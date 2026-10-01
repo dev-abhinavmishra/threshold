@@ -1,0 +1,25 @@
+/** Headless route simulation — generates seeds and validates them. */
+import { generateRoute } from '../src/world/generator';
+import { validateRoute } from '../src/world/validation';
+import type { Difficulty } from '../src/game/types';
+
+const seeds = process.argv.slice(2);
+const list = seeds.length ? seeds : ['ash-vault-101', 'gilt-spine-777', 'moth-ledger-404', 'sable-cord-001', 'wax-bell-256'];
+let fail = 0;
+
+for (const seedText of list) {
+  const t0 = Date.now();
+  const route = generateRoute({ seedText, difficulty: 'standard' as Difficulty, includeUnderscript: true });
+  const report = validateRoute(route);
+  const encCount = route.rooms.reduce((a, r) => a + r.scheduled.length, 0);
+  const locks = route.keyPairs.length;
+  const hide = route.rooms.reduce((a, r) => a + r.hidingSpots.length, 0);
+  console.log(
+    `seed ${seedText}: ${route.rooms.length} rooms + ${route.underRooms.length} under, ` +
+    `${encCount} encounters, ${locks} locks, ${hide} hides, ${Date.now() - t0}ms — ${report.ok ? 'OK' : 'FAIL'}`,
+  );
+  for (const e of report.errors) console.log(`  ERR ${e}`);
+  for (const w of report.warnings.slice(0, 6)) console.log(`  warn ${w}`);
+  if (!report.ok) fail++;
+}
+process.exit(fail ? 1 : 0);
