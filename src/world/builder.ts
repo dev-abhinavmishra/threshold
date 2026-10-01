@@ -9,6 +9,7 @@ import type { RoomSpec } from './spec';
 import { buildProp } from './props';
 import { MAT, floorMaterial } from './materials';
 import { SeedStreams } from '../engine/rng';
+import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 
 export interface BuiltRoom {
@@ -112,6 +113,22 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       group.add(built.group);
+      // Wire authored prop colliders into the room (room-local → world space).
+      for (const c of built.colliders) {
+        const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+        const wx = room.origin.x + c.x * cos + c.z * sin;
+        const wz = room.origin.z - c.x * sin + c.z * cos;
+        const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
+        const ww = swapped ? c.d : c.w;
+        const wd = swapped ? c.w : c.d;
+        const box = aabb(wx, room.origin.y + (c.y ?? 0) + c.h / 2, wz, ww / 2, c.h / 2, wd / 2);
+        if (c.losOnly) {
+          room.losBlockers.push(box);
+        } else if (!c.walkable) {
+          room.colliders.push(box);
+          room.losBlockers.push(box);
+        }
+      }
     } catch {
       // skip broken prop rather than fail room
     }
