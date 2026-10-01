@@ -467,16 +467,21 @@ export class Game {
           it.enabled = false;
           return;
         }
-        if (door.locked) {
-          if (this.consumeKeyFor(door.lockId ?? '')) {
-            door.locked = false;
+        // Port boundaries and folded corridors stack several door objects at
+        // the same position (prev room's out leaf + next room's in leaf); they
+        // are one physical doorway, so the whole cluster opens/locks together.
+        const cluster = this.doorsAt(it.pos);
+        if (cluster.some((d) => d.locked)) {
+          const lockId = cluster.find((d) => d.locked)?.lockId ?? '';
+          if (this.consumeKeyFor(lockId)) {
+            for (const d of cluster) d.locked = false;
             this.cue('door-unlock', it.pos, `[unlocked — Door ${door.label}]`);
           } else {
             this.cue('door-locked', it.pos, `[locked — needs a key]`, 'warn');
             return;
           }
         }
-        door.opening = true;
+        for (const d of cluster) d.opening = true;
         this.cue('door-open', it.pos, '');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'door', caption: '[door]' });
         return;
@@ -853,6 +858,22 @@ export class Game {
       }
     }
     return this.currentRoom;
+  }
+
+  /** Every door object within one doorway's width of pos, across built rooms. */
+  private doorsAt(pos: Vec3): RoomInstance['doors'] {
+    const rooms = this.activeRooms();
+    const out: RoomInstance['doors'] = [];
+    for (const i of this.streamer.builtIndices) {
+      const r = rooms.find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i);
+      if (!r) continue;
+      for (const d of r.doors) {
+        const dx = d.pos.x - pos.x;
+        const dz = d.pos.z - pos.z;
+        if (dx * dx + dz * dz < 1.2) out.push(d);
+      }
+    }
+    return out;
   }
 
   private collectBlockers(): Aabb[] {

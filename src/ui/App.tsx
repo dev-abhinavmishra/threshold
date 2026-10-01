@@ -18,16 +18,21 @@ export function getGame(): Game | null {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [bootError, setBootError] = useState<string | null>(null);
   const phase = useGameStore((s) => s.phase);
   const menuPage = useGameStore((s) => s.menuPage);
 
   useEffect(() => {
     if (!canvasRef.current || gameInstance) return;
-    const g = new Game(canvasRef.current);
-    gameInstance = g;
-    g.run();
+    try {
+      const g = new Game(canvasRef.current);
+      gameInstance = g;
+      g.run();
+    } catch (e) {
+      setBootError(e instanceof Error ? e.message : 'WebGL unavailable');
+    }
     return () => {
-      g.dispose();
+      gameInstance?.dispose();
       gameInstance = null;
     };
   }, []);
@@ -37,6 +42,14 @@ export default function App() {
     <div className="app">
       <canvas ref={canvasRef} className="game-canvas" />
       {phase === 'MENU' && <Menu />}
+      {bootError && (
+        <div className="overlay dim">
+          <div className="menu-inner">
+            <h2>THE HOUSE WILL NOT OPEN</h2>
+            <p>This browser cannot create a WebGL context, so the house cannot be drawn. ({bootError})</p>
+          </div>
+        </div>
+      )}
       {inGame && <HUD />}
       {phase === 'PAUSED' && <PauseMenu />}
       {phase === 'DEAD' && <DeathScreen />}
