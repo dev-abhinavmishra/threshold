@@ -57,6 +57,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
   // Trim: baseboard + crown strips along the four walls
   const trimMat = isUnder ? MAT.steelDark() : MAT.darkOak();
+  const wainsMat = isUnder ? MAT.steelDark() : MAT.oak();
   for (const [sx, sz, sw2, sd] of [
     [0, d / 2 - 0.04, w - 0.3, 0.07],
     [0, -d / 2 + 0.04, w - 0.3, 0.07],
@@ -69,6 +70,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const cr = new THREE.Mesh(texBox(sw2, 0.1, sd), trimMat);
     cr.position.set(sx, h - 0.05, sz);
     group.add(cr);
+    if (!isUnder && h >= 2.6) {
+      // Wainscot panel band + chair rail + picture rail (non-underfloor rooms)
+      const panel = new THREE.Mesh(texBox(sw2, 0.85, sd * 0.8), wainsMat);
+      panel.position.set(sx, 0.55, sz);
+      group.add(panel);
+      const chairRail = new THREE.Mesh(texBox(sw2, 0.06, sd), trimMat);
+      chairRail.position.set(sx, 0.98, sz);
+      group.add(chairRail);
+      const picRail = new THREE.Mesh(texBox(sw2, 0.05, sd), trimMat);
+      picRail.position.set(sx, Math.min(2.35, h - 0.45), sz);
+      group.add(picRail);
+    }
   }
 
   // Door frames at ports
@@ -87,6 +100,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const top = new THREE.Mesh(texBox(fw, 0.25, 0.4), frameMat);
     top.position.y = 2.4;
     frame.add(left, right, top);
+    // Outer architrave casing — shallow lip proud of the wall on both faces
+    const caseMat = isUnder ? MAT.steelDark() : MAT.oak();
+    for (const zOff of [0.26, -0.26]) {
+      const cl = new THREE.Mesh(texBox(0.09, 2.55, 0.05), caseMat);
+      cl.position.set(-fw / 2 + sideW / 2, 1.28, zOff);
+      const cr2 = new THREE.Mesh(cl.geometry, caseMat);
+      cr2.position.set(fw / 2 - sideW / 2, 1.28, zOff);
+      const ct = new THREE.Mesh(texBox(fw + 0.12, 0.12, 0.05), caseMat);
+      ct.position.set(0, 2.56, zOff);
+      frame.add(cl, cr2, ct);
+    }
     // label plate above door
     const plate = new THREE.Mesh(texBox(0.5, 0.25, 0.05), MAT.brass());
     plate.position.y = 2.62;

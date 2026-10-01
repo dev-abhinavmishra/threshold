@@ -127,9 +127,9 @@ export class Game {
     this.worldGroup = new THREE.Group();
     this.entityGroup = new THREE.Group();
     this.scene.add(this.worldGroup, this.entityGroup);
-    const amb = new THREE.AmbientLight(0x35302a, 0.5);
+    const amb = new THREE.AmbientLight(0x35302a, 0.62);
     this.scene.add(amb);
-    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.5);
+    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.62);
     this.scene.add(hemi);
     this.streamer = new RoomStreamer(this.worldGroup, this.settings.quality, 0);
     this.initPost();

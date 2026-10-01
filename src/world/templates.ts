@@ -91,14 +91,23 @@ function defaultLights(w: number, d: number, h: number): LightSpec[] {
 }
 
 // Common prop scatter helpers
+// Wall-hung kinds sit flush on the surface and mount at eye height.
+const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
+  painting: 1.6, wallSconce: 2.05, mirror: 1.55, wallClock: 2.25, sign: 2.1, curtain: 1.25,
+};
+const WALL_THIN: ReadonlySet<PropKind> = new Set(Object.keys(WALL_MOUNT_Y) as PropKind[]);
+
 function wallProps(w: number, d: number, rng: Rng, kinds: PropKind[], n: number): PropSpec[] {
   const out: PropSpec[] = [];
   for (let i = 0; i < n; i++) {
     const wall = rng.int(0, 2); // 0 west, 1 east, 2 north-ish
     const kind = rng.pick(kinds);
-    if (wall === 0) out.push({ kind, x: -w / 2 + 0.5, z: -d / 2 + 1 + rng.float() * (d - 2), yaw: Math.PI / 2 });
-    else if (wall === 1) out.push({ kind, x: w / 2 - 0.5, z: -d / 2 + 1 + rng.float() * (d - 2), yaw: -Math.PI / 2 });
-    else out.push({ kind, x: -w / 2 + 1 + rng.float() * (w - 2), z: d / 2 - 0.6, yaw: Math.PI });
+    const inX = WALL_THIN.has(kind) ? 0.12 : 0.5;
+    const inZ = WALL_THIN.has(kind) ? 0.15 : 0.6;
+    const y = WALL_MOUNT_Y[kind];
+    if (wall === 0) out.push({ kind, x: -w / 2 + inX, z: -d / 2 + 1 + rng.float() * (d - 2), y, yaw: Math.PI / 2 });
+    else if (wall === 1) out.push({ kind, x: w / 2 - inX, z: -d / 2 + 1 + rng.float() * (d - 2), y, yaw: -Math.PI / 2 });
+    else out.push({ kind, x: -w / 2 + 1 + rng.float() * (w - 2), z: d / 2 - inZ, y, yaw: Math.PI });
   }
   return out;
 }
@@ -116,7 +125,7 @@ const corridorStraight: RoomTemplate = {
   build: (rng) => spec('corr-straight', 'corridor', 3.2, 7 + rng.int(0, 4), 2.9, {
     entryOff: 0,
     props: [
-      ...wallProps(3.2, 8, rng, ['painting', 'wallSconce', 'sign'], rng.int(1, 3)),
+      ...wallProps(3.2, 8, rng, ['painting', 'wallSconce', 'sign', 'wallClock'], rng.int(2, 4)),
       { kind: 'rug', x: 0, z: 0 },
     ],
     sockets: rng.bool(0.4) ? [{ kind: 'drawer', x: 1.0, z: 1.5, meta: {} }] : [],
@@ -136,7 +145,9 @@ const corridorWide: RoomTemplate = {
       { kind: 'pillar', x: 2, z: 0, meta: { height: 3.2 } },
       { kind: 'sofa', x: -2.2, z: 2.5, yaw: Math.PI / 2 },
       { kind: 'table', x: 2.2, z: 2.5 },
-      ...wallProps(6, 9, rng, ['painting', 'plant'], 2),
+      { kind: 'vase', x: 2.2, z: 2.5, y: 0.8 },
+      { kind: 'bookshelf', x: -2.6, z: -3.2, yaw: Math.PI / 2 },
+      ...wallProps(6, 9, rng, ['painting', 'plant', 'wallSconce', 'wallClock'], 3),
     ],
     sockets: lootSockets([[2.2, 2.5]]),
     hiding: [{ kind: 'cabinet', x: -2.4, z: -3, yaw: Math.PI / 2, propKind: 'cabinet' }],
@@ -149,7 +160,7 @@ const corridorL: RoomTemplate = {
   id: 'corr-l-turn',
   build: (rng) => spec('corr-l-turn', 'corridor', 4, 8, 2.9, {
     exits: [P(1.2, 'e'), P(0, 'n', 1.4)], // exit east; north retained only if branch
-    props: wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain'], 2),
+    props: wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain', 'wallClock'], 3),
     sockets: rng.bool(0.5) ? drawerSockets([[0.8, 2.2]]) : [],
     nav: [
       { id: 'entry', x: 0, z: -3.1, links: ['elbow'], tags: ['door', 'entry'] },
@@ -169,7 +180,7 @@ const corridorZig: RoomTemplate = {
       { kind: 'partition', x: -0.6, z: -1.4, scale: 2.4 },
       { kind: 'partition', x: 0.9, z: 1.6, scale: 2.6 },
       { kind: 'drawerUnit', x: 1.9, z: -3, yaw: -Math.PI / 2 },
-      ...wallProps(5, 10, rng, ['wallSconce', 'sign'], 2),
+      ...wallProps(5, 10, rng, ['wallSconce', 'sign', 'wallClock'], 3),
     ],
     sockets: drawerSockets([[1.9, -3]]),
     hiding: [{ kind: 'cabinet', x: -1.9, z: 2.8, yaw: Math.PI / 2, propKind: 'cabinet' }],
@@ -189,8 +200,10 @@ const corridorJunction: RoomTemplate = {
     exits: [P(0, 'n'), P(-1.8, 'w'), P(1.8, 'e')],
     props: [
       { kind: 'pillar', x: 0, z: 0, meta: { height: 3 } },
-      ...wallProps(7, 7, rng, ['painting', 'wallSconce'], 3),
+      ...wallProps(7, 7, rng, ['painting', 'wallSconce', 'wallClock'], 4),
       { kind: 'cabinet', x: 2.6, z: -2.4, yaw: -Math.PI / 2 },
+      { kind: 'clock', x: -2.8, z: -2.8 },
+      { kind: 'statue', x: 0, z: 2.9, yaw: Math.PI },
     ],
     sockets: lootSockets([[-2.6, 2.4]]),
     hiding: [{ kind: 'cabinet', x: 2.6, z: -2.4, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -217,7 +230,11 @@ const guestRoom: RoomTemplate = {
       { kind: 'desk', x: 2.2, z: -1.6, yaw: -Math.PI / 2 },
       { kind: 'chair', x: 1.6, z: -1.6, yaw: Math.PI / 2 },
       { kind: 'rug', x: 0, z: 0.4 },
-      ...wallProps(6.5, 6, rng, ['painting', 'wallSconce', 'curtain'], 2),
+      { kind: 'clock', x: -2.7, z: -2.4 },
+      { kind: 'vase', x: -0.4, z: 1.5, y: 0.72 },
+      { kind: 'candle', x: 2.2, z: -1.4, y: 0.82 },
+      { kind: 'bookshelf', x: 0.6, z: 2.55, yaw: Math.PI },
+      ...wallProps(6.5, 6, rng, ['painting', 'wallSconce', 'curtain', 'wallClock'], 3),
     ],
     sockets: [...drawerSockets([[-0.4, 1.5], [2.2, -1.6]]), ...lootSockets([[0.5, 2.2]])],
     hiding: [
@@ -236,7 +253,7 @@ const guestTwin: RoomTemplate = {
       { kind: 'drawerUnit', x: 0, z: 1.9 },
       { kind: 'trolley', x: 2.6, z: -1.8 },
       { kind: 'partition', x: 0, z: 0.2, scale: 2.2 },
-      ...wallProps(7, 6.5, rng, ['painting', 'wallSconce'], 2),
+      ...wallProps(7, 6.5, rng, ['painting', 'wallSconce', 'wallClock'], 3),
     ],
     sockets: [...drawerSockets([[0, 1.9]]), ...lootSockets([[2.6, -1.8], [-2.8, -2]])],
     hiding: [
@@ -259,7 +276,7 @@ const suiteSplit: RoomTemplate = {
       { kind: 'table', x: -2.4, z: -1.4 },
       { kind: 'bed', x: 3, z: 1.8 },
       { kind: 'desk', x: 3, z: -2, yaw: Math.PI },
-      ...wallProps(9, 7, rng, ['painting', 'lamp'], 3),
+      ...wallProps(9, 7, rng, ['painting', 'lamp', 'wallClock'], 4),
     ],
     sockets: [...drawerSockets([[3, -2]]), ...lootSockets([[-2.4, -1.4], [-3.6, 2.4]])],
     hiding: [
@@ -287,7 +304,7 @@ const bathAnte: RoomTemplate = {
       { kind: 'mirror', x: -1.8, z: 2.95, y: 1.6 },
       { kind: 'machineBox', x: 2.0, z: 2.6, scale: 0.8 },
       { kind: 'puddle', x: 0.3, z: 0.6 },
-      ...wallProps(5, 7.5, rng, ['sign', 'wallSconce'], 2),
+      ...wallProps(5, 7.5, rng, ['sign', 'wallSconce', 'wallClock'], 3),
     ],
     sockets: lootSockets([[-1.8, 2.6], [1.9, -2.8]]),
     hiding: [{ kind: 'vent', x: 2.3, z: 0.5, yaw: -Math.PI / 2, propKind: 'vent' }],
@@ -315,7 +332,7 @@ const recordsStacks: RoomTemplate = {
         { kind: 'rollingLadder', x: aisle + 0.5, z: -1.5 },
         { kind: 'deskLamp', x: -3.2, z: 3.4, y: 0.8 },
         { kind: 'desk', x: -3.2, z: 3.4 },
-        ...wallProps(w, d, rng, ['paperStack', 'sign'], 2),
+        ...wallProps(w, d, rng, ['paperStack', 'sign', 'wallClock'], 3),
       ],
       colliders: cols,
       sockets: [...drawerSockets([[-3.2, 3.4]]), ...lootSockets([[3.4, 3.4], [-3.4, -3.4]])],
@@ -346,7 +363,9 @@ const recordsOffice: RoomTemplate = {
       { kind: 'filing', x: -3, z: 2.4 }, { kind: 'filing', x: -2.4, z: 2.4 },
       { kind: 'filing', x: 3, z: 2.4 },
       { kind: 'typewriter', x: -1.8, z: 0.55, y: 0.78 },
-      ...wallProps(7, 6.5, rng, ['paperStack', 'painting', 'sign'], 3),
+      { kind: 'deskLamp', x: 1.8, z: 0.7, y: 0.8 },
+      { kind: 'candle', x: -1.8, z: -1.3, y: 0.8 },
+      ...wallProps(7, 6.5, rng, ['paperStack', 'painting', 'sign', 'wallClock'], 4),
     ],
     sockets: [...drawerSockets([[-1.8, 0.6], [1.8, 0.6], [-1.8, -1.4], [1.8, -1.4]]), ...lootSockets([[3, -2.4]])],
     hiding: [
@@ -366,7 +385,7 @@ const recordsVault: RoomTemplate = {
       { kind: 'pillar', x: -1.8, z: 1.8, meta: { height: 3.4 } },
       { kind: 'pillar', x: 1.8, z: 1.8, meta: { height: 3.4 } },
       { kind: 'catalogueDesk', x: 0, z: 0 },
-      ...wallProps(6, 6, rng, ['wallSconce'], 4),
+      ...wallProps(6, 6, rng, ['wallSconce', 'wallClock'], 4),
     ],
     sockets: lootSockets([[0, 0], [-2.4, 2.4], [2.4, -2.4]]),
     hiding: [
@@ -387,7 +406,7 @@ const recordsCross: RoomTemplate = {
       { kind: 'bookshelf', x: 2.5, z: -1, yaw: -Math.PI / 2 },
       { kind: 'bookshelf', x: 2.5, z: 1.4, yaw: -Math.PI / 2 },
       { kind: 'catalogTrack', x: 0, z: 0, y: 2.8, scale: 8 },
-      ...wallProps(10, 8, rng, ['paperStack'], 3),
+      ...wallProps(10, 8, rng, ['paperStack', 'wallClock'], 4),
     ],
     colliders: [
       { x: -2.5, z: -1, w: 0.5, d: 2.1, h: 2.3 },
@@ -441,6 +460,8 @@ const maintBoiler: RoomTemplate = {
       { kind: 'steamVent', x: -1.4, z: 2.6 },
       { kind: 'rubble', x: 1.8, z: 2.8 },
       { kind: 'locker', x: 3.2, z: 1.2, yaw: -Math.PI / 2 },
+      { kind: 'stove', x: -3.2, z: -2.8 },
+      { kind: 'trolley', x: -1.2, z: 3.2 },
     ],
     sockets: lootSockets([[-3.2, -3.2], [2.8, 3.0]]),
     hiding: [
@@ -511,6 +532,9 @@ const galleryPortraits: RoomTemplate = {
       { kind: 'painting', x: 3.2, z: 1.8, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'pillar', x: -1.4, z: -0.4, meta: { height: 3.6 } },
       { kind: 'pillar', x: 1.4, z: 0.8, meta: { height: 3.6 } },
+      { kind: 'statue', x: 0, z: -3.6 },
+      { kind: 'bust', x: -1.4, z: -0.4, y: 1.6 },
+      { kind: 'bust', x: 1.4, z: 0.8, y: 1.6 },
       { kind: 'chandelier', x: 0, z: 0, y: 3.2 },
       { kind: 'rug', x: 0, z: 0 },
     ],
@@ -539,6 +563,9 @@ const galleryAtrium: RoomTemplate = {
       { kind: 'table', x: 0, z: 0, scale: 1.4 },
       { kind: 'hangingPanels', x: -4.5, z: 0, y: 3.2 },
       { kind: 'hangingPanels', x: 4.5, z: 0, y: 3.2 },
+      { kind: 'statue', x: -4.2, z: -3.4 },
+      { kind: 'statue', x: 4.2, z: 3.4, yaw: Math.PI },
+      { kind: 'clock', x: -4.6, z: 3.2, yaw: Math.PI / 2 },
       { kind: 'window', x: -5.2, z: -1, y: 2.2, yaw: Math.PI / 2 },
       { kind: 'window', x: -5.2, z: 1.6, y: 2.2, yaw: Math.PI / 2 },
     ],
@@ -594,7 +621,7 @@ const roomHedge: RoomTemplate = {
       { kind: 'partition', x: 1.2, z: -0.6, scale: 3.4 },
       { kind: 'partition', x: -1.2, z: 1.4, scale: 3.2 },
       { kind: 'partition', x: 1.2, z: 3.0, scale: 2.4 },
-      ...wallProps(6, 11, rng, ['wallSconce'], 3),
+      ...wallProps(6, 11, rng, ['wallSconce', 'wallClock'], 4),
     ],
     sockets: lootSockets([[2.4, -4.6]]),
     hiding: [{ kind: 'cabinet', x: -2.5, z: 4.4, yaw: Math.PI / 2, propKind: 'cabinet' }],
@@ -617,7 +644,7 @@ const roomDorm: RoomTemplate = {
       { kind: 'bed', x: -2.8, z: -1.6 }, { kind: 'bed', x: -2.8, z: 1.2 },
       { kind: 'bed', x: 0, z: -1.6 }, { kind: 'bed', x: 0, z: 1.2 },
       { kind: 'bed', x: 2.8, z: -1.6 }, { kind: 'bed', x: 2.8, z: 1.2 },
-      ...wallProps(9, 8, rng, ['sign', 'wallSconce'], 2),
+      ...wallProps(9, 8, rng, ['sign', 'wallSconce', 'wallClock'], 3),
     ],
     sockets: lootSockets([[-2.8, 3.2], [0, 3.2], [2.8, 3.2]]),
     hiding: [
@@ -640,7 +667,7 @@ const roomLobbySmall: RoomTemplate = {
       { kind: 'table', x: -2.8, z: -0.2 },
       { kind: 'plant', x: 3.2, z: -2.6 },
       { kind: 'chandelier', x: 0, z: -0.5, y: 3.0 },
-      ...wallProps(8, 7, rng, ['painting', 'sign'], 2),
+      ...wallProps(8, 7, rng, ['painting', 'sign', 'wallClock'], 3),
     ],
     sockets: [...lootSockets([[0.6, 1.8], [3.2, 2.8]]), ...drawerSockets([[0, 1.8]])],
     hiding: [
@@ -738,6 +765,10 @@ const roomConservatory: RoomTemplate = {
       { kind: 'window', x: 4.8, z: 0, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'table', x: 0, z: 0.4, scale: 1.3 },
       { kind: 'chandelier', x: 0, z: 0, y: 4.0 },
+      { kind: 'statue', x: 0, z: -3.8 },
+      { kind: 'vase', x: 0.4, z: 0.4, y: 1.05 },
+      { kind: 'plant', x: -1.6, z: -2.6 }, { kind: 'plant', x: 1.6, z: -2.6 },
+      { kind: 'candle', x: -0.4, z: 0.4, y: 1.05 },
     ],
     sockets: lootSockets([[0, 0.4], [-4.2, 3.8]]),
     hiding: [],
@@ -826,7 +857,7 @@ const roomLongHall: RoomTemplate = {
       { kind: 'pillar', x: -1.8, z: 4, meta: { height: 3.4 } },
       { kind: 'pillar', x: 1.8, z: 4, meta: { height: 3.4 } },
       { kind: 'rug', x: 0, z: 0 },
-      ...wallProps(5.5, 14, rng, ['painting', 'wallSconce'], 4),
+      ...wallProps(5.5, 14, rng, ['painting', 'wallSconce', 'wallClock'], 5),
     ],
     hiding: [
       { kind: 'cabinet', x: -2.3, z: 6, yaw: Math.PI / 2, propKind: 'cabinet' },
@@ -844,7 +875,7 @@ const roomBranchCloset: RoomTemplate = {
     props: [
       { kind: 'cabinet', x: 2.1, z: 1.4, yaw: -Math.PI / 2 },
       { kind: 'drawerUnit', x: -2.0, z: 1.8, yaw: Math.PI / 2 },
-      ...wallProps(5, 8, rng, ['wallSconce', 'sign'], 2),
+      ...wallProps(5, 8, rng, ['wallSconce', 'sign', 'wallClock'], 3),
     ],
     sockets: [...drawerSockets([[-2.0, 1.8]]), ...lootSockets([[2.1, 1.4]])],
     hiding: [{ kind: 'cabinet', x: 2.1, z: 1.4, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -917,7 +948,7 @@ const roomRecordsCage: RoomTemplate = {
       { kind: 'recordsCage', x: 1.4, z: -0.8 },
       { kind: 'recordsCage', x: 0, z: 2.2 },
       { kind: 'desk', x: -2.6, z: 2.6 },
-      ...wallProps(7, 7.5, rng, ['paperStack', 'sign'], 2),
+      ...wallProps(7, 7.5, rng, ['paperStack', 'sign', 'wallClock'], 3),
     ],
     sockets: [...drawerSockets([[-2.6, 2.6]]), ...lootSockets([[2.6, 2.8]])],
     hiding: [{ kind: 'cabinet', x: 2.8, z: -3.0, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -1173,7 +1204,7 @@ const roomIndexAntechamber: RoomTemplate = {
 const roomDecompress: RoomTemplate = {
   id: 'ms-decompress',
   build: (rng) => spec('ms-decompress', 'milestone', 3.4, 8, 3.0, {
-    props: wallProps(3.4, 8, rng, ['wallSconce'], 2),
+    props: wallProps(3.4, 8, rng, ['wallSconce', 'wallClock'], 3),
     weight: 0, special: 'decompress', floor: 'stone', darkChance: 0,
   }),
 };

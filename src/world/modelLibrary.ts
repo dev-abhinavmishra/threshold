@@ -16,6 +16,8 @@ interface ModelSpec {
   collider: [number, number, number];
   /** 'floor' anchors the model's base at y=0; 'center' anchors its center (wall/hanging mounts). */
   anchor?: 'floor' | 'center';
+  /** Alternative models picked per-prop via the room's dressing rng. */
+  variants?: ModelSpec[];
 }
 
 /** Prop kind → vendored model + display size. */
@@ -24,7 +26,45 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   bed: { dir: 'GothicBed_01', height: 1.1, collider: [1.7, 1.1, 2.2] },
   chair: { dir: 'Rockingchair_01', height: 1.0, collider: [0.65, 1.0, 0.75] },
   table: { dir: 'WoodenTable_01', height: 0.8, collider: [1.3, 0.8, 0.85] },
-  painting: { dir: 'hanging_picture_frame_01', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
+  painting: {
+    dir: 'hanging_picture_frame_01', height: 0.9, collider: [0, 0, 0], anchor: 'center',
+    variants: [{ dir: 'fancy_picture_frame_01', height: 0.9, collider: [0, 0, 0], anchor: 'center' }],
+  },
+  desk: { dir: 'metal_office_desk', height: 0.8, collider: [2.0, 0.8, 0.95] },
+  bookshelf: { dir: 'wooden_bookshelf_worn', height: 2.1, collider: [1.4, 2.1, 0.6] },
+  sofa: { dir: 'sofa_02', height: 0.75, collider: [1.9, 0.75, 0.9] },
+  filing: { dir: 'drawer_cabinet', height: 1.85, collider: [1.15, 1.85, 0.5] },
+  locker: { dir: 'steel_frame_shelves_01', height: 2.2, collider: [1.15, 2.2, 0.55] },
+  drawerUnit: { dir: 'vintage_wooden_drawer_01', height: 0.7, collider: [0.9, 0.7, 0.5] },
+  trolley: { dir: 'industrial_storage_cart', height: 1.1, collider: [1.3, 1.1, 0.9] },
+  shelf: { dir: 'steel_frame_shelves_02', height: 2.1, collider: [0.6, 2.1, 0.55] },
+  plant: {
+    dir: 'potted_plant_01', height: 1.3, collider: [0.6, 1.3, 0.65],
+    variants: [{ dir: 'nettle_plant', height: 1.0, collider: [0.5, 1.0, 0.5] }],
+  },
+  clock: { dir: 'vintage_grandfather_clock_01', height: 2.2, collider: [0.5, 2.2, 0.65] },
+  wallClock: { dir: 'vintage_telephone_wall_clock', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
+  deskLamp: { dir: 'desk_lamp_arm_01', height: 0.55, collider: [0, 0, 0] },
+  wallSconce: {
+    dir: 'industrial_wall_sconce', height: 0.4, collider: [0, 0, 0], anchor: 'center',
+    variants: [{ dir: 'industrial_wall_lamp', height: 0.45, collider: [0, 0, 0], anchor: 'center' }],
+  },
+  ceilingLamp: { dir: 'hanging_industrial_lamp', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
+  crate: {
+    dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
+    variants: [{ dir: 'old_military_crate', height: 0.45, collider: [0.95, 0.45, 0.7] }],
+  },
+  statue: { dir: 'gothic_statue', height: 1.8, collider: [1.1, 1.8, 1.1] },
+  bust: { dir: 'marble_bust_01', height: 0.55, collider: [0.3, 0.55, 0.35] },
+  vase: { dir: 'brass_vase_01', height: 0.65, collider: [0, 0, 0] },
+  candle: {
+    dir: 'brass_candleholders', height: 0.8, collider: [0, 0, 0],
+    variants: [{ dir: 'wooden_candlestick', height: 0.5, collider: [0, 0, 0] }],
+  },
+  mirror: { dir: 'ornate_mirror_01', height: 1.4, collider: [0, 0, 0], anchor: 'center' },
+  chandelier: { dir: 'Chandelier_01', height: 1.7, collider: [0, 0, 0], anchor: 'center' },
+  lamp: { dir: 'vintage_oil_lamp', height: 0.45, collider: [0, 0, 0] },
+  stove: { dir: 'barrel_stove', height: 0.9, collider: [0.6, 0.9, 0.6] },
 };
 
 const loader = new GLTFLoader();
@@ -73,21 +113,35 @@ function bake(holder: THREE.Group): THREE.Group {
   return out;
 }
 
+function allSpecs(): { spec: ModelSpec }[] {
+  const out: { spec: ModelSpec }[] = [];
+  for (const base of Object.values(MODEL_FOR)) {
+    if (!base) continue;
+    out.push({ spec: base });
+    for (const v of base.variants ?? []) out.push({ spec: v });
+  }
+  return out;
+}
+
 export function preloadModels(): void {
-  for (const [kind, spec] of Object.entries(MODEL_FOR)) {
-    if (!spec || cache.has(kind) || pending.has(kind)) continue;
-    pending.add(kind);
+  for (const { spec } of allSpecs()) {
+    if (cache.has(spec.dir) || pending.has(spec.dir)) continue;
+    pending.add(spec.dir);
     loader
       .loadAsync(`/assets/models/${spec.dir}/model.gltf`)
-      .then((g) => cache.set(kind, bake(normalize(g.scene, spec))))
+      .then((g) => cache.set(spec.dir, bake(normalize(g.scene, spec))))
       .catch(() => { /* fallback stays procedural */ })
-      .finally(() => pending.delete(kind));
+      .finally(() => pending.delete(spec.dir));
   }
 }
 
-/** A cloned, floor-anchored model group when loaded, else null. */
-export function modelInstance(kind: string): THREE.Group | null {
-  const src = cache.get(kind);
+/** A cloned, floor-anchored model group when loaded, else null. `roll` in [0,1) picks a variant deterministically. */
+export function modelInstance(kind: string, roll = 0): THREE.Group | null {
+  const base = MODEL_FOR[kind];
+  if (!base) return null;
+  const variants = base.variants ?? [];
+  const spec = variants.length && roll > 0.5 ? variants[Math.floor(roll * variants.length * 2) % variants.length] : base;
+  const src = cache.get(spec.dir) ?? cache.get(base.dir);
   return src ? (src.clone(true) as THREE.Group) : null;
 }
 

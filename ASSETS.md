@@ -37,3 +37,31 @@ has not finished loading falls back to its procedural builder.
 | `models/Rockingchair_01` | Rockingchair 01 | `chair` props |
 | `models/WoodenTable_01` | Wooden Table 01 | `table` props |
 | `models/hanging_picture_frame_01` | Hanging Picture Frame 01 | `painting` props |
+| `models/wooden_bookshelf_worn` | Wooden Bookshelf Worn | `bookshelf` props |
+| `models/metal_office_desk` | Metal Office Desk | `desk` props |
+| `models/sofa_02` | Sofa 02 | `sofa` props |
+| `models/drawer_cabinet` | Drawer Cabinet | `filing` props |
+| `models/steel_frame_shelves_01` | Steel Frame Shelves 01 | `locker` props |
+| `models/steel_frame_shelves_02` | Steel Frame Shelves 02 | `shelf` props |
+| `models/vintage_wooden_drawer_01` | Vintage Wooden Drawer 01 | `drawerUnit` props |
+| `models/industrial_storage_cart` | Industrial Storage Cart | `trolley` props |
+| `models/potted_plant_01` | Potted Plant 01 | `plant` props |
+| `models/nettle_plant` | Nettle Plant | `plant` props (variant) |
+| `models/vintage_grandfather_clock_01` | Vintage Grandfather Clock 01 | `clock` props |
+| `models/vintage_telephone_wall_clock` | Vintage Telephone Wall Clock | `wallClock` props |
+| `models/desk_lamp_arm_01` | Desk Lamp Arm 01 | `deskLamp` props |
+| `models/industrial_wall_sconce` | Industrial Wall Sconce | `wallSconce` props |
+| `models/industrial_wall_lamp` | Industrial Wall Lamp | `wallSconce` props (variant) |
+| `models/hanging_industrial_lamp` | Hanging Industrial Lamp | `ceilingLamp` props |
+| `models/vintage_oil_lamp` | Vintage Oil Lamp | `lamp` props |
+| `models/wooden_crate_01` | Wooden Crate 01 | `crate` props |
+| `models/old_military_crate` | Old Military Crate | `crate` props (variant) |
+| `models/fancy_picture_frame_01` | Fancy Picture Frame 01 | `painting` props (variant) |
+| `models/gothic_statue` | Gothic Statue | `statue` props |
+| `models/marble_bust_01` | Marble Bust 01 | `bust` props |
+| `models/brass_vase_01` | Brass Vase 01 | `vase` props |
+| `models/brass_candleholders` | Brass Candleholders | `candle` props |
+| `models/wooden_candlestick` | Wooden Candlestick | `candle` props (variant) |
+| `models/Chandelier_01` | Chandelier 01 | `chandelier` props |
+| `models/ornate_mirror_01` | Ornate Mirror 01 | `mirror` props |
+| `models/barrel_stove` | Barrel Stove | `stove` props |

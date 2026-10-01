@@ -23,6 +23,7 @@ export type PropKind =
   | 'paperStack' | 'pipe' | 'rubble' | 'plant' | 'curtain' | 'sign'
   | 'pillar' | 'railing' | 'stairs' | 'partition' | 'ceilingLamp'
   | 'chandelier' | 'bookshelf' | 'counter' | 'till' | 'trolley'
+  | 'clock' | 'wallClock' | 'statue' | 'bust' | 'vase' | 'candle' | 'stove'
   | 'machineBox' | 'hangingPanels' | 'deskLamp' | 'keypad'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
