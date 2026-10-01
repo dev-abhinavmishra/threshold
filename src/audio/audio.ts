@@ -112,8 +112,11 @@ export class AudioManager {
     this.ctx = new AC();
     for (const name of ['master', 'music', 'sfx', 'ui', 'voice']) {
       const g = this.ctx.createGain();
-      g.connect(this.ctx.destination);
       this.buses.set(name, g);
+    }
+    this.buses.get('master')!.connect(this.ctx.destination);
+    for (const name of ['music', 'sfx', 'ui', 'voice']) {
+      this.buses.get(name)!.connect(this.buses.get('master')!);
     }
     this.applyVolumes();
     // shared noise buffer

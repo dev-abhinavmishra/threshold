@@ -42,8 +42,7 @@ export class InteractionSystem {
   clear(): void {
     this.interactables = [];
     this.focused = null;
-    this.holdProgress = 0;
-    this.holdTarget = null;
+    // hold state survives per-frame rebuilds; updateHold resets it on target change
   }
 
   add(it: Interactable): void {
@@ -102,7 +101,7 @@ export class InteractionSystem {
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
-          data: sock, enabled: true, priority: kind === 'shop' ? 1 : 2,
+          data: sock, enabled: !sock.meta.taken, priority: kind === 'shop' ? 1 : 2,
           holdTime: kind === 'pylon' || kind === 'seal' ? 1.2 : 0,
         });
       }

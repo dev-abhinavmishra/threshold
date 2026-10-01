@@ -21,6 +21,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
+import { Editor } from '../entities/setpieces';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY } from '../game/config';
 import type {
   Difficulty, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document,
@@ -36,6 +37,8 @@ export interface StartOptions {
 }
 
 const KEY_DEFAULT = (s: SettingsData, name: string) => s.keybinds[name] ?? '';
+
+const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
 
 export class Game {
   private renderer!: THREE.WebGLRenderer;
@@ -191,9 +194,9 @@ export class Game {
 
   startRun(opts: StartOptions = {}): void {
     const seedText = opts.seedText?.trim() || this.randomSeed();
-    const difficulty = opts.difficulty ?? useGameStore.getState().difficulty;
-    const shortRun = opts.shortRun ?? difficulty === 'qa';
     const cp = opts.checkpoint ?? null;
+    const difficulty = cp?.difficulty ?? opts.difficulty ?? useGameStore.getState().difficulty;
+    const shortRun = opts.shortRun ?? difficulty === 'qa';
 
     this.route = generateRoute({ seedText, difficulty, shortRun, includeUnderscript: true });
     this.streams = new SeedStreams(seedText);
@@ -204,15 +207,16 @@ export class Game {
     this.doorStates.clear();
     this.hazard = new HazardField();
     this.roomBounds.clear();
-    this.inventory = cp ? [...cp.inventory] : [];
+    this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
     this.lampOn = false;
     this.pulseLampOn = false;
+    this.wardArmed = false;
     this.space = cp?.inUnderscript ? 'under' : 'main';
     this.streamer.setSpace(this.space);
     this.streamer.clear();
-    this.stats = cp?.stats ?? {
+    this.stats = cp?.stats ? { ...cp.stats, entityEncounters: { ...cp.stats.entityEncounters } } : {
       startedAt: Date.now(), endedAt: 0, deaths: 0, retries: 0, roomsVisited: 0,
       imprintsEarned: 0, marginaliaEarned: 0, entityEncounters: {},
       underscriptDeepest: 0, underscriptCompleted: false, victory: false,
@@ -530,6 +534,10 @@ export class Game {
     } else if (contains && (ITEM_DEFS as Record<string, unknown>)[contains]) {
       this.giveItem(contains as ItemId, 1);
       this.cue('pickup', it.pos, `[${ITEM_DEFS[contains].name}]`);
+    } else if (this.space === 'under') {
+      this.marginalia += 6;
+      this.stats.marginaliaEarned += 6;
+      this.cue('pickup', it.pos, '[+6 marginalia]');
     } else {
       this.imprints += 6;
       this.cue('pickup', it.pos, '[+6 imprints]');
@@ -599,7 +607,12 @@ export class Game {
         item.count--;
         this.player.stamina = 100;
         this.player.speedMul = 1.12;
-        setTimeout(() => (this.player.speedMul = 1), 90000);
+        {
+          const p = this.player;
+          setTimeout(() => {
+            if (this.player === p) p.speedMul = 1;
+          }, 90000);
+        }
         this.cue('heal', null, '[tonic — lungs open]');
         return;
       case 'bandage':
@@ -612,13 +625,17 @@ export class Game {
       case 'feltWrap':
         item.count--;
         this.player.noiseMul = 0.4;
-        setTimeout(() => (this.player.noiseMul = 1), 120000);
+        {
+          const p = this.player;
+          setTimeout(() => {
+            if (this.player === p) p.noiseMul = 1;
+          }, 120000);
+        }
         this.cue('heal', null, '[steps muffled]');
         return;
       case 'chalkSpool':
         item.count--;
         this.cue('afterglow-hint', null, '[chalk marks will guide your memory]');
-        return;        this.cue('afterglow-hint', null, '[chalk marks will guide your memory]');
         return;
       case 'wardSeal':
         item.count--;
@@ -681,8 +698,8 @@ export class Game {
       health: this.player.health,
       imprints: this.imprints,
       marginalia: this.marginalia,
-      inventory: [...this.inventory],
-      stats: this.stats,
+      inventory: this.inventory.map((i) => ({ ...i })),
+      stats: { ...this.stats, entityEncounters: { ...this.stats.entityEncounters } },
     };
   }
 
@@ -879,6 +896,7 @@ export class Game {
         case 'echoskin': this.spawnEntity(new EchoSkin()); break;
         case 'margin': this.spawnEntity(new Margin()); break;
         case 'stillframe': this.spawnEntity(new Stillframe()); break;
+        case 'editor': this.spawnEntity(new Editor()); break;
         case 'pursuer': break; // milestones only
         default: break;
       }
@@ -888,12 +906,13 @@ export class Game {
     if (ms && 'enter' in ms && !this.spawned.has(`ms-${this.currentRoom}`)) {
       this.spawned.add(`ms-${this.currentRoom}`);
       (ms as { enter?: () => void }).enter?.();
-      const room = this.activeRooms()[this.currentRoom];
-      if (room && (room.templateId === 'ms-clinic' || room.templateId === 'ms-custodian' || room.templateId === 'ms-index-ante' || room.templateId === 'ms-final-ante' || room.templateId === 'ms-decompress')) {
-        this.checkpoint = this.makeCheckpoint(this.currentRoom);
-        saveCheckpoint(this.checkpoint);
-        this.cue('checkpoint', null, '[a breath — progress recorded]', 'info');
-      }
+    }
+    // safe rooms checkpoint on entry whether or not they run a milestone
+    if (!this.spawned.has(`cp-${this.currentRoom}`) && SAFE_ROOM_TEMPLATES.has(room.templateId)) {
+      this.spawned.add(`cp-${this.currentRoom}`);
+      this.checkpoint = this.makeCheckpoint(this.currentRoom);
+      saveCheckpoint(this.checkpoint);
+      this.cue('checkpoint', null, '[a breath — progress recorded]', 'info');
     }
   }
 
@@ -1014,7 +1033,7 @@ export class Game {
     this.raf = requestAnimationFrame(this.frame);
     const st = useGameStore.getState();
     const running = st.phase === 'PLAYING' || st.phase === 'MINIGAME';
-    if (!this.clock.tick(performance.now()) || !running) {
+    if (!running || !this.clock.tick(performance.now())) {
       this.renderer.render(this.scene, this.camera);
       return;
     }

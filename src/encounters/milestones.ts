@@ -49,6 +49,7 @@ export class IndexEncounter extends Milestone {
   private targetGlyphs: string[] = [];
   private consoleStep = 0;
   private consoleShowing = 0;
+  private consoleT = 0;
   private catalogRead = false;
   private breatheT = 0;
 
@@ -83,6 +84,15 @@ export class IndexEncounter extends Milestone {
       this.breatheT = 0;
       this.ev.cue('curator-search', this.curator.position, '', 'info');
     }
+    // seal console cycles its display on a timer; the player presses to submit
+    if (this.catalogRead && !this.done) {
+      this.consoleT += dt;
+      if (this.consoleT >= 1.4) {
+        this.consoleT = 0;
+        this.consoleShowing = (this.consoleShowing + 1) % GLYPHS.length;
+        this.ev.cue('stabilize-tick', null, `[console shows: ${GLYPHS[this.consoleShowing]}]`, 'info');
+      }
+    }
   }
 
   override onInteract(it: Interactable): boolean {
@@ -114,10 +124,9 @@ export class IndexEncounter extends Milestone {
         this.ev.cue('door-locked', it.pos, '[the seal console wants a glyph order]', 'warn');
         return true;
       }
-      // cycle console showing glyph; correct press advances step
-      this.consoleShowing = (this.consoleShowing + 1) % GLYPHS.length;
+      // submit the glyph the console is currently showing; a wrong press with
+      // pending progress resets the sequence, before step 1 it is just noise
       const shown = GLYPHS[this.consoleShowing];
-      this.ev.cue('stabilize-tick', it.pos, `[console shows: ${shown}]`, 'info');
       if (shown === this.targetGlyphs[this.consoleStep]) {
         this.consoleStep++;
         this.ev.cue('stabilize-good', it.pos, `[glyph ${this.consoleStep}/3 accepted]`, 'info');
@@ -126,15 +135,12 @@ export class IndexEncounter extends Milestone {
           this.ev.unlockMainDoor(this.room);
           this.ev.cue('door-unlock', null, '[the Index releases you]', 'info');
         }
-      } else if (shown === this.targetGlyphs[0] && this.consoleStep !== 0) {
-        // reset handled below
+      } else if (this.consoleStep > 0) {
+        this.consoleStep = 0;
+        this.ev.ctx().sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.8, category: 'puzzle-fail', caption: '[the console rejects the glyph]' });
+        this.ev.cue('stabilize-bad', it.pos, '[wrong glyph — sequence reset]', 'warn');
       } else {
-        // wrong glyph while a step was pending — loud failure, resets
-        if (this.consoleStep > 0 && shown !== this.targetGlyphs[this.consoleStep]) {
-          this.consoleStep = 0;
-          this.ev.ctx().sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.8, category: 'puzzle-fail', caption: '[the console rejects the glyph]' });
-          this.ev.cue('stabilize-bad', it.pos, '[wrong glyph — sequence reset]', 'warn');
-        }
+        this.ev.cue('stabilize-tick', it.pos, `[console shows: ${shown}]`, 'info');
       }
       return true;
     }
@@ -273,6 +279,8 @@ export class EngineEncounter extends Milestone {
   private relaysTaken = 0;
   private routingSequence: number[] = [];
   private routingStep = 0;
+  private boardShowing = 0;
+  private boardT = 0;
   private entered = false;
 
   constructor(room: RoomInstance, ev: MilestoneEvents, seed: number) {
@@ -296,11 +304,20 @@ export class EngineEncounter extends Milestone {
     this.phase = 'relays';
   }
 
-  override update(): void {
+  override update(dt: number): void {
     if (this.done) return;
     if (this.phase === 'relays' && this.relaysTaken >= this.relaysNeeded) {
       this.phase = 'routing';
       this.ev.cue('relay', null, `[routing board online — sequence: ${this.routingSequence.map((n) => n + 1).join(' · ')}]`, 'info');
+    }
+    // routing board cycles its highlighted terminal on a timer; press to lock
+    if (this.phase === 'routing') {
+      this.boardT += dt;
+      if (this.boardT >= 1.4) {
+        this.boardT = 0;
+        this.boardShowing = (this.boardShowing + 1) % 7;
+        this.ev.cue('stabilize-tick', null, `[board shows terminal ${this.boardShowing + 1}]`, 'info');
+      }
     }
   }
 
@@ -320,11 +337,7 @@ export class EngineEncounter extends Milestone {
       // Player presses the board when standing nearest to the correct terminal.
       // Simpler authored version: board cycles through terminals 0..6 on each press;
       // press when it shows the next number in sequence.
-      const sock = it.data as Socket;
-      const showing = ((sock.meta.showing as number) ?? -1) + 1;
-      sock.meta.showing = showing > 6 ? 0 : showing;
-      const cur = sock.meta.showing as number;
-      this.ev.cue('stabilize-tick', it.pos, `[board shows terminal ${cur + 1}]`);
+      const cur = this.boardShowing;
       if (cur === this.routingSequence[this.routingStep]) {
         this.routingStep++;
         this.ev.cue('stabilize-good', it.pos, `[route ${this.routingStep}/3 locked]`, 'info');
