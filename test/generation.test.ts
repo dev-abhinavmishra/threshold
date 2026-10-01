@@ -2,12 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
-import { aabbIntersects2D, aabbFromMinMax, v3 } from '../src/engine/math';
+import { aabbFromMinMax, v3 } from '../src/engine/math';
 import { portLocalPos } from '../src/world/spec';
 
+// Must match src/world/generator.ts rotXZ (world-space convention).
 function rotXZ(x: number, z: number, yaw: number): { x: number; z: number } {
   const c = Math.cos(yaw), s = Math.sin(yaw);
-  return { x: x * c - z * s, z: x * s + z * c };
+  return { x: x * c + z * s, z: -x * s + z * c };
 }
 
 const SEEDS = ['ash-vault-101', 'gilt-spine-777', 'moth-ledger-404', 'sable-cord-001', 'wax-bell-256'];
@@ -59,17 +60,34 @@ describe('route generation', () => {
     const rooms = mainRooms(route).filter(
       (r) => r.spec.width >= 4 && r.spec.depth >= 4,
     );
-    const boxes = rooms.map((r) => ({
-      idx: r.index,
-      box: aabbFromMinMax(
-        r.origin.x - r.spec.width / 2, 0, r.origin.z - r.spec.depth / 2,
-        r.origin.x + r.spec.width / 2, 3, r.origin.z + r.spec.depth / 2,
-      ),
-    }));
+    // Footprint is yaw-rotated — AABB of the four rotated corners (matches
+    // specWorldAabb in the generator).
+    const boxes = rooms.map((r) => {
+      const hw = r.spec.width / 2, hd = r.spec.depth / 2;
+      const cs = [
+        rotXZ(-hw, -hd, r.yaw), rotXZ(hw, -hd, r.yaw),
+        rotXZ(-hw, hd, r.yaw), rotXZ(hw, hd, r.yaw),
+      ];
+      const xs = cs.map((c) => c.x + r.origin.x);
+      const zs = cs.map((c) => c.z + r.origin.z);
+      return {
+        idx: r.index,
+        box: aabbFromMinMax(
+          Math.min(...xs), 0, Math.min(...zs),
+          Math.max(...xs), 3, Math.max(...zs),
+        ),
+      };
+    });
     for (let i = 0; i < boxes.length; i++) {
       for (let j = i + 2; j < boxes.length; j++) {
-        // adjacent rooms share a wall — allow slight interpenetration there only
-        expect(aabbIntersects2D(boxes[i].box, boxes[j].box),
+        // adjacent rooms share a wall — allow slight interpenetration there only.
+        // Non-adjacent rooms may tile flush (zero-area boundary touch) or share
+        // a wall strip within wall-depth; flag only real volume intrusions
+        // (>15cm deep in both axes — placement tolerance is ±5cm per side).
+        const A = boxes[i].box, B = boxes[j].box;
+        const dx = Math.min(A.maxX, B.maxX) - Math.max(A.minX, B.minX);
+        const dz = Math.min(A.maxZ, B.maxZ) - Math.max(A.minZ, B.minZ);
+        expect(dx > 0.15 && dz > 0.15,
           `rooms ${boxes[i].idx} and ${boxes[j].idx} overlap`).toBe(false);
       }
     }

@@ -6,14 +6,31 @@
 import * as THREE from 'three';
 import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
+import { modelInstance, modelCollider } from './modelLibrary';
 import type { Rng } from '../engine/rng';
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
 
-function box(w: number, h: number, d: number): THREE.BoxGeometry {
+/** Scale a BoxGeometry's per-face UVs so 1 uv unit = 1 meter on every face. */
+export function uvFixBox(g: THREE.BoxGeometry, w: number, h: number, d: number): THREE.BoxGeometry {
+  const uv = g.attributes.uv;
+  // BoxGeometry face order: +x,-x,+y,-y,+z,-z — 4 verts each
+  const dims: [number, number][] = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++) {
+    const [su, sv] = dims[f];
+    for (let v = 0; v < 4; v++) {
+      const i = f * 4 + v;
+      uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+    }
+  }
+  uv.needsUpdate = true;
+  return g;
+}
+
+export function box(w: number, h: number, d: number): THREE.BoxGeometry {
   const key = `b${w.toFixed(3)},${h.toFixed(3)},${d.toFixed(3)}`;
   let g = geoCache.get(key) as THREE.BoxGeometry | undefined;
-  if (!g) { g = new THREE.BoxGeometry(w, h, d); geoCache.set(key, g); }
+  if (!g) { g = uvFixBox(new THREE.BoxGeometry(w, h, d), w, h, d); geoCache.set(key, g); }
   return g;
 }
 function cyl(rT: number, rB: number, h: number, seg = 10): THREE.CylinderGeometry {
@@ -589,8 +606,15 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
 };
 
 export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
-  const b = builders[spec.kind];
-  const prop = b ? b(spec, rng) : single(new THREE.Group(), 0.4, 0.4, 0.4);
+  const model = modelInstance(spec.kind);
+  let prop: BuiltProp;
+  if (model) {
+    const c = modelCollider(spec.kind)!;
+    prop = c[0] > 0 ? single(model, c[0], c[1], c[2]) : { group: model, colliders: [] };
+  } else {
+    const b = builders[spec.kind];
+    prop = b ? b(spec, rng) : single(new THREE.Group(), 0.4, 0.4, 0.4);
+  }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
   // Rotate local colliders with the prop yaw (axis-aligned rotations only for

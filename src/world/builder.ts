@@ -7,10 +7,12 @@ import * as THREE from 'three';
 import type { RoomInstance } from '../game/types';
 import type { RoomSpec } from './spec';
 import { buildProp } from './props';
-import { MAT, floorMaterial } from './materials';
+import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
+import { TEX } from './textures';
+import { box as texBox } from './props';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -30,18 +32,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.name = `room-${room.index}`;
 
   const isUnder = room.biome === 'underscript';
-  const wallMat = isUnder ? MAT.concrete() : (room.darkRoom ? MAT.plasterDark() : MAT.plaster());
-  const floorMat = isUnder ? MAT.concreteDark() : floorMaterial(room.floorMaterial);
-  const ceilMat = isUnder ? MAT.concreteDark() : MAT.plasterDark();
+  const wallMat = isUnder ? TEX.concreteWall() : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  const floorMat = isUnder ? TEX.concreteFloor() : (room.floorMaterial === 'carpet' ? TEX.carpet() : room.floorMaterial === 'stone' || room.floorMaterial === 'metal' ? TEX.concreteFloor() : TEX.woodFloor());
+  const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 
-  // Floor + ceiling
-  const floor = new THREE.Mesh(unitBox, floorMat);
-  floor.scale.set(w, 0.1, d);
+  // Floor + ceiling (texBox carries meter-scaled UVs)
+  const floor = new THREE.Mesh(texBox(w, 0.1, d), floorMat);
   floor.position.y = -0.05;
   group.add(floor);
-  const ceil = new THREE.Mesh(unitBox, ceilMat);
-  ceil.scale.set(w, 0.1, d);
+  const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
   group.add(ceil);
 
@@ -51,17 +51,25 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (c.walkable) continue;
     if (c.w <= 0.05 || c.d <= 0.05) continue;
     if (c.h < h * 0.5 && !c.losOnly) continue; // only tall wall segments become walls
-    const wallMesh = new THREE.Mesh(unitBox, wallMat);
-    wallMesh.scale.set(c.w, c.h, c.d);
+    const wallMesh = new THREE.Mesh(texBox(c.w, c.h, c.d), wallMat);
     wallMesh.position.set(c.x, (c.y ?? 0) + c.h / 2, c.z);
     group.add(wallMesh);
   }
-  // Trim: baseboard
-  const baseboard = new THREE.Mesh(unitBox, MAT.charcoal());
-  baseboard.scale.set(w - 0.2, 0.12, d - 0.2);
-  baseboard.position.y = 0.06;
-  // only render as thin inset — skip for perf: use edge strips on n/s walls
-  void baseboard;
+  // Trim: baseboard + crown strips along the four walls
+  const trimMat = isUnder ? MAT.steelDark() : MAT.darkOak();
+  for (const [sx, sz, sw2, sd] of [
+    [0, d / 2 - 0.04, w - 0.3, 0.07],
+    [0, -d / 2 + 0.04, w - 0.3, 0.07],
+    [w / 2 - 0.04, 0, 0.07, d - 0.3],
+    [-w / 2 + 0.04, 0, 0.07, d - 0.3],
+  ] as const) {
+    const bb = new THREE.Mesh(texBox(sw2, 0.12, sd), trimMat);
+    bb.position.set(sx, 0.06, sz);
+    group.add(bb);
+    const cr = new THREE.Mesh(texBox(sw2, 0.1, sd), trimMat);
+    cr.position.set(sx, h - 0.05, sz);
+    group.add(cr);
+  }
 
   // Door frames at ports
   const doorLeaves = new Map<string, THREE.Mesh>();
@@ -72,25 +80,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const fw = port.width + 0.3;
     const sideW = 0.15;
     const frameMat = isUnder ? MAT.steelDark() : MAT.darkOak();
-    const left = new THREE.Mesh(unitBox, frameMat);
-    left.scale.set(sideW, 2.3, 0.4);
+    const left = new THREE.Mesh(texBox(sideW, 2.3, 0.4), frameMat);
     left.position.set(-fw / 2 + sideW / 2, 1.15, 0);
-    const right = left.clone();
-    right.position.x = fw / 2 - sideW / 2;
-    const top = new THREE.Mesh(unitBox, frameMat);
-    top.scale.set(fw, 0.25, 0.4);
+    const right = new THREE.Mesh(left.geometry, frameMat);
+    right.position.set(fw / 2 - sideW / 2, 1.15, 0);
+    const top = new THREE.Mesh(texBox(fw, 0.25, 0.4), frameMat);
     top.position.y = 2.4;
     frame.add(left, right, top);
     // label plate above door
-    const plate = new THREE.Mesh(unitBox, MAT.brass());
-    plate.scale.set(0.5, 0.25, 0.05);
+    const plate = new THREE.Mesh(texBox(0.5, 0.25, 0.05), MAT.brass());
     plate.position.y = 2.62;
     frame.add(plate);
     // leaf
-    const leaf = new THREE.Mesh(unitBox, isUnder ? MAT.steel() : MAT.oak());
-    leaf.scale.set(port.width - 0.1, 2.2, 0.09);
-    leaf.position.set(0, 1.1, 0);
-    leaf.geometry = unitBox;
+    const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), isUnder ? MAT.steel() : MAT.oak());
     // hinge at edge for swing
     const hinge = new THREE.Group();
     leaf.position.set(port.width / 2 - 0.05, 1.1, 0);
@@ -146,9 +148,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     group.add(bulb);
     lampMeshes.push(bulb);
   }
+  let shadowAssigned = false;
   for (const ls of sorted.slice(0, maxLights)) {
-    const pl = new THREE.PointLight(ls.color, ls.intensity * (room.darkRoom ? 0.25 : 1), ls.range, 1.8);
+    // decay=2 physical falloff → boost authored (legacy-scale) intensities
+    const pl = new THREE.PointLight(ls.color, ls.intensity * 24 * (room.darkRoom ? 0.25 : 1), ls.range * 1.3, 2);
     pl.position.set(ls.x, ls.y, ls.z);
+    if (quality === 'high' && !shadowAssigned && !room.darkRoom) {
+      pl.castShadow = true;
+      pl.shadow.mapSize.set(512, 512);
+      pl.shadow.bias = -0.01;
+      pl.shadow.camera.near = 0.2;
+      pl.shadow.camera.far = ls.range;
+      shadowAssigned = true;
+    }
     group.add(pl);
     lights.push(pl);
     pl.userData.group = ls.group;
@@ -177,17 +189,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const len = Math.hypot(dx, dz);
       if (len < 0.05) continue;
       const ux = dx / len, uz = dz / len;
-      const fl = new THREE.Mesh(unitBox, floorMat);
-      fl.scale.set(Math.abs(ux) > 0.5 ? len + 2.6 : 2.8, 0.08, Math.abs(ux) > 0.5 ? 2.8 : len + 2.6);
+      const fl = new THREE.Mesh(texBox(Math.abs(ux) > 0.5 ? len + 2.6 : 2.8, 0.08, Math.abs(ux) > 0.5 ? 2.8 : len + 2.6), floorMat);
       fl.position.set((la.x + lb.x) / 2, -0.04, (la.z + lb.z) / 2);
       corr.add(fl);
-      const ce = fl.clone();
-      ce.position.y = 2.74;
+      const ce = new THREE.Mesh(fl.geometry, ceilMat);
+      ce.position.set(fl.position.x, 2.74, fl.position.z);
       corr.add(ce);
       for (const side of [-1, 1]) {
-        const wall = new THREE.Mesh(unitBox, wallMat);
         const px = -uz * side * 1.3, pz = ux * side * 1.3;
-        wall.scale.set(Math.abs(ux) > 0.5 ? len + 2.6 : 0.24, 2.8, Math.abs(ux) > 0.5 ? 0.24 : len + 2.6);
+        const wall = new THREE.Mesh(texBox(Math.abs(ux) > 0.5 ? len + 2.6 : 0.24, 2.8, Math.abs(ux) > 0.5 ? 0.24 : len + 2.6), wallMat);
         wall.position.set((la.x + lb.x) / 2 + px, 1.4, (la.z + lb.z) / 2 + pz);
         corr.add(wall);
       }

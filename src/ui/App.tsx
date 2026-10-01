@@ -28,6 +28,7 @@ export default function App() {
       const g = new Game(canvasRef.current);
       gameInstance = g;
       g.run();
+      if (import.meta.env.DEV) (window as unknown as { __thresholdGame?: Game }).__thresholdGame = g;
     } catch (e) {
       setBootError(e instanceof Error ? e.message : 'WebGL unavailable');
     }

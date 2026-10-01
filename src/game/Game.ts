@@ -5,12 +5,19 @@
  * React renders.
  */
 import * as THREE from 'three';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { GameClock } from '../engine/clock';
 import { SoundEventBus } from '../engine/events';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
+import { preloadModels } from '../world/modelLibrary';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
@@ -80,11 +87,14 @@ export class Game {
   private roomBounds = new Map<number, Aabb>();
   private lastHud = 0;
   private doorStates = new Map<string, { t: number; opening: boolean }>();
+  private composer: EffectComposer | null = null;
+  private grainUniforms: Record<string, THREE.IUniform> | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.settings = loadSettings();
     this.initThree();
+    preloadModels();
     this.bindInput();
     bindSoundBus(this.sound, this.audio);
     this.audio.applySettings(this.settings);
@@ -103,6 +113,9 @@ export class Game {
     const q = QUALITY[this.settings.quality];
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatioCap));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     if (q.shadowMap) {
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -114,16 +127,70 @@ export class Game {
     this.worldGroup = new THREE.Group();
     this.entityGroup = new THREE.Group();
     this.scene.add(this.worldGroup, this.entityGroup);
-    const amb = new THREE.AmbientLight(0x1a1812, 0.6);
+    const amb = new THREE.AmbientLight(0x35302a, 0.5);
     this.scene.add(amb);
+    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.5);
+    this.scene.add(hemi);
     this.streamer = new RoomStreamer(this.worldGroup, this.settings.quality, 0);
+    this.initPost();
     window.addEventListener('resize', this.onResize);
+  }
+
+  private initPost(): void {
+    const q = this.settings.quality;
+    const composer = new EffectComposer(this.renderer);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+    if (q === 'high') {
+      const ssao = new SSAOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
+      ssao.kernelRadius = 0.6;
+      ssao.minDistance = 0.002;
+      ssao.maxDistance = 0.12;
+      composer.addPass(ssao);
+    }
+    if (q !== 'low') {
+      const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.55, 0.82);
+      composer.addPass(bloom);
+    }
+    this.grainUniforms = {
+      tDiffuse: { value: null },
+      uTime: { value: 0 },
+      uGrain: { value: q === 'low' ? 0.028 : 0.04 },
+      uVig: { value: 0.34 },
+    };
+    const grain = new ShaderPass(new THREE.ShaderMaterial({
+      uniforms: this.grainUniforms,
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse; uniform float uTime; uniform float uGrain; uniform float uVig;
+        varying vec2 vUv;
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)) + uTime * 43.0) * 43758.5453); }
+        void main(){
+          vec4 c = texture2D(tDiffuse, vUv);
+          c.rgb += (hash(vUv * vec2(1920.0, 1080.0)) - 0.5) * uGrain;
+          vec2 d = vUv - 0.5;
+          c.rgb *= 1.0 - uVig * smoothstep(0.28, 0.72, dot(d, d) * 2.0);
+          gl_FragColor = c;
+        }`,
+    }), 'tDiffuse');
+    composer.addPass(grain);
+    composer.addPass(new OutputPass());
+    this.composer = composer;
+  }
+
+  private renderFrame(): void {
+    if (this.composer) {
+      if (this.grainUniforms) this.grainUniforms.uTime.value = performance.now() / 1000;
+      this.composer.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   private onResize = (): void => {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.composer?.setSize(window.innerWidth, window.innerHeight);
   };
 
   /* ==================== input ==================== */
@@ -1055,7 +1122,7 @@ export class Game {
     const st = useGameStore.getState();
     const running = st.phase === 'PLAYING' || st.phase === 'MINIGAME';
     if (!running || !this.clock.tick(performance.now())) {
-      this.renderer.render(this.scene, this.camera);
+      this.renderFrame();
       return;
     }
     const dt = this.clock.dt;
@@ -1136,9 +1203,19 @@ export class Game {
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.player.yaw + Math.PI);
     this.camera.rotateX(this.player.pitch);
+    if (!this.fillLight) {
+      this.fillLight = new THREE.PointLight(0x9a8f7a, 0.6, 5, 2);
+      this.scene.add(this.fillLight);
+    }
+    this.fillLight.position.set(eye.x, eye.y, eye.z);
     if (this.lampOn || this.pulseLampOn) {
       if (!this.lampLight) {
-        this.lampLight = new THREE.SpotLight(0xffe0b0, 6, 22, 0.5, 0.5);
+        this.lampLight = new THREE.SpotLight(0xffe0b0, 9, 24, 0.55, 0.6, 1.8);
+        if (QUALITY[this.settings.quality].shadowMap) {
+          this.lampLight.castShadow = true;
+          this.lampLight.shadow.mapSize.set(512, 512);
+          this.lampLight.shadow.bias = -0.004;
+        }
         this.scene.add(this.lampLight);
         this.scene.add(this.lampLight.target);
       }
@@ -1147,7 +1224,7 @@ export class Game {
       const t = v3();
       this.player.lookDir(t);
       this.lampLight.target.position.set(eye.x + t.x * 6, eye.y + t.y * 6, eye.z + t.z * 6);
-      this.lampLight.intensity = this.pulseLampOn ? 5 + Math.sin(this.clock.time * 9) * 2 : 6;
+      this.lampLight.intensity = this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9;
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
@@ -1169,10 +1246,11 @@ export class Game {
       this.lastHud = this.clock.time;
       this.publishHud();
     }
-    this.renderer.render(this.scene, this.camera);
+    this.renderFrame();
   };
 
   private lampLight: THREE.SpotLight | null = null;
+  private fillLight: THREE.PointLight | null = null;
 
   private publishHud(): void {
     const st = useGameStore.getState();

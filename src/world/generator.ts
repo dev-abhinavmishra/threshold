@@ -353,13 +353,20 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     } else {
       const candidates = pickSpec(MAIN_TEMPLATES, structRng, i, entry.biomeBias ?? biomeBiasFor(i));
       for (const cand of candidates) {
-        placedRoom = tryPlace(cand.spec, connPos, connDir, placed);
+        placedRoom = tryPlace(cand.spec, connPos, connDir, placed)
+          ?? jitteredPlace(cand.spec, connPos, connDir, placed);
         if (placedRoom) break;
       }
       if (!placedRoom) {
-        // guaranteed fit: the straight corridor
+        // guaranteed fit: the straight corridor — try its full jitter space,
+        // then force a small forward nudge (bridge drawn via pendingConnector).
         const fallback = MAIN_TEMPLATE_MAP.get('corr-straight')!.build(streams.roomStream('structure', i));
-        placedRoom = tryPlace(fallback, connPos, connDir, placed, true)!;
+        placedRoom = jitteredPlace(fallback, connPos, connDir, placed);
+        if (!placedRoom) {
+          const pos = v3(connPos.x + connDir.x * 2, 0, connPos.z + connDir.z * 2);
+          pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
+          placedRoom = tryPlace(fallback, pos, connDir, placed, true)!;
+        }
       }
     }
 
@@ -466,6 +473,16 @@ function biomeBiasFor(i: number): Biome | null {
  * unless every jitter fails.
  */
 function tryPlaceWithJitters(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: PlacedRoom[], boundC = v3(0, 0, 0)): PlacedRoom | null {
+  const p = jitteredPlace(spec, connPos, connDir, placed, boundC);
+  if (p) return p;
+  // Last resort: forced placement 2m forward (still bridge it visually).
+  const pos = v3(connPos.x + connDir.x * 2, 0, connPos.z + connDir.z * 2);
+  pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
+  return tryPlace(spec, pos, connDir, placed, true, boundC);
+}
+
+/** Jittered placement without the forced-overlap fallback (null when nothing fits). */
+function jitteredPlace(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: PlacedRoom[], boundC = v3(0, 0, 0)): PlacedRoom | null {
   // 1) Extend the connector forward: the stretch between prev exit and the
   //    milestone's entry becomes a drawn gap corridor (straight, drawable).
   for (const fz of [0, 2, 4, 6, 8, 10, 14, 18, 24, 30]) {
@@ -494,10 +511,7 @@ function tryPlaceWithJitters(spec: RoomSpec, connPos: Vec3, connDir: Vec3, place
       }
     }
   }
-  // Last resort: forced placement 2m forward (still bridge it visually).
-  const pos = v3(connPos.x + connDir.x * 2, 0, connPos.z + connDir.z * 2);
-  pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
-  return tryPlace(spec, pos, connDir, placed, true, boundC);
+  return null;
 }
 
 let pendingConnector: { a: Vec3; b: Vec3; elbow?: Vec3 } | null = null;
@@ -534,12 +548,15 @@ function tryPlace(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: PlacedRo
   const p = placeSpec(spec, connPos, connDir);
   if (force) return p;
   const shrink = 0.5;
+  const eps = 0.05; // float-edge tolerance for non-adjacent rooms
   for (const q of placed) {
-    const a: Aabb = { ...p.aabb, minX: p.aabb.minX + shrink, maxX: p.aabb.maxX - shrink, minZ: p.aabb.minZ + shrink, maxZ: p.aabb.maxZ - shrink };
-    const b: Aabb = { ...q.aabb, minX: q.aabb.minX + shrink, maxX: q.aabb.maxX - shrink, minZ: q.aabb.minZ + shrink, maxZ: q.aabb.maxZ - shrink };
+    const adjacent = q === placed[placed.length - 1];
+    const s = adjacent ? shrink : eps;
+    const a: Aabb = { ...p.aabb, minX: p.aabb.minX + s, maxX: p.aabb.maxX - s, minZ: p.aabb.minZ + s, maxZ: p.aabb.maxZ - s };
+    const b: Aabb = { ...q.aabb, minX: q.aabb.minX + s, maxX: q.aabb.maxX - s, minZ: q.aabb.minZ + s, maxZ: q.aabb.maxZ - s };
     if (aabbIntersects2D(a, b)) {
       // Allow touching the immediately previous room (shared boundary wall).
-      if (q === placed[placed.length - 1]) {
+      if (adjacent) {
         // Only OK if intersection is a thin boundary overlap.
         const ix = Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX);
         const iz = Math.min(a.maxZ, b.maxZ) - Math.max(a.minZ, b.minZ);
@@ -767,22 +784,32 @@ function hasSurvivalOption(rooms: RoomInstance[], atIndex: number): boolean {
   return false;
 }
 
+/** Entities already scheduled in the 6-room validation window containing `room`. */
+function windowEntities(rooms: RoomInstance[], room: RoomInstance): EntityId[] {
+  const wLo = Math.floor(room.index / 6) * 6;
+  return rooms.slice(wLo, Math.min(rooms.length, wLo + 6))
+    .flatMap((r) => r.scheduled.map((s) => s.entity));
+}
+
+function windowCompatible(rooms: RoomInstance[], room: RoomInstance, id: EntityId): boolean {
+  const near = windowEntities(rooms, room);
+  return INCOMPATIBLE.every(([a, b]) => !(a === id && near.includes(b)) && !(b === id && near.includes(a)));
+}
+
 function guarantee(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, id: EntityId, lo: number, hi: number): void {
   const window = rooms.filter((r) => r.index >= lo && r.index <= hi && !r.authored && r.biome !== 'safe');
   if (!window.length) return;
   if (window.some((r) => r.scheduled.some((s) => s.entity === id))) return;
   if (id === 'sweep' || id === 'reprise' || id === 'maelstrom') {
-    const ok = window.filter((r) => hasSurvivalOption(rooms, r.index) && r.scheduled.length === 0);
+    const ok = window.filter((r) => hasSurvivalOption(rooms, r.index) && r.scheduled.length === 0 && windowCompatible(rooms, r, id));
     if (!ok.length) return;
     const room = ok[0];
     room.scheduled.push({ entity: id, triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff), passes: id === 'reprise' ? 2 : undefined });
     return;
   }
-  const room = window.find((r) => r.scheduled.length === 0) ?? window[0];
-  if (!room.scheduled.some((s) => s.entity === id)) {
-    room.scheduled = room.scheduled.filter((s) => INCOMPATIBLE.every(([a, b]) => !(s.entity === a && b === id) && !(s.entity === b && a === id)));
-    room.scheduled.push({ entity: id, triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
-  }
+  const room = window.find((r) => r.scheduled.length === 0 && windowCompatible(rooms, r, id));
+  if (!room) return;
+  room.scheduled.push({ entity: id, triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
 }
 
 /* ==================== UNDERSCRIPT ==================== */

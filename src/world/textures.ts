@@ -1,0 +1,101 @@
+/**
+ * Vendored CC0 texture sets (public/assets/textures/<name>/) and the shared
+ * surface materials built from them. All box geometry in the game is
+ * UV-fixed to 1 unit = 1 meter (see props.box / uvFixBox), so `period` is
+ * simply how many meters one texture tile should span.
+ */
+import * as THREE from 'three';
+
+const loader = new THREE.TextureLoader();
+const texCache = new Map<string, THREE.Texture>();
+const matCache = new Map<string, THREE.MeshStandardMaterial>();
+
+function tex(name: string, kind: 'color' | 'normalgl' | 'roughness', srgb = false): THREE.Texture {
+  const key = `${name}/${kind}`;
+  let t = texCache.get(key);
+  if (!t) {
+    try {
+      t = loader.load(`/assets/textures/${name}/${kind}.jpg`);
+    } catch {
+      // Headless environments (unit tests, SSR) have no real image loading —
+      // a blank texture keeps materials valid.
+      t = new THREE.Texture();
+    }
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    texCache.set(key, t);
+  }
+  return t;
+}
+
+export interface SurfaceOpts {
+  color?: number;
+  roughness?: number;
+  metalness?: number;
+  normalScale?: number;
+}
+
+/** Shared PBR material for a vendored texture set; `period` = meters per tile. */
+export function surfaceMaterial(name: string, period: number, opts: SurfaceOpts = {}): THREE.MeshStandardMaterial {
+  const key = `${name}@${period}:${opts.color ?? 0xffffff}:${opts.metalness ?? ''}`;
+  const hit = matCache.get(key);
+  if (hit) return hit;
+  const m = new THREE.MeshStandardMaterial({
+    color: opts.color ?? 0xffffff,
+    roughness: opts.roughness ?? 1.0,
+    metalness: opts.metalness ?? 0.02,
+  });
+  const r = 1 / period;
+  const c = tex(name, 'color', true).clone();
+  c.repeat.set(r, r);
+  m.map = c;
+  const n = tex(name, 'normalgl').clone();
+  n.repeat.set(r, r);
+  m.normalMap = n;
+  m.normalScale.setScalar(opts.normalScale ?? 0.85);
+  const ro = tex(name, 'roughness').clone();
+  ro.repeat.set(r, r);
+  m.roughnessMap = ro;
+  matCache.set(key, m);
+  return m;
+}
+
+/** Named surface materials used by the room builder. */
+export const TEX = {
+  wallpaper: () => surfaceMaterial('wallpaper', 1.6, { color: 0xbfb8a8 }),
+  plasterDamaged: () => surfaceMaterial('plaster-damaged', 1.8, { color: 0xb0a89a }),
+  ceiling: () => surfaceMaterial('ceiling-plaster', 2.0, { color: 0xa8a49a }),
+  carpet: () => surfaceMaterial('carpet-dark', 2.0, { color: 0x9a8f86 }),
+  woodFloor: () => surfaceMaterial('wood-floor', 1.8, { color: 0xb09577 }),
+  woodFloorDark: () => surfaceMaterial('wood-floor-dark', 1.8, { color: 0x8a7057 }),
+  concreteFloor: () => surfaceMaterial('concrete-dark', 2.2, { color: 0x9aa0a6 }),
+  concreteWall: () => surfaceMaterial('concrete-bunker', 2.0, { color: 0xa8aeB0 }),
+  brick: () => surfaceMaterial('brick-damaged', 2.0, { color: 0xa09080 }),
+  metalDirty: () => surfaceMaterial('metal-dirty', 1.2, { color: 0xb8bcc0, metalness: 0.55 }),
+  metalAged: () => surfaceMaterial('metal-aged', 1.4, { color: 0xc0c4c8, metalness: 0.5 }),
+  leather: () => surfaceMaterial('leather-dark', 1.0, { color: 0x9a8874 }),
+};
+
+/** Prop-level swaps (used through MAT): wood and metal grain on furniture. */
+export function woodTex(dark = false): THREE.MeshStandardMaterial {
+  return dark
+    ? surfaceMaterial('wood-floor-dark', 1.2, { color: 0x6e543c })
+    : surfaceMaterial('wood-floor', 1.2, { color: 0x9a7a56 });
+}
+export function metalTex(dark = false): THREE.MeshStandardMaterial {
+  return dark
+    ? surfaceMaterial('metal-dirty', 0.9, { color: 0x8a9096, metalness: 0.5 })
+    : surfaceMaterial('metal-aged', 1.0, { color: 0xaab0b6, metalness: 0.55 });
+}
+export function carpetTex(green = false): THREE.MeshStandardMaterial {
+  return surfaceMaterial('carpet-dark', 1.6, { color: green ? 0x6a7a6e : 0x8a7a6e });
+}
+
+export function disposeTextures(): void {
+  for (const t of texCache.values()) t.dispose();
+  texCache.clear();
+  for (const m of matCache.values()) m.dispose();
+  matCache.clear();
+}

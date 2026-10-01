@@ -4,6 +4,7 @@
  * Underscript: gray-blue concrete, fluorescent ivory, black ink, red amendment.
  */
 import * as THREE from 'three';
+import { woodTex, metalTex, carpetTex, TEX } from './textures';
 
 export const PALETTE = {
   plaster: 0x8f8578,
@@ -45,27 +46,27 @@ function m(key: string, color: number, opts: Partial<THREE.MeshStandardMaterialP
 export const MAT = {
   plaster: () => m('plaster', PALETTE.plaster),
   plasterDark: () => m('plasterDark', PALETTE.plasterDark),
-  darkOak: () => m('darkOak', PALETTE.darkOak),
-  oak: () => m('oak', PALETTE.oak),
+  darkOak: () => woodTex(true),
+  oak: () => woodTex(false),
   brass: () => m('brass', PALETTE.brass, { metalness: 0.55, roughness: 0.45 }),
   brassBright: () => m('brassBright', PALETTE.brassBright, { metalness: 0.65, roughness: 0.35 }),
-  steel: () => m('steel', PALETTE.steel, { metalness: 0.5, roughness: 0.6 }),
-  steelDark: () => m('steelDark', PALETTE.steelDark, { metalness: 0.45, roughness: 0.7 }),
+  steel: () => metalTex(false),
+  steelDark: () => metalTex(true),
   paper: () => m('paper', PALETTE.paper, { roughness: 1 }),
   paperOld: () => m('paperOld', PALETTE.paperOld, { roughness: 1 }),
-  tile: () => m('tile', PALETTE.tile, { roughness: 0.6 }),
+  tile: () => TEX.concreteFloor(),
   charcoal: () => m('charcoal', PALETTE.charcoal),
-  carpet: () => m('carpet', PALETTE.carpet, { roughness: 1 }),
-  carpetGreen: () => m('carpetGreen', PALETTE.carpetGreen, { roughness: 1 }),
+  carpet: () => carpetTex(false),
+  carpetGreen: () => carpetTex(true),
   oxGreen: () => m('oxGreen', PALETTE.oxGreen),
   glassDusty: () => m('glassDusty', PALETTE.glassDusty, { transparent: true, opacity: 0.35, roughness: 0.2, metalness: 0.2 }),
-  amber: () => m('amber', PALETTE.amber, { emissive: PALETTE.amber, emissiveIntensity: 0.7 }),
-  amberDim: () => m('amberDim', PALETTE.amber, { emissive: PALETTE.amber, emissiveIntensity: 0.25 }),
-  redLamp: () => m('redLamp', PALETTE.red, { emissive: PALETTE.red, emissiveIntensity: 0.9 }),
+  amber: () => m('amber', PALETTE.amber, { emissive: PALETTE.amber, emissiveIntensity: 1.7 }),
+  amberDim: () => m('amberDim', PALETTE.amber, { emissive: PALETTE.amber, emissiveIntensity: 1.1 }),
+  redLamp: () => m('redLamp', PALETTE.red, { emissive: PALETTE.red, emissiveIntensity: 2.0 }),
   ink: () => m('ink', PALETTE.ink),
-  concrete: () => m('concrete', PALETTE.concrete, { roughness: 1 }),
-  concreteDark: () => m('concreteDark', PALETTE.concreteDark, { roughness: 1 }),
-  fluoro: () => m('fluoro', PALETTE.fluoro, { emissive: PALETTE.fluoro, emissiveIntensity: 0.6 }),
+  concrete: () => TEX.concreteWall(),
+  concreteDark: () => TEX.concreteFloor(),
+  fluoro: () => m('fluoro', PALETTE.fluoro, { emissive: PALETTE.fluoro, emissiveIntensity: 1.4 }),
   wax: () => m('wax', PALETTE.wax),
   waterDark: () => m('waterDark', 0x1a2426, { roughness: 0.15, metalness: 0.3 }),
   darkVoid: () => m('darkVoid', 0x0b0a09, { roughness: 1 }),
