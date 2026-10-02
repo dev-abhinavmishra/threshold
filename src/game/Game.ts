@@ -11,6 +11,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { GameClock } from '../engine/clock';
 import { SoundEventBus } from '../engine/events';
 import { SeedStreams, Rng } from '../engine/rng';
@@ -122,6 +123,13 @@ export class Game {
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     }
     this.scene = new THREE.Scene();
+    // Neutral room environment gives PBR materials something to reflect —
+    // without it metallic/dark GLTF props collapse to flat black. Kept dim
+    // so the horror lighting stays dominant.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    this.scene.environmentIntensity = 0.32;
+    pmrem.dispose();
     this.scene.background = new THREE.Color(0x050505);
     this.scene.fog = new THREE.FogExp2(0x050505, q.fogDensity);
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, window.innerWidth / window.innerHeight, 0.08, 80);
@@ -149,7 +157,7 @@ export class Game {
       composer.addPass(ssao);
     }
     if (q !== 'low') {
-      const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.55, 0.82);
+      const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.26, 0.55, 0.86);
       composer.addPass(bloom);
     }
     this.grainUniforms = {
@@ -1299,7 +1307,7 @@ export class Game {
     this.fillLight.position.set(eye.x, eye.y, eye.z);
     if (this.lampOn || this.pulseLampOn) {
       if (!this.lampLight) {
-        this.lampLight = new THREE.SpotLight(0xffe0b0, 9, 24, 0.55, 0.6, 1.8);
+        this.lampLight = new THREE.SpotLight(0xffd9a4, 7, 24, 0.52, 0.85, 1.8);
         if (QUALITY[this.settings.quality].shadowMap) {
           this.lampLight.castShadow = true;
           this.lampLight.shadow.mapSize.set(512, 512);

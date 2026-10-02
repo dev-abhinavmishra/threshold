@@ -53,6 +53,45 @@ function dustSprite(): THREE.Texture | null {
   return dustTex;
 }
 
+// Vertical alpha ramp for light shafts: bright at the fixture, gone at the
+// floor — kills the hard bottom ellipse a plain cone draws.
+let shaftTex: THREE.Texture | null = null;
+function shaftTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  if (!shaftTex) {
+    const cv = document.createElement('canvas');
+    cv.width = 4; cv.height = 128;
+    const ctx = cv.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 128);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.55, '#5a5a5a');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 4, 128);
+    shaftTex = new THREE.CanvasTexture(cv);
+  }
+  return shaftTex;
+}
+
+// Radial alpha for floor light pools — soft-edged glow instead of a lit slab.
+let poolTex: THREE.Texture | null = null;
+function poolTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  if (!poolTex) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const ctx = cv.getContext('2d')!;
+    const grad = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.55, '#6e6e6e');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    poolTex = new THREE.CanvasTexture(cv);
+  }
+  return poolTex;
+}
+
 // Wallpaper tint palette — subtle per-room cast so corridors don't all read
 // the same beige. Multiplies the shared wallpaper map, so materials are
 // cloned per room and disposed with it.
@@ -267,7 +306,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
   // Trim: baseboard + crown strips along the four walls
   const trimMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.darkOak();
-  const wainsMat = isUnder ? MAT.steelDark() : MAT.oak();
+  const wainsMat = isUnder ? MAT.steelDark() : MAT.darkOak();
   for (const [sx, sz, sw2, sd] of [
     [0, d / 2 - 0.04, w - 0.3, 0.07],
     [0, -d / 2 + 0.04, w - 0.3, 0.07],
@@ -504,14 +543,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         if (mt.kind === 'window') {
           const inX = spot.wall === 'e' ? -0.8 : spot.wall === 'w' ? 0.8 : 0;
           const inZ = spot.wall === 'n' ? -0.8 : spot.wall === 's' ? 0.8 : 0;
-          const poolMat = new THREE.MeshStandardMaterial({
-            color: 0x101820, emissive: 0x5f7791, emissiveIntensity: 0.5,
-            transparent: true, opacity: 0.55, roughness: 1, depthWrite: false,
+          const poolMat = new THREE.MeshBasicMaterial({
+            color: 0x5f7791, alphaMap: poolTexture(), transparent: true, opacity: 0.45,
+            blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
           });
           poolMat.userData.decalMat = true;
-          const pool = new THREE.Mesh(texBox(1.35, 0.012, 2.4), poolMat);
+          const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.6), poolMat);
           pool.position.set(lp.x + inX, 0.012, lp.z + inZ);
-          pool.rotation.y = mountYaw[spot.wall] + (rng.float() - 0.5) * 0.15;
+          pool.rotation.set(-Math.PI / 2, mountYaw[spot.wall] + (rng.float() - 0.5) * 0.15, 0);
           group.add(pool);
         }
       } catch { /* dressing only */ }
@@ -652,6 +691,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         group.add(pivot);
       } else {
         // pendant — cord + shade + bulb, pivoted at the ceiling anchor so it swings
+                // plaster ceiling rose anchoring the pendant cord
+        const rose = new THREE.Group();
+        rose.position.set(ls.x, ls.y + 0.5, ls.z);
+        const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.04, 20), MAT.plaster());
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.028, 8, 22), MAT.plaster());
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = -0.02;
+        rose.add(disc, ring);
+        group.add(rose);
         const pivot = new THREE.Group();
         pivot.position.set(ls.x, ls.y + 0.5, ls.z);
         const cord = new THREE.Mesh(texBox(0.02, 0.5, 0.02), MAT.charcoal());
@@ -749,7 +797,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const shaft = new THREE.Mesh(
         new THREE.CylinderGeometry(0.2, Math.min(0.62, ls.range * 0.16), len, 10, 1, true),
         new THREE.MeshBasicMaterial({
-          color: ls.color, transparent: true, opacity: 0.03,
+          color: ls.color, transparent: true, opacity: 0.055, alphaMap: shaftTexture(),
           blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
           fog: false,
         }),
@@ -758,6 +806,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(shaft);
       shafts.push(shaft);
       shaftCount++;
+      // soft glow pool where the shaft lands
+      const pool = new THREE.Mesh(
+        new THREE.CircleGeometry(Math.min(0.9, ls.range * 0.2), 20),
+        new THREE.MeshBasicMaterial({
+          color: ls.color, alphaMap: poolTexture(), transparent: true, opacity: 0.16,
+          blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+        }),
+      );
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(ls.x, 0.014, ls.z);
+      group.add(pool);
     }
 
     // Dust motes — sparse additive points drifting inside lit rooms.

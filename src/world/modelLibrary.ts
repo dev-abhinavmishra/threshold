@@ -245,9 +245,18 @@ function normalize(root: THREE.Object3D, spec: ModelSpec): THREE.Group {
 function bake(holder: THREE.Group): THREE.Group {
   const byMat = new Map<string, { mat: THREE.Material; geos: THREE.BufferGeometry[] }>();
   holder.updateMatrixWorld(true);
+  const tuned = new Set<string>();
   holder.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
+    // Poly Haven exports ship near-mirror metals; under indoor lighting they
+    // render as voids. Cap metalness / floor roughness so they read as worn.
+    const mat = m.material as THREE.MeshStandardMaterial;
+    if (mat && !tuned.has(mat.uuid)) {
+      tuned.add(mat.uuid);
+      if (typeof mat.metalness === 'number') mat.metalness = Math.min(mat.metalness, 0.85);
+      if (typeof mat.roughness === 'number') mat.roughness = Math.max(mat.roughness, 0.35);
+    }
     const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
     const key = (m.material as THREE.Material).uuid;
     let e = byMat.get(key);

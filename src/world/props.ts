@@ -796,7 +796,7 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
 
 // Fixture kinds whose GLTF materials get a warm emissive lift so they read
 // as light sources rather than unlit furniture.
-const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'monitor', 'serverRack', 'fluoroStrip', 'cageLight', 'securityLight', 'pipeLamp']);
+const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'monitor', 'serverRack', 'fluoroStrip', 'cageLight', 'securityLight', 'pipeLamp', 'lantern', 'lanternChandelier', 'chainBulb']);
 
 export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   const model = modelInstance(spec.kind, rng.float());
@@ -810,7 +810,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
           const mat = m.material as THREE.MeshStandardMaterial;
           if (mat && mat.emissive) {
             mat.emissive = glow;
-            mat.emissiveIntensity = spec.kind === 'chandelier' ? 0.45 : 0.8;
+            mat.emissiveIntensity = spec.kind === 'chandelier' || spec.kind === 'lanternChandelier' ? 0.35 : 0.55;
           }
         }
       });
