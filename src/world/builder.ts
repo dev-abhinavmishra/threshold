@@ -65,7 +65,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.name = `room-${room.index}`;
 
   const isUnder = room.biome === 'underscript';
-  const wallMat = isUnder ? TEX.concreteWall() : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  const wallMat = isUnder || spec.biome === 'maintenance'
+    ? TEX.concreteWall()
+    : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
   const floorMat = isUnder ? TEX.concreteFloor() : (room.floorMaterial === 'carpet' ? TEX.carpet() : room.floorMaterial === 'stone' || room.floorMaterial === 'metal' ? TEX.concreteFloor() : TEX.woodFloor());
   const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
@@ -177,7 +179,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     group.add(wallMesh);
   }
   // Trim: baseboard + crown strips along the four walls
-  const trimMat = isUnder ? MAT.steelDark() : MAT.darkOak();
+  const trimMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.darkOak();
   const wainsMat = isUnder ? MAT.steelDark() : MAT.oak();
   for (const [sx, sz, sw2, sd] of [
     [0, d / 2 - 0.04, w - 0.3, 0.07],
@@ -191,7 +193,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const cr = new THREE.Mesh(texBox(sw2, 0.1, sd), trimMat);
     cr.position.set(sx, h - 0.05, sz);
     group.add(cr);
-    if (!isUnder && h >= 2.6) {
+    if (!isUnder && spec.biome !== 'maintenance' && h >= 2.6) {
       // Wainscot panel band + chair rail + picture rail (non-underfloor rooms)
       const panel = new THREE.Mesh(texBox(sw2, 0.85, sd * 0.8), wainsMat);
       panel.position.set(sx, 0.55, sz);
@@ -250,13 +252,28 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ct.position.set(0, 2.56, zOff);
       frame.add(cl, cr2, ct);
     }
-    // Numbered label plate above door — exit doors read the next room's number.
-    const label = String(port === spec.entry ? room.index : room.index + 1).padStart(3, '0');
-    const plate = new THREE.Mesh(texBox(0.55, 0.27, 0.05), plateMaterial(label) ?? MAT.brass());
-    plate.position.y = 2.68;
-    frame.add(plate);
-    // leaf
-    const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), isUnder ? MAT.steel() : MAT.oak());
+    // Exit signage: service areas get a red EXIT box instead of a number plate.
+    const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
+    if (industrial && port !== spec.entry && rng.float() < 0.45) {
+      for (const zOff of [0.26, -0.26]) {
+        const es = new THREE.Mesh(texBox(0.55, 0.22, 0.06), MAT.redLamp());
+        es.position.set(0, 2.62, zOff);
+        frame.add(es);
+      }
+    } else {
+      // Numbered label plate above door — exit doors read the next room's number.
+      const label = String(port === spec.entry ? room.index : room.index + 1).padStart(3, '0');
+      const plate = new THREE.Mesh(texBox(0.55, 0.27, 0.05), plateMaterial(label) ?? MAT.brass());
+      plate.position.y = 2.68;
+      frame.add(plate);
+    }
+    // leaf — painted/metal variants by biome, seeded per room
+    const leafMat = isUnder
+      ? MAT.steel()
+      : spec.biome === 'maintenance'
+        ? MAT.steelDark()
+        : rng.pick([TEX.woodFloor(), TEX.woodFloor(), MAT.darkOak(), MAT.oxGreen()]);
+    const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), leafMat);
     // hinge at edge for swing
     const hinge = new THREE.Group();
     leaf.position.set(port.width / 2 - 0.05, 1.1, 0);
@@ -329,6 +346,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.x = -Math.PI / 2;
       m.rotation.z = rng.float() * Math.PI;
       m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
+      group.add(m);
+    }
+
+    // Ceiling water stains — under ducts/pipes in service spaces.
+    if ((isUnder || spec.biome === 'maintenance') && rng.float() < 0.7) {
+      const sz = 1.1 + rng.float() * 1.4;
+      const m = decalQuad(floorStain(rng), sz, sz);
+      m.rotation.x = Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI;
+      m.position.set((rng.float() - 0.5) * (w - sz), h - 0.06, (rng.float() - 0.5) * (d - sz));
       group.add(m);
     }
 
