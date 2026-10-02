@@ -666,6 +666,121 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(w, 0.07, 0.06), MAT.steelDark(), 0, h * 0.52, 0));
     return { group: g, colliders: [{ x: 0, z: 0, w, d: 0.12, h, movementOnly: true }] };
   },
+  // Morgue drawer bank — steel frame, 3×4 drawer fronts; a few sit open
+  // with a tray out and a sheeted form on it.
+  morgueDrawer: (_s, rng) => {
+    const g = new THREE.Group();
+    const W = 2.0, H = 2.05, D = 0.62;
+    g.add(mesh(box(W, H, D), MAT.steelDark(), 0, H / 2, 0));
+    g.add(mesh(box(W + 0.06, 0.08, D + 0.06), MAT.charcoal(), 0, H + 0.02, 0));
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 3; c++) {
+        const dx = -W / 2 + 0.36 + c * 0.64;
+        const dy = 0.33 + r * 0.47;
+        if (rng.bool(0.1)) {
+          // open bay: dark cavity, tray pulled out, drawer face at the tray's end
+          g.add(mesh(box(0.56, 0.4, 0.04), MAT.ink(), dx, dy, D / 2 + 0.02));
+          g.add(mesh(box(0.56, 0.03, 0.52), MAT.steel(), dx, dy - 0.17, D / 2 + 0.29));
+          if (rng.bool(0.5))
+            g.add(mesh(box(0.4, 0.11, 0.42), MAT.paperOld(), dx, dy - 0.11, D / 2 + 0.27));
+          g.add(mesh(box(0.58, 0.42, 0.03), MAT.steel(), dx, dy, D / 2 + 0.56));
+          g.add(mesh(box(0.16, 0.03, 0.02), MAT.charcoal(), dx, dy + 0.1, D / 2 + 0.58));
+        } else {
+          g.add(mesh(box(0.58, 0.42, 0.03), MAT.steel(), dx, dy, D / 2 + 0.015));
+          g.add(mesh(box(0.16, 0.03, 0.02), MAT.charcoal(), dx, dy + 0.1, D / 2 + 0.035));
+          g.add(mesh(box(0.1, 0.05, 0.008), MAT.paperOld(), dx, dy - 0.12, D / 2 + 0.032));
+        }
+      }
+    }
+    return single(g, W + 0.1, H + 0.1, D + 0.15);
+  },
+  // Morgue/exam gurney — sheeted slab on a thin wheeled frame.
+  gurney: (_s, rng) => {
+    const g = new THREE.Group();
+    g.add(mesh(box(1.8, 0.05, 0.6), MAT.steelDark(), 0, 0.62, 0));
+    g.add(mesh(box(1.86, 0.13, 0.66), MAT.paperOld(), 0, 0.72, 0));
+    for (const sx of [-0.75, 0.75])
+      for (const sz of [-0.24, 0.24]) {
+        g.add(mesh(cyl(0.02, 0.02, 0.6, 6), MAT.steelDark(), sx, 0.31, sz));
+        g.add(mesh(cyl(0.05, 0.05, 0.03, 8), MAT.charcoal(), sx, 0.035, sz));
+      }
+    if (rng.bool(0.55))
+      g.add(mesh(box(0.5, 0.14, 0.4), MAT.paperOld(), (rng.float() - 0.5) * 0.8, 0.86, 0));
+    return single(g, 1.9, 0.95, 0.7);
+  },
+  // Industrial washer — enameled box with a round porthole.
+  washer: (_s, rng) => {
+    const g = new THREE.Group();
+    g.add(mesh(box(0.74, 0.95, 0.68), MAT.steel(), 0, 0.5, 0));
+    g.add(mesh(box(0.74, 0.16, 0.66), MAT.charcoal(), 0, 1.0, 0));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.21, 0.035, 8, 18), MAT.charcoal());
+    ring.position.set(0, 0.52, 0.345);
+    g.add(ring);
+    const disc = mesh(cyl(0.19, 0.19, 0.02, 18), MAT.ink(), 0, 0.52, 0.345);
+    disc.rotation.x = Math.PI / 2;
+    g.add(disc);
+    for (let i = 0; i < 3; i++) {
+      const btn = mesh(box(0.05, 0.03, 0.02), (rng.bool(0.4) ? MAT.screenGreen() : MAT.charcoal()), -0.24 + i * 0.1, 1.0, 0.34);
+      g.add(btn);
+    }
+    return single(g, 0.78, 1.1, 0.72);
+  },
+  // Boiler — horizontal riveted tank on legs, hatch, pipe stubs, valve wheel.
+  boilerTank: (_s, rng) => {
+    const g = new THREE.Group();
+    const shell = mesh(cyl(0.66, 0.66, 1.9, 14), MAT.steelDark(), 0, 0.9, 0);
+    shell.rotation.z = Math.PI / 2;
+    g.add(shell);
+    for (const sx of [-0.62, 0.62])
+      g.add(mesh(box(0.22, 0.26, 0.9), MAT.charcoal(), sx, 0.13, 0));
+    const hatch = mesh(cyl(0.28, 0.28, 0.1, 12), MAT.charcoal(), -0.98, 0.9, 0);
+    hatch.rotation.z = Math.PI / 2;
+    g.add(hatch);
+    for (const sx of [-0.4, 0.35]) {
+      g.add(mesh(cyl(0.07, 0.07, 0.55, 8), MAT.steel(), sx, 1.75, 0));
+      g.add(mesh(cyl(0.1, 0.1, 0.08, 8), MAT.steel(), sx, 1.5, 0));
+    }
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.018, 6, 14), MAT.steel());
+    wheel.rotation.x = Math.PI / 2;
+    wheel.position.set(-0.98, 0.55, 0.2);
+    g.add(wheel);
+    const gauge = mesh(cyl(0.055, 0.055, 0.03, 10), MAT.brassBright(), -0.98, 1.2, 0.1);
+    gauge.rotation.x = Math.PI / 2;
+    g.add(gauge);
+    if (rng.bool(0.6))
+      g.add(mesh(box(0.34, 0.06, 0.02), MAT.redLamp(), 0, 0.26, 0.67));
+    return single(g, 2.1, 1.85, 1.4);
+  },
+  // Cubicle pod — U-shaped fabric partition, desk, office chair, monitor.
+  cubiclePod: (s, rng) => {
+    const g = new THREE.Group();
+    const panelMat = MAT.plasterDark();
+    g.add(mesh(box(1.7, 1.35, 0.05), panelMat, 0, 0.675, -0.78));
+    g.add(mesh(box(0.05, 1.35, 1.55), panelMat, -0.82, 0.675, 0));
+    g.add(mesh(box(0.05, 1.35, 1.55), panelMat, 0.82, 0.675, 0));
+    g.add(mesh(box(1.55, 0.05, 0.62), MAT.oak(), 0, 0.73, -0.45));
+    g.add(mesh(box(1.55, 0.62, 0.04), MAT.charcoal(), 0, 0.4, -0.48));
+    // office chair — stem + seat + back
+    g.add(mesh(cyl(0.03, 0.2, 0.42, 8), MAT.charcoal(), 0.25, 0.24, 0.15));
+    g.add(mesh(box(0.48, 0.07, 0.46), MAT.charcoal(), 0.25, 0.48, 0.15));
+    g.add(mesh(box(0.46, 0.55, 0.06), MAT.charcoal(), 0.25, 0.85, 0.36));
+    const mon = builders.monitor!(s, rng);
+    mon.group.position.set(-0.28, 0.755, -0.52);
+    mon.group.rotation.y = 0.15;
+    g.add(mon.group);
+    g.add(mesh(box(0.42, 0.02, 0.15), MAT.charcoal(), -0.24, 0.75, -0.18));
+    if (rng.bool(0.6))
+      g.add(mesh(box(0.3, 0.05, 0.22), MAT.paperOld(), 0.4, 0.78, -0.5));
+    return {
+      group: g,
+      colliders: [
+        { x: 0, z: -0.78, w: 1.7, d: 0.06, h: 1.35 },
+        { x: -0.82, z: 0, w: 0.06, d: 1.55, h: 1.35 },
+        { x: 0.82, z: 0, w: 0.06, d: 1.55, h: 1.35 },
+        { x: 0, z: -0.45, w: 1.55, d: 0.65, h: 0.76 },
+      ],
+    };
+  },
 };
 
 // Fixture kinds whose GLTF materials get a warm emissive lift so they read

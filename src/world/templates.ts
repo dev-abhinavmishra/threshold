@@ -1351,6 +1351,229 @@ const roomFinalAnte: RoomTemplate = {
   }),
 };
 
+/* ================= SPRINT-10 THEMED ROOMS ================= */
+
+const roomMorgue: RoomTemplate = {
+  id: 'morgue-drawers',
+  build: (_rng) => spec('morgue-drawers', 'maintenance', 8, 9, 3.0, {
+    props: [
+      { kind: 'morgueDrawer', x: -3.55, z: -2.4, yaw: Math.PI / 2 },
+      { kind: 'morgueDrawer', x: -3.55, z: 0.0, yaw: Math.PI / 2 },
+      { kind: 'morgueDrawer', x: -3.55, z: 2.4, yaw: Math.PI / 2 },
+      { kind: 'morgueDrawer', x: 3.55, z: -1.6, yaw: -Math.PI / 2 },
+      { kind: 'morgueDrawer', x: 3.55, z: 1.0, yaw: -Math.PI / 2 },
+      { kind: 'gurney', x: -0.8, z: -1.1, yaw: 0.12 },
+      { kind: 'gurney', x: 1.0, z: 1.5, yaw: -0.2 },
+      { kind: 'counter', x: -2.0, z: 4.0, yaw: Math.PI },
+      { kind: 'medBox', x: 1.9, z: 4.35, y: 1.4, yaw: Math.PI },
+      { kind: 'wetFloor', x: 1.3, z: -2.2 },
+      { kind: 'bucket', x: -1.7, z: 3.5 },
+      { kind: 'extinguisher', x: 2.2, z: -4.3, y: 1.4 },
+      { kind: 'wheelchair', x: 2.9, z: 3.6, yaw: -0.7 },
+    ],
+    sockets: [...drawerSockets([[-2.0, 4.0]]), ...lootSockets([[-0.8, -1.1], [1.0, 1.5]])],
+    hiding: [
+      { kind: 'underFurniture', x: -0.8, z: -1.1, yaw: 0, propKind: 'gurney' },
+      { kind: 'cabinet', x: 2.9, z: -3.8, yaw: Math.PI, propKind: 'locker' },
+    ],
+    lights: [
+      { x: 0, y: 2.62, z: -1.6, color: 0xd4e8dc, intensity: 0.85, range: 8, group: 'main', breakable: true },
+      { x: 0, y: 2.62, z: 2.6, color: 0xd4e8dc, intensity: 0.5, range: 6, group: 'dim', breakable: true },
+    ],
+    nav: [
+      { id: 'entry', x: 0, z: -4.1, links: ['mid'], tags: ['door', 'entry'] },
+      { id: 'mid', x: 0.2, z: 0.2, links: ['entry', 'exit'], tags: ['aisle'] },
+      { id: 'exit', x: 0, z: 4.1, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 7,
+    minRoom: 20,
+    floor: 'stone',
+    darkChance: 0.15,
+    perf: 4,
+  }),
+};
+
+const roomLaundry: RoomTemplate = {
+  id: 'laundry-hall',
+  build: (_rng) => spec('laundry-hall', 'maintenance', 7, 10, 3.0, {
+    props: [
+      { kind: 'washer', x: -2.9, z: -3.4, yaw: Math.PI / 2 },
+      { kind: 'washer', x: -2.9, z: -2.4, yaw: Math.PI / 2 },
+      { kind: 'washer', x: -2.9, z: -1.4, yaw: Math.PI / 2 },
+      { kind: 'washer', x: -2.9, z: -0.4, yaw: Math.PI / 2 },
+      { kind: 'washer', x: -2.9, z: 0.6, yaw: Math.PI / 2 },
+      { kind: 'washer', x: 2.9, z: -2.9, yaw: -Math.PI / 2 },
+      { kind: 'washer', x: 2.9, z: -1.9, yaw: -Math.PI / 2 },
+      { kind: 'washer', x: 2.9, z: -0.9, yaw: -Math.PI / 2 },
+      { kind: 'washer', x: 2.9, z: 0.1, yaw: -Math.PI / 2 },
+      { kind: 'trolley', x: 0.4, z: 2.6, yaw: 0.4 },
+      { kind: 'plasticCrate', x: -2.6, z: 2.4 },
+      { kind: 'plasticCrate', x: -2.3, z: 3.1, yaw: 0.5 },
+      { kind: 'bucket', x: 2.4, z: 2.2 },
+      { kind: 'wetFloor', x: -0.6, z: -0.9 },
+      { kind: 'puddle', x: 0.8, z: -1.8 },
+      { kind: 'steamVent', x: -1.8, z: 4.2 },
+      { kind: 'extinguisher', x: 2.9, z: 4.4, y: 1.4, yaw: Math.PI },
+    ],
+    sockets: lootSockets([[0.4, 2.6], [-2.6, 3.4]]),
+    hiding: [{ kind: 'cabinet', x: 2.9, z: 3.6, yaw: -Math.PI / 2, propKind: 'locker' }],
+    lights: [
+      { x: 0, y: 2.62, z: -2.4, color: 0xdde4ee, intensity: 0.55, range: 6, group: 'dim', breakable: true },
+      { x: 0, y: 2.62, z: 1.8, color: 0xdde4ee, intensity: 0.55, range: 6, group: 'dim', breakable: true },
+    ],
+    nav: [
+      { id: 'entry', x: 0, z: -4.6, links: ['a', 'mid'], tags: ['door', 'entry'] },
+      { id: 'a', x: -0.5, z: -2.0, links: ['entry', 'mid'], tags: [] },
+      { id: 'mid', x: 0.3, z: 0.6, links: ['a', 'exit'], tags: ['aisle'] },
+      { id: 'exit', x: 0, z: 4.6, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 7,
+    minRoom: 25,
+    floor: 'metal',
+    darkChance: 0.3,
+    perf: 4,
+  }),
+};
+
+const roomBoilerDetail: RoomTemplate = {
+  id: 'boiler-tank-room',
+  build: (_rng) => spec('boiler-tank-room', 'maintenance', 8, 9, 3.4, {
+    props: [
+      { kind: 'boilerTank', x: 0, z: 0.8, yaw: Math.PI / 2 },
+      { kind: 'propaneTank', x: -3.2, z: 3.4 },
+      { kind: 'propaneTank', x: -2.7, z: 3.6, yaw: 0.4 },
+      { kind: 'pipeRun', x: 3.5, z: -1.0, y: 0 },
+      { kind: 'pipeRun', x: -3.5, z: -1.6, y: 0 },
+      { kind: 'barrel', x: 2.9, z: -3.4 },
+      { kind: 'barrel', x: 3.3, z: -2.8, yaw: 0.7 },
+      { kind: 'toolChest', x: -3.0, z: -3.4 },
+      { kind: 'wrench', x: -3.0, z: -3.4, y: 0.95 },
+      { kind: 'multimeter', x: -2.6, z: -3.4, y: 0.95 },
+      { kind: 'wetFloor', x: 1.6, z: -2.0 },
+      { kind: 'steamVent', x: 2.4, z: 1.8 },
+      { kind: 'extinguisher', x: -2.0, z: -4.3, y: 1.4 },
+      { kind: 'stove', x: 2.8, z: 3.4 },
+    ],
+    sockets: [...lootSockets([[-3.0, -3.4], [2.8, 3.4]]), ...drawerSockets([[-3.0, -3.4]])],
+    hiding: [{ kind: 'cabinet', x: -3.4, z: 1.6, yaw: Math.PI / 2, propKind: 'locker' }],
+    lights: [
+      { x: 0, y: 2.9, z: -2.2, color: 0xffd9a0, intensity: 0.55, range: 6, group: 'dim', breakable: true },
+      { x: 0, y: 2.9, z: 2.4, color: 0xff9a50, intensity: 0.5, range: 5, group: 'warning', breakable: false },
+    ],
+    nav: [
+      { id: 'entry', x: 0, z: -4.1, links: ['l', 'r'], tags: ['door', 'entry'] },
+      { id: 'l', x: -1.9, z: -0.6, links: ['entry', 'mid'], tags: [] },
+      { id: 'r', x: 1.9, z: -0.6, links: ['entry', 'mid'], tags: [] },
+      { id: 'mid', x: 0, z: 2.4, links: ['l', 'r', 'exit'], tags: [] },
+      { id: 'exit', x: 0, z: 4.1, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 8,
+    minRoom: 25,
+    floor: 'metal',
+    darkChance: 0.35,
+    perf: 5,
+  }),
+};
+
+const roomCubicleOffice: RoomTemplate = {
+  id: 'cubicle-office',
+  build: (_rng) => spec('cubicle-office', 'records', 10, 9, 2.9, {
+    props: [
+      { kind: 'cubiclePod', x: -3.0, z: -2.4, yaw: Math.PI / 2 },
+      { kind: 'cubiclePod', x: -3.0, z: 0.0, yaw: Math.PI / 2 },
+      { kind: 'cubiclePod', x: -3.0, z: 2.4, yaw: Math.PI / 2 },
+      { kind: 'cubiclePod', x: 3.0, z: -2.4, yaw: -Math.PI / 2 },
+      { kind: 'cubiclePod', x: 3.0, z: 0.0, yaw: -Math.PI / 2 },
+      { kind: 'cubiclePod', x: 3.0, z: 2.4, yaw: -Math.PI / 2 },
+      { kind: 'filing', x: -1.4, z: 4.2 },
+      { kind: 'filing', x: -0.2, z: 4.2 },
+      { kind: 'waterCooler', x: 1.4, z: 4.1 },
+      { kind: 'plant', x: -4.4, z: 4.0 },
+      { kind: 'bin', x: 4.4, z: 4.0 },
+      { kind: 'rug', x: 0, z: 0.2 },
+      { kind: 'wallClock2', x: 4.4, z: -3.6, y: 2.1, yaw: -Math.PI / 2 },
+      { kind: 'paperScatter', x: -1.0, z: -1.4 },
+    ],
+    sockets: [...drawerSockets([[-1.4, 4.2], [-0.2, 4.2]]), ...lootSockets([[4.4, -3.0]])],
+    hiding: [
+      { kind: 'underFurniture', x: -3.0, z: 0.0, yaw: Math.PI / 2, propKind: 'desk' },
+      { kind: 'cabinet', x: 4.4, z: -3.9, yaw: -Math.PI / 2, propKind: 'cabinet' },
+    ],
+    lights: [
+      { x: -2.4, y: 2.62, z: -1.4, color: 0xfff0d8, intensity: 0.8, range: 7, group: 'main', breakable: true },
+      { x: 2.4, y: 2.62, z: 1.8, color: 0xfff0d8, intensity: 0.8, range: 7, group: 'main', breakable: true },
+    ],
+    nav: [
+      { id: 'entry', x: 0, z: -4.1, links: ['mid'], tags: ['door', 'entry'] },
+      { id: 'mid', x: 0, z: 0.2, links: ['entry', 'exit', 'w', 'e'], tags: ['aisle'] },
+      { id: 'w', x: -4.2, z: 0.2, links: ['mid'], tags: [] },
+      { id: 'e', x: 4.2, z: 0.2, links: ['mid'], tags: [] },
+      { id: 'exit', x: 0, z: 4.1, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 8,
+    minRoom: 15,
+    floor: 'carpet',
+    darkChance: 0.2,
+    perf: 5,
+  }),
+};
+
+const roomLibraryStacks: RoomTemplate = {
+  id: 'library-stacks',
+  build: (_rng) => spec('library-stacks', 'records', 9, 11, 3.4, {
+    props: [
+      // 4 parallel stacks, each split at the mid cross-aisle
+      { kind: 'bookshelf', x: -3.4, z: -2.7, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -3.4, z: -1.3, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -3.4, z: 1.4, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -3.4, z: 2.8, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -1.4, z: -2.7, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -1.4, z: -1.3, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -1.4, z: 1.4, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: -1.4, z: 2.8, yaw: Math.PI / 2 },
+      { kind: 'bookshelf', x: 1.4, z: -2.7, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 1.4, z: -1.3, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 1.4, z: 1.4, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 1.4, z: 2.8, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 3.4, z: -2.7, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 3.4, z: -1.3, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 3.4, z: 1.4, yaw: -Math.PI / 2 },
+      { kind: 'bookshelf', x: 3.4, z: 2.8, yaw: -Math.PI / 2 },
+      { kind: 'rollingLadder', x: -3.4, z: -3.9, yaw: Math.PI / 2 },
+      { kind: 'stool', x: 2.4, z: 0.0 },
+      { kind: 'desk', x: 0, z: -4.6 },
+      { kind: 'deskLamp', x: 0.3, z: -4.6, y: 0.78 },
+      { kind: 'papers', x: -0.4, z: -4.55, y: 0.8 },
+      { kind: 'paperScatter', x: -2.4, z: 0.0 },
+      { kind: 'paperScatter', x: 2.4, z: -0.6 },
+      { kind: 'rug', x: 0, z: -3.6 },
+      { kind: 'clock', x: 4.0, z: -4.6, yaw: Math.PI },
+    ],
+    sockets: [...drawerSockets([[0, -4.6]]), ...lootSockets([[-2.4, 0.0], [2.4, 3.6], [0.0, 4.5]])],
+    hiding: [
+      { kind: 'cabinet', x: -4.0, z: -4.6, yaw: 0, propKind: 'cabinet' },
+      { kind: 'underFurniture', x: 0, z: -4.6, yaw: Math.PI, propKind: 'desk' },
+    ],
+    lights: [
+      { x: -2.4, y: 3.0, z: 0, color: 0xffd9a0, intensity: 0.6, range: 6, group: 'dim', breakable: true },
+      { x: 2.4, y: 3.0, z: 0, color: 0xffd9a0, intensity: 0.6, range: 6, group: 'dim', breakable: true },
+      { x: 0, y: 2.2, z: -4.6, color: 0xffc878, intensity: 0.5, range: 4, group: 'dim', breakable: false },
+    ],
+    nav: [
+      { id: 'entry', x: 0, z: -5.1, links: ['mid'], tags: ['door', 'entry'] },
+      { id: 'mid', x: 0, z: 0.0, links: ['entry', 'exit', 'w', 'e'], tags: ['aisle'] },
+      { id: 'w', x: -2.4, z: 0.0, links: ['mid'], tags: [] },
+      { id: 'e', x: 2.4, z: 0.0, links: ['mid'], tags: [] },
+      { id: 'exit', x: 0, z: 5.1, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 6,
+    minRoom: 35,
+    floor: 'carpet',
+    darkChance: 0.35,
+    perf: 5,
+  }),
+};
+
 export const MAIN_TEMPLATES: RoomTemplate[] = [
   corridorStraight, corridorWide, corridorL, corridorZig, corridorJunction,
   guestRoom, guestTwin, suiteSplit, bathAnte,
@@ -1363,6 +1586,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomRecordsCage, roomObsGallery, roomCrawl, roomRotunda,
   roomMotelCorridor, roomOfficeBullpen, roomAnomalyTall, roomImpossible, maintServer,
   roomGreenRecords, roomDuel, roomVaulted,
+  roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];

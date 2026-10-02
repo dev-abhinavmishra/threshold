@@ -34,6 +34,7 @@ export type PropKind =
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'
   | 'toolChest' | 'propaneTank' | 'medBox' | 'lantern' | 'flashlight'
   | 'plasticCrate' | 'gasMask' | 'armchair' | 'milCrate'
+  | 'morgueDrawer' | 'gurney' | 'washer' | 'boilerTank' | 'cubiclePod'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
