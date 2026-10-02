@@ -134,6 +134,7 @@ export class CorridorRunner extends Entity {
         face: 'mask',
         band: this.id === 'reprise' ? MAT.steel() : MAT.amber(),
         bandY: this.id === 'returner' ? 2.42 : 2.36,
+        eyes: this.id === 'returner' ? 'red' : 'amber',
       });
       g.add(fig);
       if (this.id === 'reprise') {

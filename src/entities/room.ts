@@ -34,7 +34,7 @@ export class Witness extends Entity {
     );
     this.state = 'engage';
     const g = new THREE.Group();
-    const figure = tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper() });
+    const figure = tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper(), eyes: 'white' });
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.5, 16), MAT.eyeGlow());
     halo.position.y = 2.0;
     g.add(figure, halo);
@@ -49,6 +49,7 @@ export class Witness extends Entity {
     const p = c.player;
     const d = v3dist(this.pos, p.pos);
     if (d > 18 || p.protection === 'hidden') { this.done(); return; }
+    if (this.mesh) this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
     // Camera pull toward itself (resistible) unless reduced-motion.
     if (!c.accessibility.reducedMotion) {
       const want = Math.atan2(this.pos.x - p.pos.x, this.pos.z - p.pos.z);
@@ -209,7 +210,7 @@ export class EchoSkin extends Entity {
   protected override onSpawn(): void {
     this.state = 'engage';
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
-    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin() });
+    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber' });
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
@@ -366,7 +367,7 @@ export class Margin extends Entity {
 
   protected override onSpawn(): void {
     const c = this.ctx;
-    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none' });
+    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red' });
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.3), MAT.redLamp());
     edge.position.set(0.4, 1.05, 0);
     g.add(edge);

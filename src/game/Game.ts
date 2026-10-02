@@ -22,6 +22,7 @@ import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
+import { tickFigure } from '../entities/figure';
 import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, HazardField } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
@@ -1124,6 +1125,12 @@ export class Game {
         built.dust.position.y = Math.sin(t * 0.13 + (built.dust.userData.phase as number)) * 0.12;
       }
     }
+
+    // Entity figure idle animation — breathing sway + eye pulse.
+    const t = this.clock.time;
+    this.entityGroup.traverse((o) => {
+      if (o.userData.figureParts) tickFigure(o, t);
+    });
   }
 
   private updateMaelstrom(dt: number): void {
