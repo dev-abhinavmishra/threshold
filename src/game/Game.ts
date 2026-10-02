@@ -18,7 +18,7 @@ import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
-import { preloadModels } from '../world/modelLibrary';
+import { preloadModels, modelInstance } from '../world/modelLibrary';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
@@ -68,6 +68,7 @@ export class Game {
   private keys = new Set<string>();
   private currentRoom = 0;
   private space: 'main' | 'under' = 'main';
+  private rats: { obj: THREE.Object3D; ax: number; az: number; bx: number; bz: number; t: number; dur: number; floor: number }[] = [];
   private entities: Entity[] = [];
   private spawned = new Set<string>();
   private milestones = new Map<number, Milestone>();
@@ -157,7 +158,7 @@ export class Game {
       composer.addPass(ssao);
     }
     if (q !== 'low') {
-      const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.26, 0.55, 0.86);
+      const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.42, 0.93);
       composer.addPass(bloom);
     }
     this.grainUniforms = {
@@ -278,6 +279,7 @@ export class Game {
     this.streams = new SeedStreams(seedText);
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
+    this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
     this.doorStates.clear();
@@ -744,6 +746,7 @@ export class Game {
     this.audio.setMood('under');
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
+    this.clearRats();
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
@@ -760,6 +763,7 @@ export class Game {
     this.audio.setMood('calm');
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
+    this.clearRats();
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -1174,6 +1178,72 @@ export class Game {
     });
   }
 
+  /** Ambient critter: a rat scurries along a wall edge when the player enters a room. */
+  private maybeSpawnRat(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    const spec = room?.spec;
+    if (!room || !spec || SAFE_ROOM_TEMPLATES.has(room.templateId) || spec.width < 3) return;
+    const roll = this.streams.roomStream('entity', this.currentRoom);
+    if (roll.float() < 0.55) return;
+    const hw = spec.width / 2 - 0.35;
+    const hd = spec.depth / 2 - 0.35;
+    const wall = roll.int(0, 3);
+    const [lx1, lz1, lx2, lz2] = [
+      [-hw, -hd, hw, -hd], [hw, -hd, hw, hd], [hw, hd, -hw, hd], [-hw, hd, -hw, -hd],
+    ][wall];
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    const wx = (lx: number, lz: number) => room.origin.x + lx * c + lz * s;
+    const wz = (lx: number, lz: number) => room.origin.z - lx * s + lz * c;
+    const rev = roll.bool(0.5);
+    const ax = wx(rev ? lx2 : lx1, rev ? lz2 : lz1), az = wz(rev ? lx2 : lx1, rev ? lz2 : lz1);
+    const bx = wx(rev ? lx1 : lx2, rev ? lz1 : lz2), bz = wz(rev ? lx1 : lx2, rev ? lz1 : lz2);
+
+    let obj = modelInstance('rat', roll.float());
+    if (!obj) {
+      obj = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.055, 8, 6),
+        new THREE.MeshStandardMaterial({ color: 0x2e2620, roughness: 0.9 }),
+      );
+      body.scale.set(1, 0.75, 1.9);
+      body.position.y = 0.045;
+      const tail = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.006, 0.002, 0.16, 4),
+        new THREE.MeshStandardMaterial({ color: 0x6b5a52, roughness: 0.9 }),
+      );
+      tail.rotation.x = Math.PI / 2 - 0.35;
+      tail.position.set(0, 0.035, -0.14);
+      obj.add(body, tail);
+    }
+    obj.position.set(ax, room.origin.y, az);
+    obj.rotation.y = Math.atan2(bx - ax, bz - az);
+    this.entityGroup.add(obj);
+    const dist = Math.hypot(bx - ax, bz - az);
+    this.rats.push({ obj, ax, az, bx, bz, t: 0, dur: Math.max(0.6, dist / 2.6), floor: room.origin.y });
+    this.sound.emit({ x: ax, y: 1, z: az, intensity: 0.3, category: 'ambient', caption: '[small scuffle]' });
+  }
+
+  private clearRats(): void {
+    for (const r of this.rats) this.entityGroup.remove(r.obj);
+    this.rats = [];
+  }
+
+  private updateRats(dt: number): void {
+    for (const r of [...this.rats]) {
+      r.t += dt;
+      const k = Math.min(1, r.t / r.dur);
+      // slight ease + scurry bob
+      const e = k * k * (3 - 2 * k);
+      r.obj.position.x = r.ax + (r.bx - r.ax) * e;
+      r.obj.position.z = r.az + (r.bz - r.az) * e;
+      r.obj.position.y = r.floor + Math.abs(Math.sin(r.t * 22)) * 0.012;
+      if (k >= 1) {
+        this.entityGroup.remove(r.obj);
+        this.rats = this.rats.filter((x) => x !== r);
+      }
+    }
+  }
+
   private updateMaelstrom(dt: number): void {
     const mael = this.entities.find((e) => e instanceof CorridorRunner && e.id === 'maelstrom' && e.state !== 'done') as CorridorRunner | undefined;
     if (mael?.stabilizeTriggered && !this.stabilize && this.player.hiddenSpot) {
@@ -1234,9 +1304,11 @@ export class Game {
     this.currentRoom = this.currentRoomIndex();
     if (this.currentRoom !== prev && this.space === 'main') {
       this.stats.roomsVisited = Math.max(this.stats.roomsVisited, this.currentRoom);
+      this.maybeSpawnRat();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
+      this.maybeSpawnRat();
     }
 
     // streamer + interactables
@@ -1291,6 +1363,7 @@ export class Game {
     this.updateDoors(dt);
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
+    this.updateRats(dt);
 
     // engine win already handled via milestone → victory()
 

@@ -41,6 +41,11 @@ function lobbySpec(): RoomSpec {
       { kind: 'statue', x: 3.2, z: 3.8, yaw: Math.PI },
       { kind: 'clock', x: -4.4, z: -1.6, yaw: Math.PI / 2 },
       { kind: 'vase', x: 0, z: 2.4, y: 1.05 },
+      { kind: 'register', x: 0.8, z: 2.6, y: 1.15 },
+      { kind: 'coffeeCart', x: -4.0, z: -0.8, yaw: Math.PI / 2 },
+      { kind: 'coffeeTable', x: -3.4, z: 1.6 },
+      { kind: 'pillows', x: -3.6, z: 0.2, y: 0.72 },
+      { kind: 'teaSet', x: -3.4, z: 1.5, y: 0.5 },
       { kind: 'sign', x: 0, z: -4.2, y: 2.6 },
       { kind: 'liftDoors', x: 0, z: 4.45 },
     ],
@@ -134,6 +139,8 @@ function custodianSpec(): RoomSpec {
       { kind: 'lamp', x: 3.2, z: -1.6 },
       { kind: 'sign', x: 0, z: -3.4, y: 2.2 },
       { kind: 'paperStack', x: -1.5, z: 1.8, y: 1.1 },
+      { kind: 'register', x: 0.7, z: 2.05, y: 1.15 },
+      { kind: 'basket', x: 1.6, z: 1.9 },
     ],
     sockets: [
       { kind: 'itemPedestal', x: -1.0, z: 1.6, y: 1.15, meta: { shop: 'slot0' } },
@@ -162,6 +169,8 @@ function underEntranceSpec(): RoomSpec {
       { kind: 'vent', x: 2.8, z: -1.6, yaw: -Math.PI / 2 },
       { kind: 'machineBox', x: 2.4, z: 1.6, scale: 1.0 },
       { kind: 'liftShaft', x: 2.6, z: 3.4 },
+      { kind: 'instrPanel', x: -3.2, z: 0.2, yaw: Math.PI / 2 },
+      { kind: 'mousetrap', x: 1.6, z: -2.4 },
     ],
     sockets: [
       { kind: 'key', x: -2.4, z: 1.6, y: 1.4, meta: { sealClamp: 'a' } },
@@ -305,6 +314,14 @@ function engineSpec(): RoomSpec {
     { kind: 'pipe', x: 7.5, z: 0, y: 3.2, scale: 18 },
     { kind: 'steamVent', x: -3.5, z: 6.5 },
     { kind: 'steamVent', x: 3.5, z: 6.5 },
+    { kind: 'instrPanel', x: -8.2, z: -4, yaw: Math.PI / 2 },
+    { kind: 'instrPanel', x: 8.2, z: -4, yaw: -Math.PI / 2 },
+    { kind: 'instrPanel', x: -8.2, z: 3, yaw: Math.PI / 2 },
+    { kind: 'ironGate', x: -1.4, z: -10.6, yaw: 0 },
+    { kind: 'ironGate', x: 1.4, z: -10.6, yaw: 0 },
+    { kind: 'barrel', x: -7.6, z: -7.4 },
+    { kind: 'propaneTank', x: 7.6, z: -7.2 },
+    { kind: 'toolChest', x: -6.8, z: -7.2 },
   ];
   const sockets: RoomSpec['sockets'] = [];
   // 7 relay sockets across the chamber

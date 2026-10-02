@@ -168,7 +168,6 @@ has not finished loading falls back to its procedural builder.
 | `models/Megaphone_01` | Megaphone 01 | `megaphone` props |
 | `models/ammo_box` | Ammo Box | `ammoBox` props |
 | `models/dead_tree_trunk` | Dead Tree Trunk | `deadTree` props |
-| `models/fir_tree_01` | Fir Tree 01 | dropped — 456MB bin exceeds repo limits |
 | `models/baseball_bat` | Baseball Bat | `baseballBat` props |
 | `models/adjustable_wrench` | Adjustable Wrench | (spare `wrench` variant) |
 | `models/plastic_jerrycan` | Plastic Jerrycan | `jerrycanP` props |
@@ -203,3 +202,128 @@ has not finished loading falls back to its procedural builder.
 | `models/bunsen_burner` | Bunsen Burner | `bunsenBurner` props |
 | `models/brass_goblets` | Brass Goblets | `goblets` props |
 | `models/bolt_action_rifle_7_62` | Bolt Action Rifle 7.62 | `rifle` props |
+
+## Poly Haven models — sprint 21 extraction batch (CC0)
+
+| Directory | Source asset | Use |
+|---|---|---|
+| `models/Camera_01` | Camera | sprint-21 dressing/modelLibrary |
+| `models/CashRegister_01` | CashRegister | sprint-21 dressing/modelLibrary |
+| `models/ClassicConsole_01` | ClassicConsole | sprint-21 dressing/modelLibrary |
+| `models/CoffeeCart_01` | CoffeeCart | sprint-21 dressing/modelLibrary |
+| `models/CoffeeTable_01` | CoffeeTable | sprint-21 dressing/modelLibrary |
+| `models/GreenChair_01` | GreenChair | sprint-21 dressing/modelLibrary |
+| `models/Ottoman_01` | Ottoman | sprint-21 dressing/modelLibrary |
+| `models/Shelf_01` | Shelf | sprint-21 dressing/modelLibrary |
+| `models/Ukulele_01` | Ukulele | sprint-21 dressing/modelLibrary |
+| `models/WoodenTable_02` | WoodenTable | sprint-21 dressing/modelLibrary |
+| `models/WoodenTable_03` | WoodenTable | sprint-21 dressing/modelLibrary |
+| `models/anthurium_botany_01` | Anthurium Botany | sprint-21 dressing/modelLibrary |
+| `models/antique_ceramic_vase_01` | Antique Ceramic Vase | sprint-21 dressing/modelLibrary |
+| `models/antique_estoc` | Antique Estoc | sprint-21 dressing/modelLibrary |
+| `models/antique_katana_01` | Antique Katana | sprint-21 dressing/modelLibrary |
+| `models/bar_chair_round_01` | Bar Chair Round | sprint-21 dressing/modelLibrary |
+| `models/barrel_03` | Barrel | sprint-21 dressing/modelLibrary |
+| `models/brass_vase_02` | Brass Vase | sprint-21 dressing/modelLibrary |
+| `models/brass_vase_03` | Brass Vase | sprint-21 dressing/modelLibrary |
+| `models/ceramic_vase_01` | Ceramic Vase | sprint-21 dressing/modelLibrary |
+| `models/ceramic_vase_02` | Ceramic Vase | sprint-21 dressing/modelLibrary |
+| `models/ceramic_vase_03` | Ceramic Vase | sprint-21 dressing/modelLibrary |
+| `models/cigarette_pack` | Cigarette Pack | sprint-21 dressing/modelLibrary |
+| `models/coffee_table_round_01` | Coffee Table Round | sprint-21 dressing/modelLibrary |
+| `models/combination_wrench` | Combination Wrench | sprint-21 dressing/modelLibrary |
+| `models/cross_pein_hammer` | Cross Pein Hammer | sprint-21 dressing/modelLibrary |
+| `models/dead_quiver_trunk` | Dead Quiver Trunk | sprint-21 dressing/modelLibrary |
+| `models/dead_tree_trunk_02` | Dead Tree Trunk | sprint-21 dressing/modelLibrary |
+| `models/drill_press_01` | Drill Press | sprint-21 dressing/modelLibrary |
+| `models/fancy_picture_frame_02` | Fancy Picture Frame | sprint-21 dressing/modelLibrary |
+| `models/flathead_screwdriver` | Flathead Screwdriver | sprint-21 dressing/modelLibrary |
+| `models/gallinera_chair` | Gallinera Chair | sprint-21 dressing/modelLibrary |
+| `models/gallinera_table` | Gallinera Table | sprint-21 dressing/modelLibrary |
+| `models/gate_latch_01` | Gate Latch | sprint-21 dressing/modelLibrary |
+| `models/gothic_coffee_table` | Gothic Coffee Table | sprint-21 dressing/modelLibrary |
+| `models/handsaw_wood` | Handsaw Wood | sprint-21 dressing/modelLibrary |
+| `models/hanging_picture_frame_02` | Hanging Picture Frame | sprint-21 dressing/modelLibrary |
+| `models/horse_statue_01` | Horse Statue | sprint-21 dressing/modelLibrary |
+| `models/jug_01` | Jug | sprint-21 dressing/modelLibrary |
+| `models/large_castle_door` | Large Castle Door | sprint-21 dressing/modelLibrary |
+| `models/large_iron_gate` | Large Iron Gate | sprint-21 dressing/modelLibrary |
+| `models/lightbulb_01` | Lightbulb | sprint-21 dressing/modelLibrary |
+| `models/magnifying_glass_01` | Magnifying Glass | sprint-21 dressing/modelLibrary |
+| `models/metal_stool_02` | Metal Stool | sprint-21 dressing/modelLibrary |
+| `models/metal_stool_03` | Metal Stool | sprint-21 dressing/modelLibrary |
+| `models/mid_century_lounge_chair` | Mid Century Lounge Chair | sprint-21 dressing/modelLibrary |
+| `models/modern_arm_chair_01` | Modern Arm Chair | sprint-21 dressing/modelLibrary |
+| `models/modular_airduct_circular_01` | Modular Airduct Circular | sprint-21 dressing/modelLibrary |
+| `models/modular_airduct_rectangular_01` | Modular Airduct Rectangular | sprint-21 dressing/modelLibrary |
+| `models/modular_industrial_pipes_01` | Modular Industrial Pipes | sprint-21 dressing/modelLibrary |
+| `models/modular_metal_gutter` | Modular Metal Gutter | sprint-21 dressing/modelLibrary |
+| `models/modular_street_seating` | Modular Street Seating | sprint-21 dressing/modelLibrary |
+| `models/moss_01` | Moss | sprint-21 dressing/modelLibrary |
+| `models/mousetrap` | Mousetrap | sprint-21 dressing/modelLibrary |
+| `models/ornate_war_hammer` | Ornate War Hammer | sprint-21 dressing/modelLibrary |
+| `models/outdoor_table_chair_set_01` | Outdoor Table Chair Set | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_cabinet` | Painted Wooden Cabinet | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_chair_01` | Painted Wooden Chair | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_chair_02` | Painted Wooden Chair | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_nightstand` | Painted Wooden Nightstand | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_shelves` | Painted Wooden Shelves | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_sofa` | Painted Wooden Sofa | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_stool` | Painted Wooden Stool | sprint-21 dressing/modelLibrary |
+| `models/painted_wooden_table` | Painted Wooden Table | sprint-21 dressing/modelLibrary |
+| `models/planter_box_02` | Planter Box | sprint-21 dressing/modelLibrary |
+| `models/planter_box_03` | Planter Box | sprint-21 dressing/modelLibrary |
+| `models/portable_cassette_player` | Portable Cassette Player | sprint-21 dressing/modelLibrary |
+| `models/pot_enamel_01` | Pot Enamel | sprint-21 dressing/modelLibrary |
+| `models/potted_plant_02` | Potted Plant | sprint-21 dressing/modelLibrary |
+| `models/potted_plant_04` | Potted Plant 04 | sprint-21 dressing/modelLibrary |
+| `models/projector_screen` | Projector Screen | sprint-21 dressing/modelLibrary |
+| `models/quiver_tree_01` | Quiver Tree | sprint-21 dressing/modelLibrary |
+| `models/quiver_tree_02` | Quiver Tree | sprint-21 dressing/modelLibrary |
+| `models/ratchet_wrench` | Ratchet Wrench | sprint-21 dressing/modelLibrary |
+| `models/rock_07` | Rock 07 | sprint-21 dressing/modelLibrary |
+| `models/round_wooden_table_01` | Round Wooden Table | sprint-21 dressing/modelLibrary |
+| `models/round_wooden_table_02` | Round Wooden Table | sprint-21 dressing/modelLibrary |
+| `models/rusted_hacksaw` | Rusted Hacksaw | sprint-21 dressing/modelLibrary |
+| `models/screwdrivers_02` | Screwdrivers | sprint-21 dressing/modelLibrary |
+| `models/seeding_tray_01` | Seeding Tray | sprint-21 dressing/modelLibrary |
+| `models/side_table_01` | Side Table | sprint-21 dressing/modelLibrary |
+| `models/side_table_tall_01` | Side Table Tall | sprint-21 dressing/modelLibrary |
+| `models/sledgehammer_01` | Sledgehammer | sprint-21 dressing/modelLibrary |
+| `models/small_oil_can_01` | Small Oil Can | sprint-21 dressing/modelLibrary |
+| `models/small_wooden_table_01` | Small Wooden Table | sprint-21 dressing/modelLibrary |
+| `models/spinning_wheel_01` | Spinning Wheel | sprint-21 dressing/modelLibrary |
+| `models/standing_picture_frame_01` | Standing Picture Frame | sprint-21 dressing/modelLibrary |
+| `models/steel_frame_shelves_03` | Steel Frame Shelves | sprint-21 dressing/modelLibrary |
+| `models/stone_01` | Stone | sprint-21 dressing/modelLibrary |
+| `models/stone_fire_pit` | Stone Fire Pit | sprint-21 dressing/modelLibrary |
+| `models/street_lamp_01` | Street Lamp | sprint-21 dressing/modelLibrary |
+| `models/street_rat` | Street Rat | sprint-21 dressing/modelLibrary |
+| `models/tea_set_01` | Tea Set | sprint-21 dressing/modelLibrary |
+| `models/throw_pillows_01` | Throw Pillows | sprint-21 dressing/modelLibrary |
+| `models/treasure_chest` | Treasure Chest | sprint-21 dressing/modelLibrary |
+| `models/tree_stump_01` | Tree Stump | sprint-21 dressing/modelLibrary |
+| `models/tree_stump_02` | Tree Stump | sprint-21 dressing/modelLibrary |
+| `models/vintage_binocular` | Vintage Binocular | sprint-21 dressing/modelLibrary |
+| `models/vintage_day_bed` | Vintage Day Bed | sprint-21 dressing/modelLibrary |
+| `models/vintage_hand_drill` | Vintage Hand Drill | sprint-21 dressing/modelLibrary |
+| `models/vintage_lighter` | Vintage Lighter | sprint-21 dressing/modelLibrary |
+| `models/vintage_radio_transceiver` | Vintage Radio Transceiver | sprint-21 dressing/modelLibrary |
+| `models/vintage_spacecraft_instrument` | Vintage Spacecraft Instrument | sprint-21 dressing/modelLibrary |
+| `models/vintage_video_camera` | Vintage Video Camera | sprint-21 dressing/modelLibrary |
+| `models/watering_can_metal_01` | Watering Can Metal | sprint-21 dressing/modelLibrary |
+| `models/weed_plant_02` | Weed Plant | sprint-21 dressing/modelLibrary |
+| `models/wicker_basket_01` | Wicker Basket | sprint-21 dressing/modelLibrary |
+| `models/wicker_basket_02` | Wicker Basket | sprint-21 dressing/modelLibrary |
+| `models/wine_bottles_01` | Wine Bottles | sprint-21 dressing/modelLibrary |
+| `models/wooden_axe` | Wooden Axe | sprint-21 dressing/modelLibrary |
+| `models/wooden_axe_02` | Wooden Axe | sprint-21 dressing/modelLibrary |
+| `models/wooden_axe_03` | Wooden Axe | sprint-21 dressing/modelLibrary |
+| `models/wooden_bowl_01` | Wooden Bowl | sprint-21 dressing/modelLibrary |
+| `models/wooden_bowl_02` | Wooden Bowl | sprint-21 dressing/modelLibrary |
+| `models/wooden_crate_02` | Wooden Crate | sprint-21 dressing/modelLibrary |
+| `models/wooden_display_shelves_01` | Wooden Display Shelves | sprint-21 dressing/modelLibrary |
+| `models/wooden_ladder_02` | Wooden Ladder | sprint-21 dressing/modelLibrary |
+| `models/wooden_picnic_table` | Wooden Picnic Table | sprint-21 dressing/modelLibrary |
+| `models/wooden_stool_01` | Wooden Stool | sprint-21 dressing/modelLibrary |
+| `models/wooden_stool_02` | Wooden Stool | sprint-21 dressing/modelLibrary |
