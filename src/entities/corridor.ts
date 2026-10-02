@@ -14,6 +14,7 @@ import { v3dist, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
+import { tallFigure } from './figure';
 import { Rng } from '../engine/rng';
 
 export interface CorridorOptions {
@@ -127,16 +128,17 @@ export class CorridorRunner extends Entity {
         g.add(fin);
       }
     } else {
-      // Sweep / Reprise / Returner — a tall pressure silhouette
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.6, 0.5), MAT.shadowFigure());
-      body.position.y = 1.3;
-      g.add(body);
-      const band = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.14, 0.55), this.id === 'reprise' ? MAT.steel() : MAT.amber());
-      band.position.y = this.id === 'returner' ? 2.0 : 1.7;
-      g.add(band);
+      // Sweep / Reprise / Returner — a tall hunched figure, eye-line band.
+      const fig = tallFigure({
+        height: 2.6,
+        face: 'mask',
+        band: this.id === 'reprise' ? MAT.steel() : MAT.amber(),
+        bandY: this.id === 'returner' ? 2.42 : 2.36,
+      });
+      g.add(fig);
       if (this.id === 'reprise') {
-        const band2 = band.clone();
-        band2.position.y = 1.2;
+        const band2 = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.12, 0.38), MAT.steel());
+        band2.position.y = 2.15;
         g.add(band2);
       }
     }

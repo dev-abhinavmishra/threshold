@@ -24,7 +24,10 @@ interface ModelSpec {
 export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   cabinet: { dir: 'GothicCabinet_01', height: 2.1, collider: [1.15, 2.1, 0.7] },
   bed: { dir: 'GothicBed_01', height: 1.1, collider: [1.7, 1.1, 2.2] },
-  chair: { dir: 'Rockingchair_01', height: 1.0, collider: [0.65, 1.0, 0.75] },
+  chair: {
+    dir: 'Rockingchair_01', height: 1.0, collider: [0.65, 1.0, 0.75],
+    variants: [{ dir: 'WoodenChair_01', height: 0.95, collider: [0.55, 0.95, 0.6] }],
+  },
   table: { dir: 'WoodenTable_01', height: 0.8, collider: [1.3, 0.8, 0.85] },
   painting: {
     dir: 'hanging_picture_frame_01', height: 0.9, collider: [0, 0, 0], anchor: 'center',
@@ -65,6 +68,28 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   chandelier: { dir: 'Chandelier_01', height: 1.7, collider: [0, 0, 0], anchor: 'center' },
   lamp: { dir: 'vintage_oil_lamp', height: 0.45, collider: [0, 0, 0] },
   stove: { dir: 'barrel_stove', height: 0.9, collider: [0.6, 0.9, 0.6] },
+  books: {
+    dir: 'book_encyclopedia_set_01', height: 0.28, collider: [0, 0, 0],
+    variants: [{ dir: 'binder_notebook', height: 0.18, collider: [0, 0, 0] }],
+  },
+  papers: {
+    dir: 'office_notepads', height: 0.08, collider: [0, 0, 0],
+    variants: [{ dir: 'clipboard', height: 0.05, collider: [0, 0, 0] }],
+  },
+  carton: { dir: 'cardboard_box_01', height: 0.55, collider: [0.6, 0.55, 0.5] },
+  bin: {
+    dir: 'metal_trash_can', height: 0.6, collider: [0.4, 0.6, 0.4],
+    variants: [{ dir: 'trashbag', height: 0.45, collider: [0.5, 0.45, 0.5] }],
+  },
+  generator: { dir: 'portable_generator', height: 0.85, collider: [0.9, 0.85, 0.6] },
+  weldingCart: { dir: 'portable_welding_cart', height: 1.15, collider: [0.8, 1.15, 0.6] },
+  rack: { dir: 'worn_metal_rack', height: 2.0, collider: [1.0, 2.0, 0.5] },
+  board: { dir: 'standing_chalkboard_01', height: 1.5, collider: [0.9, 1.5, 0.5] },
+  wheelchair: { dir: 'wheelchair_01', height: 1.0, collider: [0.65, 1.0, 0.9] },
+  suitcase: { dir: 'vintage_suitcase', height: 0.4, collider: [0.7, 0.4, 0.5] },
+  bench: { dir: 'painted_wooden_bench', height: 0.9, collider: [1.8, 0.9, 0.6] },
+  payphone: { dir: 'korean_public_payphone_01', height: 1.5, collider: [0.6, 1.5, 0.6] },
+  planter: { dir: 'planter_box_01', height: 0.55, collider: [1.1, 0.55, 0.4] },
 };
 
 const loader = new GLTFLoader();

@@ -25,6 +25,10 @@ export type PropKind =
   | 'chandelier' | 'bookshelf' | 'counter' | 'till' | 'trolley'
   | 'clock' | 'wallClock' | 'statue' | 'bust' | 'vase' | 'candle' | 'stove'
   | 'machineBox' | 'hangingPanels' | 'deskLamp' | 'keypad'
+  | 'monitor' | 'serverRack' | 'paperScatter' | 'glassWall'
+  | 'board' | 'bench' | 'wheelchair' | 'suitcase' | 'bin'
+  | 'generator' | 'weldingCart' | 'planter' | 'books' | 'papers'
+  | 'carton' | 'payphone' | 'rack'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
@@ -82,6 +86,8 @@ export interface LocalCollider {
   x: number; z: number; y?: number; w: number; d: number; h: number;
   /** If true, only blocks entity LOS, not movement (e.g. tall shelf mid-room). */
   losOnly?: boolean;
+  /** If true, blocks movement but not entity LOS (e.g. glass partitions). */
+  movementOnly?: boolean;
   /** Floor-height steps/stairs the player can climb. */
   walkable?: boolean;
 }

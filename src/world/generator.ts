@@ -15,7 +15,7 @@ import type {
   Biome, Door, EntityId, EntityTuning, HidingSpot, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR } from '../game/config';
-import type { Port, RoomSpec, RoomTemplate } from './spec';
+import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
 import { portLocalPos, portOutwardDir } from './spec';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
@@ -61,10 +61,10 @@ interface PlacedRoom {
 const DEG90 = Math.PI / 2;
 
 function yawToFaceEntry(entryOutwardLocal: Vec3, connectorDir: Vec3): number {
-  // R(yaw) * entryOutwardLocal = -connectorDir
-  // entryOutwardLocal for 's' ports is (0,-1): yaw = atan2(-dx, -dz)
-  void entryOutwardLocal;
-  return Math.atan2(-connectorDir.x, -connectorDir.z);
+  // R(yaw) * entryOutwardLocal = -connectorDir — the port's outward normal
+  // must face back along the incoming corridor so it meets the room's edge
+  // instead of tunneling through the interior.
+  return Math.atan2(-connectorDir.x, -connectorDir.z) - Math.atan2(entryOutwardLocal.x, entryOutwardLocal.z);
 }
 
 function rotXZ(x: number, z: number, yaw: number): { x: number; z: number } {
@@ -358,14 +358,33 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         if (placedRoom) break;
       }
       if (!placedRoom) {
-        // guaranteed fit: the straight corridor — try its full jitter space,
-        // then force a small forward nudge (bridge drawn via pendingConnector).
-        const fallback = MAIN_TEMPLATE_MAP.get('corr-straight')!.build(streams.roomStream('structure', i));
-        placedRoom = jitteredPlace(fallback, connPos, connDir, placed);
+        // Guaranteed fit: corridor fallbacks. When lateral drift is near the
+        // map bound (or the chain is backtracking south), prefer a turn
+        // corridor so the chain bends back along the spine instead of
+        // marching out of bounds and flooding with corridors.
+        const turning = (Math.abs(connPos.x) > 40 && Math.abs(connDir.x) > 0.7) || connDir.z < -0.7;
+        const fallbacks: RoomSpec[] = [];
+        if (turning) {
+          const lturn = MAIN_TEMPLATE_MAP.get('corr-l-turn')!.build(streams.roomStream('structure', i));
+          const mirrored = { ...lturn,
+            exits: lturn.exits.map((p): Port => ({ ...p, wall: (p.wall === 'e' ? 'w' : p.wall === 'w' ? 'e' : p.wall) as Wall, offset: (p.wall === 'n' || p.wall === 's') ? -p.offset : p.offset })),
+            nav: lturn.nav.map((n) => ({ ...n, x: -n.x })),
+          };
+          // 'e' exit maps to world dir (connDir.z, -connDir.x); 'w' its opposite.
+          // Prefer the turn that keeps northward progress.
+          if (-connDir.x > 0) fallbacks.push(lturn, mirrored); else fallbacks.push(mirrored, lturn);
+        }
+        fallbacks.push(MAIN_TEMPLATE_MAP.get('corr-straight')!.build(streams.roomStream('structure', i)));
+        for (const fb of fallbacks) {
+          placedRoom = jitteredPlace(fb, connPos, connDir, placed);
+          if (placedRoom) break;
+        }
         if (!placedRoom) {
+          // Force-place the preferred fallback (the turn, when turning) — a
+          // forced straight would keep marching out of bounds forever.
           const pos = v3(connPos.x + connDir.x * 2, 0, connPos.z + connDir.z * 2);
           pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
-          placedRoom = tryPlace(fallback, pos, connDir, placed, true)!;
+          placedRoom = tryPlace(fallbacks[0], pos, connDir, placed, true)!;
         }
       }
     }
@@ -475,6 +494,16 @@ function biomeBiasFor(i: number): Biome | null {
 function tryPlaceWithJitters(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: PlacedRoom[], boundC = v3(0, 0, 0)): PlacedRoom | null {
   const p = jitteredPlace(spec, connPos, connDir, placed, boundC);
   if (p) return p;
+  // Long forward scan before the forced fallback — big milestone rooms can
+  // need more runway than jitteredPlace's 30m reach.
+  for (const fz of [34, 40, 48, 56, 64, 72, 80]) {
+    const pos = v3(connPos.x + connDir.x * fz, 0, connPos.z + connDir.z * fz);
+    const p2 = tryPlace(spec, pos, connDir, placed, false, boundC);
+    if (p2) {
+      pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
+      return p2;
+    }
+  }
   // Last resort: forced placement 2m forward (still bridge it visually).
   const pos = v3(connPos.x + connDir.x * 2, 0, connPos.z + connDir.z * 2);
   pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
@@ -497,9 +526,9 @@ function jitteredPlace(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: Pla
   //    blocks the lane. Corridor is two axis-aligned segments.
   const perp = v3(-connDir.z, 0, connDir.x);
   const half = Math.max(spec.width, spec.depth) / 2;
-  for (const f of [1.5, 3, 5]) {
+  for (const f of [0, 1.5, 3, 5, 8, 12, 18]) {
     for (const side of [1, -1]) {
-      for (const extra of [0, 3, 6, 10, 16, 24]) {
+      for (const extra of [0, 3, 6, 10, 16, 24, 32, 40]) {
         const off = half + 2.5 + extra;
         const elbow = v3(connPos.x + connDir.x * f, 0, connPos.z + connDir.z * f);
         const pos = v3(elbow.x + perp.x * side * off, 0, elbow.z + perp.z * side * off);
@@ -509,6 +538,15 @@ function jitteredPlace(spec: RoomSpec, connPos: Vec3, connDir: Vec3, placed: Pla
           return p;
         }
       }
+    }
+  }
+  // 3) Far-forward scan before giving up: a long drawn corridor into free space.
+  for (const fz of [34, 42, 50, 60, 70, 80]) {
+    const pos = v3(connPos.x + connDir.x * fz, 0, connPos.z + connDir.z * fz);
+    const p = tryPlace(spec, pos, connDir, placed, false, boundC);
+    if (p) {
+      pendingConnector = { a: v3(connPos.x, 0, connPos.z), b: pos };
+      return p;
     }
   }
   return null;

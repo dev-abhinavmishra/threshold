@@ -603,11 +603,67 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(cyl(0.16, 0.16, 0.4), MAT.glassDusty(), 0, 1.2, 0));
     return single(g, 0.4, 1.4, 0.4);
   },
+  // Desk monitor — dark frame, glowing screen face. Template supplies y (desk top).
+  monitor: (_s, rng) => {
+    const g = new THREE.Group();
+    g.add(mesh(box(0.22, 0.03, 0.2), MAT.charcoal(), 0, 0.02, 0));
+    g.add(mesh(box(0.05, 0.14, 0.05), MAT.charcoal(), 0, 0.09, -0.04));
+    const scr = rng.pick([MAT.screenGreen(), MAT.screenAmber(), MAT.screenDark()]);
+    g.add(mesh(box(0.55, 0.36, 0.05), MAT.charcoal(), 0, 0.32, 0));
+    g.add(mesh(box(0.49, 0.3, 0.02), scr, 0, 0.32, 0.032));
+    return { group: g, colliders: [] };
+  },
+  // Server rack — dark enclosure, front rows of lit LED dots.
+  serverRack: (_s, rng) => {
+    const g = new THREE.Group();
+    g.add(mesh(box(0.65, 2.0, 0.8), MAT.ink(), 0, 1.0, 0));
+    g.add(mesh(box(0.55, 1.9, 0.04), MAT.steelDark(), 0, 1.0, 0.42));
+    const leds = [MAT.screenGreen(), MAT.amberDim(), MAT.redLamp(), MAT.screenGreen()];
+    for (let row = 0; row < 7; row++) {
+      const y = 0.35 + row * 0.24;
+      g.add(mesh(box(0.5, 0.14, 0.02), MAT.charcoal(), 0, y, 0.45));
+      for (let i = 0; i < 5; i++)
+        g.add(mesh(box(0.05, 0.04, 0.015), rng.pick(leds), -0.2 + i * 0.1, y, 0.47));
+    }
+    return single(g, 0.7, 2.0, 0.85);
+  },
+  // Loose sheets scattered on the floor — cheap clutter with no collision.
+  paperScatter: (_s, rng) => {
+    const g = new THREE.Group();
+    const n = 5 + rng.int(0, 5);
+    for (let i = 0; i < n; i++) {
+      const sheet = mesh(box(0.23, 0.004, 0.31), rng.bool() ? MAT.paper() : MAT.paperOld(),
+        (rng.float() - 0.5) * 2.4, 0.004 + i * 0.0015, (rng.float() - 0.5) * 2.4);
+      sheet.rotation.y = rng.float() * Math.PI;
+      g.add(sheet);
+    }
+    if (rng.bool(0.4)) {
+      const fold = mesh(box(0.23, 0.004, 0.16), MAT.paperOld(), (rng.float() - 0.5) * 1.2, 0.02, (rng.float() - 0.5) * 1.2);
+      fold.rotation.set(0.5, rng.float() * Math.PI, 0);
+      g.add(fold);
+    }
+    return { group: g, colliders: [] };
+  },
+  // Glass partition wall — framed glazed panes; blocks movement, not LOS.
+  glassWall: (s) => {
+    const g = new THREE.Group();
+    const w = s.scale ?? 2.4;
+    const h = 2.1;
+    g.add(mesh(box(w, 0.08, 0.1), MAT.steelDark(), 0, 0.04, 0));
+    g.add(mesh(box(w, 0.1, 0.1), MAT.steelDark(), 0, h - 0.05, 0));
+    g.add(mesh(box(w - 0.16, h - 0.3, 0.02), MAT.glassDusty(), 0, h / 2, 0));
+    const posts = Math.max(2, Math.round(w / 1.2) + 1);
+    for (let i = 0; i < posts; i++)
+      g.add(mesh(box(0.07, h, 0.09), MAT.steelDark(), -w / 2 + (i / (posts - 1)) * w, h / 2, 0));
+    // mid rail — reads as mullions
+    g.add(mesh(box(w, 0.07, 0.06), MAT.steelDark(), 0, h * 0.52, 0));
+    return { group: g, colliders: [{ x: 0, z: 0, w, d: 0.12, h, movementOnly: true }] };
+  },
 };
 
 // Fixture kinds whose GLTF materials get a warm emissive lift so they read
 // as light sources rather than unlit furniture.
-const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'stove']);
+const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'stove', 'monitor', 'serverRack']);
 
 export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   const model = modelInstance(spec.kind, rng.float());

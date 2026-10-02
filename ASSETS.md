@@ -65,3 +65,20 @@ has not finished loading falls back to its procedural builder.
 | `models/Chandelier_01` | Chandelier 01 | `chandelier` props |
 | `models/ornate_mirror_01` | Ornate Mirror 01 | `mirror` props |
 | `models/barrel_stove` | Barrel Stove | `stove` props |
+| `models/book_encyclopedia_set_01` | Book Encyclopedia Set 01 | `books` props |
+| `models/binder_notebook` | Binder Notebook | `books` props (variant) |
+| `models/office_notepads` | Office Notepads | `papers` props |
+| `models/clipboard` | Clipboard | `papers` props (variant) |
+| `models/cardboard_box_01` | Cardboard Box 01 | `carton` props |
+| `models/metal_trash_can` | Metal Trash Can | `bin` props |
+| `models/trashbag` | Trashbag | `bin` props (variant) |
+| `models/portable_generator` | Portable Generator | `generator` props |
+| `models/portable_welding_cart` | Portable Welding Cart | `weldingCart` props |
+| `models/worn_metal_rack` | Worn Metal Rack | `rack` props |
+| `models/standing_chalkboard_01` | Standing Chalkboard 01 | `board` props |
+| `models/wheelchair_01` | Wheelchair 01 | `wheelchair` props |
+| `models/vintage_suitcase` | Vintage Suitcase | `suitcase` props |
+| `models/painted_wooden_bench` | Painted Wooden Bench | `bench` props |
+| `models/WoodenChair_01` | Wooden Chair 01 | `chair` props (variant) |
+| `models/korean_public_payphone_01` | Korean Public Payphone 01 | `payphone` props |
+| `models/planter_box_01` | Planter Box 01 | `planter` props |

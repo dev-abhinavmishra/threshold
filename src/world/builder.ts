@@ -26,6 +26,32 @@ export interface BuiltRoom {
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
+// Door number plates: canvas textures cached per label (e.g. "050").
+const plateTextures = new Map<string, THREE.Texture>();
+function plateMaterial(label: string): THREE.MeshStandardMaterial | null {
+  if (typeof document === 'undefined') return null;
+  let tex = plateTextures.get(label);
+  if (!tex) {
+    const cv = document.createElement('canvas');
+    cv.width = 128; cv.height = 64;
+    const ctx = cv.getContext('2d')!;
+    ctx.fillStyle = '#14120f';
+    ctx.fillRect(0, 0, 128, 64);
+    ctx.strokeStyle = '#8f7a3a';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(4, 4, 120, 56);
+    ctx.fillStyle = '#d8cfb4';
+    ctx.font = 'bold 36px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, 64, 34);
+    tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    plateTextures.set(label, tex);
+  }
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.75 });
+}
+
 export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, quality: 'low' | 'medium' | 'high'): BuiltRoom {
   const rng = new SeedStreams('').roomStream('dressing', room.index * 31 + 7 + seed);
   const group = new THREE.Group();
@@ -44,6 +70,32 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
   group.add(ceil);
+
+  // Suspended drop ceiling — tile skin + T-bar grid for interior-height rooms.
+  // Service spaces keep an exposed slab with a duct trunk instead.
+  const suspended = !isUnder && spec.biome != 'maintenance' && h <= 3.6;
+  const fixtureY = suspended ? h - 0.22 : h - 0.3;
+  if (suspended) {
+    const tileSkin = new THREE.Mesh(texBox(w, 0.04, d), ceilMat);
+    tileSkin.position.y = h - 0.16;
+    group.add(tileSkin);
+    const barMat = MAT.charcoal();
+    for (let gx = -w / 2 + 0.6; gx < w / 2 - 0.05; gx += 0.6) {
+      const bar = new THREE.Mesh(texBox(0.03, 0.035, d - 0.05), barMat);
+      bar.position.set(gx, h - 0.19, 0);
+      group.add(bar);
+    }
+    for (let gz = -d / 2 + 0.6; gz < d / 2 - 0.05; gz += 0.6) {
+      const bar = new THREE.Mesh(texBox(w - 0.05, 0.035, 0.03), barMat);
+      bar.position.set(0, h - 0.19, gz);
+      group.add(bar);
+    }
+  } else if (isUnder || spec.biome === 'maintenance') {
+    // Exposed services — a duct trunk and pipe run below the slab.
+    const duct = new THREE.Mesh(texBox(0.5, 0.42, d - 0.4), MAT.steelDark());
+    duct.position.set(w * 0.22, h - 0.45, 0);
+    group.add(duct);
+  }
 
   // Walls from collider boxes (local coords → room group is placed at origin with yaw,
   // so we emit wall meshes in LOCAL space matching colliders).
@@ -111,9 +163,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ct.position.set(0, 2.56, zOff);
       frame.add(cl, cr2, ct);
     }
-    // label plate above door
-    const plate = new THREE.Mesh(texBox(0.5, 0.25, 0.05), MAT.brass());
-    plate.position.y = 2.62;
+    // Numbered label plate above door — exit doors read the next room's number.
+    const label = String(port === spec.entry ? room.index : room.index + 1).padStart(3, '0');
+    const plate = new THREE.Mesh(texBox(0.55, 0.27, 0.05), plateMaterial(label) ?? MAT.brass());
+    plate.position.y = 2.68;
     frame.add(plate);
     // leaf
     const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), isUnder ? MAT.steel() : MAT.oak());
@@ -135,42 +188,106 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
 
   // Props
+  const wireColliders = (built: ReturnType<typeof buildProp>) => {
+    for (const c of built.colliders) {
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + c.x * cos + c.z * sin;
+      const wz = room.origin.z - c.x * sin + c.z * cos;
+      const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
+      const ww = swapped ? c.d : c.w;
+      const wd = swapped ? c.w : c.d;
+      const box = aabb(wx, room.origin.y + (c.y ?? 0) + c.h / 2, wz, ww / 2, c.h / 2, wd / 2);
+      if (c.losOnly) {
+        room.losBlockers.push(box);
+      } else if (!c.walkable) {
+        room.colliders.push(box);
+        if (!c.movementOnly) room.losBlockers.push(box);
+      }
+    }
+  };
   for (const p of spec.props) {
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       group.add(built.group);
-      // Wire authored prop colliders into the room (room-local → world space).
-      for (const c of built.colliders) {
-        const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
-        const wx = room.origin.x + c.x * cos + c.z * sin;
-        const wz = room.origin.z - c.x * sin + c.z * cos;
-        const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
-        const ww = swapped ? c.d : c.w;
-        const wd = swapped ? c.w : c.d;
-        const box = aabb(wx, room.origin.y + (c.y ?? 0) + c.h / 2, wz, ww / 2, c.h / 2, wd / 2);
-        if (c.losOnly) {
-          room.losBlockers.push(box);
-        } else if (!c.walkable) {
-          room.colliders.push(box);
-          room.losBlockers.push(box);
-        }
-      }
+      wireColliders(built);
     } catch {
       // skip broken prop rather than fail room
     }
   }
 
-  // Light fixtures (visible lamp meshes) + real lights capped by quality
+  // Seeded floor clutter — scattered papers and debris; door lanes stay clear.
+  if (!isUnder && (spec.biome === 'corridor' || spec.biome === 'records' || spec.biome === 'guest' || spec.biome === 'unlit')) {
+    const n = Math.min(7, Math.floor((w * d) / 15) + rng.int(0, 2));
+    for (let i = 0; i < n; i++) {
+      const cx = (rng.float() - 0.5) * (w - 1.6);
+      const cz = (rng.float() - 0.5) * (d - 1.6);
+      const nearDoor = doorPositions.some((p) => {
+        const lp = portLocalPos(p, w, d);
+        return Math.hypot(cx - lp.x, cz - lp.z) < 1.5;
+      });
+      if (nearDoor) continue;
+      const kind: 'paperScatter' | 'carton' = rng.bool(0.85) ? 'paperScatter' : 'carton';
+      // bias cartons toward walls so they don't sit mid-lane
+      const px = kind === 'carton' ? Math.sign(cx || 1) * Math.max(Math.abs(cx), w * 0.3) : cx;
+      try {
+        const built = buildProp({ kind, x: px, z: cz, yaw: rng.float() * Math.PI }, rng.fork(9000 + i));
+        group.add(built.group);
+        wireColliders(built);
+      } catch { /* dressing only */ }
+    }
+  }
+
+  // Light fixtures (visible lamp meshes) + real lights capped by quality.
+  // main/dim lights get real fixtures: recessed troffers under a suspended
+  // ceiling, fluoro tubes in service spaces, pendants in tall rooms.
   const lampMeshes: THREE.Mesh[] = [];
   const lights: THREE.PointLight[] = [];
   const maxLights = quality === 'low' ? 1 : quality === 'medium' ? 2 : 3;
   const sorted = [...spec.lights].sort((a, b) => b.intensity - a.intensity);
   for (const ls of spec.lights) {
-    const bulb = new THREE.Mesh(unitBox, ls.group === 'warning' ? MAT.redLamp() : MAT.amberDim());
-    bulb.scale.set(0.15, 0.08, 0.15);
-    bulb.position.set(ls.x, ls.y - 0.05, ls.z);
-    group.add(bulb);
-    lampMeshes.push(bulb);
+    if (ls.group === 'main' || ls.group === 'dim') {
+      if (suspended) {
+        const frameM = new THREE.Mesh(texBox(1.32, 0.07, 0.64), MAT.charcoal());
+        frameM.position.set(ls.x, fixtureY + 0.02, ls.z);
+        group.add(frameM);
+        const panel = new THREE.Mesh(texBox(1.2, 0.03, 0.54), MAT.fluoro());
+        panel.position.set(ls.x, fixtureY - 0.02, ls.z);
+        group.add(panel);
+        lampMeshes.push(panel);
+      } else if (isUnder || spec.biome === 'maintenance') {
+        for (const sx of [-0.45, 0.45]) {
+          const stem = new THREE.Mesh(texBox(0.02, 0.22, 0.02), MAT.charcoal());
+          stem.position.set(ls.x + sx, ls.y + 0.11, ls.z);
+          group.add(stem);
+        }
+        const housing = new THREE.Mesh(texBox(1.32, 0.05, 0.2), MAT.steelDark());
+        housing.position.set(ls.x, ls.y, ls.z);
+        group.add(housing);
+        const tube = new THREE.Mesh(texBox(1.24, 0.03, 0.14), MAT.fluoro());
+        tube.position.set(ls.x, ls.y - 0.035, ls.z);
+        group.add(tube);
+        lampMeshes.push(tube);
+      } else {
+        // pendant — cord + shade + bulb
+        const cord = new THREE.Mesh(texBox(0.02, 0.5, 0.02), MAT.charcoal());
+        cord.position.set(ls.x, ls.y + 0.25, ls.z);
+        group.add(cord);
+        const shade = new THREE.Mesh(texBox(0.3, 0.18, 0.3), MAT.charcoal());
+        shade.position.set(ls.x, ls.y - 0.04, ls.z);
+        group.add(shade);
+        const bulb = new THREE.Mesh(unitBox, MAT.amberDim());
+        bulb.scale.set(0.12, 0.09, 0.12);
+        bulb.position.set(ls.x, ls.y - 0.14, ls.z);
+        group.add(bulb);
+        lampMeshes.push(bulb);
+      }
+    } else {
+      const bulb = new THREE.Mesh(unitBox, ls.group === 'warning' ? MAT.redLamp() : MAT.amberDim());
+      bulb.scale.set(0.15, 0.08, 0.15);
+      bulb.position.set(ls.x, ls.y - 0.05, ls.z);
+      group.add(bulb);
+      lampMeshes.push(bulb);
+    }
   }
   let shadowAssigned = false;
   for (const ls of sorted.slice(0, maxLights)) {

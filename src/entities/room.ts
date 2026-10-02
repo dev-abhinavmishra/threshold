@@ -9,6 +9,7 @@ import { v3, v3dist, clamp } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
+import { tallFigure } from './figure';
 import { Rng } from '../engine/rng';
 
 /* ============================ WITNESS ============================ */
@@ -33,10 +34,9 @@ export class Witness extends Entity {
     );
     this.state = 'engage';
     const g = new THREE.Group();
-    const figure = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.9, 0.3), MAT.shadowFigure());
-    figure.position.y = 0.95;
+    const figure = tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper() });
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.5, 16), MAT.eyeGlow());
-    halo.position.y = 1.7;
+    halo.position.y = 2.0;
     g.add(figure, halo);
     this.mesh = g;
     g.position.copy(this.pos as unknown as THREE.Vector3);
@@ -209,13 +209,7 @@ export class EchoSkin extends Entity {
   protected override onSpawn(): void {
     this.state = 'engage';
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 1.85, 0.3), MAT.creatureSkin());
-    body.position.y = 0.92;
-    // mismatched "door plate" head
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.06), MAT.darkOak());
-    head.position.y = 1.95;
-    g.add(body, head);
+    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin() });
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
@@ -372,12 +366,10 @@ export class Margin extends Entity {
 
   protected override onSpawn(): void {
     const c = this.ctx;
-    const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.7, 0.2), MAT.ink());
-    body.position.y = 0.85;
-    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.7, 0.22), MAT.redLamp());
-    edge.position.set(0.28, 0.85, 0);
-    g.add(body, edge);
+    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none' });
+    const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.3), MAT.redLamp());
+    edge.position.set(0.4, 1.05, 0);
+    g.add(edge);
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('margin-edge', null, '[something waits at the edge of sight]', { severity: 'warn' });
