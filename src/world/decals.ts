@@ -438,3 +438,31 @@ export function peeledWallpaper(rng: Rng): THREE.Texture | null {
     ctx.fillRect(fx, fh - 3, fw, 3);
   });
 }
+
+/* ---------- muddy footprint trail — staggered pairs fading along a path ---------- */
+
+export function footprintTrail(rng: Rng): THREE.Texture | null {
+  return canvasTex(160, 384, (ctx) => {
+    const steps = 4 + Math.floor(rng.float() * 4);
+    const weave = (rng.float() - 0.5) * 40;
+    for (let i = 0; i < steps; i++) {
+      const t = i / (steps - 1);
+      const y = 340 - t * 290 + (rng.float() - 0.5) * 12;
+      const x = 80 + Math.sin(t * 2.6) * weave + (i % 2 === 0 ? -26 : 26) + (rng.float() - 0.5) * 10;
+      const fade = 0.34 - t * 0.22 + rng.float() * 0.06;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((i % 2 === 0 ? -0.16 : 0.16) + (rng.float() - 0.5) * 0.2);
+      // sole: heel blob + ball blob, muddy brown-black
+      ctx.fillStyle = `rgba(46,36,24,${fade})`;
+      ctx.beginPath(); ctx.ellipse(0, -9, 9, 14, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 11, 7, 8, 0, 0, Math.PI * 2); ctx.fill();
+      // dirt speckle around the print
+      for (let s = 0; s < 6; s++) {
+        ctx.fillStyle = `rgba(46,36,24,${fade * 0.4})`;
+        ctx.fillRect((rng.float() - 0.5) * 30, (rng.float() - 0.5) * 34, 2, 2);
+      }
+      ctx.restore();
+    }
+  });
+}

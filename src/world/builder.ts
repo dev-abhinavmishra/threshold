@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -453,6 +453,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ct.position.set(0, 2.56, zOff);
       frame.add(cl, cr2, ct);
     }
+    // Light-switch plate on the latch-side jamb, both faces of the wall.
+    if (!isUnder && rng.float() < 0.7) {
+      for (const zOff of [0.125, -0.125]) {
+        const sw = new THREE.Mesh(texBox(0.09, 0.14, 0.015), MAT.paper());
+        sw.position.set(fw / 2 + 0.14, 1.22, zOff);
+        frame.add(sw);
+        const toggle = new THREE.Mesh(texBox(0.018, 0.05, 0.02), MAT.paperOld());
+        toggle.position.set(fw / 2 + 0.14, 1.22, zOff + (zOff > 0 ? 0.013 : -0.013));
+        toggle.rotation.x = zOff > 0 ? 0.25 : -0.25;
+        frame.add(toggle);
+      }
+    }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
     const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
     if (industrial && port !== spec.entry && rng.float() < 0.45) {
@@ -642,6 +654,23 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (spot) wallDecal(spot.wall, warningStripe(), 2.3, 0.26, spot.along, 1.05 + rng.float() * 0.3);
     }
 
+    // Power outlets at baseboard height — twin-socket boxes on inside
+    // faces; institutional detail that reads at eye level.
+    if (!isUnder && rng.float() < 0.55) {
+      const nOut = 1 + (rng.float() < 0.4 ? 1 : 0);
+      for (let i = 0; i < nOut; i++) {
+        const spot = pickWallSpot(0.3);
+        if (!spot) break;
+        const outlet = new THREE.Mesh(texBox(0.16, 0.09, 0.02), MAT.paper());
+        const socket = new THREE.Mesh(texBox(0.11, 0.05, 0.012), MAT.charcoal());
+        if (spot.wall === 'e') { outlet.rotation.y = -Math.PI / 2; outlet.position.set(w / 2 - 0.135, 0.28, spot.along); socket.rotation.y = -Math.PI / 2; socket.position.set(w / 2 - 0.142, 0.28, spot.along); }
+        else if (spot.wall === 'w') { outlet.rotation.y = Math.PI / 2; outlet.position.set(-w / 2 + 0.135, 0.28, spot.along); socket.rotation.y = Math.PI / 2; socket.position.set(-w / 2 + 0.142, 0.28, spot.along); }
+        else if (spot.wall === 'n') { outlet.rotation.y = Math.PI; outlet.position.set(spot.along, 0.28, d / 2 - 0.135); socket.rotation.y = Math.PI; socket.position.set(spot.along, 0.28, d / 2 - 0.142); }
+        else { outlet.position.set(spot.along, 0.28, -d / 2 + 0.135); socket.position.set(spot.along, 0.28, -d / 2 + 0.142); }
+        group.add(outlet, socket);
+      }
+    }
+
     // Peeling wallpaper — torn paper exposing plaster, only where the skin
     // is actually wallpaper. Heavier in damp/hostile rooms, never safe.
     if (isWallpaper && spec.biome !== 'safe' && rng.float() < (hostile ? 0.5 : 0.3)) {
@@ -708,6 +737,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(rug);
     }
 
+    // Corridor runner rug — a long worn strip down hallway rooms.
+    if (spec.biome === 'corridor' && !isUnder && d > w * 1.3 && rng.float() < 0.4) {
+      const rw = Math.min(1.1, w * 0.3);
+      const rl = d * (0.6 + rng.float() * 0.25);
+      const runMat = TEX.clothWorn();
+      runMat.color.setHex(rng.pick([0x4a2620, 0x2e3a3c, 0x3a3028]));
+      const run = new THREE.Mesh(texBox(rw, 0.016, rl), runMat);
+      run.position.set((rng.float() - 0.5) * (w - rw - 1), 0.012, (rng.float() - 0.5) * (d - rl - 1));
+      run.rotation.y = (rng.float() - 0.5) * 0.05;
+      group.add(run);
+    }
+
     // Floor stains.
     const stainP = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 0.8 : spec.biome === 'corridor' ? 0.5 : 0.2;
     const nStain = rng.float() < stainP ? 1 + Math.floor(rng.float() * 2) : 0;
@@ -717,6 +758,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.x = -Math.PI / 2;
       m.rotation.z = rng.float() * Math.PI;
       m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
+      group.add(m);
+    }
+
+    // Muddy footprint trail — something walked through here. A staggered
+    // track crossing the floor; heaviest on the walk-paths, never safe.
+    const trackP = isUnder ? 0.5 : spec.biome === 'corridor' ? 0.45 : hostile ? 0.4 : spec.biome === 'records' || spec.biome === 'lobby' ? 0.12 : 0.08;
+    if (spec.biome !== 'safe' && rng.float() < trackP) {
+      const along = d >= w; // lay the trail along the long axis
+      const len = (along ? d : w) * (0.55 + rng.float() * 0.3);
+      const m = decalQuad(footprintTrail(rng), 0.9, Math.min(4.2, len));
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = (along ? 0 : Math.PI / 2) + (rng.bool(0.5) ? Math.PI : 0) + (rng.float() - 0.5) * 0.25;
+      m.position.set((rng.float() - 0.5) * (w - 1.6), 0.0065, (rng.float() - 0.5) * (d - 1.6));
       group.add(m);
     }
 
