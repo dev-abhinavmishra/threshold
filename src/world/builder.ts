@@ -222,12 +222,32 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.add(floor);
   const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
+  // Suspended drop ceiling decision — hoisted: it also gates coffers below.
+  const suspended = !isUnder && spec.biome != 'maintenance' && h <= 3.6;
+  const fixtureY = suspended ? h - 0.22 : h - 0.3;
+  // Coffered ceiling — grand rooms get a shallow oak beam grid under the
+  // slab; the dropped cross-members read as real joinery from the floor.
+  if ((spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && !suspended && w >= 4 && d >= 4 && rng.float() < 0.6) {
+    const beamMat = MAT.darkOak();
+    const nx = Math.max(2, Math.round(w / 2.4));
+    const nz = Math.max(2, Math.round(d / 2.4));
+    for (let i = 0; i <= nx; i++) {
+      const bx = -w / 2 + (i * w) / nx;
+      const beam = new THREE.Mesh(texBox(0.16, 0.18, d), beamMat);
+      beam.position.set(bx, h - 0.09, 0);
+      group.add(beam);
+    }
+    for (let i = 0; i <= nz; i++) {
+      const bz = -d / 2 + (i * d) / nz;
+      const beam = new THREE.Mesh(texBox(w, 0.14, 0.16), beamMat);
+      beam.position.set(0, h - 0.07, bz);
+      group.add(beam);
+    }
+  }
   group.add(ceil);
 
   // Suspended drop ceiling — tile skin + T-bar grid for interior-height rooms.
   // Service spaces keep an exposed slab with a duct trunk instead.
-  const suspended = !isUnder && spec.biome != 'maintenance' && h <= 3.6;
-  const fixtureY = suspended ? h - 0.22 : h - 0.3;
   if (suspended) {
     const tileSkin = new THREE.Mesh(texBox(w, 0.04, d), ceilMat);
     tileSkin.position.y = h - 0.16;
@@ -440,11 +460,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (!industrial) {
       const pw = port.width - 0.1;
       const panelMat = leafMat;
+      const recessMat = MAT.darkOak();
       for (const fz of [0.048, -0.048]) {
         for (let col = 0; col < 2; col++) {
           for (let row = 0; row < 3; row++) {
             const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
             const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
+            // shadowed recess behind each raised panel — reads as a real
+            // mortised panel instead of floating trim
+            const recess = new THREE.Mesh(texBox(pw * 0.4, ph + 0.05, 0.01), recessMat);
+            recess.position.set((col - 0.5) * pw * 0.44, py, fz - Math.sign(fz) * 0.012);
+            leaf.add(recess);
             const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
             panel.position.set((col - 0.5) * pw * 0.44, py, fz);
             leaf.add(panel);
@@ -463,6 +489,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const knob2 = new THREE.Mesh(knob.geometry, MAT.brass());
       knob2.position.set(pw / 2 - 0.14, -0.02, -0.075);
       leaf.add(knob2);
+      // three strap hinges on the hinge stile, both faces
+      for (const fz of [0.048, -0.048]) {
+        for (const hy of [0.75, -0.02, -0.8]) {
+          const hg = new THREE.Mesh(texBox(0.09, 0.14, 0.02), MAT.brass());
+          hg.position.set(-pw / 2 + 0.05, hy, fz);
+          leaf.add(hg);
+        }
+      }
+    } else {
+      // kick plate + rivets on service doors
+      const kp = new THREE.Mesh(texBox(port.width - 0.16, 0.3, 0.02), MAT.steelDark());
+      kp.position.set(0, -0.88, 0.05);
+      leaf.add(kp);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -476,6 +515,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const seam = new THREE.Mesh(texBox(port.width - 0.12, 0.012, 0.085), seamMat);
       seam.position.set(0, -1.095, 0);
       leaf.add(seam);
+    }
+    // hinge hardware on metal service doors (interior got its strap
+    // hinges inside the raised-panel block)
+    if (industrial) {
+      for (const hy of [0.75, -0.02, -0.8]) {
+        const hg = new THREE.Mesh(texBox(0.07, 0.16, 0.03), MAT.steelDark());
+        hg.position.set(-(port.width - 0.1) / 2 + 0.04, hy, 0.05);
+        leaf.add(hg);
+      }
     }
     // hinge at edge for swing
     const hinge = new THREE.Group();
