@@ -221,7 +221,7 @@ export class AudioManager {
   soundEvent(e: SoundEvent): void {
     const at = { x: e.x, y: e.y, z: e.z };
     const isPlayer = Math.abs(e.x - this.listener.x) < 0.5 && Math.abs(e.z - this.listener.z) < 0.5;
-    const base = {
+    let base = {
       footstep: { freq: 120 + e.intensity * 60, dur: 0.08, type: 'sine' as OscillatorType, gain: 0.1 * e.intensity },
       sprint: { freq: 140 + e.intensity * 60, dur: 0.1, type: 'sine' as OscillatorType, gain: 0.16 * e.intensity },
       door: CUES['door-open'],
@@ -235,6 +235,21 @@ export class AudioManager {
       ambient: { freq: 70, dur: 1.5, type: 'sine' as OscillatorType, gain: 0.05 },
       critter: { freq: 2400, dur: 0.06, type: 'square' as OscillatorType, gain: 0.045, sweep: 3200 },
     }[e.category];
+    // Surface-timbre footsteps: carpet thuds soft, wood knocks, stone/concrete
+    // taps, metal rings, paper rustles.
+    if ((e.category === 'footstep' || e.category === 'sprint') && e.surface && base) {
+      const mul = e.category === 'sprint' ? 1.4 : 1;
+      const steps: Record<string, { freq: number; dur: number; type: OscillatorType; gain: number }> = {
+        carpet: { freq: 85 + e.intensity * 40, dur: 0.09, type: 'sine', gain: 0.07 * e.intensity * mul },
+        wood: { freq: 155 + e.intensity * 60, dur: 0.07, type: 'triangle', gain: 0.12 * e.intensity * mul },
+        stone: { freq: 140 + e.intensity * 55, dur: 0.08, type: 'triangle', gain: 0.11 * e.intensity * mul },
+        concrete: { freq: 130 + e.intensity * 50, dur: 0.09, type: 'triangle', gain: 0.11 * e.intensity * mul },
+        metal: { freq: 210 + e.intensity * 90, dur: 0.13, type: 'triangle', gain: 0.13 * e.intensity * mul },
+        paper: { freq: 300 + e.intensity * 120, dur: 0.05, type: 'sawtooth', gain: 0.05 * e.intensity * mul },
+      };
+      const surf = steps[e.surface];
+      if (surf) base = surf;
+    }
     this.emitCaption(e.caption ?? '', 'info');
     if (!this.ctx || !base) return;
     const t0 = this.ctx.currentTime;
@@ -253,6 +268,62 @@ export class AudioManager {
     osc.connect(g).connect(panner);
     osc.start(t0);
     osc.stop(t0 + base.dur + 0.05);
+  }
+
+  /* ---------- biome room-tone bed ---------- */
+
+  private roomTone: { src: AudioBufferSourceNode; gain: GainNode; filter: BiquadFilterNode; osc?: OscillatorNode } | null = null;
+  private roomToneKey = '';
+
+  /** Looping ambience for the current space — noise bed + optional hum on
+   *  the 'voice' (ambience) bus. Call when the room or subfloor changes. */
+  setRoomTone(biome: string, extras: { dark?: boolean; window?: boolean } = {}): void {
+    const key = `${biome}|${extras.dark ? 'd' : ''}${extras.window ? 'w' : ''}`;
+    if (key === this.roomToneKey) return;
+    this.roomToneKey = key;
+    if (this.roomTone) {
+      try { this.roomTone.src.stop(); this.roomTone.osc?.stop(); } catch { /* already stopped */ }
+      this.roomTone.gain.disconnect();
+      this.roomTone = null;
+    }
+    if (!this.ctx || !this.noiseBuffer || this.mood === 'chase' || biome === 'off') return;
+    // Per-space voice: filters/gains tuned so each biome reads at a glance.
+    const prof: Record<string, { fType: BiquadFilterType; f: number; q: number; g: number; hum?: number; humG?: number }> = {
+      maintenance: { fType: 'lowpass', f: 170, q: 0.8, g: 0.10, hum: 60, humG: 0.05 },
+      underscript: { fType: 'bandpass', f: 170, q: 3, g: 0.05, hum: 120, humG: 0.03 },
+      unlit: { fType: 'bandpass', f: 320, q: 1.2, g: 0.045 },
+      corridor: { fType: 'highpass', f: 700, q: 0.6, g: 0.014 },
+      records: { fType: 'highpass', f: 800, q: 0.6, g: 0.012 },
+      guest: { fType: 'highpass', f: 750, q: 0.6, g: 0.013 },
+      lobby: { fType: 'highpass', f: 650, q: 0.6, g: 0.016 },
+      gallery: { fType: 'highpass', f: 600, q: 0.6, g: 0.015 },
+      milestone: { fType: 'lowpass', f: 130, q: 0.8, g: 0.09, hum: 45, humG: 0.06 },
+      safe: { fType: 'bandpass', f: 260, q: 1.4, g: 0.03 },
+      unknown: { fType: 'highpass', f: 700, q: 0.6, g: 0.014 },
+    };
+    const p = prof[biome] ?? prof.unknown;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuffer;
+    src.loop = true;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = p.fType;
+    filter.frequency.value = p.f * (extras.window ? 1.25 : 1) * (extras.dark ? 0.85 : 1);
+    filter.Q.value = p.q;
+    const gain = this.ctx.createGain();
+    gain.gain.value = p.g * (extras.dark ? 0.8 : 1);
+    src.connect(filter).connect(gain).connect(this.bus('voice')!);
+    let osc: OscillatorNode | undefined;
+    if (p.hum) {
+      osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = p.hum;
+      const og = this.ctx.createGain();
+      og.gain.value = p.humG ?? 0.03;
+      osc.connect(og).connect(gain);
+      osc.start();
+    }
+    src.start();
+    this.roomTone = { src, gain, filter, osc };
   }
 
   /** Adaptive music — a slow generative pad; intensity follows mood. */

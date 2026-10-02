@@ -810,6 +810,7 @@ export class Game {
     saveMeta(this.meta);
     this.audio.play('death', null, '', 'danger');
     this.audio.setMood('off');
+    this.sound.setRoomTone('off');
     const hints: Record<string, string> = {
       sweep: 'Its cue is the pressure wave and the flicker. Conceal or break line of sight.',
       reprise: 'It returns — stay put through every pass.',
@@ -857,6 +858,7 @@ export class Game {
     clearCheckpoint();
     this.audio.play('victory', null, '', 'info');
     this.audio.setMood('menu');
+    this.sound.setRoomTone('off');
     useGameStore.setState({ phase: 'COMPLETE', victoryInfo: { stats: this.stats }, paused: true });
     document.exitPointerLock?.();
     this.clock.stop();
@@ -874,6 +876,7 @@ export class Game {
   }
 
   quitToMenu(): void {
+    this.sound.setRoomTone('off');
     useGameStore.setState({ phase: 'MENU', paused: true, menuPage: 'title' });
     document.exitPointerLock?.();
     this.audio.setMood('menu');
@@ -1320,6 +1323,11 @@ export class Game {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
       this.maybeSpawnRat();
     }
+    // Room-tone bed — idempotent; follows space + biome changes each frame.
+    const toneRoom = this.activeRooms()[this.currentRoom];
+    this.sound.setRoomTone(this.space === 'under' ? 'underscript' : (toneRoom?.biome ?? 'unknown'), {
+      dark: toneRoom?.darkRoom ?? this.space === 'under',
+    });
 
     // streamer + interactables
     this.streamer.update(this.activeRooms(), this.currentRoom, 1, this.space === 'main' ? this.route!.branchRooms : []);
@@ -1483,6 +1491,7 @@ export class Game {
   }
 
   dispose(): void {
+    this.sound.setRoomTone('off');
     cancelAnimationFrame(this.raf);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);

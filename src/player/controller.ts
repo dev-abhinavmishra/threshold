@@ -128,8 +128,8 @@ export class PlayerController {
           intensity,
           category: sprinting ? 'sprint' : 'footstep',
           caption: sprinting ? '[running]' : '',
+          surface: roomFloor?.floorMaterial,
         });
-        void roomFloor;
       }
     }
   }

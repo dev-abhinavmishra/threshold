@@ -59,6 +59,8 @@ export interface SoundEvent {
   caption: string;
   /** Direction hint for captions (left/right/behind/ahead) resolved at emit. */
   direction?: 'left' | 'right' | 'ahead' | 'behind' | 'above' | 'below';
+  /** Floor surface under the emitter (wood/carpet/stone/metal/concrete/paper) — varies footstep timbre. */
+  surface?: string;
 }
 
 type SoundListener = (event: SoundEvent) => void;
