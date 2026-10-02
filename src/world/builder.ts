@@ -622,6 +622,52 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (spot) wallDecal(spot.wall, warningStripe(), 2.3, 0.26, spot.along, 1.05 + rng.float() * 0.3);
     }
 
+    // Panel molding — picture-frame trim rectangles on formal-room walls
+    // between the chair rail and picture rail. Four thin strips per frame.
+    const moldingP = ({ gallery: 0.8, lobby: 0.7, milestone: 0.6, guest: 0.35 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && rng.float() < moldingP) {
+      const nFrames = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < nFrames; i++) {
+        const fw = 1.1 + rng.float() * 0.7, fh = 0.9 + rng.float() * 0.4;
+        const spot = pickWallSpot(fw + 0.2);
+        if (!spot) break;
+        const cy = 1.55 + rng.float() * 0.35;
+        const t = 0.035;
+        const fr = new THREE.Group();
+        for (const [bw, bh, bx, by] of [
+          [fw, t, 0, fh / 2], [fw, t, 0, -fh / 2],
+          [t, fh, -fw / 2, 0], [t, fh, fw / 2, 0],
+        ] as const) {
+          const strip = new THREE.Mesh(texBox(bw, bh, 0.03), trimMat);
+          strip.position.set(bx, by, 0.005);
+          fr.add(strip);
+        }
+        if (spot.wall === 'e') { fr.rotation.y = -Math.PI / 2; fr.position.set(w / 2 - 0.02, cy, spot.along); }
+        else if (spot.wall === 'w') { fr.rotation.y = Math.PI / 2; fr.position.set(-w / 2 + 0.02, cy, spot.along); }
+        else if (spot.wall === 'n') { fr.rotation.y = Math.PI; fr.position.set(spot.along, cy, d / 2 - 0.02); }
+        else { fr.position.set(spot.along, cy, -d / 2 + 0.02); }
+        group.add(fr);
+      }
+    }
+
+    // Area rug — a bordered carpet runner center-floor in lived-in rooms.
+    const rugP = ({ lobby: 0.6, guest: 0.55, gallery: 0.4, records: 0.3, milestone: 0.5, safe: 0.4 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && rng.float() < rugP && w > 3.4 && d > 3.4) {
+      const rw = Math.min(w - 1.6, 1.8 + rng.float() * 1.4);
+      const rd = Math.min(d - 1.6, 1.4 + rng.float() * 1.6);
+      const rx = (rng.float() - 0.5) * (w - rw - 1.2);
+      const rz = (rng.float() - 0.5) * (d - rd - 1.2);
+      const rugPal = [0x5a2a24, 0x2c3a4a, 0x3c4a34, 0x4a3c2c];
+      const rugMat = TEX.clothWorn();
+      rugMat.color.setHex(rugPal[Math.floor(rng.float() * rugPal.length)]);
+      const border = new THREE.Mesh(texBox(rw + 0.14, 0.012, rd + 0.14), MAT.darkOak());
+      border.position.set(rx, 0.008, rz);
+      group.add(border);
+      const rug = new THREE.Mesh(texBox(rw, 0.018, rd), rugMat);
+      rug.position.set(rx, 0.014, rz);
+      group.add(rug);
+    }
+
     // Floor stains.
     const stainP = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 0.8 : spec.biome === 'corridor' ? 0.5 : 0.2;
     const nStain = rng.float() < stainP ? 1 + Math.floor(rng.float() * 2) : 0;
