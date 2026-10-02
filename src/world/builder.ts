@@ -452,14 +452,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const mounts: { kind: PropKind; y: number; p: number }[] = ({
       corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.15 }],
       records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }],
-      lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }],
-      guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }],
+      lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }, { kind: 'dartboard', y: 1.7, p: 0.25 }],
+      guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'dartboard', y: 1.7, p: 0.15 }],
       gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }],
-      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.3 }],
+      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.3 }, { kind: 'airconUnit', y: 2.35, p: 0.3 }],
       unlit: [{ kind: 'gasMask', y: 1.55, p: 0.2 }],
       milestone: [{ kind: 'securityCam', y: 2.4, p: 0.3 }],
       safe: [{ kind: 'medBox', y: 1.45, p: 0.45 }],
-      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.4 }, { kind: 'cagedSconce', y: 2.3, p: 0.25 }],
+      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.4 }, { kind: 'cagedSconce', y: 2.3, p: 0.25 }, { kind: 'airconUnit', y: 2.35, p: 0.25 }],
     } as Record<string, { kind: PropKind; y: number; p: number }[]>)[spec.biome] ?? [];
     for (const mt of mounts) {
       if (rng.float() >= mt.p) continue;
@@ -493,16 +493,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
     // Floor props — seeded dressing per biome, biased to walls, lane-clear.
     const floorSet: { kind: PropKind; p: number; wallBias?: boolean }[] = ({
-      corridor: [{ kind: 'wetFloor', p: 0.25 }, { kind: 'stool', p: 0.15, wallBias: true }, { kind: 'bin', p: 0.3, wallBias: true }],
-      records: [{ kind: 'stool', p: 0.3, wallBias: true }, { kind: 'plasticCrate', p: 0.3, wallBias: true }, { kind: 'ladder', p: 0.15, wallBias: true }],
-      lobby: [{ kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }],
-      guest: [{ kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }],
-      gallery: [{ kind: 'bench', p: 0.3 }, { kind: 'armchair', p: 0.2, wallBias: true }],
-      maintenance: [{ kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }, { kind: 'plasticCrate2', p: 0.25, wallBias: true }, { kind: 'jerrycan', p: 0.3, wallBias: true }, { kind: 'oilTin', p: 0.25 }, { kind: 'tirePump', p: 0.2, wallBias: true }, { kind: 'woodLadder', p: 0.2, wallBias: true }],
-      unlit: [{ kind: 'lantern', p: 0.4, wallBias: true }, { kind: 'flashlight', p: 0.2 }, { kind: 'barrel', p: 0.3, wallBias: true }],
+      corridor: [{ kind: 'wetFloor', p: 0.25 }, { kind: 'stool', p: 0.15, wallBias: true }, { kind: 'bin', p: 0.3, wallBias: true }, { kind: 'broom', p: 0.15, wallBias: true }, { kind: 'baseballBat', p: 0.12, wallBias: true }],
+      records: [{ kind: 'stool', p: 0.3, wallBias: true }, { kind: 'plasticCrate', p: 0.3, wallBias: true }, { kind: 'ladder', p: 0.15, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }, { kind: 'screenPanels', p: 0.15, wallBias: true }],
+      lobby: [{ kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }, { kind: 'screenPanels', p: 0.25, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }],
+      guest: [{ kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }, { kind: 'nightstand', p: 0.5, wallBias: true }, { kind: 'bedOld', p: 0.3, wallBias: true }, { kind: 'screenPanels', p: 0.2, wallBias: true }, { kind: 'masonryHeater', p: 0.25, wallBias: true }, { kind: 'broom', p: 0.1, wallBias: true }, { kind: 'baseballBat', p: 0.15, wallBias: true }],
+      gallery: [{ kind: 'bench', p: 0.3 }, { kind: 'armchair', p: 0.2, wallBias: true }, { kind: 'masonryHeater', p: 0.2, wallBias: true }, { kind: 'screenPanels', p: 0.2, wallBias: true }],
+      maintenance: [{ kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }, { kind: 'plasticCrate2', p: 0.25, wallBias: true }, { kind: 'jerrycan', p: 0.3, wallBias: true }, { kind: 'oilTin', p: 0.25 }, { kind: 'tirePump', p: 0.2, wallBias: true }, { kind: 'woodLadder', p: 0.2, wallBias: true }, { kind: 'cementBag', p: 0.3, wallBias: true }, { kind: 'compostBags', p: 0.3, wallBias: true }, { kind: 'drillPress', p: 0.3, wallBias: true }, { kind: 'jerrycanP', p: 0.25, wallBias: true }, { kind: 'broom', p: 0.25, wallBias: true }, { kind: 'dustpan', p: 0.2 }, { kind: 'sprayCans', p: 0.2 }, { kind: 'rustCan', p: 0.2 }, { kind: 'cleanerBottle', p: 0.2 }, { kind: 'bleachBottle', p: 0.2 }, { kind: 'ammoBox', p: 0.15, wallBias: true }, { kind: 'megaphone', p: 0.1 }, { kind: 'deadTree', p: 0.05, wallBias: true }],
+      unlit: [{ kind: 'lantern', p: 0.4, wallBias: true }, { kind: 'flashlight', p: 0.2 }, { kind: 'barrel', p: 0.3, wallBias: true }, { kind: 'deadTree', p: 0.08, wallBias: true }, { kind: 'sprayCans', p: 0.15 }, { kind: 'rustCan', p: 0.15 }, { kind: 'ammoBox', p: 0.12, wallBias: true }],
       milestone: [{ kind: 'lantern', p: 0.2, wallBias: true }],
-      safe: [{ kind: 'lantern', p: 0.5, wallBias: true }, { kind: 'armchair', p: 0.3, wallBias: true }],
-      underscript: [{ kind: 'wineBarrel', p: 0.45, wallBias: true }, { kind: 'milCrate', p: 0.4, wallBias: true }, { kind: 'lantern', p: 0.3, wallBias: true }, { kind: 'barrel', p: 0.3, wallBias: true }, { kind: 'plasticCrate3', p: 0.3, wallBias: true }, { kind: 'roadBarrier', p: 0.15 }, { kind: 'hydrant', p: 0.12, wallBias: true }, { kind: 'manhole', p: 0.25 }, { kind: 'wetFloor', p: 0.2 }],
+      safe: [{ kind: 'lantern', p: 0.5, wallBias: true }, { kind: 'armchair', p: 0.3, wallBias: true }, { kind: 'boombox', p: 0.2 }, { kind: 'foodCans', p: 0.3 }, { kind: 'jerrycanP', p: 0.2, wallBias: true }, { kind: 'megaphone', p: 0.1 }],
+      underscript: [{ kind: 'wineBarrel', p: 0.45, wallBias: true }, { kind: 'milCrate', p: 0.4, wallBias: true }, { kind: 'lantern', p: 0.3, wallBias: true }, { kind: 'barrel', p: 0.3, wallBias: true }, { kind: 'plasticCrate3', p: 0.3, wallBias: true }, { kind: 'roadBarrier', p: 0.15 }, { kind: 'hydrant', p: 0.12, wallBias: true }, { kind: 'manhole', p: 0.25 }, { kind: 'wetFloor', p: 0.2 }, { kind: 'cementBag', p: 0.2, wallBias: true }, { kind: 'compostBags', p: 0.25, wallBias: true }, { kind: 'drillPress', p: 0.2, wallBias: true }, { kind: 'jerrycanP', p: 0.2, wallBias: true }, { kind: 'deadTree', p: 0.05, wallBias: true }, { kind: 'ammoBox', p: 0.15, wallBias: true }, { kind: 'broom', p: 0.15, wallBias: true }],
     } as Record<string, { kind: PropKind; p: number; wallBias?: boolean }[]>)[spec.biome] ?? [];
     for (const fp of floorSet) {
       if (rng.float() >= fp.p) continue;
@@ -640,6 +640,31 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       bulb.position.set(ls.x, ls.y - 0.05, ls.z);
       group.add(bulb);
       lampMeshes.push(bulb);
+    }
+  }
+  // Decorative ceiling fixtures in non-suspended main rooms — spinning
+  // ceiling fans in domestic spaces, swinging lantern chandeliers in
+  // grander rooms, both hung on ceiling pivots so they animate.
+  if (!suspended && !isUnder && !room.darkRoom && rng.float() < 0.35) {
+    const kind: PropKind | null =
+      spec.biome === 'lobby' || spec.biome === 'gallery' ? 'lanternChandelier'
+      : spec.biome === 'guest' ? 'ceilingFan'
+      : null;
+    if (kind) {
+      const fx = (rng.float() - 0.5) * w * 0.3;
+      const fz = (rng.float() - 0.5) * d * 0.3;
+      try {
+        const built = buildProp({ kind, x: fx, z: fz, y: 0, yaw: rng.float() * Math.PI }, rng.fork(5550));
+        const pivot = new THREE.Group();
+        pivot.position.set(fx, h - 0.03, fz);
+        built.group.position.y = kind === 'ceilingFan' ? -0.28 : -0.62;
+        pivot.add(built.group);
+        pivot.userData.anim = kind === 'ceilingFan' ? 'spin' : 'swing';
+        pivot.userData.animSpeed = 0.9;
+        pivot.userData.animAmp = 0.08;
+        pivot.userData.animSeed = rng.float() * 100;
+        group.add(pivot);
+      } catch { /* dressing only */ }
     }
   }
   let shadowAssigned = false;

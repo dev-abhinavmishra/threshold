@@ -43,6 +43,12 @@ export type PropKind =
   | 'plasticCrate2' | 'plasticCrate3' | 'schoolChair' | 'schoolDesk'
   | 'ceilingLamp2' | 'cagedSconce' | 'manhole' | 'hydrant' | 'chainBulb'
   | 'woodLadder' | 'oilTin' | 'tirePump' | 'vintageCabinet' | 'modernCabinet' | 'projector'
+  | 'stove' | 'bedOld' | 'masonryHeater' | 'boombox' | 'cassettePlayer'
+  | 'laptop' | 'dartboard' | 'airconUnit' | 'broom' | 'dustpan'
+  | 'cementBag' | 'compostBags' | 'nightstand' | 'screenPanels' | 'foldingStool'
+  | 'drillPress' | 'lanternChandelier' | 'megaphone' | 'ammoBox' | 'deadTree'
+  | 'baseballBat' | 'jerrycanP' | 'sprayCans' | 'rustCan'
+  | 'foodCans' | 'cleanerBottle' | 'bleachBottle' | 'ceilingFan'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'

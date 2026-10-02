@@ -146,3 +146,35 @@ has not finished loading falls back to its procedural builder.
 | `models/vintage_cabinet_01` | Vintage Cabinet 01 | `vintageCabinet` props |
 | `models/modern_wooden_cabinet` | Modern Wooden Cabinet | `modernCabinet` props |
 | `models/filmstrip_projector_8mm` | Filmstrip Projector 8mm | `projector` props |
+| `models/electric_stove` | Electric Stove | `stove` props |
+| `models/old_bed_frame` | Old Bed Frame | `bedOld` props |
+| `models/scandinavian_masonry_heater` | Scandinavian Masonry Heater | `masonryHeater` props |
+| `models/ceiling_fan` | Ceiling Fan | `ceilingFan` fixtures |
+| `models/boombox` | Boombox | `boombox` props |
+| `models/cassette_player` | Cassette Player | `cassettePlayer` props |
+| `models/classic_laptop` | Classic Laptop | `laptop` props |
+| `models/dartboard` | Dartboard | `dartboard` wall-mounts |
+| `models/security_camera_02` | Security Camera 02 | `securityCam` variant |
+| `models/exterior_aircon_unit` | Exterior Aircon Unit | `airconUnit` wall-mounts |
+| `models/plastic_broom` | Plastic Broom | `broom` props |
+| `models/dustpan` | Dustpan | `dustpan` props |
+| `models/cement_bag` | Cement Bag | `cementBag` props |
+| `models/compost_bags` | Compost Bags | `compostBags` props |
+| `models/ClassicNightstand_01` | Classic Nightstand 01 | `nightstand` props |
+| `models/chinese_screen_panels` | Chinese Screen Panels | `screenPanels` dividers |
+| `models/folding_wooden_stool` | Folding Wooden Stool | `foldingStool` props |
+| `models/old_drill_press` | Old Drill Press | `drillPress` props |
+| `models/lantern_chandelier_01` | Lantern Chandelier 01 | `lanternChandelier` fixtures |
+| `models/Megaphone_01` | Megaphone 01 | `megaphone` props |
+| `models/ammo_box` | Ammo Box | `ammoBox` props |
+| `models/dead_tree_trunk` | Dead Tree Trunk | `deadTree` props |
+| `models/fir_tree_01` | Fir Tree 01 | dropped — 456MB bin exceeds repo limits |
+| `models/baseball_bat` | Baseball Bat | `baseballBat` props |
+| `models/adjustable_wrench` | Adjustable Wrench | (spare `wrench` variant) |
+| `models/plastic_jerrycan` | Plastic Jerrycan | `jerrycanP` props |
+| `models/spray_paint_bottles` | Spray Paint Bottles | `sprayCans` clutter |
+| `models/can_rusted` | Can Rusted | `rustCan` clutter |
+| `models/russian_food_cans_01` | Russian Food Cans 01 | `foodCans` clutter |
+| `models/signal_flashlight` | Signal Flashlight | (spare `flashlight` variant) |
+| `models/drain_cleaner` | Drain Cleaner | `cleanerBottle` clutter |
+| `models/bleach_bottle` | Bleach Bottle | `bleachBottle` clutter |

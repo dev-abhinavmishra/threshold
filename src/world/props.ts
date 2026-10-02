@@ -785,7 +785,7 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
 
 // Fixture kinds whose GLTF materials get a warm emissive lift so they read
 // as light sources rather than unlit furniture.
-const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'stove', 'monitor', 'serverRack', 'fluoroStrip', 'cageLight', 'securityLight', 'pipeLamp']);
+const LIT_FIXTURES = new Set(['wallSconce', 'ceilingLamp', 'lamp', 'deskLamp', 'candle', 'chandelier', 'monitor', 'serverRack', 'fluoroStrip', 'cageLight', 'securityLight', 'pipeLamp']);
 
 export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   const model = modelInstance(spec.kind, rng.float());
