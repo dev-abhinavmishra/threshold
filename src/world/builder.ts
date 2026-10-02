@@ -100,6 +100,68 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const duct = new THREE.Mesh(texBox(0.5, 0.42, d - 0.4), MAT.steelDark());
     duct.position.set(w * 0.22, h - 0.45, 0);
     group.add(duct);
+    // Branch duct peeling off at 90° + elbow collar
+    const branch = new THREE.Mesh(texBox(w * 0.45, 0.34, 0.5), MAT.steelDark());
+    branch.position.set(-w * 0.1, h - 0.42, (rng.float() - 0.5) * d * 0.4);
+    group.add(branch);
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.44, 10), MAT.steelDark());
+    collar.rotation.z = Math.PI / 2;
+    collar.position.set(w * 0.22 - 0.14, h - 0.44, branch.position.z);
+    group.add(collar);
+    // 2-3 exposed pipe runs along the long axis, some with valve wheels
+    const nPipes = 2 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < nPipes; i++) {
+      const px = -w * 0.35 + rng.float() * w * 0.25;
+      const py = h - 0.25 - i * 0.14 - rng.float() * 0.05;
+      const r = 0.028 + rng.float() * 0.03;
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d - 0.3, 8), MAT.steelDark());
+      pipe.rotation.x = Math.PI / 2;
+      pipe.position.set(px, py, 0);
+      group.add(pipe);
+      // pipe hangers: thin straps from slab down to the pipe
+      for (let hz = -d / 2 + 1; hz < d / 2 - 0.5; hz += 2.4) {
+        const strap = new THREE.Mesh(texBox(0.02, h - py - 0.04, r * 2.6), MAT.charcoal());
+        strap.position.set(px, (h + py + r) / 2 - 0.02, hz);
+        group.add(strap);
+      }
+      if (rng.float() < 0.55) {
+        // valve: small cylinder stub + wheel torus
+        const vz = (rng.float() - 0.5) * (d - 2);
+        const stub = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.4, r * 1.4, 0.5, 8), MAT.steelDark());
+        stub.position.set(px, py - 0.22, vz);
+        group.add(stub);
+        const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.016, 6, 14), MAT.steel());
+        wheel.rotation.x = Math.PI / 2;
+        wheel.position.set(px, py - 0.46, vz);
+        group.add(wheel);
+      }
+    }
+    // Sagging cable drops — TubeGeometry along quadratic curves
+    const nDrops = 1 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < nDrops; i++) {
+      const sx = (rng.float() - 0.5) * (w - 1);
+      const sz = (rng.float() - 0.5) * (d - 1);
+      const sag = 0.25 + rng.float() * 0.55;
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(sx, h - 0.06, sz),
+        new THREE.Vector3(sx + (rng.float() - 0.5) * 0.3, h - sag, sz + (rng.float() - 0.5) * 0.3),
+        new THREE.Vector3(sx + (rng.float() - 0.5) * 0.2, h - sag - 0.02, sz + (rng.float() - 0.5) * 0.2),
+      );
+      const wire = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.012, 5), MAT.charcoal());
+      group.add(wire);
+    }
+  }
+  // Vent registers — small louvered grilles on suspended ceilings too.
+  if (suspended && rng.float() < 0.6) {
+    const vent = new THREE.Mesh(texBox(0.55, 0.02, 0.55), MAT.steelDark());
+    vent.position.set((rng.float() - 0.5) * (w - 1.5), h - 0.145, (rng.float() - 0.5) * (d - 1.5));
+    group.add(vent);
+    for (let lv = -2; lv <= 2; lv++) {
+      const louvre = new THREE.Mesh(texBox(0.5, 0.015, 0.05), MAT.charcoal());
+      louvre.rotation.x = 0.5;
+      louvre.position.set(vent.position.x, h - 0.16, vent.position.z + lv * 0.1);
+      group.add(louvre);
+    }
   }
 
   // Walls from collider boxes (local coords → room group is placed at origin with yaw,
