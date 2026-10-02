@@ -70,17 +70,39 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
     const hand = new THREE.Mesh(new THREE.BoxGeometry(0.09 * s, 0.22 * s, 0.1 * s), body);
     hand.position.y = -1.28 * s;
     arm.add(upper, hand);
+    if (!o.claws) {
+      // finger stubs fanned below the palm — reads as a hand, not a stub
+      for (let fi = 0; fi < 3; fi++) {
+        const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.012 * s, 0.014 * s, 0.13 * s, 5), body);
+        finger.position.set((fi - 1) * 0.03 * s, -1.44 * s, 0.01 + Math.abs(fi - 1) * 0.012);
+        finger.rotation.x = 0.12 + (fi - 1) * 0.08;
+        arm.add(finger);
+      }
+    }
     arm.position.set(sx * 0.44 * s, 2.02 * s, 0.05);
     arm.rotation.z = sx * -0.07;
     g.add(arm);
     parts[sx < 0 ? 'armL' : 'armR'] = arm;
   }
-  // elongated head, tilted down
+  // elongated head, tilted down — neck, brow ridge and jaw give it a
+  // skull-like structure under the hood/shadow rather than a bare egg
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07 * s, 0.09 * s, 0.3 * s, 7), body);
+  neck.position.set(0, 2.16 * s, 0.05);
+  neck.rotation.x = 0.12;
+  g.add(neck);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.17 * s, 10, 9), body);
   head.scale.set(0.8, 1.35, 0.75);
   head.position.set(0, 2.34 * s, 0.06);
   head.rotation.x = 0.1;
   g.add(head);
+  const brow = new THREE.Mesh(new THREE.BoxGeometry(0.2 * s, 0.045 * s, 0.05 * s), body);
+  brow.position.set(0, 2.43 * s, 0.17 * s);
+  brow.rotation.x = 0.28;
+  g.add(brow);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.11 * s, 0.12 * s, 0.07 * s), body);
+  jaw.position.set(0, 2.2 * s, 0.14 * s);
+  jaw.rotation.x = 0.3;
+  g.add(jaw);
   parts.head = head;
 
   if (o.tattered) {
@@ -170,6 +192,14 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
     const c = EYE_COLORS[o.eyes];
     const eyeMat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2.6 });
     for (const ex of [-0.055, 0.055]) {
+      // sunken socket behind each emissive eye — a hollow pit the glow
+      // sits inside, so eyes read as set in a skull, not floating orbs
+      if (o.face !== 'mask') {
+        const socket = new THREE.Mesh(new THREE.SphereGeometry(0.042 * s, 8, 6), MAT.ink());
+        socket.scale.set(1, 1.25, 0.6);
+        socket.position.set(ex * s, 2.36 * s, 0.185 * s);
+        g.add(socket);
+      }
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022 * s, 8, 6), eyeMat);
       eye.position.set(ex * s, 2.36 * s, o.face === 'mask' ? 0.3 * s : 0.2 * s);
       g.add(eye);
