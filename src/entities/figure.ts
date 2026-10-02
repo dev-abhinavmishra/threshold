@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { MAT } from '../world/materials';
+import { modelInstance } from '../world/modelLibrary';
 
 export interface FigureOpts {
   /** Total height in meters (proportions scale from a 2.6m baseline). */
@@ -19,6 +20,10 @@ export interface FigureOpts {
   bandY?: number;
   /** Floating emissive eyes, color-tinted. */
   eyes?: 'amber' | 'red' | 'white';
+  /** Dorsal spine ridge — vertebra cones down the back. */
+  spines?: boolean;
+  /** Clawed hands — three finger cones per hand. */
+  claws?: boolean;
 }
 
 const EYE_COLORS = { amber: 0xffb050, red: 0xff2a20, white: 0xffe9b0 } as const;
@@ -91,6 +96,30 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
     g.add(plate);
     parts.mask = plate;
   }
+  if (o.spines) {
+    const spineMat = o.body ?? body;
+    for (let i = 0; i < 6; i++) {
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.05 * s, 0.22 * s, 6), spineMat);
+      const fy = (1.1 + i * 0.22) * s;
+      sp.position.set(0, fy, -0.24 * s - Math.sin(i * 0.5) * 0.02);
+      sp.rotation.x = -1.15;
+      g.add(sp);
+    }
+  }
+  if (o.claws) {
+    for (const sx of [-1, 1]) {
+      for (let fi = 0; fi < 3; fi++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(0.018 * s, 0.2 * s, 5), MAT.ink());
+        claw.position.set(
+          sx * (0.42 + fi * 0.035) * s,
+          0.62 * s - fi * 0.01,
+          0.06 + fi * 0.03,
+        );
+        claw.rotation.x = Math.PI - 0.15 + fi * 0.12;
+        g.add(claw);
+      }
+    }
+  }
   if (o.band) {
     const band = new THREE.Mesh(new THREE.BoxGeometry(0.82 * s, 0.12 * s, 0.38 * s), o.band);
     band.position.set(0, (o.bandY ?? 2.36) * s, 0.06);
@@ -108,6 +137,36 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
   }
   g.userData.figureParts = parts;
   g.userData.phase = Math.random() * 100;
+  return g;
+}
+
+export interface StatueFigureOpts {
+  height?: number;
+  eyes?: 'amber' | 'red' | 'white';
+  eyeY?: number;
+}
+
+/** The gothic-statue body (CC0 modelLibrary 'statue') used by the Witness:
+ * a realistic sculpted figure, far better than the procedural silhouette.
+ * Returns null while the model is unloaded — callers fall back to tallFigure. */
+export function statueFigure(o: StatueFigureOpts = {}): THREE.Group | null {
+  const body = modelInstance('statue', Math.random());
+  if (!body) return null;
+  const h = o.height ?? 2.3;
+  body.scale.multiplyScalar(h / 1.8); // prop scale is 1.8m; Witness wants taller
+  const g = new THREE.Group();
+  g.add(body);
+  const s = h / 2.3;
+  if (o.eyes) {
+    const c = EYE_COLORS[o.eyes];
+    const eyeMat = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 2.6 });
+    for (const ex of [-0.055, 0.055]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.022 * s, 8, 6), eyeMat);
+      eye.position.set(ex * s, (o.eyeY ?? 1.85) * s, 0.42 * s);
+      g.add(eye);
+    }
+  }
+  g.userData.statue = true;
   return g;
 }
 

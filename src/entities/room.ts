@@ -9,7 +9,7 @@ import { v3, v3dist, clamp } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
-import { tallFigure } from './figure';
+import { tallFigure, statueFigure } from './figure';
 import { Rng } from '../engine/rng';
 
 /* ============================ WITNESS ============================ */
@@ -34,7 +34,8 @@ export class Witness extends Entity {
     );
     this.state = 'engage';
     const g = new THREE.Group();
-    const figure = tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper(), eyes: 'white' });
+    const figure = statueFigure({ height: 2.3, eyes: 'white', eyeY: 1.92 })
+      ?? tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper(), eyes: 'white' });
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.5, 16), MAT.eyeGlow());
     halo.position.y = 2.0;
     g.add(figure, halo);
@@ -210,7 +211,7 @@ export class EchoSkin extends Entity {
   protected override onSpawn(): void {
     this.state = 'engage';
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
-    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber' });
+    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber', spines: true, claws: true });
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
@@ -367,7 +368,7 @@ export class Margin extends Entity {
 
   protected override onSpawn(): void {
     const c = this.ctx;
-    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red' });
+    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red', spines: true });
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.3), MAT.redLamp());
     edge.position.set(0.4, 1.05, 0);
     g.add(edge);

@@ -33,7 +33,7 @@ export type PropKind =
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'
   | 'toolChest' | 'propaneTank' | 'medBox' | 'lantern' | 'flashlight'
-  | 'plasticCrate' | 'gasMask' | 'armchair' | 'milCrate'
+  | 'plasticCrate' | 'gasMask' | 'armchair' | 'milCrate' | 'statue' | 'marbleBust'
   | 'morgueDrawer' | 'gurney' | 'washer' | 'boilerTank' | 'cubiclePod'
   | 'powerBox' | 'utilityBox' | 'fluoroStrip' | 'cageLight' | 'securityLight'
   | 'pipeLamp' | 'wallHose' | 'toolCart' | 'jerrycan' | 'toolbox'

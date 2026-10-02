@@ -118,6 +118,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   gasMask: { dir: 'old_gas_mask', height: 0.3, collider: [0, 0, 0] },
   armchair: { dir: 'ArmChair_01', height: 0.95, collider: [0.9, 0.95, 0.85] },
   milCrate: { dir: 'wooden_military_crate', height: 0.5, collider: [0.9, 0.5, 0.55] },
+  marbleBust: { dir: 'marble_bust_01', height: 0.5, collider: [0.35, 0.5, 0.3] },
   // Sprint 12 — utility/industrial wall-mounts + clutter
   powerBox: { dir: 'power_box_01', height: 0.65, collider: [0, 0, 0], anchor: 'center' },
   utilityBox: { dir: 'utility_box_01', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
