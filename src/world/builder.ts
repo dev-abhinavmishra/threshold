@@ -58,6 +58,33 @@ function dustSprite(): THREE.Texture | null {
 // cloned per room and disposed with it.
 const WALLPAPER_TINTS = [0xcfc4ae, 0xb9c0a9, 0xc6b4a6, 0xaeb6b6, 0xc9c0ba];
 
+// Corridor direction signs — institutional green boards, cached per label.
+const signTextures = new Map<string, THREE.Texture>();
+function signMaterial(label: string): THREE.MeshStandardMaterial | null {
+  if (typeof document === 'undefined') return null;
+  let tex = signTextures.get(label);
+  if (!tex) {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 64;
+    const ctx = cv.getContext('2d')!;
+    ctx.fillStyle = '#1c2b20';
+    ctx.fillRect(0, 0, 256, 64);
+    ctx.strokeStyle = '#4a5849';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(3, 3, 250, 58);
+    ctx.fillStyle = '#d6dcc9';
+    ctx.font = 'bold 26px "Courier New", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, 128, 34);
+    tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    signTextures.set(label, tex);
+  }
+  return new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 });
+}
+const CORRIDOR_SIGNS = ['RECORDS →', 'EXIT →', '← ARCHIVE', 'SUB-BASEMENT', 'NO ENTRY', 'SERVICE ONLY', '→ STAIR', 'RESTRICTED'];
+
 // Door number plates: canvas textures cached per label (e.g. "050").
 const plateTextures = new Map<string, THREE.Texture>();
 function plateMaterial(label: string): THREE.MeshStandardMaterial | null {
@@ -306,6 +333,35 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         ? MAT.steelDark()
         : rng.pick([TEX.woodFloor(), TEX.woodFloor(), MAT.darkOak(), MAT.oxGreen()]);
     const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), leafMat);
+    // Raised 6-panel relief + brass hardware on interior (non-industrial)
+    // doors — the slab reads flat otherwise.
+    if (!industrial) {
+      const pw = port.width - 0.1;
+      const panelMat = leafMat;
+      for (const fz of [0.048, -0.048]) {
+        for (let col = 0; col < 2; col++) {
+          for (let row = 0; row < 3; row++) {
+            const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
+            const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
+            const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
+            panel.position.set((col - 0.5) * pw * 0.44, py, fz);
+            leaf.add(panel);
+          }
+        }
+      }
+      // knob + backplate on the latch edge, both faces
+      for (const fz of [0.06, -0.06]) {
+        const bp = new THREE.Mesh(texBox(0.05, 0.16, 0.012), MAT.brass());
+        bp.position.set(pw / 2 - 0.14, -0.02, fz);
+        leaf.add(bp);
+      }
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), MAT.brass());
+      knob.position.set(pw / 2 - 0.14, -0.02, 0.075);
+      leaf.add(knob);
+      const knob2 = new THREE.Mesh(knob.geometry, MAT.brass());
+      knob2.position.set(pw / 2 - 0.14, -0.02, -0.075);
+      leaf.add(knob2);
+    }
     // hinge at edge for swing
     const hinge = new THREE.Group();
     leaf.position.set(port.width / 2 - 0.05, 1.1, 0);
@@ -417,6 +473,22 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
         group.add(built.group);
       } catch { /* dressing only */ }
+    }
+
+    // Direction signs on corridor walls — institutional boards beside exits.
+    if (spec.biome === 'corridor' && rng.float() < 0.4) {
+      const spot = pickWallSpot(0.5);
+      if (spot) {
+        const label = CORRIDOR_SIGNS[Math.floor(rng.float() * CORRIDOR_SIGNS.length)];
+        const board = new THREE.Mesh(texBox(1.1, 0.28, 0.04), signMaterial(label) ?? MAT.charcoal());
+        const lp2 = spot.wall === 'e' ? { x: w / 2 - 0.06, z: spot.along }
+          : spot.wall === 'w' ? { x: -w / 2 + 0.06, z: spot.along }
+          : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.06 }
+          : { x: spot.along, z: -d / 2 + 0.06 };
+        board.position.set(lp2.x, 1.95, lp2.z);
+        board.rotation.y = mountYaw[spot.wall];
+        group.add(board);
+      }
     }
 
     // Floor props — seeded dressing per biome, biased to walls, lane-clear.
