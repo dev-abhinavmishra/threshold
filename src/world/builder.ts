@@ -478,11 +478,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // Wall-mounted props (models are center-anchored; face +z → yaw per wall).
     const mountYaw = { e: -Math.PI / 2, w: Math.PI / 2, n: Math.PI, s: 0 } as const;
     const mounts: { kind: PropKind; y: number; p: number }[] = ({
-      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.15 }],
-      records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }],
-      lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }, { kind: 'dartboard', y: 1.7, p: 0.25 }],
-      guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'dartboard', y: 1.7, p: 0.15 }],
-      gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }],
+      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.15 }, { kind: 'window', y: 1.7, p: 0.15 }],
+      records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }, { kind: 'window', y: 1.7, p: 0.2 }],
+      lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }, { kind: 'dartboard', y: 1.7, p: 0.25 }, { kind: 'window', y: 1.7, p: 0.3 }],
+      guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'dartboard', y: 1.7, p: 0.15 }, { kind: 'window', y: 1.7, p: 0.35 }],
+      gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }, { kind: 'window', y: 1.8, p: 0.25 }],
       maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.3 }, { kind: 'airconUnit', y: 2.35, p: 0.3 }],
       unlit: [{ kind: 'gasMask', y: 1.55, p: 0.2 }],
       milestone: [{ kind: 'securityCam', y: 2.4, p: 0.3 }],
@@ -500,6 +500,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       try {
         const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
         group.add(built.group);
+        // Windows cast a pale light pool onto the floor in front of them.
+        if (mt.kind === 'window') {
+          const inX = spot.wall === 'e' ? -0.8 : spot.wall === 'w' ? 0.8 : 0;
+          const inZ = spot.wall === 'n' ? -0.8 : spot.wall === 's' ? 0.8 : 0;
+          const poolMat = new THREE.MeshStandardMaterial({
+            color: 0x101820, emissive: 0x5f7791, emissiveIntensity: 0.5,
+            transparent: true, opacity: 0.55, roughness: 1, depthWrite: false,
+          });
+          poolMat.userData.decalMat = true;
+          const pool = new THREE.Mesh(texBox(1.35, 0.012, 2.4), poolMat);
+          pool.position.set(lp.x + inX, 0.012, lp.z + inZ);
+          pool.rotation.y = mountYaw[spot.wall] + (rng.float() - 0.5) * 0.15;
+          group.add(pool);
+        }
       } catch { /* dressing only */ }
     }
 

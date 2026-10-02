@@ -195,11 +195,22 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     return { group: g, colliders: [] };
   },
   window: (_s) => {
+    // Cold night light through a 2×2 pane grid — pale emissive panes read
+    // as moonlight without spending a real light.
     const g = new THREE.Group();
     g.add(mesh(box(1.2, 1.6, 0.1), MAT.darkOak(), 0, 0, 0));
-    g.add(mesh(box(1.05, 1.45, 0.03), MAT.darkVoid(), 0, 0, 0.05));
-    g.add(mesh(box(0.04, 1.45, 0.04), MAT.darkOak(), 0, 0, 0.07));
-    g.add(mesh(box(1.05, 0.04, 0.04), MAT.darkOak(), 0, 0, 0.07));
+    const paneMat = new THREE.MeshStandardMaterial({
+      color: 0x0e1a26, emissive: 0x7d94ad, emissiveIntensity: 0.55,
+      roughness: 0.15, metalness: 0.05,
+    });
+    paneMat.userData.decalMat = true;
+    for (const px of [-0.27, 0.27]) {
+      for (const py of [-0.37, 0.37]) {
+        g.add(mesh(box(0.48, 0.68, 0.02), paneMat, px, py, 0.05));
+      }
+    }
+    g.add(mesh(box(0.05, 1.45, 0.04), MAT.darkOak(), 0, 0, 0.07));
+    g.add(mesh(box(1.05, 0.05, 0.04), MAT.darkOak(), 0, 0, 0.07));
     return { group: g, colliders: [] };
   },
   rug: (_s, rng) => {
