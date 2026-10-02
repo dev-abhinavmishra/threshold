@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -620,6 +620,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (rng.float() < warnP) {
       const spot = pickWallSpot(2.3);
       if (spot) wallDecal(spot.wall, warningStripe(), 2.3, 0.26, spot.along, 1.05 + rng.float() * 0.3);
+    }
+
+    // Broken plaster exposing brick — decay on shabby walls; skipped where
+    // the skin is already brick/tile/metal (nothing to expose through).
+    const solidSurface = spec.wallMaterial === 'brick' || spec.wallMaterial === 'tile' || spec.wallMaterial === 'corrugated' || spec.wallMaterial === 'travertine' || spec.wallMaterial === 'woodPanel';
+    const brickP = room.darkRoom || spec.biome === 'unlit' ? 0.4 : isUnder || spec.biome === 'maintenance' ? 0.3 : 0.05;
+    if (!solidSurface && spec.biome !== 'safe' && rng.float() < brickP) {
+      const spot = pickWallSpot(1.3);
+      if (spot) wallDecal(spot.wall, brickPatch(rng), 1.3, 1.1, spot.along, 1.4 + rng.float() * 0.5);
     }
 
     // Panel molding — picture-frame trim rectangles on formal-room walls

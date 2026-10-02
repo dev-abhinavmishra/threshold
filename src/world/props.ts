@@ -221,6 +221,17 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     g.add(mesh(box(0.05, 1.45, 0.04), MAT.darkOak(), 0, 0, 0.07));
     g.add(mesh(box(1.05, 0.05, 0.04), MAT.darkOak(), 0, 0, 0.07));
+    // Boarded up — rough planks nailed across the panes; the night glow
+    // still leaks through the gaps, which is the whole point.
+    if (rng.bool(0.22)) {
+      const nB = 3 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < nB; i++) {
+        const by = -0.6 + (i + 0.5) * (1.2 / nB) + (rng.float() - 0.5) * 0.08;
+        const plank = mesh(box(1.5 + rng.float() * 0.25, 0.16 + rng.float() * 0.06, 0.03), TEX.woodPlanksDark(), 0, by, 0.1);
+        plank.rotation.z = (rng.float() - 0.5) * 0.24;
+        g.add(plank);
+      }
+    }
     return { group: g, colliders: [] };
   },
   rug: (_s, rng) => {

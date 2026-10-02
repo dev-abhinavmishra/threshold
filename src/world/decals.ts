@@ -285,6 +285,54 @@ export function handPrints(rng: Rng): THREE.Texture | null {
   });
 }
 
+/** Broken plaster exposing brick — ragged-edged hole with coursed brick
+ *  and dark mortar behind the wall skin. */
+export function brickPatch(rng: Rng): THREE.Texture | null {
+  return canvasTex(192, 160, (ctx) => {
+    // brick courses clipped to an irregular blob
+    const cx = 96, cy = 80;
+    const pts: [number, number][] = [];
+    const nPts = 10;
+    for (let i = 0; i < nPts; i++) {
+      const a = (i / nPts) * Math.PI * 2;
+      const r = 46 + rng.float() * 38;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.75]);
+    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < nPts; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.fillStyle = '#4a3226';
+    ctx.fillRect(0, 0, 192, 160);
+    // courses
+    ctx.fillStyle = '#6b4a36';
+    const bh = 12, bw = 30;
+    for (let row = 0; row < 14; row++) {
+      const off = row % 2 ? bw / 2 : 0;
+      for (let bx = -bw; bx < 192 + bw; bx += bw + 4) {
+        ctx.fillRect(bx + off, row * (bh + 3), bw, bh);
+      }
+    }
+    // darken the hole's own shadows
+    const sh = ctx.createRadialGradient(cx, cy, 20, cx, cy, 100);
+    sh.addColorStop(0, 'rgba(0,0,0,0)');
+    sh.addColorStop(1, 'rgba(0,0,0,0.5)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(0, 0, 192, 160);
+    ctx.restore();
+    // plaster edge highlight around the break
+    ctx.strokeStyle = 'rgba(210,200,180,0.35)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < nPts; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.closePath();
+    ctx.stroke();
+  });
+}
+
 /* ---------- warning stripe band ---------- */
 
 export function warningStripe(): THREE.Texture | null {
