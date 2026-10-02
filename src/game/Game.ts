@@ -19,6 +19,7 @@ import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
+import { MAT } from '../world/materials';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
@@ -1462,6 +1463,39 @@ export class Game {
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
+    // Handheld torch — a real vendored flashlight model held low-right in
+    // frame whenever a lamp source is on; sways with movement.
+    if (this.lampOn || this.pulseLampOn) {
+      if (!this.heldTorch) {
+        const m = modelInstance('flashlight', 0.35);
+        if (m) {
+          this.heldTorch = m;
+        } else {
+          const fallback = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, 0.22, 10), MAT.steel());
+          fallback.rotation.x = Math.PI / 2;
+          this.heldTorch = fallback;
+        }
+        this.scene.add(this.heldTorch);
+      }
+      this.heldTorch.visible = true;
+      this.camera.getWorldDirection(torchFwd);
+      torchRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+      torchUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+      this.heldTorch.position.set(eye.x, eye.y, eye.z)
+        .addScaledVector(torchRight, 0.24)
+        .addScaledVector(torchUp, -0.19)
+        .addScaledVector(torchFwd, 0.38);
+      this.heldTorch.quaternion.copy(this.camera.quaternion);
+      this.heldTorch.rotateY(-0.06);
+      this.heldTorch.rotateX(0.05);
+      if (!this.settings.reducedMotion) {
+        const sway = Math.sin(this.clock.time * 5.2) * 0.012 + Math.sin(this.clock.time * 1.7) * 0.008;
+        this.heldTorch.rotateZ(sway);
+        this.heldTorch.position.addScaledVector(torchUp, Math.sin(this.clock.time * 5.2) * 0.004);
+      }
+    } else if (this.heldTorch) {
+      this.heldTorch.visible = false;
+    }
     this.audio.setListener(this.player.pos, this.player.yaw);
 
     // adaptive music mood
@@ -1485,6 +1519,10 @@ export class Game {
 
   private lampLight: THREE.SpotLight | null = null;
   private fillLight: THREE.PointLight | null = null;
+  private heldTorch: THREE.Object3D | null = null;
+  private static torchFwd = new THREE.Vector3();
+  private static torchRight = new THREE.Vector3();
+  private static torchUp = new THREE.Vector3();
 
   private publishHud(): void {
     const st = useGameStore.getState();
