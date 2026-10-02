@@ -448,3 +448,16 @@ has not finished loading falls back to its procedural builder.
 | `models/standing_picture_frame_02` | Standing Picture Frame 02 | `standingFrame` floor prop |
 | `models/hanging_picture_frame_03` | Hanging Picture Frame 03 | `painting` variant |
 | `models/wooden_table_02` | Wooden Table 02 | `table` variant |
+
+### Textures — ambientCG batch 2 (CC0)
+
+| Folder | Source asset | Used for |
+| --- | --- | --- |
+| `textures/terrazzo` | Terrazzo005 | lobby/gallery/milestone floors |
+| `textures/ceiling-acoustic` | AcousticFoam003 | corridor/records/maintenance ceilings |
+| `textures/cloth-worn` | Fabric001 | curtain pleats |
+| `textures/plaster-painted` | PaintedPlaster016 | corridor/guest/records walls |
+| `textures/wood-planks-dark` | WoodFloor064 | maintenance floors |
+| `textures/corrugated-rust` | Metal063 | maintenance walls |
+| `textures/carpet-shag` | Carpet016 | guest carpet floors |
+| `textures/wood-parquet` | WoodFloor051 | lobby/gallery/milestone floors |

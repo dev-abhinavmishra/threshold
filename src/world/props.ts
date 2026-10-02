@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
+import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { nightBackdrop } from './decals';
 import type { Rng } from '../engine/rng';
@@ -269,7 +270,11 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
   },
   curtain: (_s) => {
     const g = new THREE.Group();
-    g.add(mesh(box(1.4, 2.0, 0.06), MAT.carpet(), 0, 0, 0));
+    const mat = TEX.clothWorn();
+    // alternating deep/shallow folds read as pleated fabric
+    for (let i = 0; i < 5; i++) {
+      g.add(mesh(box(0.28, 2.0, i % 2 ? 0.05 : 0.12), mat, -0.56 + i * 0.28, 0, 0));
+    }
     return { group: g, colliders: [] };
   },
   sign: (_s) => {

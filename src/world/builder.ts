@@ -157,6 +157,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
   const isUnder = room.biome === 'underscript';
   let wallMat: THREE.MeshStandardMaterial;
+  let isWallpaper = false;
   switch (spec.wallMaterial) {
     case 'tile': wallMat = TEX.tileWall(); break;
     case 'woodPanel': wallMat = TEX.woodPanel(); break;
@@ -164,14 +165,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     case 'corrugated': wallMat = TEX.corrugated(); break;
     case 'brick': wallMat = TEX.brick(); break;
     default:
-      wallMat = (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete')
-        ? TEX.concreteWall()
-        : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+      if (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete') wallMat = TEX.concreteWall();
+      else if (room.darkRoom) wallMat = TEX.plasterDamaged();
+      else { wallMat = TEX.wallpaper(); isWallpaper = true; }
   }
   // Seeded per-biome wall variety when the template doesn't pin a surface:
   // grand rooms get wood paneling or travertine, maintenance gets
   // corrugated steel or damaged brick, underscript stays concrete.
   if (!spec.wallMaterial) {
+    const preRoll = wallMat;
     const roll = rng.float();
     if (spec.biome === 'gallery' && roll < 0.45) wallMat = TEX.travertine();
     else if (spec.biome === 'lobby' && roll < 0.4) wallMat = TEX.woodPanel();
@@ -179,14 +181,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     else if (spec.biome === 'records' && roll < 0.15) wallMat = TEX.woodPanel();
     else if (spec.biome === 'maintenance' && roll < 0.3) wallMat = TEX.corrugated();
     else if (spec.biome === 'maintenance' && roll < 0.55) wallMat = TEX.brick();
+    else if (spec.biome === 'maintenance' && roll < 0.62) wallMat = TEX.corrugatedRust();
     else if (isUnder && roll < 0.2) wallMat = TEX.brick();
     else if (isUnder && roll < 0.34) wallMat = TEX.plasterPeeling();
     else if (isUnder && roll < 0.45) wallMat = TEX.concreteIndustrial();
     else if (spec.biome === 'lobby' && roll < 0.52) wallMat = TEX.wallpaperGrand();
     else if (spec.biome === 'guest' && roll < 0.18) wallMat = TEX.woodPaint();
     else if (spec.biome === 'maintenance' && roll < 0.68) wallMat = TEX.plasterPeeling();
+    else if ((spec.biome === 'corridor' || spec.biome === 'guest' || spec.biome === 'records') && roll < 0.3) wallMat = TEX.plasterPainted();
+    if (wallMat !== preRoll) isWallpaper = false;
   }
-  if (wallMat === TEX.wallpaper() && rng.float() < 0.55) {
+  if (isWallpaper && rng.float() < 0.55) {
     wallMat = wallMat.clone();
     wallMat.color.setHex(WALLPAPER_TINTS[Math.floor(rng.float() * WALLPAPER_TINTS.length)]);
     wallMat.userData.decalMat = true; // reuse the decal-material disposal path
@@ -195,15 +200,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const floorMat = isUnder
     ? (floorRoll < 0.3 ? TEX.metalWalkway() : floorRoll < 0.45 ? TEX.concreteIndustrial() : TEX.concreteFloor())
     : room.floorMaterial === 'carpet'
-      ? (floorRoll < 0.25 ? TEX.carpetWorn() : TEX.carpet())
+      ? (floorRoll < 0.12 && spec.biome === 'guest' ? TEX.carpetShag() : floorRoll < 0.25 ? TEX.carpetWorn() : TEX.carpet())
       : room.floorMaterial === 'stone' || room.floorMaterial === 'metal'
         ? (spec.biome === 'maintenance' && floorRoll < 0.45
           ? (floorRoll < 0.2 ? TEX.metalRusted() : TEX.diamondPlate())
           : TEX.concreteFloor())
         : (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && floorRoll < 0.5
-          ? (floorRoll < 0.18 ? TEX.marbleDark() : TEX.marbleFloor())
-          : (floorRoll < 0.22 ? TEX.woodFloorWorn() : floorRoll < 0.38 ? TEX.woodFloorOld() : TEX.woodFloor());
-  const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
+          ? (floorRoll < 0.12 ? TEX.marbleDark() : floorRoll < 0.26 ? TEX.terrazzo() : floorRoll < 0.4 ? TEX.woodParquet() : TEX.marbleFloor())
+          : (floorRoll < 0.14 && spec.biome === 'maintenance' ? TEX.woodPlanksDark() : floorRoll < 0.22 ? TEX.woodFloorWorn() : floorRoll < 0.38 ? TEX.woodFloorOld() : TEX.woodFloor());
+  const ceilRoll = rng.float();
+  const ceilMat = isUnder
+    ? TEX.concreteFloor()
+    : (spec.biome === 'corridor' || spec.biome === 'records' || spec.biome === 'maintenance') && ceilRoll < 0.45
+      ? TEX.ceilingAcoustic()
+      : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 
   // Floor + ceiling (texBox carries meter-scaled UVs)
