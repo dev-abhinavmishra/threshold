@@ -27,6 +27,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     variants: [
       { dir: 'painted_wooden_cabinet', height: 2.0, collider: [1.1, 2.0, 0.65] },
       { dir: 'chinese_cabinet', height: 2.0, collider: [1.1, 2.0, 0.6] },
+      { dir: 'painted_wooden_cabinet_02', height: 1.9, collider: [1.0, 1.9, 0.6] },
     ],
   },
   bed: { dir: 'GothicBed_01', height: 1.1, collider: [1.7, 1.1, 2.2] },
@@ -123,6 +124,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'ceramic_vase_03', height: 0.6, collider: [0, 0, 0] },
       { dir: 'antique_ceramic_vase_01', height: 0.65, collider: [0, 0, 0] },
       { dir: 'brass_vase_04', height: 0.7, collider: [0, 0, 0] },
+      { dir: 'ceramic_vase_04', height: 0.6, collider: [0, 0, 0] },
     ],
   },
   candle: {
@@ -567,7 +569,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   machete: { dir: 'machete', height: 0.5, collider: [0, 0, 0] },
   dagger: { dir: 'ornate_medieval_dagger', height: 0.4, collider: [0, 0, 0] },
   mace: { dir: 'ornate_medieval_mace', height: 0.75, collider: [0, 0, 0] },
-  katana: { dir: 'katana_stand_01', height: 1.0, collider: [0.5, 1.0, 0.3] },
+  katana: {
+    dir: 'katana_stand_01', height: 1.0, collider: [0.5, 1.0, 0.3],
+    variants: [{ dir: 'wooden_handle_saber', height: 1.0, collider: [0.5, 1.0, 0.3] }],
+  },
   kiteShield: { dir: 'kite_shield', height: 1.3, collider: [0, 0, 0], anchor: 'center' },
   brassPot: {
     dir: 'brass_pot_01', height: 0.3, collider: [0, 0, 0],
@@ -612,6 +617,35 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   medicalTape: { dir: 'medical_tape', height: 0.1, collider: [0, 0, 0] },
   pastry: { dir: 'croissant', height: 0.08, collider: [0, 0, 0] },
   standingFrame: { dir: 'standing_picture_frame_02', height: 1.5, collider: [0.6, 1.5, 0.4] },
+
+  // Sprint 35 — extraction batch 6
+  sportsBall: {
+    dir: 'baseball_01', height: 0.1, collider: [0, 0, 0],
+    variants: [
+      { dir: 'dirty_football', height: 0.25, collider: [0, 0, 0] },
+      { dir: 'american_football', height: 0.2, collider: [0, 0, 0] },
+    ],
+  },
+  gamepad: { dir: 'gamepad', height: 0.08, collider: [0, 0, 0] },
+  gameConsole: { dir: 'gaming_console', height: 0.12, collider: [0, 0, 0] },
+  blowtorch: {
+    dir: 'brass_blowtorch', height: 0.3, collider: [0, 0, 0],
+    variants: [{ dir: 'propane_torch_02', height: 0.35, collider: [0, 0, 0] }],
+  },
+  cigaretteCase: { dir: 'cigarette_case', height: 0.05, collider: [0, 0, 0] },
+  pickaxe: { dir: 'picke_dirty_01', height: 1.0, collider: [0, 0, 0] },
+  compostBag: { dir: 'compost_bag_02', height: 0.55, collider: [0.5, 0.55, 0.4] },
+  rollerShutter: {
+    dir: 'rollershutter_window_01', height: 2.3, collider: [0, 0, 0], anchor: 'center',
+    variants: [{ dir: 'rollershutter_window_02', height: 2.3, collider: [0, 0, 0], anchor: 'center' }],
+  },
+  shell: { dir: 'lambis_shell', height: 0.25, collider: [0, 0, 0] },
+  fishingKnife: { dir: 'fish_knife', height: 0.15, collider: [0, 0, 0] },
+  woodenSpoon: { dir: 'wooden_spoon', height: 0.06, collider: [0, 0, 0] },
+  onion: { dir: 'yellow_onion', height: 0.15, collider: [0, 0, 0] },
+  sweetPotato: { dir: 'sweet_potato', height: 0.12, collider: [0, 0, 0] },
+  lemon: { dir: 'lemon', height: 0.08, collider: [0, 0, 0] },
+  gardenGloves: { dir: 'garden_gloves_01', height: 0.1, collider: [0, 0, 0] },
 };
 
 const loader = new GLTFLoader();

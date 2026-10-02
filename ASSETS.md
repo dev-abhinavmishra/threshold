@@ -461,3 +461,32 @@ has not finished loading falls back to its procedural builder.
 | `textures/corrugated-rust` | Metal063 | maintenance walls |
 | `textures/carpet-shag` | Carpet016 | guest carpet floors |
 | `textures/wood-parquet` | WoodFloor051 | lobby/gallery/milestone floors |
+
+### Models — Poly Haven batch 6 (CC0)
+
+| Folder | Source asset | Used for |
+| --- | --- | --- |
+| `models/baseball_01` | Baseball 01 | `sportsBall` guest clutter |
+| `models/dirty_football` | Dirty Football | `sportsBall` variant |
+| `models/gamepad` | Gamepad | `gamepad` guest clutter |
+| `models/gaming_console` | Gaming Console | `gameConsole` guest furniture |
+| `models/brass_blowtorch` | Brass Blowtorch | `blowtorch` maintenance tool |
+| `models/propane_torch_02` | Propane Torch 02 | `blowtorch` variant |
+| `models/cigarette_case` | Cigarette Case | `cigaretteCase` guest clutter |
+| `models/picke_dirty_01` | Pickaxe (dirty) 01 | `pickaxe` maintenance tool |
+| `models/compost_bag_02` | Compost Bag 02 | `compostBag` floor sack |
+| `models/rollershutter_window_01` | Roller Shutter Window 01 | `rollerShutter` maintenance mount |
+| `models/rollershutter_window_02` | Roller Shutter Window 02 | `rollerShutter` variant |
+| `models/wooden_handle_saber` | Wooden Handle Saber | `katana` variant |
+| `models/ceramic_vase_04` | Ceramic Vase 04 | `vase` variant |
+| `models/lambis_shell` | Lambis Shell | `shell` lobby ornament |
+| `models/fish_knife` | Fish Knife | `fishingKnife` maintenance tool |
+| `models/wooden_spoon` | Wooden Spoon | `woodenSpoon` break-room clutter |
+| `models/yellow_onion` | Yellow Onion | `onion` break-room food |
+| `models/sweet_potato` | Sweet Potato | `sweetPotato` break-room food |
+| `models/lemon` | Lemon | `lemon` break-room food |
+| `models/painted_wooden_cabinet_02` | Painted Wooden Cabinet 02 | `cabinet` variant |
+| `models/industrial_coffee_table` | Industrial Coffee Table | `coffeeTable` variant |
+| `models/modern_coffee_table_01` | Modern Coffee Table 01 | `coffeeTable` variant |
+| `models/modern_coffee_table_02` | Modern Coffee Table 02 | `coffeeTable` variant |
+| `models/garden_gloves_01` | Garden Gloves 01 | `gardenGloves` maintenance clutter |

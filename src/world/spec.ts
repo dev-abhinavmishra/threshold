@@ -76,6 +76,10 @@ export type PropKind =
   | 'thermos' | 'postcards' | 'stationery' | 'stapler' | 'rubberDuck'
   | 'spade' | 'wheelRim' | 'tyre' | 'compressor' | 'crutches' | 'rations'
   | 'medicalTape' | 'pastry' | 'standingFrame'
+  // sprint 35 — batch 6
+  | 'sportsBall' | 'gamepad' | 'gameConsole' | 'blowtorch' | 'cigaretteCase'
+  | 'pickaxe' | 'compostBag' | 'rollerShutter' | 'shell' | 'fishingKnife'
+  | 'woodenSpoon' | 'onion' | 'sweetPotato' | 'lemon' | 'gardenGloves'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
