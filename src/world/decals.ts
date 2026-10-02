@@ -501,3 +501,33 @@ export function crackDecal(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/* ---------- rain streaks on glass — thin vertical runnels, slight lean ---------- */
+
+export function rainStreaks(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 256, (ctx) => {
+    const lean = (rng.float() - 0.5) * 0.12;
+    const n = 14 + Math.floor(rng.float() * 10);
+    for (let i = 0; i < n; i++) {
+      const x = 6 + rng.float() * 116;
+      const y = rng.float() * 200;
+      const len = 14 + rng.float() * 60;
+      const a = 0.10 + rng.float() * 0.22;
+      const g = ctx.createLinearGradient(x, y, x + lean * len, y + len);
+      g.addColorStop(0, 'rgba(190,210,225,0)');
+      g.addColorStop(0.4, `rgba(190,210,225,${a})`);
+      g.addColorStop(1, `rgba(190,210,225,${a * 0.4})`);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1 + rng.float() * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + lean * len + (rng.float() - 0.5) * 3, y + len);
+      ctx.stroke();
+      // droplet bead at the runnel head
+      ctx.fillStyle = `rgba(200,218,232,${a * 0.9})`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 1.4, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
