@@ -84,6 +84,15 @@ export const TEX = {
   metalWalkway: () => surfaceMaterial('metalwalkway014', 1.5, { color: 0x878d92, metalness: 0.55 }),
   corrugated: () => surfaceMaterial('corrugatedsteel007a', 1.5, { color: 0x8a9298, metalness: 0.6 }),
   concreteLight: () => surfaceMaterial('concrete034', 2.2, { color: 0xa2a6aa }),
+  metalRusted: () => surfaceMaterial('metal-rusted', 1.4, { color: 0x8a7f78, metalness: 0.45 }),
+  woodFloorWorn: () => surfaceMaterial('wood-floor-worn', 1.8, { color: 0xa08b74 }),
+  woodFloorOld: () => surfaceMaterial('wood-floor-old', 1.9, { color: 0x9a8268 }),
+  plasterPeeling: () => surfaceMaterial('plaster-peeling2', 1.8, { color: 0xa8a294 }),
+  carpetWorn: () => surfaceMaterial('carpet-worn', 2.0, { color: 0x8a8078 }),
+  wallpaperGrand: () => surfaceMaterial('wallpaper-grand', 1.5, { color: 0xa09a80 }),
+  woodPaint: () => surfaceMaterial('wood-paint', 1.6, { color: 0x8a9098 }),
+  marbleDark: () => surfaceMaterial('marble-dark', 1.7, { color: 0x8a8a8e, roughness: 0.32 }),
+  concreteIndustrial: () => surfaceMaterial('concrete-industrial', 2.1, { color: 0x9aa0a2 }),
 };
 
 /** Prop-level swaps (used through MAT): wood and metal grain on furniture. */

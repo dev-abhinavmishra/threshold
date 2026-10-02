@@ -496,15 +496,24 @@ function allSpecs(): { spec: ModelSpec }[] {
 }
 
 export function preloadModels(): void {
-  for (const { spec } of allSpecs()) {
-    if (cache.has(spec.dir) || pending.has(spec.dir)) continue;
-    pending.add(spec.dir);
-    loader
-      .loadAsync(`/assets/models/${spec.dir}/model.gltf`)
-      .then((g) => cache.set(spec.dir, bake(normalize(g.scene, spec))))
-      .catch(() => { /* fallback stays procedural */ })
-      .finally(() => pending.delete(spec.dir));
-  }
+  // Staggered queue — ~270 GLTF parses at once spikes JS heap past 2GB;
+  // drip-feeding lets early rooms build while the tail loads.
+  const queue = allSpecs();
+  let i = 0;
+  const pump = () => {
+    for (let n = 0; n < 8 && i < queue.length; n++, i++) {
+      const { spec } = queue[i];
+      if (cache.has(spec.dir) || pending.has(spec.dir)) continue;
+      pending.add(spec.dir);
+      loader
+        .loadAsync(`/assets/models/${spec.dir}/model.gltf`)
+        .then((g) => cache.set(spec.dir, bake(normalize(g.scene, spec))))
+        .catch(() => { /* fallback stays procedural */ })
+        .finally(() => pending.delete(spec.dir));
+    }
+    if (i < queue.length) setTimeout(pump, 60);
+  };
+  pump();
 }
 
 /** A cloned, floor-anchored model group when loaded, else null. `roll` in [0,1) picks a variant deterministically. */

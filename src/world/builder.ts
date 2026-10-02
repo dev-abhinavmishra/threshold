@@ -180,21 +180,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     else if (spec.biome === 'maintenance' && roll < 0.3) wallMat = TEX.corrugated();
     else if (spec.biome === 'maintenance' && roll < 0.55) wallMat = TEX.brick();
     else if (isUnder && roll < 0.2) wallMat = TEX.brick();
+    else if (isUnder && roll < 0.34) wallMat = TEX.plasterPeeling();
+    else if (isUnder && roll < 0.45) wallMat = TEX.concreteIndustrial();
+    else if (spec.biome === 'lobby' && roll < 0.52) wallMat = TEX.wallpaperGrand();
+    else if (spec.biome === 'guest' && roll < 0.18) wallMat = TEX.woodPaint();
+    else if (spec.biome === 'maintenance' && roll < 0.68) wallMat = TEX.plasterPeeling();
   }
   if (wallMat === TEX.wallpaper() && rng.float() < 0.55) {
     wallMat = wallMat.clone();
     wallMat.color.setHex(WALLPAPER_TINTS[Math.floor(rng.float() * WALLPAPER_TINTS.length)]);
     wallMat.userData.decalMat = true; // reuse the decal-material disposal path
   }
+  const floorRoll = rng.float();
   const floorMat = isUnder
-    ? (rng.float() < 0.35 ? TEX.metalWalkway() : TEX.concreteFloor())
+    ? (floorRoll < 0.3 ? TEX.metalWalkway() : floorRoll < 0.45 ? TEX.concreteIndustrial() : TEX.concreteFloor())
     : room.floorMaterial === 'carpet'
-      ? TEX.carpet()
+      ? (floorRoll < 0.25 ? TEX.carpetWorn() : TEX.carpet())
       : room.floorMaterial === 'stone' || room.floorMaterial === 'metal'
-        ? (spec.biome === 'maintenance' && rng.float() < 0.45 ? TEX.diamondPlate() : TEX.concreteFloor())
-        : (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && rng.float() < 0.5
-          ? TEX.marbleFloor()
-          : TEX.woodFloor();
+        ? (spec.biome === 'maintenance' && floorRoll < 0.45
+          ? (floorRoll < 0.2 ? TEX.metalRusted() : TEX.diamondPlate())
+          : TEX.concreteFloor())
+        : (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && floorRoll < 0.5
+          ? (floorRoll < 0.18 ? TEX.marbleDark() : TEX.marbleFloor())
+          : (floorRoll < 0.22 ? TEX.woodFloorWorn() : floorRoll < 0.38 ? TEX.woodFloorOld() : TEX.woodFloor());
   const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 

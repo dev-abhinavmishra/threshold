@@ -189,6 +189,15 @@ has not finished loading falls back to its procedural builder.
 | `textures/marble012` | Marble 012 | `marbleFloor` lobby/gallery floors |
 | `textures/travertine009` | Travertine 009 | `travertine` gallery walls |
 | `textures/corrugatedsteel007a` | Corrugated Steel 007A | `corrugated` maintenance walls |
+| `textures/metal-rusted` | Metal 053C | `metalRusted` maintenance floors |
+| `textures/wood-floor-worn` | Wood Floor 065B | `woodFloorWorn` wood-floor variant |
+| `textures/wood-floor-old` | Planks 009 | `woodFloorOld` wood-floor variant |
+| `textures/plaster-peeling2` | Painted Plaster 018 | `plasterPeeling` underscript/maint walls |
+| `textures/carpet-worn` | Carpet 016 | `carpetWorn` carpet variant |
+| `textures/wallpaper-grand` | Wallpaper 001A | `wallpaperGrand` lobby walls |
+| `textures/wood-paint` | Painted Wood 008C | `woodPaint` guest walls |
+| `textures/marble-dark` | Marble 006 | `marbleDark` grand-floor variant |
+| `textures/concrete-industrial` | Concrete 046 | `concreteIndustrial` underscript walls/floors |
 | `models/GothicCommode_01` | Gothic Commode 01 | `gothicCommode` props |
 | `models/concrete_cat_statue` | Concrete Cat Statue | `galleryStatue` props |
 | `models/bronze_shark_statue` | Bronze Shark Statue | `galleryStatue` variant |

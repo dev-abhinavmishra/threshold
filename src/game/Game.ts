@@ -1198,7 +1198,18 @@ export class Game {
     const ax = wx(rev ? lx2 : lx1, rev ? lz2 : lz1), az = wz(rev ? lx2 : lx1, rev ? lz2 : lz1);
     const bx = wx(rev ? lx1 : lx2, rev ? lz1 : lz2), bz = wz(rev ? lx1 : lx2, rev ? lz1 : lz2);
 
-    let obj = modelInstance('rat', roll.float());
+    const pack = roll.float() < 0.2 ? roll.int(2, 4) : 1;
+    for (let i = 0; i < pack; i++) {
+      const off = pack > 1 ? (i - (pack - 1) / 2) * 0.28 : 0;
+      const ox = (bx - ax) / Math.hypot(bx - ax, bz - az) * off;
+      const oz = (bz - az) / Math.hypot(bx - ax, bz - az) * off;
+      this.spawnRatMesh(ax + ox, az + oz, bx + ox, bz + oz, room.origin.y, roll.float());
+    }
+    this.sound.emit({ x: ax, y: 1, z: az, intensity: 0.3, category: 'ambient', caption: '[small scuffle]' });
+  }
+
+  private spawnRatMesh(ax: number, az: number, bx: number, bz: number, floor: number, roll: number): void {
+    let obj = modelInstance('rat', roll);
     if (!obj) {
       obj = new THREE.Group();
       const body = new THREE.Mesh(
@@ -1215,12 +1226,11 @@ export class Game {
       tail.position.set(0, 0.035, -0.14);
       obj.add(body, tail);
     }
-    obj.position.set(ax, room.origin.y, az);
+    obj.position.set(ax, floor, az);
     obj.rotation.y = Math.atan2(bx - ax, bz - az);
     this.entityGroup.add(obj);
     const dist = Math.hypot(bx - ax, bz - az);
-    this.rats.push({ obj, ax, az, bx, bz, t: 0, dur: Math.max(0.6, dist / 2.6), floor: room.origin.y });
-    this.sound.emit({ x: ax, y: 1, z: az, intensity: 0.3, category: 'ambient', caption: '[small scuffle]' });
+    this.rats.push({ obj, ax, az, bx, bz, t: 0, dur: Math.max(0.6, dist / 2.6), floor });
   }
 
   private clearRats(): void {
