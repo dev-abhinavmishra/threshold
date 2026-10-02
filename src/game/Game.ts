@@ -1205,7 +1205,7 @@ export class Game {
       const oz = (bz - az) / Math.hypot(bx - ax, bz - az) * off;
       this.spawnRatMesh(ax + ox, az + oz, bx + ox, bz + oz, room.origin.y, roll.float());
     }
-    this.sound.emit({ x: ax, y: 1, z: az, intensity: 0.3, category: 'ambient', caption: '[small scuffle]' });
+    this.sound.emit({ x: ax, y: 1, z: az, intensity: 0.3, category: 'critter', caption: '[small scuffle]' });
   }
 
   private spawnRatMesh(ax: number, az: number, bx: number, bz: number, floor: number, roll: number): void {

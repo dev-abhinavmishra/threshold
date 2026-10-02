@@ -233,6 +233,7 @@ export class AudioManager {
       distraction: { freq: 350, dur: 0.4, type: 'sine' as OscillatorType, gain: 0.2, sweep: 500 },
       'entity-cue': CUES['curator-investigate'],
       ambient: { freq: 70, dur: 1.5, type: 'sine' as OscillatorType, gain: 0.05 },
+      critter: { freq: 2400, dur: 0.06, type: 'square' as OscillatorType, gain: 0.045, sweep: 3200 },
     }[e.category];
     this.emitCaption(e.caption ?? '', 'info');
     if (!this.ctx || !base) return;

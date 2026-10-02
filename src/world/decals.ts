@@ -95,6 +95,80 @@ export function poster(rng: Rng): THREE.Texture | null {
   });
 }
 
+/* ---------- cobweb (wall/ceiling corner) ---------- */
+
+export function cobweb(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    // Radial web anchored in the top-right corner of the quad.
+    const cx = 128, cy = 0;
+    ctx.strokeStyle = 'rgba(210,205,190,0.30)';
+    const spokes = 7 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < spokes; i++) {
+      const a = (Math.PI / 2) * (i / (spokes - 1)) + (rng.float() - 0.5) * 0.05;
+      const r = 118 + rng.float() * 10;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx - Math.cos(a) * r, cy + Math.sin(a) * r);
+      ctx.stroke();
+    }
+    // sagging arcs between spokes
+    for (let ring = 1; ring <= 4; ring++) {
+      const rr = ring * 28 + rng.float() * 8;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      for (let i = 0; i < spokes; i++) {
+        const a0 = (Math.PI / 2) * (i / (spokes - 1));
+        const a1 = (Math.PI / 2) * ((i + 0.5) / (spokes - 1));
+        const sag = 1.06 + rng.float() * 0.1;
+        const x0 = cx - Math.cos(a0) * rr, y0 = cy + Math.sin(a0) * rr;
+        const x1 = cx - Math.cos(a1) * rr * sag, y1 = cy + Math.sin(a1) * rr * sag;
+        if (i === 0) ctx.moveTo(x0, y0);
+        ctx.quadraticCurveTo(x1, y1, cx - Math.cos((Math.PI / 2) * ((i + 1) / (spokes - 1))) * rr, cy + Math.sin((Math.PI / 2) * ((i + 1) / (spokes - 1))) * rr);
+      }
+      ctx.stroke();
+    }
+  });
+}
+
+/* ---------- night exterior seen through windows ---------- */
+
+export function nightBackdrop(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 192, (ctx) => {
+    // cold sky gradient, darker at the sill
+    const sky = ctx.createLinearGradient(0, 0, 0, 192);
+    sky.addColorStop(0, '#0a1420');
+    sky.addColorStop(0.55, '#0c1a28');
+    sky.addColorStop(1, '#05090f');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, 256, 192);
+    // distant skyline silhouettes
+    for (let layer = 0; layer < 2; layer++) {
+      const base = 110 + layer * 30;
+      ctx.fillStyle = layer === 0 ? '#0d1520' : '#070c14';
+      let x = -10;
+      while (x < 266) {
+        const bw = 18 + rng.float() * 34;
+        const bh = 30 + rng.float() * 62;
+        ctx.fillRect(x, base - bh, bw, bh + 84);
+        x += bw + rng.float() * 14;
+      }
+    }
+    // sparse lit windows — a couple of amber, a couple of cold
+    for (let i = 0; i < 26; i++) {
+      const warm = rng.bool(0.4);
+      ctx.fillStyle = warm ? `rgba(216,155,74,${0.25 + rng.float() * 0.4})` : `rgba(150,178,205,${0.2 + rng.float() * 0.35})`;
+      ctx.fillRect(rng.float() * 250, 60 + rng.float() * 110, 2, 3);
+    }
+    // faint moon haze top-left
+    const moon = ctx.createRadialGradient(48, 34, 2, 48, 34, 46);
+    moon.addColorStop(0, 'rgba(180,196,214,0.35)');
+    moon.addColorStop(1, 'rgba(180,196,214,0)');
+    ctx.fillStyle = moon;
+    ctx.fillRect(0, 0, 96, 80);
+  });
+}
+
 /* ---------- warning stripe band ---------- */
 
 export function warningStripe(): THREE.Texture | null {

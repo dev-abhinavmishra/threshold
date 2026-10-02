@@ -44,7 +44,8 @@ export type SoundCategory =
   | 'machine'
   | 'distraction'
   | 'entity-cue'
-  | 'ambient';
+  | 'ambient'
+  | 'critter';
 
 export interface SoundEvent {
   /** World position. */

@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, decalQuad } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -454,6 +454,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       knob2.position.set(pw / 2 - 0.14, -0.02, -0.075);
       leaf.add(knob2);
     }
+    // Light seeping under the door — the thin emissive seam at the leaf's
+    // bottom edge reads as a lit space beyond, warm indoors / cold service.
+    if (rng.float() < 0.35) {
+      const seamMat = new THREE.MeshStandardMaterial({
+        color: 0x1a1510,
+        emissive: industrial ? 0x9fb6c8 : 0xd8b070,
+        emissiveIntensity: 0.9, roughness: 1,
+      });
+      seamMat.userData.decalMat = true;
+      const seam = new THREE.Mesh(texBox(port.width - 0.12, 0.012, 0.085), seamMat);
+      seam.position.set(0, -1.095, 0);
+      leaf.add(seam);
+    }
     // hinge at edge for swing
     const hinge = new THREE.Group();
     leaf.position.set(port.width / 2 - 0.05, 1.1, 0);
@@ -508,6 +521,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const spot = pickWallSpot(0.9);
       if (!spot) break;
       wallDecal(spot.wall, grimeStreak(rng), 0.9, 1.9, spot.along, 1.5 + rng.float() * 0.4);
+    }
+
+    // Cobwebs at wall-ceiling edges — dark, undisturbed spaces only.
+    const webP = room.darkRoom ? 0.55 : isUnder || spec.biome === 'maintenance' || spec.biome === 'unlit' ? 0.4 : 0.12;
+    if (rng.float() < webP) {
+      const nWeb = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < nWeb; i++) {
+        const spot = pickWallSpot(0.62);
+        if (!spot) break;
+        const web = decalQuad(cobweb(rng), 0.62, 0.62);
+        // cobweb tex anchors top-right; mirror half the time for left corners
+        if (rng.bool(0.5)) web.scale.x = -1;
+        if (spot.wall === 'e') { web.rotation.y = -Math.PI / 2; web.position.set(w / 2 - 0.013, h - 0.38, spot.along); }
+        else if (spot.wall === 'w') { web.rotation.y = Math.PI / 2; web.position.set(-w / 2 + 0.013, h - 0.38, spot.along); }
+        else if (spot.wall === 'n') { web.rotation.y = Math.PI; web.position.set(spot.along, h - 0.38, d / 2 - 0.013); }
+        else { web.position.set(spot.along, h - 0.38, -d / 2 + 0.013); }
+        group.add(web);
+      }
     }
 
     // Warning stripes — machinery rooms mostly.

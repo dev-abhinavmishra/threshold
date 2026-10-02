@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { modelInstance, modelCollider } from './modelLibrary';
+import { nightBackdrop } from './decals';
 import type { Rng } from '../engine/rng';
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
@@ -194,19 +195,27 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(0.6, 1.3, 0.02), MAT.glassDusty(), 0, 0, 0.035));
     return { group: g, colliders: [] };
   },
-  window: (_s) => {
-    // Cold night light through a 2×2 pane grid — pale emissive panes read
-    // as moonlight without spending a real light.
+  window: (_s, rng) => {
+    // Cold night light through a 2×2 pane grid — translucent panes over a
+    // night-skyline backdrop give the pane real depth instead of a flat glow.
     const g = new THREE.Group();
     g.add(mesh(box(1.2, 1.6, 0.1), MAT.darkOak(), 0, 0, 0));
+    const backMat = new THREE.MeshStandardMaterial({
+      map: nightBackdrop(rng) ?? undefined, color: 0x8ea6bc,
+      emissive: 0x51677f, emissiveIntensity: 0.5, roughness: 1, metalness: 0,
+    });
+    backMat.userData.decalMat = true;
+    const back = mesh(box(1.06, 1.42, 0.015), backMat, 0, 0, 0.02);
+    g.add(back);
     const paneMat = new THREE.MeshStandardMaterial({
-      color: 0x0e1a26, emissive: 0x7d94ad, emissiveIntensity: 0.55,
-      roughness: 0.15, metalness: 0.05,
+      color: 0x0e1a26, emissive: 0x7d94ad, emissiveIntensity: 0.4,
+      roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.45,
+      depthWrite: false,
     });
     paneMat.userData.decalMat = true;
     for (const px of [-0.27, 0.27]) {
       for (const py of [-0.37, 0.37]) {
-        g.add(mesh(box(0.48, 0.68, 0.02), paneMat, px, py, 0.05));
+        g.add(mesh(box(0.48, 0.68, 0.015), paneMat, px, py, 0.055));
       }
     }
     g.add(mesh(box(0.05, 1.45, 0.04), MAT.darkOak(), 0, 0, 0.07));
