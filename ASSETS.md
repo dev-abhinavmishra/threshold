@@ -124,3 +124,25 @@ has not finished loading falls back to its procedural builder.
 | `models/dining_table` | Dining Table | `diningTable` props |
 | `models/dining_chair_02` | Dining Chair 02 | `diningChair` props |
 | `models/bench_vice_01` | Bench Vice 01 | `benchVice` props |
+| `models/fire_alarm` | Fire Alarm | `fireAlarm` wall-mounts |
+| `models/modular_electric_cables` | Modular Electric Cables | `cableTray` ceiling runs |
+| `models/modular_chainlink_fence` | Modular Chainlink Fence | `chainFence` barriers |
+| `models/rollershutter_door` | Roller Shutter Door | `shutterDoor` fronts |
+| `models/concrete_road_barrier_02` | Concrete Road Barrier 02 | `roadBarrier` props |
+| `models/plastic_crate_02` | Plastic Crate 02 | `plasticCrate2` props |
+| `models/plastic_crate_03` | Plastic Crate 03 | `plasticCrate3` props |
+| `models/SchoolChair_01` | School Chair 01 | `schoolChair` props |
+| `models/SchoolDesk_01` | School Desk 01 | `schoolDesk` props |
+| `models/modern_ceiling_lamp_01` | Modern Ceiling Lamp 01 | `ceilingLamp2` fixtures |
+| `models/industrial_caged_sconce` | Industrial Caged Sconce | `cagedSconce` wall-mounts |
+| `models/water_manhole_cover` | Water Manhole Cover | `manhole` floor props |
+| `models/fire_hydrant` | Fire Hydrant | `hydrant` props |
+| `models/pull_chain_light_socket` | Pull Chain Light Socket | `chainBulb` fixtures |
+| `models/wooden_ladder` | Wooden Ladder | `woodLadder` props |
+| `models/oil_tin` | Oil Tin | `oilTin` clutter |
+| `models/tire_pump` | Tire Pump | `tirePump` clutter |
+| `models/Sofa_01` | Sofa 01 | `sofa` variant |
+| `models/sofa_03` | Sofa 03 | `sofa` variant |
+| `models/vintage_cabinet_01` | Vintage Cabinet 01 | `vintageCabinet` props |
+| `models/modern_wooden_cabinet` | Modern Wooden Cabinet | `modernCabinet` props |
+| `models/filmstrip_projector_8mm` | Filmstrip Projector 8mm | `projector` props |

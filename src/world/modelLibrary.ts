@@ -35,7 +35,13 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   },
   desk: { dir: 'metal_office_desk', height: 0.8, collider: [2.0, 0.8, 0.95] },
   bookshelf: { dir: 'wooden_bookshelf_worn', height: 2.1, collider: [1.4, 2.1, 0.6] },
-  sofa: { dir: 'sofa_02', height: 0.75, collider: [1.9, 0.75, 0.9] },
+  sofa: {
+    dir: 'sofa_02', height: 0.75, collider: [1.9, 0.75, 0.9],
+    variants: [
+      { dir: 'Sofa_01', height: 0.85, collider: [1.9, 0.85, 0.9] },
+      { dir: 'sofa_03', height: 0.85, collider: [1.9, 0.85, 0.9] },
+    ],
+  },
   filing: { dir: 'drawer_cabinet', height: 1.85, collider: [1.15, 1.85, 0.5] },
   locker: { dir: 'steel_frame_shelves_01', height: 2.2, collider: [1.15, 2.2, 0.55] },
   drawerUnit: { dir: 'vintage_wooden_drawer_01', height: 0.7, collider: [0.9, 0.7, 0.5] },
@@ -136,6 +142,27 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   diningTable: { dir: 'dining_table', height: 0.8, collider: [1.6, 0.8, 1.0] },
   diningChair: { dir: 'dining_chair_02', height: 0.9, collider: [0.55, 0.9, 0.55] },
   benchVice: { dir: 'bench_vice_01', height: 0.35, collider: [0, 0, 0] },
+  // Sprint 14 — underscript/industrial batch 2
+  fireAlarm: { dir: 'fire_alarm', height: 0.3, collider: [0, 0, 0], anchor: 'center' },
+  cableTray: { dir: 'modular_electric_cables', height: 0.4, collider: [0, 0, 0], anchor: 'center' },
+  chainFence: { dir: 'modular_chainlink_fence', height: 2.2, collider: [2.4, 2.2, 0.15] },
+  shutterDoor: { dir: 'rollershutter_door', height: 2.4, collider: [1.6, 2.4, 0.2] },
+  roadBarrier: { dir: 'concrete_road_barrier_02', height: 0.8, collider: [1.6, 0.8, 0.4] },
+  plasticCrate2: { dir: 'plastic_crate_02', height: 0.4, collider: [0.55, 0.4, 0.4] },
+  plasticCrate3: { dir: 'plastic_crate_03', height: 0.4, collider: [0.55, 0.4, 0.4] },
+  schoolChair: { dir: 'SchoolChair_01', height: 0.8, collider: [0.5, 0.8, 0.5] },
+  schoolDesk: { dir: 'SchoolDesk_01', height: 0.75, collider: [0.65, 0.75, 0.5] },
+  ceilingLamp2: { dir: 'modern_ceiling_lamp_01', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
+  cagedSconce: { dir: 'industrial_caged_sconce', height: 0.35, collider: [0, 0, 0], anchor: 'center' },
+  manhole: { dir: 'water_manhole_cover', height: 0.06, collider: [0, 0, 0] },
+  hydrant: { dir: 'fire_hydrant', height: 0.7, collider: [0.35, 0.7, 0.35] },
+  chainBulb: { dir: 'pull_chain_light_socket', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
+  woodLadder: { dir: 'wooden_ladder', height: 2.2, collider: [0.5, 2.2, 0.15] },
+  oilTin: { dir: 'oil_tin', height: 0.3, collider: [0, 0, 0] },
+  tirePump: { dir: 'tire_pump', height: 0.5, collider: [0, 0, 0] },
+  vintageCabinet: { dir: 'vintage_cabinet_01', height: 1.6, collider: [1.0, 1.6, 0.5] },
+  modernCabinet: { dir: 'modern_wooden_cabinet', height: 1.4, collider: [1.0, 1.4, 0.5] },
+  projector: { dir: 'filmstrip_projector_8mm', height: 0.45, collider: [0, 0, 0] },
 };
 
 const loader = new GLTFLoader();

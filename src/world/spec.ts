@@ -39,6 +39,10 @@ export type PropKind =
   | 'pipeLamp' | 'wallHose' | 'toolCart' | 'jerrycan' | 'toolbox'
   | 'lpgTank' | 'plasticChair' | 'microwave' | 'diningTable' | 'diningChair'
   | 'benchVice'
+  | 'fireAlarm' | 'cableTray' | 'chainFence' | 'shutterDoor' | 'roadBarrier'
+  | 'plasticCrate2' | 'plasticCrate3' | 'schoolChair' | 'schoolDesk'
+  | 'ceilingLamp2' | 'cagedSconce' | 'manhole' | 'hydrant' | 'chainBulb'
+  | 'woodLadder' | 'oilTin' | 'tirePump' | 'vintageCabinet' | 'modernCabinet' | 'projector'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'

@@ -33,6 +33,31 @@ export interface BuiltRoom {
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
+// Soft radial sprite for dust motes — unmapped PointsMaterial renders as
+// hard squares; a radial gradient reads as a dust grain.
+let dustTex: THREE.Texture | null = null;
+function dustSprite(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  if (!dustTex) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 32;
+    const ctx = cv.getContext('2d')!;
+    const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, 'rgba(255,255,255,0.85)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 32, 32);
+    dustTex = new THREE.CanvasTexture(cv);
+  }
+  return dustTex;
+}
+
+// Wallpaper tint palette — subtle per-room cast so corridors don't all read
+// the same beige. Multiplies the shared wallpaper map, so materials are
+// cloned per room and disposed with it.
+const WALLPAPER_TINTS = [0xcfc4ae, 0xb9c0a9, 0xc6b4a6, 0xaeb6b6, 0xc9c0ba];
+
 // Door number plates: canvas textures cached per label (e.g. "050").
 const plateTextures = new Map<string, THREE.Texture>();
 function plateMaterial(label: string): THREE.MeshStandardMaterial | null {
@@ -65,11 +90,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.name = `room-${room.index}`;
 
   const isUnder = room.biome === 'underscript';
-  const wallMat = spec.wallMaterial === 'tile'
+  let wallMat = spec.wallMaterial === 'tile'
     ? TEX.tileWall()
     : (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete')
       ? TEX.concreteWall()
       : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  if (wallMat === TEX.wallpaper() && rng.float() < 0.55) {
+    wallMat = wallMat.clone();
+    wallMat.color.setHex(WALLPAPER_TINTS[Math.floor(rng.float() * WALLPAPER_TINTS.length)]);
+    wallMat.userData.decalMat = true; // reuse the decal-material disposal path
+  }
   const floorMat = isUnder ? TEX.concreteFloor() : (room.floorMaterial === 'carpet' ? TEX.carpet() : room.floorMaterial === 'stone' || room.floorMaterial === 'metal' ? TEX.concreteFloor() : TEX.woodFloor());
   const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
@@ -364,16 +394,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // Wall-mounted props (models are center-anchored; face +z → yaw per wall).
     const mountYaw = { e: -Math.PI / 2, w: Math.PI / 2, n: Math.PI, s: 0 } as const;
     const mounts: { kind: PropKind; y: number; p: number }[] = ({
-      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }],
+      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.15 }],
       records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }],
       lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }],
       guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }],
       gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }],
-      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }],
+      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }, { kind: 'fireAlarm', y: 1.8, p: 0.3 }, { kind: 'cagedSconce', y: 2.3, p: 0.3 }],
       unlit: [{ kind: 'gasMask', y: 1.55, p: 0.2 }],
       milestone: [{ kind: 'securityCam', y: 2.4, p: 0.3 }],
       safe: [{ kind: 'medBox', y: 1.45, p: 0.45 }],
-      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }],
+      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.4 }, { kind: 'cagedSconce', y: 2.3, p: 0.25 }],
     } as Record<string, { kind: PropKind; y: number; p: number }[]>)[spec.biome] ?? [];
     for (const mt of mounts) {
       if (rng.float() >= mt.p) continue;
@@ -396,11 +426,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       lobby: [{ kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }],
       guest: [{ kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }],
       gallery: [{ kind: 'bench', p: 0.3 }, { kind: 'armchair', p: 0.2, wallBias: true }],
-      maintenance: [{ kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }],
+      maintenance: [{ kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }, { kind: 'plasticCrate2', p: 0.25, wallBias: true }, { kind: 'jerrycan', p: 0.3, wallBias: true }, { kind: 'oilTin', p: 0.25 }, { kind: 'tirePump', p: 0.2, wallBias: true }, { kind: 'woodLadder', p: 0.2, wallBias: true }],
       unlit: [{ kind: 'lantern', p: 0.4, wallBias: true }, { kind: 'flashlight', p: 0.2 }, { kind: 'barrel', p: 0.3, wallBias: true }],
       milestone: [{ kind: 'lantern', p: 0.2, wallBias: true }],
       safe: [{ kind: 'lantern', p: 0.5, wallBias: true }, { kind: 'armchair', p: 0.3, wallBias: true }],
-      underscript: [{ kind: 'wineBarrel', p: 0.45, wallBias: true }, { kind: 'milCrate', p: 0.4, wallBias: true }, { kind: 'lantern', p: 0.3, wallBias: true }, { kind: 'barrel', p: 0.3, wallBias: true }],
+      underscript: [{ kind: 'wineBarrel', p: 0.45, wallBias: true }, { kind: 'milCrate', p: 0.4, wallBias: true }, { kind: 'lantern', p: 0.3, wallBias: true }, { kind: 'barrel', p: 0.3, wallBias: true }, { kind: 'plasticCrate3', p: 0.3, wallBias: true }, { kind: 'roadBarrier', p: 0.15 }, { kind: 'hydrant', p: 0.12, wallBias: true }, { kind: 'manhole', p: 0.25 }, { kind: 'wetFloor', p: 0.2 }],
     } as Record<string, { kind: PropKind; p: number; wallBias?: boolean }[]>)[spec.biome] ?? [];
     for (const fp of floorSet) {
       if (rng.float() >= fp.p) continue;
@@ -578,9 +608,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const len = topY - 0.12;
       if (len <= 0.4) continue;
       const shaft = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.26, Math.min(0.85, ls.range * 0.22), len, 10, 1, true),
+        new THREE.CylinderGeometry(0.2, Math.min(0.62, ls.range * 0.16), len, 10, 1, true),
         new THREE.MeshBasicMaterial({
-          color: ls.color, transparent: true, opacity: 0.045,
+          color: ls.color, transparent: true, opacity: 0.03,
           blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
           fog: false,
         }),
@@ -603,7 +633,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const dg = new THREE.BufferGeometry();
       dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       dust = new THREE.Points(dg, new THREE.PointsMaterial({
-        color: 0xd8c9a8, size: 0.022, transparent: true, opacity: 0.3,
+        color: 0xd8c9a8, size: 0.014, transparent: true, opacity: 0.26,
+        map: dustSprite(), alphaTest: 0.01,
         blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
       }));
       dust.userData.phase = rng.float() * Math.PI * 2;
