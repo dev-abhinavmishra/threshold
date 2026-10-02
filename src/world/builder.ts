@@ -65,9 +65,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.name = `room-${room.index}`;
 
   const isUnder = room.biome === 'underscript';
-  const wallMat = isUnder || spec.biome === 'maintenance'
-    ? TEX.concreteWall()
-    : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  const wallMat = spec.wallMaterial === 'tile'
+    ? TEX.tileWall()
+    : (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete')
+      ? TEX.concreteWall()
+      : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
   const floorMat = isUnder ? TEX.concreteFloor() : (room.floorMaterial === 'carpet' ? TEX.carpet() : room.floorMaterial === 'stone' || room.floorMaterial === 'metal' ? TEX.concreteFloor() : TEX.woodFloor());
   const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
@@ -362,16 +364,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // Wall-mounted props (models are center-anchored; face +z → yaw per wall).
     const mountYaw = { e: -Math.PI / 2, w: Math.PI / 2, n: Math.PI, s: 0 } as const;
     const mounts: { kind: PropKind; y: number; p: number }[] = ({
-      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }],
+      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }, { kind: 'pipeLamp', y: 2.5, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.15 }],
       records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }],
       lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }],
       guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }],
       gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }],
-      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }],
+      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }, { kind: 'powerBox', y: 1.7, p: 0.45 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'pipeLamp', y: 2.45, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.2 }, { kind: 'wallHose', y: 1.1, p: 0.2 }],
       unlit: [{ kind: 'gasMask', y: 1.55, p: 0.2 }],
       milestone: [{ kind: 'securityCam', y: 2.4, p: 0.3 }],
       safe: [{ kind: 'medBox', y: 1.45, p: 0.45 }],
-      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }],
+      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }],
     } as Record<string, { kind: PropKind; y: number; p: number }[]>)[spec.biome] ?? [];
     for (const mt of mounts) {
       if (rng.float() >= mt.p) continue;
@@ -472,6 +474,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         panel.position.set(ls.x, fixtureY - 0.02, ls.z);
         group.add(panel);
         lampMeshes.push(panel);
+        if (rng.float() < 0.3) {
+          panel.material = (panel.material as THREE.MeshStandardMaterial).clone();
+          panel.userData.anim = 'flicker';
+          panel.userData.animSeed = rng.float() * 100;
+          panel.userData.lsRef = ls;
+        }
       } else if (isUnder || spec.biome === 'maintenance') {
         // hanging fluoro bank — pivoted at the stem tops so it can sway
         const pivot = new THREE.Group();
@@ -487,11 +495,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const tube = new THREE.Mesh(texBox(1.24, 0.03, 0.14), MAT.fluoro());
         tube.position.set(0, -0.255, 0);
         pivot.add(tube);
+        if (rng.float() < 0.3) {
+          tube.material = (tube.material as THREE.MeshStandardMaterial).clone();
+          tube.userData.anim = 'flicker';
+          tube.userData.animSeed = rng.float() * 100;
+          tube.userData.lsRef = ls;
+        }
+        lampMeshes.push(tube);
         pivot.userData.anim = 'swing';
         pivot.userData.animAmp = 0.045;
         pivot.userData.animSeed = rng.float() * 100;
         group.add(pivot);
-        lampMeshes.push(tube);
       } else {
         // pendant — cord + shade + bulb, pivoted at the ceiling anchor so it swings
         const pivot = new THREE.Group();
@@ -506,6 +520,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         bulb.scale.set(0.12, 0.09, 0.12);
         bulb.position.y = -0.64;
         pivot.add(bulb);
+        if (rng.float() < 0.22) {
+          bulb.material = (bulb.material as THREE.MeshStandardMaterial).clone();
+          bulb.userData.anim = 'flicker';
+          bulb.userData.animSeed = rng.float() * 100;
+          bulb.userData.lsRef = ls;
+        }
         pivot.userData.anim = 'swing';
         pivot.userData.animAmp = 0.11;
         pivot.userData.animSeed = rng.float() * 100;
@@ -525,6 +545,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // decay=2 physical falloff → boost authored (legacy-scale) intensities
     const pl = new THREE.PointLight(ls.color, ls.intensity * 24 * (room.darkRoom ? 0.25 : 1), ls.range * 1.3, 2);
     pl.position.set(ls.x, ls.y, ls.z);
+    pl.userData.ls = ls;
+    pl.userData.baseIntensity = pl.intensity;
     if (quality === 'high' && !shadowAssigned && !room.darkRoom) {
       pl.castShadow = true;
       pl.shadow.mapSize.set(512, 512);

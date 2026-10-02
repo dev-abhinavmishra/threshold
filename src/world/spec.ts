@@ -35,6 +35,10 @@ export type PropKind =
   | 'toolChest' | 'propaneTank' | 'medBox' | 'lantern' | 'flashlight'
   | 'plasticCrate' | 'gasMask' | 'armchair' | 'milCrate'
   | 'morgueDrawer' | 'gurney' | 'washer' | 'boilerTank' | 'cubiclePod'
+  | 'powerBox' | 'utilityBox' | 'fluoroStrip' | 'cageLight' | 'securityLight'
+  | 'pipeLamp' | 'wallHose' | 'toolCart' | 'jerrycan' | 'toolbox'
+  | 'lpgTank' | 'plasticChair' | 'microwave' | 'diningTable' | 'diningChair'
+  | 'benchVice'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
@@ -125,6 +129,8 @@ export interface RoomSpec {
   colliders: LocalCollider[]; // extra interior colliders (walls are auto)
   lights: LightSpec[];
   floorMaterial: 'wood' | 'carpet' | 'stone' | 'metal' | 'concrete' | 'paper';
+  /** Override wall surface; biome default applies when unset. */
+  wallMaterial?: 'wallpaper' | 'concrete' | 'tile';
   tags: string[];
   /** Entities forbidden here regardless of eligibility. */
   forbidEntities?: EntityId[];

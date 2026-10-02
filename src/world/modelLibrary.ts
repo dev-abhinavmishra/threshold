@@ -118,6 +118,23 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   gasMask: { dir: 'old_gas_mask', height: 0.3, collider: [0, 0, 0] },
   armchair: { dir: 'ArmChair_01', height: 0.95, collider: [0.9, 0.95, 0.85] },
   milCrate: { dir: 'wooden_military_crate', height: 0.5, collider: [0.9, 0.5, 0.55] },
+  // Sprint 12 — utility/industrial wall-mounts + clutter
+  powerBox: { dir: 'power_box_01', height: 0.65, collider: [0, 0, 0], anchor: 'center' },
+  utilityBox: { dir: 'utility_box_01', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
+  fluoroStrip: { dir: 'mounted_fluorescent_lights', height: 0.22, collider: [0, 0, 0], anchor: 'center' },
+  cageLight: { dir: 'caged_hanging_light', height: 0.65, collider: [0, 0, 0], anchor: 'center' },
+  securityLight: { dir: 'security_light', height: 0.4, collider: [0, 0, 0], anchor: 'center' },
+  pipeLamp: { dir: 'industrial_pipe_lamp', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
+  wallHose: { dir: 'garden_hose_wall_mounted_01', height: 0.95, collider: [0, 0, 0], anchor: 'center' },
+  toolCart: { dir: 'tool_cart', height: 0.95, collider: [1.05, 0.95, 0.6] },
+  jerrycan: { dir: 'metal_jerrycan', height: 0.5, collider: [0.4, 0.5, 0.3] },
+  toolbox: { dir: 'metal_toolbox', height: 0.3, collider: [0, 0, 0] },
+  lpgTank: { dir: 'small_lpg_tank', height: 0.9, collider: [0.4, 0.9, 0.4] },
+  plasticChair: { dir: 'plastic_monobloc_chair_01', height: 0.85, collider: [0.5, 0.85, 0.55] },
+  microwave: { dir: 'vintage_microwave', height: 0.4, collider: [0, 0, 0] },
+  diningTable: { dir: 'dining_table', height: 0.8, collider: [1.6, 0.8, 1.0] },
+  diningChair: { dir: 'dining_chair_02', height: 0.9, collider: [0.55, 0.9, 0.55] },
+  benchVice: { dir: 'bench_vice_01', height: 0.35, collider: [0, 0, 0] },
 };
 
 const loader = new GLTFLoader();

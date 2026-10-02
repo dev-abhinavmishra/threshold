@@ -1144,6 +1144,17 @@ export class Game {
           const a = (o.userData.animAmp as number) ?? 0.12;
           o.rotation.x = Math.sin(t * 1.15 + s) * a;
           o.rotation.z = Math.cos(t * 0.83 + s) * a * 0.7;
+        } else if (kind === 'flicker') {
+          // Fluorescent dying-glow: emissive dips with the coupled room light.
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          if (o.userData.lightRef === undefined) {
+            o.userData.lightRef = built.lights.find((l) => l.userData.ls === o.userData.lsRef) ?? null;
+          }
+          const light = o.userData.lightRef as THREE.PointLight | null;
+          const n = Math.sin(t * 27 + s) * Math.sin(t * 9.7 + s * 1.31) + Math.sin(t * 61 + s * 2.7) * 0.4;
+          const on = n > -0.75;
+          mat.emissiveIntensity = on ? 1.35 + Math.sin(t * 47 + s) * 0.15 : 0.04;
+          if (light) light.intensity = (light.userData.baseIntensity as number) * (on ? 1 : 0.1);
         }
       }
     }

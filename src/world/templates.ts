@@ -22,6 +22,7 @@ interface Opts {
   colliders?: LocalCollider[];
   lights?: LightSpec[];
   floor?: RoomSpec['floorMaterial'];
+  wall?: RoomSpec['wallMaterial'];
   tags?: string[];
   darkChance?: number;
   weight?: number;
@@ -48,6 +49,7 @@ function spec(id: string, biome: Biome, w: number, d: number, h: number, o: Opts
     colliders: [...wallColliders(w, d, h, entry, exits), ...(o.colliders ?? [])],
     lights: o.lights ?? defaultLights(w, d, h),
     floorMaterial: o.floor ?? defaultFloor(biome),
+    wallMaterial: o.wall,
     tags: o.tags ?? [],
     forbidEntities: o.forbid,
     darkChance: o.darkChance ?? defaultDark(biome),
@@ -1370,6 +1372,9 @@ const roomMorgue: RoomTemplate = {
       { kind: 'bucket', x: -1.7, z: 3.5 },
       { kind: 'extinguisher', x: 2.2, z: -4.3, y: 1.4 },
       { kind: 'wheelchair', x: 2.9, z: 3.6, yaw: -0.7 },
+      { kind: 'plasticChair', x: -2.6, z: -4.0, yaw: 0.9 },
+      { kind: 'toolbox', x: -2.0, z: 3.4, y: 0.92 },
+      { kind: 'utilityBox', x: -3.85, z: -4.1, y: 1.6, yaw: Math.PI / 2 },
     ],
     sockets: [...drawerSockets([[-2.0, 4.0]]), ...lootSockets([[-0.8, -1.1], [1.0, 1.5]])],
     hiding: [
@@ -1388,6 +1393,7 @@ const roomMorgue: RoomTemplate = {
     weight: 7,
     minRoom: 20,
     floor: 'stone',
+    wall: 'tile',
     darkChance: 0.15,
     perf: 4,
   }),
@@ -1412,8 +1418,11 @@ const roomLaundry: RoomTemplate = {
       { kind: 'bucket', x: 2.4, z: 2.2 },
       { kind: 'wetFloor', x: -0.6, z: -0.9 },
       { kind: 'puddle', x: 0.8, z: -1.8 },
+      { kind: 'puddle', x: -1.9, z: -0.6 },
       { kind: 'steamVent', x: -1.8, z: 4.2 },
       { kind: 'extinguisher', x: 2.9, z: 4.4, y: 1.4, yaw: Math.PI },
+      { kind: 'toolCart', x: -2.5, z: 4.0, yaw: 0.3 },
+      { kind: 'wallHose', x: 0.6, z: 4.85, y: 1.1, yaw: Math.PI },
     ],
     sockets: lootSockets([[0.4, 2.6], [-2.6, 3.4]]),
     hiding: [{ kind: 'cabinet', x: 2.9, z: 3.6, yaw: -Math.PI / 2, propKind: 'locker' }],
@@ -1430,6 +1439,7 @@ const roomLaundry: RoomTemplate = {
     weight: 7,
     minRoom: 25,
     floor: 'metal',
+    wall: 'tile',
     darkChance: 0.3,
     perf: 4,
   }),
@@ -1453,6 +1463,12 @@ const roomBoilerDetail: RoomTemplate = {
       { kind: 'steamVent', x: 2.4, z: 1.8 },
       { kind: 'extinguisher', x: -2.0, z: -4.3, y: 1.4 },
       { kind: 'stove', x: 2.8, z: 3.4 },
+      { kind: 'jerrycan', x: -3.4, z: -3.0 },
+      { kind: 'jerrycan', x: -3.1, z: -2.6, yaw: 0.8 },
+      { kind: 'lpgTank', x: 3.5, z: 0.6 },
+      { kind: 'toolbox', x: -2.5, z: -3.0, y: 0 },
+      { kind: 'powerBox', x: 3.85, z: -2.2, y: 1.6, yaw: -Math.PI / 2 },
+      { kind: 'benchVice', x: -3.0, z: -3.2, y: 0.95 },
     ],
     sockets: [...lootSockets([[-3.0, -3.4], [2.8, 3.4]]), ...drawerSockets([[-3.0, -3.4]])],
     hiding: [{ kind: 'cabinet', x: -3.4, z: 1.6, yaw: Math.PI / 2, propKind: 'locker' }],

@@ -23,6 +23,7 @@ Downloaded at 1K-JPG quality; each folder holds `color`, `normalgl`,
 | `textures/metal-dirty` | Metal046B | metal props, doors, Underscript detail |
 | `textures/metal-aged` | Metal063 | machinery, the Engine |
 | `textures/leather-dark` | Leather030 | upholstered furniture |
+| `textures/tiles-institutional` | Tiles074 | morgue/laundry/service walls |
 
 ## Models — Poly Haven (https://polyhaven.com), CC0
 
@@ -107,3 +108,19 @@ has not finished loading falls back to its procedural builder.
 | `models/old_gas_mask` | Old Gas Mask | `gasMask` props |
 | `models/ArmChair_01` | Arm Chair 01 | `armchair` props |
 | `models/wooden_military_crate` | Wooden Military Crate | `milCrate` props |
+| `models/power_box_01` | Power Box 01 | `powerBox` wall-mounts |
+| `models/utility_box_01` | Utility Box 01 | `utilityBox` wall-mounts |
+| `models/mounted_fluorescent_lights` | Mounted Fluorescent Lights | `fluoroStrip` props |
+| `models/caged_hanging_light` | Caged Hanging Light | `cageLight` fixtures |
+| `models/security_light` | Security Light | `securityLight` wall-mounts |
+| `models/industrial_pipe_lamp` | Industrial Pipe Lamp | `pipeLamp` wall-mounts |
+| `models/garden_hose_wall_mounted_01` | Garden Hose Wall Mounted 01 | `wallHose` wall-mounts |
+| `models/tool_cart` | Tool Cart | `toolCart` props |
+| `models/metal_jerrycan` | Metal Jerrycan | `jerrycan` props |
+| `models/metal_toolbox` | Metal Toolbox | `toolbox` props |
+| `models/small_lpg_tank` | Small LPG Tank | `lpgTank` props |
+| `models/plastic_monobloc_chair_01` | Plastic Monobloc Chair 01 | `plasticChair` props |
+| `models/vintage_microwave` | Vintage Microwave | `microwave` props |
+| `models/dining_table` | Dining Table | `diningTable` props |
+| `models/dining_chair_02` | Dining Chair 02 | `diningChair` props |
+| `models/bench_vice_01` | Bench Vice 01 | `benchVice` props |

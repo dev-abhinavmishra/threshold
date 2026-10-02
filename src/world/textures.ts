@@ -75,6 +75,7 @@ export const TEX = {
   brick: () => surfaceMaterial('brick-damaged', 2.0, { color: 0xa09080 }),
   metalDirty: () => surfaceMaterial('metal-dirty', 1.2, { color: 0xb8bcc0, metalness: 0.55 }),
   metalAged: () => surfaceMaterial('metal-aged', 1.4, { color: 0xc0c4c8, metalness: 0.5 }),
+  tileWall: () => surfaceMaterial('tiles-institutional', 1.3, { color: 0xb9bfb2 }),
   leather: () => surfaceMaterial('leather-dark', 1.0, { color: 0x9a8874 }),
 };
 
