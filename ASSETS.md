@@ -336,3 +336,27 @@ has not finished loading falls back to its procedural builder.
 | `models/wooden_picnic_table` | Wooden Picnic Table | sprint-21 dressing/modelLibrary |
 | `models/wooden_stool_01` | Wooden Stool | sprint-21 dressing/modelLibrary |
 | `models/wooden_stool_02` | Wooden Stool | sprint-21 dressing/modelLibrary |
+| `models/chinese_sofa` | Chinese Sofa | `sofa` variant |
+| `models/chinese_console_table` | Chinese Console Table | `sideTable` variant |
+| `models/chinese_tea_table` | Chinese Tea Table | `coffeeTable` variant |
+| `models/chinese_armchair` | Chinese Armchair | `armchair` variant |
+| `models/vintage_electric_kettle` | Vintage Electric Kettle | `kettle` props |
+| `models/carved_wooden_plate` | Carved Wooden Plate | `carvedPlate` props |
+| `models/food_apple_01` | Food Apple | `apple` props |
+| `models/food_pears_asian_01` | Food Pears Asian | `pears` props |
+| `models/metal_jerrycan_green` | Metal Jerrycan Green | `jerrycan` variant |
+| `models/american_football` | American Football | `football` props |
+| `models/CheeseBox_01` | Cheese Box | `cheeseBox` props |
+| `models/circuit_board` | Circuit Board | `circuitBoard` props |
+| `models/brass_pan_01` | Brass Pan | `pan` props |
+| `models/propane_torch` | Propane Torch | `propaneTorch` props |
+| `models/wooden_cutting_board` | Wooden Cutting Board | `cuttingBoard` props |
+| `models/modular_pipes_plastic_01` | Modular Pipes Plastic | `indPipes` variant |
+| `models/street_lamp_02` | Street Lamp 02 | `streetLamp` variant |
+| `models/crystalline_iceplant` | Crystalline Iceplant | `plant` variant |
+| `models/periwinkle_plant` | Periwinkle Plant | `plant` variant |
+| `models/planter_pot_clay` | Planter Pot Clay | `plant` variant |
+| `models/portable_searchlight` | Portable Searchlight | `searchlight` props |
+| `models/lightbulb_led` | Lightbulb LED | `lightbulb` variant |
+| `models/wooden_barrels_01` | Wooden Barrels | `barrel` variant |
+| `models/brass_vase_04` | Brass Vase 04 | `vase` variant |

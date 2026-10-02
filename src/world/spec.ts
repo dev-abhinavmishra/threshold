@@ -64,6 +64,9 @@ export type PropKind =
   | 'streetSeat' | 'chest' | 'vidCamera' | 'barStool' | 'picnicTable'
   | 'stone' | 'moss' | 'shelfWood' | 'crate2'
   | 'castleDoor' | 'ironGate' | 'gateLatch'
+  // sprint 24 — kitchen/food + electronics clutter
+  | 'kettle' | 'pan' | 'cuttingBoard' | 'carvedPlate' | 'apple' | 'pears'
+  | 'cheeseBox' | 'football' | 'circuitBoard' | 'propaneTorch' | 'searchlight'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
