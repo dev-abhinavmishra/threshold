@@ -69,6 +69,7 @@ export class Game {
   private currentRoom = 0;
   private space: 'main' | 'under' = 'main';
   private rats: { obj: THREE.Object3D; ax: number; az: number; bx: number; bz: number; t: number; dur: number; floor: number }[] = [];
+  private moths: { obj: THREE.Object3D; cx: number; cy: number; cz: number; r: number; t: number; dur: number; speed: number; phase: number }[] = [];
   private entities: Entity[] = [];
   private spawned = new Set<string>();
   private milestones = new Map<number, Milestone>();
@@ -1187,6 +1188,29 @@ export class Game {
     const spec = room?.spec;
     if (!room || !spec || SAFE_ROOM_TEMPLATES.has(room.templateId) || spec.width < 3) return;
     const roll = this.streams.roomStream('entity', this.currentRoom);
+    // Moths circling a lit fixture — sells "this light has burned for years".
+    if (!room.darkRoom && spec.lights.length && roll.bool(0.45)) {
+      const ls = spec.lights[Math.floor(roll.float() * spec.lights.length)];
+      const mc = Math.cos(room.yaw), ms = Math.sin(room.yaw);
+      const lx = room.origin.x + ls.x * mc + ls.z * ms;
+      const lz = room.origin.z - ls.x * ms + ls.z * mc;
+      const ly = room.origin.y + ls.y;
+      const n2 = roll.int(2, 4);
+      for (let i = 0; i < n2 && this.moths.length < 14; i++) {
+        const moth = new THREE.Mesh(
+          new THREE.SphereGeometry(0.014, 5, 4),
+          new THREE.MeshBasicMaterial({ color: 0x6e6353 }),
+        );
+        moth.scale.set(1, 0.6, 1.6);
+        this.entityGroup.add(moth);
+        this.moths.push({
+          obj: moth, cx: lx, cy: ly - 0.12, cz: lz,
+          r: 0.22 + roll.float() * 0.45, t: 0, dur: 6 + roll.float() * 6,
+          speed: (2.2 + roll.float() * 1.8) * (roll.bool(0.5) ? 1 : -1),
+          phase: roll.float() * Math.PI * 2,
+        });
+      }
+    }
     if (roll.float() < 0.55) return;
     const hw = spec.width / 2 - 0.35;
     const hd = spec.depth / 2 - 0.35;
@@ -1239,6 +1263,27 @@ export class Game {
   private clearRats(): void {
     for (const r of this.rats) this.entityGroup.remove(r.obj);
     this.rats = [];
+    for (const m of this.moths) this.entityGroup.remove(m.obj);
+    this.moths = [];
+  }
+
+  private updateMoths(dt: number): void {
+    for (const m of [...this.moths]) {
+      m.t += dt;
+      const a = m.phase + m.t * m.speed;
+      // Wobbling orbit + vertical bob + wing flutter (roll)
+      m.obj.position.set(
+        m.cx + Math.cos(a) * m.r + Math.sin(m.t * 9.7) * 0.03,
+        m.cy + Math.sin(m.t * 3.1 + m.phase) * 0.12 + Math.sin(a * 1.4) * 0.05,
+        m.cz + Math.sin(a) * m.r + Math.cos(m.t * 8.3) * 0.03,
+      );
+      m.obj.rotation.z = Math.sin(m.t * 42) * 0.55;
+      m.obj.rotation.y = a + Math.PI / 2;
+      if (m.t >= m.dur) {
+        this.entityGroup.remove(m.obj);
+        this.moths.splice(this.moths.indexOf(m), 1);
+      }
+    }
   }
 
   private updateRats(dt: number): void {
@@ -1382,6 +1427,7 @@ export class Game {
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
     this.updateRats(dt);
+    this.updateMoths(dt);
 
     // engine win already handled via milestone → victory()
 
