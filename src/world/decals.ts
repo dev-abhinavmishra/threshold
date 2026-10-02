@@ -466,3 +466,38 @@ export function footprintTrail(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/* ---------- hairline crack — jagged dark branching polylines ---------- */
+
+export function crackDecal(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 256, (ctx) => {
+    const branches = 1 + Math.floor(rng.float() * 3);
+    for (let b = 0; b < branches; b++) {
+      let x = 40 + rng.float() * 176;
+      let y = 20 + rng.float() * 60;
+      let ang = Math.PI / 2 + (rng.float() - 0.5) * 1.2;
+      const segs = 8 + Math.floor(rng.float() * 12);
+      const a = 0.25 + rng.float() * 0.25;
+      ctx.strokeStyle = `rgba(22,18,14,${a})`;
+      ctx.lineWidth = 1.5 + rng.float() * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let s = 0; s < segs; s++) {
+        ang += (rng.float() - 0.5) * 0.9;
+        const len = 8 + rng.float() * 16;
+        x += Math.cos(ang) * len;
+        y += Math.sin(ang) * len;
+        ctx.lineTo(x, y);
+        // occasional fork
+        if (rng.float() < 0.22 && s > 2) {
+          ctx.moveTo(x, y);
+          const fa = ang + (rng.bool(0.5) ? 0.8 : -0.8);
+          const fl = 10 + rng.float() * 18;
+          ctx.lineTo(x + Math.cos(fa) * fl, y + Math.sin(fa) * fl);
+          ctx.moveTo(x, y);
+        }
+      }
+      ctx.stroke();
+    }
+  });
+}

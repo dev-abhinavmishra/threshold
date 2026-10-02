@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -618,6 +618,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(spot.wall, grimeStreak(rng), 0.9, 1.9, spot.along, 1.5 + rng.float() * 0.4);
     }
 
+    // Hairline cracks — jagged splits on walls and, rarely, the ceiling.
+    const crackP = hostile ? 0.4 : spec.biome === 'safe' ? 0 : 0.12;
+    if (rng.float() < crackP) {
+      const n = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < n; i++) {
+        const spot = pickWallSpot(1.1);
+        if (!spot) break;
+        wallDecal(spot.wall, crackDecal(rng), 1.1, 1.1, spot.along, 1.3 + rng.float() * 0.7);
+      }
+      if (rng.float() < 0.3) {
+        const m = decalQuad(crackDecal(rng), 1.3, 1.3);
+        m.rotation.x = Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI;
+        m.position.set((rng.float() - 0.5) * (w - 1.6), h - 0.055, (rng.float() - 0.5) * (d - 1.6));
+        group.add(m);
+      }
+    }
+
     // Cobwebs at wall-ceiling edges — dark, undisturbed spaces only.
     const webP = room.darkRoom ? 0.55 : isUnder || spec.biome === 'maintenance' || spec.biome === 'unlit' ? 0.4 : 0.12;
     if (rng.float() < webP) {
@@ -747,6 +765,37 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       run.position.set((rng.float() - 0.5) * (w - rw - 1), 0.012, (rng.float() - 0.5) * (d - rl - 1));
       run.rotation.y = (rng.float() - 0.5) * 0.05;
       group.add(run);
+    }
+
+    // Sheet-draped furniture — pale dust covers over anonymous shapes;
+    // abandoned-storage reading, solid so it can't be walked through.
+    const drapeP = ({ guest: 0.3, lobby: 0.25, gallery: 0.3, records: 0.15, milestone: 0.12, corridor: 0.1 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && spec.biome !== 'safe' && rng.float() < drapeP) {
+      const tall = rng.bool(0.5);
+      const dw = tall ? 0.7 + rng.float() * 0.3 : 1.1 + rng.float() * 0.7;
+      const dd = tall ? 0.6 + rng.float() * 0.2 : 0.6 + rng.float() * 0.3;
+      const dh = tall ? 1.5 + rng.float() * 0.4 : 0.85 + rng.float() * 0.35;
+      const px = (rng.float() - 0.5) * (w - dw - 1.4);
+      const pz = (rng.float() - 0.5) * (d - dd - 1.4);
+      const sheetMat = TEX.clothWorn();
+      sheetMat.color.setHex(rng.pick([0xa8a294, 0x96928a, 0xb0a894]));
+      const body = new THREE.Mesh(texBox(dw, dh - 0.05, dd), sheetMat);
+      body.position.set(px, dh / 2 + 0.02, pz);
+      body.rotation.y = (rng.float() - 0.5) * 0.12;
+      group.add(body);
+      // drape hem — a slightly wider skirt at floor level
+      const hem = new THREE.Mesh(texBox(dw + 0.07, 0.14, dd + 0.07), sheetMat);
+      hem.position.set(px, 0.09, pz);
+      hem.rotation.y = body.rotation.y;
+      group.add(hem);
+      // solid collision so it can't be walked through
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + px * cos + pz * sin;
+      const wz = room.origin.z - px * sin + pz * cos;
+      const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
+      const wb = aabb(wx, room.origin.y + dh / 2, wz, (swapped ? dd : dw) / 2 + 0.03, dh / 2, (swapped ? dw : dd) / 2 + 0.03);
+      room.colliders.push(wb);
+      if (dh > 1.2) room.losBlockers.push(wb);
     }
 
     // Floor stains.
