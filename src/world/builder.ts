@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -546,6 +546,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // Violence residue — claw gouges + grabbed walls in the hostile wings,
+    // rare enough to stay a shock. Never in safe rooms.
+    const hostile = room.darkRoom || spec.biome === 'unlit' || spec.biome === 'maintenance' || isUnder;
+    if (hostile && spec.biome !== 'safe' && rng.float() < (isUnder ? 0.5 : 0.3)) {
+      const spot = pickWallSpot(1.0);
+      if (spot) {
+        if (rng.bool(0.55)) wallDecal(spot.wall, scratchMarks(rng), 0.85, 1.6, spot.along, 1.5 + rng.float() * 0.3);
+        else wallDecal(spot.wall, handPrints(rng), 1.1, 0.9, spot.along, 1.35 + rng.float() * 0.3);
+      }
+    }
+
     // Warning stripes — machinery rooms mostly.
     const warnP = spec.biome === 'maintenance' ? 0.7 : isUnder ? 0.5 : spec.biome === 'corridor' ? 0.2 : 0;
     if (rng.float() < warnP) {
@@ -563,6 +574,25 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
       group.add(m);
+    }
+
+    // Blood evidence — pools and drag smears; heaviest in the Underscript
+    // and dark rooms, sparse elsewhere. Door lanes avoid pools only — a
+    // smear running under a door is the point.
+    const goreP = isUnder ? 0.55 : room.darkRoom ? 0.45 : spec.biome === 'maintenance' || spec.biome === 'unlit' ? 0.3 : 0.06;
+    if (spec.biome !== 'safe' && rng.float() < goreP) {
+      const pool = rng.bool(0.6);
+      const sz = pool ? 1.3 + rng.float() * 1.2 : 1.8 + rng.float() * 1.4;
+      const m = decalQuad(pool ? bloodPool(rng) : bloodSmear(rng), sz, pool ? sz : sz * 0.55);
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI;
+      m.position.set((rng.float() - 0.5) * (w - 1.8), 0.007, (rng.float() - 0.5) * (d - 1.8));
+      group.add(m);
+      // a pool sometimes spatters the nearest wall too
+      if (pool && rng.bool(0.4)) {
+        const spot = pickWallSpot(0.9);
+        if (spot) wallDecal(spot.wall, handPrints(rng), 1.0, 0.85, spot.along, 1.1 + rng.float() * 0.4);
+      }
     }
 
     // Ceiling water stains — under ducts/pipes in service spaces.

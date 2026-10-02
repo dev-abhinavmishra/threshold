@@ -169,6 +169,122 @@ export function nightBackdrop(rng: Rng): THREE.Texture | null {
   });
 }
 
+/* ---------- gore / violence decals ---------- */
+
+/** Dried pool — dark radial blobs, irregular rim, a couple of stray drops. */
+export function bloodPool(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 256, (ctx) => {
+    const cx = 128, cy = 128;
+    const lobes = 5 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < lobes; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const d = rng.float() * 46;
+      const r = 26 + rng.float() * 44;
+      const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+      const g = ctx.createRadialGradient(x, y, r * 0.15, x, y, r);
+      g.addColorStop(0, 'rgba(58,10,8,0.85)');
+      g.addColorStop(0.72, 'rgba(44,8,6,0.55)');
+      g.addColorStop(1, 'rgba(44,8,6,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * (0.55 + rng.float() * 0.45), rng.float() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // darker crusted center
+    const c2 = ctx.createRadialGradient(cx, cy, 4, cx, cy, 52);
+    c2.addColorStop(0, 'rgba(30,5,4,0.9)');
+    c2.addColorStop(1, 'rgba(30,5,4,0)');
+    ctx.fillStyle = c2;
+    ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI * 2); ctx.fill();
+    // stray droplets
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2, d = 60 + rng.float() * 60;
+      ctx.fillStyle = `rgba(50,9,7,${0.35 + rng.float() * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1 + rng.float() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Dragged smear — something pulled across the floor; tapering streaks. */
+export function bloodSmear(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 128, (ctx) => {
+    const streaks = 6 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < streaks; i++) {
+      const y0 = 20 + rng.float() * 88;
+      const w0 = 6 + rng.float() * 16;
+      const len = 120 + rng.float() * 120;
+      const bend = (rng.float() - 0.5) * 26;
+      const g = ctx.createLinearGradient(0, 0, len, 0);
+      g.addColorStop(0, `rgba(52,9,7,${0.55 + rng.float() * 0.3})`);
+      g.addColorStop(0.75, 'rgba(42,8,6,0.25)');
+      g.addColorStop(1, 'rgba(42,8,6,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(0, y0);
+      ctx.quadraticCurveTo(len * 0.5, y0 + bend, len, y0 + bend * 1.4 + w0 * 0.2);
+      ctx.lineTo(len, y0 + bend * 1.4 - w0 * 0.2);
+      ctx.quadraticCurveTo(len * 0.5, y0 + bend + w0 * 0.8, 0, y0 + w0);
+      ctx.fill();
+    }
+  });
+}
+
+/** Claw gouges down a wall — parallel torn slashes. */
+export function scratchMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 192, (ctx) => {
+    const claws = 3 + Math.floor(rng.float() * 3);
+    const x0 = 30 + rng.float() * 30;
+    for (let i = 0; i < claws; i++) {
+      const x = x0 + i * (10 + rng.float() * 8);
+      const len = 100 + rng.float() * 80;
+      const drift = (rng.float() - 0.5) * 22;
+      const g = ctx.createLinearGradient(0, 8, 0, 8 + len);
+      g.addColorStop(0, 'rgba(30,22,16,0)');
+      g.addColorStop(0.12, `rgba(28,20,14,${0.5 + rng.float() * 0.3})`);
+      g.addColorStop(0.85, 'rgba(24,16,12,0.35)');
+      g.addColorStop(1, 'rgba(24,16,12,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(x, 8);
+      ctx.quadraticCurveTo(x + drift, 8 + len * 0.55, x + drift * 0.6, 8 + len);
+      ctx.lineTo(x + drift * 0.6 + 2.5, 8 + len);
+      ctx.quadraticCurveTo(x + drift + 2.5, 8 + len * 0.55, x + 2.5, 8);
+      ctx.fill();
+    }
+  });
+}
+
+/** Cluster of dark hand-prints — somebody grabbed the wall here. */
+export function handPrints(rng: Rng): THREE.Texture | null {
+  return canvasTex(192, 160, (ctx) => {
+    const prints = 3 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < prints; i++) {
+      const x = 24 + rng.float() * 130;
+      const y = 24 + rng.float() * 100;
+      const s = 0.7 + rng.float() * 0.7;
+      const a = 0.3 + rng.float() * 0.4;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rng.float() - 0.5) * 1.4);
+      ctx.scale(s, s);
+      ctx.fillStyle = `rgba(40,10,8,${a})`;
+      // palm
+      ctx.beginPath(); ctx.ellipse(0, 6, 9, 11, 0, 0, Math.PI * 2); ctx.fill();
+      // fingers
+      for (let f = -2; f <= 2; f++) {
+        ctx.beginPath();
+        ctx.ellipse(f * 4.4, -7 - Math.abs(f), 2.2, 7 - Math.abs(f) * 1.4, f * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // thumb
+      ctx.beginPath(); ctx.ellipse(-10, 4, 2.6, 6, -0.7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  });
+}
+
 /* ---------- warning stripe band ---------- */
 
 export function warningStripe(): THREE.Texture | null {
