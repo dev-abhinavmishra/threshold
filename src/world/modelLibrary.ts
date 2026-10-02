@@ -197,6 +197,28 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   cleanerBottle: { dir: 'drain_cleaner', height: 0.27, collider: [0, 0, 0] },
   bleachBottle: { dir: 'bleach_bottle', height: 0.3, collider: [0, 0, 0] },
   ceilingFan: { dir: 'ceiling_fan', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
+  // Sprint 18 — gothic/creepy dressing batch
+  gothicCommode: { dir: 'GothicCommode_01', height: 0.95, collider: [1.1, 0.95, 0.55] },
+  galleryStatue: {
+    dir: 'concrete_cat_statue', height: 1.6, collider: [0.9, 1.6, 0.9],
+    variants: [
+      { dir: 'bronze_shark_statue', height: 1.6, collider: [0.9, 1.6, 0.9] },
+      { dir: 'bronze_whale_statue', height: 1.6, collider: [0.9, 1.6, 0.9] },
+      { dir: 'bronze_ray_statue', height: 1.6, collider: [0.9, 1.6, 0.9] },
+    ],
+  },
+  deadBranch: {
+    dir: 'dead_quiver_branch_01', height: 1.2, collider: [0, 0, 0],
+    variants: [
+      { dir: 'dead_quiver_branch_02', height: 1.2, collider: [0, 0, 0] },
+      { dir: 'dry_branches_medium_01', height: 1.1, collider: [0, 0, 0] },
+    ],
+  },
+  crowbar: { dir: 'crowbar_01', height: 0.75, collider: [0, 0, 0] },
+  boltCutters: { dir: 'bolt_cutters_01', height: 0.8, collider: [0, 0, 0] },
+  bunsenBurner: { dir: 'bunsen_burner', height: 0.25, collider: [0, 0, 0] },
+  goblets: { dir: 'brass_goblets', height: 0.2, collider: [0, 0, 0] },
+  rifle: { dir: 'bolt_action_rifle_7_62', height: 1.2, collider: [0, 0, 0] },
 };
 
 const loader = new GLTFLoader();

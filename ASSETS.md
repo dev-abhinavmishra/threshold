@@ -190,3 +190,16 @@ has not finished loading falls back to its procedural builder.
 | `textures/marble012` | Marble 012 | `marbleFloor` lobby/gallery floors |
 | `textures/travertine009` | Travertine 009 | `travertine` gallery walls |
 | `textures/corrugatedsteel007a` | Corrugated Steel 007A | `corrugated` maintenance walls |
+| `models/GothicCommode_01` | Gothic Commode 01 | `gothicCommode` props |
+| `models/concrete_cat_statue` | Concrete Cat Statue | `galleryStatue` props |
+| `models/bronze_shark_statue` | Bronze Shark Statue | `galleryStatue` variant |
+| `models/bronze_whale_statue` | Bronze Whale Statue | `galleryStatue` variant |
+| `models/bronze_ray_statue` | Bronze Ray Statue | `galleryStatue` variant |
+| `models/dead_quiver_branch_01` | Dead Quiver Branch 01 | `deadBranch` props |
+| `models/dead_quiver_branch_02` | Dead Quiver Branch 02 | `deadBranch` variant |
+| `models/dry_branches_medium_01` | Dry Branches Medium 01 | `deadBranch` variant |
+| `models/crowbar_01` | Crowbar 01 | `crowbar` props |
+| `models/bolt_cutters_01` | Bolt Cutters 01 | `boltCutters` props |
+| `models/bunsen_burner` | Bunsen Burner | `bunsenBurner` props |
+| `models/brass_goblets` | Brass Goblets | `goblets` props |
+| `models/bolt_action_rifle_7_62` | Bolt Action Rifle 7.62 | `rifle` props |

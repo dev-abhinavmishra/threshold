@@ -97,13 +97,26 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
     parts.mask = plate;
   }
   if (o.spines) {
-    const spineMat = o.body ?? body;
-    for (let i = 0; i < 6; i++) {
-      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.05 * s, 0.22 * s, 6), spineMat);
-      const fy = (1.1 + i * 0.22) * s;
-      sp.position.set(0, fy, -0.24 * s - Math.sin(i * 0.5) * 0.02);
-      sp.rotation.x = -1.15;
-      g.add(sp);
+    // Gnarled dead branches erupting from the back when the CC0 model is
+    // loaded; vertebra cones otherwise.
+    const branch = modelInstance('deadBranch', Math.random());
+    if (branch) {
+      for (let i = 0; i < 3; i++) {
+        const b = branch.clone(true) as THREE.Group;
+        b.scale.setScalar((0.55 + i * 0.12) * s);
+        b.position.set((i - 1) * 0.1 * s, (1.35 + i * 0.3) * s, -0.18 * s);
+        b.rotation.set(-0.85 - i * 0.2, (i - 1) * 0.6 + Math.PI, 0);
+        g.add(b);
+      }
+    } else {
+      const spineMat = o.body ?? body;
+      for (let i = 0; i < 6; i++) {
+        const sp = new THREE.Mesh(new THREE.ConeGeometry(0.05 * s, 0.22 * s, 6), spineMat);
+        const fy = (1.1 + i * 0.22) * s;
+        sp.position.set(0, fy, -0.24 * s - Math.sin(i * 0.5) * 0.02);
+        sp.rotation.x = -1.15;
+        g.add(sp);
+      }
     }
   }
   if (o.claws) {

@@ -49,6 +49,8 @@ export type PropKind =
   | 'drillPress' | 'lanternChandelier' | 'megaphone' | 'ammoBox' | 'deadTree'
   | 'baseballBat' | 'jerrycanP' | 'sprayCans' | 'rustCan'
   | 'foodCans' | 'cleanerBottle' | 'bleachBottle' | 'ceilingFan'
+  | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
+  | 'bunsenBurner' | 'goblets' | 'rifle'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
