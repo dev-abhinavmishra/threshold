@@ -1078,6 +1078,54 @@ export class Game {
     void dt;
   }
 
+  /* ==================== atmosphere ==================== */
+
+  private readonly fogTargets: Record<string, { d: number; c: number }> = {
+    lobby: { d: 0.04, c: 0x060606 },
+    corridor: { d: 0.055, c: 0x060606 },
+    guest: { d: 0.05, c: 0x060606 },
+    records: { d: 0.05, c: 0x070706 },
+    gallery: { d: 0.04, c: 0x080806 },
+    maintenance: { d: 0.075, c: 0x070a08 },
+    unlit: { d: 0.08, c: 0x040404 },
+    milestone: { d: 0.045, c: 0x060606 },
+    safe: { d: 0.03, c: 0x060606 },
+    underscript: { d: 0.09, c: 0x050806 },
+  };
+
+  private updateAtmosphere(dt: number): void {
+    // Fog eases toward the current biome's density/tint.
+    const fog = this.scene.fog as THREE.FogExp2 | null;
+    const cur = this.activeRooms()[this.currentRoom];
+    const target = cur ? (this.fogTargets[cur.biome] ?? { d: 0.05, c: 0x060606 }) : { d: 0.05, c: 0x060606 };
+    if (fog) {
+      const k = Math.min(1, dt * 0.9);
+      const targetD = target.d * (QUALITY[this.settings.quality].fogDensity / 0.05);
+      fog.density += (targetD - fog.density) * k;
+      fog.color.lerp(new THREE.Color(target.c), k);
+    }
+
+    for (const i of this.streamer.builtIndices) {
+      const built = this.streamer.get(i);
+      if (!built) continue;
+      const t = this.clock.time;
+      for (const l of built.lights) {
+        if (!l.userData.flicker) continue;
+        const s = (l.userData.flickerSeed as number) ?? 0;
+        // Squared-off pseudo-noise: mostly steady with occasional deep dips.
+        const n = Math.sin(t * 11.3 + s) * Math.sin(t * 5.7 + s * 1.7) * Math.sin(t * 2.9 + s * 0.6);
+        const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
+        l.intensity = (l.userData.baseIntensity as number) * f;
+        const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
+        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f;
+      }
+      if (built.dust) {
+        built.dust.rotation.y += dt * 0.02;
+        built.dust.position.y = Math.sin(t * 0.13 + (built.dust.userData.phase as number)) * 0.12;
+      }
+    }
+  }
+
   private updateMaelstrom(dt: number): void {
     const mael = this.entities.find((e) => e instanceof CorridorRunner && e.id === 'maelstrom' && e.state !== 'done') as CorridorRunner | undefined;
     if (mael?.stabilizeTriggered && !this.stabilize && this.player.hiddenSpot) {
@@ -1193,6 +1241,7 @@ export class Game {
 
     this.updatePanic(dt);
     this.updateDoors(dt);
+    this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
 
     // engine win already handled via milestone → victory()

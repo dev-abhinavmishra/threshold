@@ -22,6 +22,10 @@ export interface BuiltRoom {
   lampMeshes: THREE.Mesh[];
   /** Actual THREE lights (few, quality-capped). */
   lights: THREE.PointLight[];
+  /** Fake-volumetric cones under lit fixtures. */
+  shafts: THREE.Mesh[];
+  /** Drifting dust motes (lit rooms only). */
+  dust: THREE.Points | null;
 }
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -311,6 +315,67 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     for (const b of lampMeshes) (b.material as THREE.MeshStandardMaterial) = MAT.charcoal();
   }
 
+  // Fake-volumetric light shafts under lit fixtures + drifting dust motes.
+  // Skipped for dark rooms (no light to scatter through).
+  const shafts: THREE.Mesh[] = [];
+  let dust: THREE.Points | null = null;
+  if (!room.darkRoom) {
+    let shaftCount = 0;
+    for (let li = 0; li < spec.lights.length; li++) {
+      const ls = spec.lights[li];
+      if (ls.group !== 'main' && ls.group !== 'dim') continue;
+      if (shaftCount >= 2) break;
+      const topY = suspended || isUnder || spec.biome === 'maintenance' ? fixtureY : ls.y - 0.1;
+      const len = topY - 0.12;
+      if (len <= 0.4) continue;
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.26, Math.min(0.85, ls.range * 0.22), len, 10, 1, true),
+        new THREE.MeshBasicMaterial({
+          color: ls.color, transparent: true, opacity: 0.045,
+          blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+          fog: false,
+        }),
+      );
+      shaft.position.set(ls.x, topY - len / 2, ls.z);
+      group.add(shaft);
+      shafts.push(shaft);
+      shaftCount++;
+    }
+
+    // Dust motes — sparse additive points drifting inside lit rooms.
+    const count = Math.min(80, Math.floor(w * d * 1.6));
+    if (count > 12) {
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) {
+        pos[i * 3] = (rng.float() - 0.5) * (w - 0.8);
+        pos[i * 3 + 1] = 0.15 + rng.float() * (h - 0.5);
+        pos[i * 3 + 2] = (rng.float() - 0.5) * (d - 0.8);
+      }
+      const dg = new THREE.BufferGeometry();
+      dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      dust = new THREE.Points(dg, new THREE.PointsMaterial({
+        color: 0xd8c9a8, size: 0.022, transparent: true, opacity: 0.3,
+        blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+      }));
+      dust.userData.phase = rng.float() * Math.PI * 2;
+      group.add(dust);
+    }
+
+    // ~1-in-5 lit rooms get a flickering main fixture.
+    if (lights.length && rng.float() < 0.2) {
+      const l = lights[0];
+      l.userData.flicker = true;
+      l.userData.flickerSeed = rng.float() * 100;
+      // Clone the paired fixture material so its emissive can dip in sync
+      // without touching the shared cache.
+      const lamp = lampMeshes[0];
+      if (lamp) {
+        lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
+        l.userData.lampMesh = lamp;
+      }
+    }
+  }
+
   // Gap corridor to previous exit (jittered milestones): floor + 2 walls +
   // ceiling in room-local space. World endpoints are on the port chain.
   if (room.connectorIn) {
@@ -350,7 +415,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.position.set(room.origin.x, room.origin.y, room.origin.z);
   group.rotation.y = room.yaw;
 
-  return { group, doorLeaves, lampMeshes, lights };
+  return { group, doorLeaves, lampMeshes, lights, shafts, dust };
 }
 
 export function disposeRoom(built: BuiltRoom): void {
@@ -362,4 +427,6 @@ export function disposeRoom(built: BuiltRoom): void {
   built.doorLeaves.clear();
   built.lampMeshes.length = 0;
   built.lights.length = 0;
+  built.shafts.length = 0;
+  built.dust = null;
 }
