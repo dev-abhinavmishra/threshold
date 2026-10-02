@@ -13,6 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
+import { grimeStreak, floorStain, poster, warningStripe, decalQuad } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -189,6 +190,65 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     doorLeaves.set(doorId, leaf);
     leaf.userData.hinge = hinge;
     leaf.userData.closedYaw = 0;
+  }
+
+  // Decal overlays — grime streaks, floor stains, posters, warning stripes
+  // on planes slightly offset off surfaces. Boundary walls only.
+  {
+    const wallDecal = (wall: 'n' | 's' | 'e' | 'w', tex: THREE.Texture | null, dw: number, dh: number, along: number, cy: number) => {
+      const m = decalQuad(tex, dw, dh);
+      if (wall === 'e') { m.rotation.y = -Math.PI / 2; m.position.set(w / 2 - 0.013, cy, along); }
+      else if (wall === 'w') { m.rotation.y = Math.PI / 2; m.position.set(-w / 2 + 0.013, cy, along); }
+      else if (wall === 'n') { m.rotation.y = Math.PI; m.position.set(along, cy, d / 2 - 0.013); }
+      else { m.position.set(along, cy, -d / 2 + 0.013); }
+      group.add(m);
+    };
+    const portOffsetsOn = (wall: string) => [spec.entry, ...spec.exits].filter((p) => p.wall === wall).map((p) => p.offset);
+    const pickWallSpot = (dw: number): { wall: 'n' | 's' | 'e' | 'w'; along: number } | null => {
+      for (let tries = 0; tries < 4; tries++) {
+        const wall = (['n', 's', 'e', 'w'] as const)[Math.floor(rng.float() * 4)];
+        const span = (wall === 'e' || wall === 'w' ? d : w) - dw - 0.4;
+        const along = (rng.float() - 0.5) * Math.max(0.2, span);
+        if (portOffsetsOn(wall).every((o) => Math.abs(along - o) > dw / 2 + 0.9)) return { wall, along };
+      }
+      return null;
+    };
+
+    // Posters / notices — corridor/records/lobby heavy, rare in maintenance.
+    const posterP = ({ lobby: 0.6, corridor: 0.6, records: 0.55, guest: 0.3, gallery: 0.25, maintenance: 0.1, unlit: 0.15, milestone: 0.2, safe: 0.3, underscript: 0.05 } as Record<string, number>)[spec.biome] ?? 0.2;
+    const nPosters = rng.float() < posterP ? 1 + Math.floor(rng.float() * 3) : 0;
+    for (let i = 0; i < nPosters; i++) {
+      const spot = pickWallSpot(0.62);
+      if (!spot) break;
+      wallDecal(spot.wall, poster(rng), 0.5, 0.68, spot.along, 1.35 + rng.float() * 0.35);
+    }
+
+    // Grime streaks — every room gets some; service spaces heavier.
+    const nGrime = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 2 + Math.floor(rng.float() * 3) : 1 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < nGrime; i++) {
+      const spot = pickWallSpot(0.9);
+      if (!spot) break;
+      wallDecal(spot.wall, grimeStreak(rng), 0.9, 1.9, spot.along, 1.5 + rng.float() * 0.4);
+    }
+
+    // Warning stripes — machinery rooms mostly.
+    const warnP = spec.biome === 'maintenance' ? 0.7 : isUnder ? 0.5 : spec.biome === 'corridor' ? 0.2 : 0;
+    if (rng.float() < warnP) {
+      const spot = pickWallSpot(2.3);
+      if (spot) wallDecal(spot.wall, warningStripe(), 2.3, 0.26, spot.along, 1.05 + rng.float() * 0.3);
+    }
+
+    // Floor stains.
+    const stainP = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 0.8 : spec.biome === 'corridor' ? 0.5 : 0.2;
+    const nStain = rng.float() < stainP ? 1 + Math.floor(rng.float() * 2) : 0;
+    for (let i = 0; i < nStain; i++) {
+      const sz = 1.4 + rng.float() * 1.3;
+      const m = decalQuad(floorStain(rng), sz, sz);
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI;
+      m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
+      group.add(m);
+    }
   }
 
   // Props
@@ -422,6 +482,11 @@ export function disposeRoom(built: BuiltRoom): void {
   built.group.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.geometry && m.geometry !== unitBox) m.geometry.dispose();
+    if (m.userData.decalMat && m.material) {
+      const mat = m.material as THREE.MeshStandardMaterial;
+      mat.map?.dispose();
+      mat.dispose();
+    }
   });
   built.group.clear();
   built.doorLeaves.clear();
