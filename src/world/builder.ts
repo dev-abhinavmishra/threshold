@@ -304,14 +304,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     wallMesh.position.set(c.x, (c.y ?? 0) + c.h / 2, c.z);
     group.add(wallMesh);
   }
-  // Trim: baseboard + crown strips along the four walls
+  // Trim: baseboard + crown strips along the four walls. Wall slabs are
+  // ~0.24 thick with the inner face ~0.12 inside the edge — trim centered
+  // shallower than that is swallowed by the wall and never seen.
   const trimMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.darkOak();
   const wainsMat = isUnder ? MAT.steelDark() : MAT.darkOak();
+  const trimInset = 0.16;
   for (const [sx, sz, sw2, sd] of [
-    [0, d / 2 - 0.04, w - 0.3, 0.07],
-    [0, -d / 2 + 0.04, w - 0.3, 0.07],
-    [w / 2 - 0.04, 0, 0.07, d - 0.3],
-    [-w / 2 + 0.04, 0, 0.07, d - 0.3],
+    [0, d / 2 - trimInset, w - 0.3, 0.07],
+    [0, -d / 2 + trimInset, w - 0.3, 0.07],
+    [w / 2 - trimInset, 0, 0.07, d - 0.3],
+    [-w / 2 + trimInset, 0, 0.07, d - 0.3],
   ] as const) {
     const bb = new THREE.Mesh(texBox(sw2, 0.12, sd), trimMat);
     bb.position.set(sx, 0.06, sz);
@@ -349,6 +352,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         if (!c.movementOnly) room.losBlockers.push(box);
       }
     }
+  };
+
+  // Soft moonlight spill on the floor under a window — shared by the
+  // biome-mount roll and template-declared window props.
+  const moonlightPool = (px: number, pz: number, yaw: number) => {
+    const poolMat = new THREE.MeshBasicMaterial({
+      color: 0x5f7791, alphaMap: poolTexture(), transparent: true, opacity: 0.45,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    });
+    poolMat.userData.decalMat = true;
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.6), poolMat);
+    pool.position.set(px, 0.013, pz);
+    pool.rotation.set(-Math.PI / 2, yaw, 0);
+    group.add(pool);
   };
 
   // Door frames at ports
@@ -543,15 +560,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         if (mt.kind === 'window') {
           const inX = spot.wall === 'e' ? -0.8 : spot.wall === 'w' ? 0.8 : 0;
           const inZ = spot.wall === 'n' ? -0.8 : spot.wall === 's' ? 0.8 : 0;
-          const poolMat = new THREE.MeshBasicMaterial({
-            color: 0x5f7791, alphaMap: poolTexture(), transparent: true, opacity: 0.45,
-            blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
-          });
-          poolMat.userData.decalMat = true;
-          const pool = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.6), poolMat);
-          pool.position.set(lp.x + inX, 0.012, lp.z + inZ);
-          pool.rotation.set(-Math.PI / 2, mountYaw[spot.wall] + (rng.float() - 0.5) * 0.15, 0);
-          group.add(pool);
+          moonlightPool(lp.x + inX, lp.z + inZ, mountYaw[spot.wall] + (rng.float() - 0.5) * 0.15);
         }
       } catch { /* dressing only */ }
     }
@@ -613,6 +622,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       group.add(built.group);
       wireColliders(built);
+      // Template-declared windows spill the same moonlight pool as
+      // biome-mount windows — the glow extends toward the room center.
+      if (p.kind === 'window') {
+        const len = Math.hypot(p.x, p.z) || 1;
+        moonlightPool(p.x - (p.x / len) * 0.9, p.z - (p.z / len) * 0.9, (p.yaw ?? 0) + (rng.float() - 0.5) * 0.15);
+      }
     } catch {
       // skip broken prop rather than fail room
     }
@@ -693,7 +708,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         // pendant — cord + shade + bulb, pivoted at the ceiling anchor so it swings
                 // plaster ceiling rose anchoring the pendant cord
         const rose = new THREE.Group();
-        rose.position.set(ls.x, ls.y + 0.5, ls.z);
+        rose.position.set(ls.x, h - 0.035, ls.z);
         const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.42, 0.04, 20), MAT.plaster());
         const ring = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.028, 8, 22), MAT.plaster());
         ring.rotation.x = Math.PI / 2;
