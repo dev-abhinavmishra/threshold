@@ -27,6 +27,8 @@ export interface BuiltRoom {
   shafts: THREE.Mesh[];
   /** Drifting dust motes (lit rooms only). */
   dust: THREE.Points | null;
+  /** Meshes/groups tagged userData.anim — ticked each frame by the game. */
+  animated: THREE.Object3D[];
 }
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -444,30 +446,43 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         group.add(panel);
         lampMeshes.push(panel);
       } else if (isUnder || spec.biome === 'maintenance') {
+        // hanging fluoro bank — pivoted at the stem tops so it can sway
+        const pivot = new THREE.Group();
+        pivot.position.set(ls.x, ls.y + 0.22, ls.z);
         for (const sx of [-0.45, 0.45]) {
           const stem = new THREE.Mesh(texBox(0.02, 0.22, 0.02), MAT.charcoal());
-          stem.position.set(ls.x + sx, ls.y + 0.11, ls.z);
-          group.add(stem);
+          stem.position.set(sx, -0.11, 0);
+          pivot.add(stem);
         }
         const housing = new THREE.Mesh(texBox(1.32, 0.05, 0.2), MAT.steelDark());
-        housing.position.set(ls.x, ls.y, ls.z);
-        group.add(housing);
+        housing.position.set(0, -0.22, 0);
+        pivot.add(housing);
         const tube = new THREE.Mesh(texBox(1.24, 0.03, 0.14), MAT.fluoro());
-        tube.position.set(ls.x, ls.y - 0.035, ls.z);
-        group.add(tube);
+        tube.position.set(0, -0.255, 0);
+        pivot.add(tube);
+        pivot.userData.anim = 'swing';
+        pivot.userData.animAmp = 0.045;
+        pivot.userData.animSeed = rng.float() * 100;
+        group.add(pivot);
         lampMeshes.push(tube);
       } else {
-        // pendant — cord + shade + bulb
+        // pendant — cord + shade + bulb, pivoted at the ceiling anchor so it swings
+        const pivot = new THREE.Group();
+        pivot.position.set(ls.x, ls.y + 0.5, ls.z);
         const cord = new THREE.Mesh(texBox(0.02, 0.5, 0.02), MAT.charcoal());
-        cord.position.set(ls.x, ls.y + 0.25, ls.z);
-        group.add(cord);
+        cord.position.y = -0.25;
+        pivot.add(cord);
         const shade = new THREE.Mesh(texBox(0.3, 0.18, 0.3), MAT.charcoal());
-        shade.position.set(ls.x, ls.y - 0.04, ls.z);
-        group.add(shade);
+        shade.position.y = -0.54;
+        pivot.add(shade);
         const bulb = new THREE.Mesh(unitBox, MAT.amberDim());
         bulb.scale.set(0.12, 0.09, 0.12);
-        bulb.position.set(ls.x, ls.y - 0.14, ls.z);
-        group.add(bulb);
+        bulb.position.y = -0.64;
+        pivot.add(bulb);
+        pivot.userData.anim = 'swing';
+        pivot.userData.animAmp = 0.11;
+        pivot.userData.animSeed = rng.float() * 100;
+        group.add(pivot);
         lampMeshes.push(bulb);
       }
     } else {
@@ -561,6 +576,41 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
   }
 
+  // Ceiling fan — slow-turning blades; some rooms shed one for an unbalanced wobble.
+  if (!isUnder && spec.biome !== 'maintenance' && h >= 2.9 && rng.float() < 0.32) {
+    const fx = (rng.float() - 0.5) * w * 0.35;
+    const fz = (rng.float() - 0.5) * d * 0.35;
+    const topY = suspended ? h - 0.18 : h - 0.02;
+    if (topY - 0.44 > 2.3) {
+      const pivot = new THREE.Group();
+      pivot.position.set(fx, topY, fz);
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.4, 6), MAT.charcoal());
+      rod.position.y = -0.2;
+      pivot.add(rod);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.14, 10), MAT.steelDark());
+      hub.position.y = -0.42;
+      pivot.add(hub);
+      const spin = new THREE.Group();
+      spin.position.y = -0.44;
+      const missing = rng.bool(0.25);
+      const nBlades = missing ? 3 : 4;
+      for (let i = 0; i < nBlades; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        const blade = new THREE.Mesh(texBox(0.52, 0.015, 0.11), MAT.charcoal());
+        blade.position.set(Math.cos(a) * 0.32, 0.02, Math.sin(a) * 0.32);
+        blade.rotation.y = -a;
+        spin.add(blade);
+      }
+      spin.userData.anim = 'spin';
+      spin.userData.animSpeed = 1.6 + rng.float() * 1.8;
+      pivot.add(spin);
+      pivot.userData.anim = 'sway';
+      pivot.userData.animAmp = missing ? 0.07 : 0.03;
+      pivot.userData.animSeed = rng.float() * 100;
+      group.add(pivot);
+    }
+  }
+
   // Gap corridor to previous exit (jittered milestones): floor + 2 walls +
   // ceiling in room-local space. World endpoints are on the port chain.
   if (room.connectorIn) {
@@ -600,14 +650,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.position.set(room.origin.x, room.origin.y, room.origin.z);
   group.rotation.y = room.yaw;
 
-  return { group, doorLeaves, lampMeshes, lights, shafts, dust };
+  const animated: THREE.Object3D[] = [];
+  group.traverse((o) => { if (o.userData.anim) animated.push(o); });
+
+  return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated };
 }
 
 export function disposeRoom(built: BuiltRoom): void {
   built.group.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.geometry && m.geometry !== unitBox) m.geometry.dispose();
-    if (m.userData.decalMat && m.material) {
+    if ((m.userData.decalMat || m.userData.anim) && m.material) {
       const mat = m.material as THREE.MeshStandardMaterial;
       mat.map?.dispose();
       mat.dispose();
@@ -618,5 +671,6 @@ export function disposeRoom(built: BuiltRoom): void {
   built.lampMeshes.length = 0;
   built.lights.length = 0;
   built.shafts.length = 0;
+  built.animated.length = 0;
   built.dust = null;
 }

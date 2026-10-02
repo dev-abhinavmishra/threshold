@@ -608,9 +608,12 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const g = new THREE.Group();
     g.add(mesh(box(0.22, 0.03, 0.2), MAT.charcoal(), 0, 0.02, 0));
     g.add(mesh(box(0.05, 0.14, 0.05), MAT.charcoal(), 0, 0.09, -0.04));
-    const scr = rng.pick([MAT.screenGreen(), MAT.screenAmber(), MAT.screenDark()]);
+    const scr = rng.pick([MAT.screenGreen(), MAT.screenAmber(), MAT.screenDark()]).clone();
     g.add(mesh(box(0.55, 0.36, 0.05), MAT.charcoal(), 0, 0.32, 0));
-    g.add(mesh(box(0.49, 0.3, 0.02), scr, 0, 0.32, 0.032));
+    const scrMesh = mesh(box(0.49, 0.3, 0.02), scr, 0, 0.32, 0.032);
+    scrMesh.userData.anim = 'screen';
+    scrMesh.userData.animSeed = rng.float() * 100;
+    g.add(scrMesh);
     return { group: g, colliders: [] };
   },
   // Server rack — dark enclosure, front rows of lit LED dots.
@@ -622,8 +625,12 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     for (let row = 0; row < 7; row++) {
       const y = 0.35 + row * 0.24;
       g.add(mesh(box(0.5, 0.14, 0.02), MAT.charcoal(), 0, y, 0.45));
-      for (let i = 0; i < 5; i++)
-        g.add(mesh(box(0.05, 0.04, 0.015), rng.pick(leds), -0.2 + i * 0.1, y, 0.47));
+      for (let i = 0; i < 5; i++) {
+        const led = mesh(box(0.05, 0.04, 0.015), rng.pick(leds).clone(), -0.2 + i * 0.1, y, 0.47);
+        led.userData.anim = 'blink';
+        led.userData.animSeed = rng.float() * 100;
+        g.add(led);
+      }
     }
     return single(g, 0.7, 2.0, 0.85);
   },

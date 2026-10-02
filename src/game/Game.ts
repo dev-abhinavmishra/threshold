@@ -1124,6 +1124,28 @@ export class Game {
         built.dust.rotation.y += dt * 0.02;
         built.dust.position.y = Math.sin(t * 0.13 + (built.dust.userData.phase as number)) * 0.12;
       }
+      for (const o of built.animated) {
+        const kind = o.userData.anim as string;
+        const s = (o.userData.animSeed as number) ?? 0;
+        if (kind === 'blink') {
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          mat.emissiveIntensity = (Math.sin(t * 1.7 + s * 3.1) + Math.sin(t * 4.3 + s)) > 0.9 ? 0.04 : 1.1;
+        } else if (kind === 'screen') {
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          const n = Math.sin(t * 13.7 + s) * Math.sin(t * 3.1 + s * 2.3);
+          mat.emissiveIntensity = n > 0.55 ? 0.1 : 0.85 + Math.sin(t * 29 + s) * 0.12;
+        } else if (kind === 'spin') {
+          o.rotation.y += dt * ((o.userData.animSpeed as number) ?? 2.2);
+        } else if (kind === 'sway') {
+          const a = (o.userData.animAmp as number) ?? 0.03;
+          o.rotation.z = Math.sin(t * 1.4 + s) * a;
+          o.rotation.x = Math.cos(t * 1.1 + s * 0.7) * a * 0.6;
+        } else if (kind === 'swing') {
+          const a = (o.userData.animAmp as number) ?? 0.12;
+          o.rotation.x = Math.sin(t * 1.15 + s) * a;
+          o.rotation.z = Math.cos(t * 0.83 + s) * a * 0.7;
+        }
+      }
     }
 
     // Entity figure idle animation — breathing sway + eye pulse.
