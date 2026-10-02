@@ -140,7 +140,7 @@ export interface RoomSpec {
   lights: LightSpec[];
   floorMaterial: 'wood' | 'carpet' | 'stone' | 'metal' | 'concrete' | 'paper';
   /** Override wall surface; biome default applies when unset. */
-  wallMaterial?: 'wallpaper' | 'concrete' | 'tile';
+  wallMaterial?: 'wallpaper' | 'concrete' | 'tile' | 'woodPanel' | 'travertine' | 'corrugated' | 'brick';
   tags: string[];
   /** Entities forbidden here regardless of eligibility. */
   forbidEntities?: EntityId[];

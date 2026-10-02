@@ -592,6 +592,7 @@ const galleryPortraits: RoomTemplate = {
     darkChance: 0.3,
     tags: ['witness-eligible'],
     perf: 3,
+    wall: 'woodPanel',
   }),
 };
 
@@ -631,6 +632,7 @@ const galleryAtrium: RoomTemplate = {
     weight: 5,
     perf: 4,
     minRoom: 15,
+    wall: 'travertine',
   }),
 };
 
@@ -929,6 +931,7 @@ const roomLongHall: RoomTemplate = {
     ],
     weight: 6,
     perf: 3,
+    wall: 'woodPanel',
   }),
 };
 
@@ -1091,6 +1094,7 @@ const roomRotunda: RoomTemplate = {
     weight: 3,
     minRoom: 30,
     perf: 4,
+    wall: 'travertine',
   }),
 };
 
@@ -1316,6 +1320,7 @@ const roomVaulted: RoomTemplate = {
     weight: 3,
     minRoom: 25,
     perf: 4,
+    wall: 'travertine',
   }),
 };
 
@@ -1593,6 +1598,7 @@ const roomLibraryStacks: RoomTemplate = {
     floor: 'carpet',
     darkChance: 0.35,
     perf: 5,
+    wall: 'woodPanel',
   }),
 };
 

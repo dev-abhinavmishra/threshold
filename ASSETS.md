@@ -178,3 +178,15 @@ has not finished loading falls back to its procedural builder.
 | `models/signal_flashlight` | Signal Flashlight | (spare `flashlight` variant) |
 | `models/drain_cleaner` | Drain Cleaner | `cleanerBottle` clutter |
 | `models/bleach_bottle` | Bleach Bottle | `bleachBottle` clutter |
+
+## ambientCG texture sets (CC0)
+
+| Directory | Source asset | Use |
+|---|---|---|
+| `textures/wood092` | Wood 092 | `woodPanel` walls (grand rooms) |
+| `textures/concrete034` | Concrete 034 | `concreteLight` floors |
+| `textures/metalwalkway014` | Metal Walkway 014 | `metalWalkway` underscript floors |
+| `textures/diamondplate009` | Diamond Plate 009 | `diamondPlate` maintenance floors |
+| `textures/marble012` | Marble 012 | `marbleFloor` lobby/gallery floors |
+| `textures/travertine009` | Travertine 009 | `travertine` gallery walls |
+| `textures/corrugatedsteel007a` | Corrugated Steel 007A | `corrugated` maintenance walls |

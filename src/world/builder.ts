@@ -117,17 +117,45 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.name = `room-${room.index}`;
 
   const isUnder = room.biome === 'underscript';
-  let wallMat = spec.wallMaterial === 'tile'
-    ? TEX.tileWall()
-    : (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete')
-      ? TEX.concreteWall()
-      : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  let wallMat: THREE.MeshStandardMaterial;
+  switch (spec.wallMaterial) {
+    case 'tile': wallMat = TEX.tileWall(); break;
+    case 'woodPanel': wallMat = TEX.woodPanel(); break;
+    case 'travertine': wallMat = TEX.travertine(); break;
+    case 'corrugated': wallMat = TEX.corrugated(); break;
+    case 'brick': wallMat = TEX.brick(); break;
+    default:
+      wallMat = (isUnder || spec.biome === 'maintenance' || spec.wallMaterial === 'concrete')
+        ? TEX.concreteWall()
+        : (room.darkRoom ? TEX.plasterDamaged() : TEX.wallpaper());
+  }
+  // Seeded per-biome wall variety when the template doesn't pin a surface:
+  // grand rooms get wood paneling or travertine, maintenance gets
+  // corrugated steel or damaged brick, underscript stays concrete.
+  if (!spec.wallMaterial) {
+    const roll = rng.float();
+    if (spec.biome === 'gallery' && roll < 0.45) wallMat = TEX.travertine();
+    else if (spec.biome === 'lobby' && roll < 0.4) wallMat = TEX.woodPanel();
+    else if (spec.biome === 'gallery' && roll < 0.75) wallMat = TEX.woodPanel();
+    else if (spec.biome === 'records' && roll < 0.15) wallMat = TEX.woodPanel();
+    else if (spec.biome === 'maintenance' && roll < 0.3) wallMat = TEX.corrugated();
+    else if (spec.biome === 'maintenance' && roll < 0.55) wallMat = TEX.brick();
+    else if (isUnder && roll < 0.2) wallMat = TEX.brick();
+  }
   if (wallMat === TEX.wallpaper() && rng.float() < 0.55) {
     wallMat = wallMat.clone();
     wallMat.color.setHex(WALLPAPER_TINTS[Math.floor(rng.float() * WALLPAPER_TINTS.length)]);
     wallMat.userData.decalMat = true; // reuse the decal-material disposal path
   }
-  const floorMat = isUnder ? TEX.concreteFloor() : (room.floorMaterial === 'carpet' ? TEX.carpet() : room.floorMaterial === 'stone' || room.floorMaterial === 'metal' ? TEX.concreteFloor() : TEX.woodFloor());
+  const floorMat = isUnder
+    ? (rng.float() < 0.35 ? TEX.metalWalkway() : TEX.concreteFloor())
+    : room.floorMaterial === 'carpet'
+      ? TEX.carpet()
+      : room.floorMaterial === 'stone' || room.floorMaterial === 'metal'
+        ? (spec.biome === 'maintenance' && rng.float() < 0.45 ? TEX.diamondPlate() : TEX.concreteFloor())
+        : (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && rng.float() < 0.5
+          ? TEX.marbleFloor()
+          : TEX.woodFloor();
   const ceilMat = isUnder ? TEX.concreteFloor() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 

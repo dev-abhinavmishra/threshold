@@ -77,6 +77,13 @@ export const TEX = {
   metalAged: () => surfaceMaterial('metal-aged', 1.4, { color: 0xc0c4c8, metalness: 0.5 }),
   tileWall: () => surfaceMaterial('tiles-institutional', 1.3, { color: 0xb9bfb2 }),
   leather: () => surfaceMaterial('leather-dark', 1.0, { color: 0x9a8874 }),
+  woodPanel: () => surfaceMaterial('wood092', 1.5, { color: 0x8a7050 }),
+  marbleFloor: () => surfaceMaterial('marble012', 1.8, { color: 0xb8b4ac, roughness: 0.35 }),
+  travertine: () => surfaceMaterial('travertine009', 1.6, { color: 0xb5ab98 }),
+  diamondPlate: () => surfaceMaterial('diamondplate009', 1.2, { color: 0x8f959b, metalness: 0.5 }),
+  metalWalkway: () => surfaceMaterial('metalwalkway014', 1.5, { color: 0x878d92, metalness: 0.55 }),
+  corrugated: () => surfaceMaterial('corrugatedsteel007a', 1.5, { color: 0x8a9298, metalness: 0.6 }),
+  concreteLight: () => surfaceMaterial('concrete034', 2.2, { color: 0xa2a6aa }),
 };
 
 /** Prop-level swaps (used through MAT): wood and metal grain on furniture. */
