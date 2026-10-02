@@ -133,6 +133,8 @@ export class CorridorRunner extends Entity {
         height: 2.6,
         face: 'mask',
         spines: true,
+        tattered: true,
+        hood: this.id === 'sweep',
         band: this.id === 'reprise' ? MAT.steel() : MAT.amber(),
         bandY: this.id === 'returner' ? 2.42 : 2.36,
         eyes: this.id === 'returner' ? 'red' : 'amber',

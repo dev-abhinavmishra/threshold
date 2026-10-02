@@ -35,7 +35,7 @@ export class Witness extends Entity {
     this.state = 'engage';
     const g = new THREE.Group();
     const figure = statueFigure({ height: 2.3, eyes: 'white', eyeY: 1.92 })
-      ?? tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper(), eyes: 'white' });
+      ?? tallFigure({ height: 2.3, face: 'mask', faceMat: MAT.paper(), eyes: 'white', hood: true, tattered: true });
     const halo = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.5, 16), MAT.eyeGlow());
     halo.position.y = 2.0;
     g.add(figure, halo);
@@ -88,7 +88,7 @@ export class Witness extends Entity {
 /* ============================ WHISPER ============================ */
 /** Dark-room threat: a spatial whisper — find the silhouette before it strikes. */
 export class Whisper extends Entity {
-  private mesh: THREE.Mesh | null = null;
+  private mesh: THREE.Object3D | null = null;
   private pos = v3();
   private attackT = 0;
   private strikeWindow = 6.0;
@@ -102,10 +102,11 @@ export class Whisper extends Entity {
     const r = 3.5 + rng.float() * 2.5;
     this.pos = v3(c.player.pos.x + Math.cos(a) * r, 0, c.player.pos.z + Math.sin(a) * r);
     this.state = 'engage';
-    const geo = new THREE.ConeGeometry(0.4, 1.8, 6);
-    this.mesh = new THREE.Mesh(geo, MAT.shadowFigure());
-    this.mesh.position.set(this.pos.x, 0.9, this.pos.z);
-    this.mesh.visible = false; // nearly invisible — found by silhouette at range
+    const g = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'none', eyes: 'white', hood: true, tattered: true });
+    g.position.set(this.pos.x, 0, this.pos.z);
+    g.visible = false; // nearly invisible — found by silhouette at range
+    this.mesh = g as unknown as THREE.Object3D;
+    this.mesh.visible = false;
     c.addEntityMesh(this.mesh);
     // caption reports direction relative to player
     c.cue('whisper-voice', this.pos, '[a whisper, close — turn toward it]', { severity: 'warn' });
@@ -211,7 +212,7 @@ export class EchoSkin extends Entity {
   protected override onSpawn(): void {
     this.state = 'engage';
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
-    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber', spines: true, claws: true });
+    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber', spines: true, claws: true, tattered: true });
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
@@ -368,7 +369,7 @@ export class Margin extends Entity {
 
   protected override onSpawn(): void {
     const c = this.ctx;
-    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red', spines: true });
+    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red', spines: true, tattered: true });
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.3), MAT.redLamp());
     edge.position.set(0.4, 1.05, 0);
     g.add(edge);

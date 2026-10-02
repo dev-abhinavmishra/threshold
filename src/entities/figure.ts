@@ -24,6 +24,10 @@ export interface FigureOpts {
   spines?: boolean;
   /** Clawed hands — three finger cones per hand. */
   claws?: boolean;
+  /** Ragged hem — torn strips hanging off the robe edge. */
+  tattered?: boolean;
+  /** Hooded drape behind the head. */
+  hood?: boolean;
 }
 
 const EYE_COLORS = { amber: 0xffb050, red: 0xff2a20, white: 0xffe9b0 } as const;
@@ -79,6 +83,30 @@ export function tallFigure(o: FigureOpts = {}): THREE.Group {
   g.add(head);
   parts.head = head;
 
+  if (o.tattered) {
+    // Torn hem — irregular strips off the robe bottom rim so the cloak
+    // reads as worn fabric rather than a clean cone edge.
+    const n = 9;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.sin(i * 7.3) * 0.2;
+      const len = (0.1 + Math.abs(Math.sin(i * 13.7)) * 0.16) * s;
+      const strip = new THREE.Mesh(new THREE.BoxGeometry(0.09 * s, len, 0.015 * s), body);
+      strip.position.set(Math.cos(a) * 0.42 * s, 0.3 * s - len / 2, Math.sin(a) * 0.42 * s + 0.02);
+      strip.rotation.set(Math.sin(i * 5.1) * 0.15, -a, Math.cos(i * 3.7) * 0.12);
+      g.add(strip);
+    }
+  }
+  if (o.hood) {
+    // Hood — a drooped drape behind and over the head.
+    const hood = new THREE.Mesh(new THREE.ConeGeometry(0.24 * s, 0.55 * s, 8, 1, true), body);
+    hood.position.set(0, 2.42 * s, -0.05 * s);
+    hood.rotation.x = -0.28;
+    g.add(hood);
+    const drape = new THREE.Mesh(new THREE.CylinderGeometry(0.22 * s, 0.34 * s, 0.5 * s, 8, 1, true), body);
+    drape.position.set(0, 2.16 * s, -0.08 * s);
+    drape.rotation.x = 0.15;
+    g.add(drape);
+  }
   if (o.face === 'mask') {
     const mask = new THREE.Mesh(new THREE.SphereGeometry(0.17 * s, 12, 10), o.faceMat ?? MAT.paperOld());
     mask.scale.set(0.78, 1.05, 0.45);
