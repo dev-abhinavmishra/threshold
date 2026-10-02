@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch } from './decals';
+import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -262,6 +262,26 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const bar = new THREE.Mesh(texBox(w - 0.05, 0.035, 0.03), barMat);
       bar.position.set(0, h - 0.19, gz);
       group.add(bar);
+    }
+    // Missing tiles — dark plenum holes at grid positions, plus the fallen
+    // tile on the floor below. Decayed spaces only.
+    const decayP = room.darkRoom || spec.biome === 'unlit' ? 0.4 : spec.biome === 'corridor' || spec.biome === 'records' ? 0.15 : 0;
+    if (spec.biome !== 'safe' && rng.float() < decayP) {
+      const n = 1 + Math.floor(rng.float() * 2);
+      const holeMat = MAT.charcoal();
+      for (let i = 0; i < n; i++) {
+        const tx = Math.round(((rng.float() - 0.5) * (w - 1)) / 0.6) * 0.6;
+        const tz = Math.round(((rng.float() - 0.5) * (d - 1)) / 0.6) * 0.6;
+        if (Math.abs(tx) > w / 2 - 0.5 || Math.abs(tz) > d / 2 - 0.5) continue;
+        const hole = new THREE.Mesh(texBox(0.56, 0.04, 0.56), holeMat);
+        hole.position.set(tx, h - 0.185, tz);
+        group.add(hole);
+        // fallen tile below, askew on the floor
+        const fallen = new THREE.Mesh(texBox(0.58, 0.018, 0.58), ceilMat);
+        fallen.position.set(tx + (rng.float() - 0.5) * 0.5, 0.012, tz + (rng.float() - 0.5) * 0.5);
+        fallen.rotation.y = rng.float() * Math.PI;
+        group.add(fallen);
+      }
     }
   } else if (isUnder || spec.biome === 'maintenance') {
     // Exposed services — a duct trunk and pipe run below the slab.
@@ -620,6 +640,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (rng.float() < warnP) {
       const spot = pickWallSpot(2.3);
       if (spot) wallDecal(spot.wall, warningStripe(), 2.3, 0.26, spot.along, 1.05 + rng.float() * 0.3);
+    }
+
+    // Peeling wallpaper — torn paper exposing plaster, only where the skin
+    // is actually wallpaper. Heavier in damp/hostile rooms, never safe.
+    if (isWallpaper && spec.biome !== 'safe' && rng.float() < (hostile ? 0.5 : 0.3)) {
+      const n = 1 + (rng.float() < 0.35 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const spot = pickWallSpot(0.9);
+        if (!spot) break;
+        wallDecal(spot.wall, peeledWallpaper(rng), 0.75, 1.0, spot.along, 1.15 + rng.float() * 0.55);
+      }
     }
 
     // Broken plaster exposing brick — decay on shabby walls; skipped where

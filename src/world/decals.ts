@@ -364,3 +364,77 @@ export function decalQuad(tex: THREE.Texture | null, w: number, h: number): THRE
   mesh.renderOrder = 2;
   return mesh;
 }
+
+/* ---------- peeling wallpaper — torn patch exposing plaster ---------- */
+
+export function peeledWallpaper(rng: Rng): THREE.Texture | null {
+  return canvasTex(192, 256, (ctx) => {
+    // hanging flap of still-attached paper at the top
+    const fw = 60 + rng.float() * 70;
+    const fx = 96 - fw / 2 + (rng.float() - 0.5) * 40;
+    const fh = 30 + rng.float() * 26;
+    // drop shadow under the flap
+    const sh = ctx.createLinearGradient(0, fh + 8, 0, fh + 30);
+    sh.addColorStop(0, 'rgba(10,8,6,0.4)');
+    sh.addColorStop(1, 'rgba(10,8,6,0)');
+    ctx.fillStyle = sh;
+    ctx.fillRect(fx - 6, fh + 6, fw + 12, 26);
+    // ragged plaster exposure beneath the flap
+    ctx.beginPath();
+    const cx = 96 + (rng.float() - 0.5) * 30;
+    const cy = 150 + rng.float() * 40;
+    const pr = 55 + rng.float() * 40;
+    const n = 12;
+    for (let i = 0; i <= n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = pr * (0.65 + rng.float() * 0.55);
+      const px = cx + Math.cos(a) * r * 0.85;
+      const py = cy + Math.sin(a) * r * 1.15;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = '#a3937c';
+    ctx.fillRect(0, 0, 192, 256);
+    // plaster mottling
+    for (let i = 0; i < 26; i++) {
+      const px = rng.float() * 192;
+      const py = rng.float() * 256;
+      const r = 6 + rng.float() * 22;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+      const c = rng.float() < 0.5 ? '132,118,96' : '190,176,148';
+      g.addColorStop(0, `rgba(${c},${0.15 + rng.float() * 0.2})`);
+      g.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = g;
+      ctx.fillRect(px - r, py - r, r * 2, r * 2);
+    }
+    // faint lath lines
+    ctx.strokeStyle = 'rgba(90,78,60,0.25)';
+    ctx.lineWidth = 2;
+    for (let y = 60; y < 256; y += 18 + Math.floor(rng.float() * 8)) {
+      ctx.beginPath(); ctx.moveTo(cx - pr, y); ctx.lineTo(cx + pr, y + (rng.float() - 0.5) * 4); ctx.stroke();
+    }
+    ctx.restore();
+    // torn paper edge highlight around the patch
+    ctx.strokeStyle = 'rgba(214,200,170,0.5)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // the curled flap itself — paper face with a darker fold crease
+    const flap = ctx.createLinearGradient(fx, 0, fx, fh);
+    flap.addColorStop(0, '#7a6a55');
+    flap.addColorStop(0.75, '#66584a');
+    flap.addColorStop(1, '#4a3e32');
+    ctx.fillStyle = flap;
+    ctx.fillRect(fx, 2, fw, fh);
+    // subtle stripes on the flap so it reads as wallpaper
+    ctx.strokeStyle = 'rgba(60,50,40,0.35)';
+    ctx.lineWidth = 4;
+    for (let x = fx + 6; x < fx + fw; x += 14) {
+      ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x, fh); ctx.stroke();
+    }
+    // fold shadow line at flap bottom
+    ctx.fillStyle = 'rgba(20,16,10,0.5)';
+    ctx.fillRect(fx, fh - 3, fw, 3);
+  });
+}
