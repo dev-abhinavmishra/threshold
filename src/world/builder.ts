@@ -484,6 +484,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     leaf.userData.closedYaw = 0;
   }
 
+  // Lit sconce/cage fixtures put a real warm point light into the room —
+  // emissive alone leaves the fixture glowing but nothing illuminated.
+  // Captured in the decal block, consumed in the light-fixture block below.
+  let sconcePos: { x: number; y: number; z: number } | null = null;
+
   // Decal overlays — grime streaks, floor stains, posters, warning stripes
   // on planes slightly offset off surfaces. Boundary walls only.
   {
@@ -584,6 +589,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       safe: [{ kind: 'medBox', y: 1.45, p: 0.45 }],
       underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }, { kind: 'powerBox', y: 1.7, p: 0.35 }, { kind: 'utilityBox', y: 1.6, p: 0.3 }, { kind: 'securityLight', y: 2.55, p: 0.15 }, { kind: 'wallHose', y: 1.1, p: 0.15 }, { kind: 'fireAlarm', y: 1.8, p: 0.4 }, { kind: 'cagedSconce', y: 2.3, p: 0.25 }, { kind: 'airconUnit', y: 2.35, p: 0.25 }],
     } as Record<string, { kind: PropKind; y: number; p: number }[]>)[spec.biome] ?? [];
+    const SCONCE_KINDS = new Set<PropKind>(['wallSconce', 'cagedSconce', 'pipeLamp', 'securityLight']);
     for (const mt of mounts) {
       if (rng.float() >= mt.p) continue;
       const spot = pickWallSpot(0.6);
@@ -595,6 +601,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       try {
         const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
         group.add(built.group);
+        if (SCONCE_KINDS.has(mt.kind) && !sconcePos) {
+          const inX = spot.wall === 'e' ? -0.3 : spot.wall === 'w' ? 0.3 : 0;
+          const inZ = spot.wall === 'n' ? -0.3 : spot.wall === 's' ? 0.3 : 0;
+          sconcePos = { x: lp.x + inX, y: mt.y + 0.05, z: lp.z + inZ };
+        }
         // Windows cast a pale light pool onto the floor in front of them.
         if (mt.kind === 'window') {
           const inX = spot.wall === 'e' ? -0.8 : spot.wall === 'w' ? 0.8 : 0;
@@ -603,7 +614,6 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         }
       } catch { /* dressing only */ }
     }
-
     // Direction signs on corridor walls — institutional boards beside exits.
     if (spec.biome === 'corridor' && rng.float() < 0.4) {
       const spot = pickWallSpot(0.5);
@@ -699,6 +709,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // ceiling, fluoro tubes in service spaces, pendants in tall rooms.
   const lampMeshes: THREE.Mesh[] = [];
   const lights: THREE.PointLight[] = [];
+  if (sconcePos && !room.darkRoom) {
+    const sl = new THREE.PointLight(0xffc878, 0.55, 4.5, 2);
+    sl.position.set(sconcePos.x, sconcePos.y, sconcePos.z);
+    group.add(sl);
+    lights.push(sl);
+  }
   const maxLights = quality === 'low' ? 1 : quality === 'medium' ? 2 : 3;
   const sorted = [...spec.lights].sort((a, b) => b.intensity - a.intensity);
   for (const ls of spec.lights) {

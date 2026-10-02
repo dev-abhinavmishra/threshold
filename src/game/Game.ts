@@ -137,9 +137,9 @@ export class Game {
     this.worldGroup = new THREE.Group();
     this.entityGroup = new THREE.Group();
     this.scene.add(this.worldGroup, this.entityGroup);
-    const amb = new THREE.AmbientLight(0x35302a, 0.62);
+    const amb = new THREE.AmbientLight(0x35302a, 0.72);
     this.scene.add(amb);
-    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.62);
+    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.7);
     this.scene.add(hemi);
     this.streamer = new RoomStreamer(this.worldGroup, this.settings.quality, 0);
     this.initPost();
@@ -1384,13 +1384,13 @@ export class Game {
     this.camera.rotateY(this.player.yaw + Math.PI);
     this.camera.rotateX(this.player.pitch);
     if (!this.fillLight) {
-      this.fillLight = new THREE.PointLight(0x9a8f7a, 0.6, 5, 2);
+      this.fillLight = new THREE.PointLight(0x9a8f7a, 0.85, 6.5, 2);
       this.scene.add(this.fillLight);
     }
     this.fillLight.position.set(eye.x, eye.y, eye.z);
     if (this.lampOn || this.pulseLampOn) {
       if (!this.lampLight) {
-        this.lampLight = new THREE.SpotLight(0xffd9a4, 7, 24, 0.52, 0.85, 1.8);
+        this.lampLight = new THREE.SpotLight(0xffd9a4, 9, 26, 0.55, 0.85, 1.8);
         if (QUALITY[this.settings.quality].shadowMap) {
           this.lampLight.castShadow = true;
           this.lampLight.shadow.mapSize.set(512, 512);
