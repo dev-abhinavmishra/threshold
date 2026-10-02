@@ -360,3 +360,91 @@ has not finished loading falls back to its procedural builder.
 | `models/lightbulb_led` | Lightbulb LED | `lightbulb` variant |
 | `models/wooden_barrels_01` | Wooden Barrels | `barrel` variant |
 | `models/brass_vase_04` | Brass Vase 04 | `vase` variant |
+
+### Extraction batch 5 (sprint 28)
+
+| Folder | Source asset | Used for |
+| --- | --- | --- |
+| `models/BarberShopChair_01` | Barber Shop Chair 01 | `armchair` variant |
+| `models/Barrel_02` | Barrel 02 | `barrel` variant |
+| `models/Chandelier_02` | Chandelier 02 | `chandelier` variant |
+| `models/Chandelier_03` | Chandelier 03 | `chandelier` variant |
+| `models/chinese_chandelier` | Chinese Chandelier | `chandelier` variant |
+| `models/Drill_01` | Drill 01 | `powerDrill` maintenance clutter |
+| `models/all_purpose_cleaner` | All Purpose Cleaner | `cleanerBottle` variant |
+| `models/cleaner_tin_01` | Cleaner Tin 01 | `cleanerBottle` variant |
+| `models/multi_cleaner_bottle` | Multi Cleaner Bottle | `cleanerBottle` variant |
+| `models/multi_cleaner_5_litre` | Multi Cleaner 5 Litre | `cleanerBottle` variant |
+| `models/leather_cleaner_can` | Leather Cleaner Can | `cleanerBottle` variant |
+| `models/lubricant_spray` | Lubricant Spray | `cleanerBottle` variant |
+| `models/spray_paint_bottles_02` | Spray Paint Bottles 02 | `cleanerBottle` variant |
+| `models/binoculars` | Binoculars | `binoculars` variant |
+| `models/digital_wrist_watch` | Digital Wrist Watch | `wristWatch` trinket |
+| `models/pocket_watch` | Pocket Watch | `pocketWatch` trinket |
+| `models/vintage_pocket_watch` | Vintage Pocket Watch | `pocketWatch` variant |
+| `models/round_spectacles` | Round Spectacles | `spectacles` trinket |
+| `models/seadogs_compass` | Seadog's Compass | `compass` trinket |
+| `models/bull_head` | Bull Head | `trophyHead` wall mount |
+| `models/horse_head` | Horse Head | `trophyHead` variant |
+| `models/lion_head` | Lion Head | `trophyHead` variant |
+| `models/carved_wooden_elephant` | Carved Wooden Elephant | `ornament` clutter |
+| `models/garden_gnome` | Garden Gnome | `ornament` variant |
+| `models/chemistry_set` | Chemistry Set | `chemistrySet` lab clutter |
+| `models/industrial_microscope` | Industrial Microscope | `microscope` variant |
+| `models/vintage_microscope` | Vintage Microscope | `microscope` variant |
+| `models/chess_set` | Chess Set | `chessSet` table prop |
+| `models/sungka_board` | Sungka Board | `boardGame` variant |
+| `models/sungka_board_02` | Sungka Board 02 | `boardGame` variant |
+| `models/chinese_cabinet` | Chinese Cabinet | `cabinet` variant |
+| `models/chinese_commode` | Chinese Commode | `gothicCommode` variant |
+| `models/chinese_stool` | Chinese Stool | `stool` variant |
+| `models/hatchet` | Hatchet | `axe` variant |
+| `models/machete` | Machete | `machete` blade prop |
+| `models/ornate_medieval_dagger` | Ornate Medieval Dagger | `dagger` display prop |
+| `models/ornate_medieval_mace` | Ornate Medieval Mace | `mace` display prop |
+| `models/katana_stand_01` | Katana Stand 01 | `katana` display prop |
+| `models/kite_shield` | Kite Shield | `kiteShield` wall mount |
+| `models/brass_pot_01` | Brass Pot 01 | `brassPot` variant |
+| `models/brass_pot_02` | Brass Pot 02 | `brassPot` variant |
+| `models/ceramic_pot` | Ceramic Pot | `brassPot` variant |
+| `models/metal_jug` | Metal Jug | `jug` variant |
+| `models/hand_truck` | Hand Truck | `handTruck` maintenance prop |
+| `models/pliers` | Pliers | `pliers` tool |
+| `models/tongue_groove_pliers` | Tongue Groove Pliers | `pliers` variant |
+| `models/screwdriver` | Screwdriver | `screwdrivers` variant |
+| `models/trowel_01` | Trowel 01 | `trowel` tool |
+| `models/hand_plane_no4` | Hand Plane No.4 | `handPlane` tool |
+| `models/wooden_hammer_01` | Wooden Hammer 01 | `hammer` variant |
+| `models/measuring_tape_01` | Measuring Tape 01 | `tapeMeasure` tool |
+| `models/metal_detector` | Metal Detector | `metalDetector` prop |
+| `models/plunger` | Plunger | `plunger` janitorial prop |
+| `models/rubber_boots` | Rubber Boots | `rubberBoots` prop |
+| `models/wooden_bucket_02` | Wooden Bucket 02 | `bucket` variant |
+| `models/wooden_broom` | Wooden Broom | `broom` variant |
+| `models/plastic_bottle_gallon` | Plastic Bottle Gallon | `gallonJug` clutter |
+| `models/plastic_container` | Plastic Container | `plasticBin` variant |
+| `models/industrial_pastic_container` | Industrial Plastic Container | `plasticBin` variant |
+| `models/plastic_thermos` | Plastic Thermos | `thermos` clutter |
+| `models/modified_thermos` | Modified Thermos | `thermos` variant |
+| `models/pastic_torch_6v` | Plastic Torch 6V | `flashlight` variant |
+| `models/small_plastic_torch` | Small Plastic Torch | `flashlight` variant |
+| `models/postcard_set_01` | Postcard Set 01 | `postcards` desk clutter |
+| `models/stationery_supplies` | Stationery Supplies | `stationery` desk clutter |
+| `models/vintage_stapler` | Vintage Stapler | `stapler` desk clutter |
+| `models/rubber_duck_toy` | Rubber Duck Toy | `rubberDuck` guest clutter |
+| `models/rusted_spade_01` | Rusted Spade 01 | `spade` maintenance junk |
+| `models/rusted_wheel_rim_01` | Rusted Wheel Rim 01 | `wheelRim` variant |
+| `models/rusted_wheel_rim_02` | Rusted Wheel Rim 02 | `wheelRim` variant |
+| `models/old_tyre` | Old Tyre | `tyre` maintenance junk |
+| `models/old_military_compressor` | Old Military Compressor | `compressor` maintenance machine |
+| `models/television_02` | Television 02 | `television` variant |
+| `models/utility_box_02` | Utility Box 02 | `utilityBox` variant |
+| `models/vintage_crutches_01` | Vintage Crutches 01 | `crutches` guest prop |
+| `models/wooden_lantern_01` | Wooden Lantern 01 | `lantern` variant |
+| `models/brass_diya_lantern` | Brass Diya Lantern | `lantern` variant |
+| `models/long_life_food` | Long Life Food | `rations` underscript dressing |
+| `models/medical_tape` | Medical Tape | `medicalTape` safe-room clutter |
+| `models/croissant` | Croissant | `pastry` food clutter |
+| `models/standing_picture_frame_02` | Standing Picture Frame 02 | `standingFrame` floor prop |
+| `models/hanging_picture_frame_03` | Hanging Picture Frame 03 | `painting` variant |
+| `models/wooden_table_02` | Wooden Table 02 | `table` variant |

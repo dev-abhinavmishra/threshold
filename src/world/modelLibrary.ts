@@ -24,7 +24,10 @@ interface ModelSpec {
 export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   cabinet: {
     dir: 'GothicCabinet_01', height: 2.1, collider: [1.15, 2.1, 0.7],
-    variants: [{ dir: 'painted_wooden_cabinet', height: 2.0, collider: [1.1, 2.0, 0.65] }],
+    variants: [
+      { dir: 'painted_wooden_cabinet', height: 2.0, collider: [1.1, 2.0, 0.65] },
+      { dir: 'chinese_cabinet', height: 2.0, collider: [1.1, 2.0, 0.6] },
+    ],
   },
   bed: { dir: 'GothicBed_01', height: 1.1, collider: [1.7, 1.1, 2.2] },
   chair: {
@@ -43,6 +46,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'WoodenTable_03', height: 0.8, collider: [1.3, 0.8, 0.85] },
       { dir: 'gallinera_table', height: 0.75, collider: [1.2, 0.75, 0.8] },
       { dir: 'painted_wooden_table', height: 0.8, collider: [1.3, 0.8, 0.85] },
+      { dir: 'wooden_table_02', height: 0.8, collider: [1.3, 0.8, 0.85] },
     ],
   },
   painting: {
@@ -51,6 +55,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'fancy_picture_frame_01', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
       { dir: 'hanging_picture_frame_02', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
       { dir: 'fancy_picture_frame_02', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
+      { dir: 'hanging_picture_frame_03', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
     ],
   },
   desk: { dir: 'metal_office_desk', height: 0.8, collider: [2.0, 0.8, 0.95] },
@@ -125,7 +130,14 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     variants: [{ dir: 'wooden_candlestick', height: 0.5, collider: [0, 0, 0] }],
   },
   mirror: { dir: 'ornate_mirror_01', height: 1.4, collider: [0, 0, 0], anchor: 'center' },
-  chandelier: { dir: 'Chandelier_01', height: 1.7, collider: [0, 0, 0], anchor: 'center' },
+  chandelier: {
+    dir: 'Chandelier_01', height: 1.7, collider: [0, 0, 0], anchor: 'center',
+    variants: [
+      { dir: 'Chandelier_02', height: 1.6, collider: [0, 0, 0], anchor: 'center' },
+      { dir: 'Chandelier_03', height: 1.5, collider: [0, 0, 0], anchor: 'center' },
+      { dir: 'chinese_chandelier', height: 1.4, collider: [0, 0, 0], anchor: 'center' },
+    ],
+  },
   lamp: { dir: 'vintage_oil_lamp', height: 0.45, collider: [0, 0, 0] },
   stove: {
     dir: 'barrel_stove', height: 0.9, collider: [0.6, 0.9, 0.6],
@@ -171,7 +183,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   wineBarrel: { dir: 'wine_barrel_01', height: 0.95, collider: [0.7, 0.95, 0.7] },
   pipeRun: { dir: 'modular_pipes', height: 2.2, collider: [0.4, 2.2, 0.4], anchor: 'center' },
   extinguisher: { dir: 'korean_fire_extinguisher_01', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
-  television: { dir: 'Television_01', height: 0.55, collider: [0.75, 0.55, 0.5] },
+  television: {
+    dir: 'Television_01', height: 0.55, collider: [0.75, 0.55, 0.5],
+    variants: [{ dir: 'television_02', height: 0.6, collider: [0.9, 0.6, 0.55] }],
+  },
   wetFloor: { dir: 'WetFloorSign_01', height: 0.6, collider: [0.35, 0.6, 0.35] },
   wallClock2: { dir: 'wall_clock', height: 0.35, collider: [0, 0, 0], anchor: 'center' },
   mantelClock: { dir: 'mantel_clock_01', height: 0.3, collider: [0, 0, 0] },
@@ -183,13 +198,17 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'wooden_stool_01', height: 0.48, collider: [0.4, 0.48, 0.4] },
       { dir: 'wooden_stool_02', height: 0.5, collider: [0.4, 0.5, 0.4] },
       { dir: 'painted_wooden_stool', height: 0.45, collider: [0.4, 0.45, 0.4] },
+      { dir: 'chinese_stool', height: 0.5, collider: [0.4, 0.5, 0.4] },
     ],
   },
   ladder: {
     dir: 'ladder_sectioned_01', height: 2.4, collider: [0.5, 2.4, 0.25],
     variants: [{ dir: 'wooden_ladder_02', height: 2.2, collider: [0.5, 2.2, 0.2] }],
   },
-  bucket: { dir: 'wooden_bucket_01', height: 0.35, collider: [0.35, 0.35, 0.35] },
+  bucket: {
+    dir: 'wooden_bucket_01', height: 0.35, collider: [0.35, 0.35, 0.35],
+    variants: [{ dir: 'wooden_bucket_02', height: 0.35, collider: [0.35, 0.35, 0.35] }],
+  },
   alarmClock: { dir: 'alarm_clock_01', height: 0.16, collider: [0, 0, 0] },
   multimeter: { dir: 'retro_multimeter', height: 0.28, collider: [0, 0, 0] },
   wrench: {
@@ -208,10 +227,20 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   toolChest: { dir: 'metal_tool_chest', height: 0.9, collider: [1.1, 0.9, 0.5] },
   propaneTank: { dir: 'propane_tank', height: 1.3, collider: [0.4, 1.3, 0.4] },
   medBox: { dir: 'medical_box', height: 0.45, collider: [0, 0, 0], anchor: 'center' },
-  lantern: { dir: 'Lantern_01', height: 0.4, collider: [0.25, 0.4, 0.25] },
+  lantern: {
+    dir: 'Lantern_01', height: 0.4, collider: [0.25, 0.4, 0.25],
+    variants: [
+      { dir: 'wooden_lantern_01', height: 0.4, collider: [0.25, 0.4, 0.25] },
+      { dir: 'brass_diya_lantern', height: 0.35, collider: [0.25, 0.35, 0.25] },
+    ],
+  },
   flashlight: {
     dir: 'vintage_flashlight', height: 0.2, collider: [0, 0, 0],
-    variants: [{ dir: 'signal_flashlight', height: 0.25, collider: [0, 0, 0] }],
+    variants: [
+      { dir: 'signal_flashlight', height: 0.25, collider: [0, 0, 0] },
+      { dir: 'pastic_torch_6v', height: 0.25, collider: [0, 0, 0] },
+      { dir: 'small_plastic_torch', height: 0.2, collider: [0, 0, 0] },
+    ],
   },
   plasticCrate: { dir: 'plastic_crate_01', height: 0.4, collider: [0.55, 0.4, 0.4] },
   gasMask: { dir: 'old_gas_mask', height: 0.3, collider: [0, 0, 0] },
@@ -222,13 +251,17 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'modern_arm_chair_01', height: 0.9, collider: [0.85, 0.9, 0.8] },
       { dir: 'GreenChair_01', height: 0.9, collider: [0.8, 0.9, 0.8] },
       { dir: 'chinese_armchair', height: 0.9, collider: [0.8, 0.9, 0.8] },
+      { dir: 'BarberShopChair_01', height: 1.0, collider: [0.7, 1.0, 0.7] },
     ],
   },
   milCrate: { dir: 'wooden_military_crate', height: 0.5, collider: [0.9, 0.5, 0.55] },
   marbleBust: { dir: 'marble_bust_01', height: 0.5, collider: [0.35, 0.5, 0.3] },
   // Sprint 12 — utility/industrial wall-mounts + clutter
   powerBox: { dir: 'power_box_01', height: 0.65, collider: [0, 0, 0], anchor: 'center' },
-  utilityBox: { dir: 'utility_box_01', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
+  utilityBox: {
+    dir: 'utility_box_01', height: 0.75, collider: [0, 0, 0], anchor: 'center',
+    variants: [{ dir: 'utility_box_02', height: 0.75, collider: [0, 0, 0], anchor: 'center' }],
+  },
   fluoroStrip: { dir: 'mounted_fluorescent_lights', height: 0.22, collider: [0, 0, 0], anchor: 'center' },
   cageLight: { dir: 'caged_hanging_light', height: 0.65, collider: [0, 0, 0], anchor: 'center' },
   securityLight: { dir: 'security_light', height: 0.4, collider: [0, 0, 0], anchor: 'center' },
@@ -278,7 +311,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   laptop: { dir: 'classic_laptop', height: 0.28, collider: [0, 0, 0] },
   dartboard: { dir: 'dartboard', height: 0.45, collider: [0, 0, 0], anchor: 'center' },
   airconUnit: { dir: 'exterior_aircon_unit', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
-  broom: { dir: 'plastic_broom', height: 1.3, collider: [0, 0, 0] },
+  broom: {
+    dir: 'plastic_broom', height: 1.3, collider: [0, 0, 0],
+    variants: [{ dir: 'wooden_broom', height: 1.3, collider: [0, 0, 0] }],
+  },
   dustpan: { dir: 'dustpan', height: 0.32, collider: [0, 0, 0] },
   cementBag: { dir: 'cement_bag', height: 0.42, collider: [0.6, 0.42, 0.4] },
   compostBags: { dir: 'compost_bags', height: 0.65, collider: [0.7, 0.65, 0.6] },
@@ -307,11 +343,25 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   sprayCans: { dir: 'spray_paint_bottles', height: 0.22, collider: [0, 0, 0] },
   rustCan: { dir: 'can_rusted', height: 0.12, collider: [0, 0, 0] },
   foodCans: { dir: 'russian_food_cans_01', height: 0.14, collider: [0, 0, 0] },
-  cleanerBottle: { dir: 'drain_cleaner', height: 0.27, collider: [0, 0, 0] },
+  cleanerBottle: {
+    dir: 'drain_cleaner', height: 0.27, collider: [0, 0, 0],
+    variants: [
+      { dir: 'all_purpose_cleaner', height: 0.27, collider: [0, 0, 0] },
+      { dir: 'cleaner_tin_01', height: 0.22, collider: [0, 0, 0] },
+      { dir: 'multi_cleaner_bottle', height: 0.25, collider: [0, 0, 0] },
+      { dir: 'multi_cleaner_5_litre', height: 0.32, collider: [0, 0, 0] },
+      { dir: 'leather_cleaner_can', height: 0.2, collider: [0, 0, 0] },
+      { dir: 'lubricant_spray', height: 0.22, collider: [0, 0, 0] },
+      { dir: 'spray_paint_bottles_02', height: 0.2, collider: [0, 0, 0] },
+    ],
+  },
   bleachBottle: { dir: 'bleach_bottle', height: 0.3, collider: [0, 0, 0] },
   ceilingFan: { dir: 'ceiling_fan', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
   // Sprint 18 — gothic/creepy dressing batch
-  gothicCommode: { dir: 'GothicCommode_01', height: 0.95, collider: [1.1, 0.95, 0.55] },
+  gothicCommode: {
+    dir: 'GothicCommode_01', height: 0.95, collider: [1.1, 0.95, 0.55],
+    variants: [{ dir: 'chinese_commode', height: 0.95, collider: [1.1, 0.95, 0.55] }],
+  },
   galleryStatue: {
     dir: 'concrete_cat_statue', height: 1.6, collider: [0.9, 1.6, 0.9],
     variants: [
@@ -341,6 +391,9 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'coffee_table_round_01', height: 0.45, collider: [0.7, 0.45, 0.7] },
       { dir: 'gothic_coffee_table', height: 0.45, collider: [1.1, 0.45, 0.6] },
       { dir: 'chinese_tea_table', height: 0.5, collider: [0.9, 0.5, 0.9] },
+      { dir: 'industrial_coffee_table', height: 0.45, collider: [1.1, 0.45, 0.6] },
+      { dir: 'modern_coffee_table_01', height: 0.4, collider: [1.1, 0.4, 0.6] },
+      { dir: 'modern_coffee_table_02', height: 0.4, collider: [1.0, 0.4, 0.6] },
     ],
   },
   sideTable: {
@@ -362,7 +415,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   instrPanel: { dir: 'vintage_spacecraft_instrument', height: 1.3, collider: [1.2, 1.3, 0.4] },
   teaSet: { dir: 'tea_set_01', height: 0.18, collider: [0, 0, 0] },
   wineBottles: { dir: 'wine_bottles_01', height: 0.32, collider: [0, 0, 0] },
-  jug: { dir: 'jug_01', height: 0.3, collider: [0, 0, 0] },
+  jug: {
+    dir: 'jug_01', height: 0.3, collider: [0, 0, 0],
+    variants: [{ dir: 'metal_jug', height: 0.3, collider: [0, 0, 0] }],
+  },
   enamelPot: { dir: 'pot_enamel_01', height: 0.22, collider: [0, 0, 0] },
   woodenBowl: {
     dir: 'wooden_bowl_01', height: 0.14, collider: [0, 0, 0],
@@ -375,7 +431,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   },
   radio: { dir: 'vintage_radio_transceiver', height: 0.35, collider: [0, 0, 0] },
   camera: { dir: 'Camera_01', height: 0.18, collider: [0, 0, 0] },
-  binoculars: { dir: 'vintage_binocular', height: 0.12, collider: [0, 0, 0] },
+  binoculars: {
+    dir: 'vintage_binocular', height: 0.12, collider: [0, 0, 0],
+    variants: [{ dir: 'binoculars', height: 0.14, collider: [0, 0, 0] }],
+  },
   magnifier: { dir: 'magnifying_glass_01', height: 0.1, collider: [0, 0, 0] },
   lightbulb: {
     dir: 'lightbulb_01', height: 0.12, collider: [0, 0, 0],
@@ -390,8 +449,14 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     dir: 'handsaw_wood', height: 0.55, collider: [0, 0, 0],
     variants: [{ dir: 'rusted_hacksaw', height: 0.45, collider: [0, 0, 0] }],
   },
-  hammer: { dir: 'cross_pein_hammer', height: 0.35, collider: [0, 0, 0] },
-  screwdrivers: { dir: 'screwdrivers_02', height: 0.3, collider: [0, 0, 0] },
+  hammer: {
+    dir: 'cross_pein_hammer', height: 0.35, collider: [0, 0, 0],
+    variants: [{ dir: 'wooden_hammer_01', height: 0.35, collider: [0, 0, 0] }],
+  },
+  screwdrivers: {
+    dir: 'screwdrivers_02', height: 0.3, collider: [0, 0, 0],
+    variants: [{ dir: 'screwdriver', height: 0.28, collider: [0, 0, 0] }],
+  },
   handDrill: { dir: 'vintage_hand_drill', height: 0.35, collider: [0, 0, 0] },
   wateringCan: { dir: 'watering_can_metal_01', height: 0.4, collider: [0.45, 0.4, 0.25] },
   seedTray: { dir: 'seeding_tray_01', height: 0.18, collider: [0.55, 0.18, 0.35] },
@@ -420,6 +485,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     variants: [
       { dir: 'wooden_axe_02', height: 0.8, collider: [0, 0, 0] },
       { dir: 'wooden_axe_03', height: 0.75, collider: [0, 0, 0] },
+      { dir: 'hatchet', height: 0.55, collider: [0, 0, 0] },
     ],
   },
   warHammer: { dir: 'ornate_war_hammer', height: 0.85, collider: [0, 0, 0] },
@@ -468,6 +534,84 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   castleDoor: { dir: 'large_castle_door', height: 2.8, collider: [1.6, 2.8, 0.3] },
   ironGate: { dir: 'large_iron_gate', height: 2.4, collider: [1.8, 2.4, 0.2] },
   gateLatch: { dir: 'gate_latch_01', height: 0.35, collider: [0, 0, 0] },
+  // Sprint 28 — extraction batch 5: tools, trophies, instruments, clutter
+  powerDrill: { dir: 'Drill_01', height: 0.22, collider: [0, 0, 0] },
+  pocketWatch: {
+    dir: 'pocket_watch', height: 0.1, collider: [0, 0, 0],
+    variants: [{ dir: 'vintage_pocket_watch', height: 0.1, collider: [0, 0, 0] }],
+  },
+  wristWatch: { dir: 'digital_wrist_watch', height: 0.08, collider: [0, 0, 0] },
+  spectacles: { dir: 'round_spectacles', height: 0.08, collider: [0, 0, 0] },
+  compass: { dir: 'seadogs_compass', height: 0.1, collider: [0, 0, 0] },
+  trophyHead: {
+    dir: 'bull_head', height: 0.75, collider: [0, 0, 0], anchor: 'center',
+    variants: [
+      { dir: 'horse_head', height: 0.8, collider: [0, 0, 0], anchor: 'center' },
+      { dir: 'lion_head', height: 0.7, collider: [0, 0, 0], anchor: 'center' },
+    ],
+  },
+  ornament: {
+    dir: 'carved_wooden_elephant', height: 0.25, collider: [0, 0, 0],
+    variants: [{ dir: 'garden_gnome', height: 0.35, collider: [0, 0, 0] }],
+  },
+  chemistrySet: { dir: 'chemistry_set', height: 0.35, collider: [0, 0, 0] },
+  microscope: {
+    dir: 'industrial_microscope', height: 0.35, collider: [0, 0, 0],
+    variants: [{ dir: 'vintage_microscope', height: 0.35, collider: [0, 0, 0] }],
+  },
+  chessSet: { dir: 'chess_set', height: 0.12, collider: [0, 0, 0] },
+  boardGame: {
+    dir: 'sungka_board', height: 0.15, collider: [0, 0, 0],
+    variants: [{ dir: 'sungka_board_02', height: 0.15, collider: [0, 0, 0] }],
+  },
+  machete: { dir: 'machete', height: 0.5, collider: [0, 0, 0] },
+  dagger: { dir: 'ornate_medieval_dagger', height: 0.4, collider: [0, 0, 0] },
+  mace: { dir: 'ornate_medieval_mace', height: 0.75, collider: [0, 0, 0] },
+  katana: { dir: 'katana_stand_01', height: 1.0, collider: [0.5, 1.0, 0.3] },
+  kiteShield: { dir: 'kite_shield', height: 1.3, collider: [0, 0, 0], anchor: 'center' },
+  brassPot: {
+    dir: 'brass_pot_01', height: 0.3, collider: [0, 0, 0],
+    variants: [
+      { dir: 'brass_pot_02', height: 0.28, collider: [0, 0, 0] },
+      { dir: 'ceramic_pot', height: 0.3, collider: [0, 0, 0] },
+    ],
+  },
+  handTruck: { dir: 'hand_truck', height: 1.2, collider: [0.5, 1.2, 0.5] },
+  pliers: {
+    dir: 'pliers', height: 0.18, collider: [0, 0, 0],
+    variants: [{ dir: 'tongue_groove_pliers', height: 0.2, collider: [0, 0, 0] }],
+  },
+  trowel: { dir: 'trowel_01', height: 0.25, collider: [0, 0, 0] },
+  handPlane: { dir: 'hand_plane_no4', height: 0.2, collider: [0, 0, 0] },
+  tapeMeasure: { dir: 'measuring_tape_01', height: 0.12, collider: [0, 0, 0] },
+  metalDetector: { dir: 'metal_detector', height: 1.1, collider: [0.3, 1.1, 0.3] },
+  plunger: { dir: 'plunger', height: 0.5, collider: [0, 0, 0] },
+  rubberBoots: { dir: 'rubber_boots', height: 0.35, collider: [0, 0, 0] },
+  gallonJug: { dir: 'plastic_bottle_gallon', height: 0.3, collider: [0, 0, 0] },
+  plasticBin: {
+    dir: 'plastic_container', height: 0.3, collider: [0, 0, 0],
+    variants: [{ dir: 'industrial_pastic_container', height: 0.35, collider: [0, 0, 0] }],
+  },
+  thermos: {
+    dir: 'plastic_thermos', height: 0.25, collider: [0, 0, 0],
+    variants: [{ dir: 'modified_thermos', height: 0.3, collider: [0, 0, 0] }],
+  },
+  postcards: { dir: 'postcard_set_01', height: 0.05, collider: [0, 0, 0] },
+  stationery: { dir: 'stationery_supplies', height: 0.12, collider: [0, 0, 0] },
+  stapler: { dir: 'vintage_stapler', height: 0.12, collider: [0, 0, 0] },
+  rubberDuck: { dir: 'rubber_duck_toy', height: 0.12, collider: [0, 0, 0] },
+  spade: { dir: 'rusted_spade_01', height: 0.95, collider: [0, 0, 0] },
+  wheelRim: {
+    dir: 'rusted_wheel_rim_01', height: 0.5, collider: [0, 0, 0],
+    variants: [{ dir: 'rusted_wheel_rim_02', height: 0.5, collider: [0, 0, 0] }],
+  },
+  tyre: { dir: 'old_tyre', height: 0.6, collider: [0.6, 0.6, 0.6] },
+  compressor: { dir: 'old_military_compressor', height: 1.0, collider: [0.9, 1.0, 0.5] },
+  crutches: { dir: 'vintage_crutches_01', height: 1.35, collider: [0, 0, 0] },
+  rations: { dir: 'long_life_food', height: 0.2, collider: [0, 0, 0] },
+  medicalTape: { dir: 'medical_tape', height: 0.1, collider: [0, 0, 0] },
+  pastry: { dir: 'croissant', height: 0.08, collider: [0, 0, 0] },
+  standingFrame: { dir: 'standing_picture_frame_02', height: 1.5, collider: [0.6, 1.5, 0.4] },
 };
 
 const loader = new GLTFLoader();

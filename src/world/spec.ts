@@ -67,6 +67,15 @@ export type PropKind =
   // sprint 24 — kitchen/food + electronics clutter
   | 'kettle' | 'pan' | 'cuttingBoard' | 'carvedPlate' | 'apple' | 'pears'
   | 'cheeseBox' | 'football' | 'circuitBoard' | 'propaneTorch' | 'searchlight'
+  // sprint 28 — tools, trophies, instruments, clutter
+  | 'powerDrill' | 'pocketWatch' | 'wristWatch' | 'spectacles' | 'compass'
+  | 'trophyHead' | 'ornament' | 'chemistrySet' | 'microscope' | 'chessSet'
+  | 'boardGame' | 'machete' | 'dagger' | 'mace' | 'katana' | 'kiteShield'
+  | 'brassPot' | 'handTruck' | 'pliers' | 'trowel' | 'handPlane' | 'tapeMeasure'
+  | 'metalDetector' | 'plunger' | 'rubberBoots' | 'gallonJug' | 'plasticBin'
+  | 'thermos' | 'postcards' | 'stationery' | 'stapler' | 'rubberDuck'
+  | 'spade' | 'wheelRim' | 'tyre' | 'compressor' | 'crutches' | 'rations'
+  | 'medicalTape' | 'pastry' | 'standingFrame'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
