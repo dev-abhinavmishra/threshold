@@ -82,3 +82,28 @@ has not finished loading falls back to its procedural builder.
 | `models/WoodenChair_01` | Wooden Chair 01 | `chair` props (variant) |
 | `models/korean_public_payphone_01` | Korean Public Payphone 01 | `payphone` props |
 | `models/planter_box_01` | Planter Box 01 | `planter` props |
+| `models/Barrel_01` | Barrel 01 | `barrel` props |
+| `models/Barrel_02` | Barrel 02 | `barrel` props (variant) |
+| `models/wine_barrel_01` | Wine Barrel 01 | `wineBarrel` props |
+| `models/modular_pipes` | Modular Pipes | `pipeRun` props |
+| `models/korean_fire_extinguisher_01` | Korean Fire Extinguisher 01 | `extinguisher` props |
+| `models/Television_01` | Television 01 | `television` props |
+| `models/WetFloorSign_01` | Wet Floor Sign 01 | `wetFloor` props |
+| `models/wall_clock` | Wall Clock | `wallClock2` props |
+| `models/mantel_clock_01` | Mantel Clock 01 | `mantelClock` props |
+| `models/metal_stool_01` | Metal Stool 01 | `stool` props |
+| `models/ladder_sectioned_01` | Ladder Sectioned 01 | `ladder` props |
+| `models/wooden_bucket_01` | Wooden Bucket 01 | `bucket` props |
+| `models/alarm_clock_01` | Alarm Clock 01 | `alarmClock` props |
+| `models/retro_multimeter` | Retro Multimeter | `multimeter` props |
+| `models/pipe_wrench` | Pipe Wrench | `wrench` props |
+| `models/security_camera_01` | Security Camera 01 | `securityCam` props |
+| `models/metal_tool_chest` | Metal Tool Chest | `toolChest` props |
+| `models/propane_tank` | Propane Tank | `propaneTank` props |
+| `models/medical_box` | Medical Box | `medBox` props |
+| `models/Lantern_01` | Lantern 01 | `lantern` props |
+| `models/vintage_flashlight` | Vintage Flashlight | `flashlight` props |
+| `models/plastic_crate_01` | Plastic Crate 01 | `plasticCrate` props |
+| `models/old_gas_mask` | Old Gas Mask | `gasMask` props |
+| `models/ArmChair_01` | Arm Chair 01 | `armchair` props |
+| `models/wooden_military_crate` | Wooden Military Crate | `milCrate` props |

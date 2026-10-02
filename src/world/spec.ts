@@ -29,6 +29,11 @@ export type PropKind =
   | 'board' | 'bench' | 'wheelchair' | 'suitcase' | 'bin'
   | 'generator' | 'weldingCart' | 'planter' | 'books' | 'papers'
   | 'carton' | 'payphone' | 'rack'
+  | 'barrel' | 'wineBarrel' | 'pipeRun' | 'extinguisher' | 'television'
+  | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
+  | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'
+  | 'toolChest' | 'propaneTank' | 'medBox' | 'lantern' | 'flashlight'
+  | 'plasticCrate' | 'gasMask' | 'armchair' | 'milCrate'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'

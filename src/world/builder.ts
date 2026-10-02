@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import type { RoomInstance } from '../game/types';
-import type { RoomSpec } from './spec';
+import type { PropKind, RoomSpec } from './spec';
 import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
@@ -203,6 +203,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
   }
 
+  const wireColliders = (built: ReturnType<typeof buildProp>) => {
+    for (const c of built.colliders) {
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + c.x * cos + c.z * sin;
+      const wz = room.origin.z - c.x * sin + c.z * cos;
+      const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
+      const ww = swapped ? c.d : c.w;
+      const wd = swapped ? c.w : c.d;
+      const box = aabb(wx, room.origin.y + (c.y ?? 0) + c.h / 2, wz, ww / 2, c.h / 2, wd / 2);
+      if (c.losOnly) {
+        room.losBlockers.push(box);
+      } else if (!c.walkable) {
+        room.colliders.push(box);
+        if (!c.movementOnly) room.losBlockers.push(box);
+      }
+    }
+  };
+
   // Door frames at ports
   const doorLeaves = new Map<string, THREE.Mesh>();
   const doorPositions = [spec.entry, ...spec.exits];
@@ -311,26 +329,71 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
       group.add(m);
     }
+
+    // Wall-mounted props (models are center-anchored; face +z → yaw per wall).
+    const mountYaw = { e: -Math.PI / 2, w: Math.PI / 2, n: Math.PI, s: 0 } as const;
+    const mounts: { kind: PropKind; y: number; p: number }[] = ({
+      corridor: [{ kind: 'extinguisher', y: 1.15, p: 0.4 }, { kind: 'medBox', y: 1.45, p: 0.2 }, { kind: 'wallClock2', y: 1.95, p: 0.25 }, { kind: 'securityCam', y: 2.35, p: 0.2 }],
+      records: [{ kind: 'wallClock2', y: 1.95, p: 0.35 }, { kind: 'medBox', y: 1.45, p: 0.15 }, { kind: 'securityCam', y: 2.35, p: 0.25 }],
+      lobby: [{ kind: 'securityCam', y: 2.4, p: 0.5 }, { kind: 'wallClock2', y: 2.0, p: 0.4 }],
+      guest: [{ kind: 'wallClock2', y: 1.95, p: 0.25 }],
+      gallery: [{ kind: 'securityCam', y: 2.4, p: 0.35 }],
+      maintenance: [{ kind: 'extinguisher', y: 1.15, p: 0.5 }, { kind: 'gasMask', y: 1.55, p: 0.25 }, { kind: 'securityCam', y: 2.3, p: 0.2 }],
+      unlit: [{ kind: 'gasMask', y: 1.55, p: 0.2 }],
+      milestone: [{ kind: 'securityCam', y: 2.4, p: 0.3 }],
+      safe: [{ kind: 'medBox', y: 1.45, p: 0.45 }],
+      underscript: [{ kind: 'gasMask', y: 1.5, p: 0.3 }],
+    } as Record<string, { kind: PropKind; y: number; p: number }[]>)[spec.biome] ?? [];
+    for (const mt of mounts) {
+      if (rng.float() >= mt.p) continue;
+      const spot = pickWallSpot(0.6);
+      if (!spot) continue;
+      const lp = spot.wall === 'e' ? { x: w / 2 - 0.07, z: spot.along }
+        : spot.wall === 'w' ? { x: -w / 2 + 0.07, z: spot.along }
+        : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.07 }
+        : { x: spot.along, z: -d / 2 + 0.07 };
+      try {
+        const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
+        group.add(built.group);
+      } catch { /* dressing only */ }
+    }
+
+    // Floor props — seeded dressing per biome, biased to walls, lane-clear.
+    const floorSet: { kind: PropKind; p: number; wallBias?: boolean }[] = ({
+      corridor: [{ kind: 'wetFloor', p: 0.25 }, { kind: 'stool', p: 0.15, wallBias: true }, { kind: 'bin', p: 0.3, wallBias: true }],
+      records: [{ kind: 'stool', p: 0.3, wallBias: true }, { kind: 'plasticCrate', p: 0.3, wallBias: true }, { kind: 'ladder', p: 0.15, wallBias: true }],
+      lobby: [{ kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }],
+      guest: [{ kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }],
+      gallery: [{ kind: 'bench', p: 0.3 }, { kind: 'armchair', p: 0.2, wallBias: true }],
+      maintenance: [{ kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }],
+      unlit: [{ kind: 'lantern', p: 0.4, wallBias: true }, { kind: 'flashlight', p: 0.2 }, { kind: 'barrel', p: 0.3, wallBias: true }],
+      milestone: [{ kind: 'lantern', p: 0.2, wallBias: true }],
+      safe: [{ kind: 'lantern', p: 0.5, wallBias: true }, { kind: 'armchair', p: 0.3, wallBias: true }],
+      underscript: [{ kind: 'wineBarrel', p: 0.45, wallBias: true }, { kind: 'milCrate', p: 0.4, wallBias: true }, { kind: 'lantern', p: 0.3, wallBias: true }, { kind: 'barrel', p: 0.3, wallBias: true }],
+    } as Record<string, { kind: PropKind; p: number; wallBias?: boolean }[]>)[spec.biome] ?? [];
+    for (const fp of floorSet) {
+      if (rng.float() >= fp.p) continue;
+      let px = (rng.float() - 0.5) * (w - 1.6);
+      let pz = (rng.float() - 0.5) * (d - 1.6);
+      if (fp.wallBias) {
+        // push toward a random edge
+        if (rng.bool(0.5)) px = Math.sign(px || 1) * (w / 2 - 0.6 - rng.float() * 0.4);
+        else pz = Math.sign(pz || 1) * (d / 2 - 0.6 - rng.float() * 0.4);
+      }
+      const nearDoor = doorPositions.some((p) => {
+        const lp = portLocalPos(p, w, d);
+        return Math.hypot(px - lp.x, pz - lp.z) < 1.6;
+      });
+      if (nearDoor) continue;
+      try {
+        const built = buildProp({ kind: fp.kind, x: px, z: pz, yaw: fp.wallBias && Math.abs(px) > Math.abs(pz) ? Math.sign(px) * -Math.PI / 2 : rng.float() * Math.PI }, rng.fork(6000 + Math.floor(px * 13 + pz * 7)));
+        group.add(built.group);
+        wireColliders(built);
+      } catch { /* dressing only */ }
+    }
   }
 
   // Props
-  const wireColliders = (built: ReturnType<typeof buildProp>) => {
-    for (const c of built.colliders) {
-      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
-      const wx = room.origin.x + c.x * cos + c.z * sin;
-      const wz = room.origin.z - c.x * sin + c.z * cos;
-      const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
-      const ww = swapped ? c.d : c.w;
-      const wd = swapped ? c.w : c.d;
-      const box = aabb(wx, room.origin.y + (c.y ?? 0) + c.h / 2, wz, ww / 2, c.h / 2, wd / 2);
-      if (c.losOnly) {
-        room.losBlockers.push(box);
-      } else if (!c.walkable) {
-        room.colliders.push(box);
-        if (!c.movementOnly) room.losBlockers.push(box);
-      }
-    }
-  };
   for (const p of spec.props) {
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
