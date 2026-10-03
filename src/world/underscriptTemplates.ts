@@ -97,11 +97,15 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'kettle', x: -0.35, z: 0.15, y: 0.78 },
       { kind: 'cuttingBoard', x: 0.5, z: 0.2, y: 0.78 },
       { kind: 'apple', x: -0.05, z: -0.15, y: 0.78 },
+      { kind: 'fruit', x: 0.42, z: 0.28, y: 0.78 },
+      { kind: 'cakeSlice', x: 0.12, z: -0.42, y: 0.78 },
       { kind: 'pears', x: 0.55, z: 0.05, y: 0.78 },
       { kind: 'pan', x: -0.6, z: -0.1, y: 0.78 },
       { kind: 'cheeseBox', x: 0.3, z: 0.12, y: 0.78 },
       { kind: 'bleachBottle', x: -2.4, z: 2.0 },
       { kind: 'dartboard', x: 0.8, z: -2.93, y: 1.7 },
+      { kind: 'lifebuoy', x: -1.2, z: -2.95, y: 1.7 },
+      { kind: 'fishHat', x: 2.1, z: 1.4 },
       { kind: 'sign', x: 0, z: 2.95, y: 1.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.5 },
     ],
@@ -195,6 +199,11 @@ const u_openOffice: RoomTemplate = {
       { kind: 'laptop', x: 4.55, z: 0.4, y: 0.75, yaw: -Math.PI / 2 },
       { kind: 'boombox', x: 0.3, z: 3.75, y: 0.85 },
       { kind: 'plasticCrate3', x: -4.8, z: -3.8 },
+      // a building that should not be here — facade + crane riding the
+      // back wall of the basement office floor
+      { kind: 'factoryFacade', x: -3.2, z: 4.35 },
+      { kind: 'overheadCrane', x: 2.8, z: 4.2 },
+      { kind: 'pistol', x: 4.5, z: 0.75, y: 0.75 },
     ],
     sockets: [
       { kind: 'loot', x: -3.6, z: -2.2, meta: {} }, { kind: 'loot', x: 2.4, z: 0.4, meta: {} },

@@ -286,7 +286,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   cableTray: { dir: 'modular_electric_cables', height: 0.4, collider: [0, 0, 0], anchor: 'center' },
   chainFence: { dir: 'modular_chainlink_fence', height: 2.2, collider: [2.4, 2.2, 0.15] },
   shutterDoor: { dir: 'rollershutter_door', height: 2.4, collider: [1.6, 2.4, 0.2] },
-  roadBarrier: { dir: 'concrete_road_barrier_02', height: 0.8, collider: [1.6, 0.8, 0.4] },
+  roadBarrier: {
+    dir: 'concrete_road_barrier_02', height: 0.8, collider: [1.6, 0.8, 0.4],
+    variants: [{ dir: 'concrete_road_barrier', height: 0.85, collider: [1.7, 0.85, 0.45] }],
+  },
   plasticCrate2: { dir: 'plastic_crate_02', height: 0.4, collider: [0.55, 0.4, 0.4] },
   plasticCrate3: { dir: 'plastic_crate_03', height: 0.4, collider: [0.55, 0.4, 0.4] },
   schoolChair: { dir: 'SchoolChair_01', height: 0.8, collider: [0.5, 0.8, 0.5] },
@@ -624,6 +627,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     variants: [
       { dir: 'dirty_football', height: 0.25, collider: [0, 0, 0] },
       { dir: 'american_football', height: 0.2, collider: [0, 0, 0] },
+      { dir: 'football', height: 0.22, collider: [0, 0, 0] },
     ],
   },
   gamepad: { dir: 'gamepad', height: 0.08, collider: [0, 0, 0] },
@@ -637,7 +641,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   compostBag: { dir: 'compost_bag_02', height: 0.55, collider: [0.5, 0.55, 0.4] },
   rollerShutter: {
     dir: 'rollershutter_window_01', height: 2.3, collider: [0, 0, 0], anchor: 'center',
-    variants: [{ dir: 'rollershutter_window_02', height: 2.3, collider: [0, 0, 0], anchor: 'center' }],
+    variants: [
+      { dir: 'rollershutter_window_02', height: 2.3, collider: [0, 0, 0], anchor: 'center' },
+      { dir: 'rollershutter_window_03', height: 2.3, collider: [0, 0, 0], anchor: 'center' },
+    ],
   },
   shell: { dir: 'lambis_shell', height: 0.25, collider: [0, 0, 0] },
   fishingKnife: { dir: 'fish_knife', height: 0.15, collider: [0, 0, 0] },
@@ -646,6 +653,52 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   sweetPotato: { dir: 'sweet_potato', height: 0.12, collider: [0, 0, 0] },
   lemon: { dir: 'lemon', height: 0.08, collider: [0, 0, 0] },
   gardenGloves: { dir: 'garden_gloves_01', height: 0.1, collider: [0, 0, 0] },
+
+  // Sprint 43 — extraction batch 7
+  shipModel: {
+    dir: 'dutch_ship_medium', height: 0.45, collider: [0, 0, 0],
+    variants: [
+      { dir: 'ship_pinnace', height: 0.4, collider: [0, 0, 0] },
+      { dir: 'dutch_ship_large_01', height: 0.5, collider: [0, 0, 0] },
+    ],
+  },
+  cannon: { dir: 'cannon_01', height: 1.15, collider: [1.5, 1.15, 2.4] },
+  coveredCar: { dir: 'covered_car', height: 1.55, collider: [1.9, 1.55, 4.4] },
+  overheadCrane: { dir: 'overhead_crane', height: 2.6, collider: [3.2, 2.6, 1.0] },
+  fireEscape: { dir: 'modular_fire_escape', height: 2.7, collider: [1.6, 2.7, 0.9] },
+  powerPole: { dir: 'modular_electricity_poles', height: 2.6, collider: [1.2, 2.6, 1.2] },
+  factoryFacade: { dir: 'modular_factory_facade', height: 2.9, collider: [3.2, 2.9, 0.6] },
+  pistol: { dir: 'service_pistol', height: 0.16, collider: [0, 0, 0] },
+  stickGrenade: { dir: 'stick_grenade', height: 0.28, collider: [0, 0, 0] },
+  lifebuoy: { dir: 'lifebuoy', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
+  fishHat: { dir: 'fishermans_hat', height: 0.18, collider: [0, 0, 0] },
+  cakeSlice: {
+    dir: 'carrot_cake', height: 0.14, collider: [0, 0, 0],
+    variants: [
+      { dir: 'strawberry_chocolate_cake', height: 0.16, collider: [0, 0, 0] },
+      { dir: 'hamburger_buns', height: 0.12, collider: [0, 0, 0] },
+    ],
+  },
+  fruit: {
+    dir: 'bananas', height: 0.14, collider: [0, 0, 0],
+    variants: [
+      { dir: 'food_avocado_01', height: 0.1, collider: [0, 0, 0] },
+      { dir: 'food_ginger_01', height: 0.08, collider: [0, 0, 0] },
+      { dir: 'food_kiwi_01', height: 0.09, collider: [0, 0, 0] },
+      { dir: 'food_lime_01', height: 0.09, collider: [0, 0, 0] },
+      { dir: 'food_lychee_01', height: 0.09, collider: [0, 0, 0] },
+      { dir: 'food_pomegranate_01', height: 0.12, collider: [0, 0, 0] },
+    ],
+  },
+  boulder: {
+    dir: 'boulder_01', height: 0.85, collider: [1.2, 0.85, 1.0],
+    variants: [
+      { dir: 'moon_rock_03', height: 0.7, collider: [1.0, 0.7, 0.9] },
+      { dir: 'moon_rock_05', height: 0.8, collider: [1.1, 0.8, 0.9] },
+      { dir: 'namaqualand_boulder_04', height: 0.9, collider: [1.3, 0.9, 1.0] },
+    ],
+  },
+  barkDebris: { dir: 'bark_debris_01', height: 0.12, collider: [0, 0, 0] },
 };
 
 const loader = new GLTFLoader();

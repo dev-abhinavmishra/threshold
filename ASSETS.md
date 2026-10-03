@@ -504,3 +504,41 @@ has not finished loading falls back to its procedural builder.
 | `textures/tiles-mosaic` | PavingStones151 | Formal-room floor roll |
 | `textures/brick-old` | Bricks097 | Underscript wall roll |
 | `textures/granite` | Granite002A | Formal-room floor roll |
+
+### Models — Poly Haven batch 7 (CC0)
+
+| Folder | Source asset | Used for |
+| --- | --- | --- |
+| `models/dutch_ship_medium` | Dutch Ship Medium | `shipModel` mantel/desk curio |
+| `models/ship_pinnace` | Ship Pinnace | `shipModel` variant |
+| `models/dutch_ship_large_01` | Dutch Ship Large 01 | `shipModel` variant |
+| `models/cannon_01` | Cannon 01 | `cannon` gallery/underscript display |
+| `models/covered_car` | Covered Car | `coveredCar` maintenance/underscript |
+| `models/overhead_crane` | Overhead Crane | `overheadCrane` large underscript halls |
+| `models/modular_fire_escape` | Modular Fire Escape | `fireEscape` large underscript halls |
+| `models/modular_electricity_poles` | Modular Electricity Poles | `powerPole` large underscript halls |
+| `models/modular_factory_facade` | Modular Factory Facade | `factoryFacade` large underscript halls |
+| `models/service_pistol` | Service Pistol | `pistol` surface ordnance |
+| `models/stick_grenade` | Stick Grenade | `stickGrenade` ordnance |
+| `models/lifebuoy` | Lifebuoy | `lifebuoy` wall mount |
+| `models/fishermans_hat` | Fisherman's Hat | `fishHat` clutter |
+| `models/carrot_cake` | Carrot Cake | `cakeSlice` food |
+| `models/strawberry_chocolate_cake` | Strawberry Chocolate Cake | `cakeSlice` variant |
+| `models/hamburger_buns` | Hamburger Buns | `cakeSlice` variant |
+| `models/bananas` | Bananas | `fruit` food |
+| `models/food_avocado_01` | Food Avocado 01 | `fruit` variant |
+| `models/food_ginger_01` | Food Ginger 01 | `fruit` variant |
+| `models/food_kiwi_01` | Food Kiwi 01 | `fruit` variant |
+| `models/food_lime_01` | Food Lime 01 | `fruit` variant |
+| `models/food_lychee_01` | Food Lychee 01 | `fruit` variant |
+| `models/food_pomegranate_01` | Food Pomegranate 01 | `fruit` variant |
+| `models/boulder_01` | Boulder 01 | `boulder` underscript ground |
+| `models/moon_rock_03` | Moon Rock 03 | `boulder` variant |
+| `models/moon_rock_05` | Moon Rock 05 | `boulder` variant |
+| `models/namaqualand_boulder_04` | Namaqualand Boulder 04 | `boulder` variant |
+| `models/bark_debris_01` | Bark Debris 01 | `barkDebris` ground litter |
+| `models/concrete_road_barrier` | Concrete Road Barrier | `roadBarrier` variant |
+| `models/rollershutter_window_03` | Roller Shutter Window 03 | `rollerShutter` variant |
+| `models/football` | Football (soccer ball) | `sportsBall` variant |
+| `models/wooden_table_02` | Wooden Table 02 | `table` variant |
+| `models/tree_stump_01` | Tree Stump 01 | `treeStump` variant |

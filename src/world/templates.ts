@@ -96,7 +96,7 @@ function defaultLights(w: number, d: number, h: number): LightSpec[] {
 // Wall-hung kinds sit flush on the surface and mount at eye height.
 const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
   painting: 1.6, wallSconce: 2.05, mirror: 1.55, wallClock: 2.25, sign: 2.1, curtain: 1.25,
-  ductCirc: 2.3, ductRect: 2.35, gutter: 2.4, indPipes: 1.8, cableTray: 2.3,
+  ductCirc: 2.3, ductRect: 2.35, gutter: 2.4, indPipes: 1.8, cableTray: 2.3, lifebuoy: 1.7,
 };
 const WALL_THIN: ReadonlySet<PropKind> = new Set(Object.keys(WALL_MOUNT_Y) as PropKind[]);
 
@@ -151,6 +151,7 @@ const corridorWide: RoomTemplate = {
       { kind: 'sofa', x: -2.2, z: 2.5, yaw: Math.PI / 2 },
       { kind: 'table', x: 2.2, z: 2.5 },
       { kind: 'vase', x: 2.2, z: 2.5, y: 0.8 },
+      { kind: 'shipModel', x: 1.55, z: 2.5, y: 0.8 },
       { kind: 'bookshelf', x: -2.6, z: -3.2, yaw: Math.PI / 2 },
       { kind: 'bench', x: -2.3, z: -1.4, yaw: Math.PI / 2 },
       { kind: 'planter', x: 2.6, z: -3.6 },
@@ -246,6 +247,8 @@ const guestRoom: RoomTemplate = {
       { kind: 'rug', x: 0, z: 0.4 },
       { kind: 'clock', x: -2.7, z: -2.4 },
       { kind: 'vase', x: -0.4, z: 1.5, y: 0.72 },
+      { kind: 'shipModel', x: 0.85, z: 1.5, y: 0.72 },
+      { kind: 'fruit', x: 0.3, z: 1.35, y: 0.72 },
       { kind: 'candle', x: 2.2, z: -1.4, y: 0.82 },
       { kind: 'bookshelf', x: 0.6, z: 2.55, yaw: Math.PI },
       { kind: 'suitcase', x: -2.9, z: 0.2, yaw: 0.4 },
@@ -450,6 +453,8 @@ const recordsVault: RoomTemplate = {
       { kind: 'catalogueDesk', x: 0, z: 0 },
       { kind: 'books', x: 0.35, z: -0.3, y: 0.92 },
       { kind: 'papers', x: -0.3, z: 0.35, y: 0.9 },
+      { kind: 'shipModel', x: -0.95, z: 0.35, y: 0.9 },
+      { kind: 'fishHat', x: 0.55, z: 0.35, y: 0.9 },
       { kind: 'chest', x: -2.2, z: 0.4, yaw: 0.5 },
       { kind: 'magnifier', x: 0.15, z: 0.3, y: 0.92 },
       ...wallProps(6, 6, rng, ['wallSconce', 'wallClock'], 4),
@@ -618,6 +623,7 @@ const galleryPortraits: RoomTemplate = {
       { kind: 'pillar', x: -1.4, z: -0.4, meta: { height: 3.6 } },
       { kind: 'pillar', x: 1.4, z: 0.8, meta: { height: 3.6 } },
       { kind: 'statue', x: 0, z: -3.6 },
+      { kind: 'cannon', x: -2.6, z: -3.6, yaw: 0.5 },
       { kind: 'bust', x: -1.4, z: -0.4, y: 1.6 },
       { kind: 'bust', x: 1.4, z: 0.8, y: 1.6 },
       { kind: 'chandelier', x: 0, z: 0, y: 3.2 },
@@ -1389,6 +1395,7 @@ const roomVaulted: RoomTemplate = {
       { kind: 'painting', x: -4.8, z: 0, y: 2.4, yaw: Math.PI / 2 },
       { kind: 'painting', x: 4.8, z: 0, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'statue', x: -4.3, z: -4.3 },
+      { kind: 'cannon', x: 0, z: -4.3, yaw: 0.3 },
       { kind: 'statue', x: 4.3, z: 4.3, yaw: Math.PI },
       { kind: 'marbleBust', x: -3, z: -2.55, y: 1.35 },
       { kind: 'marbleBust', x: 3, z: 2.55, y: 1.35 },
