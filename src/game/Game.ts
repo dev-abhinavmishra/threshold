@@ -1620,10 +1620,10 @@ export class Game {
 
   /** Revisit scare: a door you left open drifts shut — while you might watch. */
   private maybeShiftDoor(idx: number): void {
-    if (this.space !== 'main') return;
     const room = this.activeRooms()[idx];
     if (!room || room.spec?.special) return;
-    const rng = this.streams.roomStream('shift', idx);
+    const under = this.space === 'under';
+    const rng = this.streams.roomStream('shift', idx + (under ? 977 : 0));
     if (!rng.bool(0.4)) return;
     const candidates = room.doors.filter((d) => !d.locked && !d.falseDoor && d.openT > 0.5);
     if (!candidates.length) return;
@@ -1631,8 +1631,9 @@ export class Game {
     d.opening = false;
     const dist = v3dist(d.pos, this.player.pos);
     if (dist > 4 && dist < 22) {
-      this.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 0.5, category: 'door', caption: '[a door drifts shut]' });
-      this.cue('door-creak', d.pos, '[a door drifts shut]', 'info');
+      const cap = under ? '[metal groans somewhere — a bulkhead settles]' : '[a door drifts shut]';
+      this.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 0.5, category: 'door', caption: cap });
+      this.cue(under ? 'sweep-return' : 'door-creak', d.pos, cap, 'info');
     }
   }
 
@@ -2077,6 +2078,12 @@ export class Game {
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
       this.maybeSpawnRat();
+      if (this.currentRoom !== prev) {
+        const revisit = this.visitedRooms.has(-this.currentRoom - 1);
+        this.visitedRooms.add(-this.currentRoom - 1);
+        if (revisit) this.maybeShiftDoor(this.currentRoom);
+        this.maybeFarSound();
+      }
     }
     // Room-tone bed — idempotent; follows space + biome changes each frame.
     const toneRoom = this.activeRooms()[this.currentRoom];
