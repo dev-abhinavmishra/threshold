@@ -317,7 +317,12 @@ const u_lobby: RoomTemplate = {
       { kind: 'fluoroTube', x: 0, z: 0, y: 3.1 },
       { kind: 'exitSign', x: 0, z: 3.4, y: 2.6 },
     ],
-    sockets: [{ kind: 'loot', x: 0, z: 2.2, meta: {} }, { kind: 'loot', x: -3.6, z: 2.6, meta: {} }],
+    sockets: [
+      { kind: 'loot', x: 0, z: 2.2, meta: {} },
+      { kind: 'loot', x: -3.6, z: 2.6, meta: {} },
+      { kind: 'itemPedestal', x: -0.5, z: 2.2, y: 1.15, meta: { broker: 'slot0' } },
+      { kind: 'itemPedestal', x: 0.5, z: 2.2, y: 1.15, meta: { broker: 'slot1' } },
+    ],
     hiding: [{ kind: 'cabinet', x: 3.8, z: 2.6, yaw: -Math.PI / 2, propKind: 'locker' }],
     weight: 5,
   }),

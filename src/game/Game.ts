@@ -36,7 +36,7 @@ import {
 import { Editor, Grafter } from '../entities/setpieces';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY } from '../game/config';
 import type {
-  Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document,
+  Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
 import { useGameStore, loadSettings, saveSettings, loadMeta, saveMeta, saveCheckpoint, loadCheckpoint, clearCheckpoint, type CheckpointSave } from './store';
 import { DOCUMENTS } from './documents';
@@ -434,6 +434,34 @@ export class Game {
           break;
       }
     }
+    for (const r of this.route!.underRooms) {
+      if (r.templateId === 'u-lobby') this.populateBroker(r);
+    }
+  }
+
+  /** The Broker trades for marginalia — the subfloor's own economy. */
+  private populateBroker(room: RoomInstance): void {
+    const rng = this.streams.roomStream('loot', room.index + 733);
+    const stock: { id: ItemId; price: number }[] = [
+      { id: 'tonic', price: rng.int(14, 22) },
+      { id: 'bandage', price: rng.int(10, 16) },
+      { id: 'feltWrap', price: rng.int(18, 28) },
+      { id: 'latchpick', price: rng.int(24, 34) },
+      { id: 'windAlarm', price: rng.int(28, 40) },
+    ];
+    // seeded pick of 2
+    const first = rng.int(0, stock.length - 1);
+    let second = rng.int(0, stock.length - 2);
+    if (second >= first) second++;
+    const picks = [stock[first], stock[second]];
+    let slot = 0;
+    for (const sock of room.sockets) {
+      if (sock.meta.broker !== undefined && slot < picks.length) {
+        sock.meta.brokerItem = picks[slot].id;
+        sock.meta.brokerPrice = picks[slot].price;
+        slot++;
+      }
+    }
   }
 
   private populateShop(room: RoomInstance): void {
@@ -656,6 +684,23 @@ export class Game {
     if (ms?.onInteract(it)) return;
 
     switch (it.kind) {
+      case 'shop': {
+        const sock = it.data as Socket;
+        if (sock.meta.broker === undefined) return;
+        if (sock.meta.sold) return;
+        const item = sock.meta.brokerItem as ItemId;
+        const price = (sock.meta.brokerPrice as number) ?? 20;
+        if (this.marginalia >= price) {
+          this.marginalia -= price;
+          sock.meta.sold = true;
+          it.enabled = false;
+          this.giveItem(item, 1);
+          this.cue('purchase', it.pos, `[traded — ${price} marginalia]`, 'info');
+        } else {
+          this.cue('door-locked', it.pos, `[${price} marginalia required]`, 'warn');
+        }
+        return;
+      }
       case 'exitHide': {
         if (this.player.hiddenSpot?.trappedBy === 'hollow') {
           // struggle minigame
@@ -1442,6 +1487,7 @@ export class Game {
       const built = this.streamer.get(i);
       if (!built) continue;
       this.ensureChalkMarks(i, built);
+      this.ensureBroker(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
       for (const l of built.lights) {
@@ -1583,7 +1629,22 @@ export class Game {
     // Entity figure idle animation — breathing sway + eye pulse.
     const t = this.clock.time;
     this.entityGroup.traverse((o) => {
-      if (o.userData.figureParts) tickFigure(o, t);
+      if (o.userData.figureParts) {
+        tickFigure(o, t);
+        // Broker figures track the player with their head.
+        if (o.userData.broker) {
+          const head = (o.userData.figureParts as Record<string, THREE.Object3D>).head;
+          if (head) {
+            const dx = this.player.pos.x - o.position.x;
+            const dz = this.player.pos.z - o.position.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist > 0.01 && dist < 16) {
+              const rel = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.rotation.y), Math.cos(Math.atan2(dx, dz) - o.rotation.y));
+              head.rotation.y += (Math.max(-1.1, Math.min(1.1, rel)) - head.rotation.y) * Math.min(1, dt * 4);
+            }
+          }
+        }
+      }
     });
   }
 
@@ -1639,6 +1700,32 @@ export class Game {
   private readonly visitedRooms = new Set<number>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
+
+  /** The Broker: one robed figure per u-lobby, behind the counter, head that
+   *  follows you. Spawned lazily when the room first builds. */
+  private readonly brokerFigs = new Map<number, THREE.Object3D>();
+
+  private ensureBroker(roomIndex: number): void {
+    if (this.space !== 'under' || this.brokerFigs.has(roomIndex)) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room || room.templateId !== 'u-lobby') return;
+    const fig = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'mask', eyes: 'white', hood: true });
+    const yaw = room.yaw;
+    const cos = Math.cos(yaw), sin = Math.sin(yaw);
+    const lx = 0, lz = 3.0; // behind the counter at local z 2.2
+    const wx = room.origin.x + lx * cos + lz * sin;
+    const wz = room.origin.z - lx * sin + lz * cos;
+    fig.position.set(wx, room.origin.y, wz);
+    fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
+    fig.userData.broker = true;
+    this.entityGroup.add(fig);
+    this.brokerFigs.set(roomIndex, fig);
+    // first sighting — the building has staff down here too
+    const greet = this.streams.roomStream('scare', roomIndex + 881);
+    if (greet.bool(0.75)) {
+      this.cue('custodian-bell', fig.position as unknown as Vec3, '[something stands behind the counter]', 'info');
+    }
+  }
 
   /** Revisit scare: a door you left open drifts shut — while you might watch. */
   private maybeShiftDoor(idx: number): void {
