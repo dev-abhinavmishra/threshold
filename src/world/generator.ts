@@ -490,6 +490,18 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           if (s.kind === 'drawer' && lootRng.bool(0.25)) s.meta.drawerLocked = true;
         }
       }
+      // Under vending — rarer, hungrier.
+      const vendItemsU = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.12)) continue;
+        const lx = room.spec.width / 2 - 1.1;
+        const lz = lootRng.range(-room.spec.depth / 3, room.spec.depth / 3);
+        const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
+        room.sockets.push({
+          kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
+          meta: { vend: true, price: lootRng.int(5, 11), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
+        });
+      }
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
       const returnRoom = mainRooms[Math.min(underReturn, mainRooms.length - 1)];
@@ -734,6 +746,22 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
   const resHost = rooms[Math.min(45, rooms.length - 10)];
   const resSock = { kind: 'key' as const, pos: v3(resHost.origin.x, 0.8, resHost.origin.z), yaw: 0, filled: true, meta: { contains: 'resonanceKey', pedestal: true } };
   resHost.sockets.push(resSock);
+
+  // Vending machines — maintenance and records rooms sometimes carry one.
+  // Filled but never lootable for free: `meta.vend` routes it to the
+  // imprint-feed interaction. The vendItem is seeded so runs differ.
+  const vendItems = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+  for (const room of rooms) {
+    if (room.authored || !room.spec || (room.biome !== 'maintenance' && room.biome !== 'records')) continue;
+    if (!lootRng.bool(0.22)) continue;
+    const lx = room.spec.width / 2 - 1.1;
+    const lz = lootRng.range(-room.spec.depth / 3, room.spec.depth / 3);
+    const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
+    room.sockets.push({
+      kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
+      meta: { vend: true, price: lootRng.int(4, 9), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
+    });
+  }
 
   void branches;
   return keyPairs;

@@ -97,6 +97,7 @@ const CUES: Record<string, CueSpec> = {
   'phone-ring': { freq: 900, dur: 0.3, type: 'square', gain: 0.06, sweep: 1200 },
   'phone-stop': { freq: 150, dur: 0.15, type: 'sine', gain: 0.05, sweep: 0 },
   'pebble': { freq: 700, dur: 0.08, type: 'triangle', gain: 0.05, sweep: 300, noise: true },
+  'machine': { freq: 110, dur: 0.5, type: 'triangle', gain: 0.12, sweep: 160, noise: true },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },

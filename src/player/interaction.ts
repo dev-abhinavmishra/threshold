@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'drawer' | 'socket' | 'hide' | 'exitHide'
+  | 'door' | 'peek' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant';
@@ -114,12 +114,16 @@ export class InteractionSystem {
         if (clampId) { kind = 'seal'; prompt = `Release seal clamp ${clampId.toUpperCase()}`; }
         if (underD) { kind = 'underEntrance'; prompt = 'Open Underscript passage'; }
         if (sock.meta.arrivalRegister) { kind = 'item'; prompt = 'Sign the register'; }
+        if (sock.meta.vend !== undefined) {
+          kind = 'vend';
+          prompt = `Feed the machine — ${sock.meta.price as number} imprints`;
+        }
         if (sock.kind === 'clue' && !sock.meta.catalogue) { kind = 'card'; prompt = 'Take catalog card'; }
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
           data: sock, enabled: !sock.meta.taken, priority: kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pylon' || kind === 'seal' ? 1.2 : 0,
+          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' ? 1.2 : 0,
         });
       }
     }

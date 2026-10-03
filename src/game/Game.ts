@@ -837,6 +837,21 @@ export class Game {
         this.resolveSocketLoot(it);
         return;
       }
+      case 'vend': {
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the machine wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.cue('machine', it.pos, '[the machine coughs something up]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.6, category: 'machine', caption: '' });
+        this.giveItem(sock.meta.vendItem as ItemId, 1);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {

@@ -225,6 +225,22 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('vending machines carry a price and a stocked item', () => {
+    let anyVend = false;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...mainRooms(route), ...route.underRooms]) {
+        for (const s of r.sockets.filter((x) => x.meta.vend)) {
+          expect(s.meta.price as number).toBeGreaterThan(0);
+          expect(s.meta.vendItem).toBeTruthy();
+          if (r.biome === 'underscript') expect(r.index % 20).not.toBe(0);
+          anyVend = true;
+        }
+      }
+    }
+    expect(anyVend).toBe(true);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');
@@ -239,7 +255,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
