@@ -799,7 +799,7 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -809,9 +809,10 @@ export class Game {
           const isPrint = p.kind === 'printer' || p.kind === 'printerRow';
           const isType = p.kind === 'typewriter';
           const isWin = p.kind === 'window';
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin) ord[p.kind] = n + 1;
+          const isCool = p.kind === 'waterCooler';
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -893,6 +894,12 @@ export class Game {
               kind: 'window', id: `win-${key}`,
               pos: { x: wx, y: 1.5, z: wz },
               prompt: 'Look out', holdTime: 0.8, enabled: true, priority: 2,
+            });
+          } else if (isCool && !this.drunkCoolers.has(key)) {
+            this.interaction.add({
+              kind: 'cooler', id: `cool-${key}`,
+              pos: { x: wx, y: 0.9, z: wz },
+              prompt: 'Drink', holdTime: 0.9, enabled: true, priority: 2,
             });
           }
         }
@@ -1192,6 +1199,20 @@ export class Game {
           const msg = lockIdx >= 0 ? `[the page reads: the next lock waits ${lockIdx - this.currentRoom} doors on]`
             : '[the page reads: no locks ahead — the house lets you walk]';
           window.setTimeout(() => this.cue('pickup', at, msg), 1400);
+        }
+        return;
+      }
+      case 'cooler': {
+        it.enabled = false;
+        this.drunkCoolers.add(it.id.replace(/^cool-/, ''));
+        const at = { x: it.pos.x, y: 1.0, z: it.pos.z };
+        const bad = this.streams.roomStream('scare', this.currentRoom * 691 + Number(it.id.split(':')[2] ?? 0)).bool(0.3);
+        if (bad) {
+          this.audio.play('inkling-hiss', at, '[the water is wrong — tepid, thick]', 'warn');
+          this.player.panic = Math.min(1, this.player.panic + 0.12);
+        } else {
+          this.player.health = Math.min(100, this.player.health + 6);
+          this.cue('pickup', at, '[cold, real water — a small mercy]');
         }
         return;
       }
@@ -2656,6 +2677,7 @@ export class Game {
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
   private lookedWindows = new Set<string>();
+  private drunkCoolers = new Set<string>();
   private finishedWashers = new Set<string>();
   private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];

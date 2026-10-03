@@ -45,6 +45,7 @@ ported to the subfloor.
 | The keyhole answers | +677 (0.24/door) | peeks through locked doors | the far side is occupied: an eye at the hole, a close whisper, a panic tick — once per door | peeking is information with a price; the house watches back |
 | Struck key | — (interaction) | typewriters, once each | four spaced clacks over ~1.4s, each a 0.55 distraction emit on the desk | a mechanical lure — write a word, be somewhere else |
 | Looked out | +683 | windows, once each | the outside is fog, or the corridor you crossed (empty), or someone looking up — a panic tick on the last | the window is free to check; it is not free to be seen checking |
+| Cold water | +691 (0.3 wrong) | water coolers, once each | a real drink heals 6 — or the tap runs tepid and thick (panic +0.12) | thirst is a gamble the plumbing settles |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
