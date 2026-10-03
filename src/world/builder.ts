@@ -1391,7 +1391,48 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
 
   // Props
+  // High-count clutter kinds draw once as an InstancedMesh instead of N
+  // separate prop groups — the template's meshes bake into one geometry.
+  const INSTANCEABLE = new Set(['paperScatter', 'papers', 'books', 'carton', 'goblets', 'foodCans', 'bottle', 'weedCluster', 'deadBranch', 'rubblePile', 'wineBottles', 'cleanerBottle', 'bleachBottle', 'candle', 'vase']);
+  const instanced = new Map<import('./spec').PropKind, { spec: import('./spec').PropSpec; mtx: THREE.Matrix4 }[]>();
+  const passthrough: import('./spec').PropSpec[] = [];
   for (const p of spec.props) {
+    if (INSTANCEABLE.has(p.kind)) (instanced.get(p.kind) ?? instanced.set(p.kind, []).get(p.kind)!).push({ spec: p, mtx: new THREE.Matrix4() });
+    else passthrough.push(p);
+  }
+  for (const [kind, list] of instanced) {
+    if (list.length < 3) { for (const e of list) passthrough.push(e.spec); continue; }
+    try {
+      const template = buildProp({ kind, x: 0, z: 0 }, rng.fork(kind.length * 131));
+      const geos: THREE.BufferGeometry[] = [];
+      let mat: THREE.Material | null = null;
+      template.group.updateMatrixWorld(true);
+      template.group.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || Array.isArray(m.material)) return;
+        if (!mat) mat = m.material as THREE.Material;
+        geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
+      });
+      if (!geos.length || !mat) { for (const e of list) passthrough.push(e.spec); continue; }
+      const geo = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+      if (!geo) { for (const e of list) passthrough.push(e.spec); continue; }
+      const im = new THREE.InstancedMesh(geo, mat, list.length);
+      im.castShadow = false; im.receiveShadow = true;
+      list.forEach((e, i) => {
+        const s = e.spec.scale ?? 1;
+        e.mtx.compose(
+          new THREE.Vector3(e.spec.x, e.spec.y ?? 0, e.spec.z),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(0, e.spec.yaw ?? 0, 0)),
+          new THREE.Vector3(s, s, s));
+        im.setMatrixAt(i, e.mtx);
+      });
+      im.instanceMatrix.needsUpdate = true;
+      group.add(im);
+      template.group.removeFromParent();
+    } catch { for (const e of list) passthrough.push(e.spec); }
+  }
+
+  for (const p of passthrough) {
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       group.add(built.group);
