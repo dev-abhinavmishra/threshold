@@ -18,6 +18,7 @@ import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
+import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
 import { preloadFigures, riggedFigure, type RiggedFigure } from '../entities/rigged';
@@ -2012,6 +2013,7 @@ export class Game {
       this.ensureTV(i, built);
       this.ensureTrap(i, built);
       this.ensureWasher(i, built);
+      this.ensureLuggage(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2537,6 +2539,65 @@ export class Game {
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
   private activeWashKeys = new Set<string>();
   private trapJawMat: THREE.MeshStandardMaterial | null = null;
+
+  /* — the luggage arrives: a suitcase that was not there — */
+  private luggageArmed = new Map<number, { lx: number; lz: number; wx: number; wz: number; since: number }>();
+  private luggageSpawned = new Set<number>();
+  private luggageNoticed = new Set<number>();
+
+  private maybeLuggage(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room?.spec || room.spec.special || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    if (this.luggageArmed.has(room.index) || this.luggageSpawned.has(room.index)) return;
+    const rs = this.streams.roomStream('scare', room.index + 563);
+    if (!rs.bool(0.16)) { this.luggageArmed.delete(room.index); return; }
+    const lx = rs.range(-room.width / 2 + 1.4, room.width / 2 - 1.4);
+    const lz = rs.range(-room.depth / 2 + 1.4, room.depth / 2 - 1.4);
+    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    this.luggageArmed.set(room.index, {
+      lx, lz,
+      wx: room.origin.x + lx * cs + lz * sn,
+      wz: room.origin.z - lx * sn + lz * cs,
+      since: this.clock.time,
+    });
+  }
+
+  /** It only ever arrives while the spot is unobserved — first it is empty,
+   *  then it isn't; it must have been carried in while you looked elsewhere. */
+  private ensureLuggage(i: number, built: { group: THREE.Group }): void {
+    const a = this.luggageArmed.get(i);
+    if (!a) return;
+    const has = built.group.children.some((c) => c.name === `lug-${i}`);
+    if (has) return;
+    if (!this.luggageSpawned.has(i)) {
+      if (this.clock.time - a.since < 6) return;
+      const dx = a.wx - this.player.pos.x, dz = a.wz - this.player.pos.z;
+      const dist = Math.hypot(dx, dz);
+      this.camera.getWorldDirection(this.tmpV3);
+      const dot = dist > 0.001 ? (this.tmpV3.x * dx + this.tmpV3.z * dz) / dist : 1;
+      if (dist < 5.5 && dot > 0.15) return; // watched — it waits for you to look away
+      this.luggageSpawned.add(i);
+      if (dist < 9) {
+        const at = { x: a.wx, y: 0.4, z: a.wz };
+        this.audio.play('luggage-thud', at, '[a weight settles somewhere]', 'warn');
+        this.sound.emit({ x: a.wx, y: 0.3, z: a.wz, intensity: 0.4, category: 'ambient', caption: '' });
+      }
+    }
+    const p = buildProp({ kind: 'suitcase', x: a.lx, z: a.lz, yaw: (a.lx * 7 + a.lz * 3) % 3.14 }, this.streams.roomStream('dressing', i * 7919));
+    p.group.name = `lug-${i}`;
+    built.group.add(p.group);
+  }
+
+  private tickLuggage(): void {
+    const i = this.currentRoom;
+    const a = this.luggageArmed.get(i);
+    if (!a || !this.luggageSpawned.has(i) || this.luggageNoticed.has(i)) return;
+    const dx = a.wx - this.player.pos.x, dz = a.wz - this.player.pos.z;
+    if (Math.hypot(dx, dz) < 2.4) {
+      this.luggageNoticed.add(i);
+      this.audio.play('whisper', { x: a.wx, y: 0.5, z: a.wz }, '[someone packed this — it was not here]', 'warn');
+    }
+  }
 
   /** Re-apply trap tell (raised jaw wire) for armed traps in a (re)streamed room. */
   private ensureTrap(i: number, built: { group: THREE.Group }): void {
@@ -3293,9 +3354,11 @@ export class Game {
       this.maybeDeepReveal();
       this.maybeWallWord();
       this.maybeOccupant();
+      this.maybeLuggage();
     }
     this.tickEchoQueue();
     this.tickOccupant();
+    this.tickLuggage();
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
       this.maybeSpawnRat();
