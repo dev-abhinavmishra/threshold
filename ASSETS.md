@@ -630,9 +630,9 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 | --- | --- | --- | --- |
 | `quaternius_orc.glb` | Orc Enemy | `Q3z8ZX4kUy` | Reprise corridor runner |
 | `quaternius_monkroose.glb` | Monkroose | `j4rVPvxyLg` | Returner corridor runner |
-| `quaternius_ninja.glb` | Ninja | `mCNoqcqpvC` | (staged for upcoming entities) |
-| `quaternius_tribal.glb` | Tribal | `t91lDHaqRW` | (staged for upcoming entities) |
-| `quaternius_dragon.glb` | Dragon Evolved | `LlwD0QNUPj` | (staged for upcoming entities) |
+| `quaternius_ninja.glb` | Ninja | `mCNoqcqpvC` | Lurker stalker body |
+| `quaternius_tribal.glb` | Tribal | `t91lDHaqRW` | doorway Crosser figure |
+| `quaternius_dragon.glb` | Dragon Evolved | `LlwD0QNUPj` | Behemoth corridor blockade |
 
 ### Mill — batch 4
 

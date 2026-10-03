@@ -2001,7 +2001,7 @@ export class Game {
     };
   }
 
-  private crossers: { mesh: THREE.Object3D; from: Vec3; to: Vec3; t: number; dur: number }[] = [];
+  private crossers: { mesh: THREE.Object3D; rig: RiggedFigure | null; from: Vec3; to: Vec3; t: number; dur: number }[] = [];
 
   /** Doorway crosser: a figure passes the far door once — there and gone. */
   private maybeCrosser(): void {
@@ -2012,7 +2012,9 @@ export class Game {
     if (!scare.bool(0.16)) return;
     const fwd = room.doors.find((d) => d.isMainRoute && !d.falseDoor);
     if (!fwd) return;
-    const fig = tallFigure({ height: 2.2, body: MAT.shadowFigure(), hood: true });
+    const rig = riggedFigure('tribal');
+    const fig = rig ? rig.group : tallFigure({ height: 2.2, body: MAT.shadowFigure(), hood: true });
+    rig?.play('move', 0);
     const c = Math.cos(fwd.yaw), s = Math.sin(fwd.yaw);
     const dir = v3(c, 0, -s); // along the door's wall
     const side = scare.bool() ? 1 : -1;
@@ -2022,7 +2024,7 @@ export class Game {
     fig.position.copy(from as unknown as THREE.Vector3);
     fig.rotation.y = Math.atan2(dir.x * side, dir.z * side);
     this.entityGroup.add(fig);
-    this.crossers.push({ mesh: fig, from, to, t: 0, dur: 0.9 + scare.float() * 0.5 });
+    this.crossers.push({ mesh: fig, rig, from, to, t: 0, dur: 0.9 + scare.float() * 0.5 });
     this.cue('figure-pass', fwd.pos, scare.bool(0.5) ? '[something crosses the far door]' : '', 'info');
   }
 
@@ -3082,6 +3084,7 @@ export class Game {
     // Doorway crossers — silent slide across the frame, then gone for good.
     for (const cr of this.crossers) {
       cr.t += dt;
+      cr.rig?.update(dt);
       const u = Math.min(1, cr.t / cr.dur);
       cr.mesh.position.set(
         cr.from.x + (cr.to.x - cr.from.x) * u,

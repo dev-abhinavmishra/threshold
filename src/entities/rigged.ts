@@ -93,6 +93,11 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,
     clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'punch', 'jump'] },
   },
+  /** Masked hunter — the figure that crosses a far doorway, seen mid-stride. */
+  tribal: {
+    file: 'quaternius_tribal.glb', height: 2.2, tint: 0.38, emissive: 0.04,
+    clips: { idle: ['idle'], move: ['run', 'walk', 'sprint'], attack: ['punch', 'bite_front'] },
+  },
 };
 
 interface RigSource { scene: THREE.Group; animations: THREE.AnimationClip[] }

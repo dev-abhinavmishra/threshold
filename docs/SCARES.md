@@ -33,7 +33,7 @@ ported to the subfloor.
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
-| Crosser | +733 | timed | something crosses a far doorway, once | none |
+| Crosser | +733 | timed | a masked figure strides across a far doorway, once, mid-stride animation | none |
 | Unseen steps | +131 (0.16) | timed | five weighted paces crossing a room | none |
 
 ## Door states (world, not beats)
