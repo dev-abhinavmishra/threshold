@@ -766,7 +766,17 @@ export class Game {
         const cluster = this.doorsAt(it.pos);
         if (cluster.some((d) => d.locked)) {
           const lockId = cluster.find((d) => d.locked)?.lockId ?? '';
-          if (this.consumeKeyFor(lockId)) {
+          if (lockId === 'toll') {
+            // The toll door — imprints, not keys, open it.
+            if (this.imprints >= 3) {
+              this.imprints -= 3;
+              for (const d of cluster) d.locked = false;
+              this.cue('door-unlock', it.pos, '[the door takes its toll — 3 imprints]');
+            } else {
+              this.cue('door-locked', it.pos, `[it asks a toll — ${3 - this.imprints} imprints short]`, 'warn');
+              return;
+            }
+          } else if (this.consumeKeyFor(lockId)) {
             for (const d of cluster) d.locked = false;
             this.cue('door-unlock', it.pos, `[unlocked — Door ${door.label}]`);
           } else {

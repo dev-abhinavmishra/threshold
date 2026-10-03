@@ -214,6 +214,17 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('toll doors appear only on optional branch closets — never the main route', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });
+      const tolls = mainRooms(route).flatMap((r) => r.doors.filter((d) => d.lockId === 'toll'));
+      for (const d of tolls) {
+        expect(d.isMainRoute).toBe(false);
+        expect(d.locked).toBe(true);
+      }
+    }
+  });
+
   it('custodian shop sockets exist on the milestone room', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const cust = mainRooms(route).find((r) => r.templateId === 'ms-custodian');

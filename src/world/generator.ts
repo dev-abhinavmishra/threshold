@@ -426,9 +426,13 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         placed.push(bp);
         const broom = instantiate(-1000 - i * 10 - e, `B${entry.label}`, bp, false);
         broom.branchOf = i;
+        // Toll doors: some branch closets hold out for imprints — never on
+        // the main route, so they can never block forward progress.
+        const toll = streams.roomStream('loot', i * 61 + e).bool(0.35);
         room.doors.push({
           id: `door-${i}-b${e}`, roomIndex: i, isMainRoute: false,
-          pos: bw.pos, yaw: Math.atan2(bw.dir.x, bw.dir.z), locked: false,
+          pos: bw.pos, yaw: Math.atan2(bw.dir.x, bw.dir.z),
+          locked: toll, lockId: toll ? 'toll' : undefined,
           label: '—', openT: 0, opening: false,
         });
         rooms.push(broom); // appended out of order; streamer indexes by .index — keep sorted later
