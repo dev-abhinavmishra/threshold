@@ -2310,6 +2310,9 @@ export class Game {
   private litTVs = new Set<string>();
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
+  private motesGeo: THREE.BufferGeometry | null = null;
+  private motesMat: THREE.PointsMaterial | null = null;
+  private motesData: { d: number; a: number; r: number; spin: number; fall: number }[] = [];
   private lampFade = 1;
 
   /** World position of the Wake's coffin prop, or null outside that room. */
@@ -3496,17 +3499,55 @@ export class Game {
           cone.position.y = -len / 2; // apex at the pivot
           cone.frustumCulled = false;
           const pivot = new THREE.Group();
-          pivot.rotation.x = -Math.PI / 2; // -Y (cone axis) → camera forward
+          pivot.rotation.x = Math.PI / 2; // -Y (cone axis) → -Z (camera forward)
           pivot.add(cone);
           this.beamGroup.add(pivot);
           this.beamMats.push({ mat, base: o });
         }
+        // Dust motes — a hundred points drifting inside the cone volume so
+        // the beam reads as air, not geometry. beamGroup local space is
+        // camera space: forward is -z.
+        const n = 110;
+        const pos = new Float32Array(n * 3);
+        this.motesData = [];
+        for (let i = 0; i < n; i++) {
+          const d = 0.4 + Math.random() * 4.4;
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * d * 0.17;
+          pos[i * 3] = Math.cos(a) * r;
+          pos[i * 3 + 1] = Math.sin(a) * r;
+          pos[i * 3 + 2] = -d;
+          this.motesData.push({ d, a, r, spin: (Math.random() - 0.5) * 0.7, fall: 0.06 + Math.random() * 0.14 });
+        }
+        this.motesGeo = new THREE.BufferGeometry();
+        this.motesGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        this.motesMat = new THREE.PointsMaterial({
+          color: 0xffe2b8, size: 0.035, sizeAttenuation: true, transparent: true,
+          opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+        });
+        const pts = new THREE.Points(this.motesGeo, this.motesMat);
+        pts.frustumCulled = false;
+        this.beamGroup.add(pts);
         this.scene.add(this.beamGroup);
       }
       this.beamGroup.visible = true;
       this.beamGroup.position.copy(this.heldTorch.position).addScaledVector(Game.torchFwd, 0.12);
       this.beamGroup.quaternion.copy(this.camera.quaternion);
       for (const { mat, base } of this.beamMats) mat.opacity = base * this.lampFade;
+      // motes orbit the beam axis slowly and fall toward the viewer
+      if (this.motesGeo && this.motesMat) {
+        const arr = this.motesGeo.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < this.motesData.length; i++) {
+          const m = this.motesData[i];
+          m.a += m.spin * dt;
+          m.d -= m.fall * dt;
+          if (m.d < 0.35) { m.d = 5.0; m.a = Math.random() * Math.PI * 2; }
+          const r = Math.min(m.r, m.d * 0.17);
+          arr.setXYZ(i, Math.cos(m.a) * r, Math.sin(m.a) * r, -m.d);
+        }
+        arr.needsUpdate = true;
+        this.motesMat.opacity = 0.4 * this.lampFade;
+      }
     } else if (this.heldTorch) {
       this.heldTorch.visible = false;
       if (this.beamGroup) this.beamGroup.visible = false;
