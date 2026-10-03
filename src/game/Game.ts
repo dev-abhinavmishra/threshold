@@ -1154,6 +1154,34 @@ export class Game {
     built.group.add(m);
   }
 
+  /** Seeded per-room light character — temperature tint + ragged brightness,
+   *  so rooms stop reading on one uniform warm palette. */
+  private readonly tinted = new Set<object>();
+  private ensureRoomTint(roomIndex: number, built: { group: THREE.Group; lights: THREE.PointLight[] }): void {
+    if (this.tinted.has(built)) return;
+    this.tinted.add(built);
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    const rng = this.streams.roomStream('dressing', roomIndex + 41);
+    const biome = this.space === 'under' ? 'underscript' : (room.biome ?? 'corridor');
+    const palette: Record<string, number[]> = {
+      guest: [0xffd8a8, 0xffc890, 0xffe0c0],
+      lobby: [0xffd8a8, 0xffe0c0, 0xf0e0d0],
+      milestone: [0xffe0c0, 0xffffff],
+      gallery: [0xffe0c0, 0xf0d8c0],
+      records: [0xf0d8b8, 0xe8d8c0],
+      maintenance: [0xd8e4ff, 0xd4e8d8, 0xe0e8f0],
+      corridor: [0xffd0a0, 0xe8dcd0, 0xd8e4e8],
+      underscript: [0xc8d4e8, 0xd0dce8],
+    };
+    const pal = palette[biome] ?? palette.corridor;
+    const tint = new THREE.Color(pal[rng.int(0, pal.length - 1)]);
+    for (const l of built.lights) {
+      l.color.lerp(tint, 0.35);
+      l.userData.baseIntensity = (l.userData.baseIntensity as number) * rng.range(0.88, 1.14);
+    }
+  }
+
   /** Attach chalk marks to built rooms' doors (re-applied as rooms stream). */
   private ensureChalkMarks(roomIndex: number, built: { group: THREE.Group }): void {
     if (this.chalkMarks.size === 0) return;
@@ -1583,6 +1611,7 @@ export class Game {
       if (!built) continue;
       this.ensureChalkMarks(i, built);
       this.ensureGateMark(i, built);
+      this.ensureRoomTint(i, built);
       this.ensureBroker(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
