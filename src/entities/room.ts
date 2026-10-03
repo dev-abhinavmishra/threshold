@@ -504,6 +504,167 @@ export class Hollow extends Entity {
   }
 }
 
+
+/* ============================ HUSK ============================ */
+/** A sleeper in the big rooms — dormant until the beam paints it or someone
+ * bumps it. Wakes to a short heavy charge, then settles back. The readable
+ * rule: sweep slowly, and never stop near it. */
+export class Husk extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private home = v3();
+  private lastSeen = v3();
+  private mode: 'dormant' | 'hunt' | 'return' = 'dormant';
+  private anger = 0;
+  private huntT = 0;
+  private giveUpT = 0;
+  private footT = 0;
+  private stirred = false;
+  /** 1 while the player's lamp/pulse is lit — computed by Game each frame. */
+  lightOnIt = 0;
+
+  constructor() { super('husk', ENTITY_TUNING.husk); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    const rng = new Rng(c.seed);
+    // doze against a wall, biased away from the entry the player just used
+    const side = rng.bool(0.5) ? 1 : -1;
+    const hx = rng.range(-room.width / 2 + 1.2, room.width / 2 - 1.2);
+    const hz = side * (room.depth / 2 - 1.1);
+    const c2 = Math.cos(room.yaw), s2 = Math.sin(room.yaw);
+    const wx = room.origin.x + hx * c2 + hz * s2;
+    const wz = room.origin.z - hx * s2 + hz * c2;
+    this.pos = v3(wx, 0, wz);
+    this.home = v3(wx, 0, wz);
+    const rig = riggedFigure('yeti');
+    const g = new THREE.Group();
+    if (rig) {
+      this.rig = rig;
+      rig.play('idle', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.55, 1.4, 4, 8), MAT.ink());
+      body.position.y = 1.0;
+      g.add(body);
+    }
+    g.position.copy(this.pos);
+    g.rotation.y = Math.atan2(room.origin.x - wx, room.origin.z - wz);
+    g.rotation.x = 0.22; // slumped forward
+    this.mesh = g;
+    c.addEntityMesh(g);
+    this.state = 'engage';
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+    const d = v3dist(this.pos, p.pos);
+    const roomIdx = this.roomOf(p.pos);
+    void roomIdx;
+
+    if (this.mode === 'dormant') {
+      // beam sweeps over it — the player must hold the beam on it to wake it
+      if (this.lightOnIt > 0.4 && d < this.tuning.seeRange) {
+        const dir = v3();
+        p.lookDir(dir);
+        const toE = v3(this.pos.x - p.pos.x, 0, this.pos.z - p.pos.z);
+        const dn = Math.hypot(toE.x, toE.z) || 1;
+        if ((dir.x * toE.x + dir.z * toE.z) / dn > 0.86) this.anger += dt * 0.85;
+      }
+      // proximity and sprint noise also stir it
+      if (d < 3.4) this.anger += dt * 2.2;
+      if (p.lastMoveSpeed > 6 && d < 7) this.anger += dt * 1.1;
+      this.anger = Math.max(0, this.anger - dt * 0.12);
+      if (this.anger > 0.5 && !this.stirred) {
+        this.stirred = true;
+        c.cue('husk-stir', this.pos, '[the figure in the corner shifts]', { severity: 'warn' });
+        if (this.mesh) this.mesh.rotation.x = 0.08;
+      }
+      if (this.anger >= 1) {
+        this.mode = 'hunt';
+        this.huntT = 0;
+        this.giveUpT = 0;
+        this.lastSeen = v3(p.pos.x, 0, p.pos.z);
+        if (this.mesh) this.mesh.rotation.x = 0;
+        this.rig?.play('move', 0.08);
+        c.cue('husk-bellow', this.pos, '[it wakes]', { severity: 'danger' });
+      }
+      return;
+    }
+
+    if (this.mode === 'hunt') {
+      this.huntT += dt;
+      this.footT += dt;
+      const hidden = p.protection === 'hidden';
+      if (!hidden) { this.lastSeen = v3(p.pos.x, 0, p.pos.z); this.giveUpT = 0; }
+      else this.giveUpT += dt;
+      const dx = this.lastSeen.x - this.pos.x, dz = this.lastSeen.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.25) {
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        if (this.mesh) {
+          this.mesh.rotation.y = Math.atan2(dx, dz);
+          this.mesh.position.copy(this.pos);
+        }
+      }
+      if (this.footT > 0.38) {
+        this.footT = 0;
+        c.cue('husk-foot', this.pos, '', { severity: 'warn' });
+      }
+      if (d < this.tuning.killRange && !hidden) {
+        this.rig?.play('attack', 0.05);
+        c.killPlayer('husk', 'It sleeps until you paint it with light or crowd it. Sweep slowly.');
+        this.done();
+        return;
+      }
+      // lose the living — trudge home and slump
+      if (this.giveUpT > 4 || this.huntT > 14) {
+        this.mode = 'return';
+        c.cue('husk-calm', this.pos, '[it loses the trail]', { severity: 'warn' });
+      }
+      return;
+    }
+
+    // returning home
+    const dx = this.home.x - this.pos.x, dz = this.home.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.3) {
+      this.pos.x += (dx / dd) * this.tuning.speed * 0.55 * dt;
+      this.pos.z += (dz / dd) * this.tuning.speed * 0.55 * dt;
+      if (this.mesh) {
+        this.mesh.rotation.y = Math.atan2(dx, dz);
+        this.mesh.position.copy(this.pos);
+      }
+    } else {
+      this.mode = 'dormant';
+      this.anger = 0.15;
+      this.stirred = false;
+      if (this.mesh) { this.mesh.rotation.x = 0.22; this.mesh.position.copy(this.home); }
+      this.pos = v3(this.home.x, 0, this.home.z);
+      this.rig?.play('idle');
+    }
+  }
+
+  private roomOf(p: { x: number; z: number }): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}
+
 /* ============================ HAZARDS ============================ */
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {

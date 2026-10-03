@@ -27,7 +27,7 @@ import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, HazardField } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -864,6 +864,7 @@ export class Game {
       returner: 'It comes from ahead. Retreat to known cover.',
       redactor: 'Check the number, the seam, the hum. Real exits are even-tempered.',
       hollow: 'Warm cabinets lie. Check for the residue and the off-hum.',
+      husk: 'It sleeps. Keep the beam off it, keep your distance, go quiet.',
       curator: 'It hunts sound. Crouch, go slow, and distract it.',
       pursuer: 'Sprint the sequence. Vaults and gates are the route.',
       orrery: 'Beams read the low floor. Crouch and time the gaps.',
@@ -1040,6 +1041,7 @@ export class Game {
         case 'echoskin': this.spawnEntity(new EchoSkin()); break;
         case 'margin': this.spawnEntity(new Margin()); break;
         case 'stillframe': this.spawnEntity(new Stillframe()); break;
+        case 'husk': this.spawnEntity(new Husk()); break;
         case 'editor': this.spawnEntity(new Editor()); break;
         case 'grafter': this.spawnEntity(new Grafter()); break;
         case 'pursuer': break; // milestones only
@@ -1932,7 +1934,7 @@ export class Game {
       if (e instanceof Stillframe) {
         e.inputHeld = this.keys.size > 0;
       }
-      if (e instanceof Inkling) {
+      if (e instanceof Inkling || e instanceof Husk) {
         e.lightOnIt = (this.lampOn || this.pulseLampOn) ? 1 : 0;
       }
     }

@@ -63,6 +63,11 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_goleling.glb', height: 2.2, tint: 0.45, emissive: 0.04,
     clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
   },
+  /** Big pale sleeper — the Husk dozing in the big rooms. */
+  yeti: {
+    file: 'quaternius_yeti.glb', height: 2.5, tint: 0.5, emissive: 0.02,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'jump'] },
+  },
   /** Grey intruder — the thing that was already inside the cabinet. */
   alien: {
     file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,

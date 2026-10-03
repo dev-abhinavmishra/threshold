@@ -118,6 +118,10 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 1.2, speed: 1.8, damage: 100, killRange: 1.35, seeRange: 9,
     cooldown: 14, spawnChance: 0.5, minRoom: 22,
   },
+  husk: {
+    warningTime: 0.8, speed: 4.0, damage: 100, killRange: 1.35, seeRange: 9,
+    cooldown: 20, spawnChance: 0.3, minRoom: 34,
+  },
   hazard: {
     warningTime: 0, speed: 0, damage: 20, killRange: 0.7, seeRange: 0,
     cooldown: 0, spawnChance: 0, minRoom: 0,

@@ -595,3 +595,9 @@ has not finished loading falls back to its procedural builder.
 | Asset | Source | Animations used | Entity |
 | --- | --- | --- | --- |
 | `figures/quaternius_goleling.glb` | Quaternius "Goleling Evolved" (poly.pizza/m/iHEuXiH6Aj, CC0) | Flying_Idle, Fast_Flying, Headbutt | Grafter (Underscript roamer) |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 80
+
+| Asset | Source | Animations used | Entity |
+| --- | --- | --- | --- |
+| `figures/quaternius_yeti.glb` | Quaternius "Yeti" (poly.pizza/m/S1E7idPFhe, CC0) | Idle, Walk, Bite_Front, Jump | Husk (dormant sleeper) |

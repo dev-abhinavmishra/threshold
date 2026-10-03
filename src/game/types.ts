@@ -40,6 +40,7 @@ export type EntityId =
   | 'pursuer'
   | 'curator'
   | 'hollow'
+  | 'husk'
   // Underscript
   | 'redline'
   | 'stillframe'
