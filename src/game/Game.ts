@@ -19,6 +19,7 @@ import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
+import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
@@ -98,6 +99,7 @@ export class Game {
   private nextThunder = 30;
   private pendingBlackout: { room: number; at: number } | null = null;
   private nextMusicBox = 45;
+  private nextKnock = 40;
   private blackedOut = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
@@ -1548,6 +1550,23 @@ export class Game {
             i === 0 ? '[a music box plays, somewhere]' : '', 'info', 'sfx', mul);
         }, i * 620);
       });
+    }
+
+    // Door knock — a slow fist on the entry door. Rare per room, seeded.
+    if (toneRoom && useGameStore.getState().phase === 'PLAYING' && tA >= this.nextKnock
+      && this.streams.roomStream('scare', this.currentRoom + 999).bool(0.14)) {
+      this.nextKnock = tA + 50 + Math.random() * 90;
+      const ksp = toneRoom.spec;
+      if (ksp) {
+        const lp = portLocalPos(ksp.entry, ksp.width, ksp.depth);
+        const kco = Math.cos(toneRoom.yaw), ksi = Math.sin(toneRoom.yaw);
+        const kx = toneRoom.origin.x + lp.x * kco + lp.z * ksi;
+        const kz = toneRoom.origin.z - lp.x * ksi + lp.z * kco;
+        for (let i = 0; i < 3; i++) {
+          window.setTimeout(() => this.audio.play('knock',
+            { x: kx, y: toneRoom.origin.y + 1.1, z: kz }, i === 0 ? '[a knock at the door]' : ''), i * 340);
+        }
+      }
     }
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.

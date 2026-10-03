@@ -92,6 +92,7 @@ const CUES: Record<string, CueSpec> = {
   'thunder': { freq: 52, dur: 2.8, type: 'sine', gain: 0.34, sweep: 28, noise: true },
   'whisper': { freq: 780, dur: 1.3, type: 'sawtooth', gain: 0.03, sweep: 460, noise: true },
   'mb-note': { freq: 1568, dur: 1.1, type: 'sine', gain: 0.05, sweep: 1540 },
+  'knock': { freq: 130, dur: 0.14, type: 'triangle', gain: 0.17, sweep: 70 },
   'amb-tick': { freq: 2500, dur: 0.045, type: 'square', gain: 0.028 },
 };
 
