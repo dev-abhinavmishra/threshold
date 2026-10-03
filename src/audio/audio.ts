@@ -58,6 +58,7 @@ const CUES: Record<string, CueSpec> = {
   'luggage-thud': { freq: 78, dur: 0.45, type: 'sine', gain: 0.3, sweep: 14, noise: true },
   'printer-whir': { freq: 320, dur: 1.4, type: 'triangle', gain: 0.1, sweep: 140, noise: true },
   'printer-jam': { freq: 90, dur: 1.8, type: 'square', gain: 0.26, sweep: -30, noise: true },
+  'type-clack': { freq: 1100, dur: 0.09, type: 'square', gain: 0.22, sweep: -420, noise: true },
   'fire-crackle': { freq: 220, dur: 0.6, type: 'triangle', gain: 0.07, sweep: -80, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },

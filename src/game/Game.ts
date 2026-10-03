@@ -799,7 +799,7 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -807,9 +807,10 @@ export class Game {
           const isTrap = p.kind === 'mousetrap';
           const isWash = p.kind === 'washer';
           const isPrint = p.kind === 'printer' || p.kind === 'printerRow';
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint) ord[p.kind] = n + 1;
+          const isType = p.kind === 'typewriter';
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -879,6 +880,12 @@ export class Game {
               kind: 'printer', id: `print-${key}`,
               pos: { x: wx, y: 0.75, z: wz },
               prompt: 'Print the page', holdTime: 0.9, enabled: true, priority: 2,
+            });
+          } else if (isType && !this.typedKeys.has(key)) {
+            this.interaction.add({
+              kind: 'typewriter', id: `type-${key}`,
+              pos: { x: wx, y: 0.82, z: wz },
+              prompt: 'Strike a key', holdTime: 0.7, enabled: true, priority: 2,
             });
           }
         }
@@ -1131,6 +1138,19 @@ export class Game {
         this.runningWashers.push({ pos: at, until: this.clock.time + 24, nextThump: this.clock.time + 1.2, key });
         this.audio.play('washer-spin', at, '[the drum spins up — it will not stop]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a machine starts]' });
+        return;
+      }
+      case 'typewriter': {
+        it.enabled = false;
+        this.typedKeys.add(it.id.replace(/^type-/, ''));
+        // four struck keys, spaced like a word — a mechanical lure on the desk
+        const at = { x: it.pos.x, y: 0.85, z: it.pos.z };
+        for (let n = 0; n < 4; n++) {
+          window.setTimeout(() => {
+            this.audio.play('type-clack', at, n === 0 ? '[the key strikes — the ribbon spells nothing]' : '');
+            this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.55, category: 'distraction', caption: '[a typewriter clacks]' });
+          }, n * 350 + (n % 2) * 90);
+        }
         return;
       }
       case 'printer': {
@@ -2611,6 +2631,7 @@ export class Game {
   private liveTraps: { key: string; x: number; z: number }[] = [];
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
+  private typedKeys = new Set<string>();
   private finishedWashers = new Set<string>();
   private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
