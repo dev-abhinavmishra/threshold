@@ -760,17 +760,19 @@ export class Game {
     // Pianos play — a real lure: loud distraction, hunters walk to it.
     {
       const pr = this.activeRooms()[this.currentRoom];
+      this.liveTraps = [];
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
-          if (!isVent && !isHearth && !isPhone && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone) ord[p.kind] = n + 1;
+          const isTrap = p.kind === 'mousetrap';
+          if (!isVent && !isHearth && !isPhone && !isTrap && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -810,6 +812,19 @@ export class Game {
               pos: { x: wx, y: 1.4, z: wz },
               prompt: 'Lift the receiver', holdTime: 1.0, enabled: true, priority: 2,
             });
+          } else if (isTrap) {
+            // some of the house's traps are set — seeded per trap, stable
+            if (!this.armedTraps.has(key)) {
+              this.armedTraps.set(key, this.streams.roomStream('scare', pr.index * 611 + n * 17).bool(0.32));
+            }
+            if (this.armedTraps.get(key) && !this.snappedTraps.has(key) && !this.priedTraps.has(key)) {
+              this.liveTraps.push({ key, x: wx, z: wz });
+              this.interaction.add({
+                kind: 'trap', id: `trap-${key}`,
+                pos: { x: wx, y: 0.08, z: wz },
+                prompt: 'Pry the trap', holdTime: 0.7, enabled: true, priority: 2,
+              });
+            }
           }
         }
       }
@@ -1024,6 +1039,14 @@ export class Game {
           : '[a voice: rooms away — keep walking]';
         this.audio.play('whisper-voice', at, line, 'warn');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'trap': {
+        it.enabled = false;
+        this.priedTraps.add(it.id.replace(/^trap-/, ''));
+        const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
+        this.audio.play('trap-click', at, '[the spring slackens]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
         return;
       }
       case 'hearth': {
@@ -1945,6 +1968,7 @@ export class Game {
       this.ensureTenant(i, built);
       this.ensureCoffin(i, built);
       this.ensureTV(i, built);
+      this.ensureTrap(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2460,6 +2484,36 @@ export class Game {
   private nextHiss = 0;
   private litHearths = new Set<string>();
   private answeredPhones = new Set<string>();
+  private armedTraps = new Map<string, boolean>();
+  private snappedTraps = new Set<string>();
+  private priedTraps = new Set<string>();
+  private liveTraps: { key: string; x: number; z: number }[] = [];
+  private trapJawMat: THREE.MeshStandardMaterial | null = null;
+
+  /** Re-apply trap tell (raised jaw wire) for armed traps in a (re)streamed room. */
+  private ensureTrap(i: number, built: { group: THREE.Group }): void {
+    const groups: THREE.Object3D[] = [];
+    built.group.traverse((o) => { if (o.name === `trap-${i}`) groups.push(o); });
+    if (!groups.length) return;
+    if (!this.trapJawMat) {
+      this.trapJawMat = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.9, roughness: 0.35 });
+    }
+    const geo = new THREE.BoxGeometry(0.11, 0.006, 0.006);
+    groups.forEach((g, n) => {
+      const key = `${this.space}:${i}:${n}`;
+      let jaw = g.children.find((c) => c.userData.jaw === true) as THREE.Mesh | undefined;
+      const armed = this.armedTraps.get(key) === true;
+      const down = this.snappedTraps.has(key) || this.priedTraps.has(key);
+      if (armed && !jaw) {
+        jaw = new THREE.Mesh(geo, this.trapJawMat!);
+        jaw.userData.jaw = true;
+        jaw.position.set(0, 0.045, 0);
+        g.add(jaw);
+      }
+      if (jaw) jaw.rotation.x = down ? -1.5 : -0.55;
+      if (!armed && jaw) jaw.visible = false;
+    });
+  }
   private hearths: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; light: THREE.PointLight; base: THREE.Vector3; until: number; seed: number; nextCrackle: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
   private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
@@ -3478,6 +3532,20 @@ export class Game {
         j.geo.dispose(); j.mat.dispose();
         return false;
       });
+    }
+
+    // Armed mousetraps — step on one and it snaps: loud, and it bites
+    for (const tp of this.liveTraps) {
+      const dx = tp.x - this.player.pos.x;
+      const dz = tp.z - this.player.pos.z;
+      if (dx * dx + dz * dz < 0.55 * 0.55) {
+        this.snappedTraps.add(tp.key);
+        const at = { x: tp.x, y: 0.05, z: tp.z };
+        this.audio.play('trap-snap', at, '[metal snaps under your heel]', 'warn');
+        this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
+        this.player.health = Math.max(3, this.player.health - 4);
+        this.player.panic = Math.min(1, this.player.panic + 0.08);
+      }
     }
 
     // The channel answers — some tuned sets whisper back a breath later
