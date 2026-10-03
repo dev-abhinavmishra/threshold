@@ -188,12 +188,19 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     for (let i = 0; i < 4; i++) g.add(mesh(box(0.9, 0.05, 0.04), MAT.charcoal(), 0, 0.12 + i * 0.15, 0.08));
     return single(g, 1.0, 0.7, 0.2);
   },
-  sofa: (_s) => {
+  sofa: (_s, rng) => {
     const g = new THREE.Group();
-    g.add(mesh(box(1.6, 0.4, 0.7), MAT.oxGreen(), 0, 0.2, 0));
-    g.add(mesh(box(1.6, 0.5, 0.2), MAT.oxGreen(), 0, 0.55, -0.25));
-    g.add(mesh(box(0.2, 0.5, 0.7), MAT.oxGreen(), -0.7, 0.4, 0));
-    g.add(mesh(box(0.2, 0.5, 0.7), MAT.oxGreen(), 0.7, 0.4, 0));
+    const fab = rng.bool(0.5) ? TEX.fabricChintz() : TEX.leatherWorn();
+    fab.color.multiplyScalar(0.9 + rng.float() * 0.25);
+    g.add(mesh(box(1.6, 0.4, 0.7), fab, 0, 0.2, 0));
+    g.add(mesh(box(1.6, 0.5, 0.2), fab, 0, 0.55, -0.25));
+    g.add(mesh(box(0.2, 0.5, 0.7), fab, -0.7, 0.4, 0));
+    g.add(mesh(box(0.2, 0.5, 0.7), fab, 0.7, 0.4, 0));
+    // seat + back cushions — the subdivided surface sells upholstery
+    g.add(mesh(box(0.7, 0.11, 0.55), fab, -0.37, 0.44, 0.03));
+    g.add(mesh(box(0.7, 0.11, 0.55), fab, 0.37, 0.44, 0.03));
+    g.add(mesh(box(0.68, 0.4, 0.11), fab, -0.37, 0.66, -0.16));
+    g.add(mesh(box(0.68, 0.4, 0.11), fab, 0.37, 0.66, -0.16));
     return single(g, 1.65, 0.85, 0.75);
   },
   lamp: (_s) => {

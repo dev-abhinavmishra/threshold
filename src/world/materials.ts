@@ -78,6 +78,16 @@ export const MAT = {
   eyeGlow: () => m('eyeGlow', 0xffe9b0, { emissive: 0xffe9b0, emissiveIntensity: 2.2 }),
   afterglow: () => m('afterglow', 0xe8c86a, { emissive: 0xe8c86a, emissiveIntensity: 1.4, transparent: true, opacity: 0.85 }),
   shadowFigure: () => m('shadowFigure', 0x111010, { roughness: 1 }),
+  figureCloth: () => {
+    let mat = mats.get('figureCloth');
+    if (!mat) {
+      mat = TEX.fabricDark();
+      mat.color.setHex(0x211d1b);
+      mat.roughness = 0.96;
+      mats.set('figureCloth', mat);
+    }
+    return mat;
+  },
 };
 
 /** Materials keyed by biome floor material for prop builders. */

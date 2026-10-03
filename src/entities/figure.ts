@@ -35,7 +35,7 @@ const EYE_COLORS = { amber: 0xffb050, red: 0xff2a20, white: 0xffe9b0 } as const;
 export function tallFigure(o: FigureOpts = {}): THREE.Group {
   const h = o.height ?? 2.6;
   const s = h / 2.6;
-  const body = o.body ?? MAT.shadowFigure();
+  const body = o.body ?? MAT.figureCloth();
   const g = new THREE.Group();
   const parts: Record<string, THREE.Object3D> = {};
 

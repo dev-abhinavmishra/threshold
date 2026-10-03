@@ -24,6 +24,10 @@ Downloaded at 1K-JPG quality; each folder holds `color`, `normalgl`,
 | `textures/metal-aged` | Metal063 | machinery, the Engine |
 | `textures/leather-dark` | Leather030 | upholstered furniture |
 | `textures/tiles-institutional` | Tiles074 | morgue/laundry/service walls |
+| `textures/fabric-dark` | Fabric077 | entity robes, dark cloth |
+| `textures/fabric-chintz` | Fabric024 | sofas, rugs, dust sheets |
+| `textures/wood-carved` | Wood096 | grand-room crown/chair rail + wainscot |
+| `textures/leather-worn` | Leather038 | sofa upholstery |
 
 ## Models — Poly Haven (https://polyhaven.com), CC0
 

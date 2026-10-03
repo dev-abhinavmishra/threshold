@@ -433,8 +433,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // Trim: baseboard + crown strips along the four walls. Wall slabs are
   // ~0.24 thick with the inner face ~0.12 inside the edge — trim centered
   // shallower than that is swallowed by the wall and never seen.
-  const trimMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.darkOak();
-  const wainsMat = isUnder ? MAT.steelDark() : MAT.darkOak();
+  const grand = spec.biome === 'gallery' || spec.biome === 'lobby' || spec.biome === 'milestone' || spec.biome === 'safe';
+  const trimMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : grand ? TEX.woodCarved() : MAT.darkOak();
+  const wainsMat = isUnder ? MAT.steelDark() : grand ? TEX.woodCarved() : MAT.darkOak();
   const trimInset = 0.16;
   for (const [sx, sz, sw2, sd] of [
     [0, d / 2 - trimInset, w - 0.3, 0.07],
@@ -833,7 +834,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const rx = (rng.float() - 0.5) * (w - rw - 1.2);
       const rz = (rng.float() - 0.5) * (d - rd - 1.2);
       const rugPal = [0x5a2a24, 0x2c3a4a, 0x3c4a34, 0x4a3c2c];
-      const rugMat = TEX.clothWorn();
+      const rugMat = rng.bool(0.4) ? TEX.fabricChintz() : TEX.clothWorn();
       rugMat.color.setHex(rugPal[Math.floor(rng.float() * rugPal.length)]);
       const border = new THREE.Mesh(texBox(rw + 0.14, 0.012, rd + 0.14), MAT.darkOak());
       border.position.set(rx, 0.008, rz);
@@ -847,7 +848,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (spec.biome === 'corridor' && !isUnder && d > w * 1.3 && rng.float() < 0.4) {
       const rw = Math.min(1.1, w * 0.3);
       const rl = d * (0.6 + rng.float() * 0.25);
-      const runMat = TEX.clothWorn();
+      const runMat = rng.bool(0.4) ? TEX.fabricChintz() : TEX.clothWorn();
       runMat.color.setHex(rng.pick([0x4a2620, 0x2e3a3c, 0x3a3028]));
       const run = new THREE.Mesh(texBox(rw, 0.016, rl), runMat);
       run.position.set((rng.float() - 0.5) * (w - rw - 1), 0.012, (rng.float() - 0.5) * (d - rl - 1));
@@ -865,7 +866,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const dh = tall ? 1.5 + rng.float() * 0.4 : 0.85 + rng.float() * 0.35;
       const px = (rng.float() - 0.5) * (w - dw - 1.4);
       const pz = (rng.float() - 0.5) * (d - dd - 1.4);
-      const sheetMat = TEX.clothWorn();
+      const sheetMat = rng.bool(0.5) ? TEX.fabricChintz() : TEX.clothWorn();
       sheetMat.color.setHex(rng.pick([0xa8a294, 0x96928a, 0xb0a894]));
       const body = new THREE.Mesh(texBox(dw, dh - 0.05, dd), sheetMat);
       body.position.set(px, dh / 2 + 0.02, pz);

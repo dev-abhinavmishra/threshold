@@ -108,6 +108,10 @@ export const TEX = {
   tilesCheckered: () => surfaceMaterial('tiles-checkered', 1.5, { color: 0xa8a89e }),
   curtainFabric: () => surfaceMaterial('curtain-fabric', 1.4, { color: 0x6a5048 }),
   tilesMosaic: () => surfaceMaterial('tiles-mosaic', 1.5, { color: 0x9a9890 }),
+  fabricDark: () => surfaceMaterial('fabric-dark', 1.2, { color: 0x3a3632 }),
+  fabricChintz: () => surfaceMaterial('fabric-chintz', 1.3, { color: 0x8a8074 }),
+  woodCarved: () => surfaceMaterial('wood-carved', 1.4, { color: 0x7a5f44 }),
+  leatherWorn: () => surfaceMaterial('leather-worn', 1.2, { color: 0x6a523a }),
   brickOld: () => surfaceMaterial('brick-old', 1.8, { color: 0xa08a78 }),
   granite: () => surfaceMaterial('granite', 1.6, { color: 0x9aa0a4, roughness: 0.35 }),
 };
