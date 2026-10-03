@@ -225,6 +225,21 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('under sockets get filled with caches — never on safe landings', () => {
+    let anyFilled = false;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        for (const s of r.sockets.filter((x) => x.filled && (x.kind === 'drawer' || x.kind === 'loot'))) {
+          expect(s.meta.contains).toBeTruthy();
+          expect(r.index % 20).not.toBe(0);
+          anyFilled = true;
+        }
+      }
+    }
+    expect(anyFilled).toBe(true);
+  });
+
   it('deep doors are optional branch doors only, never toll', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });

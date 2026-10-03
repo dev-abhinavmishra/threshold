@@ -465,6 +465,29 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     underReturn = opts.shortRun ? 20 : 70;
     underRooms = generateUnderscript(streams, opts);
     if (underRooms.length) {
+      // Under caches — the subfloor keeps a little, sparser and meaner than
+      // upstairs. No door locks down here; the under has its own pacing.
+      const underMul = { learning: 1.4, standard: 1, hard: 0.7, qa: 1 }[opts.difficulty];
+      const underTable: { item: string; w: number }[] = [
+        { item: 'imprints', w: 46 }, { item: 'bandage', w: 7 }, { item: 'tonic', w: 7 },
+        { item: 'sparkFlash', w: 10 }, { item: 'latchpick', w: 8 }, { item: 'feltWrap', w: 5 },
+        { item: 'chalkSpool', w: 4 }, { item: 'wardSeal', w: 4 }, { item: 'windAlarm', w: 6 },
+        { item: 'lore', w: 6 },
+      ];
+      for (const room of underRooms) {
+        if (room.index % 20 === 0) continue; // landings stay safe
+        for (const s of room.sockets) {
+          if (s.filled || s.kind === 'key' || s.meta.broker !== undefined || s.meta.shop !== undefined) continue;
+          if (s.kind !== 'drawer' && s.kind !== 'loot') continue;
+          if (!lootRng.bool(0.38 * underMul)) continue;
+          s.filled = true;
+          const roll = lootRng.weighted(underTable, (t) => t.w).item;
+          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: lootRng.int(3, 16) };
+          else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-u${room.index}` };
+          else s.meta = { contains: roll };
+          if (s.kind === 'drawer' && lootRng.bool(0.25)) s.meta.drawerLocked = true;
+        }
+      }
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
       const returnRoom = mainRooms[Math.min(underReturn, mainRooms.length - 1)];
