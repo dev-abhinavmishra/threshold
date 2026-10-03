@@ -601,3 +601,18 @@ has not finished loading falls back to its procedural builder.
 | Asset | Source | Animations used | Entity |
 | --- | --- | --- | --- |
 | `figures/quaternius_yeti.glb` | Quaternius "Yeti" (poly.pizza/m/S1E7idPFhe, CC0) | Idle, Walk, Bite_Front, Jump | Husk (dormant sleeper) |
+
+## Blender prefab mill — tools/mill/prefab_kit.py (original, authored this project)
+
+Parameterized architectural kit generated headless via Blender 4.2's Python API
+and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/prefab_kit.py -- ALL public/assets/models`.
+
+| Dir | Piece | Where it appears |
+| --- | --- | --- |
+| `archway` | Fluted pilasters + annular arch band + keystone + architrave | gallery-atrium, gallery-vaulted, gallery-rotunda |
+| `colonnade` | 3-bay arcade: columns + solid arch bands + entablature | gallery-atrium, gallery-rotunda |
+| `fireplace` | Stone mantel: jambs, lintel, shelf, corbels, hearth | gallery-banquet, suite-split |
+| `windowArch` | Arched window: stone surround, mullion, tracery, dark pane | gallery-atrium |
+| `hatch` | Riveted iron hatch: grate bars, hinge straps, wheel handle | maint-boiler, maint-service-narrow, maint-pipes |
+| `medallion` | Ceiling rosette: concentric rings + petal relief | gallery-atrium, gallery-banquet |
+| `vault` | Coffered ceiling panel: rail grid + inset panels + corbels | gallery-vaulted |

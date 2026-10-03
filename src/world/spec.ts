@@ -29,6 +29,8 @@ export type PropKind =
   | 'board' | 'bench' | 'wheelchair' | 'suitcase' | 'bin'
   | 'generator' | 'weldingCart' | 'planter' | 'books' | 'papers'
   | 'carton' | 'payphone' | 'rack'
+  | 'archway' | 'colonnade' | 'fireplace' | 'windowArch' | 'hatch'
+  | 'medallion' | 'vault'
   | 'barrel' | 'wineBarrel' | 'pipeRun' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'

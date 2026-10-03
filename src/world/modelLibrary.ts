@@ -105,6 +105,14 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     variants: [{ dir: 'industrial_wall_lamp', height: 0.45, collider: [0, 0, 0], anchor: 'center' }],
   },
   ceilingLamp: { dir: 'hanging_industrial_lamp', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
+  // Blender prefab mill — tools/mill/prefab_kit.py (original, ours)
+  archway: { dir: 'archway', height: 3.4, collider: [2.6, 3.4, 0.34] },
+  colonnade: { dir: 'colonnade', height: 3.0, collider: [5.8, 3.0, 0.3] },
+  fireplace: { dir: 'fireplace', height: 1.7, collider: [2.2, 1.7, 0.55] },
+  windowArch: { dir: 'windowArch', height: 2.4, collider: [0, 0, 0], anchor: 'center' },
+  hatch: { dir: 'hatch', height: 1.9, collider: [1.1, 1.9, 0.18] },
+  medallion: { dir: 'medallion', height: 0.12, collider: [0, 0, 0], anchor: 'center' },
+  vault: { dir: 'vault', height: 0.3, collider: [0, 0, 0], anchor: 'center' },
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
     variants: [
