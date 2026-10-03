@@ -93,6 +93,9 @@ export class Game {
   private lastHud = 0;
   private nextAmbience = 8;
   private nextBreath = 0;
+  private hemi: THREE.HemisphereLight | null = null;
+  private lightning = 0;
+  private nextThunder = 30;
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -143,8 +146,8 @@ export class Game {
     this.scene.add(this.worldGroup, this.entityGroup);
     const amb = new THREE.AmbientLight(0x35302a, 0.72);
     this.scene.add(amb);
-    const hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.7);
-    this.scene.add(hemi);
+    this.hemi = new THREE.HemisphereLight(0x3a342c, 0x0c0a08, 0.7);
+    this.scene.add(this.hemi);
     this.streamer = new RoomStreamer(this.worldGroup, this.settings.quality, 0);
     this.initPost();
     window.addEventListener('resize', this.onResize);
@@ -1445,6 +1448,24 @@ export class Game {
           y: toneRoom.origin.y + 1.1 + Math.random() * 1.2,
           z: toneRoom.origin.z - lx * si + lz * co,
         });
+      }
+    }
+
+    // Storm layer — every ~35–95s a strike flashes the hemisphere light for
+    // a split second, rumble arriving a beat behind it. Only above ground.
+    if (tA >= this.nextThunder && this.space !== 'under' && useGameStore.getState().phase === 'PLAYING') {
+      this.nextThunder = tA + 35 + Math.random() * 60;
+      this.lightning = 1;
+      window.setTimeout(() => this.audio.play('thunder', null, '[distant thunder]'), 280);
+    }
+    if (this.hemi) {
+      if (this.lightning > 0) {
+        this.lightning = Math.max(0, this.lightning - dt * 3.4);
+        const f = this.lightning;
+        const pulse = Math.max(f, Math.max(0, f - 0.55) * 1.5); // forked double-flash
+        this.hemi.intensity = 0.7 + pulse * 2.6;
+      } else if (this.hemi.intensity !== 0.7) {
+        this.hemi.intensity = 0.7;
       }
     }
 

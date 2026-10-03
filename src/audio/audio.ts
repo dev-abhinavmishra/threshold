@@ -89,6 +89,7 @@ const CUES: Record<string, CueSpec> = {
   'amb-drip': { freq: 1900, dur: 0.08, type: 'sine', gain: 0.06, sweep: 1150 },
   'amb-distant': { freq: 58, dur: 1.9, type: 'sine', gain: 0.085, sweep: 42, noise: true },
   'amb-settle': { freq: 215, dur: 0.32, type: 'triangle', gain: 0.05, sweep: 165 },
+  'thunder': { freq: 52, dur: 2.8, type: 'sine', gain: 0.34, sweep: 28, noise: true },
   'amb-tick': { freq: 2500, dur: 0.045, type: 'square', gain: 0.028 },
 };
 
