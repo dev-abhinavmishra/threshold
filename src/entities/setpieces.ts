@@ -89,6 +89,7 @@ export class Pursuer extends Entity {
 
     const d = v3dist(this.pos, p.pos);
     if (d < this.tuning.killRange && p.protection !== 'hidden') {
+      this.rig?.play('attack', 0.05);
       c.killPlayer('pursuer', 'The Pursuer only wins if you stop. Sprint the whole sequence — vaults and gates slow it too.');
       this.done();
       return;

@@ -58,6 +58,11 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_bluedemon.glb', height: 2.6, tint: 0.4, emissive: 0.06,
     clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
   },
+  /** Grey intruder — the thing that was already inside the cabinet. */
+  alien: {
+    file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'punch', 'jump'] },
+  },
 };
 
 interface RigSource { scene: THREE.Group; animations: THREE.AnimationClip[] }

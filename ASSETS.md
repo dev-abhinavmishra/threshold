@@ -583,3 +583,9 @@ has not finished loading falls back to its procedural builder.
 | `figures/quaternius_slime.glb` | Quaternius "Pink Slime" (poly.pizza/m/AyP8sQmDLh, CC0) | Idle, Walk, Bite_Front | Inkling (ink-tinted cluster) |
 | `figures/quaternius_wizard.glb` | Quaternius "Wizard" (poly.pizza/m/o87Upt5uHX, CC0) | Idle, Walk | Curator body |
 | `figures/quaternius_bluedemon.glb` | Quaternius "Blue Demon" (poly.pizza/m/S7jYW6Amye, CC0) | Flying_Idle, Fast_Flying | Editor |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 77
+
+| Asset | Source | Animations used | Entity |
+| --- | --- | --- | --- |
+| `figures/quaternius_alien.glb` | Quaternius "Alien" (poly.pizza/m/RRliSQBP7r, CC0) | Idle, Walk, Bite_Front, Jump | Hollow (cabinet grapple) |

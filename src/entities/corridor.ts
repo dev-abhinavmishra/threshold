@@ -205,6 +205,7 @@ export class CorridorRunner extends Entity {
         const verdict = playerExposed(c, f.pos);
         if (verdict === 'kill' && d < this.tuning.seeRange) {
           this.hasKilled = true;
+          this.rig?.play('attack', 0.05);
           c.killPlayer(this.id, this.deathHint());
           return;
         }

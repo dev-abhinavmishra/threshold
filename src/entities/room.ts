@@ -456,18 +456,35 @@ export class Margin extends Entity {
 /* ============================ HOLLOW ============================ */
 /** Hiding-spot trap — triggered on entry, not scheduled like others. */
 export class Hollow extends Entity {
+  private rig: RiggedFigure | null = null;
   escapeProgress = 0;
   required = 3; // interact presses to escape
   constructor() { super('hollow', ENTITY_TUNING.hollow); }
 
   protected override onSpawn(): void {
     this.state = 'engage';
-    this.ctx.cue('hollow-wake', null, '[the cabinet breathes — get out]', { severity: 'danger' });
+    const c = this.ctx;
+    // The thing sharing the cabinet — its body pressed against the slats.
+    const spot = c.player.hiddenSpot;
+    if (spot) {
+      const rig = riggedFigure('alien');
+      if (rig) {
+        const cx = (spot.volume.min.x + spot.volume.max.x) / 2;
+        const cz = (spot.volume.min.z + spot.volume.max.z) / 2;
+        rig.group.position.set(cx + Math.sin(spot.viewYaw) * 0.5, 0, cz + Math.cos(spot.viewYaw) * 0.5);
+        rig.group.rotation.y = spot.viewYaw + Math.PI;
+        rig.play('attack', 0.05);
+        this.rig = rig;
+        c.addEntityMesh(rig.group);
+      }
+    }
+    c.cue('hollow-wake', null, '[the cabinet breathes — get out]', { severity: 'danger' });
   }
 
   /** Player pressed interact during the grapple. */
   struggle(): void {
     this.escapeProgress++;
+    this.rig?.play('attack', 0.05);
     if (this.escapeProgress >= this.required) {
       this.ctx.cue('hollow-release', null, '[it lets go]', { severity: 'info' });
       this.done();
@@ -475,11 +492,15 @@ export class Hollow extends Entity {
   }
 
   protected override onUpdate(dt: number): void {
+    this.rig?.update(dt);
     if (this.stateT > 4 && this.escapeProgress < this.required) {
       this.ctx.damagePlayer(this.tuning.damage, 'hollow', 'Hollow waits inside warm cabinets. Check for the off-hum and the residue.');
       this.done();
     }
-    void dt;
+  }
+
+  protected override onDone(): void {
+    if (this.rig) { this.ctx.removeEntityMesh(this.rig.group); this.rig = null; }
   }
 }
 
