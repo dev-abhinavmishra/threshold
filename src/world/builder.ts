@@ -29,6 +29,8 @@ export interface BuiltRoom {
   dust: THREE.Points | null;
   /** Meshes/groups tagged userData.anim — ticked each frame by the game. */
   animated: THREE.Object3D[];
+  /** Falling drip particles (leak spots) — animated by the game. */
+  drips: THREE.Points | null;
 }
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -117,6 +119,10 @@ const blobMat = new THREE.MeshBasicMaterial({
 });
 blobMat.userData.decalMat = true;
 const blobGeo = new THREE.PlaneGeometry(1, 1);
+const dripMat = new THREE.PointsMaterial({
+  color: 0xa8bfd0, size: 0.02, transparent: true, opacity: 0.5,
+  depthWrite: false, sizeAttenuation: true,
+});
 function contactShadow(w: number, d: number): THREE.Mesh {
   const m = new THREE.Mesh(blobGeo, blobMat);
   m.scale.set(Math.min(w * 1.3, 4.2), Math.min(d * 1.3, 4.2), 1);
@@ -472,6 +478,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
   };
+
+  const dripSpots: [number, number][] = [];
 
   // Contact shadow under a floor-standing prop — props whose collider sits at
   // floor level get a soft dark ellipse so they read grounded, not floating.
@@ -1020,6 +1028,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         group.add(built.group);
         wireColliders(built);
         groundShadow(built, px, pz);
+        if (fp.kind === 'puddle' || fp.kind === 'steamVent') dripSpots.push([px, pz]);
       } catch { /* dressing only */ }
     }
   }
@@ -1031,6 +1040,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);
+      if (p.kind === 'puddle' || p.kind === 'steamVent') dripSpots.push([p.x, p.z]);
       // Template-declared windows spill the same moonlight pool as
       // biome-mount windows — the glow extends toward the room center.
       if (p.kind === 'window') {
@@ -1385,7 +1395,32 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const animated: THREE.Object3D[] = [];
   group.traverse((o) => { if (o.userData.anim) animated.push(o); });
 
-  return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated };
+  // Leak drips — a shared Points column per room; each particle falls from a
+  // per-spot ceiling height and wraps. userData carries tops/speeds/phases.
+  let drips: THREE.Points | null = null;
+  const spots = dripSpots.slice(0, 4);
+  if (spots.length) {
+    const per = 12;
+    const n = spots.length * per;
+    const pos = new Float32Array(n * 3);
+    const tops = new Float32Array(n), speeds = new Float32Array(n), phases = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const [sx, sz] = spots[(i / per) | 0];
+      pos[i * 3] = sx + (rng.float() - 0.5) * 0.06;
+      pos[i * 3 + 1] = rng.float() * (h - 0.3);
+      pos[i * 3 + 2] = sz + (rng.float() - 0.5) * 0.06;
+      tops[i] = h - 0.25 - rng.float() * 0.4;
+      speeds[i] = 2.1 + rng.float() * 1.3;
+      phases[i] = rng.float() * 10;
+    }
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    drips = new THREE.Points(dg, dripMat);
+    drips.userData.tops = tops; drips.userData.speeds = speeds; drips.userData.phases = phases;
+    group.add(drips);
+  }
+
+  return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated, drips };
 }
 
 export function disposeRoom(built: BuiltRoom): void {
@@ -1405,4 +1440,5 @@ export function disposeRoom(built: BuiltRoom): void {
   built.shafts.length = 0;
   built.animated.length = 0;
   built.dust = null;
+  built.drips = null;
 }

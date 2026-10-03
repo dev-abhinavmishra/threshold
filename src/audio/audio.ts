@@ -83,6 +83,12 @@ const CUES: Record<string, CueSpec> = {
   'stabilize-tick': { freq: 600, dur: 0.05, type: 'square', gain: 0.1 },
   'stabilize-good': { freq: 700, dur: 0.15, type: 'sine', gain: 0.16 },
   'stabilize-bad': { freq: 180, dur: 0.3, type: 'sawtooth', gain: 0.25, noise: true },
+  // Sparse ambience one-shots — the house settling, pipes, far-off things.
+  'amb-creak': { freq: 135, dur: 0.7, type: 'triangle', gain: 0.065, sweep: 95 },
+  'amb-drip': { freq: 1900, dur: 0.08, type: 'sine', gain: 0.06, sweep: 1150 },
+  'amb-distant': { freq: 58, dur: 1.9, type: 'sine', gain: 0.085, sweep: 42, noise: true },
+  'amb-settle': { freq: 215, dur: 0.32, type: 'triangle', gain: 0.05, sweep: 165 },
+  'amb-tick': { freq: 2500, dur: 0.045, type: 'square', gain: 0.028 },
 };
 
 /** Adaptive music layer states. */

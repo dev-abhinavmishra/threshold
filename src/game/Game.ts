@@ -91,6 +91,7 @@ export class Game {
   private stabilize: { needle: number; dir: number; zone: number; timeLeft: number; failT: number } | null = null;
   private roomBounds = new Map<number, Aabb>();
   private lastHud = 0;
+  private nextAmbience = 8;
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -1141,6 +1142,18 @@ export class Game {
         built.dust.rotation.y += dt * 0.02;
         built.dust.position.y = Math.sin(t * 0.13 + (built.dust.userData.phase as number)) * 0.12;
       }
+      if (built.drips) {
+        const pos = built.drips.geometry.getAttribute('position') as THREE.BufferAttribute;
+        const tops = built.drips.userData.tops as Float32Array;
+        const speeds = built.drips.userData.speeds as Float32Array;
+        const phases = built.drips.userData.phases as Float32Array;
+        for (let pi = 0; pi < pos.count; pi++) {
+          const top = tops[pi];
+          const y = top - ((t * speeds[pi] + phases[pi]) % top);
+          pos.setY(pi, y);
+        }
+        pos.needsUpdate = true;
+      }
       for (const o of built.animated) {
         const kind = o.userData.anim as string;
         const s = (o.userData.animSeed as number) ?? 0;
@@ -1379,7 +1392,34 @@ export class Game {
     const toneRoom = this.activeRooms()[this.currentRoom];
     this.audio.setRoomTone(this.space === 'under' ? 'underscript' : (toneRoom?.biome ?? 'unknown'), {
       dark: toneRoom?.darkRoom ?? this.space === 'under',
+      window: toneRoom?.spec?.props.some((p) => p.kind === 'window') ?? false,
     });
+
+    // Sparse ambience — settling creaks, pipe drips, far-off booms. Weighted
+    // per biome, positional inside the current room.
+    const tA = this.clock.time;
+    if (tA >= this.nextAmbience && useGameStore.getState().phase === 'PLAYING') {
+      this.nextAmbience = tA + 14 + Math.random() * 30;
+      const sp = toneRoom?.spec;
+      if (toneRoom && sp) {
+        const b = toneRoom.biome;
+        const table: [string, number][] =
+          this.space === 'under' || b === 'maintenance'
+            ? [['amb-drip', 0.38], ['amb-creak', 0.24], ['amb-distant', 0.22], ['amb-tick', 0.16]]
+            : b === 'records' || b === 'guest' || b === 'safe' || b === 'corridor' || b === 'lobby'
+              ? [['amb-creak', 0.45], ['amb-settle', 0.3], ['amb-distant', 0.15], ['amb-tick', 0.1]]
+              : [['amb-creak', 0.35], ['amb-distant', 0.35], ['amb-settle', 0.3]];
+        let r = Math.random(), cue = 'amb-creak';
+        for (const [c, wgt] of table) { r -= wgt; if (r <= 0) { cue = c; break; } }
+        const co = Math.cos(toneRoom.yaw), si = Math.sin(toneRoom.yaw);
+        const lx = (Math.random() - 0.5) * (sp.width - 1), lz = (Math.random() - 0.5) * (sp.depth - 1);
+        this.audio.play(cue, {
+          x: toneRoom.origin.x + lx * co + lz * si,
+          y: toneRoom.origin.y + 1.1 + Math.random() * 1.2,
+          z: toneRoom.origin.z - lx * si + lz * co,
+        });
+      }
+    }
 
     // streamer + interactables
     this.streamer.update(this.activeRooms(), this.currentRoom, 1, this.space === 'main' ? this.route!.branchRooms : []);
