@@ -320,6 +320,8 @@ export class Game {
     this.lures = [];
     for (const cr of this.crossers) this.entityGroup.remove(cr.mesh);
     this.crossers = [];
+    if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
+    this.bookDrop = null;
     for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
     this.brokerFigs.clear();
     this.clearRats();
@@ -1228,6 +1230,8 @@ export class Game {
     this.doorTry = null;
     this.breathingRoom = -1;
     this.pianoRoom = -1;
+    if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
+    this.bookDrop = null;
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
@@ -1248,6 +1252,8 @@ export class Game {
     this.doorTry = null;
     this.breathingRoom = -1;
     this.pianoRoom = -1;
+    if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
+    this.bookDrop = null;
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -1892,6 +1898,27 @@ export class Game {
   private pianoFired = false;
   /** Door-rattle scare — something on the other side tries the handle. */
   private doorTry: { id: string; pos: Vec3; at: number; until: number; rung: boolean } | null = null;
+  /** A shelf sheds a book while you're inside — it stays fallen. */
+  private bookDrop: { x: number; z: number; y: number; vy: number; at: number; mesh: THREE.Mesh | null; landed: boolean } | null = null;
+
+  private maybeBookDrop(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    const prop = room.spec?.props.find((p) => p.kind === 'bookshelf' || p.kind === 'stackShelf');
+    if (!prop) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 955 + (this.space === 'under' ? 977 : 0));
+    if (!scare.bool(0.3)) return;
+    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    this.bookDrop = {
+      x: room.origin.x + prop.x * cs + prop.z * sn,
+      z: room.origin.z - prop.x * sn + prop.z * cs,
+      y: 1.5 + scare.range(0, 0.5),
+      vy: 0,
+      at: this.clock.time + 2 + scare.range(0, 6),
+      mesh: null,
+      landed: false,
+    };
+  }
 
   private maybeDoorTry(under = false): void {
     const room = this.activeRooms()[this.currentRoom];
@@ -2416,6 +2443,7 @@ export class Game {
       this.maybeBreathing();
       this.maybePiano();
       this.maybeDoorTry();
+      this.maybeBookDrop();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -2427,6 +2455,7 @@ export class Game {
         this.maybeFarSound();
         this.maybeBreathing(true);
         this.maybeDoorTry(true);
+        this.maybeBookDrop();
       }
     }
     // death echo: the building remembers where it took you
@@ -2652,6 +2681,28 @@ export class Game {
         this.sound.emit({ x: this.doorTry.pos.x, y: 1.2, z: this.doorTry.pos.z, intensity: 0.45, category: 'door', caption: '' });
       }
       if (tA >= this.doorTry.until) this.doorTry = null;
+    }
+
+    // The falling book — drops off the shelf, lands flat, stays behind.
+    if (this.bookDrop && !this.bookDrop.landed && tA >= this.bookDrop.at) {
+      const bd = this.bookDrop;
+      if (!bd.mesh) {
+        bd.mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.05, 0.28), MAT.ink());
+        bd.mesh.position.set(bd.x, bd.y, bd.z);
+        bd.mesh.rotation.set(0.2, 0.7, 0.3);
+        this.entityGroup.add(bd.mesh);
+      }
+      bd.vy += 9.8 * dt;
+      bd.y -= bd.vy * dt;
+      bd.mesh.position.y = bd.y;
+      bd.mesh.rotation.z += dt * 2.5;
+      if (bd.y <= 0.05) {
+        bd.mesh.position.y = 0.04;
+        bd.mesh.rotation.set(0, bd.mesh.rotation.y, 0);
+        bd.landed = true;
+        this.cue('book-drop', v3(bd.x, 0.4, bd.z), '[a book drops from the shelf]', 'warn');
+        this.sound.emit({ x: bd.x, y: 0.5, z: bd.z, intensity: 0.3, category: 'impact', caption: '' });
+      }
     }
 
     // Doorway crossers — silent slide across the frame, then gone for good.
