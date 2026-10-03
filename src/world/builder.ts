@@ -13,6 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
 
 export interface BuiltRoom {
@@ -1386,6 +1387,52 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
     group.add(corr);
+  }
+
+  // Static consolidation — merge every non-animated, non-decal, non-door mesh
+  // into a handful of draw calls per material. Big furnished rooms drop from
+  // ~250 draw calls to ~30; door leaves, lamp meshes, shafts, decals and
+  // anim-tagged meshes stay untouched (they move or get re-materialized).
+  {
+    const keep = new Set<THREE.Object3D>();
+    for (const m of doorLeaves.values()) keep.add(m);
+    for (const m of lampMeshes) keep.add(m);
+    for (const m of shafts) keep.add(m);
+    if (dust) keep.add(dust);
+    group.updateMatrixWorld(true);
+    const buckets = new Map<string, { mat: THREE.Material; geos: THREE.BufferGeometry[]; cast: boolean; recv: boolean }>();
+    const toRemove: THREE.Object3D[] = [];
+    group.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      let p: THREE.Object3D | null = m;
+      while (p) { if (keep.has(p)) return; p = p.parent; }
+      if (m.userData.anim || m.userData.decalMat || m.renderOrder !== 0) return;
+      const mat = m.material as THREE.MeshStandardMaterial;
+      if (!mat || Array.isArray(m.material) || !mat.isMeshStandardMaterial) return;
+      const ms = [
+        mat.color.getHex(), mat.roughness.toFixed(2), mat.metalness.toFixed(2),
+        mat.emissive?.getHex() ?? 0, (mat.emissiveIntensity ?? 0).toFixed(2),
+        mat.map?.uuid ?? '-', mat.normalMap?.uuid ?? '-', mat.opacity.toFixed(2),
+        mat.transparent ? 't' : 'o', mat.side, mat.flatShading ? 1 : 0,
+      ].join('|');
+      const sig = Object.keys(m.geometry.attributes).sort().join(',') + (m.geometry.index ? '|i' : '');
+      const key = ms + '||' + sig;
+      let b = buckets.get(key);
+      if (!b) { b = { mat, geos: [], cast: false, recv: false }; buckets.set(key, b); }
+      b.geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
+      b.cast ||= m.castShadow; b.recv ||= m.receiveShadow;
+      toRemove.push(m);
+    });
+    for (const m of toRemove) m.parent?.remove(m);
+    for (const { mat, geos, cast, recv } of buckets.values()) {
+      const merged = geos.length === 1 ? geos[0] : mergeGeometries(geos, false);
+      if (!merged) continue;
+      const mesh = new THREE.Mesh(merged, mat);
+      mesh.castShadow = cast; mesh.receiveShadow = recv;
+      group.add(mesh);
+      if (geos.length > 1) for (const g of geos) g.dispose();
+    }
   }
 
   // Transform to world
