@@ -666,8 +666,6 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   coveredCar: { dir: 'covered_car', height: 1.55, collider: [1.9, 1.55, 4.4] },
   overheadCrane: { dir: 'overhead_crane', height: 2.6, collider: [3.2, 2.6, 1.0] },
   fireEscape: { dir: 'modular_fire_escape', height: 2.7, collider: [1.6, 2.7, 0.9] },
-  powerPole: { dir: 'modular_electricity_poles', height: 2.6, collider: [1.2, 2.6, 1.2] },
-  factoryFacade: { dir: 'modular_factory_facade', height: 2.9, collider: [3.2, 2.9, 0.6] },
   pistol: { dir: 'service_pistol', height: 0.16, collider: [0, 0, 0] },
   stickGrenade: { dir: 'stick_grenade', height: 0.28, collider: [0, 0, 0] },
   lifebuoy: { dir: 'lifebuoy', height: 0.75, collider: [0, 0, 0], anchor: 'center' },

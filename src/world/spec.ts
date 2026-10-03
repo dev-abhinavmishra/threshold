@@ -83,7 +83,7 @@ export type PropKind =
   | 'cardboardBox'
   // sprint 43 — batch 7: exteriors, food, curios, boulders
   | 'shipModel' | 'cannon' | 'coveredCar' | 'overheadCrane' | 'fireEscape'
-  | 'powerPole' | 'factoryFacade' | 'pistol' | 'stickGrenade' | 'lifebuoy'
+  | 'pistol' | 'stickGrenade' | 'lifebuoy'
   | 'fishHat' | 'cakeSlice' | 'fruit' | 'boulder' | 'barkDebris' | 'treeStump'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'

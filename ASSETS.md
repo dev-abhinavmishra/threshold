@@ -516,8 +516,6 @@ has not finished loading falls back to its procedural builder.
 | `models/covered_car` | Covered Car | `coveredCar` maintenance/underscript |
 | `models/overhead_crane` | Overhead Crane | `overheadCrane` large underscript halls |
 | `models/modular_fire_escape` | Modular Fire Escape | `fireEscape` large underscript halls |
-| `models/modular_electricity_poles` | Modular Electricity Poles | `powerPole` large underscript halls |
-| `models/modular_factory_facade` | Modular Factory Facade | `factoryFacade` large underscript halls |
 | `models/service_pistol` | Service Pistol | `pistol` surface ordnance |
 | `models/stick_grenade` | Stick Grenade | `stickGrenade` ordnance |
 | `models/lifebuoy` | Lifebuoy | `lifebuoy` wall mount |

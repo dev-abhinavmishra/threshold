@@ -201,7 +201,6 @@ const u_openOffice: RoomTemplate = {
       { kind: 'plasticCrate3', x: -4.8, z: -3.8 },
       // a building that should not be here — facade + crane riding the
       // back wall of the basement office floor
-      { kind: 'factoryFacade', x: -3.2, z: 4.35 },
       { kind: 'overheadCrane', x: 2.8, z: 4.2 },
       { kind: 'pistol', x: 4.5, z: 0.75, y: 0.75 },
     ],
