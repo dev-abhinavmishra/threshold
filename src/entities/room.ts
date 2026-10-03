@@ -9,6 +9,7 @@ import { v3, v3dist, clamp, type Vec3 } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
+import { plateMaterial } from '../world/builder';
 import { tallFigure, statueFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
@@ -422,12 +423,16 @@ export class Redactor extends Entity {
 
   constructor() { super('redactor', ENTITY_TUNING.redactor); }
 
-  private buildForgery(telltale: 'plate' | 'gap'): THREE.Group {
+  private buildForgery(telltale: 'plate' | 'gap', wrongNumber: number): THREE.Group {
     const g = new THREE.Group();
     const leaf = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.2, 0.09), MAT.oak());
     leaf.position.y = 1.1;
     if (telltale === 'plate') {
-      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.05), MAT.brass());
+      // Tell: a real plate carrying the WRONG room number — the sequence is off.
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.25, 0.05),
+        plateMaterial(String(wrongNumber).padStart(3, '0')) ?? MAT.brass(),
+      );
       plate.position.set(0.12, 2.62, 0);
       g.add(plate);
     } else {
@@ -444,13 +449,16 @@ export class Redactor extends Entity {
     const rng = new Rng(c.seed + 41);
     // Plant the false exit beside the real one on the same wall, offset.
     this.falseDoorPos = v3(room.exitPos.x + 2.4, 0, room.exitPos.z);
-    const g = this.buildForgery(rng.bool(0.4) ? 'gap' : 'plate');
+    // Wrong numbers are always off the true sequence (real exit reads index+1).
+    const wrong = room.index + 2 + Math.floor(rng.float() * 3);
+    const g = this.buildForgery(rng.bool(0.4) ? 'gap' : 'plate', wrong);
     g.position.add(this.falseDoorPos as unknown as THREE.Vector3);
     this.mesh = g;
     c.addEntityMesh(g);
     if (rng.bool(0.4)) {
       this.falseDoorPos2 = v3(room.exitPos.x - 2.4, 0, room.exitPos.z);
-      const g2 = this.buildForgery('gap');
+      const wrong2 = Math.max(0, room.index - 1 - Math.floor(rng.float() * 2));
+      const g2 = this.buildForgery('gap', wrong2);
       g2.position.add(this.falseDoorPos2 as unknown as THREE.Vector3);
       this.mesh2 = g2;
       c.addEntityMesh(g2);

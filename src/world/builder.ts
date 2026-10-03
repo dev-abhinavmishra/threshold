@@ -167,7 +167,7 @@ const CORRIDOR_SIGNS = ['RECORDS →', 'EXIT →', '← ARCHIVE', 'SUB-BASEMENT'
 
 // Door number plates: canvas textures cached per label (e.g. "050").
 const plateTextures = new Map<string, THREE.Texture>();
-function plateMaterial(label: string): THREE.MeshStandardMaterial | null {
+export function plateMaterial(label: string): THREE.MeshStandardMaterial | null {
   if (typeof document === 'undefined') return null;
   let tex = plateTextures.get(label);
   if (!tex) {
