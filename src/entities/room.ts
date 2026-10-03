@@ -96,6 +96,11 @@ export class Whisper extends Entity {
   override threatPos(): Vec3 { return this.pos; }
   private attackT = 0;
   private strikeWindow = 6.0;
+  /** Mimic variant: the first silhouette is a decoy that collapses when faced,
+   *  relocating the real whisper with a tightened strike window. */
+  private decoyMesh: THREE.Object3D | null = null;
+  private decoyPos = v3();
+  private decoyed = false;
 
   constructor() { super('whisper', ENTITY_TUNING.whisper); }
 
@@ -115,6 +120,17 @@ export class Whisper extends Entity {
     this.mesh = g as unknown as THREE.Object3D;
     this.mesh.visible = false;
     c.addEntityMesh(this.mesh);
+    // ~1/3 of whispers lead with a decoy silhouette at a different bearing
+    if (rng.bool(0.34)) {
+      this.decoyed = true;
+      const da = a + (rng.bool() ? 1 : -1) * (0.9 + rng.float() * 0.9);
+      this.decoyPos = v3(c.player.pos.x + Math.cos(da) * r * 0.8, 0, c.player.pos.z + Math.sin(da) * r * 0.8);
+      const decoy = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'none', eyes: 'white', hood: true, tattered: true });
+      decoy.position.set(this.decoyPos.x, 0, this.decoyPos.z);
+      decoy.visible = false;
+      this.decoyMesh = decoy;
+      c.addEntityMesh(decoy);
+    }
     // caption reports direction relative to player
     c.cue('whisper-voice', this.pos, '[a whisper, close — turn toward it]', { severity: 'warn' });
   }
@@ -126,6 +142,26 @@ export class Whisper extends Entity {
     this.rig?.update(dt);
     const dir = v3();
     p.lookDir(dir);
+    // Decoy logic: it localizes just like the real one, but facing it squarely
+    // collapses it and relocates the real whisper instead of ending the fight.
+    if (this.decoyMesh) {
+      const toD = v3(this.decoyPos.x - p.pos.x, 0, this.decoyPos.z - p.pos.z);
+      const dd = Math.hypot(toD.x, toD.z) || 1;
+      const dfacing = (dir.x * toD.x + dir.z * toD.z) / dd;
+      this.decoyMesh.visible = dfacing > 0.75 && dd < 9;
+      if (this.decoyMesh.visible) this.decoyMesh.rotation.y = Math.atan2(p.pos.x - this.decoyPos.x, p.pos.z - this.decoyPos.z);
+      if (dfacing > 0.94 && dd < 9) {
+        c.removeEntityMesh(this.decoyMesh);
+        this.decoyMesh = null;
+        // Relocate the real whisper to a fresh bearing, tighten the window.
+        const a2 = new Rng(c.seed + 977).float() * Math.PI * 2;
+        const r2 = 3 + new Rng(c.seed + 311).float() * 2.5;
+        this.pos = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
+        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        this.attackT = this.strikeWindow * 0.35;
+        c.cue('whisper-shift', this.pos, '[not it — the voice moved]', { severity: 'warn' });
+      }
+    }
     const toW = v3(this.pos.x - p.pos.x, 1.0 - p.pos.y - 1.5, this.pos.z - p.pos.z);
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
@@ -148,6 +184,7 @@ export class Whisper extends Entity {
 
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.decoyMesh) { this.ctx.removeEntityMesh(this.decoyMesh); this.decoyMesh = null; }
   }
 }
 
@@ -372,25 +409,52 @@ export class EchoSkin extends Entity {
 export class Redactor extends Entity {
   private falseDoorPos = v3();
   private mesh: THREE.Group | null = null;
+  /** Twin-forgery variant: a second, subtler forgery on the opposite side. */
+  private mesh2: THREE.Group | null = null;
+  private falseDoorPos2 = v3();
   triggered = false;
+  /** Positions of every forgery (1–2) for interaction wiring. */
+  forgeryPositions(): Vec3[] {
+    const out = [this.falseDoorPos];
+    if (this.mesh2) out.push(this.falseDoorPos2);
+    return out;
+  }
 
   constructor() { super('redactor', ENTITY_TUNING.redactor); }
+
+  private buildForgery(telltale: 'plate' | 'gap'): THREE.Group {
+    const g = new THREE.Group();
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.2, 0.09), MAT.oak());
+    leaf.position.y = 1.1;
+    if (telltale === 'plate') {
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.05), MAT.brass());
+      plate.position.set(0.12, 2.62, 0);
+      g.add(plate);
+    } else {
+      // subtler tell: no plate at all + leaf sits a few cm off the wall
+      g.position.z += 0.14;
+    }
+    g.add(leaf);
+    return g;
+  }
 
   protected override onSpawn(): void {
     const c = this.ctx;
     const room = c.rooms[c.currentRoomIndex];
+    const rng = new Rng(c.seed + 41);
     // Plant the false exit beside the real one on the same wall, offset.
     this.falseDoorPos = v3(room.exitPos.x + 2.4, 0, room.exitPos.z);
-    const g = new THREE.Group();
-    const leaf = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.2, 0.09), MAT.oak());
-    leaf.position.y = 1.1;
-    // tell: slightly misaligned plate + wrong label
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.05), MAT.brass());
-    plate.position.set(0.12, 2.62, 0);
-    g.add(leaf, plate);
-    g.position.copy(this.falseDoorPos as unknown as THREE.Vector3);
+    const g = this.buildForgery(rng.bool(0.4) ? 'gap' : 'plate');
+    g.position.add(this.falseDoorPos as unknown as THREE.Vector3);
     this.mesh = g;
     c.addEntityMesh(g);
+    if (rng.bool(0.4)) {
+      this.falseDoorPos2 = v3(room.exitPos.x - 2.4, 0, room.exitPos.z);
+      const g2 = this.buildForgery('gap');
+      g2.position.add(this.falseDoorPos2 as unknown as THREE.Vector3);
+      this.mesh2 = g2;
+      c.addEntityMesh(g2);
+    }
     this.state = 'engage';
     c.cue('redactor-sense', this.falseDoorPos, '[a second exit — the sequence feels wrong]', { severity: 'info' });
   }
@@ -410,6 +474,7 @@ export class Redactor extends Entity {
 
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.mesh2) { this.ctx.removeEntityMesh(this.mesh2); this.mesh2 = null; }
   }
 }
 

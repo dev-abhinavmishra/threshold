@@ -40,6 +40,8 @@ const CUES: Record<string, CueSpec> = {
   'witness-drone': { freq: 980, dur: 1.2, type: 'sine', gain: 0.2 },
   'whisper-voice': { freq: 500, dur: 0.9, type: 'sine', gain: 0.14, sweep: 420 },
   'whisper-dismiss': { freq: 700, dur: 0.4, type: 'sine', gain: 0.1, sweep: 900 },
+  'whisper-shift': { freq: 340, dur: 0.7, type: 'sine', gain: 0.12, sweep: 260 },
+  'sweep-return': { freq: 62, dur: 1.2, type: 'sine', gain: 0.4, sweep: 40 },
   'lurker-stalk': { freq: 220, dur: 0.5, type: 'sawtooth', gain: 0.1, sweep: 160 },
   'lurker-flee': { freq: 640, dur: 0.35, type: 'sine', gain: 0.09, sweep: 950 },
   'behemoth-warn': { freq: 55, dur: 1.8, type: 'sawtooth', gain: 0.22, sweep: 38 },

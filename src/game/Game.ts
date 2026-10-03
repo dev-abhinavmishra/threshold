@@ -561,12 +561,13 @@ export class Game {
     // Redactor false doors become interactable
     for (const e of this.entities) {
       if (e instanceof Redactor && e.state === 'engage') {
-        const pos = (e as Redactor)['falseDoorPos'] as Vec3;
-        this.interaction.add({
-          kind: 'door', id: 'redactor-false', pos,
-          prompt: `Open Door ${(this.activeRooms()[this.currentRoom]?.index ?? 0) + 1}`,
-          data: { id: 'redactor-false', falseDoor: true, openT: 0 } as never,
-          enabled: true, priority: 2,
+        e.forgeryPositions().forEach((pos, n) => {
+          this.interaction.add({
+            kind: 'door', id: `redactor-false-${n}`, pos,
+            prompt: `Open Door ${(this.activeRooms()[this.currentRoom]?.index ?? 0) + 1}`,
+            data: { id: `redactor-false-${n}`, falseDoor: true, openT: 0 } as never,
+            enabled: true, priority: 2,
+          });
         });
       }
     }

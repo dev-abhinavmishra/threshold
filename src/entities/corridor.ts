@@ -45,6 +45,9 @@ export class CorridorRunner extends Entity {
   private endRoom: number;
   private rng!: Rng;
   private brokeLights = new Set<number>();
+  /** Rebound variant: sweep reverses once for a faster surprise pass. */
+  private rebounded = false;
+  private reboundBoost = 1;
 
   constructor(id: EntityId, opts: CorridorOptions = {}) {
     super(id, ENTITY_TUNING[id]);
@@ -195,7 +198,7 @@ export class CorridorRunner extends Entity {
         this.traveled = 0;
         c.cue(this.id + '-return', this.path[0], '[it turns back — hold]', { severity: 'danger' });
       }
-      const speed = this.tuning.speed * ({ learning: 0.9, standard: 1, hard: 1.15, qa: 1 })[c.difficulty];
+      const speed = this.tuning.speed * this.reboundBoost * ({ learning: 0.9, standard: 1, hard: 1.15, qa: 1 })[c.difficulty];
       this.traveled += speed * dt;
       const f = followPath(this.path, this.traveled);
       this.rig?.update(dt);
@@ -227,6 +230,17 @@ export class CorridorRunner extends Entity {
       }
       if (f.doneT || this.traveled >= this.totalLen) {
         this.pass++;
+        // Rebound variant (sweep only): an unannounced second pass back
+        // through — catches players who step out as it finishes.
+        if (this.id === 'sweep' && this.pass >= this.maxPasses && !this.rebounded && this.rng.bool(0.3)) {
+          this.rebounded = true;
+          this.path = this.path.slice().reverse();
+          this.traveled = 0;
+          this.reboundBoost = 1.5;
+          this.pauseUntil = c.now + 1.4;
+          c.cue('sweep-return', f.pos, '[it is not done — turn around]', { severity: 'danger' });
+          return;
+        }
         if (this.pass < this.maxPasses) {
           this.pauseUntil = c.now + (this.id === 'reprise' ? this.rng.range(1.6, 3.2) : 0.8);
           return;
