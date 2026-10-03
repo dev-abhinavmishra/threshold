@@ -115,6 +115,31 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(0.82 * sc, 0.06, 0.1), MAT.darkOak(), 0, 0.4 * sc, 0.35 * sc));
     return single(g, 0.85 * sc, 0.85 * sc, 0.85 * sc);
   },
+  cardboardBox: (_s, rng) => {
+    // taped shipping box, sometimes a second one stacked or flaps open
+    const g = new THREE.Group();
+    const bw = 0.42 + rng.float() * 0.22;
+    const bh = 0.3 + rng.float() * 0.18;
+    const bd = 0.36 + rng.float() * 0.18;
+    g.add(mesh(box(bw, bh, bd), TEX.cardboard(), 0, bh / 2, 0));
+    // packing tape strip across the lid
+    g.add(mesh(box(bw * 0.94, 0.008, 0.05), MAT.paperOld(), 0, bh + 0.004, 0));
+    if (rng.bool(0.3)) {
+      // open flaps splayed outward
+      for (const sx of [-1, 1]) {
+        const flap = mesh(box(bw * 0.46, 0.01, bd * 0.9), TEX.cardboard(), sx * bw * 0.28, bh + 0.06, 0);
+        flap.rotation.z = sx * 0.7;
+        g.add(flap);
+      }
+    } else if (rng.bool(0.4)) {
+      const bw2 = bw * (0.7 + rng.float() * 0.2);
+      const bh2 = bh * 0.8;
+      const top = mesh(box(bw2, bh2, bd * 0.85), TEX.cardboard(), (rng.float() - 0.5) * 0.08, bh + bh2 / 2 + 0.01, (rng.float() - 0.5) * 0.08);
+      top.rotation.y = (rng.float() - 0.5) * 0.6;
+      g.add(top);
+    }
+    return single(g, bw + 0.06, bh + 0.6, bd + 0.06);
+  },
   shelf: (_s) => {
     const g = new THREE.Group();
     g.add(mesh(box(1.8, 2.2, 0.4), MAT.darkOak(), 0, 1.1, 0));
@@ -157,6 +182,9 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
   vent: (_s) => {
     const g = new THREE.Group();
     g.add(mesh(box(1.0, 0.7, 0.15), MAT.steelDark(), 0, 0.35, 0));
+    // mesh grille behind the louvers — metal grid texture reads as
+    // perforated steel, not four floating bars
+    g.add(mesh(box(0.94, 0.62, 0.02), TEX.metalGrid(), 0, 0.35, 0.075));
     for (let i = 0; i < 4; i++) g.add(mesh(box(0.9, 0.05, 0.04), MAT.charcoal(), 0, 0.12 + i * 0.15, 0.08));
     return single(g, 1.0, 0.7, 0.2);
   },
@@ -294,7 +322,7 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
   },
   curtain: (_s) => {
     const g = new THREE.Group();
-    const mat = TEX.clothWorn();
+    const mat = TEX.curtainFabric();
     // alternating deep/shallow folds read as pleated fabric
     for (let i = 0; i < 5; i++) {
       g.add(mesh(box(0.28, 2.0, i % 2 ? 0.05 : 0.12), mat, -0.56 + i * 0.28, 0, 0));

@@ -80,6 +80,7 @@ export type PropKind =
   | 'sportsBall' | 'gamepad' | 'gameConsole' | 'blowtorch' | 'cigaretteCase'
   | 'pickaxe' | 'compostBag' | 'rollerShutter' | 'shell' | 'fishingKnife'
   | 'woodenSpoon' | 'onion' | 'sweetPotato' | 'lemon' | 'gardenGloves'
+  | 'cardboardBox'
   // milestone / machinery
   | 'pylon' | 'catalogueDesk' | 'sealConsole' | 'relay' | 'liftDoors'
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'

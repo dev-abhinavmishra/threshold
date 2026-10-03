@@ -1478,20 +1478,20 @@ export class Game {
         this.scene.add(this.heldTorch);
       }
       this.heldTorch.visible = true;
-      this.camera.getWorldDirection(torchFwd);
-      torchRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
-      torchUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+      this.camera.getWorldDirection(Game.torchFwd);
+      Game.torchRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
+      Game.torchUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
       this.heldTorch.position.set(eye.x, eye.y, eye.z)
-        .addScaledVector(torchRight, 0.24)
-        .addScaledVector(torchUp, -0.19)
-        .addScaledVector(torchFwd, 0.38);
+        .addScaledVector(Game.torchRight, 0.24)
+        .addScaledVector(Game.torchUp, -0.19)
+        .addScaledVector(Game.torchFwd, 0.38);
       this.heldTorch.quaternion.copy(this.camera.quaternion);
       this.heldTorch.rotateY(-0.06);
       this.heldTorch.rotateX(0.05);
       if (!this.settings.reducedMotion) {
         const sway = Math.sin(this.clock.time * 5.2) * 0.012 + Math.sin(this.clock.time * 1.7) * 0.008;
         this.heldTorch.rotateZ(sway);
-        this.heldTorch.position.addScaledVector(torchUp, Math.sin(this.clock.time * 5.2) * 0.004);
+        this.heldTorch.position.addScaledVector(Game.torchUp, Math.sin(this.clock.time * 5.2) * 0.004);
       }
     } else if (this.heldTorch) {
       this.heldTorch.visible = false;

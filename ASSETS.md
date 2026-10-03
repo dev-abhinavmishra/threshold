@@ -490,3 +490,17 @@ has not finished loading falls back to its procedural builder.
 | `models/modern_coffee_table_01` | Modern Coffee Table 01 | `coffeeTable` variant |
 | `models/modern_coffee_table_02` | Modern Coffee Table 02 | `coffeeTable` variant |
 | `models/garden_gloves_01` | Garden Gloves 01 | `gardenGloves` maintenance clutter |
+
+### Textures — ambientCG batch 3 (CC0)
+
+| Folder | Source asset | Used for |
+| --- | --- | --- |
+| `textures/cardboard` | Paper005 | `cardboardBox` prop (records/maintenance/underscript/guest) |
+| `textures/stone-wall` | Tiles143 | Underscript wall roll |
+| `textures/ground-dirt` | Ground111 | Underscript floor roll |
+| `textures/metal-grid` | MetalWalkway013 | Vent grille mesh |
+| `textures/tiles-checkered` | Tiles139 | Guest/corridor floor roll |
+| `textures/curtain-fabric` | Carpet016 | `curtain` prop material |
+| `textures/tiles-mosaic` | PavingStones151 | Formal-room floor roll |
+| `textures/brick-old` | Bricks097 | Underscript wall roll |
+| `textures/granite` | Granite002A | Formal-room floor roll |
