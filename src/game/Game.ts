@@ -53,6 +53,39 @@ const KEY_DEFAULT = (s: SettingsData, name: string) => s.keybinds[name] ?? '';
 
 const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
 
+// Fresh wall scrawl — jagged red caps on transparent, cached per text.
+const wallWordTextures = new Map<string, THREE.Texture>();
+function wallWordMaterial(text: string): THREE.MeshBasicMaterial | null {
+  if (typeof document === 'undefined') return null;
+  let tex = wallWordTextures.get(text);
+  if (!tex) {
+    const cv = document.createElement('canvas');
+    cv.width = 512; cv.height = 112;
+    const ctx = cv.getContext('2d')!;
+    ctx.clearRect(0, 0, 512, 112);
+    ctx.fillStyle = '#6e1410';
+    ctx.font = 'bold 46px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // jittered glyphs — smeared, hand-drawn feel
+    let x = 256 - (text.length * 22) / 2;
+    for (const ch of text) {
+      const jy = (Math.sin(x * 3.7) * 5), jx = (Math.cos(x * 2.3) * 3);
+      const w = ch === ' ' ? 14 : 22;
+      ctx.save();
+      ctx.translate(x + w / 2 + jx, 56 + jy);
+      ctx.rotate(Math.sin(x) * 0.06);
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+      x += w;
+    }
+    tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    wallWordTextures.set(text, tex);
+  }
+  return new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
+}
+
 export class Game {
   private renderer!: THREE.WebGLRenderer;
   private scene!: THREE.Scene;
@@ -1707,6 +1740,7 @@ export class Game {
       this.ensureGateMark(i, built);
       this.ensureDeepVoid(i, built);
       this.ensureRoomTint(i, built);
+      this.ensureWallWords(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2049,6 +2083,44 @@ export class Game {
     d.label = wrong;
     this.applyWrongPlate(this.currentRoom, wrong);
     this.cue('door-locked', d.pos, '[the number moved]', 'warn');
+  }
+
+  /** The walls write back — on revisit, a seeded room can grow fresh
+   *  scrawl: red block letters on a wall that weren't there before.
+   *  Pure scare; the message is seeded per room and reapplied on rebuild. */
+  private readonly wallWords = new Map<number, { text: string; lx: number; lz: number; yaw: number }>();
+  private wallWordsTouched = false;
+
+  private maybeWallWord(under = false): void {
+    if (this.wallWords.has(this.currentRoom)) return;
+    const room = this.activeRooms()[this.currentRoom];
+    const spec = room?.spec;
+    if (!room || !spec || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 6) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 177 + (under ? 977 : 0));
+    if (!scare.bool(0.28)) return;
+    const texts = ['YOU WERE HERE BEFORE', 'STILL COUNTING', 'BEHIND YOU', 'WRONG DOOR', 'NO EXIT WAS BUILT', 'STAY'];
+    const text = texts[scare.int(0, texts.length - 1)];
+    const side = scare.bool(0.5) ? 1 : -1;
+    const lx = side * (spec.width / 2 - 0.06);
+    const lz = scare.range(-spec.depth / 4, spec.depth / 4);
+    const yaw = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    this.wallWords.set(this.currentRoom, { text, lx, lz, yaw });
+    if (!this.wallWordsTouched) {
+      this.wallWordsTouched = true;
+      this.cue('whisper', { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, '[writing that wasn\'t there]', 'warn');
+    }
+  }
+
+  private ensureWallWords(i: number, built: { group: THREE.Group }): void {
+    const ww = this.wallWords.get(i);
+    if (!ww || built.group.getObjectByName(`wall-words-${i}`)) return;
+    const mat = wallWordMaterial(ww.text);
+    if (!mat) return;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 0.5), mat);
+    m.position.set(ww.lx, 1.45, ww.lz);
+    m.rotation.y = ww.yaw;
+    m.name = `wall-words-${i}`;
+    built.group.add(m);
   }
 
   /** The answering steps — for a few strides in a seeded room, each of your
@@ -2642,6 +2714,7 @@ export class Game {
       this.maybeEchoRoom();
       this.maybePhoneRing();
       this.maybeDeepReveal();
+      this.maybeWallWord();
     }
     this.tickEchoQueue();
     if (this.space === 'under') {
