@@ -729,6 +729,19 @@ export class Game {
       }
       case 'drawer': {
         const sock = it.data as { meta: Record<string, unknown>; pos: Vec3; filled?: boolean };
+        // Locked drawer: tap with a latchpick opens quietly; the hold path
+        // (forceDrawer) opens loudly and costs nothing.
+        if (sock.meta.drawerLocked && !sock.meta.picked) {
+          const lp = this.inventory.find((i) => i.id === 'latchpick' && i.count > 0);
+          if (lp) {
+            lp.count -= 1;
+            sock.meta.picked = true;
+            this.cue('drawer', it.pos, '[latchpick spent — the lock gives]');
+          } else {
+            this.cue('door-locked', it.pos, '[locked — a latchpick, or hold to force]', 'warn');
+            return;
+          }
+        }
         sock.meta.opened = true;
         it.enabled = false;
         this.cue('drawer', it.pos, '');
@@ -815,6 +828,24 @@ export class Game {
       this.imprints += 6;
       this.cue('pickup', it.pos, '[+6 imprints]');
     }
+  }
+
+  /** Force a locked drawer without a latchpick — free, but loud enough
+   *  for anything listening. */
+  private forceDrawer(it: Interactable): void {
+    const sock = it.data as { meta: Record<string, unknown>; pos: Vec3 };
+    sock.meta.picked = true;
+    this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 1.3, category: 'door', caption: '[wood splinters]' });
+    this.cue('drawer', it.pos, '[forced — that carried]', 'warn');
+    sock.meta.opened = true;
+    it.enabled = false;
+    const built = this.streamer.get(this.currentRoom);
+    built?.group.traverse((o) => {
+      if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${it.pos.x.toFixed(1)}|${it.pos.z.toFixed(1)}`) {
+        o.userData.open = true;
+      }
+    });
+    this.resolveSocketLoot(it);
   }
 
   private consumeKeyFor(lockId: string): boolean {
@@ -1480,10 +1511,11 @@ export class Game {
     const rooms = this.activeRooms();
     const ahead = scare.bool(0.7);
     const target = rooms[this.currentRoom + (ahead ? 1 : -1) * scare.int(2, 5)];
-    if (!target || target.special) return;
+    const tspec = target?.spec;
+    if (!target || !tspec || tspec.special) return;
     const c = Math.cos(target.yaw), s = Math.sin(target.yaw);
-    const lx = (scare.float() - 0.5) * target.spec.width;
-    const lz = (scare.float() - 0.5) * target.spec.depth;
+    const lx = (scare.float() - 0.5) * tspec.width;
+    const lz = (scare.float() - 0.5) * tspec.depth;
     const pos = v3(target.origin.x + lx * c + lz * s, 1.4, target.origin.z - lx * s + lz * c);
     const table = [
       { cue: 'door-slam', cap: '[somewhere — a door slams]' },
@@ -2098,7 +2130,10 @@ export class Game {
     }
     if (held) {
       if (held.kind === 'peek') this.startPeek(held);
-      else this.tryInteract();
+      else if (held.kind === 'drawer' && (held.data as { meta?: Record<string, unknown> }).meta?.drawerLocked
+        && !(held.data as { meta?: Record<string, unknown> }).meta?.picked) {
+        this.forceDrawer(held);
+      } else this.tryInteract();
     }
     // hold-type milestone interactions (pylons)
     if (this.interaction.focused && this.keys.has(this.keyFor('interact'))) {
@@ -2293,7 +2328,7 @@ export class Game {
         inUnderscript: this.space === 'under',
         floor: this.space,
         prompt: it ? (it.lockedPrompt && !it.enabled ? it.lockedPrompt : it.prompt) : extraPrompt,
-        promptProgress: this.interaction.holdProgress,
+        promptProgress: it?.holdTime ? Math.min(1, this.interaction.holdProgress / it.holdTime) : 0,
         interactable: it?.kind ?? null,
         imprints: this.imprints,
         marginalia: this.marginalia,

@@ -71,9 +71,12 @@ export class InteractionSystem {
       if (sock.meta.hidden) continue;
       const contains = sock.meta.contains as string | undefined;
       if (sock.kind === 'drawer') {
+        const locked = sock.meta.drawerLocked === true;
         this.add({
           kind: 'drawer', id: `drawer-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}`,
-          pos: sock.pos, prompt: 'Search drawer', holdTime: 0.5,
+          pos: sock.pos,
+          prompt: locked ? 'Drawer (locked)' : 'Search drawer',
+          holdTime: locked ? 1.6 : 0.5,
           data: sock, enabled: !sock.meta.opened, priority: 1,
         });
       } else if (sock.kind === 'loot' || sock.kind === 'itemPedestal' || sock.kind === 'key' || sock.kind === 'clue') {
