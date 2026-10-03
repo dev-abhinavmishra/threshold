@@ -121,6 +121,8 @@ export class Game {
   private nextPiano = 70;
   private blackedOut = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
+  /** Staged arrival captions for a fresh run (lobby cold-open). */
+  private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
 
@@ -351,6 +353,13 @@ export class Game {
 
     this.audio.init();
     this.audio.setMood(this.space === 'under' ? 'under' : 'calm');
+    // Cold-open: staged arrival captions establish the house and the goal
+    // before anything threatens the player.
+    this.arrival = !cp && startIdx === 0 ? [
+      { t: 1.5, text: `[The Meridian. You don't remember checking in.]`, sev: 'info', fired: false },
+      { t: 7, text: `[Sign the register at the counter.]`, sev: 'info', fired: false },
+      { t: 15, text: `[Door 100 — The Engine. The ledger says that is where you belong.]`, sev: 'warn', fired: false },
+    ] : [];
     this.clock.start();
     useGameStore.setState({
       phase: 'PLAYING', paused: false, deathInfo: null, victoryInfo: null, shopOpen: false,
@@ -674,6 +683,26 @@ export class Game {
     const contains = sock.meta.contains as string | undefined;
     it.enabled = false;
     if (sock.meta) sock.meta.taken = true;
+    if (sock.meta.arrivalRegister) {
+      // Signing the register: arrival payoff — imprints, the first archive
+      // document, and the door-handling tutorial caption.
+      this.imprints += 25;
+      this.stats.imprintsEarned += 25;
+      const doc = DOCUMENTS[0];
+      if (doc && !this.documents.some((d) => d.id === doc.id)) {
+        this.documents.push({ ...doc, unlockedAt: Date.now() });
+        this.meta.documents.push(doc.id);
+        saveMeta(this.meta);
+        useGameStore.setState({ documents: this.loadDocs() });
+      }
+      this.cue('arrival', it.pos, `[signed — the ledger notes your name · +25 imprints]`);
+      this.arrival.push({
+        t: this.clock.time + 6,
+        text: `[Doors open with E. Shift slams them loud. Crouch opens them quiet.]`,
+        sev: 'info', fired: false,
+      });
+      return;
+    }
     if (contains === 'imprints' || contains === 'imprints-few' || contains === 'imprints-many') {
       const amt = (sock.meta.amount as number) ?? 12;
       this.imprints += amt;
@@ -1179,6 +1208,12 @@ export class Game {
   };
 
   private updateAtmosphere(dt: number): void {
+    for (const a of this.arrival) {
+      if (!a.fired && this.clock.time >= a.t) {
+        a.fired = true;
+        this.cue('arrival', null, a.text, a.sev);
+      }
+    }
     // Fog eases toward the current biome's density/tint.
     const fog = this.scene.fog as THREE.FogExp2 | null;
     const cur = this.activeRooms()[this.currentRoom];

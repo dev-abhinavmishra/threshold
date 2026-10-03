@@ -49,6 +49,11 @@ function lobbySpec(): RoomSpec {
       { kind: 'sign', x: 0, z: -4.2, y: 2.6 },
       { kind: 'liftDoors', x: 0, z: 4.45 },
     ],
+    sockets: [
+      // The register — arrival beat: signing it grants imprints + a document
+      // and cues the objective. Always filled; the lobby is the tutorial.
+      { kind: 'loot', x: 0, z: 2.0, y: 1.05, meta: { arrivalRegister: true } },
+    ],
     lights: [
       { x: 0, y: 3.8, z: 0, color: 0xffe2b8, intensity: 1.4, range: 12, group: 'main' },
       { x: -3.5, y: 2.4, z: -3, color: 0xffd9a0, intensity: 0.6, range: 5, group: 'accent' },

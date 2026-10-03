@@ -90,6 +90,7 @@ const CUES: Record<string, CueSpec> = {
   'death': { freq: 90, dur: 2.0, type: 'sawtooth', gain: 0.5, sweep: 40, noise: true },
   'victory': { freq: 440, dur: 2.4, type: 'sine', gain: 0.3, sweep: 660 },
   'checkpoint': { freq: 520, dur: 0.5, type: 'sine', gain: 0.16, sweep: 660 },
+  'arrival': { freq: 280, dur: 1.2, type: 'sine', gain: 0.09, sweep: 200 },
   'relay': { freq: 480, dur: 0.4, type: 'square', gain: 0.16, sweep: 520 },
   'afterglow-hint': { freq: 880, dur: 0.8, type: 'sine', gain: 0.1, sweep: 990 },
   'ui-click': { freq: 700, dur: 0.06, type: 'square', gain: 0.08 },

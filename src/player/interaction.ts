@@ -97,6 +97,7 @@ export class InteractionSystem {
         if (underX) { kind = 'underExit'; prompt = 'Return to The Meridian'; }
         if (clampId) { kind = 'seal'; prompt = `Release seal clamp ${clampId.toUpperCase()}`; }
         if (underD) { kind = 'underEntrance'; prompt = 'Open Underscript passage'; }
+        if (sock.meta.arrivalRegister) { kind = 'item'; prompt = 'Sign the register'; }
         if (sock.kind === 'clue' && !sock.meta.catalogue) { kind = 'card'; prompt = 'Take catalog card'; }
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
