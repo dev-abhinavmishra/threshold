@@ -152,3 +152,26 @@ describe('shortRun mode', () => {
     expect(mainRooms(route).some((r) => r.templateId === 'ms-engine')).toBe(true);
   });
 });
+
+
+describe('pacing planner', () => {
+  const CHASE = ['sweep', 'reprise', 'maelstrom'];
+  it('holds beat rules across all QA seeds', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });
+      const rooms = mainRooms(route);
+      for (const r of rooms) {
+        const chase = r.scheduled.filter((s) => CHASE.includes(s.entity));
+        // at most the guaranteed tutorial chase before room 15; none before 10
+        if (r.index < 10) expect(chase.length).toBe(0);
+        if (r.index < 15) expect(chase.length).toBeLessThanOrEqual(1);
+        // one scheduled entity per room at most
+        expect(r.scheduled.length).toBeLessThanOrEqual(1);
+      }
+      // early rooms are calmer than late rooms on average
+      const early = rooms.filter((r) => r.index < 15).reduce((n, r) => n + r.scheduled.length, 0);
+      const late = rooms.filter((r) => r.index >= 70 && r.index < 100).reduce((n, r) => n + r.scheduled.length, 0);
+      expect(late).toBeGreaterThanOrEqual(early);
+    }
+  });
+});

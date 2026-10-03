@@ -14,7 +14,8 @@ export type RngStream =
   | 'audio'
   | 'puzzle'
   | 'entity'
-  | 'scare';
+  | 'scare'
+  | 'pacing';
 
 const STREAM_SALTS: Record<RngStream, number> = {
   structure: 0x517ac0de,
@@ -25,6 +26,7 @@ const STREAM_SALTS: Record<RngStream, number> = {
   puzzle: 0x9a221e55,
   entity: 0xe7717a15,
   scare: 0x5ca4e000,
+  pacing: 0x9ac1e000,
 };
 
 /** FNV-1a 32-bit string hash — used to derive seeds from player-entered text. */

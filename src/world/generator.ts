@@ -20,6 +20,7 @@ import { portLocalPos, portOutwardDir } from './spec';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
+import { ENTITY_TIER, tierMap, planBeats } from './pacing';
 
 export interface GenOptions {
   seedText: string;
@@ -441,7 +442,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   ensureHidingDensity(mainRooms, dressRng);
 
   // Encounter scheduling via director rules.
-  scheduleEncounters(mainRooms, encRng, opts);
+  scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
 
   // Underscript
   let underRooms: RoomInstance[] = [];
@@ -742,16 +743,20 @@ function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng')
 
 /* ==================== ENCOUNTER SCHEDULING ==================== */
 
-function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, opts: GenOptions): void {
+function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, opts: GenOptions, beats?: import('./pacing').Beat[]): void {
   const diff = opts.difficulty;
   const cooldowns = new Map<EntityId, number>();
   let roomsSinceDeath = 999;
 
   const eligibleRooms = rooms.filter((r) => !r.authored && r.biome !== 'safe' && r.index >= 10);
 
+  const tiers = beats ? tierMap(beats, rooms) : null;
+  const TIER_MULT = [0.25, 0.7, 1.1, 1.0];
   for (const room of eligibleRooms) {
     roomsSinceDeath++;
     const mercy = roomsSinceDeath <= DIRECTOR.mercyRoomsAfterDeath ? 0.4 : 1;
+    const tier = tiers?.get(room.index) ?? 2;
+    if (tier === 0 && !encRng.bool(0.15)) continue;
 
     for (const [id, t] of Object.entries(ENTITY_TUNING) as [EntityId, EntityTuning][]) {
       if (['pursuer', 'curator', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin'].includes(id)) continue;
@@ -764,6 +769,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       if (spec?.allowOnlyEntities && !spec.allowOnlyEntities.includes(id)) continue;
       // Corridor threats need a route + hiding guarantee.
       if ((id === 'sweep' || id === 'reprise' || id === 'maelstrom') && !hasSurvivalOption(rooms, room.index)) continue;
+      if ((ENTITY_TIER[id] ?? 2) > tier) continue;
       if (id === 'whisper' && !room.darkRoom) continue;
       if (id === 'inkling' && !room.darkRoom) continue;
       if (id === 'echoskin' && room.index < 63) continue;
@@ -779,7 +785,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       // Only one scheduled entity per room.
       if (room.scheduled.length > 0) break;
 
-      const chance = t.spawnChance * mercy * ({ learning: 0.55, standard: 1, hard: 1.35, qa: 1 })[diff];
+      const chance = t.spawnChance * mercy * TIER_MULT[tier] * ({ learning: 0.55, standard: 1, hard: 1.35, qa: 1 })[diff];
       if (encRng.bool(chance)) {
         const sched: ScheduledEncounter = { entity: id, triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) };
         if (id === 'reprise') sched.passes = encRng.int(2, 4);
