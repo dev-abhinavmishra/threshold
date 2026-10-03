@@ -199,7 +199,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   let wallMat: THREE.MeshStandardMaterial;
   let isWallpaper = false;
   switch (spec.wallMaterial) {
-    case 'tile': wallMat = TEX.tileWall(); break;
+    case 'tile': wallMat = spec.biome === 'maintenance' || spec.biome === 'guest' || spec.biome === 'corridor' ? TEX.tilesSubway() : TEX.tileWall(); break;
     case 'woodPanel': wallMat = TEX.woodPanel(); break;
     case 'travertine': wallMat = TEX.travertine(); break;
     case 'corrugated': wallMat = TEX.corrugated(); break;
@@ -232,9 +232,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     else if (spec.biome === 'lobby' && roll < 0.52) { wallMat = TEX.wallpaperGrand(); keepPaper = true; }
     else if (spec.biome === 'guest' && roll < 0.18) wallMat = TEX.woodPaint();
     else if (spec.biome === 'guest' && roll < 0.35) { wallMat = TEX.plasterFloral(); keepPaper = true; }
+    else if (spec.biome === 'guest' && roll < 0.48) { wallMat = TEX.wallpaperStripe(); keepPaper = true; }
     else if (spec.biome === 'maintenance' && roll < 0.68) wallMat = TEX.plasterPeeling();
     else if (spec.biome === 'maintenance' && roll < 0.78) wallMat = TEX.brickPainted();
     else if ((spec.biome === 'corridor' || spec.biome === 'guest' || spec.biome === 'records') && roll < 0.3) wallMat = TEX.plasterPainted();
+    else if ((spec.biome === 'corridor' || spec.biome === 'records') && roll < 0.4) { wallMat = TEX.wallpaperFloral(); keepPaper = true; }
+    else if (spec.biome === 'lobby' && roll < 0.62) { wallMat = TEX.wallpaperStripe(); keepPaper = true; }
     if (wallMat !== preRoll) isWallpaper = keepPaper;
   }
   if (isWallpaper && rng.float() < 0.55) {
@@ -253,13 +256,13 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           : TEX.concreteFloor())
         : (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && floorRoll < 0.5
           ? (floorRoll < 0.1 ? TEX.marbleDark() : floorRoll < 0.2 ? TEX.terrazzo() : floorRoll < 0.28 ? TEX.granite() : floorRoll < 0.34 ? TEX.tilesMosaic() : floorRoll < 0.42 ? TEX.woodParquet() : TEX.marbleFloor())
-          : (floorRoll < 0.12 && spec.biome === 'maintenance' ? TEX.woodPlanksDark() : (floorRoll < 0.18 && (spec.biome === 'guest' || spec.biome === 'corridor')) ? TEX.tilesCheckered() : floorRoll < 0.24 ? TEX.woodFloorWorn() : floorRoll < 0.38 ? TEX.woodFloorOld() : TEX.woodFloor());
+          : (floorRoll < 0.12 && spec.biome === 'maintenance' ? TEX.woodPlanksDark() : (floorRoll < 0.18 && (spec.biome === 'guest' || spec.biome === 'corridor')) ? TEX.tilesCheckered() : floorRoll < 0.24 ? (spec.biome === 'records' || spec.biome === 'corridor' ? TEX.tilesHex() : TEX.woodFloorWorn()) : floorRoll < 0.38 ? TEX.woodFloorOld() : TEX.woodFloor());
   const ceilRoll = rng.float();
   const ceilMat = isUnder
     ? TEX.concreteFloor()
     : (spec.biome === 'corridor' || spec.biome === 'records' || spec.biome === 'maintenance') && ceilRoll < 0.45
-      ? (ceilRoll < 0.22 ? TEX.ceilingOffice() : TEX.ceilingAcoustic())
-      : TEX.ceiling();
+      ? (ceilRoll < 0.15 ? TEX.ceilingOffice() : ceilRoll < 0.3 ? TEX.ceilingPanel() : TEX.ceilingAcoustic())
+      : ceilRoll < 0.14 ? TEX.plasterSmooth() : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 
   // Floor + ceiling (texBox carries meter-scaled UVs)

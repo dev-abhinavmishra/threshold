@@ -121,6 +121,12 @@ export const TEX = {
   plasterFloral: () => surfaceMaterial('plaster-floral', 1.7, { color: 0xa29a8a }),
   brickOld: () => surfaceMaterial('brick-old', 1.8, { color: 0xa08a78 }),
   granite: () => surfaceMaterial('granite', 1.6, { color: 0x9aa0a4, roughness: 0.35 }),
+  tilesSubway: () => surfaceMaterial('tiles036', 1.7, { color: 0xb9b5ac, roughness: 0.3 }),
+  tilesHex: () => surfaceMaterial('tiles071', 1.5, { color: 0xb2aca0, roughness: 0.35 }),
+  wallpaperStripe: () => surfaceMaterial('wallpaper002a', 1.5, { color: 0x93876f }),
+  wallpaperFloral: () => surfaceMaterial('wallpaper001c', 1.5, { color: 0x8d8371 }),
+  ceilingPanel: () => surfaceMaterial('officeceiling004', 1.55, { color: 0xb5afa5 }),
+  plasterSmooth: () => surfaceMaterial('plaster001', 1.8, { color: 0xa8a094 }),
 };
 
 /** Prop-level swaps (used through MAT): wood and metal grain on furniture. */

@@ -561,3 +561,9 @@ has not finished loading falls back to its procedural builder.
 | shrub_03 | Poly Haven (CC0) | model | weed shrub |
 | shrub_04 | Poly Haven (CC0) | model | weed shrub |
 | garden_sprinkler_01 | Poly Haven (CC0) | model | garden sprinkler |
+| tiles036 | ambientCG (CC0) | texture | subway tile walls (service rooms) |
+| tiles071 | ambientCG (CC0) | texture | hex tile floors (records/corridor) |
+| wallpaper002a | ambientCG (CC0) | texture | striped wallpaper (guest/lobby) |
+| wallpaper001c | ambientCG (CC0) | texture | floral wallpaper (corridor/records) |
+| officeceiling004 | ambientCG (CC0) | texture | second drop-ceiling tile |
+| plaster001 | ambientCG (CC0) | texture | smooth plaster ceiling |
