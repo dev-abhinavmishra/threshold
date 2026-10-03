@@ -17,6 +17,7 @@ import { SoundEventBus } from '../engine/events';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
+import { plateMaterial } from '../world/builder';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
 import { preloadFigures, riggedFigure, type RiggedFigure } from '../entities/rigged';
@@ -1687,6 +1688,8 @@ export class Game {
       this.ensureGateMark(i, built);
       this.ensureDeepVoid(i, built);
       this.ensureRoomTint(i, built);
+      const wrong = this.relabeled.get(i);
+      if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
@@ -1974,6 +1977,35 @@ export class Game {
       mesh: null,
       landed: false,
     };
+  }
+
+  /** The numbers moved — on revisit, a room's exit-door plate can read a
+   *  wrong room number. Pure scare: locks, geometry and routing never change. */
+  private readonly relabeled = new Map<number, string>();
+
+  private applyWrongPlate(roomIndex: number, wrong: string): void {
+    const room = this.activeRooms()[roomIndex];
+    const d = room?.doors.find((x) => x.isMainRoute && !x.falseDoor && x.id.includes('-out'));
+    if (!d) return;
+    const leaf = this.streamer.get(roomIndex)?.doorLeaves.get(d.id);
+    const plate = leaf?.parent?.parent?.getObjectByName('door-plate');
+    const mat = plateMaterial(wrong);
+    if (plate instanceof THREE.Mesh && mat) plate.material = mat;
+  }
+
+  private maybeRelabel(): void {
+    if (this.relabeled.has(this.currentRoom)) return;
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 143);
+    if (!scare.bool(0.3)) return;
+    const wrong = String(Math.max(1, this.currentRoom + 1 + scare.int(-9, 9))).padStart(3, '0');
+    this.relabeled.set(this.currentRoom, wrong);
+    const d = room.doors.find((x) => x.isMainRoute && !x.falseDoor && x.id.includes('-out'));
+    if (!d) return;
+    d.label = wrong;
+    this.applyWrongPlate(this.currentRoom, wrong);
+    this.cue('door-locked', d.pos, '[the number moved]', 'warn');
   }
 
   /** The answering steps — for a few strides in a seeded room, each of your
@@ -2530,6 +2562,7 @@ export class Game {
       this.visitedRooms.add(this.currentRoom);
       if (revisit) {
         this.maybeShiftDoor(this.currentRoom);
+        this.maybeRelabel();
         if (this.currentRoom === 0) this.maybeReSignature();
       }
       this.maybeSpawnRat();

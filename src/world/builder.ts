@@ -638,6 +638,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       // Numbered label plate above door — exit doors read the next room's number.
       const label = String(port === spec.entry ? room.index : room.index + 1).padStart(3, '0');
       const plate = new THREE.Mesh(texBox(0.55, 0.27, 0.05), plateMaterial(label) ?? MAT.brass());
+      plate.name = 'door-plate';
+      plate.userData.port = port === spec.entry ? 'entry' : 'exit';
       plate.position.y = 2.68;
       frame.add(plate);
     }
