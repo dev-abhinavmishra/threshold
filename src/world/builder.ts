@@ -1466,6 +1466,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'typewriter') built.group.name = `type-${room.index}`;
       if (p.kind === 'window') built.group.name = `win-${room.index}`;
       if (p.kind === 'waterCooler') built.group.name = `cool-${room.index}`;
+      if (p.kind === 'statue' || p.kind === 'marbleBust') built.group.name = `stat-${room.index}`;
       group.add(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);

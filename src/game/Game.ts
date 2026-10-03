@@ -2159,6 +2159,7 @@ export class Game {
       this.ensureTrap(i, built);
       this.ensureWasher(i, built);
       this.ensureLuggage(i, built);
+      this.ensureStatue(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2695,6 +2696,62 @@ export class Game {
   private luggageArmed = new Map<number, { lx: number; lz: number; wx: number; wz: number; since: number }>();
   private luggageSpawned = new Set<number>();
   private luggageNoticed = new Set<number>();
+
+  /** Stone that migrates — statues/busts take one quiet step toward you,
+   *  only ever while their new spot is unobserved. Once each. */
+  private statuePlans = new Map<string, { n: number; since: number; done: boolean }>();
+  private maybeStatueShift(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room?.spec || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    let n = 0;
+    for (const p of room.spec.props) {
+      if (p.kind !== 'statue' && p.kind !== 'marbleBust') continue;
+      const key = `${this.space}:${room.index}:${n}`;
+      if (!this.statuePlans.has(key)) {
+        const armed = this.streams.roomStream('scare', room.index * 613 + n * 29 + (this.space === 'under' ? 977 : 0)).bool(0.55);
+        this.statuePlans.set(key, { n, since: this.clock.time, done: !armed });
+      }
+      n++;
+    }
+  }
+
+  private ensureStatue(i: number, built: { group: THREE.Group }): void {
+    const groups: THREE.Object3D[] = [];
+    built.group.traverse((o) => { if (o.name === `stat-${i}`) groups.push(o); });
+    if (!groups.length) return;
+    const room = this.activeRooms()[i];
+    if (!room?.spec) return;
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    let n = 0;
+    for (const p of room.spec.props) {
+      if (p.kind !== 'statue' && p.kind !== 'marbleBust') continue;
+      const key = `${this.space}:${i}:${n}`;
+      const plan = this.statuePlans.get(key);
+      const g = groups[n];
+      n++;
+      if (!plan || plan.done || !g) continue;
+      // only move while unobserved: far away, or out of frame
+      const wx = room.origin.x + g.position.x * c + g.position.z * s;
+      const wz = room.origin.z - g.position.x * s + g.position.z * c;
+      const dx = wx - this.player.pos.x, dz = wz - this.player.pos.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+      const dot = dist > 0.001 ? (dx / dist) * fx + (dz / dist) * fz : 0;
+      if (this.clock.time - plan.since < 3.5) continue;
+      if (dist < 6 && dot > 0.2) continue;
+      // one quiet step, up to 1.1m, toward the player — room-local delta
+      const toX = this.player.pos.x - wx, toZ = this.player.pos.z - wz;
+      const len = Math.sqrt(toX * toX + toZ * toZ) || 1;
+      const step = Math.min(1.1, len * 0.55);
+      const wxd = (toX / len) * step, wzd = (toZ / len) * step;
+      g.position.x += wxd * c - wzd * s;
+      g.position.z += wxd * s + wzd * c;
+      plan.done = true;
+      if (dist < 11) {
+        this.audio.play('luggage-thud', { x: wx, y: 0.3, z: wz }, '[stone scrapes — it was not there before]', 'warn');
+      }
+    }
+  }
 
   private maybeLuggage(): void {
     const room = this.activeRooms()[this.currentRoom];
@@ -3506,6 +3563,7 @@ export class Game {
       this.maybeWallWord();
       this.maybeOccupant();
       this.maybeLuggage();
+      this.maybeStatueShift();
     }
     this.tickEchoQueue();
     this.tickOccupant();
@@ -3517,6 +3575,7 @@ export class Game {
         const revisit = this.visitedRooms.has(-this.currentRoom - 1);
         this.visitedRooms.add(-this.currentRoom - 1);
         if (revisit) { this.maybeShiftDoor(this.currentRoom); this.maybeTenantMoved(true); }
+        this.maybeStatueShift();
         this.maybeFarSound();
         this.maybeBreathing(true);
         this.maybeDoorTry(true);
