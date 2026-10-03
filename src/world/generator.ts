@@ -276,6 +276,7 @@ function mainFloorPlan(shortRun: boolean): PlanEntry[] {
     push('001'); push('002'); push('003'); push('004'); push('005');
     push('010', { biomeBias: 'corridor' });
     push('012');
+    push('018', { fixed: 'ms-baggage' });
     push('020', { biomeBias: 'records' });
     push('030', { fixed: 'ms-chase1' });
     push('035');
@@ -298,6 +299,7 @@ function mainFloorPlan(shortRun: boolean): PlanEntry[] {
     if (i === 0) { push(label, { fixed: 'ms-lobby' }); continue; }
     if (i <= 9) { push(label, { biomeBias: i <= 4 ? 'corridor' : undefined }); continue; }
     if (i <= 19) { push(label); continue; }
+    if (i === 25) { push(label, { fixed: 'ms-baggage' }); continue; }
     if (i <= 29) { push(label); continue; }
     if (i === 30) { push(label, { fixed: 'ms-chase1' }); continue; }
     if (i <= 39) { push(label); continue; }

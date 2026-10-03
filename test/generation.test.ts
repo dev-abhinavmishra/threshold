@@ -225,6 +225,15 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('baggage hall is authored at room 25 with loot sockets', () => {
+    const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
+    const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');
+    expect(hall).toBeTruthy();
+    expect(hall!.index).toBe(25);
+    expect(hall!.authored).toBe(true);
+    expect(hall!.sockets.filter((s) => s.kind === 'loot' || s.kind === 'drawer').length).toBeGreaterThanOrEqual(4);
+  });
+
   it('under sockets get filled with caches — never on safe landings', () => {
     let anyFilled = false;
     for (const seed of SEEDS) {

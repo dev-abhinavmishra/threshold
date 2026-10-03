@@ -411,6 +411,44 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
         ],
         hiding: [{ kind: 'cabinet', x: -2.4, z: 2.6, yaw: Math.PI / 2, propKind: 'cabinet' }],
       });
+    case 'ms-baggage':
+      return base('ms-baggage', 10, 14, 3.6, {
+        special: 'baggage', floorMaterial: 'carpet',
+        props: [
+          { kind: 'sign', x: 0, z: 4.2, y: 2.6 },
+          { kind: 'wallSconce', x: -4.2, z: 0, y: 2.0 },
+          { kind: 'wallSconce', x: 4.2, z: 0, y: 2.0 },
+          { kind: 'trolley', x: -3.2, z: -2.5 },
+          { kind: 'trolley', x: 3.2, z: 1.0 },
+          { kind: 'trolley', x: -3.2, z: 4.0 },
+          { kind: 'suitcase', x: -1.8, z: -1.5, yaw: 0.4 },
+          { kind: 'suitcase', x: -1.2, z: -1.2, yaw: -0.3 },
+          { kind: 'suitcase', x: 0.8, z: -0.5, yaw: 1.1 },
+          { kind: 'suitcase', x: 1.6, z: 0.2, yaw: -0.8 },
+          { kind: 'suitcase', x: -0.4, z: 1.4, yaw: 2.2 },
+          { kind: 'suitcase', x: 2.4, z: 2.2, yaw: 0.2 },
+          { kind: 'suitcase', x: -2.2, z: 2.8, yaw: -1.4 },
+          { kind: 'suitcase', x: 0.4, z: 3.4, yaw: 0.9 },
+          { kind: 'carton', x: 3.6, z: -3.2, yaw: 0.1 },
+          { kind: 'carton', x: 3.2, z: -2.6, y: 0.6, yaw: 0.5 },
+          { kind: 'carton', x: -3.8, z: 0.2, yaw: -0.2 },
+          { kind: 'paperScatter', x: 0.5, z: -2.8 },
+          { kind: 'paperScatter', x: -1.0, z: 0.8 },
+          { kind: 'ceilingLamp', x: 0, z: -2 },
+          { kind: 'ceilingLamp', x: 0, z: 3 },
+        ],
+        sockets: [
+          { kind: 'loot', x: -3.2, z: -2.0, meta: {} },
+          { kind: 'loot', x: 3.2, z: 1.5, meta: {} },
+          { kind: 'loot', x: -3.2, z: 4.5, meta: {} },
+          { kind: 'drawer', x: 0.8, z: -4.6, meta: {} },
+          { kind: 'drawer', x: -1.2, z: 5.0, meta: {} },
+        ],
+        hiding: [
+          { kind: 'cabinet', x: 4.2, z: -4.8, yaw: -Math.PI / 2, propKind: 'cabinet' },
+          { kind: 'underFurniture', x: 0, z: 0.6, yaw: Math.PI / 2, propKind: 'trolley' },
+        ],
+      });
     case 'ms-decompress':
       return base('ms-decompress', 3.4, 8, 3.0, {
         special: 'decompress', floorMaterial: 'stone',
