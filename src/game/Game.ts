@@ -1564,6 +1564,12 @@ export class Game {
           const a = (o.userData.animAmp as number) ?? 0.03;
           o.rotation.z = Math.sin(t * 1.4 + s) * a;
           o.rotation.x = Math.cos(t * 1.1 + s * 0.7) * a * 0.6;
+          // grandfather pendulums tick once a second in earshot
+          if (a >= 0.1) {
+            o.getWorldPosition(this.tmpV3);
+            const d = v3dist(this.tmpV3, this.player.pos);
+            if (d < this.clockNear) { this.clockNear = d; this.clockPos.copy(this.tmpV3); }
+          }
         } else if (kind === 'swing') {
           const a = (o.userData.animAmp as number) ?? 0.12;
           o.rotation.x = Math.sin(t * 1.15 + s) * a;
@@ -1656,6 +1662,14 @@ export class Game {
         }
       }
     }
+
+    // Working clocks tock once a second — a metronome for rooms that keep time.
+    if (this.clockNear < 10 && this.clock.time >= this.nextClockTick) {
+      this.nextClockTick = (this.nextClockTick > 0 ? this.nextClockTick : this.clock.time) + 1;
+      this.cue('clock-tick', this.clockPos, '');
+      this.sound?.emit({ x: this.clockPos.x, y: this.clockPos.y, z: this.clockPos.z, intensity: Math.max(0.02, 0.12 * (1 - this.clockNear / 10)), category: 'ambient', caption: '' });
+    }
+    this.clockNear = 999;
 
     // Entity figure idle animation — breathing sway + eye pulse.
     const t = this.clock.time;
@@ -1760,6 +1774,10 @@ export class Game {
   private nextHollowHum = 0;
   /** A room whose lights inhale and dim on a slow cycle — present while inside. */
   private breathingRoom = -1;
+  private nextClockTick = 0;
+  private clockNear = 0;
+  private readonly clockPos = new THREE.Vector3();
+  private readonly tmpV3 = new THREE.Vector3();
 
   private maybeBreathing(): void {
     const room = this.activeRooms()[this.currentRoom];
