@@ -33,6 +33,7 @@ export type PropKind =
   | 'medallion' | 'vault' | 'scissorgate' | 'balustrade'
   | 'boilerDrum' | 'pipeManifold' | 'stackShelf'
   | 'breakerPanel' | 'wallVent' | 'portcullis'
+  | 'wardrobe' | 'dresser' | 'nightstand'
   | 'barrel' | 'wineBarrel' | 'pipeManifold' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'

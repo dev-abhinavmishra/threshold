@@ -30,11 +30,13 @@ def mat(name, color, rough=0.85, metal=0.0):
 STONE = None
 DARK = None
 IRON = None
+WOOD = None
 
 def init_mats():
-    global STONE, DARK, IRON
+    global STONE, DARK, IRON, WOOD
     STONE = mat('stone', (0.42, 0.38, 0.33))
     DARK = mat('darkwood', (0.16, 0.10, 0.07), rough=0.7)
+    WOOD = mat('oakwood', (0.32, 0.22, 0.13), rough=0.8)
     IRON = mat('iron', (0.11, 0.11, 0.12), rough=0.45, metal=0.85)
 
 # ---------- build helpers ----------
@@ -405,10 +407,64 @@ def portcullis():
         cube('strap', (0, -0.01, z), (w - 0.1, 0.03, 0.07), IRON, 0.004)
     join_all('portcullis')
 
+
+def wardrobe():
+    """Tall double-door wardrobe: cornice, panelled doors, bun feet, escutcheons."""
+    w, h, d = 1.3, 2.15, 0.62
+    cube('body', (0, 0, h / 2), (w, d, h - 0.25), WOOD, 0.015)
+    # cornice + plinth
+    cube('cornice', (0, 0, h - 0.05), (w + 0.1, d + 0.08, 0.12), WOOD, 0.02)
+    cube('plinth', (0, 0, 0.1), (w + 0.06, d + 0.05, 0.2), WOOD, 0.015)
+    # bun feet
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6, radius=0.055,
+                location=(sx * (w / 2 - 0.08), sy * (d / 2 - 0.08), 0.05))
+            bpy.context.object.data.materials.append(WOOD)
+    # door panels — two raised panels per leaf, recessed stiles
+    for sx in (-1, 1):
+        dx = sx * w / 4
+        for pz, ph in [(0.55, 0.62), (1.4, 1.0)]:
+            cube('panel', (dx, -d / 2 - 0.015, pz), (w / 2 - 0.18, 0.025, ph), DARK, 0.01)
+        # seam between leaves
+        cube('stile', (0, -d / 2 - 0.005, h / 2), (0.04, 0.02, h - 0.3), WOOD, 0.005)
+        # escutcheon
+        cyl('esc', (sx * 0.07, -d / 2 - 0.02, 1.0), 0.018, 0.02, IRON, 8).rotation_euler[0] = math.pi / 2
+    join_all('wardrobe')
+
+def dresser():
+    """Three-drawer chest: overhanging top, recessed drawer faces, pulls."""
+    w, h, d = 1.0, 0.95, 0.5
+    cube('body', (0, 0, h / 2), (w, d, h - 0.08), WOOD, 0.012)
+    cube('top', (0, 0, h - 0.02), (w + 0.08, d + 0.06, 0.05), WOOD, 0.012)
+    for i in range(3):
+        z = 0.28 + i * 0.24
+        cube('drawer', (0, -d / 2 - 0.012, z), (w - 0.14, 0.03, 0.2), DARK, 0.008)
+        for sx in (-1, 1):
+            cyl('pull', (sx * 0.14, -d / 2 - 0.04, z), 0.018, 0.03, IRON, 8).rotation_euler[0] = math.pi / 2
+    # feet
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cube('foot', (sx * (w / 2 - 0.05), sy * (d / 2 - 0.05), 0.035), (0.06, 0.06, 0.07), WOOD, 0.008)
+    join_all('dresser')
+
+def nightstand():
+    """Bedside cabinet: one drawer over a recessed door, turned legs."""
+    w, h, d = 0.48, 0.72, 0.4
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('leg', (sx * (w / 2 - 0.035), sy * (d / 2 - 0.035), 0.16), 0.028, 0.32, WOOD, 8)
+    cube('body', (0, 0, 0.32 + (h - 0.32) / 2), (w, d, h - 0.32), WOOD, 0.01)
+    cube('top', (0, 0, h - 0.015), (w + 0.05, d + 0.04, 0.035), WOOD, 0.01)
+    cube('drawer', (0, -d / 2 - 0.01, h - 0.14), (w - 0.1, 0.025, 0.14), DARK, 0.006)
+    cyl('knob', (0, -d / 2 - 0.03, h - 0.14), 0.015, 0.025, IRON, 8).rotation_euler[0] = math.pi / 2
+    cube('door', (0, -d / 2 - 0.01, 0.48), (w - 0.1, 0.02, 0.22), DARK, 0.006)
+    join_all('nightstand')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
-    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf, 'breakerPanel': breakerPanel, 'wallVent': wallVent, 'portcullis': portcullis,
+    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf, 'breakerPanel': breakerPanel, 'wallVent': wallVent, 'portcullis': portcullis, 'wardrobe': wardrobe, 'dresser': dresser, 'nightstand': nightstand,
 }
 
 def main():

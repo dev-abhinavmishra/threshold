@@ -643,3 +643,11 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 | `portcullis` | Spiked iron grid gate | maint-service-narrow |
 
 Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-records-cage, u-long-hall, u-server, u-narrow-stacks (portcullis, hatches, stackShelf bays, pipeManifold, breaker panels, wall vents).
+
+### Mill — batch 5 (guest furniture)
+
+| Dir | Piece | Where it appears |
+| --- | --- | --- |
+| `wardrobe` | Double-door wardrobe: cornice, panelled doors, bun feet, escutcheons | guest-standard, suite-split |
+| `dresser` | Three-drawer chest: overhanging top, recessed faces, pulls | guest-standard, suite-split |
+| `nightstand` | Bedside cabinet variant (merged into existing `nightstand` variants) | guest-standard, suite-split |

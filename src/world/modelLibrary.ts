@@ -121,6 +121,9 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   breakerPanel: { dir: 'breakerPanel', height: 1.6, collider: [0.9, 1.6, 0.2] },
   wallVent: { dir: 'wallVent', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
   portcullis: { dir: 'portcullis', height: 2.6, collider: [2.4, 2.6, 0.15] },
+  wardrobe: { dir: 'wardrobe', height: 2.2, collider: [1.3, 2.2, 0.62] },
+  dresser: { dir: 'dresser', height: 0.98, collider: [1.0, 0.98, 0.55] },
+
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
     variants: [
@@ -341,7 +344,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   compostBags: { dir: 'compost_bags', height: 0.65, collider: [0.7, 0.65, 0.6] },
   nightstand: {
     dir: 'ClassicNightstand_01', height: 0.62, collider: [0.55, 0.62, 0.45],
-    variants: [{ dir: 'painted_wooden_nightstand', height: 0.6, collider: [0.55, 0.6, 0.45] }],
+    variants: [
+      { dir: 'painted_wooden_nightstand', height: 0.6, collider: [0.55, 0.6, 0.45] },
+      { dir: 'nightstand', height: 0.75, collider: [0.5, 0.75, 0.42] },
+    ],
   },
   screenPanels: { dir: 'chinese_screen_panels', height: 1.85, collider: [1.8, 1.85, 0.12] },
   foldingStool: { dir: 'folding_wooden_stool', height: 0.46, collider: [0.4, 0.46, 0.4] },
