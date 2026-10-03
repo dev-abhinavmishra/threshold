@@ -325,6 +325,7 @@ export class Game {
     this.bookDrop = null;
     this.echoRoom = -1;
     this.echoQueue.length = 0;
+    this.phoneRing = null;
     for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
     this.brokerFigs.clear();
     this.clearRats();
@@ -1286,6 +1287,7 @@ export class Game {
     this.bookDrop = null;
     this.echoRoom = -1;
     this.echoQueue.length = 0;
+    this.phoneRing = null;
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
@@ -1310,6 +1312,7 @@ export class Game {
     this.bookDrop = null;
     this.echoRoom = -1;
     this.echoQueue.length = 0;
+    this.phoneRing = null;
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -2050,6 +2053,25 @@ export class Game {
     }
   }
 
+  /** The phone rings — a dead payphone fires a burst of rings a few seconds
+   *  after you enter, loud enough to draw anything that hunts by sound. */
+  private phoneRing: { pos: Vec3; at: number; until: number; lastRing: number } | null = null;
+
+  private maybePhoneRing(under = false): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
+    const prop = room.spec?.props.find((p) => p.kind === 'payphone');
+    if (!prop) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 199 + (under ? 977 : 0));
+    if (!scare.bool(0.3)) return;
+    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    const at = this.clock.time + 1.5 + scare.range(0, 5);
+    this.phoneRing = {
+      pos: { x: room.origin.x + prop.x * cs + prop.z * sn, y: 1.4, z: room.origin.z - prop.x * sn + prop.z * cs },
+      at, until: at + 4.2, lastRing: 0,
+    };
+  }
+
   private maybeDoorTry(under = false): void {
     const room = this.activeRooms()[this.currentRoom];
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
@@ -2576,6 +2598,7 @@ export class Game {
       this.maybeDoorTry();
       this.maybeBookDrop();
       this.maybeEchoRoom();
+      this.maybePhoneRing();
       this.maybeDeepReveal();
     }
     this.tickEchoQueue();
@@ -2591,6 +2614,7 @@ export class Game {
         this.maybeDoorTry(true);
         this.maybeBookDrop();
         this.maybeEchoRoom(true);
+        this.maybePhoneRing(true);
       }
     }
     // death echo: the building remembers where it took you
@@ -2816,6 +2840,21 @@ export class Game {
         this.sound.emit({ x: this.doorTry.pos.x, y: 1.2, z: this.doorTry.pos.z, intensity: 0.45, category: 'door', caption: '' });
       }
       if (tA >= this.doorTry.until) this.doorTry = null;
+    }
+
+    // The payphone rings in short bursts, then gives up.
+    if (this.phoneRing) {
+      const pr = this.phoneRing;
+      if (tA >= pr.at && tA >= pr.lastRing) {
+        pr.lastRing = tA + 1.05;
+        this.audio.play('phone-ring', { x: pr.pos.x, y: pr.pos.y, z: pr.pos.z },
+          tA - pr.at < 0.2 ? '[a phone rings]' : '');
+        this.sound.emit({ x: pr.pos.x, y: pr.pos.y, z: pr.pos.z, intensity: 0.55, category: 'ambient', caption: '' });
+      }
+      if (tA >= pr.until) {
+        this.cue('phone-stop', pr.pos, '[the ringing stopped]', 'warn');
+        this.phoneRing = null;
+      }
     }
 
     // The falling book — drops off the shelf, lands flat, stays behind.

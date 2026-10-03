@@ -94,6 +94,8 @@ const CUES: Record<string, CueSpec> = {
   'piano-note': { freq: 311, dur: 2.2, type: 'triangle', gain: 0.1, sweep: 300 },
   'door-rattle': { freq: 210, dur: 0.5, type: 'square', gain: 0.12, sweep: 160, noise: true },
   'book-drop': { freq: 140, dur: 0.4, type: 'triangle', gain: 0.11, sweep: 80, noise: true },
+  'phone-ring': { freq: 900, dur: 0.3, type: 'square', gain: 0.06, sweep: 1200 },
+  'phone-stop': { freq: 150, dur: 0.15, type: 'sine', gain: 0.05, sweep: 0 },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },
