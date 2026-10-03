@@ -108,6 +108,11 @@ const CUES: Record<string, CueSpec> = {
 /** Adaptive music layer states. */
 export type MusicMood = 'menu' | 'calm' | 'tension' | 'chase' | 'milestone' | 'under' | 'engine' | 'off';
 
+export type ZoneKind = 'corridor' | 'gallery' | 'suite' | 'maintenance' | 'safe' | 'under';
+const ZONE_TAIL: Record<ZoneKind, number> = { corridor: 0.9, gallery: 2.6, suite: 0.55, maintenance: 1.3, safe: 0.4, under: 1.8 };
+const ZONE_DAMP: Record<ZoneKind, number> = { corridor: 3.5, gallery: 2.2, suite: 4.5, maintenance: 3.0, safe: 5.0, under: 2.6 };
+const ZONE_WET: Record<ZoneKind, number> = { corridor: 0.18, gallery: 0.45, suite: 0.10, maintenance: 0.28, safe: 0.05, under: 0.35 };
+
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private buses = new Map<string, GainNode>();
@@ -120,6 +125,11 @@ export class AudioManager {
   private listener: Vec3 = { x: 0, y: 0, z: 0 };
   private listenerYaw = 0;
   private noiseBuffer: AudioBuffer | null = null;
+  private convolver: ConvolverNode | null = null;
+  private wetGain: GainNode | null = null;
+  private occlusionFilter: BiquadFilterNode | null = null;
+  private zone: ZoneKind = 'corridor';
+  private occlusion = 0;
   captionsEnabled = true;
 
   /** Call from a user gesture. */
@@ -138,6 +148,22 @@ export class AudioManager {
     for (const name of ['music', 'sfx', 'ui', 'voice']) {
       this.buses.get(name)!.connect(this.buses.get('master')!);
     }
+    // spatial wet path: sfx -> convolver -> master, per-zone impulse response
+    this.convolver = this.ctx.createConvolver();
+    this.wetGain = this.ctx.createGain();
+    this.wetGain.gain.value = ZONE_WET[this.zone];
+    this.buses.get('sfx')!.connect(this.convolver);
+    this.convolver.connect(this.wetGain).connect(this.buses.get('master')!);
+    this.convolver.buffer = this.impulse(ZONE_TAIL[this.zone], ZONE_DAMP[this.zone]);
+    // door occlusion: lowpass on the sfx bus (frequency eased in updateOcclusion)
+    this.occlusionFilter = this.ctx.createBiquadFilter();
+    this.occlusionFilter.type = 'lowpass';
+    this.occlusionFilter.frequency.value = 20000;
+    this.occlusionFilter.Q.value = 0.6;
+    const sfx = this.buses.get('sfx')!;
+    sfx.disconnect(this.buses.get('master')!);
+    sfx.connect(this.occlusionFilter);
+    this.occlusionFilter.connect(this.buses.get('master')!);
     this.applyVolumes();
     // shared noise buffer
     const len = this.ctx.sampleRate * 2;
@@ -170,6 +196,39 @@ export class AudioManager {
   setListener(pos: Vec3, yaw: number): void {
     this.listener = { ...pos };
     this.listenerYaw = yaw;
+    if (this.occlusionFilter && this.ctx) {
+      const target = 20000 - this.occlusion * 19000; // 0 → 20kHz open, 1 → 1kHz closed
+      this.occlusionFilter.frequency.setTargetAtTime(target, this.ctx.currentTime, 0.08);
+    }
+  }
+
+  /** Zone reverb character — crossfades the convolver IR + wet level. */
+  setZone(z: ZoneKind): void {
+    if (z === this.zone) return;
+    this.zone = z;
+    if (!this.ctx || !this.convolver || !this.wetGain) return;
+    this.convolver.buffer = this.impulse(ZONE_TAIL[z], ZONE_DAMP[z]);
+    this.wetGain.gain.setTargetAtTime(ZONE_WET[z], this.ctx.currentTime, 0.4);
+  }
+
+  /** 0 = open space, 1 = listener sealed behind closed doors. */
+  setOcclusion(v: number): void {
+    this.occlusion = Math.max(0, Math.min(1, v));
+  }
+
+  /** Procedural exponential-decay impulse response (stereo, decorrelated). */
+  private impulse(seconds: number, damp: number): AudioBuffer {
+    const sr = this.ctx!.sampleRate;
+    const len = Math.max(256, Math.floor(sr * seconds));
+    const buf = this.ctx!.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const t = i / len;
+        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, damp);
+      }
+    }
+    return buf;
   }
 
   onCaption(fn: (c: Caption) => void): () => void {

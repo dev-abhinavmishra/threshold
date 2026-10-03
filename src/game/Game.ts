@@ -2033,6 +2033,18 @@ export class Game {
       this.heldTorch.visible = false;
     }
     this.audio.setListener(this.player.pos, this.player.yaw);
+    // zone reverb + door occlusion
+    const zoneRoom = this.activeRooms()[this.currentRoom];
+    const ZONE_MAP: Record<string, import('../audio/audio').ZoneKind> = {
+      lobby: 'gallery', corridor: 'corridor', guest: 'suite', records: 'suite',
+      maintenance: 'maintenance', gallery: 'gallery', unlit: 'under',
+      milestone: 'gallery', safe: 'safe', underscript: 'under',
+    };
+    this.audio.setZone(ZONE_MAP[zoneRoom?.biome ?? 'corridor'] ?? 'corridor');
+    // occlusion: fraction of nearby doors closed — closed door behind muffles the world
+    let closed = 0, total = 0;
+    for (const d of this.doorsAt(this.player.pos)) { total++; if (!d.opening) closed++; }
+    this.audio.setOcclusion(total === 0 ? 0 : closed / total);
 
     // adaptive music mood
     const inDanger = this.entities.some((e) => e.state === 'engage' && e.id !== 'hollow');
