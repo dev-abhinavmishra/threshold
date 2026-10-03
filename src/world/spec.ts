@@ -32,6 +32,7 @@ export type PropKind =
   | 'archway' | 'colonnade' | 'fireplace' | 'windowArch' | 'hatch'
   | 'medallion' | 'vault' | 'scissorgate' | 'balustrade'
   | 'boilerDrum' | 'pipeManifold' | 'stackShelf'
+  | 'breakerPanel' | 'wallVent' | 'portcullis'
   | 'barrel' | 'wineBarrel' | 'pipeManifold' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'

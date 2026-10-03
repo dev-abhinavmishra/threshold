@@ -623,3 +623,21 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 | `boilerDrum` | Riveted boiler vessel: dome top, rivet bands, sight glass, valve | maint-boiler, maint-server |
 | `pipeManifold` | Wall-mounted 3-pipe run: drop elbows, valve wheels | maint-boiler, maint-flooded, maint-server |
 | `stackShelf` | Archive shelving bay: iron frame, 5 shelves, labelled file boxes | records-stacks |
+
+### Figures — sprint 84 additions (Quaternius, CC0, poly.pizza)
+
+| File | Source model | poly.pizza id | Rigged for |
+| --- | --- | --- | --- |
+| `quaternius_orc.glb` | Orc Enemy | `Q3z8ZX4kUy` | Reprise corridor runner |
+| `quaternius_monkroose.glb` | Monkroose | `j4rVPvxyLg` | Returner corridor runner |
+| `quaternius_ninja.glb` | Ninja | `mCNoqcqpvC` | (staged for upcoming entities) |
+| `quaternius_tribal.glb` | Tribal | `t91lDHaqRW` | (staged for upcoming entities) |
+| `quaternius_dragon.glb` | Dragon Evolved | `LlwD0QNUPj` | (staged for upcoming entities) |
+
+### Mill — batch 4
+
+| Dir | Piece | Where it appears |
+| --- | --- | --- |
+| `breakerPanel` | Fuse cabinet: switch bank, ajar door, cable drops | maint-pipes, maint-flooded, maint-server, corr-wide |
+| `wallVent` | Louvered grille with fan shadow | maint-pipes, maint-flooded, corr-wide |
+| `portcullis` | Spiked iron grid gate | maint-service-narrow |

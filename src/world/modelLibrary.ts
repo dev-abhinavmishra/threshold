@@ -118,6 +118,9 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   boilerDrum: { dir: 'boilerDrum', height: 2.5, collider: [1.6, 2.5, 1.6] },
   pipeManifold: { dir: 'pipeManifold', height: 2.5, collider: [0, 0, 0], anchor: 'center' },
   stackShelf: { dir: 'stackShelf', height: 2.3, collider: [1.6, 2.3, 0.55] },
+  breakerPanel: { dir: 'breakerPanel', height: 1.6, collider: [0.9, 1.6, 0.2] },
+  wallVent: { dir: 'wallVent', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
+  portcullis: { dir: 'portcullis', height: 2.6, collider: [2.4, 2.6, 0.15] },
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
     variants: [

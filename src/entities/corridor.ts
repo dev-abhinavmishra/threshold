@@ -15,7 +15,7 @@ import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
-import { riggedFigure, type RiggedFigure } from './rigged';
+import { riggedFigure, RIGGED, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 
 export interface CorridorOptions {
@@ -130,11 +130,13 @@ export class CorridorRunner extends Entity {
         g.add(fin);
       }
     } else {
-      // Sweep / Reprise / Returner — a tall hunched figure, eye-line band.
-      const rig = riggedFigure('skeleton');
+      // Sweep / Reprise / Returner — distinct bodies per runner: gaunt sprinter,
+      // armoured brute, antlered thing closing from ahead.
+      const kind = this.id === 'returner' ? 'monkroose' : this.id === 'reprise' ? 'orc' : 'skeleton';
+      const rig = riggedFigure(kind as 'skeleton');
       if (rig) {
         rig.play('move', 0);
-        rig.group.scale.multiplyScalar(2.6 / 2.2);
+        rig.group.scale.multiplyScalar(2.6 / RIGGED[kind].height);
         this.rig = rig;
         g.add(rig.group);
       } else {

@@ -68,6 +68,16 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_yeti.glb', height: 2.5, tint: 0.5, emissive: 0.02,
     clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'jump'] },
   },
+  /** Armoured brute — the Reprise that hauls itself down the corridor again. */
+  orc: {
+    file: 'quaternius_orc.glb', height: 2.4, tint: 0.4,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'jump'] },
+  },
+  /** Antlered sprinter — the Returner closing from ahead, full run clip. */
+  monkroose: {
+    file: 'quaternius_monkroose.glb', height: 2.1, tint: 0.45,
+    clips: { idle: ['idle'], move: ['run', 'walk'], attack: ['punch', 'bite_front'] },
+  },
   /** Grey intruder — the thing that was already inside the cabinet. */
   alien: {
     file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,

@@ -349,10 +349,66 @@ def stackShelf():
                 PAPER.diffuse_color = (0.75, 0.68, 0.5, 1)
     join_all('stackShelf')
 
+
+def breakerPanel():
+    """Fuse/breaker box: cabinet, switch bank, warning plate, cable drops."""
+    w, h, d = 0.9, 1.4, 0.18
+    cube('cab', (0, 0, h / 2), (w, d, h), IRON, 0.02)
+    # hinged door ajar on the right edge
+    door = cube('door', (w / 2 + 0.16, -0.14, h / 2), (0.025, 0.34, h * 0.94), IRON, 0.01)
+    door.rotation_euler[2] = 0.55
+    # breaker toggles in rows
+    for r in range(4):
+        for cix in range(3):
+            cube('sw', (-w / 2 + 0.2 + cix * 0.25, -d / 2 - 0.02, 0.9 - r * 0.22),
+                 (0.12, 0.04, 0.08), DARK, 0.004)
+    # cable drops below
+    for cx in (-0.25, 0.05, 0.3):
+        cyl('cable', (cx, 0, -0.4), 0.02, 0.8, DARK, 8)
+    join_all('breakerPanel')
+
+def wallVent():
+    """Louvered wall grille with fan shadow behind. 0.9 sq."""
+    w = 0.9
+    cube('frame', (0, 0, 0), (w, 0.06, w), DARK, 0.02)
+    # inner recess
+    cube('recess', (0, 0.02, 0), (w - 0.12, 0.03, w - 0.12), IRON, 0)
+    # fan silhouette
+    for i in range(4):
+        bl = cube('blade', (0, 0.04, 0), (0.3, 0.01, 0.1), DARK, 0.01)
+        bl.rotation_euler[1] = i * math.pi / 4
+        bl.location = (0, 0.04, 0)
+    # louvers angled across the front
+    for i in range(7):
+        lv = cube('lv', (0, -0.03, -w / 2 + 0.1 + i * 0.11), (w - 0.1, 0.015, 0.08), DARK, 0.002)
+        lv.rotation_euler[0] = 0.5
+    join_all('wallVent')
+
+def portcullis():
+    """Underscript gate — iron grid of bars with spike feet, hangs in a frame."""
+    w, h = 2.4, 2.6
+    # frame channel posts
+    for sx in (-1, 1):
+        cube('chan', (sx * (w / 2 - 0.05), 0, h / 2), (0.1, 0.14, h), IRON, 0.008)
+    cube('head', (0, 0, h - 0.06), (w, 0.16, 0.12), IRON, 0.008)
+    # vertical bars with spike tips
+    n = 9
+    for i in range(n):
+        x = -w / 2 + 0.16 + i * (w - 0.32) / (n - 1)
+        cyl('bar', (x, 0, h / 2), 0.025, h - 0.3, IRON, 8)
+        # spike foot
+        bpy.ops.mesh.primitive_cone_add(vertices=8, radius1=0.04, radius2=0, depth=0.22,
+            location=(x, 0, 0.11))
+        bpy.context.object.data.materials.append(IRON)
+    # horizontal straps
+    for z in (0.4, 1.3, 2.2):
+        cube('strap', (0, -0.01, z), (w - 0.1, 0.03, 0.07), IRON, 0.004)
+    join_all('portcullis')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
-    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf,
+    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf, 'breakerPanel': breakerPanel, 'wallVent': wallVent, 'portcullis': portcullis,
 }
 
 def main():
