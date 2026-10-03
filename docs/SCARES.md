@@ -49,6 +49,7 @@ ported to the subfloor.
 | The pipes tick | — (proximity) | rooms with pipework/boilers/vents | ironwork ticks — slow when a threat is far, faster as it closes under ~12m | the walls keep count: hear it quicken, find a hiding spot |
 | The stone migrates | +613 (0.55/statue) | statues and marble busts | one quiet step toward you, up to ~1m — only ever while unobserved; a scrape if you're close | it waits for you to look away; leave the room, don't stare |
 | The pages whisper | — (proximity, ~1.2s) | bookshelves, papers, stacks | linger close and the pages say a title — yours. Once per shelf | reading is free; being read is the price |
+| Loose rug | +617 (0.35/rug) | rugs with a curled corner | steps out from under you once: a stumble (×0.72 for 1.4s), a small footstep-class emit, a panic tick | watch the floor — a curled corner means it lies |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |

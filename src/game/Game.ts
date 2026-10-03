@@ -798,11 +798,12 @@ export class Game {
       this.liveTraps = [];
       this.liveTickProps = [];
       this.liveBooks = [];
+      this.liveRugs = [];
       this.bookNear = 0;
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -818,6 +819,12 @@ export class Game {
           // ticking ironwork: proximity tells that answer the house's pulse
           if (p.kind === 'pipe' || p.kind === 'indPipes' || p.kind === 'pipeManifold' || p.kind === 'boilerDrum' || p.kind === 'boilerTank' || p.kind === 'steamVent' || p.kind === 'wallVent') {
             this.liveTickProps.push({ x: wx, z: wz });
+          }
+          // loose rugs slide once — a curled corner is the tell
+          if (p.kind === 'rug') {
+            const rkey = `${this.space}:${pr.index}:rug${rg++}`;
+            if (!this.armedRugs.has(rkey)) this.armedRugs.set(rkey, this.streams.roomStream('scare', pr.index * 617 + rg - 1).bool(0.35));
+            if (this.armedRugs.get(rkey) && !this.slippedRugs.has(rkey)) this.liveRugs.push({ x: wx, z: wz, key: rkey });
           }
           // written things whisper once if you linger close
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
@@ -2166,6 +2173,7 @@ export class Game {
       this.ensureWasher(i, built);
       this.ensureLuggage(i, built);
       this.ensureStatue(i, built);
+      this.ensureRug(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2691,6 +2699,9 @@ export class Game {
   private bookNear = 0;
   private bookTarget: { x: number; z: number; key: string } | null = null;
   private bookWhispered = new Set<string>();
+  private liveRugs: { x: number; z: number; key: string }[] = [];
+  private armedRugs = new Map<string, boolean>();
+  private slippedRugs = new Set<string>();
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -2782,6 +2793,30 @@ export class Game {
 
   /** It only ever arrives while the spot is unobserved — first it is empty,
    *  then it isn't; it must have been carried in while you looked elsewhere. */
+  /** Armed rugs get a curled corner — a readable tell if you're watching the floor. */
+  private ensureRug(i: number, built: { group: THREE.Group }): void {
+    const groups: THREE.Object3D[] = [];
+    built.group.traverse((o) => { if (o.name === `rug-${i}`) groups.push(o); });
+    if (!groups.length) return;
+    const room = this.activeRooms()[i];
+    if (!room?.spec) return;
+    let r = 0;
+    for (const p of room.spec.props) {
+      if (p.kind !== 'rug') continue;
+      const g = groups[r];
+      const key = `${this.space}:${i}:rug${r}`;
+      r++;
+      if (!g || (g.userData.rugDone as boolean)) continue;
+      if (this.slippedRugs.has(key)) {
+        g.rotation.z += 0.5;
+        g.userData.rugDone = true;
+      } else if (this.armedRugs.get(key)) {
+        g.rotation.z = 0.045; // the curled corner
+        g.userData.rugDone = true;
+      }
+    }
+  }
+
   private ensureLuggage(i: number, built: { group: THREE.Group }): void {
     const a = this.luggageArmed.get(i);
     if (!a) return;
@@ -3934,6 +3969,23 @@ export class Game {
         const interval = 0.35 + nearest * 0.11;
         this.pipeTickNext = tA + interval;
         this.audio.play('pipe-tick', { x: bp.x, y: 1.1, z: bp.z }, interval < 0.75 ? '[the pipes tick — faster]' : '', 'warn');
+      }
+    }
+
+    // Loose rugs slide — one trip each, loud enough to cost you
+    for (const rg of this.liveRugs) {
+      const dx = rg.x - this.player.pos.x, dz = rg.z - this.player.pos.z;
+      if (dx * dx + dz * dz < 0.85 * 0.85) {
+        this.slippedRugs.add(rg.key);
+        const at = { x: rg.x, y: 0.05, z: rg.z };
+        this.audio.play('rug-slide', at, '[the rug slides out from under you]', 'warn');
+        this.sound.emit({ x: at.x, y: 0.1, z: at.z, intensity: 0.3, category: 'footstep', caption: '[a stumble]' });
+        if (this.player.speedMul === 1) {
+          this.player.speedMul = 0.72;
+          const p = this.player;
+          window.setTimeout(() => { if (p.speedMul === 0.72) p.speedMul = 1; }, 1400);
+        }
+        this.player.panic = Math.min(1, this.player.panic + 0.05);
       }
     }
 
