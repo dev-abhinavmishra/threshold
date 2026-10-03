@@ -1191,6 +1191,13 @@ export class Game {
           const on = n > -0.75;
           mat.emissiveIntensity = on ? 1.35 + Math.sin(t * 47 + s) * 0.15 : 0.04;
           if (light) light.intensity = (light.userData.baseIntensity as number) * (on ? 1 : 0.1);
+        } else if (kind === 'handS') {
+          // Clockwork — stepped second hand, smooth minute/hour.
+          o.rotation.z = -Math.floor(t % 60) * (Math.PI / 30);
+        } else if (kind === 'handM') {
+          o.rotation.z = -((t / 60) % 60) * (Math.PI / 30);
+        } else if (kind === 'handH') {
+          o.rotation.z = -((t / 720) % 12) * (Math.PI / 6);
         } else if (kind === 'flame') {
           // Open-flame fixture: layered sine jitter on the shared emissive.
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;

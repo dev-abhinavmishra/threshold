@@ -722,6 +722,7 @@ function normalize(root: THREE.Object3D, spec: ModelSpec): THREE.Group {
 /** Reduce a loaded GLTF scene to a single merged mesh per material for draw calls. */
 function bake(holder: THREE.Group): THREE.Group {
   const byMat = new Map<string, { mat: THREE.Material; geos: THREE.BufferGeometry[] }>();
+  const out = new THREE.Group();
   holder.updateMatrixWorld(true);
   const tuned = new Set<string>();
   holder.traverse((o) => {
@@ -735,6 +736,20 @@ function bake(holder: THREE.Group): THREE.Group {
       if (typeof mat.metalness === 'number') mat.metalness = Math.min(mat.metalness, 0.85);
       if (typeof mat.roughness === 'number') mat.roughness = Math.max(mat.roughness, 0.35);
     }
+    // Articulated nodes (clock hands, pendulums) stay live so they can
+    // animate — anything else is flattened into the material buckets.
+    let live = false;
+    for (let p: THREE.Object3D | null = m; p; p = p.parent) {
+      if (/(_hand|pendulum)/i.test(p.name)) { live = true; break; }
+    }
+    if (live) {
+      const keep = new THREE.Mesh(m.geometry, m.material);
+      keep.name = m.name;
+      keep.castShadow = true;
+      keep.applyMatrix4(m.matrixWorld);
+      out.add(keep);
+      return;
+    }
     const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
     // Merge only attribute-compatible geometries — mergeGeometries() returns
     // null for a mixed bucket (e.g. one mesh with uv + one without, or mixed
@@ -745,7 +760,6 @@ function bake(holder: THREE.Group): THREE.Group {
     if (!e) { e = { mat: m.material as THREE.Material, geos: [] }; byMat.set(key, e); }
     e.geos.push(g);
   });
-  const out = new THREE.Group();
   for (const { mat, geos } of byMat.values()) {
     const merged = mergeGeometries(geos, false);
     if (!merged) continue;
@@ -796,7 +810,18 @@ export function modelInstance(kind: string, roll = 0): THREE.Group | null {
   const variants = base.variants ?? [];
   const spec = variants.length && roll > 0.5 ? variants[Math.floor(roll * variants.length * 2) % variants.length] : base;
   const src = cache.get(spec.dir) ?? cache.get(base.dir);
-  return src ? (src.clone(true) as THREE.Group) : null;
+  if (!src) return null;
+  const inst = src.clone(true) as THREE.Group;
+  // Clock models carry separate hand nodes — tag them so they survive the
+  // static merge and tick in the atmosphere loop.
+  inst.traverse((n) => {
+    const nm = n.name.toLowerCase();
+    if (nm.includes('second_hand')) n.userData.anim = 'handS';
+    else if (nm.includes('minute_hand')) n.userData.anim = 'handM';
+    else if (nm.includes('hour_hand') || nm.includes('houd_hand')) n.userData.anim = 'handH';
+    else if (nm.includes('pendulum')) { n.userData.anim = 'sway'; n.userData.animAmp = 0.14; }
+  });
+  return inst;
 }
 
 export function modelCollider(kind: string): [number, number, number] | null {
