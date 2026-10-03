@@ -481,6 +481,32 @@ export class Game {
     }
   }
 
+  /** Spawn an entity by tuning-table id — shared by the scheduler and debug panel. */
+  spawnById(id: string, passes?: number): void {
+    switch (id) {
+      case 'sweep': this.spawnEntity(new CorridorRunner('sweep')); break;
+      case 'reprise': this.spawnEntity(new CorridorRunner('reprise', { passes: passes ?? 2 })); break;
+      case 'maelstrom': this.spawnEntity(new CorridorRunner('maelstrom', { maelstrom: true })); break;
+      case 'redline': this.spawnEntity(new CorridorRunner('redline', { redline: true })); break;
+      case 'returner': this.spawnEntity(new CorridorRunner('returner', { fromAhead: true })); break;
+      case 'witness': this.spawnEntity(new Witness()); break;
+      case 'whisper': this.spawnEntity(new Whisper()); break;
+      case 'inkling': this.spawnEntity(new Inkling()); break;
+      case 'redactor': this.spawnEntity(new Redactor()); break;
+      case 'echoskin': this.spawnEntity(new EchoSkin()); break;
+      case 'margin': this.spawnEntity(new Margin()); break;
+      case 'stillframe': this.spawnEntity(new Stillframe()); break;
+      case 'husk': this.spawnEntity(new Husk()); break;
+      case 'editor': this.spawnEntity(new Editor()); break;
+      case 'grafter': this.spawnEntity(new Grafter()); break;
+      case 'pursuer': case 'curator': case 'hazard': break; // milestone-triggered only
+      default: break;
+    }
+  }
+
+  /** Dev-only godmode flag — gates damagePlayer. */
+  godMode = false;
+
   private cue(name: string, at: Vec3 | null, caption: string, severity: 'info' | 'warn' | 'danger' = 'info'): void {
     this.audio.play(name, at, caption, severity);
   }
@@ -830,6 +856,7 @@ export class Game {
   /* ==================== damage/death/victory ==================== */
 
   private damagePlayer(amount: number, source: EntityId, hint: string): void {
+    if (this.godMode) return;
     if (this.player.dead) return;
     if (this.wardArmed && amount >= 50) {
       this.wardArmed = false;
@@ -1028,25 +1055,7 @@ export class Game {
       const key = `${this.space}-${sch.entity}-${sch.triggerRoom}-${sch.seed}`;
       if (sch.triggerRoom !== this.currentRoom || this.spawned.has(key)) continue;
       this.spawned.add(key);
-      switch (sch.entity) {
-        case 'sweep': this.spawnEntity(new CorridorRunner('sweep')); break;
-        case 'reprise': this.spawnEntity(new CorridorRunner('reprise', { passes: sch.passes ?? 2 })); break;
-        case 'maelstrom': this.spawnEntity(new CorridorRunner('maelstrom', { maelstrom: true })); break;
-        case 'redline': this.spawnEntity(new CorridorRunner('redline', { redline: true })); break;
-        case 'returner': this.spawnEntity(new CorridorRunner('returner', { fromAhead: true })); break;
-        case 'witness': this.spawnEntity(new Witness()); break;
-        case 'whisper': this.spawnEntity(new Whisper()); break;
-        case 'inkling': this.spawnEntity(new Inkling()); break;
-        case 'redactor': this.spawnEntity(new Redactor()); break;
-        case 'echoskin': this.spawnEntity(new EchoSkin()); break;
-        case 'margin': this.spawnEntity(new Margin()); break;
-        case 'stillframe': this.spawnEntity(new Stillframe()); break;
-        case 'husk': this.spawnEntity(new Husk()); break;
-        case 'editor': this.spawnEntity(new Editor()); break;
-        case 'grafter': this.spawnEntity(new Grafter()); break;
-        case 'pursuer': break; // milestones only
-        default: break;
-      }
+      this.spawnById(sch.entity, sch.passes);
     }
     // milestone entry hooks
     const ms = this.milestones.get(this.currentRoom);

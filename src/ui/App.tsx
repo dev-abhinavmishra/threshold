@@ -29,6 +29,11 @@ export default function App() {
       gameInstance = g;
       g.run();
       if (import.meta.env.DEV) (window as unknown as { __thresholdGame?: Game }).__thresholdGame = g;
+      if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
+        void import('../game/debug').then(({ debugApi, installDebugPanel }) => {
+          installDebugPanel(g, debugApi(g));
+        });
+      }
     } catch (e) {
       setBootError(e instanceof Error ? e.message : 'WebGL unavailable');
     }
