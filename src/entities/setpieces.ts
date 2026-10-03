@@ -307,3 +307,128 @@ export class Editor extends Entity {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
   }
 }
+
+/* ============================ GRAFTER ============================ */
+/** Underscript roamer — loose masonry that remembers a body. Slow drifting
+ * patrol through a room; notices the living within ~9m and drifts to them.
+ * The only winning move is distance. */
+export class Grafter extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private target = v3();
+  private roomO = v3();
+  private roomW = 10;
+  private roomD = 10;
+  private spawnRoom = 0;
+  private grindT = 0;
+  private roamT = 0;
+  private lifeT = 0;
+
+  constructor() { super('grafter', ENTITY_TUNING.grafter); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    this.roomW = room.width;
+    this.roomD = room.depth;
+    // rise in the far corner
+    const p = c.player.pos;
+    let bx = this.roomO.x, bz = this.roomO.z, best = -1;
+    for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const px = this.roomO.x + cx * (this.roomW / 2 - 1.2);
+      const pz = this.roomO.z + cz * (this.roomD / 2 - 1.2);
+      const d = Math.hypot(px - p.x, pz - p.z);
+      if (d > best) { best = d; bx = px; bz = pz; }
+    }
+    this.pos = v3(bx, 0, bz);
+    this.target = v3(bx, 0, bz);
+    const g = new THREE.Group();
+    const rig = riggedFigure('goleling');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 0), MAT.ink());
+      body.position.y = 1.4;
+      g.add(body);
+    }
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('grafter-wake', this.pos, '[the rubble folds into a shape]', { severity: 'danger' });
+    this.state = 'engage';
+  }
+
+  private pickRoam(): void {
+    const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 97));
+    this.target = v3(
+      this.roomO.x + rng.range(-this.roomW / 2 + 1.2, this.roomW / 2 - 1.2),
+      0,
+      this.roomO.z + rng.range(-this.roomD / 2 + 1.2, this.roomD / 2 - 1.2),
+    );
+    this.roamT = 0;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.lifeT += dt;
+    this.roamT += dt;
+    this.rig?.update(dt);
+
+    const d = v3dist(this.pos, p.pos);
+    // it notices the living within its range — hidden reads as furniture
+    const notices = d < this.tuning.seeRange && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
+    let speed = this.tuning.speed;
+    if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= 1.4; }
+
+    const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.25) {
+      this.pos.x += (dx / dd) * speed * dt;
+      this.pos.z += (dz / dd) * speed * dt;
+      this.rig?.play('move');
+      if (this.mesh) this.mesh.rotation.y = Math.atan2(dx, dz);
+    } else {
+      this.rig?.play('idle');
+      if (this.roamT > 1.4) this.pickRoam();
+    }
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    if (this.rig) this.rig.group.position.y = 0.12 + Math.sin(this.lifeT * 1.7) * 0.1;
+
+    this.grindT += dt;
+    if (this.grindT > 4.5) {
+      this.grindT = 0;
+      c.cue('grafter-grind', this.pos, '[stone drags on stone]', { severity: 'warn' });
+    }
+
+    if (d < this.tuning.killRange && p.protection !== 'hidden') {
+      this.rig?.play('attack', 0.05);
+      c.cue('grafter-strike', this.pos, '', { severity: 'danger' });
+      c.killPlayer('grafter', 'The Grafter is slow. Walk around it — never let it close the gap.');
+      this.done();
+      return;
+    }
+    // it settles back into the floor when the living move on, or when it has
+    // wandered itself apart
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2 || this.lifeT > 75) this.done();
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}

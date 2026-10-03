@@ -894,7 +894,7 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   const cooldowns = new Map<EntityId, number>();
   for (const room of rooms) {
     if (room.index === 0 || room.index % 20 === 0) continue; // safe landings
-    const candidates: EntityId[] = ['redline', 'stillframe', 'returner', 'margin'];
+    const candidates: EntityId[] = ['redline', 'stillframe', 'returner', 'margin', 'grafter'];
     for (const id of candidates) {
       const t = ENTITY_TUNING[id];
       if ((cooldowns.get(id) ?? -99) + t.cooldown > room.index) continue;

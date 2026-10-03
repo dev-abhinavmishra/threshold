@@ -58,6 +58,11 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_bluedemon.glb', height: 2.6, tint: 0.4, emissive: 0.06,
     clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
   },
+  /** Hovering rock-thing — the Grafter, Underscript roamer. */
+  goleling: {
+    file: 'quaternius_goleling.glb', height: 2.2, tint: 0.45, emissive: 0.04,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
   /** Grey intruder — the thing that was already inside the cabinet. */
   alien: {
     file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,

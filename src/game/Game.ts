@@ -33,7 +33,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor } from '../entities/setpieces';
+import { Editor, Grafter } from '../entities/setpieces';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY } from '../game/config';
 import type {
   Difficulty, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document,
@@ -868,6 +868,7 @@ export class Game {
       pursuer: 'Sprint the sequence. Vaults and gates are the route.',
       orrery: 'Beams read the low floor. Crouch and time the gaps.',
       editor: 'Red-lined floor is already gone. Keep moving.',
+      grafter: 'It is only rubble until it stands. Give it the berth it cannot give you.',
       hazard: 'Watch the floor — the building sets snares.',
     };
     const doc = DOCUMENTS.find((d) => d.id === `doc-${source}`);
@@ -1040,6 +1041,7 @@ export class Game {
         case 'margin': this.spawnEntity(new Margin()); break;
         case 'stillframe': this.spawnEntity(new Stillframe()); break;
         case 'editor': this.spawnEntity(new Editor()); break;
+        case 'grafter': this.spawnEntity(new Grafter()); break;
         case 'pursuer': break; // milestones only
         default: break;
       }

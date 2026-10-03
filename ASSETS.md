@@ -589,3 +589,9 @@ has not finished loading falls back to its procedural builder.
 | Asset | Source | Animations used | Entity |
 | --- | --- | --- | --- |
 | `figures/quaternius_alien.glb` | Quaternius "Alien" (poly.pizza/m/RRliSQBP7r, CC0) | Idle, Walk, Bite_Front, Jump | Hollow (cabinet grapple) |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 79
+
+| Asset | Source | Animations used | Entity |
+| --- | --- | --- | --- |
+| `figures/quaternius_goleling.glb` | Quaternius "Goleling Evolved" (poly.pizza/m/iHEuXiH6Aj, CC0) | Flying_Idle, Fast_Flying, Headbutt | Grafter (Underscript roamer) |

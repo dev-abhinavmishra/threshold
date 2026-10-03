@@ -114,6 +114,10 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 1.0, speed: 5.6, damage: 100, killRange: 1.5, seeRange: 30,
     cooldown: 999, spawnChance: 0, minRoom: 100,
   },
+  grafter: {
+    warningTime: 1.2, speed: 1.8, damage: 100, killRange: 1.35, seeRange: 9,
+    cooldown: 14, spawnChance: 0.5, minRoom: 22,
+  },
   hazard: {
     warningTime: 0, speed: 0, damage: 20, killRange: 0.7, seeRange: 0,
     cooldown: 0, spawnChance: 0, minRoom: 0,
