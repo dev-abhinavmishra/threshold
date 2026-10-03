@@ -44,6 +44,7 @@ ported to the subfloor.
 | Printed page | — (interaction) | office printers, once each | prints a route report — next lock (Meridian) or doors-to-exit (Underscript); a jam (28%) grinds loud instead | information for noise — the whir is heard; a jam is heard further |
 | The keyhole answers | +677 (0.24/door) | peeks through locked doors | the far side is occupied: an eye at the hole, a close whisper, a panic tick — once per door | peeking is information with a price; the house watches back |
 | Struck key | — (interaction) | typewriters, once each | four spaced clacks over ~1.4s, each a 0.55 distraction emit on the desk | a mechanical lure — write a word, be somewhere else |
+| Looked out | +683 | windows, once each | the outside is fog, or the corridor you crossed (empty), or someone looking up — a panic tick on the last | the window is free to check; it is not free to be seen checking |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |

@@ -799,7 +799,7 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -808,9 +808,10 @@ export class Game {
           const isWash = p.kind === 'washer';
           const isPrint = p.kind === 'printer' || p.kind === 'printerRow';
           const isType = p.kind === 'typewriter';
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType) ord[p.kind] = n + 1;
+          const isWin = p.kind === 'window';
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -886,6 +887,12 @@ export class Game {
               kind: 'typewriter', id: `type-${key}`,
               pos: { x: wx, y: 0.82, z: wz },
               prompt: 'Strike a key', holdTime: 0.7, enabled: true, priority: 2,
+            });
+          } else if (isWin && !this.lookedWindows.has(key)) {
+            this.interaction.add({
+              kind: 'window', id: `win-${key}`,
+              pos: { x: wx, y: 1.5, z: wz },
+              prompt: 'Look out', holdTime: 0.8, enabled: true, priority: 2,
             });
           }
         }
@@ -1185,6 +1192,22 @@ export class Game {
           const msg = lockIdx >= 0 ? `[the page reads: the next lock waits ${lockIdx - this.currentRoom} doors on]`
             : '[the page reads: no locks ahead — the house lets you walk]';
           window.setTimeout(() => this.cue('pickup', at, msg), 1400);
+        }
+        return;
+      }
+      case 'window': {
+        it.enabled = false;
+        this.lookedWindows.add(it.id.replace(/^win-/, ''));
+        const at = { x: it.pos.x, y: 1.6, z: it.pos.z };
+        const roll = this.streams.roomStream('scare', this.currentRoom * 683 + Number(it.id.split(':')[2] ?? 0)).range(0, 1);
+        if (roll < 0.4) {
+          this.cue('amb-settle', at, '[only fog — the hotel does not end]');
+        } else if (roll < 0.75) {
+          this.cue('amb-settle', at, `[the window shows the corridor you crossed — empty]`, 'warn');
+        } else {
+          this.audio.play('whisper', at, '[in the fog — someone looking up]', 'danger');
+          this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.25, category: 'entity-cue', caption: '' });
+          this.player.panic = Math.min(1, this.player.panic + 0.1);
         }
         return;
       }
@@ -2632,6 +2655,7 @@ export class Game {
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
+  private lookedWindows = new Set<string>();
   private finishedWashers = new Set<string>();
   private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
