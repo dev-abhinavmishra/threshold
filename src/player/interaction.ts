@@ -63,7 +63,19 @@ export class InteractionSystem {
     for (const spot of room.hidingSpots) {
       this.add({
         kind: 'hide', id: spot.id, pos: spot.exitPos,
-        prompt: spot.kind === 'cabinet' ? 'Hide in cabinet' : spot.kind === 'vent' ? 'Hide in vent' : spot.kind === 'underFurniture' ? 'Hide underneath' : 'Step into recess',
+        prompt: (() => {
+          const base = spot.kind === 'cabinet' ? 'Hide in cabinet' : spot.kind === 'vent' ? 'Hide in vent' : spot.kind === 'underFurniture' ? 'Hide underneath' : 'Step into recess';
+          // hollow tells — the Archive's promised readable warnings
+          if (spot.trappedBy === 'hollow' && spot.trapClues?.length) {
+            const CLUE_TEXT: Record<string, string> = {
+              'off-hum': 'a hum pitched wrong', 'dark-residue': 'dark residue on the hinges',
+              'warped-slats': 'the slats are warped', 'faint-move': 'something shifts inside', breathing: 'it is breathing',
+            };
+            const clue = CLUE_TEXT[spot.trapClues[0]] ?? spot.trapClues[0];
+            return `${base} — ${clue}`;
+          }
+          return base;
+        })(),
         data: spot, enabled: true, priority: 2,
       });
     }

@@ -1754,6 +1754,7 @@ export class Game {
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
   private lowBattWarned = false;
+  private nextHollowHum = 0;
 
   /** The Broker: one robed figure per u-lobby, behind the counter, head that
    *  follows you. Spawned lazily when the room first builds. */
@@ -2406,6 +2407,24 @@ export class Game {
       }
     }
     this.lures = this.lures.filter((l) => !l.rang || tA < l.until + 2.5);
+
+    // Hollow off-hum — a trapped hiding spot is audible before it is legible.
+    if (tA >= this.nextHollowHum) {
+      for (const r of this.activeRooms()) {
+        let heard = false;
+        for (const spot of r.hidingSpots) {
+          if (spot.trappedBy !== 'hollow') continue;
+          if (v3dist(spot.exitPos, this.player.pos) < 4) {
+            this.cue('hollow-hum', spot.exitPos, '', 'info');
+            this.sound.emit({ x: spot.exitPos.x, y: 1, z: spot.exitPos.z, intensity: 0.15, category: 'entity-cue', caption: '' });
+            heard = true;
+            break;
+          }
+        }
+        if (heard) break;
+      }
+      this.nextHollowHum = tA + 4.5;
+    }
 
     // Doorway crossers — silent slide across the frame, then gone for good.
     for (const cr of this.crossers) {
