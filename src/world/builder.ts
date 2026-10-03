@@ -1864,6 +1864,39 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
   }
 
+  // Vending machines — sockets flagged meta.vend stand as a humming steel
+  // box with a sickly live glass front. The glass animates on the shared
+  // 'screen' ticker; its material is cloned so each machine drifts alone.
+  {
+    const dco = Math.cos(room.yaw), dsi = Math.sin(room.yaw);
+    for (const sock of room.sockets) {
+      if (!sock.meta.vend) continue;
+      const lx = (sock.pos.x - room.origin.x) * dco - (sock.pos.z - room.origin.z) * dsi;
+      const lz = (sock.pos.x - room.origin.x) * dsi + (sock.pos.z - room.origin.z) * dco;
+      const m = new THREE.Group();
+      const body = new THREE.Mesh(texBox(0.78, 1.62, 0.56), MAT.steelDark());
+      body.position.y = 0.86;
+      const kick = new THREE.Mesh(texBox(0.8, 0.12, 0.58), MAT.ink());
+      kick.position.y = 0.06;
+      const slot = new THREE.Mesh(texBox(0.3, 0.07, 0.04), MAT.ink());
+      slot.position.set(-0.12, 0.52, 0.3);
+      const keypad = new THREE.Mesh(texBox(0.13, 0.5, 0.045), MAT.ink());
+      keypad.position.set(0.28, 1.0, 0.29);
+      const glassMat = MAT.screenGreen().clone();
+      const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.9), glassMat);
+      glass.position.set(-0.06, 1.08, 0.286);
+      glass.userData.anim = 'screen';
+      glass.userData.animSeed = rng.float() * 40;
+      m.add(body, kick, slot, keypad, glass);
+      m.position.set(lx, 0, lz);
+      m.rotation.y = sock.yaw - room.yaw;
+      group.add(m);
+      room.colliders.push(aabb(
+        room.origin.x + lx * dco + lz * dsi, room.origin.y + 0.9,
+        room.origin.z - lx * dsi + lz * dco, 0.42, 0.9, 0.42));
+    }
+  }
+
   // Static consolidation — merge every non-animated, non-decal, non-door mesh
   // into a handful of draw calls per material. Big furnished rooms drop from
   // ~250 draw calls to ~30; door leaves, lamp meshes, shafts, decals and
