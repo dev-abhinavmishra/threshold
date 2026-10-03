@@ -91,6 +91,7 @@ const CUES: Record<string, CueSpec> = {
   'clock-tick': { freq: 1150, dur: 0.05, type: 'triangle', gain: 0.05, sweep: 900 },
   'under-draft': { freq: 90, dur: 1.8, type: 'sine', gain: 0.09, sweep: 60, noise: true },
   'hide-creak': { freq: 300, dur: 0.35, type: 'triangle', gain: 0.07, sweep: 200 },
+  'piano-note': { freq: 311, dur: 2.2, type: 'triangle', gain: 0.1, sweep: 300 },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },

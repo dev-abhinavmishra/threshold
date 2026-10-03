@@ -1873,6 +1873,20 @@ export class Game {
   private underDraftSeen = false;
   /** A room whose lights inhale and dim on a slow cycle — present while inside. */
   private breathingRoom = -1;
+  /** Piano rooms get one self-played note, when the player isn't watching it. */
+  private pianoRoom = -1;
+  private pianoAt = 0;
+  private pianoFired = false;
+
+  private maybePiano(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || !room.spec?.props.some((p) => p.kind === 'pianoUpright')) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 911);
+    if (!scare.bool(0.5)) return;
+    this.pianoRoom = this.currentRoom;
+    this.pianoAt = this.clock.time + 4 + scare.range(0, 8);
+    this.pianoFired = false;
+  }
   private nextClockTick = 0;
   private clockNear = 0;
   private readonly clockPos = new THREE.Vector3();
@@ -2373,6 +2387,7 @@ export class Game {
       this.maybeFarSound();
       this.maybeCrosser();
       this.maybeBreathing();
+      this.maybePiano();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -2573,6 +2588,29 @@ export class Game {
         this.nextUnderDraft = tA + 0.5;
       } else {
         this.nextUnderDraft = tA + 2;
+      }
+    }
+
+    // The piano plays itself — one muffled key, only while unwatched.
+    if (this.pianoRoom === this.currentRoom && !this.pianoFired && tA >= this.pianoAt) {
+      const room = this.activeRooms()[this.currentRoom];
+      const prop = room?.spec?.props.find((p) => p.kind === 'pianoUpright');
+      if (prop) {
+        const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+        const wx = room.origin.x + prop.x * cs + prop.z * sn;
+        const wz = room.origin.z - prop.x * sn + prop.z * cs;
+        const dx = wx - this.player.pos.x, dz = wz - this.player.pos.z;
+        const dd = Math.hypot(dx, dz);
+        const facing = dd > 0.01 && (Math.sin(this.player.yaw) * dx + Math.cos(this.player.yaw) * dz) / dd > 0.4;
+        if (!facing) {
+          this.pianoFired = true;
+          this.cue('piano-note', v3(wx, 1.1, wz), '[a single key — no one is at the piano]', 'warn');
+          this.sound.emit({ x: wx, y: 1.1, z: wz, intensity: 0.35, category: 'distraction', caption: '' });
+        } else {
+          this.pianoAt = tA + 1.5;
+        }
+      } else {
+        this.pianoRoom = -1;
       }
     }
 
