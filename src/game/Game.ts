@@ -1466,6 +1466,40 @@ export class Game {
     this.pendingDoorOpen = { room: this.currentRoom, at: this.clock.time + 1.2 + Math.random() * 1.4 };
   }
 
+  /** Elsewhere sounds: seeded chance per room entry that a spatialized event
+   *  fires in a room 2–5 doors away — the building sounds inhabited. */
+  private pendingFarSound: { at: number; pos: Vec3; cue: string; caption: string } | null = null;
+
+  private maybeFarSound(): void {
+    if (this.pendingFarSound) return;
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    if (this.currentRoom < 4) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 555);
+    if (!scare.bool(0.38)) return;
+    const rooms = this.activeRooms();
+    const ahead = scare.bool(0.7);
+    const target = rooms[this.currentRoom + (ahead ? 1 : -1) * scare.int(2, 5)];
+    if (!target || target.special) return;
+    const c = Math.cos(target.yaw), s = Math.sin(target.yaw);
+    const lx = (scare.float() - 0.5) * target.spec.width;
+    const lz = (scare.float() - 0.5) * target.spec.depth;
+    const pos = v3(target.origin.x + lx * c + lz * s, 1.4, target.origin.z - lx * s + lz * c);
+    const table = [
+      { cue: 'door-slam', cap: '[somewhere — a door slams]' },
+      { cue: 'drawer', cap: '[somewhere — a drawer shuts]' },
+      { cue: 'whisper-voice', cap: '[somewhere — a voice answers nothing]' },
+      { cue: 'sweep-return', cap: '[somewhere — something heavy turns]' },
+      { cue: 'door-creak', cap: '[somewhere — a door opens itself]' },
+    ];
+    const pick = table[Math.floor(scare.float() * table.length)];
+    this.pendingFarSound = {
+      at: this.clock.time + 1.5 + scare.float() * 4,
+      pos, cue: pick.cue,
+      caption: scare.bool(0.5) ? pick.cap : '',
+    };
+  }
+
   private maybeBlackout(roomIndex: number): void {
     if (this.blackedOut.has(roomIndex) || this.pendingBlackout) return;
     const room = this.activeRooms()[roomIndex];
@@ -1885,6 +1919,7 @@ export class Game {
       this.maybeBlackout(this.currentRoom);
       this.maybeRelocateRelic(prev);
       this.maybeHauntDoor();
+      this.maybeFarSound();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -2016,6 +2051,13 @@ export class Game {
         this.cue('door-open', { x: door.pos.x, y: door.pos.y + 1, z: door.pos.z }, '[the door opens again]', 'warn');
         this.sound.emit({ x: door.pos.x, y: 1, z: door.pos.z, intensity: 0.5, category: 'door', caption: '[door]' });
       }
+    }
+
+    // Elsewhere sounds — queued on room entry; spatialized so they read distant.
+    if (this.pendingFarSound && tA >= this.pendingFarSound.at) {
+      const fs = this.pendingFarSound;
+      this.pendingFarSound = null;
+      this.cue(fs.cue, fs.pos, fs.caption, 'info');
     }
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.
