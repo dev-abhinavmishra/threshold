@@ -92,6 +92,7 @@ export class Game {
   private roomBounds = new Map<number, Aabb>();
   private lastHud = 0;
   private nextAmbience = 8;
+  private nextBreath = 0;
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -1443,6 +1444,14 @@ export class Game {
           z: toneRoom.origin.z - lx * si + lz * co,
         });
       }
+    }
+
+    // Winded breathing — stamina under a third plays a soft breath whose
+    // interval tightens as the tank empties.
+    if (this.player.stamina < 34 && tA >= this.nextBreath && useGameStore.getState().phase === 'PLAYING') {
+      const frac = this.player.stamina / 34;
+      this.nextBreath = tA + 0.7 + frac * 0.9;
+      this.audio.play('breath', null, this.player.stamina < 12 ? '[breathing hard]' : '');
     }
 
     // streamer + interactables

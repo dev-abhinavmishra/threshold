@@ -73,6 +73,7 @@ const CUES: Record<string, CueSpec> = {
   'hide-in': { freq: 160, dur: 0.3, type: 'triangle', gain: 0.14 },
   'hide-out': { freq: 200, dur: 0.3, type: 'triangle', gain: 0.14 },
   'panic-eject': { freq: 250, dur: 0.6, type: 'sawtooth', gain: 0.3, sweep: 120 },
+  'breath': { freq: 300, dur: 0.55, type: 'sine', gain: 0.055, sweep: 210, noise: true },
   'death': { freq: 90, dur: 2.0, type: 'sawtooth', gain: 0.5, sweep: 40, noise: true },
   'victory': { freq: 440, dur: 2.4, type: 'sine', gain: 0.3, sweep: 660 },
   'checkpoint': { freq: 520, dur: 0.5, type: 'sine', gain: 0.16, sweep: 660 },

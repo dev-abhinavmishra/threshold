@@ -328,12 +328,30 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return { group: g, colliders: [{ x: 0, z: 0, w: 0.35, d: 0.35, h: 0.6 }] };
   },
-  curtain: (_s) => {
+  curtain: (_s, rng) => {
     const g = new THREE.Group();
     const mat = TEX.curtainFabric();
-    // alternating deep/shallow folds read as pleated fabric
+    mat.color.multiplyScalar(0.85 + rng.float() * 0.3);
+    // rod + finials
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 1.7, 8), MAT.brass());
+    rod.rotation.z = Math.PI / 2;
+    rod.position.y = 0.06;
+    g.add(rod);
+    for (const ex of [-0.83, 0.83]) {
+      const fin = new THREE.Mesh(new THREE.SphereGeometry(0.036, 8, 6), MAT.brass());
+      fin.position.set(ex, 0.06, 0);
+      g.add(fin);
+    }
+    // alternating deep/shallow folds read as pleated fabric — each hangs
+    // from a rod-level pivot so 'sway' billows it like a hung drape
     for (let i = 0; i < 5; i++) {
-      g.add(mesh(box(0.28, 2.0, i % 2 ? 0.05 : 0.12), mat, -0.56 + i * 0.28, 0, 0));
+      const pivot = new THREE.Group();
+      pivot.position.set(-0.56 + i * 0.28, 0.02, 0);
+      pivot.add(mesh(box(0.28, 2.0, i % 2 ? 0.05 : 0.12), mat, 0, -1.0, 0));
+      pivot.userData.anim = 'sway';
+      pivot.userData.animSeed = rng.float() * 6 + i * 0.9;
+      pivot.userData.animAmp = 0.025 + rng.float() * 0.025;
+      g.add(pivot);
     }
     return { group: g, colliders: [] };
   },
