@@ -870,6 +870,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (model) {
     if (LIT_FIXTURES.has(spec.kind)) {
       const glow = new THREE.Color(spec.kind === 'stove' ? 0xff5a1e : 0xffc878);
+      const openFlame = spec.kind === 'candle' || spec.kind === 'lantern' || spec.kind === 'lanternChandelier' || spec.kind === 'firePit';
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.isMesh) {
@@ -877,6 +878,11 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
           if (mat && mat.emissive) {
             mat.emissive = glow;
             mat.emissiveIntensity = spec.kind === 'chandelier' || spec.kind === 'lanternChandelier' ? 0.35 : 0.55;
+            if (openFlame) {
+              m.userData.anim = 'flame';
+              m.userData.animSeed = rng.float() * 100;
+              m.userData.baseEm = mat.emissiveIntensity;
+            }
           }
         }
       });

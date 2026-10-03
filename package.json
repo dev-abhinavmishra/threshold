@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "sim": "tsx scripts/simulate.ts"
+    "sim": "tsx scripts/simulate.ts",
+    "buildcheck": "tsx scripts/buildcheck.ts"
   },
   "dependencies": {
     "react": "18.3.1",

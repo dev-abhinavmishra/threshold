@@ -92,6 +92,39 @@ function poolTexture(): THREE.Texture | null {
   return poolTex;
 }
 
+// Contact-shadow alpha — a dark soft ellipse stamped under floor-standing
+// props so furniture reads grounded instead of floating on a lit plane.
+let blobTex: THREE.Texture | null = null;
+function blobTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  if (!blobTex) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 128;
+    const ctx = cv.getContext('2d')!;
+    const grad = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
+    grad.addColorStop(0, 'rgba(255,255,255,1)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 128, 128);
+    blobTex = new THREE.CanvasTexture(cv);
+  }
+  return blobTex;
+}
+const blobMat = new THREE.MeshBasicMaterial({
+  color: 0x000000, alphaMap: blobTexture(), transparent: true, opacity: 0.42,
+  depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1,
+});
+blobMat.userData.decalMat = true;
+const blobGeo = new THREE.PlaneGeometry(1, 1);
+function contactShadow(w: number, d: number): THREE.Mesh {
+  const m = new THREE.Mesh(blobGeo, blobMat);
+  m.scale.set(Math.min(w * 1.3, 4.2), Math.min(d * 1.3, 4.2), 1);
+  m.rotation.x = -Math.PI / 2;
+  m.renderOrder = 1;
+  return m;
+}
+
 // Wallpaper tint palette — subtle per-room cast so corridors don't all read
 // the same beige. Multiplies the shared wallpaper map, so materials are
 // cloned per room and disposed with it.
@@ -229,7 +262,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const fixtureY = suspended ? h - 0.22 : h - 0.3;
   // Coffered ceiling — grand rooms get a shallow oak beam grid under the
   // slab; the dropped cross-members read as real joinery from the floor.
-  if ((spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && !suspended && w >= 4 && d >= 4 && rng.float() < 0.6) {
+  const coffered = (spec.biome === 'lobby' || spec.biome === 'gallery' || spec.biome === 'milestone') && !suspended && w >= 4 && d >= 4 && rng.float() < 0.6;
+  if (coffered) {
     const beamMat = MAT.darkOak();
     const nx = Math.max(2, Math.round(w / 2.4));
     const nz = Math.max(2, Math.round(d / 2.4));
@@ -243,6 +277,31 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const bz = -d / 2 + (i * d) / nz;
       const beam = new THREE.Mesh(texBox(w, 0.14, 0.16), beamMat);
       beam.position.set(0, h - 0.07, bz);
+      group.add(beam);
+    }
+  }
+  // Exposed joists — underscript spans get steel I-beams; tall domestic rooms
+  // (never suspended/coffered) get dark timber joists. Both read as real
+  // structure and break the flat slab from first person.
+  if (isUnder && w >= 4 && d >= 3) {
+    const jm = MAT.steelDark();
+    const n = Math.min(7, Math.floor(d / 1.5));
+    for (let i = 0; i <= n; i++) {
+      const jz = -d / 2 + (i * d) / n;
+      const beam = new THREE.Mesh(texBox(w, 0.2, 0.12), jm);
+      beam.position.set(0, h - 0.12, jz);
+      group.add(beam);
+      const web = new THREE.Mesh(texBox(w, 0.16, 0.05), jm);
+      web.position.set(0, h - 0.26, jz);
+      group.add(web);
+    }
+  } else if (!suspended && !coffered && !isUnder && (spec.biome === 'guest' || spec.biome === 'safe' || spec.biome === 'milestone' || spec.biome === 'unlit') && w >= 3.5 && d >= 3.5) {
+    const jm = MAT.darkOak();
+    const n = Math.min(8, Math.floor(d / 1.15));
+    for (let i = 0; i <= n; i++) {
+      const jz = -d / 2 + (i * d) / n;
+      const beam = new THREE.Mesh(texBox(w, 0.15, 0.09), jm);
+      beam.position.set(0, h - 0.1, jz);
       group.add(beam);
     }
   }
@@ -412,6 +471,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         if (!c.movementOnly) room.losBlockers.push(box);
       }
     }
+  };
+
+  // Contact shadow under a floor-standing prop — props whose collider sits at
+  // floor level get a soft dark ellipse so they read grounded, not floating.
+  const groundShadow = (built: ReturnType<typeof buildProp>, x: number, z: number, y = 0) => {
+    if (y > 0.05) return;
+    let fw = 0, fd = 0;
+    for (const c of built.colliders) {
+      if ((c.y ?? 0) > 0.05 || c.losOnly || c.movementOnly) continue;
+      fw = Math.max(fw, c.w); fd = Math.max(fd, c.d);
+    }
+    if (fw < 0.12 || fd < 0.12) return;
+    const s = contactShadow(fw, fd);
+    s.position.set(x, 0.011, z);
+    group.add(s);
   };
 
   // Soft moonlight spill on the floor under a window — shared by the
@@ -945,6 +1019,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const built = buildProp({ kind: fp.kind, x: px, z: pz, yaw: fp.wallBias && Math.abs(px) > Math.abs(pz) ? Math.sign(px) * -Math.PI / 2 : rng.float() * Math.PI }, rng.fork(6000 + Math.floor(px * 13 + pz * 7)));
         group.add(built.group);
         wireColliders(built);
+        groundShadow(built, px, pz);
       } catch { /* dressing only */ }
     }
   }
@@ -955,6 +1030,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       group.add(built.group);
       wireColliders(built);
+      groundShadow(built, p.x, p.z, p.y ?? 0);
       // Template-declared windows spill the same moonlight pool as
       // biome-mount windows — the glow extends toward the room center.
       if (p.kind === 'window') {
@@ -984,6 +1060,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const built = buildProp({ kind, x: px, z: cz, yaw: rng.float() * Math.PI }, rng.fork(9000 + i));
         group.add(built.group);
         wireColliders(built);
+        groundShadow(built, px, cz);
       } catch { /* dressing only */ }
     }
   }
@@ -998,6 +1075,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     sl.position.set(sconcePos.x, sconcePos.y, sconcePos.z);
     group.add(sl);
     lights.push(sl);
+    // Light throw — a warm radial wash on the wall behind the sconce and a
+    // small pool on the floor beneath it, the look of a real fixture's spill.
+    {
+      const onX = Math.abs(sconcePos.x) > Math.abs(sconcePos.z);
+      const sgn = onX ? Math.sign(sconcePos.x || 1) : Math.sign(sconcePos.z || 1);
+      const wallX = onX ? sgn * (w / 2 - 0.03) : sconcePos.x;
+      const wallZ = onX ? sconcePos.z : sgn * (d / 2 - 0.03);
+      const throwMat = new THREE.MeshBasicMaterial({
+        color: 0xff9d4f, alphaMap: poolTexture(), transparent: true, opacity: 0.3,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+      });
+      throwMat.userData.decalMat = true;
+      const wash = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.7), throwMat);
+      wash.position.set(wallX, sconcePos.y + 0.15, wallZ);
+      wash.rotation.y = onX ? -sgn * Math.PI / 2 : (sgn > 0 ? Math.PI : 0);
+      wash.renderOrder = 2;
+      group.add(wash);
+      const poolMat2 = throwMat.clone(); poolMat2.userData.decalMat = true; poolMat2.opacity = 0.2;
+      const fpool = new THREE.Mesh(new THREE.CircleGeometry(0.85, 16), poolMat2);
+      fpool.rotation.x = -Math.PI / 2;
+      fpool.position.set(sconcePos.x * 0.92, 0.013, sconcePos.z * 0.92);
+      group.add(fpool);
+    }
   }
   const maxLights = quality === 'low' ? 1 : quality === 'medium' ? 2 : 3;
   const sorted = [...spec.lights].sort((a, b) => b.intensity - a.intensity);

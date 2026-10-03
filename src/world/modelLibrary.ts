@@ -736,7 +736,11 @@ function bake(holder: THREE.Group): THREE.Group {
       if (typeof mat.roughness === 'number') mat.roughness = Math.max(mat.roughness, 0.35);
     }
     const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
-    const key = (m.material as THREE.Material).uuid;
+    // Merge only attribute-compatible geometries — mergeGeometries() returns
+    // null for a mixed bucket (e.g. one mesh with uv + one without, or mixed
+    // morph targets), which would drop every mesh sharing that material.
+    const sig = Object.keys(g.attributes).sort().join(',') + (g.morphTargetsRelative ? '|m' : '') + (g.index ? '|i' : '');
+    const key = (m.material as THREE.Material).uuid + '|' + sig;
     let e = byMat.get(key);
     if (!e) { e = { mat: m.material as THREE.Material, geos: [] }; byMat.set(key, e); }
     e.geos.push(g);
