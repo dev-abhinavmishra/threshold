@@ -322,6 +322,8 @@ export class Game {
     this.crossers = [];
     if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
     this.bookDrop = null;
+    this.echoRoom = -1;
+    this.echoQueue.length = 0;
     for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
     this.brokerFigs.clear();
     this.clearRats();
@@ -1281,6 +1283,8 @@ export class Game {
     this.pianoRoom = -1;
     if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
     this.bookDrop = null;
+    this.echoRoom = -1;
+    this.echoQueue.length = 0;
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
@@ -1303,6 +1307,8 @@ export class Game {
     this.pianoRoom = -1;
     if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
     this.bookDrop = null;
+    this.echoRoom = -1;
+    this.echoQueue.length = 0;
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -1970,6 +1976,48 @@ export class Game {
     };
   }
 
+  /** The answering steps — for a few strides in a seeded room, each of your
+   *  footsteps is repeated a few paces behind you, loud enough that
+   *  sound-hunting entities can hear the echo too. */
+  private echoRoom = -1;
+  private echoLeft = 0;
+  private echoCaptioned = false;
+  private readonly echoQueue: { at: number; x: number; y: number; z: number }[] = [];
+  private echoHooked = false;
+
+  private maybeEchoRoom(under = false): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 5) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 166 + (under ? 977 : 0));
+    if (!scare.bool(0.18)) return;
+    this.echoRoom = this.currentRoom;
+    this.echoLeft = scare.int(4, 8);
+    this.echoCaptioned = false;
+    if (this.echoHooked) return;
+    this.echoHooked = true;
+    this.sound.on((ev) => {
+      if (ev.category !== 'footstep' || this.echoRoom < 0 || this.echoLeft <= 0) return;
+      if (Math.abs(ev.x - this.player.pos.x) > 1.2 || Math.abs(ev.z - this.player.pos.z) > 1.2) return;
+      this.echoLeft--;
+      this.echoQueue.push({
+        at: this.clock.time + 0.7,
+        x: this.player.pos.x - Math.sin(this.player.yaw) * 2.8,
+        y: this.player.pos.y,
+        z: this.player.pos.z - Math.cos(this.player.yaw) * 2.8,
+      });
+    });
+  }
+
+  private tickEchoQueue(): void {
+    while (this.echoQueue.length && this.echoQueue[0].at <= this.clock.time) {
+      const q = this.echoQueue.shift()!;
+      this.audio.play('footstep', { x: q.x, y: q.y + 0.1, z: q.z },
+        this.echoCaptioned ? '' : '[footsteps — yours?]');
+      this.echoCaptioned = true;
+      this.sound.emit({ x: q.x, y: q.y, z: q.z, intensity: 0.3, category: 'ambient', caption: '' });
+    }
+  }
+
   private maybeDoorTry(under = false): void {
     const room = this.activeRooms()[this.currentRoom];
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
@@ -2494,8 +2542,10 @@ export class Game {
       this.maybePiano();
       this.maybeDoorTry();
       this.maybeBookDrop();
+      this.maybeEchoRoom();
       this.maybeDeepReveal();
     }
+    this.tickEchoQueue();
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
       this.maybeSpawnRat();
@@ -2507,6 +2557,7 @@ export class Game {
         this.maybeBreathing(true);
         this.maybeDoorTry(true);
         this.maybeBookDrop();
+        this.maybeEchoRoom(true);
       }
     }
     // death echo: the building remembers where it took you
