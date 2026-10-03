@@ -619,9 +619,24 @@ export class Game {
             return;
           }
         }
-        for (const d of cluster) d.opening = true;
-        this.cue('door-open', it.pos, '');
-        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'door', caption: '[door]' });
+        // Door intent: sprint+E slams (fast, loud — entities hear it),
+        // crouch+E creeps (slow, near-silent). Plain E opens normally.
+        const slam = this.keys.has(this.keyFor('sprint'));
+        const creep = this.player.crouching || this.keys.has(this.keyFor('crouch'));
+        for (const d of cluster) {
+          d.opening = true;
+          d.openRate = slam ? 2.6 : creep ? 0.42 : undefined;
+        }
+        if (slam) {
+          this.cue('door-slam', it.pos, `[slammed — Door ${door.label}]`, 'warn');
+          this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 1.5, category: 'door', caption: '[door slammed]' });
+        } else if (creep) {
+          this.cue('door-creak', it.pos, `[creaked open — Door ${door.label}]`);
+          this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.12, category: 'door', caption: '[door creak]' });
+        } else {
+          this.cue('door-open', it.pos, '');
+          this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'door', caption: '[door]' });
+        }
         return;
       }
       case 'drawer': {
@@ -1108,7 +1123,7 @@ export class Game {
       if (!r) continue;
       for (const d of r.doors) {
         if (d.opening && d.openT < 1) {
-          d.openT = Math.min(1, d.openT + dt * 1.8);
+          d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1));
         } else if (!d.opening && d.openT > 0) {
           d.openT = Math.max(0, d.openT - dt * 2.2);
         }

@@ -138,6 +138,8 @@ export interface Door {
   label: string;
   openT: number;     // 0 closed, 1 open (animated)
   opening: boolean;
+  /** Swing speed multiplier — slam (sprint+E) ~2.6, creep (crouch+E) ~0.4. */
+  openRate?: number;
 }
 
 export interface RoomInstance {
