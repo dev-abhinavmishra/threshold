@@ -1518,16 +1518,19 @@ export class Game {
       this.ensureBroker(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
+      // breathing rooms pulse their lights on a slow cycle
+      const breath = i === this.breathingRoom ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9)) : 1;
       for (const l of built.lights) {
         if (dead) { l.intensity = 0; continue; }
+        l.intensity *= breath;
         if (!l.userData.flicker) continue;
         const s = (l.userData.flickerSeed as number) ?? 0;
         // Squared-off pseudo-noise: mostly steady with occasional deep dips.
         const n = Math.sin(t * 11.3 + s) * Math.sin(t * 5.7 + s * 1.7) * Math.sin(t * 2.9 + s * 0.6);
         const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
-        l.intensity = (l.userData.baseIntensity as number) * f;
+        l.intensity = (l.userData.baseIntensity as number) * f * breath;
         const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f;
+        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f * breath;
       }
       if (built.dust) {
         built.dust.rotation.y += dt * 0.02;
@@ -1755,6 +1758,18 @@ export class Game {
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
   private lowBattWarned = false;
   private nextHollowHum = 0;
+  /** A room whose lights inhale and dim on a slow cycle — present while inside. */
+  private breathingRoom = -1;
+
+  private maybeBreathing(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
+    if (this.currentRoom < 6) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 811);
+    if (!scare.bool(0.11)) return;
+    this.breathingRoom = this.currentRoom;
+    this.cue('room-breathe', null, scare.bool(0.4) ? '[the room breathes]' : '', 'warn');
+  }
 
   /** The Broker: one robed figure per u-lobby, behind the counter, head that
    *  follows you. Spawned lazily when the room first builds. */
@@ -2239,6 +2254,7 @@ export class Game {
       this.maybeHauntDoor();
       this.maybeFarSound();
       this.maybeCrosser();
+      this.maybeBreathing();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
