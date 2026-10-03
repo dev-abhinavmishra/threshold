@@ -1456,6 +1456,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'coffin') built.group.name = `coffin-${room.index}`;
       if (p.kind === 'pianoUpright') built.group.name = `piano-${room.index}`;
       if (p.kind === 'television') built.group.name = `tv-${room.index}`;
+      if (p.kind === 'clock') built.group.name = `clock-${room.index}`;
       group.add(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);

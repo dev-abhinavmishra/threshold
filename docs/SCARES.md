@@ -33,6 +33,7 @@ ported to the subfloor.
 | Played piano | — (interaction) | lobby/guest/gallery pianos, once per room | three detuned strikes, loud 1.5 'distraction' emit at the instrument | a real lure — play it and be somewhere else |
 | Tuned television | — (interaction) | guest-room TVs, once per set | the flicker resolves to a steady dead channel — fixed light in a dark room, 0.7 'machine' hiss | light for the dark; the hiss carries to listeners |
 | The channel answers | +383 (0.32) | 14–26s after a TV is tuned | a whisper plays from the set — it heard the tuning | the answer draws listeners too — leave before it speaks |
+| Wound clock | — (interaction) | grandfather clocks, once per clock | three struck chimes over ~2.2s, loud 1.3 'distraction' emit each | the loudest deliberate lure in the game — wind it, then be gone |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |

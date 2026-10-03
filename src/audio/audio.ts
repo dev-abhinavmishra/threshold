@@ -90,6 +90,7 @@ const CUES: Record<string, CueSpec> = {
   'hollow-hum': { freq: 88, dur: 1.1, type: 'sine', gain: 0.06, sweep: 80 },
   'room-breathe': { freq: 55, dur: 2.6, type: 'sine', gain: 0.1, sweep: 42 },
   'clock-tick': { freq: 1150, dur: 0.05, type: 'triangle', gain: 0.05, sweep: 900 },
+  'clock-chime': { freq: 196, dur: 2.8, type: 'sine', gain: 0.28, sweep: 12 },
   'under-draft': { freq: 90, dur: 1.8, type: 'sine', gain: 0.09, sweep: 60, noise: true },
   'hide-creak': { freq: 300, dur: 0.35, type: 'triangle', gain: 0.07, sweep: 200 },
   'piano-note': { freq: 311, dur: 2.2, type: 'triangle', gain: 0.1, sweep: 300 },

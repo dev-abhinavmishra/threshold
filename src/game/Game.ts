@@ -781,6 +781,12 @@ export class Game {
               pos: { x: wx, y: 1, z: wz },
               prompt: 'Tune the static', holdTime: 0.8, enabled: true, priority: 2,
             });
+          } else if (p.kind === 'clock' && !this.woundClocks.has(key)) {
+            this.interaction.add({
+              kind: 'clock', id: `clock-${key}`,
+              pos: { x: wx, y: 1.3, z: wz },
+              prompt: 'Wind the clock', holdTime: 1.4, enabled: true, priority: 2,
+            });
           }
         }
       }
@@ -972,6 +978,20 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'clock': {
+        it.enabled = false;
+        this.woundClocks.add(it.id.replace(/^clock-/, ''));
+        // three struck chimes, each one a lure call on the clock's position —
+        // the loudest noise a guest can make on purpose
+        const at = { x: it.pos.x, y: 1.6, z: it.pos.z };
+        for (let n = 0; n < 3; n++) {
+          window.setTimeout(() => {
+            this.audio.play('clock-chime', at, n === 0 ? '[the chime carries down the hall]' : '');
+            this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 1.3, category: 'distraction', caption: '[a clock chimes]' });
+          }, n * 1100);
+        }
         return;
       }
       case 'tv': {
@@ -2313,6 +2333,7 @@ export class Game {
   private coffinOpened = false;
   private playedPianos = new Set<string>();
   private litTVs = new Set<string>();
+  private woundClocks = new Set<string>();
   private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
