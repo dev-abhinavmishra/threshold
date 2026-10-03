@@ -1101,6 +1101,46 @@ export class Game {
     });
   }
 
+  /** Hand-drawn "down" scuff for the sealed passage — once per built room. */
+  private static gateTex: THREE.Texture | null = null;
+  private static gateMaterial(): THREE.MeshBasicMaterial | null {
+    if (typeof document === 'undefined') return null;
+    if (!Game.gateTex) {
+      const cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 64;
+      const ctx = cv.getContext('2d')!;
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.strokeStyle = 'rgba(210,200,180,0.9)';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      // a wobbly hand-drawn arrow pointing down
+      ctx.beginPath(); ctx.moveTo(32, 12); ctx.lineTo(31, 46); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(16, 34); ctx.lineTo(31, 50); ctx.lineTo(48, 33); ctx.stroke();
+      const tex = new THREE.CanvasTexture(cv);
+      Game.gateTex = tex;
+    }
+    return new THREE.MeshBasicMaterial({
+      map: Game.gateTex, transparent: true, opacity: 0.55,
+      depthWrite: false, side: THREE.DoubleSide,
+    });
+  }
+
+  private ensureGateMark(roomIndex: number, built: { group: THREE.Group }): void {
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    const sock = room.sockets.find((s) => s.meta.underDoor === true);
+    if (!sock) return;
+    if (built.group.getObjectByName('gate-mark')) return;
+    const mat = Game.gateMaterial();
+    if (!mat) return;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), mat);
+    m.name = 'gate-mark';
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(sock.pos.x, 0.03, sock.pos.z + 0.55);
+    m.renderOrder = 2;
+    built.group.add(m);
+  }
+
   /** Attach chalk marks to built rooms' doors (re-applied as rooms stream). */
   private ensureChalkMarks(roomIndex: number, built: { group: THREE.Group }): void {
     if (this.chalkMarks.size === 0) return;
@@ -1529,6 +1569,7 @@ export class Game {
       const built = this.streamer.get(i);
       if (!built) continue;
       this.ensureChalkMarks(i, built);
+      this.ensureGateMark(i, built);
       this.ensureBroker(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
@@ -1786,6 +1827,8 @@ export class Game {
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
   private lowBattWarned = false;
   private nextHollowHum = 0;
+  private nextUnderDraft = 0;
+  private underDraftSeen = false;
   /** A room whose lights inhale and dim on a slow cycle — present while inside. */
   private breathingRoom = -1;
   private nextClockTick = 0;
@@ -2473,6 +2516,22 @@ export class Game {
         if (heard) break;
       }
       this.nextHollowHum = tA + 4.5;
+    }
+
+    // The sealed passage exhales — a cold draft pulls toward the gate room.
+    if (this.space === 'main' && tA >= this.nextUnderDraft) {
+      const room = this.activeRooms()[this.currentRoom];
+      const sock = room?.sockets.find((s) => s.meta.underDoor === true);
+      if (sock && v3dist(sock.pos, this.player.pos) < 4) {
+        this.cue('under-draft', sock.pos, this.underDraftSeen ? '' : '[a cold draft seeps up — the door below breathes]');
+        this.underDraftSeen = true;
+        this.sound.emit({ x: sock.pos.x, y: 1.2, z: sock.pos.z, intensity: 0.18, category: 'ambient', caption: '' });
+        this.nextUnderDraft = tA + 3.8;
+      } else if (sock) {
+        this.nextUnderDraft = tA + 0.5;
+      } else {
+        this.nextUnderDraft = tA + 2;
+      }
     }
 
     // Doorway crossers — silent slide across the frame, then gone for good.
