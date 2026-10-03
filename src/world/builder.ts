@@ -1104,6 +1104,76 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       room.colliders.push(aabb(wx, room.origin.y + 0.15, wz, 0.55, 0.15, 0.5));
     }
 
+    // Corridor arch ribs — transverse post+lintel frames stepping down the
+    // long axis; breaks the flat corridor tunnel into bays.
+    if (spec.biome === 'corridor' && !isUnder && d > w * 1.15) {
+      const n = Math.floor(d / 3.4);
+      for (let i = 1; i <= n; i++) {
+        const rz = -d / 2 + (i * d) / (n + 1);
+        for (const sgn of [1, -1]) {
+          const post = new THREE.Mesh(texBox(0.16, h - 0.6, 0.14), trimMat);
+          post.position.set(sgn * (w / 2 - 0.13), (h - 0.6) / 2 + 0.05, rz);
+          group.add(post);
+        }
+        const lintel = new THREE.Mesh(texBox(w - 0.2, 0.24, 0.14), trimMat);
+        lintel.position.set(0, h - 0.34, rz);
+        group.add(lintel);
+      }
+    }
+
+    // Radiators — cast-iron fin bank + manifolds + floor feeds under a wall
+    // of period rooms; the vertical ribbing is unmistakably domestic.
+    const radP = ({ guest: 0.45, lobby: 0.4, records: 0.35, safe: 0.5, gallery: 0.3 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && rng.float() < radP && w >= 3.5) {
+      const sgn = rng.bool(0.5) ? 1 : -1;
+      const rw = 0.7 + rng.float() * 0.4;
+      const rx = (rng.float() - 0.5) * (w - rw - 1.6);
+      const rz = sgn * (d / 2 - 0.19);
+      const rMat = rng.bool(0.4) ? MAT.steelDark() : TEX.metalRusted();
+      const nFin = Math.max(5, Math.floor(rw / 0.09));
+      for (let i = 0; i < nFin; i++) {
+        const fin = new THREE.Mesh(texBox(0.045, 0.6, 0.12), rMat);
+        fin.position.set(rx - rw / 2 + 0.05 + (i * (rw - 0.1)) / (nFin - 1), 0.46, rz);
+        group.add(fin);
+      }
+      for (const my of [0.74, 0.2]) {
+        const man = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, rw - 0.06, 8), rMat);
+        man.rotation.z = Math.PI / 2;
+        man.position.set(rx, my, rz);
+        group.add(man);
+      }
+      for (const o of [-1, 1]) {
+        const fp = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.2, 6), rMat);
+        fp.position.set(rx + o * (rw / 2 - 0.08), 0.1, rz);
+        group.add(fp);
+      }
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + rx * cos + rz * sin;
+      const wz = room.origin.z - rx * sin + rz * cos;
+      room.colliders.push(aabb(wx, room.origin.y + 0.4, wz, rw / 2 + 0.04, 0.4, 0.12));
+    }
+
+    // Floor vent registers — recessed grille + slats at wall bases in
+    // serviced rooms; small but very "institutional interior".
+    const ventP = ({ guest: 0.35, lobby: 0.3, records: 0.4, corridor: 0.3, safe: 0.3 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && rng.float() < ventP && w >= 3) {
+      const n = 1 + (rng.float() < 0.4 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const sgn = rng.bool(0.5) ? 1 : -1;
+        const vx = (rng.float() - 0.5) * (w - 2);
+        const vz = sgn * (d / 2 - 0.105);
+        const recess = new THREE.Mesh(texBox(0.52, 0.2, 0.02), MAT.charcoal());
+        recess.position.set(vx, 0.16, vz);
+        group.add(recess);
+        for (let s = 0; s < 5; s++) {
+          const slat = new THREE.Mesh(texBox(0.46, 0.018, 0.02), MAT.steelDark());
+          slat.position.set(vx, 0.1 + s * 0.035, vz - sgn * 0.006);
+          slat.rotation.x = sgn * 0.35;
+          group.add(slat);
+        }
+      }
+    }
+
     // Floor stains.
     const stainP = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 0.8 : spec.biome === 'corridor' ? 0.5 : 0.2;
     const nStain = rng.float() < stainP ? 1 + Math.floor(rng.float() * 2) : 0;
@@ -1265,6 +1335,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'window') {
         const len = Math.hypot(p.x, p.z) || 1;
         moonlightPool(p.x - (p.x / len) * 0.9, p.z - (p.z / len) * 0.9, (p.yaw ?? 0) + (rng.float() - 0.5) * 0.15);
+      }
+      // Ceiling rosette under hanging fixtures — plaster medallion + ring
+      // where the chain meets the slab.
+      if (p.kind === 'chandelier' || p.kind === 'lanternChandelier' || p.kind === 'ceilingLamp' || p.kind === 'chainBulb') {
+        const ry = h - (suspended ? 0.2 : 0.03);
+        const rose = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.32, 0.05, 16), ceilMat);
+        rose.position.set(p.x, ry, p.z);
+        group.add(rose);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.024, 8, 20), trimMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(p.x, ry - 0.04, p.z);
+        group.add(ring);
       }
     } catch {
       // skip broken prop rather than fail room
