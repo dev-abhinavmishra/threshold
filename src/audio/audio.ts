@@ -54,6 +54,7 @@ const CUES: Record<string, CueSpec> = {
   'trap-click': { freq: 1200, dur: 0.06, type: 'square', gain: 0.11, sweep: -200 },
   'washer-thump': { freq: 64, dur: 0.5, type: 'sine', gain: 0.34, sweep: 18, noise: true },
   'washer-spin': { freq: 240, dur: 1.6, type: 'triangle', gain: 0.12, sweep: 420 },
+  'washer-ding': { freq: 880, dur: 0.9, type: 'triangle', gain: 0.18, sweep: 40 },
   'fire-crackle': { freq: 220, dur: 0.6, type: 'triangle', gain: 0.07, sweep: -80, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },

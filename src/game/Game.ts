@@ -832,6 +832,12 @@ export class Game {
               pos: { x: wx, y: 0.7, z: wz },
               prompt: 'Run the load', holdTime: 1.1, enabled: true, priority: 2,
             });
+          } else if (isWash && this.finishedWashers.has(key) && !this.emptiedWashers.has(key)) {
+            this.interaction.add({
+              kind: 'washer', id: `wash-${key}`,
+              pos: { x: wx, y: 0.7, z: wz },
+              prompt: 'Empty the drum', holdTime: 0.8, enabled: true, priority: 2,
+            });
           }
         }
       }
@@ -1059,10 +1065,27 @@ export class Game {
       case 'washer': {
         it.enabled = false;
         const key = it.id.replace(/^wash-/, '');
+        const at = { x: it.pos.x, y: 0.7, z: it.pos.z };
+        if (this.ranWashers.has(key)) {
+          // Empty the drum — the load pays out, or it was never laundry
+          this.emptiedWashers.add(key);
+          const room = this.currentRoom;
+          const roll = this.streams.roomStream('scare', room * 631 + Number(key.split(':')[2] ?? 0)).range(0, 1);
+          if (roll < 0.55) {
+            const take = 4 + Math.floor(roll * 20);
+            this.marginalia += take;
+            this.audio.play('purchase', at, `[the load pays out — ${take} marginalia]`);
+          } else if (roll < 0.85) {
+            this.audio.play('trap-snap', at, '[something metal, not a coin]', 'warn');
+            this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.7, category: 'distraction', caption: '[a clank in the drum]' });
+          } else {
+            this.audio.play('pickup', at, '[wet cloth — that is all]');
+          }
+          return;
+        }
         this.ranWashers.add(key);
         // a cycle you cannot stop: ~24s of thumping the house can hear — the
         // drum calls patrols to the laundry while you take the long way
-        const at = { x: it.pos.x, y: 0.7, z: it.pos.z };
         this.runningWashers.push({ pos: at, until: this.clock.time + 24, nextThump: this.clock.time + 1.2, key });
         this.audio.play('washer-spin', at, '[the drum spins up — it will not stop]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a machine starts]' });
@@ -2509,6 +2532,8 @@ export class Game {
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
   private ranWashers = new Set<string>();
+  private finishedWashers = new Set<string>();
+  private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
   private activeWashKeys = new Set<string>();
   private trapJawMat: THREE.MeshStandardMaterial | null = null;
@@ -3545,7 +3570,14 @@ export class Game {
       }
       // running washers mask too — weaker, but the drum rings farther
       let washMask = 1;
-      this.runningWashers = this.runningWashers.filter((w) => tc < w.until);
+      this.runningWashers = this.runningWashers.filter((w) => {
+        if (tc < w.until) return true;
+        if (!this.finishedWashers.has(w.key)) {
+          this.finishedWashers.add(w.key);
+          this.audio.play('washer-ding', w.pos, '[the machine stops — drum ready]');
+        }
+        return false;
+      });
       this.activeWashKeys = new Set(this.runningWashers.map((w) => w.key));
       for (const w of this.runningWashers) {
         const d = v3dist(w.pos, this.player.pos);

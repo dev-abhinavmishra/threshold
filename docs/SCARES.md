@@ -39,6 +39,7 @@ ported to the subfloor.
 | Lifted receiver | — (interaction) | dead payphones, once per phone | a whisper reports the nearest threat's distance (in the room / a door away / rooms away) | the receiver clack is a sound — ask, then move |
 | Armed mousetrap | +611 (0.32/trap) | some mousetraps are set — a raised jaw wire is the tell | stepping on one snaps it: 4 damage, a loud footstep-class emit, a panic tick | look down in storage rooms; a set trap can be pried flat (E) before you cross it |
 | Ran the load | — (interaction) | washers/dryers, once per machine | ~24s unstoppable cycle: a loud thump every ~1.2s that masks your steps inside ~6m (×0.35) and calls patrols to the laundry | start it and take the long way — hunters answer the drum, not you |
+| Empty the drum | +631 | when a run cycle ends | the drum pays out — marginalia (55%), or a wet clank that emits a 0.7 lure (30%), or nothing | come back for it — but standing by the ding has an audience |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
