@@ -1529,7 +1529,13 @@ export class Game {
           const leaf = built.doorLeaves.get(d.id);
           if (leaf) {
             const hinge = leaf.userData.hinge as THREE.Group | undefined;
-            if (hinge) hinge.rotation.y = -d.openT * 1.9;
+            if (hinge) {
+              hinge.rotation.y = -d.openT * 1.9;
+              // handle-rattle beat: the leaf shudders in its frame
+              if (this.doorTry && this.doorTry.id === d.id && this.clock.time < this.doorTry.until) {
+                hinge.rotation.y += Math.sin(this.clock.time * 38) * 0.04;
+              }
+            }
           }
           // mirrored leaf on the other side of the boundary (prev room's out port)
           if (d.id === `door-${r.index}-in`) {
@@ -1877,6 +1883,20 @@ export class Game {
   private pianoRoom = -1;
   private pianoAt = 0;
   private pianoFired = false;
+  /** Door-rattle scare — something on the other side tries the handle. */
+  private doorTry: { id: string; pos: Vec3; at: number; until: number; rung: boolean } | null = null;
+
+  private maybeDoorTry(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 933);
+    if (!scare.bool(0.2)) return;
+    const closed = room.doors.filter((d) => !d.opening && d.openT < 0.1 && !d.falseDoor);
+    if (!closed.length) return;
+    const d = closed[scare.int(0, closed.length - 1)];
+    this.doorTry = { id: d.id, pos: d.pos, at: this.clock.time + 1 + scare.range(0, 4), until: 0, rung: false };
+    this.doorTry.until = this.doorTry.at + 0.9;
+  }
 
   private maybePiano(): void {
     const room = this.activeRooms()[this.currentRoom];
@@ -2388,6 +2408,7 @@ export class Game {
       this.maybeCrosser();
       this.maybeBreathing();
       this.maybePiano();
+      this.maybeDoorTry();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -2612,6 +2633,16 @@ export class Game {
       } else {
         this.pianoRoom = -1;
       }
+    }
+
+    // Something tries the handle — one rattle burst, then silence.
+    if (this.doorTry) {
+      if (!this.doorTry.rung && tA >= this.doorTry.at) {
+        this.doorTry.rung = true;
+        this.cue('door-rattle', this.doorTry.pos, '[the handle rattles — held]', 'warn');
+        this.sound.emit({ x: this.doorTry.pos.x, y: 1.2, z: this.doorTry.pos.z, intensity: 0.45, category: 'door', caption: '' });
+      }
+      if (tA >= this.doorTry.until) this.doorTry = null;
     }
 
     // Doorway crossers — silent slide across the frame, then gone for good.
