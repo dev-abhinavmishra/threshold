@@ -2,6 +2,8 @@
 
 _Audit of the working game at `stable-pre-rehaul` (post-sprint-86, ~16.4k LOC TS/TSX, 63 main-floor + 14 Underscript room templates, 464 licensed model dirs, 14 rigged animated figures, 15 Blender-milled original prefabs, 19 tuned entity ids + 5 corridor-runner variants + 9 ambient scare systems, 52 unit tests + 4 e2e + 5-seed determinism sim)._
 
+_Update (post-sprint-136): the §9 plan has landed — debug panel + perf HUD (`?debug`), the seeded pacing planner (`world/pacing.ts` `planBeats`), per-enemy docs in `docs/enemies/`, audio occlusion lowpass + convolver send, and prop instancing. Since then: toll/deep branch doors, under-floor caches, the Baggage Hall (room 25), pebble toss, and ~15 new seeded scare beats — full catalog in `docs/SCARES.md`. 61 tests + 4 e2e green._
+
 ## 1. Strengths worth preserving
 
 - **Seeded generation core** (`engine/rng`, `world/generator`, `world/validation`, `npm run sim`): every run is reproducible; 5-seed validation gates keys-before-locks, hiding coverage, no overlapping volumes. This is the foundation everything hangs on — hard to rebuild, cheap to extend.
@@ -24,37 +26,37 @@ _Audit of the working game at `stable-pre-rehaul` (post-sprint-86, ~16.4k LOC TS
 ## 3. Systems requiring full replacement
 
 - **None at architecture level.** Every system passes the PRESERVE tests (stable, testable, expandable). The only full replacements are *content-level*: procedural placeholder bodies for entities are being replaced by rigged GLBs (already 14/19 done).
-- **Debug tooling: absent → build new** (mandated by brief): room-jump, entity spawn/kill, state overlay, seed jump, FPS/frame overlay, save/load test hooks.
+- ~~**Debug tooling**~~ SHIPPED: `src/game/debug.ts` installs at `?debug` — room-jump, entity spawn/kill, state overlay, seed jump, FPS/frame overlay.
 
 ## 4. Biggest reasons it currently reads below target
 
-- Encounters fire from a flat probability field — no designed escalation curve, so tension can plateau mid-run.
+- ~~Encounters fire from a flat probability field~~ — SHIPPED: `world/pacing.ts` plans an authored beat curve (warning → relief → escalation) seeded per run, layered over the seeded picks.
 - Enemy telegraphing relies on audio cues + caption hints; no *visual* foreshadowing language (scuffs, disturbed props, drawings) tied to the specific entity scheduled in the run.
 - Underscript reads sparser than the main floor (now being dressed by the mill — sprints 84–85).
-- Audio lacks spatial occlusion — a threat 2 doors away sounds identical to one adjacent.
+- ~~Audio lacks spatial occlusion~~ — SHIPPED: occlusion lowpass on the sfx bus, distance delay, biome room-tone beds; a threat two doors away now sounds like it.
 - No one has actually *played the balance*: tuning numbers are sim-validated, not playtested.
 
 ## 5. Biggest player-experience problems
 
 - Death classes are hinted but the "what just killed me" read is uneven across entities.
-- Sprint has no stamina tradeoff depth; hiding is binary in/out with no near-miss state.
-- Route choice exists (branching + Underscript detour) but not signposted — players may miss the subfloor entirely.
+- ~~Hiding is binary in/out with no near-miss state~~ — SHIPPED (s122): a runner passing your hiding spot triggers a near-miss slow-down + creak tell.
+- ~~Underscript not signposted~~ — SHIPPED (s121): gate-mark floor decal + under-draft audio pull near the passage.
 
 ## 6. Pacing & replayability problems
 
 - Tension curve is emergent only; needs authored "beats" (warning → relief → escalation) seeded per run.
-- Seed variety is spatial, not experiential — item/entity mix should differ more run-to-run within fairness bounds.
+- ~~Seed variety is spatial, not experiential~~ — IMPROVED: seeded encounter variants (s98), per-room light tint/intensity (s124), and ~20 seeded scare beats keyed to room index make runs read differently without breaking determinism.
 
 ## 7. Atmosphere / audio / lighting problems
 
-- No occlusion/reverb zoning; light flicker is uniform; dark rooms lean on the same palette.
+- ~~No occlusion/reverb zoning~~ — SHIPPED: door-state occlusion lowpass + convolver send in `audio.ts`. Light character now varies per room (tint + flicker + breathing rooms + telegraph waves).
 - Procedural door-leaf + corridor architrave still flat-lit at grazing angles (mill archways landed for portals; doors pending).
 
 ## 8. Technical / performance risks
 
 - Draw calls scale with prop count (~150–400/room); fine at target res, risk on integrated GPUs — mitigate via instancing + existing quality presets.
 - AnimationMixer count grows per streamed room — bounded by the streaming window, but profiles absent.
-- No FPS/frame-time HUD — the brief mandates one; being added with debug tooling.
+- ~~No FPS/frame-time HUD~~ — SHIPPED with the debug panel (`?debug`).
 
 ## 9. Prioritized work plan
 
