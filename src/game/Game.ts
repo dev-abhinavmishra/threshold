@@ -587,6 +587,13 @@ export class Game {
         sock.meta.opened = true;
         it.enabled = false;
         this.cue('drawer', it.pos, '');
+        // slide the matching drawer front open
+        const built = this.streamer.get(this.currentRoom);
+        built?.group.traverse((o) => {
+          if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${it.pos.x.toFixed(1)}|${it.pos.z.toFixed(1)}`) {
+            o.userData.open = true;
+          }
+        });
         this.resolveSocketLoot(it);
         return;
       }
@@ -1200,6 +1207,14 @@ export class Game {
           const on = n > -0.75;
           mat.emissiveIntensity = on ? 1.35 + Math.sin(t * 47 + s) * 0.15 : 0.04;
           if (light) light.intensity = (light.userData.baseIntensity as number) * (on ? 1 : 0.1);
+        } else if (kind === 'drawerFront') {
+          if (o.userData.open) {
+            const p = Math.min(1, ((o.userData.dprog as number) ?? 0) + dt * 2.2);
+            o.userData.dprog = p;
+            if (o.userData.baseZ === undefined) o.userData.baseZ = o.position.z;
+            const e = 1 - Math.pow(1 - p, 3);
+            o.position.z = (o.userData.baseZ as number) + e * 0.24;
+          }
         } else if (kind === 'ripple') {
           // Drip landing ring — expanding loop; fades as it spreads.
           const m = o as THREE.Mesh;

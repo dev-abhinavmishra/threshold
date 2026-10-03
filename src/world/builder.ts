@@ -1757,6 +1757,55 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     group.add(corr);
   }
 
+  // Drawer sockets — give every "Search drawer" point real furniture. When
+  // a chest-like prop already stands at the socket, mount a drawer front on
+  // it facing the player side; otherwise build a small nightstand pedestal.
+  {
+    const FURNITURE = new Set(['drawerUnit', 'nightstand', 'gothicCommode', 'vintageCabinet', 'modernCabinet', 'metalDesk', 'desk', 'schoolDesk', 'sideTable', 'cabinet']);
+    const dco = Math.cos(room.yaw), dsi = Math.sin(room.yaw);
+    for (const sock of room.sockets) {
+      if (sock.kind !== 'drawer') continue;
+      const dx = sock.pos.x - room.origin.x, dz = sock.pos.z - room.origin.z;
+      const lx = dx * dco - dz * dsi, lz = dx * dsi + dz * dco;
+      const near = spec.props.find((p) => FURNITURE.has(p.kind) && Math.hypot(p.x - lx, p.z - lz) < 1.0);
+      const holder = new THREE.Group();
+      const bodyMat = grand ? TEX.woodCarved() : MAT.darkOak();
+      let fx = lx, fz = lz, fyaw = Math.atan2(-lx, -lz);
+      if (near) {
+        fyaw = Math.atan2(lx - near.x, lz - near.z);
+        fx = near.x + Math.sin(fyaw) * 0.26;
+        fz = near.z + Math.cos(fyaw) * 0.26;
+      } else {
+        // nightstand pedestal — body, proud top, plinth
+        const body = new THREE.Mesh(texBox(0.48, 0.56, 0.4), bodyMat);
+        body.position.y = 0.31;
+        const top = new THREE.Mesh(texBox(0.52, 0.035, 0.44), bodyMat);
+        top.position.y = 0.61;
+        const plinth = new THREE.Mesh(texBox(0.52, 0.06, 0.44), MAT.ink());
+        plinth.position.y = 0.03;
+        holder.add(body, top, plinth);
+        holder.position.set(lx, 0, lz);
+        holder.rotation.y = fyaw;
+        room.colliders.push(aabb(
+          room.origin.x + lx * dco + lz * dsi, room.origin.y + 0.33,
+          room.origin.z - lx * dsi + lz * dco, 0.28, 0.33, 0.28));
+      }
+      // sliding drawer front + brass knob; opens on 'Search drawer'
+      const face = new THREE.Mesh(texBox(0.4, 0.15, 0.035), bodyMat);
+      face.position.set(0, 0.42, 0.205);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), MAT.brass());
+      knob.position.set(0, 0.42, 0.24);
+      face.add(knob);
+      face.userData.anim = 'drawerFront';
+      face.userData.sockKey = `${sock.pos.x.toFixed(1)}|${sock.pos.z.toFixed(1)}`;
+      const faceHolder = new THREE.Group();
+      faceHolder.position.set(fx, 0, fz);
+      faceHolder.rotation.y = fyaw;
+      faceHolder.add(face);
+      group.add(holder, faceHolder);
+    }
+  }
+
   // Static consolidation — merge every non-animated, non-decal, non-door mesh
   // into a handful of draw calls per material. Big furnished rooms drop from
   // ~250 draw calls to ~30; door leaves, lamp meshes, shafts, decals and
