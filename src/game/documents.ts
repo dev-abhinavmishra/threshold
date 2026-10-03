@@ -85,4 +85,28 @@ export const DOCUMENTS: Document[] = [
     id: 'doc-engine', title: 'The Engine', category: 'lore', unlockedAt: 0,
     body: 'The hundredth threshold is a machine for crossing. It stalled. The relays scatter it; the routing board reorders it; the lift at its heart is the last door you will ever open.',
   },
+  {
+    id: 'doc-guest-chalk', title: 'Note — “mark your doors”', category: 'lore', unlockedAt: 0,
+    body: 'I carry chalk now. One stroke on the frame of every threshold I take. When I come back through — and you always come back through — a marked door means it was me, not them. Unmarked doors I did not take are the ones I worry about. — a previous guest',
+  },
+  {
+    id: 'doc-guest-alarm', title: 'Note — “let it ring somewhere else”', category: 'lore', unlockedAt: 0,
+    body: 'The thing downstairs files every sound you make. I stopped being quiet and started being elsewhere: wind the clock, set it down, walk away slow. It rings where you are not. Everything that hunts noise goes to the noise. — a previous guest',
+  },
+  {
+    id: 'doc-guest-broker', title: 'Note — “the staff below”', category: 'lore', unlockedAt: 0,
+    body: 'There is a counter in the service rooms where something stands all night. It is not friendly and it is not cruel. It takes only Marginalia — the coin this place pays out — and it will watch you the whole time you browse. Buy what you need and do not linger. — a previous guest',
+  },
+  {
+    id: 'doc-guest-register', title: 'Note — “the ledger”', category: 'lore', unlockedAt: 0,
+    body: 'I signed the register at the counter because the lobby asks you to. Yesterday I walked back through and there were two signatures. The second one is mine. I did not write it. — a previous guest',
+  },
+  {
+    id: 'doc-guest-drawers', title: 'Note — “splinters carry”', category: 'lore', unlockedAt: 0,
+    body: 'Locked drawers hold more — I have seen the tally. But the sound of a forced lock carries further than the loot is worth. Spend a pick or walk away. Whatever is down the hall heard me learn that. — a previous guest',
+  },
+  {
+    id: 'doc-guest-torch', title: 'Note — “the beam stutters”', category: 'lore', unlockedAt: 0,
+    body: 'My lamp is honest. When it stutters near a wardrobe, a vent, a gap under a bed — something is in there deciding whether to be hungry. The flicker is the only warning a hiding place gives. — a previous guest',
+  },
 ];
