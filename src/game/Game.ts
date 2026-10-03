@@ -764,15 +764,16 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
-          if (!isVent && !isHearth && !isPhone && !isTrap && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap) ord[p.kind] = n + 1;
+          const isWash = p.kind === 'washer';
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -825,6 +826,12 @@ export class Game {
                 prompt: 'Pry the trap', holdTime: 0.7, enabled: true, priority: 2,
               });
             }
+          } else if (isWash && !this.ranWashers.has(key)) {
+            this.interaction.add({
+              kind: 'washer', id: `wash-${key}`,
+              pos: { x: wx, y: 0.7, z: wz },
+              prompt: 'Run the load', holdTime: 1.1, enabled: true, priority: 2,
+            });
           }
         }
       }
@@ -1047,6 +1054,18 @@ export class Game {
         const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
         this.audio.play('trap-click', at, '[the spring slackens]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'washer': {
+        it.enabled = false;
+        const key = it.id.replace(/^wash-/, '');
+        this.ranWashers.add(key);
+        // a cycle you cannot stop: ~24s of thumping the house can hear — the
+        // drum calls patrols to the laundry while you take the long way
+        const at = { x: it.pos.x, y: 0.7, z: it.pos.z };
+        this.runningWashers.push({ pos: at, until: this.clock.time + 24, nextThump: this.clock.time + 1.2, key });
+        this.audio.play('washer-spin', at, '[the drum spins up — it will not stop]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a machine starts]' });
         return;
       }
       case 'hearth': {
@@ -1969,6 +1988,7 @@ export class Game {
       this.ensureCoffin(i, built);
       this.ensureTV(i, built);
       this.ensureTrap(i, built);
+      this.ensureWasher(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2488,6 +2508,9 @@ export class Game {
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
+  private ranWashers = new Set<string>();
+  private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
+  private activeWashKeys = new Set<string>();
   private trapJawMat: THREE.MeshStandardMaterial | null = null;
 
   /** Re-apply trap tell (raised jaw wire) for armed traps in a (re)streamed room. */
@@ -2512,6 +2535,21 @@ export class Game {
       }
       if (jaw) jaw.rotation.x = down ? -1.5 : -0.55;
       if (!armed && jaw) jaw.visible = false;
+    });
+  }
+
+  /** Running washers shudder on the floor for their cycle. */
+  private ensureWasher(i: number, built: { group: THREE.Group }): void {
+    const t = this.clock.time;
+    built.group.traverse((o) => {
+      if (o.name !== `wash-${i}`) return;
+      const groups = built.group.children.filter((c) => c.name === `wash-${i}`);
+      const n = groups.indexOf(o);
+      const key = `${this.space}:${i}:${n}`;
+      if (o.userData.washBaseY === undefined) o.userData.washBaseY = o.position.y;
+      o.position.y = this.activeWashKeys.has(key)
+        ? (o.userData.washBaseY as number) + Math.abs(Math.sin(t * 38 + n * 1.7)) * 0.012
+        : (o.userData.washBaseY as number);
     });
   }
   private hearths: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; light: THREE.PointLight; base: THREE.Vector3; until: number; seed: number; nextCrackle: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
@@ -3505,7 +3543,20 @@ export class Game {
         if (v3dist(m.pos, this.player.pos) < 7) masked = true;
         if (v3dist(m.pos, this.player.pos) < 13) anyHiss = true;
       }
-      this.player.maskMul = masked ? 0.22 : 1;
+      // running washers mask too — weaker, but the drum rings farther
+      let washMask = 1;
+      this.runningWashers = this.runningWashers.filter((w) => tc < w.until);
+      this.activeWashKeys = new Set(this.runningWashers.map((w) => w.key));
+      for (const w of this.runningWashers) {
+        const d = v3dist(w.pos, this.player.pos);
+        if (d < 6) washMask = 0.35;
+        if (tc >= w.nextThump) {
+          w.nextThump = tc + 1.15;
+          this.audio.play('washer-thump', w.pos, '');
+          this.sound.emit({ x: w.pos.x, y: w.pos.y, z: w.pos.z, intensity: 0.55, category: 'machine', caption: '[the machine thumps]' });
+        }
+      }
+      this.player.maskMul = Math.min(masked ? 0.22 : 1, washMask);
       if (anyHiss && tc >= this.nextHiss) {
         this.nextHiss = tc + 2.4;
         const m = this.steamMasks[0];
