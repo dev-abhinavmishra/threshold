@@ -424,6 +424,7 @@ const recordsOffice: RoomTemplate = {
       { kind: 'desk', x: -1.8, z: -1.4 }, { kind: 'desk', x: 1.8, z: -1.4 },
       { kind: 'filing', x: -3, z: 2.4 }, { kind: 'filing', x: -2.4, z: 2.4 },
       { kind: 'filing', x: 3, z: 2.4 },
+      { kind: 'printer', x: 3, z: 1.5 },
       { kind: 'typewriter', x: -1.8, z: 0.55, y: 0.78 },
       { kind: 'deskLamp', x: 1.8, z: 0.7, y: 0.8 },
       { kind: 'candle', x: -1.8, z: -1.3, y: 0.8 },

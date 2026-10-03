@@ -765,16 +765,17 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
           const isWash = p.kind === 'washer';
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash) ord[p.kind] = n + 1;
+          const isPrint = p.kind === 'printer' || p.kind === 'printerRow';
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -838,6 +839,12 @@ export class Game {
               kind: 'washer', id: `wash-${key}`,
               pos: { x: wx, y: 0.7, z: wz },
               prompt: 'Empty the drum', holdTime: 0.8, enabled: true, priority: 2,
+            });
+          } else if (isPrint && !this.printedPages.has(key)) {
+            this.interaction.add({
+              kind: 'printer', id: `print-${key}`,
+              pos: { x: wx, y: 0.75, z: wz },
+              prompt: 'Print the page', holdTime: 0.9, enabled: true, priority: 2,
             });
           }
         }
@@ -1090,6 +1097,41 @@ export class Game {
         this.runningWashers.push({ pos: at, until: this.clock.time + 24, nextThump: this.clock.time + 1.2, key });
         this.audio.play('washer-spin', at, '[the drum spins up — it will not stop]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a machine starts]' });
+        return;
+      }
+      case 'printer': {
+        it.enabled = false;
+        const key = it.id.replace(/^print-/, '');
+        this.printedPages.add(key);
+        const at = { x: it.pos.x, y: 0.8, z: it.pos.z };
+        const roll = this.streams.roomStream('scare', this.currentRoom * 647 + Number(key.split(':')[2] ?? 0)).range(0, 1);
+        if (roll < 0.28) {
+          // the paper jams — a grind the floor hears, no page
+          this.audio.play('printer-jam', at, '[the feed jams — it grinds on empty]', 'warn');
+          this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.6, category: 'machine', caption: '[a printer grinds]' });
+          return;
+        }
+        this.audio.play('printer-whir', at, '[the machine warms — a page is coming]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.3, category: 'machine', caption: '' });
+        if (this.space === 'under') {
+          let exitIdx = -1;
+          for (const r of this.route!.underRooms) {
+            if (r.sockets.some((s) => s.meta.underExit === true)) { exitIdx = r.index; break; }
+          }
+          const msg = exitIdx >= 0 ? `[the page reads: the way out is ${Math.max(0, exitIdx - this.currentRoom)} doors on]`
+            : '[the page reads: a floor plan with no exits marked]';
+          window.setTimeout(() => this.cue('pickup', at, msg), 1400);
+        } else {
+          // the next locked door on the main route, as a count of rooms
+          let lockIdx = -1;
+          for (const r of this.route!.rooms) {
+            if (r.index <= this.currentRoom) continue;
+            if (r.doors.some((d) => d.locked)) { lockIdx = r.index; break; }
+          }
+          const msg = lockIdx >= 0 ? `[the page reads: the next lock waits ${lockIdx - this.currentRoom} doors on]`
+            : '[the page reads: no locks ahead — the house lets you walk]';
+          window.setTimeout(() => this.cue('pickup', at, msg), 1400);
+        }
         return;
       }
       case 'hearth': {
@@ -2534,6 +2576,7 @@ export class Game {
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
   private ranWashers = new Set<string>();
+  private printedPages = new Set<string>();
   private finishedWashers = new Set<string>();
   private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
