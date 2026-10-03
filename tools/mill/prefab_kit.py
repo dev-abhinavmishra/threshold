@@ -299,10 +299,60 @@ def balustrade():
         bpy.context.object.data.materials.append(STONE)
     join_all('balustrade')
 
+
+def boilerDrum():
+    """Riveted rivet-seamed boiler vessel with sight glass + pipes. ~2m."""
+    cyl('shell', (0, 0, 1.0), 0.75, 1.7, IRON, 20)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=10, radius=0.75, location=(0, 0, 1.85))
+    d = bpy.context.object; d.scale.z = 0.4; d.data.materials.append(IRON)
+    cyl('base', (0, 0, 0.1), 0.82, 0.2, STONE, 20)
+    # rivet bands
+    for bz in (0.35, 1.0, 1.65):
+        ring_seg('band', (0, 0, bz), 0.78, 0.76, 0.06, IRON)
+    # sight glass tube
+    cyl('glass', (0.72, 0, 1.0), 0.05, 1.0, BRASS := bpy.data.materials.new('brass'), 10)
+    BRASS.diffuse_color = (0.55, 0.42, 0.18, 1); BRASS.metallic = 0.9
+    # top pipe + valve wheel
+    cyl('pipe', (0, 0, 2.35), 0.12, 0.7, IRON, 12)
+    torus('wheel', (0.18, 0, 2.3), 0.16, 0.025, IRON)
+    join_all('boilerDrum')
+
+def pipeManifold():
+    """Wall-mounted 3-pipe run with elbows and two valve wheels. 3m wide."""
+    L = 3.0
+    for (py, pz) in [(0.06, 2.4), (0.0, 2.1), (0.09, 1.8)]:
+        cyl('pipe', (0, py, pz), 0.055, L, IRON, 10).rotation_euler[1] = math.pi / 2
+    # drop elbows at both ends
+    for sx in (-1, 1):
+        cyl('drop', (sx * (L / 2 - 0.05), 0.06, 2.0), 0.055, 0.85, IRON, 10)
+        torus('elb', (sx * (L / 2 - 0.05), 0.06, 2.35), 0.07, 0.05, IRON)
+    # valve wheels on the mid pipe
+    for vx in (-0.8, 0.7):
+        cyl('stem', (vx, 0.16, 2.1), 0.02, 0.14, IRON, 8).rotation_euler[0] = math.pi / 2
+        torus('vwheel', (vx, 0.24, 2.1), 0.11, 0.02, IRON)
+    join_all('pipeManifold')
+
+def stackShelf():
+    """Archive shelf bay — frame + 5 shelves + labelled boxes. 1.6w."""
+    w, h, d = 1.6, 2.3, 0.5
+    for sx in (-1, 1):
+        cube('post', (sx * (w / 2 - 0.03), 0, h / 2), (0.06, d, h), IRON, 0.005)
+    for i in range(5):
+        z = 0.15 + i * 0.46
+        cube('shelf', (0, 0, z), (w, d, 0.04), IRON, 0.004)
+        if i < 4:
+            # file boxes on the shelf
+            for b in range(3):
+                bx = -w / 2 + 0.3 + b * (w - 0.6) / 2
+                cube('box', (bx, 0.02, z + 0.16), (0.36, d * 0.75, 0.3), DARK, 0.008)
+                cube('lbl', (bx, -d * 0.38, z + 0.16), (0.2, 0.01, 0.08), PAPER := bpy.data.materials.new('paper'), 0)
+                PAPER.diffuse_color = (0.75, 0.68, 0.5, 1)
+    join_all('stackShelf')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
-    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade,
+    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf,
 }
 
 def main():

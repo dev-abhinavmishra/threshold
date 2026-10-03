@@ -619,3 +619,7 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 
 | `scissorgate` | Elevator scissor gate: jamb frame + crossing lattice bars | gallery-lift-lobby |
 | `balustrade` | Balcony railing run: turned balusters, rail, newel posts | gallery-mezzanine |
+
+| `boilerDrum` | Riveted boiler vessel: dome top, rivet bands, sight glass, valve | maint-boiler, maint-server |
+| `pipeManifold` | Wall-mounted 3-pipe run: drop elbows, valve wheels | maint-boiler, maint-flooded, maint-server |
+| `stackShelf` | Archive shelving bay: iron frame, 5 shelves, labelled file boxes | records-stacks |
