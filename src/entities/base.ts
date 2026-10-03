@@ -85,6 +85,11 @@ export abstract class Entity {
   /** Approximate threat position for proximity systems (dread layer);
    *  null when the entity has no spatial presence. */
   threatPos(): Vec3 | null { return null; }
+
+  /** Corridor telegraph: the index span a pass will cover plus the wave
+   *  direction (±1 in index space) and warn progress 0→1. Null when not
+   *  telegraphing. Game folds this into lamp intensities each frame. */
+  telegraphSpan(): { lo: number; hi: number; dir: number; frac: number } | null { return null; }
 }
 
 /* ---------- shared helpers ---------- */

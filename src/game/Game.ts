@@ -1511,6 +1511,20 @@ export class Game {
       fog.color.lerp(new THREE.Color(target.c), k);
     }
 
+    // Corridor telegraph: darkness wave crawling along each warning runner's
+    // pass span — rooms behind the front go near-black, the front pulses dim.
+    this.telegraphMul.clear();
+    for (const e of this.entities) {
+      const ts = e.telegraphSpan();
+      if (!ts) continue;
+      const front = ts.dir > 0 ? ts.lo + ts.frac * (ts.hi - ts.lo) : ts.hi - ts.frac * (ts.hi - ts.lo);
+      for (let i = ts.lo; i <= ts.hi; i++) {
+        const rel = ts.dir * (i - front);
+        const m = rel <= 0 ? 0.12 : rel <= 1 ? 0.35 : rel <= 2 ? 0.65 : 1;
+        this.telegraphMul.set(i, Math.min(this.telegraphMul.get(i) ?? 1, m));
+      }
+    }
+
     for (const i of this.streamer.builtIndices) {
       const built = this.streamer.get(i);
       if (!built) continue;
@@ -1520,17 +1534,17 @@ export class Game {
       const dead = this.blackedOut.has(i);
       // breathing rooms pulse their lights on a slow cycle
       const breath = i === this.breathingRoom ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9)) : 1;
+      const tele = this.telegraphMul.get(i) ?? 1;
       for (const l of built.lights) {
         if (dead) { l.intensity = 0; continue; }
-        l.intensity *= breath;
-        if (!l.userData.flicker) continue;
+        if (!l.userData.flicker) { l.intensity = (l.userData.baseIntensity as number) * breath * tele; continue; }
         const s = (l.userData.flickerSeed as number) ?? 0;
         // Squared-off pseudo-noise: mostly steady with occasional deep dips.
         const n = Math.sin(t * 11.3 + s) * Math.sin(t * 5.7 + s * 1.7) * Math.sin(t * 2.9 + s * 0.6);
         const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
-        l.intensity = (l.userData.baseIntensity as number) * f * breath;
+        l.intensity = (l.userData.baseIntensity as number) * f * breath * tele;
         const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f * breath;
+        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f * breath * tele;
       }
       if (built.dust) {
         built.dust.rotation.y += dt * 0.02;
@@ -1778,6 +1792,7 @@ export class Game {
   private clockNear = 0;
   private readonly clockPos = new THREE.Vector3();
   private readonly tmpV3 = new THREE.Vector3();
+  private readonly telegraphMul = new Map<number, number>();
 
   private maybeBreathing(): void {
     const room = this.activeRooms()[this.currentRoom];

@@ -43,6 +43,8 @@ export class CorridorRunner extends Entity {
   private opts: CorridorOptions;
   private sawPlayerHide = false;
   private endRoom: number;
+  private startRoom = 0;
+  private warnTotal = 0;
   private rng!: Rng;
   private brokeLights = new Set<number>();
   /** Rebound variant: sweep reverses once for a faster surprise pass. */
@@ -60,10 +62,10 @@ export class CorridorRunner extends Entity {
     const c = this.ctx;
     this.rng = new Rng(c.seed);
     this.endRoom = Math.min(c.rooms.length - 1, c.currentRoomIndex + 2);
-    const startRoom = this.opts.fromAhead
+    this.startRoom = this.opts.fromAhead
       ? Math.min(c.rooms.length - 1, c.currentRoomIndex + 4)
       : Math.max(0, c.currentRoomIndex - 4);
-    this.path = corridorPath(c.rooms, startRoom, this.endRoom);
+    this.path = corridorPath(c.rooms, this.startRoom, this.endRoom);
     if (this.opts.fromAhead) this.path = this.path.slice().reverse();
     this.totalLen = pathLength(this.path);
     this.traveled = 0;
@@ -90,6 +92,7 @@ export class CorridorRunner extends Entity {
       for (let i = Math.max(0, c.currentRoomIndex - 3); i <= c.currentRoomIndex; i++) c.flickerRoom(i, 'sweep');
     }
     this.warnT = tune.warningTime * ({ learning: 1.5, standard: 1, hard: 0.78, qa: 1 })[c.difficulty];
+    this.warnTotal = this.warnT;
 
     // Track whether Maelstrom sees the player enter a cabinet.
     if (this.id === 'maelstrom') {
@@ -111,6 +114,18 @@ export class CorridorRunner extends Entity {
   }
 
   override threatPos(): Vec3 { return this.posApprox(); }
+
+  /** Darkness wave crawling along the pass span during the warning window:
+   *  front starts at startRoom and reaches the player's end as warnT drains. */
+  override telegraphSpan(): { lo: number; hi: number; dir: number; frac: number } | null {
+    if (this.state !== 'warn' || this.warnTotal <= 0) return null;
+    return {
+      lo: Math.min(this.startRoom, this.endRoom),
+      hi: Math.max(this.startRoom, this.endRoom),
+      dir: this.opts.fromAhead ? -1 : 1,
+      frac: Math.min(1, Math.max(0, 1 - this.warnT / this.warnTotal)),
+    };
+  }
 
   /** Approximate world position for systems that need proximity (panic). */
   posApprox(): Vec3 {
