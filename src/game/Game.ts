@@ -318,6 +318,10 @@ export class Game {
     this.entities = [];
     for (const l of this.lures) this.entityGroup.remove(l.mesh);
     this.lures = [];
+    for (const cr of this.crossers) this.entityGroup.remove(cr.mesh);
+    this.crossers = [];
+    for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
+    this.brokerFigs.clear();
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
@@ -1721,6 +1725,31 @@ export class Game {
     };
   }
 
+  private crossers: { mesh: THREE.Object3D; from: Vec3; to: Vec3; t: number; dur: number }[] = [];
+
+  /** Doorway crosser: a figure passes the far door once — there and gone. */
+  private maybeCrosser(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
+    if (this.currentRoom < 5) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 733);
+    if (!scare.bool(0.16)) return;
+    const fwd = room.doors.find((d) => d.isMainRoute && !d.falseDoor);
+    if (!fwd) return;
+    const fig = tallFigure({ height: 2.2, body: MAT.shadowFigure(), hood: true });
+    const c = Math.cos(fwd.yaw), s = Math.sin(fwd.yaw);
+    const dir = v3(c, 0, -s); // along the door's wall
+    const side = scare.bool() ? 1 : -1;
+    const from = v3(fwd.pos.x - dir.x * 1.4 * side, 0, fwd.pos.z - dir.z * 1.4 * side);
+    const to = v3(fwd.pos.x + dir.x * 1.4 * side, 0, fwd.pos.z + dir.z * 1.4 * side);
+    from.y = to.y = fwd.pos.y;
+    fig.position.copy(from as unknown as THREE.Vector3);
+    fig.rotation.y = Math.atan2(dir.x * side, dir.z * side);
+    this.entityGroup.add(fig);
+    this.crossers.push({ mesh: fig, from, to, t: 0, dur: 0.9 + scare.float() * 0.5 });
+    this.cue('figure-pass', fwd.pos, scare.bool(0.5) ? '[something crosses the far door]' : '', 'info');
+  }
+
   private readonly visitedRooms = new Set<number>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
@@ -2208,6 +2237,7 @@ export class Game {
       this.maybeRelocateRelic(prev);
       this.maybeHauntDoor();
       this.maybeFarSound();
+      this.maybeCrosser();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -2376,6 +2406,19 @@ export class Game {
       }
     }
     this.lures = this.lures.filter((l) => !l.rang || tA < l.until + 2.5);
+
+    // Doorway crossers — silent slide across the frame, then gone for good.
+    for (const cr of this.crossers) {
+      cr.t += dt;
+      const u = Math.min(1, cr.t / cr.dur);
+      cr.mesh.position.set(
+        cr.from.x + (cr.to.x - cr.from.x) * u,
+        cr.from.y,
+        cr.from.z + (cr.to.z - cr.from.z) * u,
+      );
+      if (u >= 1) this.entityGroup.remove(cr.mesh);
+    }
+    this.crossers = this.crossers.filter((cr) => cr.t < cr.dur);
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.
     if (this.pendingBlackout && tA >= this.pendingBlackout.at) {

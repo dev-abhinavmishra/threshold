@@ -85,6 +85,7 @@ const CUES: Record<string, CueSpec> = {
   'death-echo': { freq: 70, dur: 1.4, type: 'sine', gain: 0.14, sweep: 45 },
   'alarm-tick': { freq: 1900, dur: 0.06, type: 'square', gain: 0.04 },
   'alarm-ring': { freq: 2600, dur: 1.8, type: 'square', gain: 0.22, sweep: 2400, noise: true },
+  'figure-pass': { freq: 140, dur: 0.8, type: 'triangle', gain: 0.1, sweep: 90 },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },
