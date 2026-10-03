@@ -2738,6 +2738,22 @@ export class Game {
   private luggageSpawned = new Set<number>();
   private luggageNoticed = new Set<number>();
 
+  /** The boards remember — some rooms complain under upright feet,
+   *  a soft creak every other stride. Crouch and the house forgets. */
+  private creakyRooms = new Set<string>();
+  private nextCreak = 0;
+  private creakParity = 0;
+  private maybeCreakyRoom(): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
+    const key = `${this.space}:${this.currentRoom}`;
+    if (this.creakyRooms.has(key)) return;
+    if (this.streams.roomStream('scare', this.currentRoom * 619 + (this.space === 'under' ? 977 : 0)).bool(0.22)) {
+      this.creakyRooms.add(key);
+      this.cue('amb-settle', { x: this.player.pos.x, y: 0.2, z: this.player.pos.z }, '[the boards remember feet]');
+    }
+  }
+
   /** Stone that migrates — statues/busts take one quiet step toward you,
    *  only ever while their new spot is unobserved. Once each. */
   private statuePlans = new Map<string, { n: number; since: number; done: boolean }>();
@@ -3629,6 +3645,7 @@ export class Game {
       this.maybeOccupant();
       this.maybeLuggage();
       this.maybeStatueShift();
+      this.maybeCreakyRoom();
     }
     this.tickEchoQueue();
     this.tickOccupant();
@@ -3641,6 +3658,7 @@ export class Game {
         this.visitedRooms.add(-this.currentRoom - 1);
         if (revisit) { this.maybeShiftDoor(this.currentRoom); this.maybeTenantMoved(true); }
         this.maybeStatueShift();
+        this.maybeCreakyRoom();
         this.maybeFarSound();
         this.maybeBreathing(true);
         this.maybeDoorTry(true);
@@ -3989,6 +4007,18 @@ export class Game {
         const interval = 0.35 + nearest * 0.11;
         this.pipeTickNext = tA + interval;
         this.audio.play('pipe-tick', { x: bp.x, y: 1.1, z: bp.z }, interval < 0.75 ? '[the pipes tick — faster]' : '', 'warn');
+      }
+    }
+
+    // The boards remember — upright strides creak in armed rooms
+    if (this.creakyRooms.has(`${this.space}:${this.currentRoom}`) && !this.player.crouching && tA >= this.nextCreak) {
+      const v = this.player.vel;
+      if (v.x * v.x + v.z * v.z > 0.16) {
+        this.creakParity++;
+        this.nextCreak = tA + (this.creakParity % 2 ? 1.1 : 1.5);
+        const at = { x: this.player.pos.x, y: 0.1, z: this.player.pos.z };
+        this.audio.play('floor-creak', at, '');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.22, category: 'footstep', caption: '' });
       }
     }
 

@@ -61,6 +61,7 @@ const CUES: Record<string, CueSpec> = {
   'type-clack': { freq: 1100, dur: 0.09, type: 'square', gain: 0.22, sweep: -420, noise: true },
   'pipe-tick': { freq: 1350, dur: 0.05, type: 'square', gain: 0.07, sweep: -380, noise: true },
   'rug-slide': { freq: 180, dur: 0.3, type: 'sawtooth', gain: 0.16, sweep: -90, noise: true },
+  'floor-creak': { freq: 290, dur: 0.42, type: 'sawtooth', gain: 0.09, sweep: -130, noise: true },
   'fire-crackle': { freq: 220, dur: 0.6, type: 'triangle', gain: 0.07, sweep: -80, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },
