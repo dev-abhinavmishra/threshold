@@ -50,6 +50,7 @@ export type PropKind =
   | 'baseballBat' | 'jerrycanP' | 'sprayCans' | 'rustCan'
   | 'foodCans' | 'cleanerBottle' | 'bleachBottle' | 'ceilingFan'
   | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
+  | 'watcherFigure'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'

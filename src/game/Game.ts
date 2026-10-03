@@ -1191,6 +1191,30 @@ export class Game {
           const base = (o.userData.baseEm as number) ?? 0.5;
           const n = Math.sin(t * 11.3 + s) * 0.35 + Math.sin(t * 23.7 + s * 1.7) * 0.22 + Math.sin(t * 5.1 + s * 0.7) * 0.18;
           mat.emissiveIntensity = base * (0.75 + n);
+        } else if (kind === 'watch') {
+          // Watcher figure — weeping-angel behavior: while outside the
+          // player's view cone it turns to face them and creeps closer
+          // (bounded); inside the cone it freezes.
+          o.getWorldPosition(Game.watchPos);
+          const dx = this.player.pos.x - Game.watchPos.x;
+          const dz = this.player.pos.z - Game.watchPos.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 0.01 && dist < 17) {
+            const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+            const seen = (fx * dx + fz * dz) / dist > 0.6;
+            if (!seen) {
+              const parentYaw = o.parent ? o.parent.rotation.y : 0;
+              o.rotation.y = Math.atan2(dx, dz) - parentYaw;
+              const creep = (o.userData.creep as number) ?? 0;
+              if (dist > 2.0 && creep < 0.7) {
+                const step = Math.min(dt * 0.22, 0.7 - creep, dist - 2.0);
+                const cy = Math.cos(parentYaw), sy = Math.sin(parentYaw);
+                o.position.x += ((dx * cy + dz * sy) / dist) * step;
+                o.position.z += ((-dx * sy + dz * cy) / dist) * step;
+                o.userData.creep = creep + step;
+              }
+            }
+          }
         }
       }
     }
@@ -1566,6 +1590,7 @@ export class Game {
   private lampLight: THREE.SpotLight | null = null;
   private fillLight: THREE.PointLight | null = null;
   private heldTorch: THREE.Object3D | null = null;
+  private static watchPos = new THREE.Vector3();
   private static torchFwd = new THREE.Vector3();
   private static torchRight = new THREE.Vector3();
   private static torchUp = new THREE.Vector3();

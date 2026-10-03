@@ -9,6 +9,7 @@ import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { nightBackdrop, rainStreaks } from './decals';
+import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
@@ -390,6 +391,23 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       g.add(mesh(box(0.05, 0.12, 0.05), MAT.amber(), Math.cos(a) * 0.35, -0.18, Math.sin(a) * 0.35));
     }
     return { group: g, colliders: [] };
+  },
+  watcherFigure: (_s, rng) => {
+    const g = new THREE.Group();
+    const plinth = new THREE.Mesh(box(0.66, 0.14, 0.66), MAT.charcoal());
+    plinth.position.y = 0.07;
+    g.add(plinth);
+    const fig = tallFigure({
+      height: 1.85 + rng.float() * 0.35,
+      body: MAT.figureCloth(),
+      face: 'none', eyes: rng.bool(0.3) ? 'white' : undefined,
+      hood: true, tattered: true,
+    });
+    fig.position.y = 0.14;
+    g.add(fig);
+    g.userData.anim = 'watch';
+    g.userData.animSeed = rng.float() * 10;
+    return single(g, 0.9, 2.1, 0.9);
   },
   counter: (s) => {
     const g = new THREE.Group();
