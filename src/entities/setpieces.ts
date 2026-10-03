@@ -8,6 +8,7 @@ import { Entity } from './base';
 import { v3, v3copy, v3dist, clamp } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 import type { Vec3 } from '../engine/math';
 
@@ -17,6 +18,7 @@ import type { Vec3 } from '../engine/math';
  * the route, not the speed. Catches if the player stalls on obstacles. */
 export class Pursuer extends Entity {
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private waypoints: Vec3[] = [];
   private wi = 0;
@@ -45,6 +47,13 @@ export class Pursuer extends Entity {
     const glow = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), MAT.redLamp());
     glow.position.y = 1.6;
     g.add(glow);
+    // The thing dragging the frames — a rigged body at the mass's heart,
+    // counter-rotated against the frame spin to face its prey.
+    this.rig = riggedFigure('demon');
+    if (this.rig) {
+      this.rig.play('move', 0);
+      g.add(this.rig.group);
+    }
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.state = 'engage';
@@ -70,6 +79,13 @@ export class Pursuer extends Entity {
     }
     this.mesh.position.set(this.pos.x, 0, this.pos.z);
     this.mesh.rotation.y += dt * 2.2;
+    if (this.rig) {
+      this.rig.update(dt);
+      // Hold the body facing the next waypoint while the shell spins.
+      const t = this.waypoints[Math.min(this.waypoints.length - 1, this.wi)];
+      const face = Math.atan2(t.x - this.pos.x, t.z - this.pos.z);
+      this.rig.group.rotation.y = face - this.mesh.rotation.y;
+    }
 
     const d = v3dist(this.pos, p.pos);
     if (d < this.tuning.killRange && p.protection !== 'hidden') {

@@ -567,3 +567,11 @@ has not finished loading falls back to its procedural builder.
 | wallpaper001c | ambientCG (CC0) | texture | floral wallpaper (corridor/records) |
 | officeceiling004 | ambientCG (CC0) | texture | second drop-ceiling tile |
 | plaster001 | ambientCG (CC0) | texture | smooth plaster ceiling |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 75
+
+| Asset | Source | Animations used | Entity |
+| --- | --- | --- | --- |
+| `figures/quaternius_ghost.glb` | Quaternius "Ghost" (poly.pizza/m/Iip30bDHmu, CC0) | Flying_Idle, Fast_Flying, Headbutt | Whisper, Margin (ink-tinted) |
+| `figures/quaternius_demon.glb` | Quaternius "Demon" (poly.pizza/m/Mo2ky6vkf8, CC0) | Flying_Idle, Fast_Flying | EchoSkin, Pursuer core |
+| `figures/quaternius_skeleton.glb` | Quaternius "Skeleton" (poly.pizza/m/1XZD9GK6Kj, CC0) | Run, Idle | CorridorRunner (Sweep/Reprise/Returner) |

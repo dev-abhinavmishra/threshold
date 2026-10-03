@@ -19,6 +19,7 @@ import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
+import { preloadFigures } from '../entities/rigged';
 import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
 import { PlayerController, type MoveInput } from '../player/controller';
@@ -122,6 +123,7 @@ export class Game {
     this.settings = loadSettings();
     this.initThree();
     preloadModels();
+    preloadFigures();
     this.bindInput();
     bindSoundBus(this.sound, this.audio);
     this.audio.applySettings(this.settings);

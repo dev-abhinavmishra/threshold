@@ -15,6 +15,7 @@ import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 
 export interface CorridorOptions {
@@ -33,6 +34,7 @@ export class CorridorRunner extends Entity {
   private maxPasses = 1;
   private pauseUntil = 0;
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private warnT = 0;
   private warned = false;
   private hasKilled = false;
@@ -129,17 +131,25 @@ export class CorridorRunner extends Entity {
       }
     } else {
       // Sweep / Reprise / Returner — a tall hunched figure, eye-line band.
-      const fig = tallFigure({
-        height: 2.6,
-        face: 'mask',
-        spines: true,
-        tattered: true,
-        hood: this.id === 'sweep',
-        band: this.id === 'reprise' ? MAT.steel() : MAT.amber(),
-        bandY: this.id === 'returner' ? 2.42 : 2.36,
-        eyes: this.id === 'returner' ? 'red' : 'amber',
-      });
-      g.add(fig);
+      const rig = riggedFigure('skeleton');
+      if (rig) {
+        rig.play('move', 0);
+        rig.group.scale.multiplyScalar(2.6 / 2.2);
+        this.rig = rig;
+        g.add(rig.group);
+      } else {
+        const fig = tallFigure({
+          height: 2.6,
+          face: 'mask',
+          spines: true,
+          tattered: true,
+          hood: this.id === 'sweep',
+          band: this.id === 'reprise' ? MAT.steel() : MAT.amber(),
+          bandY: this.id === 'returner' ? 2.42 : 2.36,
+          eyes: this.id === 'returner' ? 'red' : 'amber',
+        });
+        g.add(fig);
+      }
       if (this.id === 'reprise') {
         const band2 = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.12, 0.38), MAT.steel());
         band2.position.y = 2.15;
@@ -178,6 +188,7 @@ export class CorridorRunner extends Entity {
       const speed = this.tuning.speed * ({ learning: 0.9, standard: 1, hard: 1.15, qa: 1 })[c.difficulty];
       this.traveled += speed * dt;
       const f = followPath(this.path, this.traveled);
+      this.rig?.update(dt);
       if (this.mesh) {
         this.mesh.position.set(f.pos.x, 0, f.pos.z);
         const nxt = this.path[Math.min(this.path.length - 1, f.seg + 1)];

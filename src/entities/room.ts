@@ -10,6 +10,7 @@ import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { tallFigure, statueFigure } from './figure';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 
 /* ============================ WITNESS ============================ */
@@ -89,6 +90,7 @@ export class Witness extends Entity {
 /** Dark-room threat: a spatial whisper — find the silhouette before it strikes. */
 export class Whisper extends Entity {
   private mesh: THREE.Object3D | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private attackT = 0;
   private strikeWindow = 6.0;
@@ -102,7 +104,10 @@ export class Whisper extends Entity {
     const r = 3.5 + rng.float() * 2.5;
     this.pos = v3(c.player.pos.x + Math.cos(a) * r, 0, c.player.pos.z + Math.sin(a) * r);
     this.state = 'engage';
-    const g = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'none', eyes: 'white', hood: true, tattered: true });
+    const rig = riggedFigure('ghost');
+    const g = rig?.group
+      ?? tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'none', eyes: 'white', hood: true, tattered: true });
+    this.rig = rig;
     g.position.set(this.pos.x, 0, this.pos.z);
     g.visible = false; // nearly invisible — found by silhouette at range
     this.mesh = g as unknown as THREE.Object3D;
@@ -116,6 +121,7 @@ export class Whisper extends Entity {
     const c = this.ctx;
     const p = c.player;
     this.attackT += dt;
+    this.rig?.update(dt);
     const dir = v3();
     p.lookDir(dir);
     const toW = v3(this.pos.x - p.pos.x, 1.0 - p.pos.y - 1.5, this.pos.z - p.pos.z);
@@ -123,6 +129,10 @@ export class Whisper extends Entity {
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
     // Show silhouette when roughly faced — reward for localization.
     if (this.mesh) this.mesh.visible = facing > 0.75 && dn < 9;
+    if (this.mesh && this.mesh.visible) {
+      this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+      this.rig?.play('idle');
+    }
     if (facing > 0.94 && dn < 9) {
       c.cue('whisper-dismiss', this.pos, '[it retreats from your regard]', { severity: 'info' });
       this.done();
@@ -203,6 +213,7 @@ export class Inkling extends Entity {
 /** Rear stalker: footsteps that don't match yours. Look back to dispel. */
 export class EchoSkin extends Entity {
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private behind = 0;
   private dispelT = 0;
   private approachD = 8;
@@ -212,7 +223,11 @@ export class EchoSkin extends Entity {
   protected override onSpawn(): void {
     this.state = 'engage';
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
-    const g = tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber', spines: true, claws: true, tattered: true });
+    const rig = riggedFigure('demon');
+    rig?.play('idle');
+    const g = rig?.group
+      ?? tallFigure({ height: 2.4, face: 'plate', body: MAT.creatureSkin(), eyes: 'amber', spines: true, claws: true, tattered: true });
+    this.rig = rig;
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
@@ -225,6 +240,7 @@ export class EchoSkin extends Entity {
     const backYaw = p.yaw + Math.PI;
     const bx = p.pos.x + Math.sin(backYaw) * this.approachD;
     const bz = p.pos.z + Math.cos(backYaw) * this.approachD;
+    this.rig?.update(dt);
     if (this.mesh) {
       this.mesh.position.set(bx, 0, bz);
       this.mesh.rotation.y = Math.atan2(p.pos.x - bx, p.pos.z - bz);
@@ -362,6 +378,7 @@ export class Stillframe extends Entity {
  * toward it freezes it but raises instability. */
 export class Margin extends Entity {
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private instability = 0;
   private d = 14;
 
@@ -369,7 +386,10 @@ export class Margin extends Entity {
 
   protected override onSpawn(): void {
     const c = this.ctx;
-    const g = tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red', spines: true, tattered: true });
+    const rig = riggedFigure('inkGhost');
+    const g = rig?.group
+      ?? tallFigure({ height: 2.1, body: MAT.ink(), face: 'none', eyes: 'red', spines: true, tattered: true });
+    this.rig = rig;
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.9, 0.3), MAT.redLamp());
     edge.position.set(0.4, 1.05, 0);
     g.add(edge);
@@ -388,6 +408,7 @@ export class Margin extends Entity {
     const yaw = p.yaw + side * 1.35;
     const x = p.pos.x + Math.sin(yaw) * this.d;
     const z = p.pos.z + Math.cos(yaw) * this.d;
+    this.rig?.update(dt);
     if (this.mesh) {
       this.mesh.position.set(x, 0, z);
       this.mesh.rotation.y = Math.atan2(p.pos.x - x, p.pos.z - z);
