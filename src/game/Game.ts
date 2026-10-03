@@ -796,6 +796,7 @@ export class Game {
     {
       const pr = this.activeRooms()[this.currentRoom];
       this.liveTraps = [];
+      this.liveTickProps = [];
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
@@ -810,11 +811,15 @@ export class Game {
           const isType = p.kind === 'typewriter';
           const isWin = p.kind === 'window';
           const isCool = p.kind === 'waterCooler';
+          const wx = pr.origin.x + p.x * c + p.z * s;
+          const wz = pr.origin.z - p.x * s + p.z * c;
+          // ticking ironwork: proximity tells that answer the house's pulse
+          if (p.kind === 'pipe' || p.kind === 'indPipes' || p.kind === 'pipeManifold' || p.kind === 'boilerDrum' || p.kind === 'boilerTank' || p.kind === 'steamVent' || p.kind === 'wallVent') {
+            this.liveTickProps.push({ x: wx, z: wz });
+          }
           if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
           const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : (ord[p.kind] ?? 0);
           if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool) ord[p.kind] = n + 1;
-          const wx = pr.origin.x + p.x * c + p.z * s;
-          const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
           if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
             this.interaction.add({
@@ -2673,6 +2678,8 @@ export class Game {
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
+  private liveTickProps: { x: number; z: number }[] = [];
+  private pipeTickNext = 0;
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -3835,6 +3842,29 @@ export class Game {
         this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
         this.player.health = Math.max(3, this.player.health - 4);
         this.player.panic = Math.min(1, this.player.panic + 0.08);
+      }
+    }
+
+    // The pipes tick — ironwork answers a near threat, faster as it closes
+    if (this.liveTickProps.length && tA >= this.pipeTickNext) {
+      let nearest = Infinity;
+      for (const e of this.entities) {
+        const tp = e.threatPos();
+        if (!tp) continue;
+        const dx = tp.x - this.player.pos.x, dz = tp.z - this.player.pos.z;
+        const d = Math.sqrt(dx * dx + dz * dz);
+        if (d < nearest) nearest = d;
+      }
+      if (nearest < 12) {
+        let bp = this.liveTickProps[0], bd = Infinity;
+        for (const p of this.liveTickProps) {
+          const dx = p.x - this.player.pos.x, dz = p.z - this.player.pos.z;
+          const dd = dx * dx + dz * dz;
+          if (dd < bd) { bd = dd; bp = p; }
+        }
+        const interval = 0.35 + nearest * 0.11;
+        this.pipeTickNext = tA + interval;
+        this.audio.play('pipe-tick', { x: bp.x, y: 1.1, z: bp.z }, interval < 0.75 ? '[the pipes tick — faster]' : '', 'warn');
       }
     }
 
