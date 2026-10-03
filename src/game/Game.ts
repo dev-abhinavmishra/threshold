@@ -1616,6 +1616,26 @@ export class Game {
     };
   }
 
+  private readonly visitedRooms = new Set<number>();
+
+  /** Revisit scare: a door you left open drifts shut — while you might watch. */
+  private maybeShiftDoor(idx: number): void {
+    if (this.space !== 'main') return;
+    const room = this.activeRooms()[idx];
+    if (!room || room.spec?.special) return;
+    const rng = this.streams.roomStream('shift', idx);
+    if (!rng.bool(0.4)) return;
+    const candidates = room.doors.filter((d) => !d.locked && !d.falseDoor && d.openT > 0.5);
+    if (!candidates.length) return;
+    const d = candidates[rng.int(0, candidates.length - 1)];
+    d.opening = false;
+    const dist = v3dist(d.pos, this.player.pos);
+    if (dist > 4 && dist < 22) {
+      this.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 0.5, category: 'door', caption: '[a door drifts shut]' });
+      this.cue('door-creak', d.pos, '[a door drifts shut]', 'info');
+    }
+  }
+
   private maybeBlackout(roomIndex: number): void {
     if (this.blackedOut.has(roomIndex) || this.pendingBlackout) return;
     const room = this.activeRooms()[roomIndex];
@@ -2031,6 +2051,9 @@ export class Game {
     this.currentRoom = this.currentRoomIndex();
     if (this.currentRoom !== prev && this.space === 'main') {
       this.stats.roomsVisited = Math.max(this.stats.roomsVisited, this.currentRoom);
+      const revisit = this.visitedRooms.has(this.currentRoom);
+      this.visitedRooms.add(this.currentRoom);
+      if (revisit) this.maybeShiftDoor(this.currentRoom);
       this.maybeSpawnRat();
       this.maybeBlackout(this.currentRoom);
       this.maybeRelocateRelic(prev);
