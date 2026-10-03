@@ -56,6 +56,8 @@ export type PropKind =
   | 'hauntedPortrait'
   | 'pianoUpright'
   | 'rubblePile'
+  | 'rootGrowth'
+  | 'weedCluster'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'

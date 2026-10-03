@@ -382,6 +382,23 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
       { dir: 'dry_branches_medium_01', height: 1.1, collider: [0, 0, 0] },
     ],
   },
+  rootCluster: {
+    dir: 'root_cluster_01', height: 1.5, collider: [0, 0, 0],
+    variants: [
+      { dir: 'root_cluster_02', height: 1.5, collider: [0, 0, 0] },
+      { dir: 'pine_roots', height: 0.9, collider: [0, 0, 0] },
+      { dir: 'single_root', height: 1.1, collider: [0, 0, 0] },
+    ],
+  },
+  deadLeaf: { dir: 'dry_quiver_leaf', height: 0.35, collider: [0, 0, 0] },
+  fernClump: { dir: 'fern_02', height: 0.5, collider: [0, 0, 0] },
+  weedShrub: {
+    dir: 'shrub_03', height: 0.55, collider: [0, 0, 0],
+    variants: [
+      { dir: 'shrub_02', height: 0.6, collider: [0, 0, 0] },
+      { dir: 'shrub_04', height: 0.75, collider: [0, 0, 0] },
+    ],
+  },
   crowbar: { dir: 'crowbar_01', height: 0.75, collider: [0, 0, 0] },
   boltCutters: { dir: 'bolt_cutters_01', height: 0.8, collider: [0, 0, 0] },
   bunsenBurner: { dir: 'bunsen_burner', height: 0.25, collider: [0, 0, 0] },

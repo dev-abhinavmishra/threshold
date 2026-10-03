@@ -510,6 +510,68 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return single(g, 1.1, 0.22, 0.9);
   },
+  // Roots breaching the underfloor walls — the CC0 root-cluster model when
+  // loaded, dead-leaf litter and a damp stain spread around the breach.
+  rootGrowth: (_s, rng) => {
+    const g = new THREE.Group();
+    const root = modelInstance('rootCluster', rng.float());
+    if (root) {
+      root.rotation.z = (rng.float() - 0.5) * 0.5;
+      root.rotation.x = rng.float() * 0.15;
+      g.add(root);
+    } else {
+      for (let i = 0; i < 5; i++) {
+        const r = mesh(cyl(0.015, 0.05, 0.8 + rng.float() * 0.6, 5), MAT.darkOak(),
+          (rng.float() - 0.5) * 0.7, 0.3 + rng.float() * 0.3, (rng.float() - 0.5) * 0.5);
+        r.rotation.z = 0.7 + rng.float() * 0.6;
+        r.rotation.y = rng.float() * Math.PI;
+        g.add(r);
+      }
+    }
+    const stain = decalQuad(floorStain(rng), 1.2 + rng.float() * 0.6, 1.0 + rng.float() * 0.4);
+    stain.rotation.x = -Math.PI / 2;
+    stain.rotation.z = rng.float() * Math.PI;
+    stain.position.y = 0.013;
+    g.add(stain);
+    const leaves = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < leaves; i++) {
+      const leaf = modelInstance('deadLeaf', rng.float());
+      if (leaf) {
+        leaf.scale.setScalar(0.4 + rng.float() * 0.3);
+        leaf.position.set((rng.float() - 0.5) * 1.1, 0.01, (rng.float() - 0.5) * 0.9);
+        leaf.rotation.y = rng.float() * Math.PI * 2;
+        g.add(leaf);
+      }
+    }
+    return single(g, 1.2, 0.5, 0.9);
+  },
+  // Damp weeds reclaiming the floor — shrub and fern clumps with litter.
+  weedCluster: (_s, rng) => {
+    const g = new THREE.Group();
+    const n = 1 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const m = modelInstance(rng.bool(0.6) ? 'weedShrub' : 'fernClump', rng.float());
+      if (m) {
+        m.position.set((rng.float() - 0.5) * 1.0, 0, (rng.float() - 0.5) * 0.8);
+        m.rotation.y = rng.float() * Math.PI * 2;
+        g.add(m);
+      }
+    }
+    const leaf = modelInstance('deadLeaf', rng.float());
+    if (leaf) {
+      leaf.scale.setScalar(0.5);
+      leaf.position.y = 0.01;
+      g.add(leaf);
+    }
+    if (rng.bool(0.5)) {
+      const stain = decalQuad(floorStain(rng), 0.9 + rng.float() * 0.5, 0.8 + rng.float() * 0.4);
+      stain.rotation.x = -Math.PI / 2;
+      stain.rotation.z = rng.float() * Math.PI;
+      stain.position.y = 0.011;
+      g.add(stain);
+    }
+    return single(g, 1.1, 0.4, 0.9);
+  },
   // Gilt-framed portrait whose painted head slowly tracks the player — but
   // only while they're not looking (weeping-angel 'watch', no creep).
   hauntedPortrait: (_s, rng) => {

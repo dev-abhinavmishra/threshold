@@ -551,3 +551,13 @@ has not finished loading falls back to its procedural builder.
 | `models/football` | Football (soccer ball) | `sportsBall` variant |
 | `models/wooden_table_02` | Wooden Table 02 | `table` variant |
 | `models/tree_stump_01` | Tree Stump 01 | `treeStump` variant |
+| root_cluster_01 | Poly Haven (CC0) | model | root breach cluster (underscript) |
+| root_cluster_02 | Poly Haven (CC0) | model | root breach cluster variant |
+| pine_roots | Poly Haven (CC0) | model | exposed root mat (underscript) |
+| single_root | Poly Haven (CC0) | model | single root strand |
+| dry_quiver_leaf | Poly Haven (CC0) | model | dead-leaf litter |
+| fern_02 | Poly Haven (CC0) | model | damp fern clump |
+| shrub_02 | Poly Haven (CC0) | model | weed shrub |
+| shrub_03 | Poly Haven (CC0) | model | weed shrub |
+| shrub_04 | Poly Haven (CC0) | model | weed shrub |
+| garden_sprinkler_01 | Poly Haven (CC0) | model | garden sprinkler |
