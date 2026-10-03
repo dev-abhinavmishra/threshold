@@ -51,6 +51,7 @@ export type PropKind =
   | 'foodCans' | 'cleanerBottle' | 'bleachBottle' | 'ceilingFan'
   | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
   | 'watcherFigure'
+  | 'dollCluster'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'

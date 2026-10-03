@@ -1207,8 +1207,10 @@ export class Game {
               const parentYaw = o.parent ? o.parent.rotation.y : 0;
               o.rotation.y = Math.atan2(dx, dz) - parentYaw;
               const creep = (o.userData.creep as number) ?? 0;
-              if (dist > 2.0 && creep < 0.7) {
-                const step = Math.min(dt * 0.22, 0.7 - creep, dist - 2.0);
+              const creepMax = (o.userData.creepMax as number) ?? 0.7;
+              const minDist = (o.userData.watchMinDist as number) ?? 2.0;
+              if (dist > minDist && creep < creepMax) {
+                const step = Math.min(dt * 0.22, creepMax - creep, dist - minDist);
                 const cy = Math.cos(parentYaw), sy = Math.sin(parentYaw);
                 o.position.x += ((dx * cy + dz * sy) / dist) * step;
                 o.position.z += ((-dx * sy + dz * cy) / dist) * step;

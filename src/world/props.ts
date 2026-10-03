@@ -410,6 +410,51 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return { group: g, colliders: [] };
   },
+  // Seated rag dolls clustered against a wall — cloth body, porcelain head,
+  // button eyes (sometimes one missing). One doll in each cluster watches.
+  dollCluster: (_s, rng) => {
+    const g = new THREE.Group();
+    const n = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const h = 0.34 + rng.float() * 0.2;
+      const doll = new THREE.Group();
+      const cloth = MAT.figureCloth();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.12, h * 0.42, h * 0.58, 9), cloth);
+      body.position.y = h * 0.3;
+      body.castShadow = true;
+      doll.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(h * 0.17, 10, 8), MAT.creatureSkin());
+      head.position.set(0, h * 0.66, h * 0.02);
+      head.scale.set(1, 1.15, 1);
+      head.rotation.z = (rng.float() - 0.5) * 0.7;
+      doll.add(head);
+      for (const sx of [-1, 1]) {
+        const arm = new THREE.Mesh(new THREE.CylinderGeometry(h * 0.05, h * 0.06, h * 0.4, 6), cloth);
+        arm.position.set(sx * h * 0.2, h * 0.42, h * 0.08);
+        arm.rotation.z = sx * (1.0 + rng.float() * 0.35);
+        arm.rotation.x = -0.4;
+        doll.add(arm);
+      }
+      const eyeMat = rng.bool(0.35) ? MAT.eyeGlow() : MAT.ink();
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(h * 0.028, 6, 5), eyeMat);
+      eye.position.set(-h * 0.06, h * 0.68, h * 0.14);
+      doll.add(eye);
+      if (rng.bool(0.8)) {
+        const eye2 = eye.clone();
+        eye2.position.x *= -1;
+        doll.add(eye2);
+      }
+      doll.position.set((i - (n - 1) / 2) * 0.42 + (rng.float() - 0.5) * 0.12, 0, (rng.float() - 0.5) * 0.3);
+      doll.rotation.y = (rng.float() - 0.5) * 0.9;
+      if (i === Math.floor(rng.float() * n)) {
+        doll.userData.anim = 'watch';
+        doll.userData.animSeed = rng.float() * 10;
+        doll.userData.creepMax = 0.16;
+      }
+      g.add(doll);
+    }
+    return single(g, 1.1, 0.7, 0.6);
+  },
   watcherFigure: (_s, rng) => {
     const g = new THREE.Group();
     const plinth = new THREE.Mesh(box(0.66, 0.14, 0.66), MAT.charcoal());
