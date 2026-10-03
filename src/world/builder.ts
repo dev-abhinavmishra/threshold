@@ -460,6 +460,34 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const picRail = new THREE.Mesh(texBox(sw2, 0.05, sd), trimMat);
       picRail.position.set(sx, Math.min(2.35, h - 0.45), sz);
       group.add(picRail);
+      // Wallpaper border — a patterned band just under the picture rail.
+      if (isWallpaper) {
+        const bMat = TEX.wallpaperGrand();
+        bMat.color.setHex(rng.pick([0x4e463a, 0x554733, 0x3f4436]));
+        const bdr = new THREE.Mesh(texBox(sw2, 0.11, sd * 1.06), bMat);
+        bdr.position.set(sx, Math.min(2.35, h - 0.45) - 0.09, sz);
+        group.add(bdr);
+      }
+    }
+  }
+
+  // Pilasters — shallow engaged columns rhythm the long walls of grand
+  // rooms; capital + base at crown/baseboard heights.
+  if (grand && !isUnder && w >= 6 && h >= 2.9) {
+    const n = Math.floor(w / 3.2);
+    for (const sgn of [1, -1]) {
+      for (let i = 1; i <= n; i++) {
+        const px = -w / 2 + (i * w) / (n + 1);
+        const pil = new THREE.Mesh(texBox(0.34, h - 0.62, 0.1), wainsMat);
+        pil.position.set(px, (h - 0.62) / 2 + 0.1, sgn * (d / 2 - 0.12));
+        group.add(pil);
+        const cap = new THREE.Mesh(texBox(0.44, 0.14, 0.15), trimMat);
+        cap.position.set(px, h - 0.6, sgn * (d / 2 - 0.11));
+        group.add(cap);
+        const base = new THREE.Mesh(texBox(0.42, 0.24, 0.14), trimMat);
+        base.position.set(px, 0.16, sgn * (d / 2 - 0.11));
+        group.add(base);
+      }
     }
   }
 
@@ -538,6 +566,31 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const ct = new THREE.Mesh(texBox(fw + 0.12, 0.12, 0.05), caseMat);
       ct.position.set(0, 2.56, zOff);
       frame.add(cl, cr2, ct);
+    }
+    // Glazed transom over tall-room doors — frosted pane + muntin grid that
+    // catches a faint glow from the space beyond.
+    if (!(isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor') && h >= 3.0 && rng.float() < 0.55) {
+      const tw = fw - 0.2;
+      const warm = rng.bool(0.6);
+      const tMat = new THREE.MeshStandardMaterial({
+        color: 0x161c22, emissive: warm ? 0x7a5a30 : 0x3a5062,
+        emissiveIntensity: 0.45 + rng.float() * 0.35, roughness: 0.35, metalness: 0.1,
+      });
+      const glass = new THREE.Mesh(texBox(tw, 0.4, 0.03), tMat);
+      glass.position.set(0, 2.66, 0);
+      frame.add(glass);
+      for (const mx of [-tw / 6, tw / 6]) {
+        const munt = new THREE.Mesh(texBox(0.024, 0.4, 0.05), frameMat);
+        munt.position.set(mx, 2.66, 0);
+        frame.add(munt);
+      }
+      const mid = new THREE.Mesh(texBox(tw, 0.024, 0.05), frameMat);
+      mid.position.set(0, 2.66, 0);
+      frame.add(mid);
+      // shallow hood over the transom ties it into the casing
+      const hood = new THREE.Mesh(texBox(fw + 0.14, 0.07, 0.1), caseMat);
+      hood.position.set(0, 2.9, 0);
+      frame.add(hood);
     }
     // Light-switch plate on the latch-side jamb, both faces of the wall.
     if (!isUnder && rng.float() < 0.7) {
@@ -885,6 +938,78 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const wb = aabb(wx, room.origin.y + dh / 2, wz, (swapped ? dd : dw) / 2 + 0.03, dh / 2, (swapped ? dw : dd) / 2 + 0.03);
       room.colliders.push(wb);
       if (dh > 1.2) room.losBlockers.push(wb);
+    }
+
+    // Chimney breast — masonry bump-out with carved mantel, granite hearth
+    // and a charred firebox. Anchors a room like real period joinery.
+    const chimP = ({ gallery: 0.3, lobby: 0.22, guest: 0.3, safe: 0.4, milestone: 0.35 } as Record<string, number>)[spec.biome] ?? 0;
+    if (!isUnder && !suspended && rng.float() < chimP && w >= 4.5 && d >= 4) {
+      const sgn = rng.bool(0.5) ? 1 : -1;
+      const bw = 1.7 + rng.float() * 0.5;
+      const bd = 0.55;
+      const cx = (rng.float() - 0.5) * Math.max(0, w - bw - 2.4);
+      const cz = sgn * (d / 2 - 0.12 - bd / 2);
+      const front = cz - sgn * (bd / 2); // room-facing surface
+      const brickMat = rng.bool(0.5) ? TEX.brick() : TEX.stoneWall();
+      brickMat.color.multiplyScalar(0.82 + rng.float() * 0.3);
+      const breast = new THREE.Mesh(texBox(bw, h, bd), brickMat);
+      breast.position.set(cx, h / 2, cz);
+      group.add(breast);
+      const carved = TEX.woodCarved();
+      carved.color.multiplyScalar(0.9 + rng.float() * 0.2);
+      // firebox opening — ink-dark cavity + stone lintel + jamb surround
+      const opening = new THREE.Mesh(texBox(bw * 0.5, 0.76, 0.05), MAT.ink());
+      opening.position.set(cx, 0.44, front + sgn * 0.028);
+      group.add(opening);
+      const lintel = new THREE.Mesh(texBox(bw * 0.56, 0.08, 0.08), carved);
+      lintel.position.set(cx, 0.85, front + sgn * 0.02);
+      group.add(lintel);
+      for (const o of [-1, 1]) {
+        const jam = new THREE.Mesh(texBox(0.1, 0.84, 0.08), carved);
+        jam.position.set(cx + o * bw * 0.28, 0.43, front + sgn * 0.02);
+        group.add(jam);
+      }
+      // mantel shelf + corbels
+      const mantel = new THREE.Mesh(texBox(bw * 0.72, 0.08, 0.22), carved);
+      mantel.position.set(cx, 0.95, front + sgn * 0.09);
+      group.add(mantel);
+      // hearth slab
+      const hearth = new THREE.Mesh(texBox(bw * 0.78, 0.025, 0.5), TEX.granite());
+      hearth.position.set(cx, 0.014, front - sgn * 0.22);
+      group.add(hearth);
+      // grate bars + charred logs; a quarter smoulder with embers
+      const lit = rng.float() < 0.25;
+      for (let i = 0; i < 4; i++) {
+        const bar = new THREE.Mesh(texBox(0.02, 0.3, 0.02), MAT.charcoal());
+        bar.position.set(cx - bw * 0.18 + i * bw * 0.12, 0.2, front + sgn * 0.045);
+        group.add(bar);
+      }
+      for (let i = 0; i < 3; i++) {
+        const logM = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.46, 6), MAT.charcoal());
+        logM.rotation.z = Math.PI / 2;
+        logM.rotation.y = (rng.float() - 0.5) * 0.5;
+        logM.position.set(cx + (i - 1) * 0.08, 0.11 + i * 0.03, front + sgn * 0.05);
+        group.add(logM);
+      }
+      if (lit) {
+        for (let i = 0; i < 5; i++) {
+          const emberMat = new THREE.MeshStandardMaterial({ color: 0x381408, emissive: 0xff5a1a, emissiveIntensity: 1.4, roughness: 1 });
+          emberMat.userData.decalMat = true;
+          const ember = new THREE.Mesh(new THREE.SphereGeometry(0.018 + rng.float() * 0.014, 6, 5), emberMat);
+          ember.position.set(cx + (rng.float() - 0.5) * bw * 0.3, 0.09 + rng.float() * 0.08, front + sgn * (0.03 + rng.float() * 0.05));
+          ember.userData.anim = 'flame';
+          ember.userData.animSeed = rng.float() * 10;
+          ember.userData.baseEm = 1.4;
+          group.add(ember);
+        }
+      }
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + cx * cos + cz * sin;
+      const wz = room.origin.z - cx * sin + cz * cos;
+      const swapped = Math.round(room.yaw / (Math.PI / 2)) % 2 !== 0;
+      const cb = aabb(wx, room.origin.y + h / 2, wz, (swapped ? bd : bw) / 2, h / 2, (swapped ? bw : bd) / 2);
+      room.colliders.push(cb);
+      room.losBlockers.push(cb);
     }
 
     // Floor stains.
