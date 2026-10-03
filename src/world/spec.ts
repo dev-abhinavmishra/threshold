@@ -30,7 +30,7 @@ export type PropKind =
   | 'generator' | 'weldingCart' | 'planter' | 'books' | 'papers'
   | 'carton' | 'payphone' | 'rack'
   | 'archway' | 'colonnade' | 'fireplace' | 'windowArch' | 'hatch'
-  | 'medallion' | 'vault'
+  | 'medallion' | 'vault' | 'scissorgate' | 'balustrade'
   | 'barrel' | 'wineBarrel' | 'pipeRun' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
   | 'bucket' | 'alarmClock' | 'multimeter' | 'wrench' | 'securityCam'

@@ -616,3 +616,6 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 | `hatch` | Riveted iron hatch: grate bars, hinge straps, wheel handle | maint-boiler, maint-service-narrow, maint-pipes |
 | `medallion` | Ceiling rosette: concentric rings + petal relief | gallery-atrium, gallery-banquet |
 | `vault` | Coffered ceiling panel: rail grid + inset panels + corbels | gallery-vaulted |
+
+| `scissorgate` | Elevator scissor gate: jamb frame + crossing lattice bars | gallery-lift-lobby |
+| `balustrade` | Balcony railing run: turned balusters, rail, newel posts | gallery-mezzanine |

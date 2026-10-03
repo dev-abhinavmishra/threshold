@@ -113,6 +113,8 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   hatch: { dir: 'hatch', height: 1.9, collider: [1.1, 1.9, 0.18] },
   medallion: { dir: 'medallion', height: 0.12, collider: [0, 0, 0], anchor: 'center' },
   vault: { dir: 'vault', height: 0.3, collider: [0, 0, 0], anchor: 'center' },
+  scissorgate: { dir: 'scissorgate', height: 2.2, collider: [0, 0, 0], anchor: 'center' },
+  balustrade: { dir: 'balustrade', height: 1.1, collider: [3.0, 1.1, 0.14] },
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
     variants: [

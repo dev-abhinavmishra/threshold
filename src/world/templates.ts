@@ -700,6 +700,8 @@ const galleryMezzanine: RoomTemplate = {
     props: [
       { kind: 'stairs', x: -2.6, z: 1.2, meta: { height: 1.8, length: 4 } },
       { kind: 'railing', x: 0, z: 3.2, scale: 7 },
+      { kind: 'balustrade', x: -0.4, z: 2.75 },
+      { kind: 'balustrade', x: 2.6, z: 2.75 },
       { kind: 'window', x: 3.6, z: 0.4, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'painting', x: 3.6, z: -2.4, y: 1.8, yaw: -Math.PI / 2 },
       { kind: 'bookshelf', x: 0.6, z: -2.8 },
@@ -1086,7 +1088,9 @@ const roomElevatorLobby: RoomTemplate = {
   build: (_rng) => spec('gallery-lift-lobby', 'gallery', 7, 7, 3.6, {
     props: [
       { kind: 'liftShaft', x: -2.6, z: 2.8 },
+      { kind: 'scissorgate', x: -2.6, z: 2.3, yaw: Math.PI },
       { kind: 'liftShaft', x: 2.6, z: 2.8 },
+      { kind: 'scissorgate', x: 2.6, z: 2.3, yaw: Math.PI },
       { kind: 'trolley', x: -3.0, z: -1.8 },
       { kind: 'sign', x: 0, z: 3.4, y: 2.6 },
       { kind: 'plant', x: 3.0, z: -1.8 },
@@ -1881,6 +1885,58 @@ const roomWaiting: RoomTemplate = {
   }),
 };
 
+
+// The Cathedral — the mill's full kit in one room: twin colonnade aisles,
+// arched clerestory windows, coffered vault panels, portal frames on both doors.
+const roomCathedral: RoomTemplate = {
+  id: 'gallery-cathedral',
+  build: (_rng) => spec('gallery-cathedral', 'gallery', 13, 10, 7, {
+    props: [
+      { kind: 'colonnade', x: -5.9, z: 0, yaw: Math.PI / 2 },
+      { kind: 'colonnade', x: 5.9, z: 0, yaw: -Math.PI / 2 },
+      { kind: 'vault', x: 0, z: -2.2, y: 6.6 },
+      { kind: 'vault', x: 0, z: 2.2, y: 6.6 },
+      { kind: 'medallion', x: 0, z: 0, y: 6.9 },
+      { kind: 'archway', x: 0, z: -4.8 },
+      { kind: 'archway', x: 0, z: 4.8, yaw: Math.PI },
+      { kind: 'windowArch', x: -5.95, z: -3.4, y: 3.4, yaw: Math.PI / 2 },
+      { kind: 'windowArch', x: -5.95, z: 3.4, y: 3.4, yaw: Math.PI / 2 },
+      { kind: 'windowArch', x: 5.95, z: -3.4, y: 3.4, yaw: -Math.PI / 2 },
+      { kind: 'windowArch', x: 5.95, z: 3.4, y: 3.4, yaw: -Math.PI / 2 },
+      { kind: 'chandelier', x: 0, z: 0, y: 5.6 },
+      { kind: 'statue', x: -4.4, z: -4.0, yaw: Math.PI / 4 },
+      { kind: 'statue', x: 4.4, z: -4.0, yaw: -Math.PI / 4 },
+      { kind: 'statue', x: -4.4, z: 4.0, yaw: Math.PI * 0.75 },
+      { kind: 'statue', x: 4.4, z: 4.0, yaw: -Math.PI * 0.75 },
+      { kind: 'marbleBust', x: -5.4, z: -1.8, y: 1.35 },
+      { kind: 'marbleBust', x: -5.4, z: 1.8, y: 1.35 },
+      { kind: 'marbleBust', x: 5.4, z: -1.8, y: 1.35 },
+      { kind: 'marbleBust', x: 5.4, z: 1.8, y: 1.35 },
+      { kind: 'bench', x: -1.2, z: -1.2, yaw: Math.PI / 2 },
+      { kind: 'bench', x: 1.2, z: -1.2, yaw: -Math.PI / 2 },
+      { kind: 'bench', x: -1.2, z: 1.2, yaw: Math.PI / 2 },
+      { kind: 'bench', x: 1.2, z: 1.2, yaw: -Math.PI / 2 },
+      { kind: 'rug', x: 0, z: 0, scale: 1.6 },
+    ],
+    sockets: lootSockets([[-5.4, -1.8], [5.4, 1.8]]),
+    hiding: [
+      { kind: 'cabinet', x: -6, z: -4.4, yaw: Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'cabinet', x: 6, z: 4.4, yaw: -Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'losAlcove', x: 6, z: -4.4, yaw: -Math.PI / 2, propKind: 'partition' },
+    ],
+    safeZones: [{ x: 6, z: -4.4, w: 1.4, d: 1.4 }],
+    nav: [
+      { id: 'entry', x: 0, z: -4.0, links: ['mid'], tags: ['door', 'entry'] },
+      { id: 'mid', x: 0, z: 0, links: ['entry', 'exit'], tags: [] },
+      { id: 'exit', x: 0, z: 4.0, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    weight: 2,
+    minRoom: 45,
+    perf: 6,
+    wall: 'travertine',
+  }),
+};
+
 // Banquet — a long table still dressed for dinner in the dark.
 const roomBanquet: RoomTemplate = {
   id: 'gallery-banquet',
@@ -1951,7 +2007,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomMotelCorridor, roomOfficeBullpen, roomAnomalyTall, roomImpossible, maintServer,
   roomGreenRecords, roomDuel, roomVaulted,
   roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
-  roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker,
+  roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker, roomCathedral,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];

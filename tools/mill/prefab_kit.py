@@ -263,10 +263,46 @@ def colonnade():
     cube('entab', (0, 0, h * 0.66 + 0.62), (total, d + 0.06, 0.3), STONE, 0.02)
     join_all('colonnade')
 
+
+def scissorgate():
+    """Old elevator gate — diamond lattice of crossing bars in a frame."""
+    w, h, d = 2.0, 2.2, 0.08
+    # frame
+    for sx in (-1, 1):
+        cube('jamb', (sx * (w / 2 - 0.04), 0, h / 2), (0.08, d, h), IRON, 0.008)
+    cube('railT', (0, 0, h - 0.05), (w, d, 0.1), IRON, 0.008)
+    cube('railB', (0, 0, 0.05), (w, d, 0.1), IRON, 0.008)
+    # lattice: bars at +-45 deg crossing
+    n = 7
+    span = h * 0.88
+    for i in range(n):
+        for sgn in (-1, 1):
+            bar = cube('bar', (-w / 2 + 0.42 + i * (w - 0.84) / (n - 1), 0, h / 2),
+                       (0.028, d * 0.5, span), IRON, 0.002)
+            bar.rotation_euler[1] = sgn * 0.42
+    join_all('scissorgate')
+
+def balustrade():
+    """Balcony railing run — rail, balusters, newel ends. 3m segment."""
+    w = 3.0
+    cube('rail', (0, 0, 1.02), (w, 0.1, 0.1), DARK, 0.015)
+    cube('base', (0, 0, 0.04), (w, 0.12, 0.08), STONE, 0.01)
+    for i in range(13):
+        x = -w / 2 + 0.18 + i * (w - 0.36) / 12
+        # turned baluster: stack of beads
+        for (bz, br) in [(0.12, 0.045), (0.3, 0.032), (0.48, 0.05), (0.62, 0.03), (0.78, 0.042), (0.9, 0.028)]:
+            cyl('bal', (x, 0, bz), br, 0.1, STONE, 10)
+    for sx in (-1, 1):
+        cube('newel', (sx * (w / 2 - 0.07), 0, 0.55), (0.16, 0.14, 1.1), STONE, 0.02)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.08,
+            location=(sx * (w / 2 - 0.07), 0, 1.16))
+        bpy.context.object.data.materials.append(STONE)
+    join_all('balustrade')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
-    'colonnade': colonnade,
+    'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade,
 }
 
 def main():
