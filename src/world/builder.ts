@@ -14,7 +14,7 @@ import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { grimeStreak, floorStain, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1882,6 +1882,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     drips = new THREE.Points(dg, dripMat);
     drips.userData.tops = tops; drips.userData.speeds = speeds; drips.userData.phases = phases;
     group.add(drips);
+    // Ceiling water damage above each leak — tide-ring bloom facing down.
+    for (const [sx, sz] of spots) {
+      const damp = decalQuad(ceilingDamp(rng), 0.9 + rng.float() * 0.9, 0.9 + rng.float() * 0.9);
+      damp.rotation.x = Math.PI / 2;
+      damp.rotation.z = rng.float() * Math.PI;
+      damp.position.set(sx, h - (suspended ? 0.24 : 0.005), sz);
+      group.add(damp);
+    }
     // Landing rings — thin expanding circles where each drip hits the floor.
     for (const [sx, sz] of spots) {
       const ring = new THREE.Mesh(

@@ -61,6 +61,46 @@ export function floorStain(rng: Rng): THREE.Texture | null {
   });
 }
 
+/* ---------- damp ceiling stain — water ring bloom ---------- */
+
+export function ceilingDamp(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 256, (ctx) => {
+    const cx = 128, cy = 128;
+    // wide pale tide ring
+    const R = 70 + rng.float() * 40;
+    const g0 = ctx.createRadialGradient(cx, cy, R * 0.4, cx, cy, R);
+    g0.addColorStop(0, 'rgba(70,60,40,0.05)');
+    g0.addColorStop(0.75, 'rgba(70,60,40,0.16)');
+    g0.addColorStop(1, 'rgba(70,60,40,0)');
+    ctx.fillStyle = g0;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, R, R * (0.75 + rng.float() * 0.35), rng.float() * Math.PI, 0, Math.PI * 2);
+    ctx.fill();
+    // irregular darker blotches inside
+    const blobs = 3 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < blobs; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const rr = rng.float() * R * 0.5;
+      const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      const r = 12 + rng.float() * 30;
+      const al = 0.14 + rng.float() * 0.22;
+      const g = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+      g.addColorStop(0, `rgba(52,44,30,${al})`);
+      g.addColorStop(1, 'rgba(52,44,30,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // hard drip ring edge — the tideline readers recognize
+    ctx.strokeStyle = `rgba(48,40,26,${0.16 + rng.float() * 0.14})`;
+    ctx.lineWidth = 2 + rng.float() * 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, R * (0.82 + rng.float() * 0.14), R * (0.66 + rng.float() * 0.3), rng.float() * Math.PI, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
 /* ---------- poster / notice ---------- */
 
 const POSTER_PALS = [
