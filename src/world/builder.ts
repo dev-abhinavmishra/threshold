@@ -215,6 +215,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   if (!spec.wallMaterial) {
     const preRoll = wallMat;
     const roll = rng.float();
+    let keepPaper = false;
     if (spec.biome === 'gallery' && roll < 0.45) wallMat = TEX.travertine();
     else if (spec.biome === 'lobby' && roll < 0.4) wallMat = TEX.woodPanel();
     else if (spec.biome === 'gallery' && roll < 0.75) wallMat = TEX.woodPanel();
@@ -227,11 +228,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     else if (isUnder && roll < 0.28) wallMat = TEX.brickOld();
     else if (isUnder && roll < 0.36) wallMat = TEX.plasterPeeling();
     else if (isUnder && roll < 0.45) wallMat = TEX.concreteIndustrial();
-    else if (spec.biome === 'lobby' && roll < 0.52) wallMat = TEX.wallpaperGrand();
+    else if ((spec.biome === 'lobby' || spec.biome === 'milestone') && roll < 0.35) { wallMat = TEX.wallpaperDamask(); keepPaper = true; }
+    else if (spec.biome === 'lobby' && roll < 0.52) { wallMat = TEX.wallpaperGrand(); keepPaper = true; }
     else if (spec.biome === 'guest' && roll < 0.18) wallMat = TEX.woodPaint();
+    else if (spec.biome === 'guest' && roll < 0.35) { wallMat = TEX.plasterFloral(); keepPaper = true; }
     else if (spec.biome === 'maintenance' && roll < 0.68) wallMat = TEX.plasterPeeling();
+    else if (spec.biome === 'maintenance' && roll < 0.78) wallMat = TEX.brickPainted();
     else if ((spec.biome === 'corridor' || spec.biome === 'guest' || spec.biome === 'records') && roll < 0.3) wallMat = TEX.plasterPainted();
-    if (wallMat !== preRoll) isWallpaper = false;
+    if (wallMat !== preRoll) isWallpaper = keepPaper;
   }
   if (isWallpaper && rng.float() < 0.55) {
     wallMat = wallMat.clone();
@@ -242,7 +246,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const floorMat = isUnder
     ? (floorRoll < 0.14 ? TEX.groundDirt() : floorRoll < 0.32 ? TEX.metalWalkway() : floorRoll < 0.46 ? TEX.concreteIndustrial() : TEX.concreteFloor())
     : room.floorMaterial === 'carpet'
-      ? (floorRoll < 0.12 && spec.biome === 'guest' ? TEX.carpetShag() : floorRoll < 0.25 ? TEX.carpetWorn() : TEX.carpet())
+      ? (floorRoll < 0.12 && spec.biome === 'guest' ? TEX.carpetShag() : floorRoll < 0.18 && spec.biome === 'guest' ? TEX.carpetPersian() : floorRoll < 0.28 && spec.biome === 'lobby' ? TEX.carpetLobby() : floorRoll < 0.25 ? TEX.carpetWorn() : TEX.carpet())
       : room.floorMaterial === 'stone' || room.floorMaterial === 'metal'
         ? (spec.biome === 'maintenance' && floorRoll < 0.45
           ? (floorRoll < 0.2 ? TEX.metalRusted() : TEX.diamondPlate())

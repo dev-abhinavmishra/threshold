@@ -28,6 +28,11 @@ Downloaded at 1K-JPG quality; each folder holds `color`, `normalgl`,
 | `textures/fabric-chintz` | Fabric024 | sofas, rugs, dust sheets |
 | `textures/wood-carved` | Wood096 | grand-room crown/chair rail + wainscot |
 | `textures/leather-worn` | Leather038 | sofa upholstery |
+| `textures/wallpaper-damask` | Wallpaper001B | lobby/milestone walls |
+| `textures/carpet-persian` | Carpet014 | guest carpets |
+| `textures/carpet-lobby` | Carpet011 | lobby carpets |
+| `textures/brick-painted` | Bricks059 | painted maintenance walls |
+| `textures/plaster-floral` | PaintedPlaster008 | guest walls |
 
 ## Models — Poly Haven (https://polyhaven.com), CC0
 
