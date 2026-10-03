@@ -424,8 +424,38 @@ export class AudioManager {
     this.musicTimer = setInterval(() => this.musicTick(), 400);
   }
 
+  /* ---------- dread: proximity heartbeat ---------- */
+  private dreadLevel = 0;
+  private nextBeatAt = 0;
+  /** 0..1 — nearest engaged threat's proximity, eased by the game loop. */
+  setDread(v: number): void { this.dreadLevel = Math.max(0, Math.min(1, v)); }
+
+  /** Double-thump under the pad; period and gain scale with proximity. */
+  private heartbeatTick(): void {
+    const ctx = this.ctx;
+    if (!ctx || this.dreadLevel < 0.3 || !this.bus('voice')) return;
+    const now = ctx.currentTime;
+    if (now < this.nextBeatAt) return;
+    this.nextBeatAt = now + (1.6 - this.dreadLevel * 1.1);
+    for (const [off, g] of [[0, 0.16], [0.18, 0.1]] as const) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(64, now + off);
+      o.frequency.exponentialRampToValueAtTime(38, now + off + 0.12);
+      const gn = ctx.createGain();
+      gn.gain.setValueAtTime(0.0001, now + off);
+      gn.gain.exponentialRampToValueAtTime(g * this.dreadLevel, now + off + 0.02);
+      gn.gain.exponentialRampToValueAtTime(0.0001, now + off + 0.16);
+      o.connect(gn).connect(this.bus('voice')!);
+      o.start(now + off);
+      o.stop(now + off + 0.2);
+    }
+  }
+
   private musicTick(): void {
-    if (!this.ctx || this.mood === 'off' || !this.bus('music')) return;
+    if (!this.ctx) return;
+    this.heartbeatTick();
+    if (this.mood === 'off' || !this.bus('music')) return;
     const ctx = this.ctx;
     const t0 = ctx.currentTime;
     // scale roots by mood

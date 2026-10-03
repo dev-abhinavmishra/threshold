@@ -81,6 +81,10 @@ export abstract class Entity {
   dispose(): void {
     this.onDone();
   }
+
+  /** Approximate threat position for proximity systems (dread layer);
+   *  null when the entity has no spatial presence. */
+  threatPos(): Vec3 | null { return null; }
 }
 
 /* ---------- shared helpers ---------- */

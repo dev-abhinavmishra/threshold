@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
-import { v3, v3dist, clamp } from '../engine/math';
+import { v3, v3dist, clamp, type Vec3 } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -19,6 +19,7 @@ import { Rng } from '../engine/rng';
 export class Witness extends Entity {
   private mesh: THREE.Group | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private exposure = 0;
 
   constructor() { super('witness', ENTITY_TUNING.witness); }
@@ -92,6 +93,7 @@ export class Whisper extends Entity {
   private mesh: THREE.Object3D | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private attackT = 0;
   private strikeWindow = 6.0;
 
@@ -158,6 +160,7 @@ export class Lurker extends Entity {
   private mesh: THREE.Object3D | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private litT = 0;
   private lungeT = 0;
 
@@ -227,6 +230,7 @@ export class Inkling extends Entity {
   private mesh: THREE.Group | null = null;
   private rigs: RiggedFigure[] = [];
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private agitation = 0;
 
   constructor() { super('inkling', ENTITY_TUNING.inkling); }
@@ -585,6 +589,7 @@ export class Husk extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private home = v3();
   private lastSeen = v3();
   private mode: 'dormant' | 'hunt' | 'return' = 'dormant';

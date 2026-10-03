@@ -20,6 +20,7 @@ export class Pursuer extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private waypoints: Vec3[] = [];
   private wi = 0;
   private active = false;
@@ -215,6 +216,7 @@ export class Editor extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private patrolT = 0;
   private deletionZones: { x: number; z: number; r: number }[] = [];
   private roomW = 10;
@@ -316,6 +318,7 @@ export class Grafter extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private target = v3();
   private roomO = v3();
   private roomW = 10;

@@ -123,6 +123,7 @@ export class Game {
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   /** Staged arrival captions for a fresh run (lobby cold-open). */
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
+  private dread = 0;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
 
@@ -2100,6 +2101,19 @@ export class Game {
 
     // adaptive music mood
     const inDanger = this.entities.some((e) => e.state === 'engage' && e.id !== 'hollow');
+    // dread: eased proximity pressure from the nearest spatial threat —
+    // drives the heartbeat layer so danger is audible before it's seen.
+    let nearest = Infinity;
+    for (const e of this.entities) {
+      if (e.state !== 'engage' && e.state !== 'warn') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const d = v3dist(tp, this.player.pos);
+      if (d < nearest) nearest = d;
+    }
+    const dreadTarget = nearest === Infinity ? 0 : Math.max(0, 1 - nearest / 18);
+    this.dread += (dreadTarget - this.dread) * Math.min(1, dt * 1.5);
+    this.audio.setDread(this.dread);
     const msActive = this.milestones.has(this.currentRoom);
     this.audio.setMood(
       this.space === 'under' ? 'under'

@@ -25,6 +25,7 @@ export class Curator extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private target = v3();
   private pathPts: Vec3[] = [];
   private pathI = 0;

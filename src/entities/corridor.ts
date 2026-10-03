@@ -107,6 +107,8 @@ export class CorridorRunner extends Entity {
     return f.pos;
   }
 
+  override threatPos(): Vec3 { return this.posApprox(); }
+
   /** Approximate world position for systems that need proximity (panic). */
   posApprox(): Vec3 {
     if (this.state === 'warn' || this.path.length === 0) {
