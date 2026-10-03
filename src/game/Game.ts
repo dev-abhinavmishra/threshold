@@ -1742,6 +1742,7 @@ export class Game {
         }
         pos.needsUpdate = true;
       }
+      if (this.dread < 0.55) this.clockT += this.clock.dt;
       for (const o of built.animated) {
         const kind = o.userData.anim as string;
         const s = (o.userData.animSeed as number) ?? 0;
@@ -1795,12 +1796,13 @@ export class Game {
           m.scale.setScalar(0.05 + u * 0.42);
           (m.material as THREE.MeshBasicMaterial).opacity = 0.24 * (1 - u);
         } else if (kind === 'handS') {
-          // Clockwork — stepped second hand, smooth minute/hour.
-          o.rotation.z = -Math.floor(t % 60) * (Math.PI / 30);
+          // Clockwork — stepped second hand, smooth minute/hour. Runs on
+          // clockT so every hand freezes together when dread is near.
+          o.rotation.z = -Math.floor(this.clockT % 60) * (Math.PI / 30);
         } else if (kind === 'handM') {
-          o.rotation.z = -((t / 60) % 60) * (Math.PI / 30);
+          o.rotation.z = -((this.clockT / 60) % 60) * (Math.PI / 30);
         } else if (kind === 'handH') {
-          o.rotation.z = -((t / 720) % 12) * (Math.PI / 6);
+          o.rotation.z = -((this.clockT / 720) % 12) * (Math.PI / 6);
         } else if (kind === 'flame') {
           // Open-flame fixture: layered sine jitter on the shared emissive.
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
@@ -1857,8 +1859,16 @@ export class Game {
       }
     }
 
-    // Working clocks tock once a second — a metronome for rooms that keep time.
-    if (this.clockNear < 10 && this.clock.time >= this.nextClockTick) {
+    // Working clocks tock once a second — a metronome for rooms that keep
+    // time. When something hunts nearby the clocks hold their breath:
+    // hands stop, tocks stop — silence is the tell.
+    if (this.dread >= 0.55) {
+      if (!this.clocksHeld) {
+        this.clocksHeld = true;
+        if (this.clockNear < 10) this.cue('phone-stop', this.clockPos, '[the clock stopped]');
+      }
+    } else if (this.dread < 0.3) this.clocksHeld = false;
+    if (this.clockNear < 10 && this.dread < 0.55 && this.clock.time >= this.nextClockTick) {
       this.nextClockTick = (this.nextClockTick > 0 ? this.nextClockTick : this.clock.time) + 1;
       this.cue('clock-tick', this.clockPos, '');
       this.sound?.emit({ x: this.clockPos.x, y: this.clockPos.y, z: this.clockPos.z, intensity: Math.max(0.02, 0.12 * (1 - this.clockNear / 10)), category: 'ambient', caption: '' });
@@ -2126,6 +2136,8 @@ export class Game {
   private nextClockTick = 0;
   private clockNear = 0;
   private readonly clockPos = new THREE.Vector3();
+  private clockT = 0;
+  private clocksHeld = false;
   private readonly tmpV3 = new THREE.Vector3();
   private readonly telegraphMul = new Map<number, number>();
 
