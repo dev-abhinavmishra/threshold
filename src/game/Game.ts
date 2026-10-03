@@ -2337,7 +2337,17 @@ export class Game {
       const t = v3();
       this.player.lookDir(t);
       this.lampLight.target.position.set(eye.x + t.x * 6, eye.y + t.y * 6, eye.z + t.z * 6);
-      this.lampLight.intensity = this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9;
+      // torch interference: something hidden nearby makes the beam sputter —
+      // the only warning a closet gives before you open it.
+      let cold = 0;
+      for (const e of this.entities) {
+        const tp = e.threatPos();
+        if (!tp) continue;
+        const d = v3dist(tp, this.player.pos);
+        if (d < 7) cold = Math.max(cold, 1 - d / 7);
+      }
+      const sputter = cold * (0.28 + 0.22 * Math.max(0, Math.sin(this.clock.time * 13) + Math.sin(this.clock.time * 7.3) * 0.5));
+      this.lampLight.intensity = (this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9) * (1 - sputter);
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
