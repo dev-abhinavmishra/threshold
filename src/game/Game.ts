@@ -1741,6 +1741,7 @@ export class Game {
       this.ensureDeepVoid(i, built);
       this.ensureRoomTint(i, built);
       this.ensureWallWords(i, built);
+      this.ensureTenant(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2121,6 +2122,34 @@ export class Game {
     m.rotation.y = ww.yaw;
     m.name = `wall-words-${i}`;
     built.group.add(m);
+  }
+
+  /** The tenant moved — a seated figure you passed is gone when you come
+   *  back; only the pool it sat in remains. Revisit-only scare; the set
+   *  persists across re-streams like relabel/wall-words state. */
+  private readonly tenantMoved = new Set<number>();
+
+  private hideTenant(t: THREE.Object3D): void {
+    for (const c of t.children) c.visible = c.name === 'tenant-pool';
+  }
+
+  private maybeTenantMoved(under = false): void {
+    const key = under ? -this.currentRoom - 1 : this.currentRoom;
+    if (this.tenantMoved.has(key)) return;
+    const t = this.streamer.get(this.currentRoom)?.group.getObjectByName(`tenant-${this.currentRoom}`);
+    if (!t || !t.visible) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 188 + (under ? 977 : 0));
+    if (!scare.bool(0.7)) return;
+    this.tenantMoved.add(key);
+    this.hideTenant(t);
+    this.cue('amb-settle', { x: this.player.pos.x, y: this.player.pos.y, z: this.player.pos.z }, '[it moved while you were gone]', 'warn');
+  }
+
+  private ensureTenant(i: number, built: { group: THREE.Group }): void {
+    const key = this.space === 'under' ? -i - 1 : i;
+    if (!this.tenantMoved.has(key)) return;
+    const t = built.group.getObjectByName(`tenant-${i}`);
+    if (t) this.hideTenant(t);
   }
 
   /** The answering steps — for a few strides in a seeded room, each of your
@@ -2699,6 +2728,7 @@ export class Game {
       if (revisit) {
         this.maybeShiftDoor(this.currentRoom);
         this.maybeRelabel();
+        this.maybeTenantMoved();
         if (this.currentRoom === 0) this.maybeReSignature();
       }
       this.maybeSpawnRat();
@@ -2723,7 +2753,7 @@ export class Game {
       if (this.currentRoom !== prev) {
         const revisit = this.visitedRooms.has(-this.currentRoom - 1);
         this.visitedRooms.add(-this.currentRoom - 1);
-        if (revisit) this.maybeShiftDoor(this.currentRoom);
+        if (revisit) { this.maybeShiftDoor(this.currentRoom); this.maybeTenantMoved(true); }
         this.maybeFarSound();
         this.maybeBreathing(true);
         this.maybeDoorTry(true);

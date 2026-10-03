@@ -650,6 +650,48 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.userData.animSeed = rng.float() * 10;
     return single(g, 0.9, 2.1, 0.9);
   },
+  // A seated figure slumped against the wall — still dressed, long past
+  // caring. Dressing-only dread; the head runs the shared 'watch' anim, so
+  // it is only ever aimed at you while you aren't looking.
+  deadTenant: (_s, rng) => {
+    const g = new THREE.Group();
+    const cloth = MAT.figureCloth(), skin = MAT.creatureSkin();
+    const llen = 0.62 + rng.float() * 0.15;
+    for (const sx of [-1, 1]) {
+      const leg = mesh(box(0.11, 0.11, llen), cloth, sx * 0.16, 0.06, llen * 0.42);
+      leg.rotation.y = sx * (0.18 + rng.float() * 0.2);
+      leg.rotation.x = -0.06;
+      g.add(leg);
+      g.add(mesh(box(0.11, 0.08, 0.2), MAT.ink(), sx * 0.2, 0.05, llen * 0.95));
+    }
+    const torso = mesh(box(0.42, 0.62, 0.24), cloth, 0, 0.42, -0.05);
+    torso.rotation.x = -0.24;
+    g.add(torso);
+    for (const sx of [-1, 1]) {
+      const arm = mesh(box(0.08, 0.5, 0.08), cloth, sx * 0.26, 0.3, 0.05);
+      arm.rotation.x = 0.15; arm.rotation.z = sx * 0.12;
+      g.add(arm);
+      g.add(mesh(new THREE.SphereGeometry(0.05, 6, 5), skin, sx * 0.3, 0.05, 0.12));
+    }
+    const head = new THREE.Group();
+    const skull = mesh(new THREE.SphereGeometry(0.11, 10, 8), skin, 0, 0, 0);
+    skull.scale.set(0.85, 1.05, 0.95);
+    head.add(skull);
+    const hair = mesh(new THREE.SphereGeometry(0.115, 8, 6), MAT.ink(), 0, 0.03, -0.02);
+    hair.scale.set(0.9, 0.9, 0.9);
+    head.add(hair);
+    head.position.set(0, 0.72, 0.08);
+    head.rotation.x = 0.6;
+    head.userData.anim = 'watch';
+    head.userData.animSeed = rng.float() * 10;
+    head.userData.creepMax = 0;
+    g.add(head);
+    const pool = mesh(new THREE.CircleGeometry(0.55 + rng.float() * 0.2, 14), MAT.ink(), 0, 0.012, 0.3);
+    pool.rotation.x = -Math.PI / 2;
+    pool.name = 'tenant-pool';
+    g.add(pool);
+    return single(g, 0.9, 0.9, 1.0);
+  },
   counter: (s) => {
     const g = new THREE.Group();
     const w = s.scale ?? 2.4;

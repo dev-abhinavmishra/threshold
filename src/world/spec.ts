@@ -56,6 +56,7 @@ export type PropKind =
   | 'foodCans' | 'cleanerBottle' | 'bleachBottle' | 'ceilingFan'
   | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
   | 'watcherFigure'
+  | 'deadTenant'
   | 'dollCluster'
   | 'hallFigure'
   | 'hauntedPortrait'

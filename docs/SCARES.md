@@ -26,6 +26,7 @@ ported to the subfloor.
 | Phone rings | +199 (+977) (0.3) | payphone prop, ≥4 | 4s of ring bursts then stops; each ring emits 0.55 'ambient' | **warn:** draws Curator-type hunters; leave the room or be ready |
 | The numbers moved | +143 (0.3) | **revisit** | the exit-door number plate reads a wrong room; sticks across re-streams | chalk-mark your doors; trust the mark, not the plate |
 | Wall writing | +177 (+977) (0.28) | **revisit**, ≥6 | red scrawl appears on an interior wall ("BEHIND YOU", "STILL COUNTING", …); persists across re-streams | it's only paint — probably |
+| The tenant moved | +188 (+977) (0.7) | **revisit**, deadTenant present | the slumped seated figure is simply gone; only the ink pool it sat in remains | none — it isn't after you. yet. |
 | Clocks hold their breath | — (dread-driven) | proximity | every clock hand freezes and ticking stops while an engaged threat is within ~10m | stopped clocks = something is close; use the silence |
 | Vending machine | — (loot stream) | maintenance/records rooms, ~22% | feed it 4–9 imprints; vends a seeded item, loud 0.6 'machine' emit | **warn:** the clank draws hunters — spend when it's quiet |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
