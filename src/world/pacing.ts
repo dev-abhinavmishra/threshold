@@ -37,6 +37,12 @@ export function planBeats(rng: Rng, rooms: RoomInstance[]): Beat[] {
     const prev = beats[beats.length - 1];
     if (prev && prev.tier >= 2) tier = rng.bool(0.75) ? 0 : 1;
     if (idx < 15 && tier >= 2) tier = 1;
+    // Calm valleys cap at ~8 rooms of run — never let quiet outstay its welcome.
+    if (tier === 0) {
+      let calm = 0;
+      for (let i = beats.length - 1; i >= 0; i--) { if (beats[i].tier !== 0) break; calm += beats[i].to - beats[i].from + 1; }
+      if (calm + len > 8) tier = 1;
+    }
     // Milestone approach (45+, 70+, 95+) lifts the floor.
     if (idx >= 95 && tier < 2) tier = 2;
     else if (idx >= 70 && idx < 76 && tier === 0) tier = 1;

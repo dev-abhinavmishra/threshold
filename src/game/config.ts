@@ -80,7 +80,7 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
   },
   redactor: {
     warningTime: 0, speed: 0, damage: 35, killRange: 0, seeRange: 0,
-    cooldown: 6, spawnChance: 0.4, minRoom: 21,
+    cooldown: 9, spawnChance: 0.28, minRoom: 21,
   },
   echoskin: {
     warningTime: 2.4, speed: 3.4, damage: 40, killRange: 1.3, seeRange: 0,
@@ -128,7 +128,7 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
   },
   husk: {
     warningTime: 0.8, speed: 4.0, damage: 100, killRange: 1.35, seeRange: 9,
-    cooldown: 20, spawnChance: 0.3, minRoom: 34,
+    cooldown: 16, spawnChance: 0.38, minRoom: 34,
   },
   hazard: {
     warningTime: 0, speed: 0, damage: 20, killRange: 0.7, seeRange: 0,

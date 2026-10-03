@@ -806,6 +806,36 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
   guarantee(rooms, encRng, 'echoskin', 63, 68);
   guarantee(rooms, encRng, 'maelstrom', 55, 70);
 
+  // Density floor: no stretch of 11+ eligible rooms stays unscheduled — seed a
+  // low-tier presence at each void's midpoint so valleys never become voids.
+  const FLOOR_SET: EntityId[] = ['whisper', 'inkling', 'redactor', 'hollow'];
+  {
+    const schedIdx = rooms.filter((r) => r.index >= 0 && r.scheduled.length > 0).map((r) => r.index);
+    const marks = [9, ...schedIdx, 101];
+    for (let k = 0; k < marks.length - 1; k++) {
+      const lo = marks[k], hi = marks[k + 1];
+      if (hi - lo <= 10) continue;
+      const mid = Math.floor((lo + hi) / 2);
+      for (let off = 0; off <= 3; off++) {
+        const cand = rooms.find((r) => r.index === mid + off) ?? rooms.find((r) => r.index === mid - off);
+        if (!cand || cand.authored || cand.biome === 'safe' || cand.scheduled.length > 0) continue;
+        const pick = FLOOR_SET.find((id) => {
+          const t = ENTITY_TUNING[id];
+          if (!t) return false;
+          if (cand.index < t.minRoom || (t.maxRoom !== undefined && cand.index > t.maxRoom)) return false;
+          if (t.biomes && !t.biomes.includes(cand.biome)) return false;
+          if ((id === 'whisper' || id === 'inkling') && !cand.darkRoom) return false;
+          const spec = cand.spec;
+          if (spec?.forbidEntities?.includes(id) || (spec?.allowOnlyEntities && !spec.allowOnlyEntities.includes(id))) return false;
+          return true;
+        });
+        if (!pick) continue;
+        cand.scheduled.push({ entity: pick, triggerRoom: cand.index, seed: encRng.int(0, 0x7fffffff) });
+        break;
+      }
+    }
+  }
+
   // Hollow traps: mark some hiding spots trapped (never all in a room).
   for (const room of rooms) {
     if (room.index < 12 || room.authored) continue;
