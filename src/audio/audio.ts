@@ -82,6 +82,7 @@ const CUES: Record<string, CueSpec> = {
   'chalk-mark': { freq: 800, dur: 0.3, type: 'triangle', gain: 0.05, sweep: 620, noise: true },
   'custodian-bell': { freq: 1240, dur: 0.7, type: 'sine', gain: 0.08, sweep: 1180 },
   'register-sign': { freq: 520, dur: 0.5, type: 'triangle', gain: 0.06, sweep: 380, noise: true },
+  'death-echo': { freq: 70, dur: 1.4, type: 'sine', gain: 0.14, sweep: 45 },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },

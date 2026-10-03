@@ -1110,6 +1110,7 @@ export class Game {
     if (this.player.dead) return;
     this.player.dead = true;
     this.deathCount[source] = (this.deathCount[source] ?? 0) + 1;
+    this.deathEcho = { room: this.currentRoom, space: this.space, fired: false };
     this.stats.deaths++;
     this.meta.deaths++;
     saveMeta(this.meta);
@@ -1617,6 +1618,7 @@ export class Game {
   }
 
   private readonly visitedRooms = new Set<number>();
+  private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
 
   /** Revisit scare: a door you left open drifts shut — while you might watch. */
   private maybeShiftDoor(idx: number): void {
@@ -2084,6 +2086,12 @@ export class Game {
         if (revisit) this.maybeShiftDoor(this.currentRoom);
         this.maybeFarSound();
       }
+    }
+    // death echo: the building remembers where it took you
+    if (this.currentRoom !== prev && this.deathEcho && !this.deathEcho.fired
+      && this.currentRoom === this.deathEcho.room && this.space === this.deathEcho.space) {
+      this.deathEcho.fired = true;
+      this.cue('death-echo', null, '[you remember this room — you died here]', 'warn');
     }
     // Room-tone bed — idempotent; follows space + biome changes each frame.
     const toneRoom = this.activeRooms()[this.currentRoom];
