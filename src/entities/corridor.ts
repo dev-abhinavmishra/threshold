@@ -24,6 +24,8 @@ export interface CorridorOptions {
   fromAhead?: boolean;
   maelstrom?: boolean;
   redline?: boolean;
+  /** Behemoth: slow airborne blockade — dragon rig, wide body. */
+  behemoth?: boolean;
 }
 
 export class CorridorRunner extends Entity {
@@ -80,6 +82,9 @@ export class CorridorRunner extends Entity {
     } else if (this.id === 'maelstrom') {
       c.cue('maelstrom-warn', this.path[0], '[a long silence — then a rotating shriek]', { severity: 'danger' });
       for (let i = Math.max(0, c.currentRoomIndex - 2); i <= c.currentRoomIndex; i++) c.flickerRoom(i, 'sweep');
+    } else if (this.id === 'behemoth') {
+      c.cue('behemoth-warn', this.path[0], '[the ceiling drops a shadow — it is too large for this hall]', { severity: 'danger' });
+      for (let i = Math.max(0, c.currentRoomIndex - 3); i <= c.currentRoomIndex; i++) c.flickerRoom(i, 'sweep');
     }
     this.warnT = tune.warningTime * ({ learning: 1.5, standard: 1, hard: 0.78, qa: 1 })[c.difficulty];
 
@@ -132,11 +137,12 @@ export class CorridorRunner extends Entity {
     } else {
       // Sweep / Reprise / Returner — distinct bodies per runner: gaunt sprinter,
       // armoured brute, antlered thing closing from ahead.
-      const kind = this.id === 'returner' ? 'monkroose' : this.id === 'reprise' ? 'orc' : 'skeleton';
+      const kind = this.id === 'behemoth' ? 'dragon' : this.id === 'returner' ? 'monkroose' : this.id === 'reprise' ? 'orc' : 'skeleton';
       const rig = riggedFigure(kind as 'skeleton');
       if (rig) {
         rig.play('move', 0);
-        rig.group.scale.multiplyScalar(2.6 / RIGGED[kind].height);
+        rig.group.scale.multiplyScalar((this.id === 'behemoth' ? 3.4 : 2.6) / RIGGED[kind].height);
+        if (this.id === 'behemoth') rig.group.position.y = 0.9; // airborne blockade
         this.rig = rig;
         g.add(rig.group);
       } else {

@@ -70,6 +70,14 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 0.5, speed: 0, damage: 26, killRange: 0, seeRange: 6,
     cooldown: 5, spawnChance: 0.45, minRoom: 22,
   },
+  lurker: {
+    warningTime: 1.0, speed: 1.6, damage: 28, killRange: 1.4, seeRange: 9,
+    cooldown: 7, spawnChance: 0.4, minRoom: 28, biomes: ['maintenance', 'unlit', 'guest'],
+  },
+  behemoth: {
+    warningTime: 3.4, speed: 0.85, damage: 60, killRange: 1.7, seeRange: 12,
+    cooldown: 14, spawnChance: 0.22, minRoom: 55, biomes: ['corridor', 'maintenance'],
+  },
   redactor: {
     warningTime: 0, speed: 0, damage: 35, killRange: 0, seeRange: 0,
     cooldown: 6, spawnChance: 0.4, minRoom: 21,

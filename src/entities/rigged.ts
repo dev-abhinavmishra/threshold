@@ -78,6 +78,16 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_monkroose.glb', height: 2.1, tint: 0.45,
     clips: { idle: ['idle'], move: ['run', 'walk'], attack: ['punch', 'bite_front'] },
   },
+  /** Crouched ambusher — the Lurker's barely-visible stalker shape. */
+  ninja: {
+    file: 'quaternius_ninja.glb', height: 1.55, tint: 0x151018, emissive: 0x220a00,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front'] },
+  },
+  /** Wide-winged corridor mass — the Behemoth's airborne blockade. */
+  dragon: {
+    file: 'quaternius_dragon.glb', height: 1.8, tint: 0x0a0c14, emissive: 0x0a0518,
+    clips: { idle: ['flying_idle'], move: ['fast_flying'], attack: ['headbutt'] },
+  },
   /** Grey intruder — the thing that was already inside the cabinet. */
   alien: {
     file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,

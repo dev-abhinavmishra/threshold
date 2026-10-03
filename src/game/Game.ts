@@ -27,7 +27,7 @@ import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -497,6 +497,8 @@ export class Game {
       case 'margin': this.spawnEntity(new Margin()); break;
       case 'stillframe': this.spawnEntity(new Stillframe()); break;
       case 'husk': this.spawnEntity(new Husk()); break;
+      case 'lurker': this.spawnEntity(new Lurker()); break;
+      case 'behemoth': this.spawnEntity(new CorridorRunner('behemoth', { behemoth: true, passes: 2 })); break;
       case 'editor': this.spawnEntity(new Editor()); break;
       case 'grafter': this.spawnEntity(new Grafter()); break;
       case 'pursuer': case 'curator': case 'hazard': break; // milestone-triggered only
@@ -1943,7 +1945,7 @@ export class Game {
       if (e instanceof Stillframe) {
         e.inputHeld = this.keys.size > 0;
       }
-      if (e instanceof Inkling || e instanceof Husk) {
+      if (e instanceof Inkling || e instanceof Husk || e instanceof Lurker) {
         e.lightOnIt = (this.lampOn || this.pulseLampOn) ? 1 : 0;
       }
     }

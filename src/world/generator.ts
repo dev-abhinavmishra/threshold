@@ -770,7 +770,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       if (spec?.forbidEntities?.includes(id)) continue;
       if (spec?.allowOnlyEntities && !spec.allowOnlyEntities.includes(id)) continue;
       // Corridor threats need a route + hiding guarantee.
-      if ((id === 'sweep' || id === 'reprise' || id === 'maelstrom') && !hasSurvivalOption(rooms, room.index)) continue;
+      if ((id === 'sweep' || id === 'reprise' || id === 'maelstrom' || id === 'behemoth') && !hasSurvivalOption(rooms, room.index)) continue;
       if ((ENTITY_TIER[id] ?? 2) > tier) continue;
       if (id === 'whisper' && !room.darkRoom) continue;
       if (id === 'inkling' && !room.darkRoom) continue;

@@ -149,6 +149,78 @@ export class Whisper extends Entity {
   }
 }
 
+/* ============================ LURKER ============================ */
+/** Ambush predator: crouches near a wall; stalks while unlit at close range.
+ *  Holding the torch on it for ~1.2s drives it off — darkness defense lesson. */
+export class Lurker extends Entity {
+  /** Set by Game when the player's light cone covers this entity. */
+  lightOnIt = 0;
+  private mesh: THREE.Object3D | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private litT = 0;
+  private lungeT = 0;
+
+  constructor() { super('lurker', ENTITY_TUNING.lurker); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const rng = new Rng(c.seed);
+    // crouch along the room's side wall, offset from the door lane
+    const a = rng.bool(0.5) ? 1 : -1;
+    this.pos = v3(c.player.pos.x + a * 2.4, 0, c.player.pos.z + rng.range(1.5, 3.5));
+    this.state = 'engage';
+    const rig = riggedFigure('ninja');
+    const g = rig?.group ?? tallFigure({ height: 1.4, body: MAT.shadowFigure(), face: 'none', eyes: 'amber', tattered: true });
+    this.rig = rig;
+    g.position.copy(this.pos);
+    g.scale.setScalar(0.72); // crouched silhouette
+    this.mesh = g;
+    c.addEntityMesh(this.mesh);
+    this.rig?.play('idle');
+    c.cue('lurker-stalk', this.pos, '[something crouches — it hates the light]', { severity: 'warn' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+    const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (this.mesh) this.mesh.rotation.y = Math.atan2(dx, dz);
+
+    // Game marks entities inside the player's light cone via lightOnIt
+    const lit = this.lightOnIt > 0;
+    if (lit) {
+      this.litT += dt;
+      this.rig?.play('idle');
+      if (this.litT > 1.2) {
+        c.cue('lurker-flee', this.pos, '[it recoils from the beam — gone]', { severity: 'info' });
+        this.done();
+        return;
+      }
+    } else {
+      this.litT = Math.max(0, this.litT - dt * 0.5);
+      // stalk: close distance slowly while unlit
+      if (dist > this.tuning.killRange && dist < this.tuning.seeRange) {
+        const step = this.tuning.speed * dt;
+        this.pos.x += (dx / dist) * step; this.pos.z += (dz / dist) * step;
+        if (this.mesh) this.mesh.position.copy(this.pos);
+        this.rig?.play('move');
+      }
+      this.lungeT += dt;
+    }
+    if (dist <= this.tuning.killRange || this.lungeT > 9) {
+      c.damagePlayer(this.tuning.damage, 'lurker', 'The Lurker stalks in the dark — hold your light on it to drive it off.');
+      this.done();
+    }
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+  }
+}
+
 /* ============================ INKLING ============================ */
 /** Darkness threat: a corner cluster enraged by continuous light at close range. */
 export class Inkling extends Entity {

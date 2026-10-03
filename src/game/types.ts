@@ -51,7 +51,9 @@ export type EntityId =
   // Environmental
   | 'hazard'
   // Set-piece systems
-  | 'orrery';
+  | 'orrery'
+  | 'lurker'
+  | 'behemoth';
 
 export type ItemId =
   | 'handLamp'
