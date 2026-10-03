@@ -109,4 +109,8 @@ export const DOCUMENTS: Document[] = [
     id: 'doc-guest-torch', title: 'Note — “the beam stutters”', category: 'lore', unlockedAt: 0,
     body: 'My lamp is honest. When it stutters near a wardrobe, a vent, a gap under a bed — something is in there deciding whether to be hungry. The flicker is the only warning a hiding place gives. — a previous guest',
   },
+  {
+    id: 'doc-guest-bier', title: 'Note — “the bier was answered”', category: 'lore', unlockedAt: 0,
+    body: 'It knocked when I leaned in — I swear it knocked. I lifted the lid anyway because of course I did. No body. The pillow was still warm and there was a brass name tag on the satin and the name was mine. I put the lid back gently, like manners would save me, and I did not stop walking for three rooms. Do not open it. Or do, and tell me if the name is yours too. — a previous guest',
+  },
 ];

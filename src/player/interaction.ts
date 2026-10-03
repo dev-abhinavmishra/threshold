@@ -11,7 +11,7 @@ export type InteractKind =
   | 'door' | 'peek' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin';
 
 export interface Interactable {
   kind: InteractKind;

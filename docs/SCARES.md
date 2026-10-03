@@ -62,7 +62,7 @@ ported to the subfloor.
 ## Milestone / world systems
 
 - **The Baggage Hall (room 25 / label 018 short-run)**: authored lost-luggage depot — suitcase rows, trolleys, 5 sockets, 2 hides; authored flag keeps it lock/encounter-free.
-- **The Wake (room 85)**: authored chapel of rest — bench rows, candle-lit bier with an ajar coffin, offering loot, 2 hides; `special: 'wake'` keeps it quiet except its own beats.
+- **The Wake (room 85)**: authored chapel of rest — bench rows, candle-lit bier with an ajar coffin, offering loot, 2 hides; `special: 'wake'` keeps it quiet except its own beats. The lid lifts on a long hold: the reveal is authored — empty shelf, warm pillow, and a guest note that should not know your name.
 - **Under caches**: under sockets fill from a meaner table (~38% per socket, imprints 3–16); landings (U-%20) stay safe.
 - **Custodian shop** (room 52): seeded stock of 3–5 from {sparkFlash, bandage, latchpick, windAlarm, wardSeal}; unstocked pedestals disabled via `meta.taken`.
 - **Broker pedestals** (u-lobby): exactly 2 per lobby, `meta.broker` + price.

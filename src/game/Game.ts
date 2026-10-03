@@ -746,6 +746,17 @@ export class Game {
         });
       }
     }
+    // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
+    if (!this.coffinOpened) {
+      const wr = this.activeRooms()[this.currentRoom];
+      if (wr?.spec?.special === 'wake') {
+        const cp = this.wakeCoffinPos(wr);
+        if (cp) this.interaction.add({
+          kind: 'coffin', id: 'wake-coffin', pos: { x: cp.x, y: cp.y + 0.15, z: cp.z },
+          prompt: 'Lift the coffin lid', holdTime: 1.8, enabled: true, priority: 2,
+        });
+      }
+    }
     // Redactor false doors become interactable
     for (const e of this.entities) {
       if (e instanceof Redactor && e.state === 'engage') {
@@ -917,6 +928,22 @@ export class Game {
       case 'lore':
       case 'card': {
         this.resolveSocketLoot(it);
+        return;
+      }
+      case 'coffin': {
+        it.enabled = false;
+        this.coffinOpened = true;
+        const g = this.worldGroup.getObjectByName(`coffin-${this.currentRoom}`);
+        if (g) this.openCoffinLid(g);
+        const doc = DOCUMENTS.find((d) => d.id === 'doc-guest-bier');
+        if (doc && !this.documents.some((d) => d.id === doc.id)) {
+          this.documents.push({ ...doc, unlockedAt: Date.now() });
+          this.meta.documents.push(doc.id);
+          saveMeta(this.meta);
+          useGameStore.setState({ documents: this.loadDocs() });
+        }
+        this.cue('door-creak', it.pos, '');
+        this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
         return;
       }
       case 'underExit': {
@@ -1770,6 +1797,7 @@ export class Game {
       this.ensureRoomTint(i, built);
       this.ensureWallWords(i, built);
       this.ensureTenant(i, built);
+      this.ensureCoffin(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2182,13 +2210,35 @@ export class Game {
     if (t) this.hideTenant(t);
   }
 
+  private ensureCoffin(_i: number, built: { group: THREE.Group }): void {
+    if (!this.coffinOpened) return;
+    const g = built.group.getObjectByName(`coffin-${_i}`);
+    if (g && !g.userData.coffinOpen) this.openCoffinLid(g);
+  }
+
+  /** Push the lid fully back — empty shelf, warm pillow. */
+  private openCoffinLid(g: THREE.Object3D): void {
+    g.userData.coffinOpen = true;
+    const lid = g.getObjectByName('lid');
+    if (lid) { lid.rotation.z = 1.22; lid.rotation.y = 0; lid.position.x += 0.14; }
+  }
+
   /** The occupant knocks — in the Wake, approach the bier on a seeded run
    *  and something inside answers your presence. Fires once. */
   private occupantAt: Vec3 | null = null;
   private occupantFired = false;
+  private coffinOpened = false;
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
   private lampFade = 1;
+
+  /** World position of the Wake's coffin prop, or null outside that room. */
+  private wakeCoffinPos(room: RoomInstance | undefined): Vec3 | null {
+    const prop = room?.spec?.props.find((p) => p.kind === 'coffin');
+    if (!prop || !room) return null;
+    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    return { x: room.origin.x + prop.x * cs + prop.z * sn, y: 1, z: room.origin.z - prop.x * sn + prop.z * cs };
+  }
 
   private maybeOccupant(): void {
     this.occupantAt = null;
@@ -2197,14 +2247,7 @@ export class Game {
     if (room?.spec?.special !== 'wake') return;
     const scare = this.streams.roomStream('scare', this.currentRoom + 211);
     if (!scare.bool(0.55)) return;
-    const prop = room.spec.props.find((p) => p.kind === 'coffin');
-    if (!prop) return;
-    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
-    this.occupantAt = {
-      x: room.origin.x + prop.x * cs + prop.z * sn,
-      y: 1,
-      z: room.origin.z - prop.x * sn + prop.z * cs,
-    };
+    this.occupantAt = this.wakeCoffinPos(room);
   }
 
   private tickOccupant(): void {

@@ -707,6 +707,7 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(0.9, 0.06, 0.7), cloth, 0, 1.13, 0.62));
     // the lid, propped ajar against the shoulder end
     const lid = mesh(box(0.8, 0.05, 1.9), wood, 0.3, 1.14, 0);
+    lid.name = 'lid';
     lid.rotation.z = 0.5;
     lid.rotation.y = rng.bool(0.5) ? 0.05 : -0.05;
     g.add(lid);
