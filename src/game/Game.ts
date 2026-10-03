@@ -984,6 +984,11 @@ export class Game {
         const at = { x: it.pos.x, y: 1.2, z: it.pos.z };
         this.audio.play('tv-static', at, '[a station that was never broadcast]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.7, category: 'machine', caption: '[tv static]' });
+        // ~1/3 of tuned sets answer back, a breath later
+        const scare = this.streams.roomStream('scare', this.currentRoom + 383);
+        if (scare.bool(0.32)) {
+          this.tvAnswerQueue.push({ at: this.clock.time + 14 + scare.range(0, 12), pos: at });
+        }
         return;
       }
       case 'piano': {
@@ -2308,6 +2313,7 @@ export class Game {
   private coffinOpened = false;
   private playedPianos = new Set<string>();
   private litTVs = new Set<string>();
+  private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
   private motesGeo: THREE.BufferGeometry | null = null;
@@ -3254,6 +3260,13 @@ export class Game {
       } else {
         this.pianoRoom = -1;
       }
+    }
+
+    // The channel answers — some tuned sets whisper back a breath later
+    while (this.tvAnswerQueue.length && this.tvAnswerQueue[0].at <= tA) {
+      const q = this.tvAnswerQueue.shift()!;
+      this.audio.play('whisper', q.pos, '[the channel knows you are here]', 'warn');
+      this.sound.emit({ x: q.pos.x, y: q.pos.y, z: q.pos.z, intensity: 0.4, category: 'entity-cue', caption: '' });
     }
 
     // Something tries the handle — one rattle burst, then silence.
