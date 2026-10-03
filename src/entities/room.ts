@@ -469,8 +469,8 @@ export class Hollow extends Entity {
     if (spot) {
       const rig = riggedFigure('alien');
       if (rig) {
-        const cx = (spot.volume.min.x + spot.volume.max.x) / 2;
-        const cz = (spot.volume.min.z + spot.volume.max.z) / 2;
+        const cx = (spot.volume.minX + spot.volume.maxX) / 2;
+        const cz = (spot.volume.minZ + spot.volume.maxZ) / 2;
         rig.group.position.set(cx + Math.sin(spot.viewYaw) * 0.5, 0, cz + Math.cos(spot.viewYaw) * 0.5);
         rig.group.rotation.y = spot.viewYaw + Math.PI;
         rig.play('attack', 0.05);
