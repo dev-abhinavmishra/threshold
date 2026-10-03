@@ -641,3 +641,5 @@ and exported as glTF. Regenerate: `blender -b --factory-startup -P tools/mill/pr
 | `breakerPanel` | Fuse cabinet: switch bank, ajar door, cable drops | maint-pipes, maint-flooded, maint-server, corr-wide |
 | `wallVent` | Louvered grille with fan shadow | maint-pipes, maint-flooded, corr-wide |
 | `portcullis` | Spiked iron grid gate | maint-service-narrow |
+
+Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-records-cage, u-long-hall, u-server, u-narrow-stacks (portcullis, hatches, stackShelf bays, pipeManifold, breaker panels, wall vents).
