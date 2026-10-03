@@ -3,6 +3,7 @@
  * quality tiers. Catches crashes/NaN in dressing code paths the generator sim
  * never exercises (no renderer needed — builder is document-guarded).
  */
+import * as THREE from 'three';
 import { buildRoomMesh, disposeRoom } from '../src/world/builder';
 import { generateRoute } from '../src/world/generator';
 
@@ -11,15 +12,16 @@ const tiers: ('low' | 'high')[] = ['low', 'high'];
 let built = 0, meshTotal = 0, fail = 0, animated = 0;
 const seen = new Set<string>();
 for (const seedText of seeds) {
-  const route = generateRoute({ seedText, difficulty: 'normal' });
+  const route = generateRoute({ seedText, difficulty: 'standard' as const });
   for (const tier of tiers) {
     for (const room of [...route.rooms, ...route.underRooms]) {
       const key = `${seedText}|${tier}|${room.index}`;
+      if (!room.spec) continue;
       try {
         const b = buildRoomMesh(room, room.spec, 7, tier);
         let meshes = 0;
         b.group.traverse((o) => {
-          if (o.isMesh) {
+          if ((o as THREE.Mesh).isMesh) {
             meshes++;
             const pos = o.position;
             if (Number.isNaN(pos.x) || Number.isNaN(pos.y) || Number.isNaN(pos.z)) {

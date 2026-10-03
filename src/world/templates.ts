@@ -1706,6 +1706,212 @@ const roomLibraryStacks: RoomTemplate = {
   }),
 };
 
+/* ---------------- sprint 45: themed rooms on the deep asset inventory ------- */
+
+// A musty projection room — tiered chairs face a pulled-down screen while the
+// projector still spins. Archive smell included.
+const roomProjection: RoomTemplate = {
+  id: 'records-projection',
+  build: (_rng) => spec('records-projection', 'records', 8, 10, 3.2, {
+    props: [
+      { kind: 'projScreen', x: 0, z: 4.6, yaw: Math.PI },
+      { kind: 'table', x: 0, z: -1.4 },
+      { kind: 'projector', x: 0, z: -1.4, y: 0.78 },
+      { kind: 'cassettePlayer', x: 0.6, z: -1.35, y: 0.78 },
+      { kind: 'schoolChair', x: -1.4, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: -0.4, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: 0.6, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: 1.5, z: 1.3, yaw: Math.PI },
+      { kind: 'schoolChair', x: -1.3, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: -0.3, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: 0.7, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: 1.6, z: 2.4, yaw: Math.PI },
+      { kind: 'schoolChair', x: -1.2, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 0.4, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 1.4, z: 3.7, yaw: Math.PI },
+      { kind: 'postcards', x: -3.4, z: 0.2, y: 0.78 },
+      { kind: 'sideTable', x: -3.4, z: 0.2 },
+      { kind: 'books', x: -3.4, z: -1.1, y: 0.78 },
+      { kind: 'crate', x: -3.4, z: -1.1 },
+      { kind: 'suitcase', x: 3.3, z: -0.6, yaw: 0.5 },
+      ...wallProps(8, 10, _rng, ['painting', 'wallSconce'], 2),
+    ],
+    sockets: lootSockets([[3.3, -0.6], [-3.4, 0.2]]),
+    hiding: [{ kind: 'cabinet', x: -3.5, z: 3.4, yaw: Math.PI / 2, propKind: 'cabinet' }],
+    lights: [
+      { x: 0, y: 2.9, z: -2.5, color: 0xffd9a4, intensity: 0.5, range: 6, group: 'dim', breakable: true },
+      { x: 0, y: 1.2, z: -1.4, color: 0xbfd0ff, intensity: 0.3, range: 3, group: 'dim', breakable: false },
+    ],
+    weight: 6, minRoom: 25, darkChance: 0.25, perf: 4,
+  }),
+};
+
+// The good room — a suite that was kept for a guest who never checked out.
+const roomGrandSuite: RoomTemplate = {
+  id: 'guest-suite-grand',
+  build: (_rng) => spec('guest-suite-grand', 'guest', 9, 8, 3.4, {
+    props: [
+      { kind: 'daybed', x: -2.6, z: 1.8 },
+      { kind: 'modernCabinet', x: 0.4, z: 3.4, yaw: Math.PI },
+      { kind: 'television', x: 0.4, z: 3.35, y: 0.72, yaw: Math.PI },
+      { kind: 'armchair', x: 2.2, z: 0.6, yaw: -0.6 }, { kind: 'armchair', x: -0.6, z: -1.2, yaw: 0.4 },
+      { kind: 'roundTable', x: 1.0, z: -0.2 },
+      { kind: 'teaSet', x: 1.0, z: -0.2, y: 0.76 },
+      { kind: 'diningChair', x: 1.9, z: -0.5, yaw: -0.4 }, { kind: 'diningChair', x: 0.1, z: -0.6, yaw: 0.5 },
+      { kind: 'chandelier', x: 0, z: 0, y: 3.0 },
+      { kind: 'marbleBust', x: -3.8, z: -1.4, y: 0.86 },
+      { kind: 'console', x: -3.8, z: -1.4 },
+      { kind: 'rug', x: 0.2, z: -0.6 },
+      { kind: 'mantelClock', x: 0.4, z: 3.3, y: 1.1, yaw: Math.PI },
+      { kind: 'vase', x: 0.1, z: 3.35, y: 0.72, yaw: Math.PI },
+      { kind: 'ottoman', x: -2.0, z: -0.4, yaw: 0.3 },
+      { kind: 'suitcase', x: 3.9, z: 2.6, yaw: 0.9 },
+      { kind: 'frameStand', x: 3.9, z: -2.6, yaw: -Math.PI / 2 },
+      ...wallProps(9, 8, _rng, ['painting', 'curtain', 'wallSconce', 'mirror'], 4),
+    ],
+    sockets: lootSockets([[3.9, 2.6], [-3.8, -1.4]]),
+    hiding: [{ kind: 'cabinet', x: -3.9, z: 3.1, yaw: Math.PI / 2, propKind: 'cabinet' }],
+    weight: 5, minRoom: 20, darkChance: 0.3, perf: 4,
+  }),
+};
+
+// A fabrication bay — benches, carts, tools, a detector gate nobody uses.
+const roomFabShop: RoomTemplate = {
+  id: 'maint-fabshop',
+  build: (_rng) => spec('maint-fabshop', 'maintenance', 9, 8, 3.1, {
+    props: [
+      { kind: 'table', x: -2.4, z: -3.0 }, { kind: 'table', x: -0.4, z: -3.0 },
+      { kind: 'benchVice', x: -2.4, z: -3.0, y: 0.78 },
+      { kind: 'multimeter', x: -0.4, z: -3.0, y: 0.78 },
+      { kind: 'handsaw', x: -1.4, z: -3.0, y: 0.78 },
+      { kind: 'oilCan', x: -2.0, z: -2.8, y: 0.78 },
+      { kind: 'weldingCart', x: 3.2, z: -2.6, yaw: -0.4 },
+      { kind: 'propaneTank', x: 3.8, z: -1.6 },
+      { kind: 'propaneTorch', x: 3.4, z: -1.9 },
+      { kind: 'toolCart', x: 1.6, z: -1.0, yaw: 0.3 },
+      { kind: 'toolChest', x: -3.6, z: -0.8 },
+      { kind: 'drillPress', x: -3.5, z: 2.0 },
+      { kind: 'metalDetector', x: 0, z: -0.4 },
+      { kind: 'ladder', x: 4.1, z: 1.2, yaw: -Math.PI / 2 },
+      { kind: 'indPipes', x: 4.35, z: -1.5, y: 1.8, yaw: -Math.PI / 2 },
+      { kind: 'wallHose', x: -4.35, z: 0.5, y: 1.1, yaw: Math.PI / 2 },
+      { kind: 'cableTray', x: -4.35, z: -2.0, y: 2.3, yaw: Math.PI / 2 },
+      { kind: 'screwdrivers', x: -2.6, z: -2.8, y: 0.78 },
+      { kind: 'wrench', x: -0.1, z: -3.1, y: 0.78 },
+      { kind: 'tapeMeasure', x: 1.7, z: -0.9, y: 0.78 },
+      { kind: 'toolbox', x: -3.9, z: 0.6 },
+      { kind: 'blowtorch', x: 2.8, z: -2.0 },
+      { kind: 'chainBulb', x: 0, z: 0, y: 2.75 },
+      { kind: 'cageLight', x: -4.35, z: 2.5, y: 2.2, yaw: Math.PI / 2 },
+    ],
+    sockets: lootSockets([[1.6, -1.0], [-3.6, 0.9]]),
+    hiding: [{ kind: 'cabinet', x: 3.9, z: 2.9, yaw: -Math.PI / 2, propKind: 'locker' }],
+    lights: [
+      { x: 0, y: 2.75, z: -2.6, color: 0xd8e0e8, intensity: 0.6, range: 7, group: 'main', breakable: true },
+      { x: 1.5, y: 2.75, z: 1.5, color: 0xffd9a4, intensity: 0.4, range: 5, group: 'dim', breakable: true },
+    ],
+    weight: 7, minRoom: 22, floor: 'metal', darkChance: 0.25, perf: 4,
+  }),
+};
+
+// A barricaded corridor — the checkpoint everyone kept meaning to staff.
+const roomCheckpoint: RoomTemplate = {
+  id: 'corridor-checkpoint',
+  build: (_rng) => spec('corridor-checkpoint', 'corridor', 4.5, 9, 2.9, {
+    props: [
+      { kind: 'roadBarrier', x: -0.9, z: -0.6, yaw: 0.15 },
+      { kind: 'roadBarrier', x: 0.9, z: 0.5, yaw: -0.1 },
+      { kind: 'chainFence', x: 0, z: 2.2 },
+      { kind: 'searchlight', x: 1.4, z: 3.6, yaw: Math.PI },
+      { kind: 'securityCam', x: -1.9, z: -2.9, y: 2.3, yaw: Math.PI / 2 },
+      { kind: 'megaphone', x: -1.5, z: -3.4 },
+      { kind: 'wetFloor', x: 0.6, z: -2.2 },
+      { kind: 'plasticChair', x: 1.5, z: -3.2, yaw: -0.5 },
+      { kind: 'papers', x: -1.2, z: -1.4 },
+      { kind: 'jerrycanP', x: 1.7, z: 1.4 },
+      { kind: 'fireAlarm', x: -2.1, z: 0.4, y: 1.9, yaw: Math.PI / 2 },
+    ],
+    lights: [
+      { x: 0, y: 2.65, z: 2.2, color: 0xffd9a4, intensity: 0.55, range: 6, group: 'main', breakable: true },
+      { x: 0, y: 2.65, z: -3.0, color: 0xdde4ee, intensity: 0.35, range: 5, group: 'dim', breakable: true },
+    ],
+    weight: 8, minRoom: 15, darkChance: 0.2, perf: 3,
+  }),
+};
+
+// Waiting area — rows of chairs, dead payphones, one flickering clock.
+const roomWaiting: RoomTemplate = {
+  id: 'lobby-waiting',
+  build: (_rng) => spec('lobby-waiting', 'lobby', 9, 7, 3.4, {
+    props: [
+      { kind: 'chair', x: -1.4, z: -0.8, yaw: Math.PI }, { kind: 'plasticChair', x: -0.4, z: -0.8, yaw: Math.PI }, { kind: 'chair', x: 0.6, z: -0.8, yaw: Math.PI },
+      { kind: 'chair', x: -1.4, z: 0.9, yaw: 0 }, { kind: 'plasticChair', x: -0.4, z: 0.9, yaw: 0 }, { kind: 'chair', x: 0.6, z: 0.9, yaw: 0 },
+      { kind: 'payphone', x: -4.35, z: -1.4, y: 0.6, yaw: Math.PI / 2 },
+      { kind: 'payphone', x: -4.35, z: -0.7, y: 0.6, yaw: Math.PI / 2 },
+      { kind: 'wallClock', x: 0, z: 3.4, y: 2.25, yaw: Math.PI },
+      { kind: 'planter', x: 3.9, z: -0.6 }, { kind: 'planter', x: 3.9, z: 0.6 },
+      { kind: 'screenPanels', x: 2.4, z: -2.9 },
+      { kind: 'counter', x: 0.4, z: 3.1, yaw: Math.PI },
+      { kind: 'trolley', x: -3.4, z: 1.8, yaw: 0.4 },
+      { kind: 'wetFloor', x: -2.4, z: 0.3 },
+      { kind: 'bin', x: -4.1, z: -2.9 },
+      { kind: 'register', x: 0.4, z: 3.05, y: 0.95, yaw: Math.PI },
+      { kind: 'papers', x: 0.2, z: 3.0, y: 0.95 },
+      { kind: 'wallSconce', x: -4.35, z: 1.4, y: 2.05, yaw: Math.PI / 2 },
+      ...wallProps(9, 7, _rng, ['painting', 'curtain'], 2),
+    ],
+    sockets: lootSockets([[0.4, 3.1], [-3.4, 1.8]]),
+    weight: 6, minRoom: 18, darkChance: 0.15, perf: 4,
+  }),
+};
+
+// Banquet — a long table still dressed for dinner in the dark.
+const roomBanquet: RoomTemplate = {
+  id: 'gallery-banquet',
+  build: (_rng) => spec('gallery-banquet', 'gallery', 11, 8, 4.4, {
+    props: [
+      { kind: 'diningTable', x: -1.6, z: 0, yaw: Math.PI / 2 }, { kind: 'diningTable', x: 1.6, z: 0, yaw: Math.PI / 2 },
+      { kind: 'diningChair', x: -1.6, z: -1.9 }, { kind: 'diningChair', x: -1.6, z: -0.7 }, { kind: 'diningChair', x: -1.6, z: 0.7 }, { kind: 'diningChair', x: -1.6, z: 1.9 },
+      { kind: 'diningChair', x: 1.6, z: -1.9 }, { kind: 'diningChair', x: 1.6, z: -0.7 }, { kind: 'diningChair', x: 1.6, z: 0.7 }, { kind: 'diningChair', x: 1.6, z: 1.9 },
+      { kind: 'goblets', x: -1.7, z: -0.4, y: 0.8 }, { kind: 'goblets', x: 1.5, z: 0.6, y: 0.8 },
+      { kind: 'wineBottles', x: -1.5, z: 0.5, y: 0.8 }, { kind: 'wineBottles', x: 1.7, z: -0.6, y: 0.8 },
+      { kind: 'candle', x: -1.6, z: 0.1, y: 0.8 }, { kind: 'candle', x: 1.6, z: -0.1, y: 0.8 },
+      { kind: 'pastry', x: -1.5, z: -0.9, y: 0.8 }, { kind: 'fruit', x: 1.5, z: 0.9, y: 0.8 },
+      { kind: 'chandelier', x: -1.6, z: 0, y: 3.6 }, { kind: 'chandelier', x: 1.6, z: 0, y: 3.6 },
+      { kind: 'galleryStatue', x: -5.0, z: 3.3, yaw: Math.PI / 2 }, { kind: 'galleryStatue', x: 5.0, z: 3.3, yaw: -Math.PI / 2 },
+      { kind: 'rug', x: 0, z: 0 },
+      { kind: 'vase', x: -4.6, z: -3.4 }, { kind: 'vase', x: 4.6, z: -3.4 },
+      ...wallProps(11, 8, _rng, ['painting', 'mirror'], 4),
+    ],
+    hiding: [{ kind: 'cabinet', x: -5.0, z: -3.3, yaw: Math.PI / 2, propKind: 'cabinet' }],
+    weight: 4, minRoom: 28, darkChance: 0.4, perf: 5,
+  }),
+};
+
+// Someone lived down here once — stocked, warm-ish, now dusted over.
+const roomBunker: RoomTemplate = {
+  id: 'safe-bunker',
+  build: (_rng) => spec('safe-bunker', 'safe', 6, 5.5, 2.8, {
+    props: [
+      { kind: 'bedOld', x: -1.9, z: 1.3 },
+      { kind: 'generator', x: 2.2, z: -1.9 },
+      { kind: 'rations', x: 0.6, z: 2.2, y: 0.78 }, { kind: 'rations', x: 0.2, z: 2.25, y: 0.78 }, { kind: 'rations', x: 0.4, z: 1.9, y: 0.78 },
+      { kind: 'table', x: 0.4, z: 2.2 },
+      { kind: 'television', x: 0.4, z: 2.15, y: 0.78, yaw: Math.PI },
+      { kind: 'ottoman', x: -0.4, z: -0.6, yaw: 0.4 },
+      { kind: 'medBox', x: -2.55, z: -0.8, y: 1.3, yaw: Math.PI / 2 },
+      { kind: 'lantern', x: -2.5, z: 2.0 },
+      { kind: 'lantern', x: 1.3, z: -0.4, y: 0.78 },
+      { kind: 'plasticBin', x: 2.4, z: 0.8 },
+      { kind: 'thermos', x: 0.9, z: 2.1, y: 0.78 },
+      { kind: 'plasticChair', x: -0.9, z: 1.9, yaw: 0.6 },
+      { kind: 'boombox', x: -2.55, z: -1.9 },
+      { kind: 'rifle', x: 2.5, z: 1.8, yaw: -0.5 },
+      { kind: 'plasticCrate', x: -2.55, z: 0.4 },
+      { kind: 'clock', x: -0.2, z: -2.4 },
+      { kind: 'rug', x: -0.4, z: 0.2 },
+    ],
+    sockets: lootSockets([[2.4, 0.8]]),
+    hiding: [{ kind: 'cabinet', x: -2.55, z: -2.0, yaw: Math.PI / 2, propKind: 'cabinet' }],
+    lights: [
+      { x: 0, y: 2.5, z: 0, color: 0xffd9a4, intensity: 0.55, range: 6, group: 'main', breakable: true },
+    ],
+    weight: 5, minRoom: 40, darkChance: 0, floor: 'carpet',
+  }),
+};
+
 export const MAIN_TEMPLATES: RoomTemplate[] = [
   corridorStraight, corridorWide, corridorL, corridorZig, corridorJunction,
   guestRoom, guestTwin, suiteSplit, bathAnte,
@@ -1719,6 +1925,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomMotelCorridor, roomOfficeBullpen, roomAnomalyTall, roomImpossible, maintServer,
   roomGreenRecords, roomDuel, roomVaulted,
   roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
+  roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];
