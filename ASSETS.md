@@ -33,6 +33,8 @@ Downloaded at 1K-JPG quality; each folder holds `color`, `normalgl`,
 | `textures/carpet-lobby` | Carpet011 | lobby carpets |
 | `textures/brick-painted` | Bricks059 | painted maintenance walls |
 | `textures/plaster-floral` | PaintedPlaster008 | guest walls |
+| `textures/ceiling-office` | OfficeCeiling002 | office-tile ceilings |
+| `textures/carpet-runner` | Carpet003 | corridor runner strips |
 
 ## Models — Poly Haven (https://polyhaven.com), CC0
 

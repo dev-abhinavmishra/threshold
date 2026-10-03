@@ -258,7 +258,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const ceilMat = isUnder
     ? TEX.concreteFloor()
     : (spec.biome === 'corridor' || spec.biome === 'records' || spec.biome === 'maintenance') && ceilRoll < 0.45
-      ? TEX.ceilingAcoustic()
+      ? (ceilRoll < 0.22 ? TEX.ceilingOffice() : TEX.ceilingAcoustic())
       : TEX.ceiling();
   const w = room.width, d = room.depth, h = room.height;
 
@@ -268,6 +268,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   group.add(floor);
   const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
+  // Corridor carpet runner — a worn strip down the length of the passage,
+  // edges bound by thin tack strips, floorboards showing either side.
+  if (!isUnder && spec.biome === 'corridor' && d > w * 1.15 && room.floorMaterial !== 'carpet' && floorRoll < 0.72) {
+    const rw = Math.min(1.3, w * 0.4);
+    const runner = new THREE.Mesh(texBox(rw, 0.022, d * 0.94), TEX.carpetRunner());
+    runner.position.y = 0.011;
+    group.add(runner);
+    const tackMat = MAT.darkOak();
+    for (const sx of [-1, 1]) {
+      const tack = new THREE.Mesh(texBox(0.035, 0.014, d * 0.94), tackMat);
+      tack.position.set(sx * (rw / 2 + 0.028), 0.007, 0);
+      group.add(tack);
+    }
+  }
   // Suspended drop ceiling decision — hoisted: it also gates coffers below.
   const suspended = !isUnder && spec.biome != 'maintenance' && h <= 3.6;
   const fixtureY = suspended ? h - 0.22 : h - 0.3;
