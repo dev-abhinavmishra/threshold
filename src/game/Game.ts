@@ -188,7 +188,10 @@ export class Game {
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
   private dread = 0;
   /** Keyhole peek: camera pushed through a locked door for a look beyond. */
-  private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number } | null = null;
+  private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number; doorKey: string; eyeDone: boolean } | null = null;
+  private peekEyeDecisions = new Map<string, boolean>();
+  private peekEyeUsed = new Set<string>();
+  private peekEye: THREE.Group | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
 
@@ -686,7 +689,7 @@ export class Game {
     dir.y = 0;
     const dl = Math.hypot(dir.x, dir.z) || 1;
     dir.x /= dl; dir.z /= dl;
-    this.peek = { eye, dir, t: 0, baseFov: this.camera.fov };
+    this.peek = { eye, dir, t: 0, baseFov: this.camera.fov, doorKey: it.id, eyeDone: false };
     p.frozen = true;
     this.camera.fov = this.camera.fov * 0.8;
     this.camera.updateProjectionMatrix();
@@ -712,6 +715,33 @@ export class Game {
       pk.eye.y - 0.15,
       pk.eye.z + pk.dir.z * depth,
     );
+    // once through the hole, the far side may already be occupied — the eye
+    // is seeded per door and only ever answers a peek once
+    if (pk.t >= 0.9 && !pk.eyeDone) {
+      pk.eyeDone = true;
+      if (!this.peekEyeDecisions.has(pk.doorKey)) {
+        const h = [...pk.doorKey].reduce((s, c) => s + c.charCodeAt(0), 0);
+        this.peekEyeDecisions.set(pk.doorKey, this.streams.roomStream('scare', this.currentRoom * 677 + h).bool(0.24));
+      }
+      if (this.peekEyeDecisions.get(pk.doorKey) && !this.peekEyeUsed.has(pk.doorKey)) {
+        this.peekEyeUsed.add(pk.doorKey);
+        const at = { x: pk.eye.x + pk.dir.x * 0.66, y: pk.eye.y - 0.06, z: pk.eye.z + pk.dir.z * 0.66 };
+        const g = new THREE.Group();
+        const white = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8),
+          new THREE.MeshStandardMaterial({ color: 0xd8d4c8, emissive: 0x8a8478, emissiveIntensity: 0.5 }));
+        const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.014, 8, 8),
+          new THREE.MeshStandardMaterial({ color: 0x0a0a0a }));
+        pupil.position.set(0, 0, -0.026);
+        g.add(white, pupil);
+        g.position.set(at.x, at.y, at.z);
+        g.lookAt(pk.eye.x, pk.eye.y, pk.eye.z);
+        this.scene.add(g);
+        this.peekEye = g;
+        this.audio.play('whisper-voice', at, '[an eye, close — it sees you seeing it]', 'danger');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.3, category: 'entity-cue', caption: '' });
+        this.player.panic = Math.min(1, this.player.panic + 0.14);
+      }
+    }
   }
 
   private endPeek(): void {
@@ -720,6 +750,10 @@ export class Game {
     this.camera.fov = this.peek.baseFov;
     this.camera.updateProjectionMatrix();
     this.peek = null;
+    if (this.peekEye) {
+      this.scene.remove(this.peekEye);
+      this.peekEye = null;
+    }
   }
 
   private rebuildInteractables(): void {

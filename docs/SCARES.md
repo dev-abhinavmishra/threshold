@@ -42,6 +42,7 @@ ported to the subfloor.
 | Empty the drum | +631 | when a run cycle ends | the drum pays out — marginalia (55%), or a wet clank that emits a 0.7 lure (30%), or nothing | come back for it — but standing by the ding has an audience |
 | The luggage arrives | +563 (0.16) | seeded rooms, ~6s+ after entry | a suitcase appears — only ever while its spot is unobserved; a settling thud marks it if you're close | it was not there; someone carried it in while you looked elsewhere — check it, then keep moving |
 | Printed page | — (interaction) | office printers, once each | prints a route report — next lock (Meridian) or doors-to-exit (Underscript); a jam (28%) grinds loud instead | information for noise — the whir is heard; a jam is heard further |
+| The keyhole answers | +677 (0.24/door) | peeks through locked doors | the far side is occupied: an eye at the hole, a close whisper, a panic tick — once per door | peeking is information with a price; the house watches back |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
