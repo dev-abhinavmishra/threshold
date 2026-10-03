@@ -1224,6 +1224,10 @@ export class Game {
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
     this.clearRats();
+    // scare state is space-scoped — armed beats die at the threshold
+    this.doorTry = null;
+    this.breathingRoom = -1;
+    this.pianoRoom = -1;
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
@@ -1241,6 +1245,9 @@ export class Game {
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
     this.clearRats();
+    this.doorTry = null;
+    this.breathingRoom = -1;
+    this.pianoRoom = -1;
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -1886,10 +1893,10 @@ export class Game {
   /** Door-rattle scare — something on the other side tries the handle. */
   private doorTry: { id: string; pos: Vec3; at: number; until: number; rung: boolean } | null = null;
 
-  private maybeDoorTry(): void {
+  private maybeDoorTry(under = false): void {
     const room = this.activeRooms()[this.currentRoom];
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
-    const scare = this.streams.roomStream('scare', this.currentRoom + 933);
+    const scare = this.streams.roomStream('scare', this.currentRoom + 933 + (under ? 977 : 0));
     if (!scare.bool(0.2)) return;
     const closed = room.doors.filter((d) => !d.opening && d.openT < 0.1 && !d.falseDoor);
     if (!closed.length) return;
@@ -1913,11 +1920,11 @@ export class Game {
   private readonly tmpV3 = new THREE.Vector3();
   private readonly telegraphMul = new Map<number, number>();
 
-  private maybeBreathing(): void {
+  private maybeBreathing(under = false): void {
     const room = this.activeRooms()[this.currentRoom];
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
     if (this.currentRoom < 6) return;
-    const scare = this.streams.roomStream('scare', this.currentRoom + 811);
+    const scare = this.streams.roomStream('scare', this.currentRoom + 811 + (under ? 977 : 0));
     if (!scare.bool(0.11)) return;
     this.breathingRoom = this.currentRoom;
     this.cue('room-breathe', null, scare.bool(0.4) ? '[the room breathes]' : '', 'warn');
@@ -2418,6 +2425,8 @@ export class Game {
         this.visitedRooms.add(-this.currentRoom - 1);
         if (revisit) this.maybeShiftDoor(this.currentRoom);
         this.maybeFarSound();
+        this.maybeBreathing(true);
+        this.maybeDoorTry(true);
       }
     }
     // death echo: the building remembers where it took you
