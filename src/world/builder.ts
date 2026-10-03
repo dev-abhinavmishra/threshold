@@ -869,6 +869,53 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (spot) wallDecal(spot.wall, brickPatch(rng), 1.3, 1.1, spot.along, 1.4 + rng.float() * 0.5);
     }
 
+    // Rat holes — gnawed openings chewed into the baseboard, occasionally
+    // with a smear of droppings. Corridors, pantries, service wings.
+    const ratP = ({ corridor: 0.3, records: 0.25, maintenance: 0.35, unlit: 0.3, underscript: 0.35, guest: 0.1 } as Record<string, number>)[spec.biome] ?? (isUnder ? 0.35 : 0);
+    if (rng.float() < ratP) {
+      const spot = pickWallSpot(0.5);
+      if (spot) {
+        const holeMat = MAT.darkVoid();
+        const hole = new THREE.Mesh(new THREE.CircleGeometry(0.085, 10, 0, Math.PI), holeMat);
+        if (spot.wall === 'e') { hole.rotation.y = -Math.PI / 2; hole.position.set(w / 2 - 0.126, 0.02, spot.along); }
+        else if (spot.wall === 'w') { hole.rotation.y = Math.PI / 2; hole.position.set(-w / 2 + 0.126, 0.02, spot.along); }
+        else if (spot.wall === 'n') { hole.rotation.y = Math.PI; hole.position.set(spot.along, 0.02, d / 2 - 0.126); }
+        else { hole.position.set(spot.along, 0.02, -d / 2 + 0.126); }
+        group.add(hole);
+        if (rng.bool(0.4)) {
+          const droppings = decalQuad(floorStain(rng), 0.3, 0.2);
+          droppings.rotation.x = -Math.PI / 2;
+          const inward = spot.wall === 'e' ? { x: hole.position.x - 0.25, z: hole.position.z }
+            : spot.wall === 'w' ? { x: hole.position.x + 0.25, z: hole.position.z }
+            : spot.wall === 'n' ? { x: hole.position.x, z: hole.position.z - 0.25 }
+            : { x: hole.position.x, z: hole.position.z + 0.25 };
+          droppings.position.set(inward.x, 0.013, inward.z);
+          group.add(droppings);
+        }
+      }
+    }
+
+    // Sprinkler run — a pipe hugging the ceiling edge with pendant heads
+    // every few meters. Service + institutional spaces.
+    const sprinkP = ({ maintenance: 0.55, corridor: 0.4, records: 0.35, underscript: 0.5 } as Record<string, number>)[spec.biome] ?? (isUnder ? 0.5 : 0);
+    if (!suspended && h >= 2.7 && rng.float() < sprinkP) {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, d * 0.9, 8), MAT.steelDark());
+      pipe.rotation.x = Math.PI / 2;
+      const px = (rng.float() - 0.5) * (w * 0.5);
+      pipe.position.set(px, h - 0.12, 0);
+      group.add(pipe);
+      const nH = Math.max(1, Math.floor(d / 3));
+      for (let i = 0; i < nH; i++) {
+        const hz = -d * 0.45 + (i + 0.5) * ((d * 0.9) / nH);
+        const head = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.03, 0.06, 6), MAT.brass());
+        head.position.set(px, h - 0.17, hz);
+        group.add(head);
+        const def = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.008, 8), MAT.brass());
+        def.position.set(px, h - 0.205, hz);
+        group.add(def);
+      }
+    }
+
     // Panel molding — picture-frame trim rectangles on formal-room walls
     // between the chair rail and picture rail. Four thin strips per frame.
     const moldingP = ({ gallery: 0.8, lobby: 0.7, milestone: 0.6, guest: 0.35 } as Record<string, number>)[spec.biome] ?? 0;
