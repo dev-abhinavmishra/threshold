@@ -47,6 +47,8 @@ export class CorridorRunner extends Entity {
   private warnTotal = 0;
   private rng!: Rng;
   private brokeLights = new Set<number>();
+  private nearMissSpots = new Set<object>();
+  private nearMissUntil = 0;
   /** Rebound variant: sweep reverses once for a faster surprise pass. */
   private rebounded = false;
   private reboundBoost = 1;
@@ -214,7 +216,7 @@ export class CorridorRunner extends Entity {
         c.cue(this.id + '-return', this.path[0], '[it turns back — hold]', { severity: 'danger' });
       }
       const speed = this.tuning.speed * this.reboundBoost * ({ learning: 0.9, standard: 1, hard: 1.15, qa: 1 })[c.difficulty];
-      this.traveled += speed * dt;
+      this.traveled += speed * dt * (c.now < this.nearMissUntil ? 0.35 : 1);
       const f = followPath(this.path, this.traveled);
       this.rig?.update(dt);
       if (this.mesh) {
@@ -229,6 +231,13 @@ export class CorridorRunner extends Entity {
       // Kill check — the runner must be near the player's room segment.
       const p = c.player;
       const d = v3dist(f.pos, p.pos);
+      // Near-miss: passing the hide slows the thing and creaks the spot —
+      // once per spot, so a re-hide can still be grazed.
+      if (p.hiddenSpot && d < 5.5 && !this.nearMissSpots.has(p.hiddenSpot)) {
+        this.nearMissSpots.add(p.hiddenSpot);
+        this.nearMissUntil = c.now + 1.2;
+        c.cue('hide-creak', p.pos, '[it slows — breathing held]', { severity: 'warn' });
+      }
       if (!this.hasKilled && d < this.tuning.killRange + 8) {
         const verdict = playerExposed(c, f.pos);
         if (verdict === 'kill' && d < this.tuning.seeRange) {
