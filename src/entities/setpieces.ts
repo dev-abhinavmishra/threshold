@@ -212,6 +212,7 @@ export class Orrery extends Entity {
  * zones and reach the final door. */
 export class Editor extends Entity {
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private patrolT = 0;
   private deletionZones: { x: number; z: number; r: number }[] = [];
@@ -230,12 +231,20 @@ export class Editor extends Entity {
     this.roomD = room.depth;
     this.pos = v3(this.roomO.x, 0, this.roomO.z - this.roomD * 0.3);
     const g = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 2.4, 6), MAT.ink());
-    body.position.y = 1.2;
+    const rig = riggedFigure('blueDemon');
+    if (rig) {
+      rig.play('move', 0);
+      this.rig = rig;
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 2.4, 6), MAT.ink());
+      body.position.y = 1.2;
+      g.add(body);
+    }
     const pen = new THREE.Mesh(new THREE.ConeGeometry(0.12, 1.2, 4), MAT.redLamp());
     pen.position.set(0.5, 1.6, 0);
     pen.rotation.z = -0.4;
-    g.add(body, pen);
+    g.add(pen);
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('editor-enter', this.pos, '[the Editor audits this floor — mind the deletions]', { severity: 'danger' });
@@ -259,6 +268,7 @@ export class Editor extends Entity {
     const c = this.ctx;
     const p = c.player;
     this.patrolT += dt;
+    this.rig?.update(dt);
     // slow orbit patrol around center
     const a = this.patrolT * this.tuning.speed * 0.1;
     this.pos.x = this.roomO.x + Math.cos(a) * this.roomW * 0.28;

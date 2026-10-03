@@ -575,3 +575,11 @@ has not finished loading falls back to its procedural builder.
 | `figures/quaternius_ghost.glb` | Quaternius "Ghost" (poly.pizza/m/Iip30bDHmu, CC0) | Flying_Idle, Fast_Flying, Headbutt | Whisper, Margin (ink-tinted) |
 | `figures/quaternius_demon.glb` | Quaternius "Demon" (poly.pizza/m/Mo2ky6vkf8, CC0) | Flying_Idle, Fast_Flying | EchoSkin, Pursuer core |
 | `figures/quaternius_skeleton.glb` | Quaternius "Skeleton" (poly.pizza/m/1XZD9GK6Kj, CC0) | Run, Idle | CorridorRunner (Sweep/Reprise/Returner) |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 76
+
+| Asset | Source | Animations used | Entity |
+| --- | --- | --- | --- |
+| `figures/quaternius_slime.glb` | Quaternius "Pink Slime" (poly.pizza/m/AyP8sQmDLh, CC0) | Idle, Walk, Bite_Front | Inkling (ink-tinted cluster) |
+| `figures/quaternius_wizard.glb` | Quaternius "Wizard" (poly.pizza/m/o87Upt5uHX, CC0) | Idle, Walk | Curator body |
+| `figures/quaternius_bluedemon.glb` | Quaternius "Blue Demon" (poly.pizza/m/S7jYW6Amye, CC0) | Flying_Idle, Fast_Flying | Editor |

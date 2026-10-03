@@ -9,6 +9,7 @@ import { Entity } from './base';
 import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import type { SoundEvent } from '../engine/events';
 import type { RoomInstance } from '../game/types';
 
@@ -22,6 +23,7 @@ const SPEED_BY_STATE: Record<CuratorState, number> = {
 export class Curator extends Entity {
   private cState: CuratorState = 'patrol';
   private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private target = v3();
   private pathPts: Vec3[] = [];
@@ -69,13 +71,19 @@ export class Curator extends Entity {
   private buildBody(): void {
     const g = new THREE.Group();
     // Tall stretched-fabric figure with measuring arms and a blank face.
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 2.6, 8), MAT.creatureFabric());
-    torso.position.y = 1.5;
-    g.add(torso);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), MAT.creatureSkin());
-    head.position.y = 2.95;
-    head.scale.y = 1.5;
-    g.add(head);
+    const rig = riggedFigure('wizard');
+    if (rig) {
+      this.rig = rig;
+      g.add(rig.group);
+    } else {
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.5, 2.6, 8), MAT.creatureFabric());
+      torso.position.y = 1.5;
+      g.add(torso);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), MAT.creatureSkin());
+      head.position.y = 2.95;
+      head.scale.y = 1.5;
+      g.add(head);
+    }
     // catalog-rod arms
     for (const s of [-1, 1]) {
       const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 1.6, 6), MAT.steel());
@@ -247,6 +255,10 @@ export class Curator extends Entity {
       this.pos.z = Math.max(r.origin.z - r.depth / 2 + 0.8, Math.min(r.origin.z + r.depth / 2 - 0.8, this.pos.z));
     }
 
+    if (this.rig) {
+      this.rig.update(dt);
+      this.rig.play(this.pathI < this.pathPts.length && speed > 0 ? 'move' : 'idle');
+    }
     if (this.mesh) {
       this.mesh.position.set(this.pos.x, 0, this.pos.z);
       if (this.pathI < this.pathPts.length) {

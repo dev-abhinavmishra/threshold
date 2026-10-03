@@ -43,6 +43,21 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_skeleton.glb', height: 2.2, tint: 0.6,
     clips: { idle: ['idle'], move: ['run', 'walk'], attack: ['punch', 'sword'] },
   },
+  /** Tar-dark slime — the Inkling's mass, agitated by held light. */
+  slime: {
+    file: 'quaternius_slime.glb', height: 0.6, tint: 0.08, emissive: 0.05,
+    clips: { idle: ['idle'], move: ['walk', 'jump'], attack: ['bite_front', 'jump'] },
+  },
+  /** Robed archivist — the Curator's body under its measuring rods. */
+  wizard: {
+    file: 'quaternius_wizard.glb', height: 2.8, tint: 0.35, emissive: 0.04,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'punch', 'jump'] },
+  },
+  /** Deep-blue winged thing — the Editor patrolling the Underscript. */
+  blueDemon: {
+    file: 'quaternius_bluedemon.glb', height: 2.6, tint: 0.4, emissive: 0.06,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
 };
 
 interface RigSource { scene: THREE.Group; animations: THREE.AnimationClip[] }

@@ -153,6 +153,7 @@ export class Whisper extends Entity {
 /** Darkness threat: a corner cluster enraged by continuous light at close range. */
 export class Inkling extends Entity {
   private mesh: THREE.Group | null = null;
+  private rigs: RiggedFigure[] = [];
   private pos = v3();
   private agitation = 0;
 
@@ -167,10 +168,20 @@ export class Inkling extends Entity {
       room.origin.z + rng.range(-room.depth * 0.4, room.depth * 0.4),
     );
     const g = new THREE.Group();
-    for (let i = 0; i < 5; i++) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(0.14 + rng.float() * 0.1, 6, 6), MAT.shadowFigure());
-      s.position.set((rng.float() - 0.5) * 0.6, 0.3 + rng.float() * 0.5, (rng.float() - 0.5) * 0.6);
-      g.add(s);
+    // Tar-dark slimes pooled in the corner — or bare shadow-blobs before the model lands.
+    for (let i = 0; i < 3; i++) {
+      const rig = riggedFigure('slime');
+      if (rig) {
+        rig.group.position.set((rng.float() - 0.5) * 0.9, 0, (rng.float() - 0.5) * 0.9);
+        rig.group.rotation.y = rng.float() * Math.PI * 2;
+        rig.play('idle');
+        this.rigs.push(rig);
+        g.add(rig.group);
+      } else {
+        const s = new THREE.Mesh(new THREE.SphereGeometry(0.14 + rng.float() * 0.1, 6, 6), MAT.shadowFigure());
+        s.position.set((rng.float() - 0.5) * 0.6, 0.3 + rng.float() * 0.5, (rng.float() - 0.5) * 0.6);
+        g.add(s);
+      }
     }
     this.mesh = g;
     g.position.copy(this.pos as unknown as THREE.Vector3);
@@ -186,9 +197,11 @@ export class Inkling extends Entity {
     const c = this.ctx;
     const d = v3dist(this.pos, c.player.pos);
     if (d > 12) { this.done(); return; }
+    for (const r of this.rigs) r.update(dt);
     const lit = this.lightOnIt > 0.4 && d < this.tuning.seeRange;
     if (lit) {
       this.agitation += dt;
+      for (const r of this.rigs) r.play('attack');
       if (this.agitation > 0.6) c.cue('inkling-hiss', this.pos, '[it recoils and presses closer]', { severity: 'warn' });
       if (this.agitation > 2.2) {
         c.damagePlayer(this.tuning.damage, 'inkling', 'Inkling hates held light. Angle the beam away or go dark.');
