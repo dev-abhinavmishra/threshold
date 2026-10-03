@@ -48,6 +48,7 @@ const CUES: Record<string, CueSpec> = {
   'behemoth-thud': { freq: 70, dur: 0.3, type: 'square', gain: 0.24, sweep: 45, noise: true },
   'inkling-settle': { freq: 300, dur: 0.5, type: 'triangle', gain: 0.1 },
   'inkling-hiss': { freq: 400, dur: 0.4, type: 'sawtooth', gain: 0.16, sweep: 800, noise: true },
+  'tv-static': { freq: 1600, dur: 1.8, type: 'sawtooth', gain: 0.07, sweep: -900, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },
   'echoskin-steps': { freq: 190, dur: 0.6, type: 'triangle', gain: 0.12 },

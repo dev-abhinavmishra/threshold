@@ -762,17 +762,26 @@ export class Game {
       const pr = this.activeRooms()[this.currentRoom];
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
-        let n = 0;
+        const ord: Record<string, number> = {};
         for (const p of pr.spec.props) {
-          if (p.kind !== 'pianoUpright') continue;
+          const n = (ord[p.kind] ?? 0);
+          ord[p.kind] = n + 1;
+          const wx = pr.origin.x + p.x * c + p.z * s;
+          const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
-          n += 1;
-          if (this.playedPianos.has(key)) continue;
-          this.interaction.add({
-            kind: 'piano', id: `piano-${key}`,
-            pos: { x: pr.origin.x + p.x * c + p.z * s, y: 1, z: pr.origin.z - p.x * s + p.z * c },
-            prompt: 'Play the piano', holdTime: 0.9, enabled: true, priority: 2,
-          });
+          if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
+            this.interaction.add({
+              kind: 'piano', id: `piano-${key}`,
+              pos: { x: wx, y: 1, z: wz },
+              prompt: 'Play the piano', holdTime: 0.9, enabled: true, priority: 2,
+            });
+          } else if (p.kind === 'television' && !this.litTVs.has(key)) {
+            this.interaction.add({
+              kind: 'tv', id: `tv-${key}`,
+              pos: { x: wx, y: 1, z: wz },
+              prompt: 'Tune the static', holdTime: 0.8, enabled: true, priority: 2,
+            });
+          }
         }
       }
     }
@@ -963,6 +972,18 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'tv': {
+        it.enabled = false;
+        const key = it.id.replace(/^tv-/, '');
+        this.litTVs.add(key);
+        // the flicker resolves to a steady dead channel — a fixed light in a
+        // dark room, but the hiss carries
+        this.tuneTVAt(this.currentRoom, Number(key.split(':')[2] ?? 0));
+        const at = { x: it.pos.x, y: 1.2, z: it.pos.z };
+        this.audio.play('tv-static', at, '[a station that was never broadcast]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.7, category: 'machine', caption: '[tv static]' });
         return;
       }
       case 'piano': {
@@ -1829,6 +1850,7 @@ export class Game {
       this.ensureWallWords(i, built);
       this.ensureTenant(i, built);
       this.ensureCoffin(i, built);
+      this.ensureTV(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -1875,6 +1897,10 @@ export class Game {
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
           const n = Math.sin(t * 13.7 + s) * Math.sin(t * 3.1 + s * 2.3);
           mat.emissiveIntensity = n > 0.55 ? 0.1 : 0.85 + Math.sin(t * 29 + s) * 0.12;
+        } else if (kind === 'tv-live') {
+          // tuned channel — steady bright, only a thin shimmer
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          mat.emissiveIntensity = 1.05 + Math.sin(t * 7 + s) * 0.05 + Math.sin(t * 23 + s * 5) * 0.04;
         } else if (kind === 'spin') {
           o.rotation.y += dt * ((o.userData.animSpeed as number) ?? 2.2);
         } else if (kind === 'sway') {
@@ -2241,6 +2267,27 @@ export class Game {
     if (t) this.hideTenant(t);
   }
 
+  private ensureTV(i: number, built: { group: THREE.Group }): void {
+    let n = -1;
+    built.group.traverse((o) => {
+      if (o.name !== `tv-${i}`) return;
+      n += 1;
+      if (this.litTVs.has(`${this.space}:${i}:${n}`)) {
+        o.traverse((x) => { if (x.userData.anim === 'screen') x.userData.anim = 'tv-live'; });
+      }
+    });
+  }
+
+  /** Light the n-th television group in room i (prop order). */
+  private tuneTVAt(i: number, n: number): void {
+    let seen = -1;
+    this.worldGroup.traverse((o) => {
+      if (o.name !== `tv-${i}`) return;
+      seen += 1;
+      if (seen === n) o.traverse((x) => { if (x.userData.anim === 'screen') x.userData.anim = 'tv-live'; });
+    });
+  }
+
   private ensureCoffin(_i: number, built: { group: THREE.Group }): void {
     if (!this.coffinOpened) return;
     const g = built.group.getObjectByName(`coffin-${_i}`);
@@ -2260,6 +2307,7 @@ export class Game {
   private occupantFired = false;
   private coffinOpened = false;
   private playedPianos = new Set<string>();
+  private litTVs = new Set<string>();
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
   private lampFade = 1;
