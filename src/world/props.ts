@@ -455,6 +455,51 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return single(g, 1.1, 0.7, 0.6);
   },
+  // Gilt-framed portrait whose painted head slowly tracks the player — but
+  // only while they're not looking (weeping-angel 'watch', no creep).
+  hauntedPortrait: (_s, rng) => {
+    const g = new THREE.Group();
+    const fw = 0.72 + rng.float() * 0.3, fh = 0.95 + rng.float() * 0.35;
+    const fm = TEX.woodCarved();
+    g.add(mesh(box(fw, 0.1, 0.06), fm, 0, fh / 2, 0));
+    g.add(mesh(box(fw, 0.1, 0.06), fm, 0, -fh / 2, 0));
+    g.add(mesh(box(0.1, fh, 0.06), fm, -fw / 2, 0, 0));
+    g.add(mesh(box(0.1, fh, 0.06), fm, fw / 2, 0, 0));
+    g.add(mesh(box(fw - 0.1, 0.028, 0.05), MAT.brass(), 0, fh / 2 - 0.065, 0.012));
+    g.add(mesh(box(fw - 0.1, 0.028, 0.05), MAT.brass(), 0, -fh / 2 + 0.065, 0.012));
+    g.add(mesh(box(0.028, fh - 0.1, 0.05), MAT.brass(), -fw / 2 + 0.065, 0, 0.012));
+    g.add(mesh(box(0.028, fh - 0.1, 0.05), MAT.brass(), fw / 2 - 0.065, 0, 0.012));
+    g.add(mesh(box(fw - 0.16, fh - 0.16, 0.02), MAT.creatureFabric(), 0, 0, 0.005));
+    // painted bust — flattened geometry reads as oil-on-canvas at distance
+    const bust = new THREE.Group();
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), MAT.creatureSkin());
+    head.scale.set(0.85, 1.1, 0.45);
+    head.position.y = fh * 0.18;
+    bust.add(head);
+    const shoulders = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.19, 0.24, 8), MAT.figureCloth());
+    shoulders.scale.z = 0.5;
+    shoulders.position.y = -fh * 0.06;
+    bust.add(shoulders);
+    if (rng.bool(0.3)) {
+      for (const ex of [-0.045, 0.045]) {
+        const e = new THREE.Mesh(new THREE.SphereGeometry(0.011, 6, 5), MAT.eyeGlow());
+        e.position.set(ex, fh * 0.2, 0.055);
+        bust.add(e);
+      }
+    } else {
+      for (const ex of [-0.045, 0.045]) {
+        const e = new THREE.Mesh(new THREE.SphereGeometry(0.011, 6, 5), MAT.ink());
+        e.position.set(ex, fh * 0.2, 0.055);
+        bust.add(e);
+      }
+    }
+    bust.position.z = 0.03;
+    bust.userData.anim = 'watch';
+    bust.userData.animSeed = rng.float() * 10;
+    bust.userData.creepMax = 0;
+    g.add(bust);
+    return { group: g, colliders: [] };
+  },
   // Half-seen silhouette at the far end of a corridor: a shadow figure that
   // is only there while you're not looking — glimpse it and it's gone.
   hallFigure: (_s, rng) => {

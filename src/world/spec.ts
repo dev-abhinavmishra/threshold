@@ -53,6 +53,7 @@ export type PropKind =
   | 'watcherFigure'
   | 'dollCluster'
   | 'hallFigure'
+  | 'hauntedPortrait'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'
