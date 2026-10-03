@@ -97,6 +97,10 @@ export class Game {
   private relicRoom = -1;
   private relicSeen = true;
   private relicHome: THREE.Vector3 | null = null;
+  private mirrorFig: THREE.Object3D | null = null;
+  private mirrorFigRoom = -1;
+  private mirrorSeenT = 0;
+  private mirrorLostT = 0;
   private nextBreath = 0;
   private hemi: THREE.HemisphereLight | null = null;
   private lightning = 0;
@@ -1485,6 +1489,77 @@ export class Game {
     if (this.relic.userData.figureParts) tickFigure(this.relic, this.clock.time);
   }
 
+  // Mirror figure — while you stare into a mirror it stands just off your
+  // shoulder. Turn to look and it's gone. One arm per room, seeded.
+  private updateMirrorFigure(dt: number): void {
+    const room = this.activeRooms()[this.currentRoom];
+    const spec = room?.spec;
+    if (this.mirrorFig && (!room || this.mirrorFigRoom !== this.currentRoom)) {
+      this.entityGroup.remove(this.mirrorFig);
+      this.mirrorFig = null;
+      this.mirrorSeenT = 0;
+    }
+    const mirror = spec?.props.find((p) => p.kind === 'mirror');
+    if (!room || !spec || !mirror || this.currentRoom < 8) { this.mirrorLostT = 0; if (!this.mirrorFig) return; }
+    const scare = this.streams.roomStream('scare', this.currentRoom + 313);
+    if (!this.mirrorFig) {
+      if (!mirror || !scare.bool(0.55)) return;
+      // facing the mirror, near it — that's the trigger
+      const mco = Math.cos(room.yaw), msi = Math.sin(room.yaw);
+      const mx = room.origin.x + mirror.x * mco + mirror.z * msi;
+      const mz = room.origin.z - mirror.x * msi + mirror.z * mco;
+      const ddx = mx - this.player.pos.x, ddz = mz - this.player.pos.z;
+      const md = Math.hypot(ddx, ddz);
+      if (md > 6) return;
+      const cp = Math.cos(this.player.pitch);
+      const fx = Math.sin(this.player.yaw) * cp, fz = Math.cos(this.player.yaw) * cp;
+      if ((fx * ddx + fz * ddz) / (md || 1) < 0.78) return;
+      // spawn just off the player's shoulder
+      const rx = fz, rz = -fx;
+      const fig = tallFigure({ height: 2.15, hood: true, eyes: 'white' });
+      fig.position.set(
+        this.player.pos.x - fx * 1.7 + rx * 0.85,
+        room.origin.y,
+        this.player.pos.z - fz * 1.7 + rz * 0.85,
+      );
+      fig.rotation.y = Math.atan2(this.player.pos.x - fig.position.x, this.player.pos.z - fig.position.z);
+      this.entityGroup.add(fig);
+      this.mirrorFig = fig;
+      this.mirrorFigRoom = this.currentRoom;
+      this.mirrorSeenT = 0;
+      this.audio.play('breath', { x: fig.position.x, y: fig.position.y + 1.6, z: fig.position.z }, '[a breath, behind you]');
+      return;
+    }
+    // player turned to face it — give them a glimpse, then it is gone
+    const fig = this.mirrorFig;
+    const dx = fig.position.x - this.player.pos.x, dz = fig.position.z - this.player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const cp2 = Math.cos(this.player.pitch);
+    const fx2 = Math.sin(this.player.yaw) * cp2, fz2 = Math.cos(this.player.yaw) * cp2;
+    const facing = dist > 0.001 ? (fx2 * dx + fz2 * dz) / dist : 0;
+    if (facing > 0.5 && dist < 12) {
+      this.mirrorSeenT += dt;
+      if (this.mirrorSeenT > 0.4) {
+        this.entityGroup.remove(fig);
+        this.mirrorFig = null;
+        this.cue('amb-settle', { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z }, '[nothing there]', 'warn');
+      }
+    } else {
+      this.mirrorSeenT = Math.max(0, this.mirrorSeenT - dt * 0.5);
+      // if the mirror gaze broke entirely, quietly stand down
+      if (mirror) {
+        const mco = Math.cos(room!.yaw), msi = Math.sin(room!.yaw);
+        const mx = room!.origin.x + mirror.x * mco + mirror.z * msi;
+        const mz = room!.origin.z - mirror.x * msi + mirror.z * mco;
+        const ddx = mx - this.player.pos.x, ddz = mz - this.player.pos.z;
+        const md = Math.hypot(ddx, ddz);
+        this.mirrorLostT = (fx2 * ddx + fz2 * ddz) / (md || 1) < 0.55 ? this.mirrorLostT + dt : 0;
+        if (this.mirrorLostT > 2.5) { this.entityGroup.remove(fig); this.mirrorFig = null; this.mirrorLostT = 0; }
+      }
+    }
+    if (this.mirrorFig?.userData.figureParts) tickFigure(this.mirrorFig, this.clock.time);
+  }
+
   private updateRats(dt: number): void {
     for (const r of [...this.rats]) {
       r.t += dt;
@@ -1762,6 +1837,7 @@ export class Game {
     this.updateMaelstrom(dt);
     this.updateRats(dt);
     this.updateRelic(dt);
+    this.updateMirrorFigure(dt);
     this.updateMoths(dt);
 
     // engine win already handled via milestone → victory()
