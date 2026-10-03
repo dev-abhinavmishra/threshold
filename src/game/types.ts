@@ -68,6 +68,7 @@ export type ItemId =
   | 'wardSeal'
   | 'palimpsest'
   | 'doorKey'
+  | 'windAlarm'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 

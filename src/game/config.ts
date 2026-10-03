@@ -234,9 +234,10 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   wardSeal: { name: 'Ward Seal', desc: 'A paper band that refuses one passing thing. Once.', maxCharges: 1, slotItem: true },
   palimpsest: { name: 'Palimpsest', desc: 'The overwritten page. One true line shows through.', maxCharges: 1, slotItem: true },
   doorKey: { name: 'Brass Key', desc: 'Numbered for a door in this wing.', maxCharges: 1, slotItem: true },
+  windAlarm: { name: 'Wind-up Alarm', desc: 'Wind it, set it down, walk away. It rings where you are not.', maxCharges: 1, slotItem: true },
 };
 
 export const SHOP_PRICES: Record<string, number> = {
   handLamp: 45, sparkFlash: 60, tonic: 30, bandage: 25,
-  latchpick: 50, feltWrap: 40, chalkSpool: 20, wardSeal: 90,
+  latchpick: 50, feltWrap: 40, chalkSpool: 20, wardSeal: 90, windAlarm: 55,
 };

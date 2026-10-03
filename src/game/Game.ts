@@ -316,6 +316,8 @@ export class Game {
     this.streams = new SeedStreams(seedText);
     this.entities.forEach((e) => e.dispose());
     this.entities = [];
+    for (const l of this.lures) this.entityGroup.remove(l.mesh);
+    this.lures = [];
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
@@ -439,6 +441,7 @@ export class Game {
       { id: 'sparkFlash', price: 60 },
       { id: 'bandage', price: 25 },
       { id: 'latchpick', price: 50 },
+      { id: 'windAlarm', price: 55 },
       { id: 'wardSeal', price: 90 },
     ];
     let slot = 0;
@@ -926,6 +929,22 @@ export class Game {
           this.cue('heal', null, '[bandaged]');
         }
         return;
+      case 'windAlarm': {
+        item.count--;
+        // Plant a ticking lure ~1.2m ahead on the floor. It ticks for 14s
+        // then rings once — sound-hunters go to it, not to you.
+        const fwd = v3();
+        this.player.lookDir(fwd);
+        const pos = v3(this.player.pos.x + fwd.x * 1.2, 0, this.player.pos.z + fwd.z * 1.2);
+        pos.y = (this.activeRooms()[this.currentRoom]?.origin.y ?? 0) + 0.12;
+        const mesh = modelInstance('wallClock', 0.6) ?? new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), MAT.brass());
+        mesh.position.copy(pos as unknown as THREE.Vector3);
+        this.entityGroup.add(mesh);
+        this.lures.push({ pos, mesh, until: this.clock.time + 14, nextTick: this.clock.time + 0.8, rang: false });
+        this.cue('alarm-tick', pos, '[the alarm starts to tick]', 'info');
+        this.sound.emit({ x: pos.x, y: pos.y, z: pos.z, intensity: 0.5, category: 'item', caption: '[wind-up key]' });
+        return;
+      }
       case 'feltWrap':
         item.count--;
         this.player.noiseMul = 0.4;
@@ -1619,13 +1638,14 @@ export class Game {
 
   private readonly visitedRooms = new Set<number>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
+  private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
 
   /** Revisit scare: a door you left open drifts shut — while you might watch. */
   private maybeShiftDoor(idx: number): void {
     const room = this.activeRooms()[idx];
     if (!room || room.spec?.special) return;
     const under = this.space === 'under';
-    const rng = this.streams.roomStream('shift', idx + (under ? 977 : 0));
+    const rng = this.streams.roomStream('scare', idx + 311 + (under ? 977 : 0));
     if (!rng.bool(0.4)) return;
     const candidates = room.doors.filter((d) => !d.locked && !d.falseDoor && d.openT > 0.5);
     if (!candidates.length) return;
@@ -2227,6 +2247,23 @@ export class Game {
       this.pendingFarSound = null;
       this.cue(fs.cue, fs.pos, fs.caption, 'info');
     }
+
+    // Wind-up alarms — tick loud enough to pull sound-hunters, then ring once.
+    for (const lure of this.lures) {
+      if (tA < lure.nextTick) continue;
+      lure.nextTick = tA + 1.2;
+      if (tA < lure.until) {
+        this.cue('alarm-tick', lure.pos, '', 'info');
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 0.9, category: 'distraction', caption: '' });
+      } else if (!lure.rang) {
+        lure.rang = true;
+        this.cue('alarm-ring', lure.pos, '[the alarm rings — somewhere else]', 'info');
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 1.6, category: 'distraction', caption: '[alarm ringing]' });
+      } else {
+        this.entityGroup.remove(lure.mesh);
+      }
+    }
+    this.lures = this.lures.filter((l) => !l.rang || tA < l.until + 2.5);
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.
     if (this.pendingBlackout && tA >= this.pendingBlackout.at) {
