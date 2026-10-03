@@ -27,6 +27,7 @@ ported to the subfloor.
 | The numbers moved | +143 (0.3) | **revisit** | the exit-door number plate reads a wrong room; sticks across re-streams | chalk-mark your doors; trust the mark, not the plate |
 | Wall writing | +177 (+977) (0.28) | **revisit**, ≥6 | red scrawl appears on an interior wall ("BEHIND YOU", "STILL COUNTING", …); persists across re-streams | it's only paint — probably |
 | The tenant moved | +188 (+977) (0.7) | **revisit**, deadTenant present | the slumped seated figure is simply gone; only the ink pool it sat in remains | none — it isn't after you. yet. |
+| The occupant knocks | +211 (0.55) | Wake proximity ≤3.4m | a single knock answers from inside the ajar coffin | don't lean in |
 | Clocks hold their breath | — (dread-driven) | proximity | every clock hand freezes and ticking stops while an engaged threat is within ~10m | stopped clocks = something is close; use the silence |
 | Vending machine | — (loot stream) | maintenance/records rooms, ~22% | feed it 4–9 imprints; vends a seeded item, loud 0.6 'machine' emit | **warn:** the clank draws hunters — spend when it's quiet |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
@@ -60,6 +61,7 @@ ported to the subfloor.
 ## Milestone / world systems
 
 - **The Baggage Hall (room 25 / label 018 short-run)**: authored lost-luggage depot — suitcase rows, trolleys, 5 sockets, 2 hides; authored flag keeps it lock/encounter-free.
+- **The Wake (room 85)**: authored chapel of rest — bench rows, candle-lit bier with an ajar coffin, offering loot, 2 hides; `special: 'wake'` keeps it quiet except its own beats.
 - **Under caches**: under sockets fill from a meaner table (~38% per socket, imprints 3–16); landings (U-%20) stay safe.
 - **Custodian shop** (room 52): seeded stock of 3–5 from {sparkFlash, bandage, latchpick, windAlarm, wardSeal}; unstocked pedestals disabled via `meta.taken`.
 - **Broker pedestals** (u-lobby): exactly 2 per lobby, `meta.broker` + price.

@@ -449,6 +449,51 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
           { kind: 'underFurniture', x: 0, z: 0.6, yaw: Math.PI / 2, propKind: 'trolley' },
         ],
       });
+    case 'ms-wake':
+      // The Wake — a chapel of rest in the post-chase lull. Benches face a
+      // candle-lit bier; the lid was never quite closed. Authored dread:
+      // no locks, no encounters — the room itself is the encounter.
+      return base('ms-wake', 12, 11, 3.6, {
+        special: 'wake', floorMaterial: 'carpet',
+        props: [
+          { kind: 'coffin', x: 0, z: 3.4 },
+          { kind: 'screenPanels', x: 0, z: 4.8, yaw: 0 },
+          { kind: 'statue', x: -2.8, z: 4.3, yaw: Math.PI },
+          { kind: 'statue', x: 2.8, z: 4.3, yaw: Math.PI },
+          { kind: 'bench', x: -1.4, z: 0.4, yaw: Math.PI },
+          { kind: 'bench', x: 1.4, z: 0.4, yaw: Math.PI },
+          { kind: 'bench', x: -1.4, z: 1.6, yaw: Math.PI },
+          { kind: 'bench', x: 1.4, z: 1.6, yaw: Math.PI },
+          { kind: 'bench', x: -1.4, z: 2.8, yaw: Math.PI },
+          { kind: 'bench', x: 1.4, z: 2.8, yaw: Math.PI },
+          { kind: 'candle', x: -1.1, z: 3.0 }, { kind: 'candle', x: 1.1, z: 3.0 },
+          { kind: 'candle', x: -1.3, z: 4.1 }, { kind: 'candle', x: 1.3, z: 4.1 },
+          { kind: 'candle', x: 0.4, z: 4.4 }, { kind: 'candle', x: -0.5, z: 4.4 },
+          { kind: 'vase', x: -2.0, z: 4.5 }, { kind: 'vase', x: 2.0, z: 4.5 },
+          { kind: 'clock', x: -4.6, z: -4.4, yaw: Math.PI / 2 },
+          { kind: 'sign', x: 0, z: -5.0, y: 2.6 },
+          { kind: 'paperScatter', x: 0.8, z: 0.2 },
+          { kind: 'paperScatter', x: -1.6, z: 1.1 },
+          { kind: 'wallSconce', x: -5.4, z: 1.0, y: 2.0 },
+          { kind: 'wallSconce', x: 5.4, z: 1.0, y: 2.0 },
+          { kind: 'wallSconce', x: -5.4, z: 3.6, y: 2.0 },
+          { kind: 'wallSconce', x: 5.4, z: 3.6, y: 2.0 },
+        ],
+        sockets: [
+          { kind: 'loot', x: -1.5, z: 3.7, meta: {} },
+          { kind: 'loot', x: 1.5, z: 3.7, meta: {} },
+          { kind: 'drawer', x: -4.8, z: -4.4, meta: {} },
+        ],
+        hiding: [
+          { kind: 'cabinet', x: 4.8, z: -4.2, yaw: -Math.PI / 2, propKind: 'cabinet' },
+          { kind: 'underFurniture', x: 0, z: 1.6, yaw: Math.PI / 2, propKind: 'bench' },
+        ],
+        lights: [
+          { x: 0, y: 3.0, z: 0, color: 0xd8d0c0, intensity: 0.45, range: 10, group: 'dim' },
+          { x: 0, y: 2.4, z: 3.6, color: 0xffc878, intensity: 0.8, range: 5, group: 'accent' },
+          { x: 0, y: 2.2, z: -4, color: 0xffd9a0, intensity: 0.35, range: 4, group: 'accent' },
+        ],
+      });
     case 'ms-decompress':
       return base('ms-decompress', 3.4, 8, 3.0, {
         special: 'decompress', floorMaterial: 'stone',

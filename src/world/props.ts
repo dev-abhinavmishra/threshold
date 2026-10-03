@@ -692,6 +692,26 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(pool);
     return single(g, 0.9, 0.9, 1.0);
   },
+  // Funerary bier centerpiece — a long box on trestles, the lid always
+  // ajar. What it holds is the room's business.
+  coffin: (_s, rng) => {
+    const g = new THREE.Group();
+    const wood = MAT.darkOak(), cloth = MAT.figureCloth();
+    for (const sz of [-1, 1]) g.add(mesh(box(0.95, 0.55, 0.16), wood, 0, 0.28, sz * 0.6)); // trestles
+    g.add(mesh(box(0.85, 0.52, 1.95), wood, 0, 0.82, 0)); // shell
+    g.add(mesh(box(0.92, 0.05, 2.0), wood, 0, 1.1, 0)); // rim lip
+    // ink-dark interior, a pale pillow at the head
+    g.add(mesh(box(0.74, 0.4, 1.8), MAT.ink(), 0, 0.82, 0));
+    g.add(mesh(box(0.4, 0.08, 0.3), cloth, 0, 1.0, -0.7));
+    // pall folded over the foot
+    g.add(mesh(box(0.9, 0.06, 0.7), cloth, 0, 1.13, 0.62));
+    // the lid, propped ajar against the shoulder end
+    const lid = mesh(box(0.8, 0.05, 1.9), wood, 0.3, 1.14, 0);
+    lid.rotation.z = 0.5;
+    lid.rotation.y = rng.bool(0.5) ? 0.05 : -0.05;
+    g.add(lid);
+    return single(g, 1.0, 1.3, 2.05);
+  },
   counter: (s) => {
     const g = new THREE.Group();
     const w = s.scale ?? 2.4;

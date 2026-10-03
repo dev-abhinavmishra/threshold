@@ -318,6 +318,7 @@ function mainFloorPlan(shortRun: boolean): PlanEntry[] {
     if (i === 75) { push(label, { fixed: 'ms-lens-hall' }); continue; }
     if (i <= 79) { push(label); continue; }
     if (i === 80) { push(label, { fixed: 'ms-chase2' }); continue; }
+    if (i === 85) { push(label, { fixed: 'ms-wake' }); continue; }
     if (i <= 89) { push(label); continue; }
     if (i <= 98) { push(label, { biomeBias: 'unlit' }); continue; }
     if (i === 99) { push(label, { fixed: 'ms-final-ante' }); continue; }

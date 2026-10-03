@@ -2152,6 +2152,36 @@ export class Game {
     if (t) this.hideTenant(t);
   }
 
+  /** The occupant knocks — in the Wake, approach the bier on a seeded run
+   *  and something inside answers your presence. Fires once. */
+  private occupantAt: Vec3 | null = null;
+  private occupantFired = false;
+
+  private maybeOccupant(): void {
+    this.occupantAt = null;
+    this.occupantFired = false;
+    const room = this.activeRooms()[this.currentRoom];
+    if (room?.spec?.special !== 'wake') return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 211);
+    if (!scare.bool(0.55)) return;
+    const prop = room.spec.props.find((p) => p.kind === 'coffin');
+    if (!prop) return;
+    const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    this.occupantAt = {
+      x: room.origin.x + prop.x * cs + prop.z * sn,
+      y: 1,
+      z: room.origin.z - prop.x * sn + prop.z * cs,
+    };
+  }
+
+  private tickOccupant(): void {
+    if (!this.occupantAt || this.occupantFired) return;
+    if (v3dist(this.occupantAt, this.player.pos) < 3.4) {
+      this.occupantFired = true;
+      this.cue('knock', this.occupantAt, '[something shifted inside]', 'danger');
+    }
+  }
+
   /** The answering steps — for a few strides in a seeded room, each of your
    *  footsteps is repeated a few paces behind you, loud enough that
    *  sound-hunting entities can hear the echo too. */
@@ -2745,8 +2775,10 @@ export class Game {
       this.maybePhoneRing();
       this.maybeDeepReveal();
       this.maybeWallWord();
+      this.maybeOccupant();
     }
     this.tickEchoQueue();
+    this.tickOccupant();
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
       this.maybeSpawnRat();

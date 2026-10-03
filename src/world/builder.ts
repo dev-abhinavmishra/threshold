@@ -1453,6 +1453,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       if (p.kind === 'deadTenant') built.group.name = `tenant-${room.index}`;
+      if (p.kind === 'coffin') built.group.name = `coffin-${room.index}`;
       group.add(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);

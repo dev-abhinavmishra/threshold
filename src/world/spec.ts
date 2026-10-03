@@ -57,6 +57,7 @@ export type PropKind =
   | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
   | 'watcherFigure'
   | 'deadTenant'
+  | 'coffin'
   | 'dollCluster'
   | 'hallFigure'
   | 'hauntedPortrait'
