@@ -763,9 +763,12 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
+        let vn = 0;
         for (const p of pr.spec.props) {
-          const n = (ord[p.kind] ?? 0);
-          ord[p.kind] = n + 1;
+          const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
+          if (!isVent && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : (ord[p.kind] ?? 0);
+          if (!isVent) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -786,6 +789,12 @@ export class Game {
               kind: 'clock', id: `clock-${key}`,
               pos: { x: wx, y: 1.3, z: wz },
               prompt: 'Wind the clock', holdTime: 1.4, enabled: true, priority: 2,
+            });
+          } else if (isVent && !this.crackedVents.has(key)) {
+            this.interaction.add({
+              kind: 'valve', id: `valve-${key}`,
+              pos: { x: wx, y: 0.8, z: wz },
+              prompt: 'Crack the valve', holdTime: 1.0, enabled: true, priority: 2,
             });
           }
         }
@@ -978,6 +987,18 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'valve': {
+        it.enabled = false;
+        this.crackedVents.add(it.id.replace(/^valve-/, ''));
+        // ~26s of vented steam — inside ~7m your steps are drowned by the
+        // hiss, which itself calls quietly to listeners: cover, not silence
+        const at = { x: it.pos.x, y: 0.9, z: it.pos.z };
+        this.steamMasks.push({ pos: at, until: this.clock.time + 26 });
+        this.spawnSteamJet(at);
+        this.audio.play('steam-hiss', at, '[steam hisses — steps drowned]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[steam vents]' });
         return;
       }
       case 'clock': {
@@ -2292,6 +2313,30 @@ export class Game {
     if (t) this.hideTenant(t);
   }
 
+  /** A burst of steam particles above a cracked vent. */
+  private spawnSteamJet(at: Vec3): void {
+    const n = 22;
+    const pos = new Float32Array(n * 3);
+    const data: { a: number; r: number; y: number; v: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      const d = { a: Math.random() * Math.PI * 2, r: Math.random() * 0.14, y: Math.random() * 1.2, v: 0.5 + Math.random() * 0.6 };
+      data.push(d);
+      pos[i * 3] = at.x + Math.cos(d.a) * d.r;
+      pos[i * 3 + 1] = at.y + d.y;
+      pos[i * 3 + 2] = at.z + Math.sin(d.a) * d.r;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xcfd4d8, size: 0.24, sizeAttenuation: true, transparent: true,
+      opacity: 0.3, depthWrite: false, fog: false,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    this.scene.add(pts);
+    this.steamJets.push({ pts, geo, mat, base: new THREE.Vector3(at.x, at.y, at.z), until: this.clock.time + 26, data });
+  }
+
   private ensureTV(i: number, built: { group: THREE.Group }): void {
     let n = -1;
     built.group.traverse((o) => {
@@ -2334,6 +2379,10 @@ export class Game {
   private playedPianos = new Set<string>();
   private litTVs = new Set<string>();
   private woundClocks = new Set<string>();
+  private crackedVents = new Set<string>();
+  private steamMasks: { pos: Vec3; until: number }[] = [];
+  private steamJets: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; base: THREE.Vector3; until: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
+  private nextHiss = 0;
   private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
@@ -3281,6 +3330,45 @@ export class Game {
       } else {
         this.pianoRoom = -1;
       }
+    }
+
+    // Cracked valves — hiss masks your footstep emits while you stay near
+    {
+      const tc = this.clock.time;
+      this.steamMasks = this.steamMasks.filter((m) => tc < m.until);
+      let masked = false;
+      let anyHiss = false;
+      for (const m of this.steamMasks) {
+        if (v3dist(m.pos, this.player.pos) < 7) masked = true;
+        if (v3dist(m.pos, this.player.pos) < 13) anyHiss = true;
+      }
+      this.player.maskMul = masked ? 0.22 : 1;
+      if (anyHiss && tc >= this.nextHiss) {
+        this.nextHiss = tc + 2.4;
+        const m = this.steamMasks[0];
+        if (m) {
+          this.audio.play('steam-hiss', m.pos, '');
+          this.sound.emit({ x: m.pos.x, y: m.pos.y, z: m.pos.z, intensity: 0.45, category: 'machine', caption: '' });
+        }
+      }
+      for (const j of this.steamJets) {
+        const arr = j.geo.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < j.data.length; i++) {
+          const d = j.data[i];
+          d.y += d.v * dt;
+          if (d.y > 1.7) { d.y = 0.05; d.a = Math.random() * Math.PI * 2; d.r = Math.random() * 0.14; }
+          const spread = d.r * (1 + d.y * 1.4);
+          arr.setXYZ(i, j.base.x + Math.cos(d.a) * spread, j.base.y + d.y, j.base.z + Math.sin(d.a) * spread);
+        }
+        arr.needsUpdate = true;
+        j.mat.opacity = Math.min(0.3, (j.until - tc) * 0.1);
+      }
+      this.steamJets = this.steamJets.filter((j) => {
+        if (tc < j.until) return true;
+        this.scene.remove(j.pts);
+        j.geo.dispose(); j.mat.dispose();
+        return false;
+      });
     }
 
     // The channel answers — some tuned sets whisper back a breath later

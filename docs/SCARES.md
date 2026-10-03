@@ -34,6 +34,7 @@ ported to the subfloor.
 | Tuned television | — (interaction) | guest-room TVs, once per set | the flicker resolves to a steady dead channel — fixed light in a dark room, 0.7 'machine' hiss | light for the dark; the hiss carries to listeners |
 | The channel answers | +383 (0.32) | 14–26s after a TV is tuned | a whisper plays from the set — it heard the tuning | the answer draws listeners too — leave before it speaks |
 | Wound clock | — (interaction) | grandfather clocks, once per clock | three struck chimes over ~2.2s, loud 1.3 'distraction' emit each | the loudest deliberate lure in the game — wind it, then be gone |
+| Cracked valve | — (interaction) | steam vents / boilers / manifolds, once per vent | ~26s of steam: inside ~7m your footstep emits are drowned ×0.22; the hiss itself calls listeners every ~2.4s | cover, not silence — sprint through the hiss zone, don't linger at the valve |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |

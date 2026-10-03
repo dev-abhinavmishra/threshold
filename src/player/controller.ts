@@ -39,6 +39,7 @@ export class PlayerController {
   panicLockoutUntil = 0;
   speedMul = 1;                     // tonic/weights
   noiseMul = 1;                     // feltWrap
+  maskMul = 1;                      // steam-vent hiss masks your steps
   dead = false;
   rootedUntil = 0;                  // snare root
   fovKick = 0;
@@ -122,7 +123,7 @@ export class PlayerController {
       const stride = this.crouching ? 1.1 : sprinting ? 0.75 : 0.95;
       if (this.footAcc > stride) {
         this.footAcc = 0;
-        const intensity = (this.crouching ? 0.15 : sprinting ? 0.85 : 0.4) * this.noiseMul;
+        const intensity = (this.crouching ? 0.15 : sprinting ? 0.85 : 0.4) * this.noiseMul * this.maskMul;
         sound.emit({
           x: this.pos.x, y: this.pos.y, z: this.pos.z,
           intensity,
