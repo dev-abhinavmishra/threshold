@@ -1830,6 +1830,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     drips = new THREE.Points(dg, dripMat);
     drips.userData.tops = tops; drips.userData.speeds = speeds; drips.userData.phases = phases;
     group.add(drips);
+    // Landing rings — thin expanding circles where each drip hits the floor.
+    for (const [sx, sz] of spots) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.82, 1.0, 20),
+        new THREE.MeshBasicMaterial({ color: 0x9fb4c0, transparent: true, opacity: 0.22, depthWrite: false, fog: false }),
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(sx, 0.015, sz);
+      ring.userData.anim = 'ripple';
+      ring.userData.animSeed = rng.float() * 10;
+      group.add(ring);
+    }
   }
 
   return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated, drips };

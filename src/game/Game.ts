@@ -1192,6 +1192,13 @@ export class Game {
           const on = n > -0.75;
           mat.emissiveIntensity = on ? 1.35 + Math.sin(t * 47 + s) * 0.15 : 0.04;
           if (light) light.intensity = (light.userData.baseIntensity as number) * (on ? 1 : 0.1);
+        } else if (kind === 'ripple') {
+          // Drip landing ring — expanding loop; fades as it spreads.
+          const m = o as THREE.Mesh;
+          const ph = (o.userData.animSeed as number) ?? 0;
+          const u = ((t * 0.55 + ph) % 1.4) / 1.4;
+          m.scale.setScalar(0.05 + u * 0.42);
+          (m.material as THREE.MeshBasicMaterial).opacity = 0.24 * (1 - u);
         } else if (kind === 'handS') {
           // Clockwork — stepped second hand, smooth minute/hour.
           o.rotation.z = -Math.floor(t % 60) * (Math.PI / 30);
