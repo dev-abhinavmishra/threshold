@@ -36,7 +36,7 @@ import {
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
 import { Editor, Grafter } from '../entities/setpieces';
-import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY } from '../game/config';
+import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
@@ -803,7 +803,7 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, sn2 = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -814,6 +814,7 @@ export class Game {
           const isType = p.kind === 'typewriter';
           const isWin = p.kind === 'window';
           const isCool = p.kind === 'waterCooler';
+          const isSeat = p.kind === 'bench' || p.kind === 'plasticChair' || p.kind === 'armchair' || p.kind === 'diningChair';
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           // ticking ironwork: proximity tells that answer the house's pulse
@@ -830,9 +831,9 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool) ord[p.kind] = n + 1;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
           if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
             this.interaction.add({
@@ -918,6 +919,12 @@ export class Game {
               kind: 'cooler', id: `cool-${key}`,
               pos: { x: wx, y: 0.9, z: wz },
               prompt: 'Drink', holdTime: 0.9, enabled: true, priority: 2,
+            });
+          } else if (isSeat && !this.satSeats.has(key) && !this.resting) {
+            this.interaction.add({
+              kind: 'seat', id: `seat-${key}`,
+              pos: { x: wx, y: 0.55, z: wz },
+              prompt: 'Rest a moment', holdTime: 1.1, enabled: true, priority: 2,
             });
           }
         }
@@ -1218,6 +1225,17 @@ export class Game {
             : '[the page reads: no locks ahead — the house lets you walk]';
           window.setTimeout(() => this.cue('pickup', at, msg), 1400);
         }
+        return;
+      }
+      case 'seat': {
+        it.enabled = false;
+        this.satSeats.add(it.id.replace(/^seat-/, ''));
+        // sit, exposed, while your breath comes back — three seconds you can't move
+        this.resting = { until: this.clock.time + 3, x: it.pos.x, z: it.pos.z, crouch: this.player.crouching };
+        this.player.frozen = true;
+        this.player.crouching = true;
+        this.cue('amb-settle', { x: it.pos.x, y: 0.6, z: it.pos.z }, '[you sit — the wood takes your weight]');
+        this.sound.emit({ x: it.pos.x, y: 0.6, z: it.pos.z, intensity: 0.3, category: 'footstep', caption: '[a creak]' });
         return;
       }
       case 'cooler': {
@@ -2707,6 +2725,8 @@ export class Game {
   private typedKeys = new Set<string>();
   private lookedWindows = new Set<string>();
   private drunkCoolers = new Set<string>();
+  private satSeats = new Set<string>();
+  private resting: { until: number; x: number; z: number; crouch: boolean } | null = null;
   private finishedWashers = new Set<string>();
   private emptiedWashers = new Set<string>();
   private runningWashers: { pos: Vec3; until: number; nextThump: number; key: string }[] = [];
@@ -3970,6 +3990,15 @@ export class Game {
         this.pipeTickNext = tA + interval;
         this.audio.play('pipe-tick', { x: bp.x, y: 1.1, z: bp.z }, interval < 0.75 ? '[the pipes tick — faster]' : '', 'warn');
       }
+    }
+
+    // Rest ends — breath restored, you're standing again
+    if (this.resting && tA >= this.resting.until) {
+      this.player.crouching = this.resting.crouch;
+      this.resting = null;
+      this.player.frozen = false;
+      this.player.stamina = PLAYER.staminaMax;
+      this.cue('heal', null, '[your breath comes back]');
     }
 
     // Loose rugs slide — one trip each, loud enough to cost you
