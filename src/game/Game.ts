@@ -86,6 +86,26 @@ function wallWordMaterial(text: string): THREE.MeshBasicMaterial | null {
   return new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false });
 }
 
+// Vertical alpha ramp for the torch beam: bright at the apex (torch head),
+// gone before the far end — shared by both nested cones.
+let beamTex: THREE.Texture | null = null;
+function beamTexture(): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  if (!beamTex) {
+    const cv = document.createElement('canvas');
+    cv.width = 4; cv.height = 128;
+    const ctx = cv.getContext('2d')!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 128);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.35, '#7a7a7a');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 4, 128);
+    beamTex = new THREE.CanvasTexture(cv);
+  }
+  return beamTex;
+}
+
 export class Game {
   private renderer!: THREE.WebGLRenderer;
   private scene!: THREE.Scene;
@@ -2156,6 +2176,9 @@ export class Game {
    *  and something inside answers your presence. Fires once. */
   private occupantAt: Vec3 | null = null;
   private occupantFired = false;
+  private beamGroup: THREE.Group | null = null;
+  private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
+  private lampFade = 1;
 
   private maybeOccupant(): void {
     this.occupantAt = null;
@@ -3202,6 +3225,7 @@ export class Game {
         : (this.inventory.find((i) => i.id === 'handLamp')?.count ?? 0);
       const battF = batt < 15 ? 0.55 + 0.35 * Math.max(0, Math.sin(this.clock.time * 11)) : 1;
       this.lampLight.intensity = (this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9) * (1 - sputter) * battF;
+      this.lampFade = (1 - sputter) * battF;
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
@@ -3235,8 +3259,34 @@ export class Game {
         this.heldTorch.rotateZ(sway);
         this.heldTorch.position.addScaledVector(Game.torchUp, Math.sin(this.clock.time * 5.2) * 0.004);
       }
+      // Fake-volumetric beam — two nested additive cones from the torch
+      // head, alpha-ramped so the air carries light without a floor hit.
+      if (!this.beamGroup) {
+        this.beamGroup = new THREE.Group();
+        for (const [r, len, o] of [[1.5, 5.5, 0.1], [0.45, 4.4, 0.13]] as const) {
+          const mat = new THREE.MeshBasicMaterial({
+            color: 0xffd9a4, transparent: true, opacity: o,
+            alphaMap: beamTexture(), blending: THREE.AdditiveBlending,
+            depthWrite: false, side: THREE.DoubleSide, fog: false,
+          });
+          const cone = new THREE.Mesh(new THREE.ConeGeometry(r, len, 18, 1, true), mat);
+          cone.position.y = -len / 2; // apex at the pivot
+          cone.frustumCulled = false;
+          const pivot = new THREE.Group();
+          pivot.rotation.x = -Math.PI / 2; // -Y (cone axis) → camera forward
+          pivot.add(cone);
+          this.beamGroup.add(pivot);
+          this.beamMats.push({ mat, base: o });
+        }
+        this.scene.add(this.beamGroup);
+      }
+      this.beamGroup.visible = true;
+      this.beamGroup.position.copy(this.heldTorch.position).addScaledVector(Game.torchFwd, 0.12);
+      this.beamGroup.quaternion.copy(this.camera.quaternion);
+      for (const { mat, base } of this.beamMats) mat.opacity = base * this.lampFade;
     } else if (this.heldTorch) {
       this.heldTorch.visible = false;
+      if (this.beamGroup) this.beamGroup.visible = false;
     }
     // Lamp batteries — hand lamp sips (~180s), pulse lamp gulps (~90s) and
     // cranks back loudly. HUD reads count as charge %.
