@@ -455,6 +455,22 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return single(g, 1.1, 0.7, 0.6);
   },
+  // Half-seen silhouette at the far end of a corridor: a shadow figure that
+  // is only there while you're not looking — glimpse it and it's gone.
+  hallFigure: (_s, rng) => {
+    const g = new THREE.Group();
+    const fig = tallFigure({
+      height: 1.9 + rng.float() * 0.3,
+      body: MAT.shadowFigure(),
+      face: 'none',
+      hood: rng.bool(0.6),
+      tattered: true,
+    });
+    g.add(fig);
+    g.userData.anim = 'vanish';
+    g.userData.animSeed = rng.float() * 10;
+    return { group: g, colliders: [] };
+  },
   watcherFigure: (_s, rng) => {
     const g = new THREE.Group();
     const plinth = new THREE.Mesh(box(0.66, 0.14, 0.66), MAT.charcoal());

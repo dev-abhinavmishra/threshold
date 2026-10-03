@@ -52,6 +52,7 @@ export type PropKind =
   | 'gothicCommode' | 'galleryStatue' | 'deadBranch' | 'crowbar' | 'boltCutters'
   | 'watcherFigure'
   | 'dollCluster'
+  | 'hallFigure'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'

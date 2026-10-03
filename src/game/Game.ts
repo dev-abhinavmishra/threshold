@@ -1221,6 +1221,26 @@ export class Game {
               }
             }
           }
+        } else if (kind === 'vanish') {
+          // Hallway figure — present only while unobserved. Once it has sat in
+          // the player's view cone for ~0.35s, the next blink/approach removes
+          // it for good.
+          if (!o.visible) continue;
+          o.getWorldPosition(Game.watchPos);
+          const dx = this.player.pos.x - Game.watchPos.x;
+          const dz = this.player.pos.z - Game.watchPos.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 18) {
+            const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+            const seen = dist > 0.01 && (fx * dx + fz * dz) / dist > 0.55;
+            const seenT = (o.userData.seenT as number) ?? 0;
+            if (seen) {
+              o.userData.seenT = seenT + dt;
+            } else if (seenT > 0.35 || dist < 5.5) {
+              o.visible = false;
+              this.audio.play('amb-settle', { x: Game.watchPos.x, y: Game.watchPos.y, z: Game.watchPos.z });
+            }
+          }
         }
       }
     }
