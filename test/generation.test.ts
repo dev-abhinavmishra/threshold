@@ -225,6 +225,18 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('deep doors are optional branch doors only, never toll', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });
+      const deeps = mainRooms(route).flatMap((r) => r.doors.filter((d) => d.deep));
+      for (const d of deeps) {
+        expect(d.isMainRoute).toBe(false);
+        expect(d.lockId).not.toBe('toll');
+        expect(d.locked).toBe(false);
+      }
+    }
+  });
+
   it('custodian shop sockets exist on the milestone room', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const cust = mainRooms(route).find((r) => r.templateId === 'ms-custodian');

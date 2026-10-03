@@ -135,6 +135,8 @@ export interface Door {
   lockId?: string;   // key socket must supply matching lockId
   /** False-door planted by Redactor. */
   falseDoor?: boolean;
+  /** Opens onto only dark — a black void masks the closet behind it. */
+  deep?: boolean;
   /** Diegetic number shown on the door. */
   label: string;
   openT: number;     // 0 closed, 1 open (animated)

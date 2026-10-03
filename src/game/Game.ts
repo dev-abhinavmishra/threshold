@@ -1166,6 +1166,45 @@ export class Game {
     built.group.add(m);
   }
 
+  /** Deep doors open onto only dark — an opaque quad masks the branch closet
+   *  behind them (one-directional: visible from the parent room only). */
+  private ensureDeepVoid(roomIndex: number, built: { group: THREE.Group }): void {
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    for (const d of room.doors) {
+      if (!d.deep) continue;
+      const name = `deep-void-${d.id}`;
+      if (built.group.getObjectByName(name)) continue;
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.5, 2.35),
+        new THREE.MeshBasicMaterial({ color: 0x000000, fog: false }),
+      );
+      m.name = name;
+      // sit just inside the closet, normal facing back toward the parent room
+      m.position.set(d.pos.x - Math.sin(d.yaw) * 0.4, 1.15, d.pos.z - Math.cos(d.yaw) * 0.4);
+      m.rotation.y = d.yaw + Math.PI;
+      m.renderOrder = 3;
+      built.group.add(m);
+    }
+  }
+
+  private readonly deepSeen = new Set<string>();
+  private maybeDeepReveal(): void {
+    for (const i of this.streamer.builtIndices) {
+      const room = this.activeRooms()[i];
+      if (!room) continue;
+      for (const d of room.doors) {
+        if (!d.deep || d.openT < 0.6 || this.deepSeen.has(d.id)) continue;
+        const dx = this.player.pos.x - d.pos.x;
+        const dz = this.player.pos.z - d.pos.z;
+        if (dx * dx + dz * dz > 4) continue;
+        this.deepSeen.add(d.id);
+        this.cue('door-locked', d.pos, '[deeper than it looked]', 'warn');
+        this.sound.emit({ x: d.pos.x, y: 1, z: d.pos.z, intensity: 0.35, category: 'door', caption: '[the door shows only dark]' });
+      }
+    }
+  }
+
   /** Seeded per-room light character — temperature tint + ragged brightness,
    *  so rooms stop reading on one uniform warm palette. */
   private readonly tinted = new Set<object>();
@@ -1640,6 +1679,7 @@ export class Game {
       if (!built) continue;
       this.ensureChalkMarks(i, built);
       this.ensureGateMark(i, built);
+      this.ensureDeepVoid(i, built);
       this.ensureRoomTint(i, built);
       this.ensureBroker(i);
       const t = this.clock.time;
@@ -2454,6 +2494,7 @@ export class Game {
       this.maybePiano();
       this.maybeDoorTry();
       this.maybeBookDrop();
+      this.maybeDeepReveal();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
