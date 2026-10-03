@@ -100,6 +100,8 @@ export class Game {
   private pendingBlackout: { room: number; at: number } | null = null;
   private nextMusicBox = 45;
   private nextKnock = 40;
+  private nextSteps = 55;
+  private nextPiano = 70;
   private blackedOut = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
@@ -1567,6 +1569,39 @@ export class Game {
             { x: kx, y: toneRoom.origin.y + 1.1, z: kz }, i === 0 ? '[a knock at the door]' : ''), i * 340);
         }
       }
+    }
+
+    // Unseen footsteps — someone pacing a line across this room or the
+    // one behind the wall. Seeded rare; five weighted steps in sequence.
+    if (toneRoom && useGameStore.getState().phase === 'PLAYING' && tA >= this.nextSteps
+      && this.streams.roomStream('scare', this.currentRoom + 131).bool(0.16)) {
+      this.nextSteps = tA + 45 + Math.random() * 80;
+      const fsp = toneRoom.spec;
+      if (fsp) {
+        const a = portLocalPos(fsp.entry, fsp.width, fsp.depth);
+        const b = portLocalPos(fsp.exits[0] ?? fsp.entry, fsp.width, fsp.depth);
+        const fco = Math.cos(toneRoom.yaw), fsi = Math.sin(toneRoom.yaw);
+        for (let i = 0; i < 5; i++) {
+          const f = (i + 1) / 6;
+          const lx = a.x + (b.x - a.x) * f, lz = a.z + (b.z - a.z) * f;
+          const wx = toneRoom.origin.x + lx * fco + lz * fsi;
+          const wz = toneRoom.origin.z - lx * fsi + lz * fco;
+          window.setTimeout(() => this.audio.play('footstep',
+            { x: wx, y: toneRoom.origin.y + 0.1, z: wz }, i === 0 ? '[footsteps — slow]' : ''), i * 460);
+        }
+      }
+    }
+
+    // Piano wire — a single dissonant note struck somewhere in domestic
+    // rooms, detuned so it reads as an old instrument, not a cue.
+    if (toneRoom && (toneRoom.biome === 'guest' || toneRoom.biome === 'lobby' || toneRoom.biome === 'gallery')
+      && useGameStore.getState().phase === 'PLAYING' && tA >= this.nextPiano
+      && this.streams.roomStream('scare', this.currentRoom + 777).bool(0.12)) {
+      this.nextPiano = tA + 80 + Math.random() * 140;
+      const at = { x: toneRoom.origin.x, y: toneRoom.origin.y + 1.0, z: toneRoom.origin.z };
+      this.audio.play('piano-wire', at, '[a piano string sounds, then dies]');
+      window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 1.06), 90);
+      window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 0.5), 180);
     }
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.
