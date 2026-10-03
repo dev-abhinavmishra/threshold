@@ -528,7 +528,14 @@ export class Game {
     if (!built) return;
     for (const l of built.lights) {
       if (mode === 'break') {
+        l.userData.flicker = false;
+        l.userData.baseIntensity = 0;
         l.intensity = 0;
+        const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
+        if (lamp) {
+          lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
+          (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.04;
+        }
       } else {
         const base = l.intensity;
         let f = 0;
@@ -541,6 +548,9 @@ export class Game {
         }, 70);
       }
     }
+    // 'break' persists for the run: the room stays dead if the player
+    // backtracks through it (blackedOut gates the ambient flicker loop).
+    if (mode === 'break') this.blackedOut.add(roomIndex);
   }
 
   /* ==================== interactions ==================== */
@@ -1231,7 +1241,9 @@ export class Game {
       const built = this.streamer.get(i);
       if (!built) continue;
       const t = this.clock.time;
+      const dead = this.blackedOut.has(i);
       for (const l of built.lights) {
+        if (dead) { l.intensity = 0; continue; }
         if (!l.userData.flicker) continue;
         const s = (l.userData.flickerSeed as number) ?? 0;
         // Squared-off pseudo-noise: mostly steady with occasional deep dips.
