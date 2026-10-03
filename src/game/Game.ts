@@ -763,12 +763,13 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0;
+        let vn = 0, hn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
-          if (!isVent && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : (ord[p.kind] ?? 0);
-          if (!isVent) ord[p.kind] = n + 1;
+          const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
+          if (!isVent && !isHearth && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -795,6 +796,12 @@ export class Game {
               kind: 'valve', id: `valve-${key}`,
               pos: { x: wx, y: 0.8, z: wz },
               prompt: 'Crack the valve', holdTime: 1.0, enabled: true, priority: 2,
+            });
+          } else if (isHearth && !this.litHearths.has(key)) {
+            this.interaction.add({
+              kind: 'hearth', id: `hearth-${key}`,
+              pos: { x: wx, y: 0.8, z: wz },
+              prompt: 'Light the hearth', holdTime: 1.6, enabled: true, priority: 2,
             });
           }
         }
@@ -987,6 +994,17 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'hearth': {
+        it.enabled = false;
+        this.litHearths.add(it.id.replace(/^hearth-/, ''));
+        // ~45s of firelight — heal slowly inside its circle while the crackle
+        // murmurs to anything listening: the house sells you rest, loudly
+        const at = { x: it.pos.x, y: 0.6, z: it.pos.z };
+        this.spawnHearth(at);
+        this.audio.play('fire-crackle', at, '[the hearth takes — warmth, and witnesses]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a fire catches]' });
         return;
       }
       case 'valve': {
@@ -2337,6 +2355,33 @@ export class Game {
     this.steamJets.push({ pts, geo, mat, base: new THREE.Vector3(at.x, at.y, at.z), until: this.clock.time + 26, data });
   }
 
+  /** Flame points + warm light for a lit hearth. */
+  private spawnHearth(at: Vec3): void {
+    const n = 14;
+    const pos = new Float32Array(n * 3);
+    const data: { a: number; r: number; y: number; v: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      const d = { a: Math.random() * Math.PI * 2, r: Math.random() * 0.09, y: Math.random() * 0.7, v: 0.9 + Math.random() * 0.9 };
+      data.push(d);
+      pos[i * 3] = at.x + Math.cos(d.a) * d.r;
+      pos[i * 3 + 1] = at.y + d.y;
+      pos[i * 3 + 2] = at.z + Math.sin(d.a) * d.r;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xff9a4a, size: 0.16, sizeAttenuation: true, transparent: true,
+      opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    });
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    this.scene.add(pts);
+    const light = new THREE.PointLight(0xff8a3a, 2.1, 6, 2);
+    light.position.set(at.x, at.y + 0.7, at.z);
+    this.scene.add(light);
+    this.hearths.push({ pts, geo, mat, light, base: new THREE.Vector3(at.x, at.y, at.z), until: this.clock.time + 45, seed: Math.random() * 100, nextCrackle: this.clock.time + 2, data });
+  }
+
   private ensureTV(i: number, built: { group: THREE.Group }): void {
     let n = -1;
     built.group.traverse((o) => {
@@ -2383,6 +2428,8 @@ export class Game {
   private steamMasks: { pos: Vec3; until: number }[] = [];
   private steamJets: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; base: THREE.Vector3; until: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
   private nextHiss = 0;
+  private litHearths = new Set<string>();
+  private hearths: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; light: THREE.PointLight; base: THREE.Vector3; until: number; seed: number; nextCrackle: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
   private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
@@ -3330,6 +3377,37 @@ export class Game {
       } else {
         this.pianoRoom = -1;
       }
+    }
+
+    // Lit hearths — warm light flickers, nearby wounds knit slowly
+    {
+      const tc = this.clock.time;
+      for (const h of this.hearths) {
+        h.light.intensity = 1.9 + Math.sin(tc * 13.7 + h.seed) * 0.5 + Math.sin(tc * 31 + h.seed * 2.3) * 0.3;
+        const arr = h.geo.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < h.data.length; i++) {
+          const d = h.data[i];
+          d.y += d.v * dt;
+          if (d.y > 0.9) { d.y = 0.02; d.a = Math.random() * Math.PI * 2; d.r = Math.random() * 0.09; }
+          arr.setXYZ(i, h.base.x + Math.cos(d.a) * d.r * (1 - d.y * 0.8), h.base.y + d.y, h.base.z + Math.sin(d.a) * d.r * (1 - d.y * 0.8));
+        }
+        arr.needsUpdate = true;
+        h.mat.opacity = Math.min(0.55, (h.until - tc) * 0.12);
+        if (tc >= h.nextCrackle) {
+          h.nextCrackle = tc + 2.6 + Math.random() * 1.8;
+          this.audio.play('fire-crackle', h.base, '');
+          this.sound.emit({ x: h.base.x, y: h.base.y, z: h.base.z, intensity: 0.18, category: 'ambient', caption: '' });
+        }
+        if (v3dist(h.base, this.player.pos) < 3.2 && this.player.health < 100) {
+          this.player.health = Math.min(100, this.player.health + 2.2 * dt);
+        }
+      }
+      this.hearths = this.hearths.filter((h) => {
+        if (tc < h.until) return true;
+        this.scene.remove(h.pts); this.scene.remove(h.light);
+        h.geo.dispose(); h.mat.dispose();
+        return false;
+      });
     }
 
     // Cracked valves — hiss masks your footstep emits while you stay near

@@ -35,6 +35,7 @@ ported to the subfloor.
 | The channel answers | +383 (0.32) | 14–26s after a TV is tuned | a whisper plays from the set — it heard the tuning | the answer draws listeners too — leave before it speaks |
 | Wound clock | — (interaction) | grandfather clocks, once per clock | three struck chimes over ~2.2s, loud 1.3 'distraction' emit each | the loudest deliberate lure in the game — wind it, then be gone |
 | Cracked valve | — (interaction) | steam vents / boilers / manifolds, once per vent | ~26s of steam: inside ~7m your footstep emits are drowned ×0.22; the hiss itself calls listeners every ~2.4s | cover, not silence — sprint through the hiss zone, don't linger at the valve |
+| Lit hearth | — (interaction) | fireplaces / stoves / masonry heaters / fire pits, once each | ~45s of firelight: heals 2.2/s inside ~3m, flickering warm light, soft crackle emits | the house sells you rest, loudly — healing means standing still where it's lit |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |

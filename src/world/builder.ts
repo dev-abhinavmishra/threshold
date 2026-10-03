@@ -1458,6 +1458,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'television') built.group.name = `tv-${room.index}`;
       if (p.kind === 'clock') built.group.name = `clock-${room.index}`;
       if (p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold') built.group.name = `vent-${room.index}`;
+      if (p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit') built.group.name = `hearth-${room.index}`;
       group.add(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);
