@@ -97,6 +97,7 @@ export class Game {
   private lightning = 0;
   private nextThunder = 30;
   private pendingBlackout: { room: number; at: number } | null = null;
+  private nextMusicBox = 45;
   private blackedOut = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
@@ -1493,10 +1494,10 @@ export class Game {
         const b = toneRoom.biome;
         const table: [string, number][] =
           this.space === 'under' || b === 'maintenance'
-            ? [['amb-drip', 0.38], ['amb-creak', 0.24], ['amb-distant', 0.22], ['amb-tick', 0.16]]
+            ? [['amb-drip', 0.34], ['amb-creak', 0.22], ['amb-distant', 0.2], ['amb-tick', 0.14], ['whisper', 0.1]]
             : b === 'records' || b === 'guest' || b === 'safe' || b === 'corridor' || b === 'lobby'
-              ? [['amb-creak', 0.45], ['amb-settle', 0.3], ['amb-distant', 0.15], ['amb-tick', 0.1]]
-              : [['amb-creak', 0.35], ['amb-distant', 0.35], ['amb-settle', 0.3]];
+              ? [['amb-creak', 0.44], ['amb-settle', 0.29], ['amb-distant', 0.14], ['amb-tick', 0.09], ['whisper', 0.04]]
+              : [['amb-creak', 0.33], ['amb-distant', 0.33], ['amb-settle', 0.26], ['whisper', 0.08]];
         let r = Math.random(), cue = 'amb-creak';
         for (const [c, wgt] of table) { r -= wgt; if (r <= 0) { cue = c; break; } }
         const co = Math.cos(toneRoom.yaw), si = Math.sin(toneRoom.yaw);
@@ -1525,6 +1526,21 @@ export class Game {
       } else if (this.hemi.intensity !== 0.7) {
         this.hemi.intensity = 0.7;
       }
+    }
+
+    // Music-box sting — a few tinny notes drifting through domestic rooms,
+    // rare and seeded. Played as staggered sine hits from the room's center.
+    if (toneRoom && (toneRoom.biome === 'guest' || toneRoom.biome === 'lobby' || toneRoom.biome === 'gallery')
+      && useGameStore.getState().phase === 'PLAYING' && tA >= this.nextMusicBox && this.streams.roomStream('scare', this.currentRoom).bool(0.1)) {
+      this.nextMusicBox = tA + 90 + Math.random() * 120;
+      const notes = [1, 0.841, 0.667, 0.561];
+      notes.forEach((mul, i) => {
+        window.setTimeout(() => {
+          this.audio.play('mb-note',
+            { x: toneRoom.origin.x, y: toneRoom.origin.y + 1.4, z: toneRoom.origin.z },
+            i === 0 ? '[a music box plays, somewhere]' : '', 'info', 'sfx', mul);
+        }, i * 620);
+      });
     }
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.

@@ -90,6 +90,8 @@ const CUES: Record<string, CueSpec> = {
   'amb-distant': { freq: 58, dur: 1.9, type: 'sine', gain: 0.085, sweep: 42, noise: true },
   'amb-settle': { freq: 215, dur: 0.32, type: 'triangle', gain: 0.05, sweep: 165 },
   'thunder': { freq: 52, dur: 2.8, type: 'sine', gain: 0.34, sweep: 28, noise: true },
+  'whisper': { freq: 780, dur: 1.3, type: 'sawtooth', gain: 0.03, sweep: 460, noise: true },
+  'mb-note': { freq: 1568, dur: 1.1, type: 'sine', gain: 0.05, sweep: 1540 },
   'amb-tick': { freq: 2500, dur: 0.045, type: 'square', gain: 0.028 },
 };
 
@@ -185,7 +187,7 @@ export class AudioManager {
     return { gain, pan: Math.sin(rel) * 0.8 };
   }
 
-  play(cueName: string, at: Vec3 | null = null, caption = '', severity: CueSeverity = 'info', bus = 'sfx'): void {
+  play(cueName: string, at: Vec3 | null = null, caption = '', severity: CueSeverity = 'info', bus = 'sfx', freqMul = 1): void {
     this.emitCaption(caption, severity);
     if (!this.ctx) return;
     const spec = CUES[cueName];
@@ -200,8 +202,8 @@ export class AudioManager {
     // osc voice
     const osc = this.ctx.createOscillator();
     osc.type = spec.type;
-    osc.frequency.setValueAtTime(spec.freq, t0);
-    if (spec.sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(20, spec.sweep), t0 + spec.dur);
+    osc.frequency.setValueAtTime(spec.freq * freqMul, t0);
+    if (spec.sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(20, spec.sweep * freqMul), t0 + spec.dur);
     const g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(spec.gain * gAmt, t0 + 0.02);
