@@ -106,6 +106,8 @@ export class Game {
   private lightning = 0;
   private nextThunder = 30;
   private pendingBlackout: { room: number; at: number } | null = null;
+  private pendingDoorOpen: { room: number; at: number } | null = null;
+  private hauntedRooms = new Set<number>();
   private nextMusicBox = 45;
   private nextKnock = 40;
   private nextSteps = 55;
@@ -1298,6 +1300,18 @@ export class Game {
 
   /** Seeded ambient scare: ~6% of lit rooms die as the player enters —
    *  lights sputter briefly, then the room goes dark for good. */
+  // The door you just came through opens itself behind you. Once per run
+  // per room, and only where the door isn't sealed by a lock state.
+  private maybeHauntDoor(): void {
+    if (this.hauntedRooms.has(this.currentRoom) || this.pendingDoorOpen) return;
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room?.spec || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec.special) return;
+    if (this.currentRoom < 6) return;
+    if (!this.streams.roomStream('scare', this.currentRoom + 87).bool(0.08)) return;
+    this.hauntedRooms.add(this.currentRoom);
+    this.pendingDoorOpen = { room: this.currentRoom, at: this.clock.time + 1.2 + Math.random() * 1.4 };
+  }
+
   private maybeBlackout(roomIndex: number): void {
     if (this.blackedOut.has(roomIndex) || this.pendingBlackout) return;
     const room = this.activeRooms()[roomIndex];
@@ -1639,6 +1653,7 @@ export class Game {
       this.maybeSpawnRat();
       this.maybeBlackout(this.currentRoom);
       this.maybeRelocateRelic(prev);
+      this.maybeHauntDoor();
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -1758,6 +1773,18 @@ export class Game {
       this.audio.play('piano-wire', at, '[a piano string sounds, then dies]');
       window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 1.06), 90);
       window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 0.5), 180);
+    }
+
+    // The entry door swings open again on its own — queued like blackout.
+    if (this.pendingDoorOpen && tA >= this.pendingDoorOpen.at) {
+      const room = this.activeRooms()[this.pendingDoorOpen.room];
+      this.pendingDoorOpen = null;
+      const door = room?.doors.find((d) => !d.locked);
+      if (door) {
+        door.opening = true;
+        this.cue('door-open', { x: door.pos.x, y: door.pos.y + 1, z: door.pos.z }, '[the door opens again]', 'warn');
+        this.sound.emit({ x: door.pos.x, y: 1, z: door.pos.z, intensity: 0.5, category: 'door', caption: '[door]' });
+      }
     }
 
     // Ambient blackout — queued by room entry; sputter first, then dead dark.
