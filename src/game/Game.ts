@@ -25,7 +25,7 @@ import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
-import { tickFigure } from '../entities/figure';
+import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
 import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, HazardField } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
@@ -93,6 +93,10 @@ export class Game {
   private roomBounds = new Map<number, Aabb>();
   private lastHud = 0;
   private nextAmbience = 8;
+  private relic: THREE.Object3D | null = null;
+  private relicRoom = -1;
+  private relicSeen = true;
+  private relicHome: THREE.Vector3 | null = null;
   private nextBreath = 0;
   private hemi: THREE.HemisphereLight | null = null;
   private lightning = 0;
@@ -1405,6 +1409,67 @@ export class Game {
     }
   }
 
+  // The Relic — a statue that relocates between rooms while you're away.
+  // Non-lethal ambient dread: it never moves inside your sightline, it just
+  // keeps ending up somewhere it has no business being.
+  private maybeRelocateRelic(_prev: number): void {
+    const room = this.activeRooms()[this.currentRoom];
+    const spec = room?.spec;
+    if (!room || !spec || SAFE_ROOM_TEMPLATES.has(room.templateId)) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 444);
+    if (!this.relic) {
+      if (this.currentRoom < 12 || !scare.bool(0.1)) return;
+      this.relic = statueFigure({ height: 2.3 }) ?? tallFigure({ height: 2.3, hood: true });
+      this.entityGroup.add(this.relic);
+    } else if (this.relicRoom === this.currentRoom || !scare.bool(0.55)) {
+      return;
+    }
+    // place at a random wall corner of the new room, facing the center
+    const c = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+    const lx = (scare.float() - 0.5) * (spec.width - 1.8);
+    const lz = (scare.bool(0.6) ? 1 : -1) * (spec.depth / 2 - 0.8 - scare.float() * 0.4);
+    const wx = room.origin.x + lx * c + lz * sn;
+    const wz = room.origin.z - lx * sn + lz * c;
+    this.relic.position.set(wx, room.origin.y, wz);
+    this.relic.rotation.y = Math.atan2(room.origin.x - wx, room.origin.z - wz) - room.yaw;
+    this.relicRoom = this.currentRoom;
+    this.relicSeen = false;
+    this.relicHome = this.relic.position.clone();
+  }
+
+  private updateRelic(_dt: number): void {
+    if (!this.relic) return;
+    const room = this.activeRooms()[this.relicRoom];
+    if (!room) { this.entityGroup.remove(this.relic); this.relic = null; this.relicRoom = -1; return; }
+    const dx = this.relic.position.x - this.player.pos.x;
+    const dz = this.relic.position.z - this.player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const inRoom = this.relicRoom === this.currentRoom;
+    // gaze check — same view-cone math the watch anim uses
+    const cp = Math.cos(this.player.pitch);
+    const fx = Math.sin(this.player.yaw) * cp;
+    const fz = Math.cos(this.player.yaw) * cp;
+    const facing = dist > 0.001 ? (-fx * dx - fz * dz) / dist : 0;
+    const seen = inRoom && dist < 15 && facing > 0.55;
+    if (seen && !this.relicSeen) {
+      this.relicSeen = true;
+      this.cue('amb-settle', { x: this.relic.position.x, y: this.relic.position.y + 1.6, z: this.relic.position.z },
+        '[it was not in this room before]', 'warn');
+    }
+    // unobserved drift — a slow lean toward the player, capped, only while
+    // they are in the room but facing away (weeping-angel pressure)
+    if (inRoom && !seen && dist > 2.2 && dist < 12 && this.relicHome) {
+      const traveled = this.relic.position.distanceTo(this.relicHome);
+      if (traveled < 1.6) {
+        const step = Math.min(0.05, 2.2 / dist * 0.03) ;
+        this.relic.position.x -= (dx / dist) * step;
+        this.relic.position.z -= (dz / dist) * step;
+      }
+      this.relic.rotation.y = Math.atan2(-dx, -dz) - (room.yaw ?? 0);
+    }
+    if (this.relic.userData.figureParts) tickFigure(this.relic, this.clock.time);
+  }
+
   private updateRats(dt: number): void {
     for (const r of [...this.rats]) {
       r.t += dt;
@@ -1483,6 +1548,7 @@ export class Game {
       this.stats.roomsVisited = Math.max(this.stats.roomsVisited, this.currentRoom);
       this.maybeSpawnRat();
       this.maybeBlackout(this.currentRoom);
+      this.maybeRelocateRelic(prev);
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -1680,6 +1746,7 @@ export class Game {
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
     this.updateRats(dt);
+    this.updateRelic(dt);
     this.updateMoths(dt);
 
     // engine win already handled via milestone → victory()
