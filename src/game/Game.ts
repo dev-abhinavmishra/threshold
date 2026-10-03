@@ -924,11 +924,21 @@ export class Game {
     const hasLamp = this.inventory.some((i) => i.id === 'handLamp' && i.count > 0);
     const hasPulse = this.inventory.some((i) => i.id === 'pulseLamp' && i.count > 0);
     if (hasPulse) {
+      const pulseItem = this.inventory.find((i) => i.id === 'pulseLamp');
+      if (!this.pulseLampOn && (pulseItem?.count ?? 0) <= 0) {
+        this.cue('ui-click', null, '[the pulse lamp is spun out]', 'warn');
+        return;
+      }
       this.pulseLampOn = !this.pulseLampOn;
       this.cue('ui-click', null, this.pulseLampOn ? '[pulse lamp humming]' : '');
       return;
     }
     if (hasLamp) {
+      const lampItem = this.inventory.find((i) => i.id === 'handLamp');
+      if (!this.lampOn && (lampItem?.count ?? 0) <= 0) {
+        this.cue('ui-click', null, '[the battery is dead]', 'warn');
+        return;
+      }
       this.lampOn = !this.lampOn;
       this.cue('ui-click', null, this.lampOn ? '[lamp on]' : '[lamp off]');
     }
@@ -937,13 +947,27 @@ export class Game {
   private useActiveSlot(): void {
     const slotItems = this.inventory.filter((i) => ITEM_DEFS[i.id]?.slotItem);
     const item = slotItems[this.activeSlot];
-    if (!item || item.count <= 0) return;
+    // lamps pass through at 0 charge so their case can report the dead battery
+    if (!item || (item.count <= 0 && item.id !== 'handLamp' && item.id !== 'pulseLamp')) return;
     switch (item.id) {
       case 'handLamp':
+        if (!this.lampOn && item.count <= 0) {
+          this.cue('ui-click', null, '[the battery is dead]', 'warn');
+          return;
+        }
         this.lampOn = !this.lampOn;
         return;
       case 'pulseLamp':
-        this.pulseLampOn = !this.pulseLampOn;
+        if (this.pulseLampOn) {
+          // crank while on: +charge, but the hum carries
+          item.count = Math.min(100, item.count + 30);
+          this.cue('ui-click', null, '[pulse lamp cranked]', 'info');
+          this.sound.emit({ x: this.player.pos.x, y: 1.2, z: this.player.pos.z, intensity: 0.7, category: 'item', caption: '[lamp crank]' });
+        } else if (item.count > 0) {
+          this.pulseLampOn = true;
+        } else {
+          this.cue('ui-click', null, '[the pulse lamp is spun out]', 'warn');
+        }
         return;
       case 'sparkFlash':
         item.count--;
@@ -1700,6 +1724,7 @@ export class Game {
   private readonly visitedRooms = new Set<number>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
+  private lowBattWarned = false;
 
   /** The Broker: one robed figure per u-lobby, behind the counter, head that
    *  follows you. Spawned lazily when the room first builds. */
@@ -2479,7 +2504,12 @@ export class Game {
         if (d < 7) cold = Math.max(cold, 1 - d / 7);
       }
       const sputter = cold * (0.28 + 0.22 * Math.max(0, Math.sin(this.clock.time * 13) + Math.sin(this.clock.time * 7.3) * 0.5));
-      this.lampLight.intensity = (this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9) * (1 - sputter);
+      // dying battery thins the beam
+      const batt = this.pulseLampOn
+        ? (this.inventory.find((i) => i.id === 'pulseLamp')?.count ?? 0)
+        : (this.inventory.find((i) => i.id === 'handLamp')?.count ?? 0);
+      const battF = batt < 15 ? 0.55 + 0.35 * Math.max(0, Math.sin(this.clock.time * 11)) : 1;
+      this.lampLight.intensity = (this.pulseLampOn ? 8 + Math.sin(this.clock.time * 9) * 3.5 : 9) * (1 - sputter) * battF;
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
@@ -2515,6 +2545,29 @@ export class Game {
       }
     } else if (this.heldTorch) {
       this.heldTorch.visible = false;
+    }
+    // Lamp batteries — hand lamp sips (~180s), pulse lamp gulps (~90s) and
+    // cranks back loudly. HUD reads count as charge %.
+    const lampItem = this.inventory.find((i) => i.id === 'handLamp');
+    const pulseItem = this.inventory.find((i) => i.id === 'pulseLamp');
+    if (this.lampOn && lampItem) {
+      lampItem.count = Math.max(0, lampItem.count - dt * 0.55);
+      if (lampItem.count <= 15 && !this.lowBattWarned) {
+        this.lowBattWarned = true;
+        this.cue('ui-click', null, '[battery low — beam thinning]', 'warn');
+      }
+      if (lampItem.count <= 0) {
+        this.lampOn = false;
+        this.cue('ui-click', null, '[the lamp dies]', 'warn');
+      }
+    }
+    if (!this.lampOn) this.lowBattWarned = false;
+    if (this.pulseLampOn && pulseItem) {
+      pulseItem.count = Math.max(0, pulseItem.count - dt * 1.1);
+      if (pulseItem.count <= 0) {
+        this.pulseLampOn = false;
+        this.cue('ui-click', null, '[the pulse lamp spins down]', 'warn');
+      }
     }
     this.audio.setListener(this.player.pos, this.player.yaw);
     // zone reverb + door occlusion
