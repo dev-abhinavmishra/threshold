@@ -757,6 +757,25 @@ export class Game {
         });
       }
     }
+    // Pianos play — a real lure: loud distraction, hunters walk to it.
+    {
+      const pr = this.activeRooms()[this.currentRoom];
+      if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
+        const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
+        let n = 0;
+        for (const p of pr.spec.props) {
+          if (p.kind !== 'pianoUpright') continue;
+          const key = `${this.space}:${pr.index}:${n}`;
+          n += 1;
+          if (this.playedPianos.has(key)) continue;
+          this.interaction.add({
+            kind: 'piano', id: `piano-${key}`,
+            pos: { x: pr.origin.x + p.x * c + p.z * s, y: 1, z: pr.origin.z - p.x * s + p.z * c },
+            prompt: 'Play the piano', holdTime: 0.9, enabled: true, priority: 2,
+          });
+        }
+      }
+    }
     // Redactor false doors become interactable
     for (const e of this.entities) {
       if (e instanceof Redactor && e.state === 'engage') {
@@ -944,6 +963,18 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'piano': {
+        it.enabled = false;
+        this.playedPianos.add(it.id.replace(/^piano-/, ''));
+        // three detuned strikes, same language as the building's own — the
+        // emit point is the instrument, not you: play it and be elsewhere
+        const at = { x: it.pos.x, y: 1.1, z: it.pos.z };
+        this.audio.play('piano-wire', at, '[the piano answers, out of tune]');
+        window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 1.06), 140);
+        window.setTimeout(() => this.audio.play('piano-wire', at, '', 'info', 'sfx', 0.5), 290);
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 1.5, category: 'distraction', caption: '[the piano sounds]' });
         return;
       }
       case 'underExit': {
@@ -2228,6 +2259,7 @@ export class Game {
   private occupantAt: Vec3 | null = null;
   private occupantFired = false;
   private coffinOpened = false;
+  private playedPianos = new Set<string>();
   private beamGroup: THREE.Group | null = null;
   private beamMats: { mat: THREE.MeshBasicMaterial; base: number }[] = [];
   private lampFade = 1;

@@ -30,6 +30,7 @@ ported to the subfloor.
 | The occupant knocks | +211 (0.55) | Wake proximity ≤3.4m | a single knock answers from inside the ajar coffin | don't lean in |
 | Clocks hold their breath | — (dread-driven) | proximity | every clock hand freezes and ticking stops while an engaged threat is within ~10m | stopped clocks = something is close; use the silence |
 | Vending machine | — (loot stream) | maintenance/records rooms, ~22% | feed it 4–9 imprints; vends a seeded item, loud 0.6 'machine' emit | **warn:** the clank draws hunters — spend when it's quiet |
+| Played piano | — (interaction) | lobby/guest/gallery pianos, once per room | three detuned strikes, loud 1.5 'distraction' emit at the instrument | a real lure — play it and be somewhere else |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
