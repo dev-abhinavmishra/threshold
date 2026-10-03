@@ -1012,6 +1012,98 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       room.losBlockers.push(cb);
     }
 
+    // Mezzanine balcony — a railed deck band along one long wall of tall
+    // grand rooms; pure set-dressing (no access) but reads as a second
+    // storey and throws a shadow band underneath.
+    if (grand && !isUnder && h >= 3.8 && w >= 6 && rng.float() < 0.4) {
+      const sgn = rng.bool(0.5) ? 1 : -1;
+      const deckD = 0.42;
+      const bz = sgn * (d / 2 - 0.12 - deckD / 2);
+      const by = 2.52;
+      const bw2 = w - 1.2;
+      const deck = new THREE.Mesh(texBox(bw2, 0.08, deckD), wainsMat);
+      deck.position.set(0, by, bz);
+      group.add(deck);
+      const railMat2 = trimMat;
+      const railY = by + 0.9;
+      const topRail = new THREE.Mesh(texBox(bw2, 0.07, 0.07), railMat2);
+      topRail.position.set(0, railY, bz - sgn * (deckD / 2 - 0.05));
+      group.add(topRail);
+      const botRail = new THREE.Mesh(texBox(bw2, 0.05, 0.05), railMat2);
+      botRail.position.set(0, by + 0.12, bz - sgn * (deckD / 2 - 0.05));
+      group.add(botRail);
+      for (let bx = -bw2 / 2; bx <= bw2 / 2; bx += 0.24) {
+        const bal = new THREE.Mesh(texBox(0.028, 0.78, 0.028), railMat2);
+        bal.position.set(bx, by + 0.5, bz - sgn * (deckD / 2 - 0.05));
+        group.add(bal);
+      }
+      for (const en of [-1, 1]) {
+        const post = new THREE.Mesh(texBox(0.09, 0.98, 0.09), railMat2);
+        post.position.set(en * bw2 / 2, by + 0.49, bz - sgn * (deckD / 2 - 0.05));
+        group.add(post);
+      }
+      for (let cx2 = -bw2 / 2 + 0.6; cx2 < bw2 / 2; cx2 += 1.4) {
+        const corbel = new THREE.Mesh(texBox(0.1, 0.3, 0.3), railMat2);
+        corbel.position.set(cx2, by - 0.19, bz + sgn * (deckD / 2 - 0.15));
+        group.add(corbel);
+      }
+      // shadow band under the deck — the gallery overhang darkens its wall
+      const shMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false });
+      shMat.userData.decalMat = true;
+      const sh = new THREE.Mesh(new THREE.PlaneGeometry(bw2, 1.1), shMat);
+      sh.position.set(0, by - 0.7, sgn * (d / 2 - 0.115));
+      sh.rotation.y = sgn > 0 ? Math.PI : 0;
+      sh.renderOrder = 1;
+      group.add(sh);
+    }
+
+    // Collapsed structure reveal — a floor pit near a wall with rubble,
+    // hanging slab fragment and rebar stubs; underscript damage storytelling.
+    const collP = ({ underscript: 0.4, maintenance: 0.3, unlit: 0.25, corridor: 0.08 } as Record<string, number>)[spec.biome] ?? 0;
+    if (rng.float() < collP && w >= 4 && d >= 4) {
+      const hx = (rng.float() - 0.5) * (w - 3);
+      const hz = (rng.bool(0.5) ? 1 : -1) * (d / 2 - 0.9);
+      // pit mouth — dark ellipse sink
+      const pitMat = new THREE.MeshBasicMaterial({ color: 0x050505, transparent: true, opacity: 0.92, depthWrite: false });
+      pitMat.userData.decalMat = true;
+      const pit = new THREE.Mesh(new THREE.CircleGeometry(0.55 + rng.float() * 0.4, 14), pitMat);
+      pit.rotation.x = -Math.PI / 2;
+      pit.scale.set(1, 0.7 + rng.float() * 0.4, 1);
+      pit.position.set(hx, 0.014, hz);
+      pit.renderOrder = 1;
+      group.add(pit);
+      // jagged rim — irregular concrete chunks around the mouth
+      const chunkMat = TEX.concreteFloor();
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + rng.float() * 0.5;
+        const rr = 0.55 + rng.float() * 0.25;
+        const chunk = new THREE.Mesh(texBox(0.22 + rng.float() * 0.3, 0.1 + rng.float() * 0.12, 0.18 + rng.float() * 0.25), chunkMat);
+        chunk.position.set(hx + Math.cos(a) * rr, 0.06, hz + Math.sin(a) * rr);
+        chunk.rotation.y = rng.float() * Math.PI;
+        chunk.rotation.z = (rng.float() - 0.5) * 0.25;
+        group.add(chunk);
+      }
+      // bent rebar stubs poking out of the rim
+      for (let i = 0; i < 3; i++) {
+        const rb = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.3 + rng.float() * 0.2, 5), MAT.charcoal());
+        rb.position.set(hx + (rng.float() - 0.5) * 0.9, 0.15, hz + (rng.float() - 0.5) * 0.7);
+        rb.rotation.z = (rng.float() - 0.5) * 0.9;
+        rb.rotation.x = (rng.float() - 0.5) * 0.9;
+        group.add(rb);
+      }
+      // hanging slab fragment — tilted wedge half-detached above the pit
+      const frag = new THREE.Mesh(texBox(0.7 + rng.float() * 0.5, 0.1, 0.5 + rng.float() * 0.3), chunkMat);
+      frag.position.set(hx + (rng.float() - 0.5) * 0.4, h - 0.5 - rng.float() * 0.5, hz + (rng.float() - 0.5) * 0.4);
+      frag.rotation.z = 0.3 + rng.float() * 0.35;
+      frag.rotation.x = (rng.float() - 0.5) * 0.3;
+      group.add(frag);
+      // keep players out of the pit mouth — shallow blocker ring
+      const cos = Math.cos(room.yaw), sin = Math.sin(room.yaw);
+      const wx = room.origin.x + hx * cos + hz * sin;
+      const wz = room.origin.z - hx * sin + hz * cos;
+      room.colliders.push(aabb(wx, room.origin.y + 0.15, wz, 0.55, 0.15, 0.5));
+    }
+
     // Floor stains.
     const stainP = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder ? 0.8 : spec.biome === 'corridor' ? 0.5 : 0.2;
     const nStain = rng.float() < stainP ? 1 + Math.floor(rng.float() * 2) : 0;
