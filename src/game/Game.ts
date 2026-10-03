@@ -937,10 +937,28 @@ export class Game {
         }
         this.cue('heal', null, '[steps muffled]');
         return;
-      case 'chalkSpool':
+      case 'chalkSpool': {
         item.count--;
-        this.cue('afterglow-hint', null, '[chalk marks will guide your memory]');
+        // Mark the focused door (or nearest within 3m) with a chalk tally —
+        // persistent for the run, readable in the dark.
+        let target = it?.kind === 'door' ? (it.data as Door) : undefined;
+        if (!target) {
+          let bd = 3;
+          for (const r of this.activeRooms()) {
+            for (const d of r.doors) {
+              const dist = v3dist(d.pos, this.player.pos);
+              if (dist < bd) { bd = dist; target = d; }
+            }
+          }
+        }
+        if (target && !target.falseDoor) {
+          this.chalkMarks.set(target.id, { pos: target.pos, yaw: target.yaw, label: target.label });
+          this.cue('chalk-mark', target.pos, `[marked — Door ${target.label}]`);
+        } else {
+          this.cue('afterglow-hint', null, '[chalk needs a threshold]');
+        }
         return;
+      }
       case 'wardSeal':
         item.count--;
         // Arm one protection charge — consumed by next lethal corridor threat.
@@ -953,6 +971,70 @@ export class Game {
   }
 
   private wardArmed = false;
+
+  /** Chalk marks left on doors this run: doorId → placement. */
+  private chalkMarks = new Map<string, { pos: Vec3; yaw: number; label: string }>();
+
+  /** Chalk tally texture — unlit so it reads faintly in unlit rooms. */
+  private static chalkTex: THREE.Texture | null = null;
+  private static chalkMaterial(): THREE.MeshBasicMaterial | null {
+    if (typeof document === 'undefined') return null;
+    if (!Game.chalkTex) {
+      const cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 64;
+      const ctx = cv.getContext('2d')!;
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.strokeStyle = 'rgba(232,228,214,0.95)';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      // crossed tally: four strokes + a diagonal — wobbly for a hand-drawn feel
+      for (let i = 0; i < 4; i++) {
+        const x = 16 + i * 9;
+        ctx.beginPath();
+        ctx.moveTo(x + (i % 2), 16 + (i % 3));
+        ctx.lineTo(x - (i % 2), 46 - (i % 3));
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(12, 44);
+      ctx.lineTo(52, 20);
+      ctx.stroke();
+      const tex = new THREE.CanvasTexture(cv);
+      Game.chalkTex = tex;
+    }
+    return new THREE.MeshBasicMaterial({
+      map: Game.chalkTex, transparent: true, opacity: 0.9,
+      depthWrite: false, side: THREE.DoubleSide,
+    });
+  }
+
+  /** Attach chalk marks to built rooms' doors (re-applied as rooms stream). */
+  private ensureChalkMarks(roomIndex: number, built: { group: THREE.Group }): void {
+    if (this.chalkMarks.size === 0) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    for (const d of room.doors) {
+      const mark = this.chalkMarks.get(d.id);
+      if (!mark) continue;
+      const name = `chalk-${d.id}`;
+      if (built.group.getObjectByName(name)) continue;
+      const mat = Game.chalkMaterial();
+      if (!mat) return;
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), mat);
+      m.name = name;
+      // face the room's interior — chalk lives on the side you marked from
+      const inward = Math.atan2(room.origin.x - d.pos.x, room.origin.z - d.pos.z);
+      m.rotation.y = inward;
+      const off = 0.07;
+      m.position.set(
+        d.pos.x + Math.sin(inward) * off,
+        d.pos.y + 1.62,
+        d.pos.z + Math.cos(inward) * off,
+      );
+      m.renderOrder = 2;
+      built.group.add(m);
+    }
+  }
 
   /* ==================== underscript ==================== */
 
@@ -1338,6 +1420,7 @@ export class Game {
     for (const i of this.streamer.builtIndices) {
       const built = this.streamer.get(i);
       if (!built) continue;
+      this.ensureChalkMarks(i, built);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
       for (const l of built.lights) {
