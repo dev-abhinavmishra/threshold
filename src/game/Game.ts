@@ -763,13 +763,14 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0;
+        let vn = 0, hn = 0, pn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
-          if (!isVent && !isHearth && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth) ord[p.kind] = n + 1;
+          const isPhone = p.kind === 'payphone';
+          if (!isVent && !isHearth && !isPhone && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone) ord[p.kind] = n + 1;
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -802,6 +803,12 @@ export class Game {
               kind: 'hearth', id: `hearth-${key}`,
               pos: { x: wx, y: 0.8, z: wz },
               prompt: 'Light the hearth', holdTime: 1.6, enabled: true, priority: 2,
+            });
+          } else if (isPhone && !this.answeredPhones.has(key)) {
+            this.interaction.add({
+              kind: 'phone', id: `phone-${key}`,
+              pos: { x: wx, y: 1.4, z: wz },
+              prompt: 'Lift the receiver', holdTime: 1.0, enabled: true, priority: 2,
             });
           }
         }
@@ -994,6 +1001,29 @@ export class Game {
         }
         this.cue('door-creak', it.pos, '');
         this.cue('amb-settle', it.pos, '[empty — the pillow is still warm]', 'warn');
+        return;
+      }
+      case 'phone': {
+        it.enabled = false;
+        this.answeredPhones.add(it.id.replace(/^phone-/, ''));
+        // the line reads the house back to you — nearest hunter by distance,
+        // whispered; the receiver's clack is a sound either way
+        const at = { x: it.pos.x, y: 1.4, z: it.pos.z };
+        let nearest: Entity | null = null;
+        let nd = Infinity;
+        for (const e of this.entities) {
+          if (e.state === 'done') continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          const d = v3dist(tp, this.player.pos);
+          if (d < nd) { nd = d; nearest = e; }
+        }
+        const line = !nearest ? '[a dial tone that sounds like counting]'
+          : nd < 3.2 ? '[a voice, close: it is in the room with you]'
+          : nd < 12 ? '[a voice: near — a door or two away]'
+          : '[a voice: rooms away — keep walking]';
+        this.audio.play('whisper-voice', at, line, 'warn');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'ambient', caption: '' });
         return;
       }
       case 'hearth': {
@@ -2429,6 +2459,7 @@ export class Game {
   private steamJets: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; base: THREE.Vector3; until: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
   private nextHiss = 0;
   private litHearths = new Set<string>();
+  private answeredPhones = new Set<string>();
   private hearths: { pts: THREE.Points; geo: THREE.BufferGeometry; mat: THREE.PointsMaterial; light: THREE.PointLight; base: THREE.Vector3; until: number; seed: number; nextCrackle: number; data: { a: number; r: number; y: number; v: number }[] }[] = [];
   private tvAnswerQueue: { at: number; pos: Vec3 }[] = [];
   private beamGroup: THREE.Group | null = null;
