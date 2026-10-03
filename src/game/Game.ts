@@ -96,6 +96,8 @@ export class Game {
   private hemi: THREE.HemisphereLight | null = null;
   private lightning = 0;
   private nextThunder = 30;
+  private pendingBlackout: { room: number; at: number } | null = null;
+  private blackedOut = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -1252,6 +1254,34 @@ export class Game {
     });
   }
 
+  /** Seeded ambient scare: ~6% of lit rooms die as the player enters —
+   *  lights sputter briefly, then the room goes dark for good. */
+  private maybeBlackout(roomIndex: number): void {
+    if (this.blackedOut.has(roomIndex) || this.pendingBlackout) return;
+    const room = this.activeRooms()[roomIndex];
+    const spec = room?.spec;
+    if (!room || !spec || spec.lights.length === 0 || room.darkRoom) return;
+    if (SAFE_ROOM_TEMPLATES.has(room.templateId) || spec.special) return;
+    if (!this.streams.roomStream('scare', roomIndex).bool(0.06)) return;
+    this.pendingBlackout = { room: roomIndex, at: this.clock.time + 0.8 + Math.random() * 0.9 };
+    this.blackedOut.add(roomIndex);
+  }
+
+  private blackoutRoom(roomIndex: number): void {
+    const built = this.streamer.get(roomIndex);
+    if (!built) return;
+    for (const l of built.lights) {
+      l.userData.flicker = false;
+      l.userData.baseIntensity = 0;
+      l.intensity = 0;
+      const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
+      if (lamp) {
+        lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
+        (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.05;
+      }
+    }
+  }
+
   /** Ambient critter: a rat scurries along a wall edge when the player enters a room. */
   private maybeSpawnRat(): void {
     const room = this.activeRooms()[this.currentRoom];
@@ -1433,6 +1463,7 @@ export class Game {
     if (this.currentRoom !== prev && this.space === 'main') {
       this.stats.roomsVisited = Math.max(this.stats.roomsVisited, this.currentRoom);
       this.maybeSpawnRat();
+      this.maybeBlackout(this.currentRoom);
     }
     if (this.space === 'under') {
       this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, this.currentRoom);
@@ -1487,6 +1518,21 @@ export class Game {
       } else if (this.hemi.intensity !== 0.7) {
         this.hemi.intensity = 0.7;
       }
+    }
+
+    // Ambient blackout — queued by room entry; sputter first, then dead dark.
+    if (this.pendingBlackout && tA >= this.pendingBlackout.at) {
+      const target = this.pendingBlackout.room;
+      this.pendingBlackout = null;
+      this.flickerRoom(target, 'dim');
+      window.setTimeout(() => {
+        this.blackoutRoom(target);
+        const rm = this.activeRooms()[target];
+        if (rm) {
+          this.audio.play('amb-settle', { x: rm.origin.x, y: rm.origin.y + 2, z: rm.origin.z });
+          this.cue('amb-settle', null, '[the lights die]', 'warn');
+        }
+      }, 420);
     }
 
     // Winded breathing — stamina under a third plays a soft breath whose
