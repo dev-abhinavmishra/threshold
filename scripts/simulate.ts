@@ -14,9 +14,12 @@ for (const seedText of list) {
   const encCount = route.rooms.reduce((a, r) => a + r.scheduled.length, 0);
   const locks = route.keyPairs.length;
   const hide = route.rooms.reduce((a, r) => a + r.hidingSpots.length, 0);
+  const biomes = new Map<string, number>();
+  for (const r of route.rooms) biomes.set(r.biome, (biomes.get(r.biome) ?? 0) + 1);
+  const corrShare = (((biomes.get('corridor') ?? 0) / route.rooms.length) * 100).toFixed(0);
   console.log(
     `seed ${seedText}: ${route.rooms.length} rooms + ${route.underRooms.length} under, ` +
-    `${encCount} encounters, ${locks} locks, ${hide} hides, ${Date.now() - t0}ms — ${report.ok ? 'OK' : 'FAIL'}`,
+    `${encCount} encounters, ${locks} locks, ${hide} hides, corridor ${corrShare}%, ${Date.now() - t0}ms — ${report.ok ? 'OK' : 'FAIL'}`,
   );
   for (const e of report.errors) console.log(`  ERR ${e}`);
   for (const w of report.warnings.slice(0, 6)) console.log(`  warn ${w}`);

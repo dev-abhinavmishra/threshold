@@ -132,6 +132,10 @@ function pickSpec(
       if (probe.weight <= 0 || roomIndex < probe.minRoom) return 0;
       let w = probe.weight;
       if (biomeBias && probe.biome === biomeBias) w *= 2.2;
+      // Corridors are connective tissue, not destinations — after the
+      // tutorial stretch (0–9, corridor-biased) taper their draw so
+      // furnished biomes dominate the mid/late run.
+      if (probe.biome === 'corridor' && roomIndex > 9 && biomeBias !== 'corridor') w *= 0.4;
       return w;
     });
     const spec = t.build(rng.fork(roomIndex * 131 + picked.length));

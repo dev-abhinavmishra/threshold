@@ -123,6 +123,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   portcullis: { dir: 'portcullis', height: 2.6, collider: [2.4, 2.6, 0.15] },
   wardrobe: { dir: 'wardrobe', height: 2.2, collider: [1.3, 2.2, 0.62] },
   dresser: { dir: 'dresser', height: 0.98, collider: [1.0, 0.98, 0.55] },
+  doorLeaf: { dir: 'doorLeaf', height: 2.2, collider: [1.0, 2.2, 0.09] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],

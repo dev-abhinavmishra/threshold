@@ -461,10 +461,42 @@ def nightstand():
     cube('door', (0, -d / 2 - 0.01, 0.48), (w - 0.1, 0.02, 0.22), DARK, 0.006)
     join_all('nightstand')
 
+def door_leaf():
+    """Six-panel molded passage door, 1.0m wide x 2.2m high, floor at z=0.
+
+    Modeled on real molded joinery: proud stiles + rails, recessed fields,
+    beveled raised panels, knob + backplate + escutcheon, strap hinges on the
+    hinge stile. The game scales x to the door port's width.
+    """
+    w, h, t = 1.0, 2.2, 0.05
+    cube('slab', (0, 0, h / 2), (w, t, h), WOOD, 0.005)
+    # proud stiles + rails — real doors are joined, not flat slabs
+    for sx in (-1, 1):
+        cube('stile', (sx * (w / 2 - 0.045), 0, h / 2), (0.075, t + 0.014, h), WOOD, 0.006)
+    for zc in (0.055, h - 0.055):
+        cube('rail', (0, 0, zc), (w - 0.1, t + 0.014, 0.11), WOOD, 0.006)
+    cube('lockrail', (0, 0, 1.05), (w - 0.1, t + 0.012, 0.14), WOOD, 0.006)
+    # six recessed fields with beveled raised panels on both faces
+    rows = [(0.45, 0.52), (1.05, 0.74), (1.75, 0.5)]
+    for sy in (-1, 1):
+        for zc, ph in rows:
+            for cx in (-0.24, 0.24):
+                cube('field', (cx, sy * (t / 2 + 0.004), zc), (0.36, 0.01, ph + 0.05), DARK, 0.004)
+                cube('panel', (cx, sy * (t / 2 + 0.012), zc), (0.31, 0.016, ph), WOOD, 0.02)
+        # knob backplate, escutcheon, strap hinges (hinge stile = -x)
+        cube('backplate', (0.4, sy * (t / 2 + 0.006), 1.05), (0.06, 0.012, 0.2), IRON, 0.004)
+        cube('escutcheon', (0.4, sy * (t / 2 + 0.005), 0.92), (0.022, 0.01, 0.055), DARK, 0.003)
+        for hz in (0.35, 1.1, 1.85):
+            cube('hinge', (-0.42, sy * (t / 2 + 0.006), hz), (0.1, 0.014, 0.15), IRON, 0.004)
+    for sy in (-1, 1):
+        cyl('knob', (0.4, sy * (t / 2 + 0.045), 1.05), 0.035, 0.035, IRON, 14).rotation_euler[0] = math.pi / 2
+    join_all('doorLeaf')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
     'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf, 'breakerPanel': breakerPanel, 'wallVent': wallVent, 'portcullis': portcullis, 'wardrobe': wardrobe, 'dresser': dresser, 'nightstand': nightstand,
+    'doorLeaf': door_leaf,
 }
 
 def main():

@@ -13,13 +13,14 @@ import { aabb } from '../engine/math';
 import { portLocalPos } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
+import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
   /** Door leaf meshes keyed by door id for animation. */
-  doorLeaves: Map<string, THREE.Mesh>;
+  doorLeaves: Map<string, THREE.Object3D>;
   /** Breakable light meshes keyed by group. */
   lampMeshes: THREE.Mesh[];
   /** Actual THREE lights (few, quality-capped). */
@@ -562,7 +563,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   };
 
   // Door frames at ports
-  const doorLeaves = new Map<string, THREE.Mesh>();
+  const doorLeaves = new Map<string, THREE.Object3D>();
   const doorPositions = [spec.entry, ...spec.exits];
   for (const port of doorPositions) {
     const lp = portLocalPos(port, w, d);
@@ -646,10 +647,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       : spec.biome === 'maintenance'
         ? MAT.steelDark()
         : rng.pick([TEX.woodFloor(), TEX.woodFloor(), MAT.darkOak(), MAT.oxGreen()]);
-    const leaf = new THREE.Mesh(texBox(port.width - 0.1, 2.2, 0.09), leafMat);
+    const leafW = port.width - 0.1;
+    // Milled 6-panel door (Blender prefab) when loaded — real molded
+    // stiles/rails/panels instead of box relief. Falls back to the
+    // procedural leaf below until the GLB streams in.
+    const doorModel = !industrial ? modelInstance('doorLeaf', rng.float()) : null;
+    const leaf: THREE.Object3D = new THREE.Group();
+    if (doorModel) {
+      // Normalized to 1m wide / 2.2 tall / floor-anchored — stretch to the
+      // port width and drop it so the leaf hangs from the hinge pivot.
+      doorModel.scale.x = leafW;
+      doorModel.position.y = -1.1;
+      leaf.add(doorModel);
+    } else {
+      leaf.add(new THREE.Mesh(texBox(leafW, 2.2, 0.09), leafMat));
+    }
     // Raised 6-panel relief + brass hardware on interior (non-industrial)
     // doors — the slab reads flat otherwise.
-    if (!industrial) {
+    if (!industrial && !doorModel) {
       const pw = port.width - 0.1;
       const panelMat = leafMat;
       const recessMat = MAT.darkOak();
