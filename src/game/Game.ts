@@ -797,6 +797,8 @@ export class Game {
       const pr = this.activeRooms()[this.currentRoom];
       this.liveTraps = [];
       this.liveTickProps = [];
+      this.liveBooks = [];
+      this.bookNear = 0;
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
@@ -816,6 +818,10 @@ export class Game {
           // ticking ironwork: proximity tells that answer the house's pulse
           if (p.kind === 'pipe' || p.kind === 'indPipes' || p.kind === 'pipeManifold' || p.kind === 'boilerDrum' || p.kind === 'boilerTank' || p.kind === 'steamVent' || p.kind === 'wallVent') {
             this.liveTickProps.push({ x: wx, z: wz });
+          }
+          // written things whisper once if you linger close
+          if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
+            this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
           if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
           const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : (ord[p.kind] ?? 0);
@@ -2681,6 +2687,10 @@ export class Game {
   private liveTraps: { key: string; x: number; z: number }[] = [];
   private liveTickProps: { x: number; z: number }[] = [];
   private pipeTickNext = 0;
+  private liveBooks: { x: number; z: number; key: string }[] = [];
+  private bookNear = 0;
+  private bookTarget: { x: number; z: number; key: string } | null = null;
+  private bookWhispered = new Set<string>();
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -3924,6 +3934,27 @@ export class Game {
         const interval = 0.35 + nearest * 0.11;
         this.pipeTickNext = tA + interval;
         this.audio.play('pipe-tick', { x: bp.x, y: 1.1, z: bp.z }, interval < 0.75 ? '[the pipes tick — faster]' : '', 'warn');
+      }
+    }
+
+    // The pages whisper — linger over written things and they answer, once
+    {
+      let near: { x: number; z: number; key: string } | null = null;
+      for (const b of this.liveBooks) {
+        if (this.bookWhispered.has(b.key)) continue;
+        const dx = b.x - this.player.pos.x, dz = b.z - this.player.pos.z;
+        if (dx * dx + dz * dz < 1.4 * 1.4) { near = b; break; }
+      }
+      if (near && this.bookTarget === near) {
+        this.bookNear += this.clock.dt;
+        if (this.bookNear >= 1.2) {
+          this.bookWhispered.add(near.key);
+          this.bookNear = 0;
+          this.audio.play('whisper', { x: near.x, y: 1.3, z: near.z }, '[the pages say a title — yours]', 'warn');
+        }
+      } else {
+        this.bookNear = 0;
+        this.bookTarget = near;
       }
     }
 
