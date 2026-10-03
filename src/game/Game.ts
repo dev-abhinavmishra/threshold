@@ -941,7 +941,8 @@ export class Game {
         item.count--;
         // Mark the focused door (or nearest within 3m) with a chalk tally —
         // persistent for the run, readable in the dark.
-        let target = it?.kind === 'door' ? (it.data as Door) : undefined;
+        const focused = this.interaction.focused;
+        let target = focused?.kind === 'door' ? (focused.data as Door) : undefined;
         if (!target) {
           let bd = 3;
           for (const r of this.activeRooms()) {

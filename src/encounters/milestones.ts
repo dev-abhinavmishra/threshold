@@ -3,7 +3,8 @@
  * generated rooms. Each controller owns its entities, reads interactions,
  * and reports completion. All puzzle data derives from the run seed.
  */
-import type { Vec3 } from '../engine/math';
+import * as THREE from 'three';
+import { v3dist, type Vec3 } from '../engine/math';
 import { Rng } from '../engine/rng';
 import type { RoomInstance, Socket } from '../game/types';
 import type { EntityCtx } from '../entities/base';
@@ -11,6 +12,8 @@ import type { Interactable } from '../player/interaction';
 import { Curator } from '../entities/curator';
 import { Pursuer, Orrery } from '../entities/setpieces';
 import { corridorPath } from '../entities/base';
+import { tallFigure, tickFigure } from '../entities/figure';
+import { MAT } from '../world/materials';
 
 export interface MilestoneEvents {
   ctx: () => EntityCtx;
@@ -155,11 +158,63 @@ export class IndexEncounter extends Milestone {
 /* ============================ CUSTODIAN'S COUNTER (Room 51) ============================ */
 export class CustodianEncounter extends Milestone {
   /** shop sockets on 'itemPedestal' with meta.shop = slot index. */
+  private keeper: THREE.Object3D | null = null;
+  private keeperHead: THREE.Object3D | null = null;
+  private greeted = false;
+  private farewell = false;
+  private purchases = 0;
+
   constructor(room: RoomInstance, ev: MilestoneEvents) {
     super(room, ev);
   }
 
-  override update(): void {}
+  private spawnKeeper(): void {
+    if (this.keeper) return;
+    const c = this.ev.ctx();
+    // The Custodian: a robed keeper behind the counter — tracks the player,
+    // never moves its feet. Non-hostile, but not friendly either.
+    const fig = tallFigure({ height: 2.05, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber', hood: true, tattered: true });
+    if (!fig) return;
+    const r = this.room;
+    const yaw = r.yaw;
+    const cos = Math.cos(yaw), sin = Math.sin(yaw);
+    // behind the counter: exit-side wall, slightly off-centre
+    const lx = 0.6, lz = (r.spec ? r.spec.depth / 2 : 3) - 1.2;
+    const wx = r.origin.x + lx * cos + lz * sin;
+    const wz = r.origin.z - lx * sin + lz * cos;
+    fig.position.set(wx, r.origin.y, wz);
+    fig.rotation.y = Math.atan2(r.entryPos.x - wx, r.entryPos.z - wz);
+    const head = fig.getObjectByName('head') ?? fig.userData.figureParts?.head as THREE.Object3D | undefined ?? null;
+    this.keeperHead = head;
+    this.keeper = fig;
+    c.addEntityMesh(fig);
+  }
+
+  override update(dt: number): void {
+    const c = this.ev.ctx();
+    if (!this.keeper) this.spawnKeeper();
+    if (!this.keeper) return;
+    tickFigure(this.keeper, c.now);
+    const dist = v3dist(this.keeper.position as unknown as Vec3, c.player.pos);
+    // greet when the player first notices it within the room
+    if (!this.greeted && dist < 12) {
+      this.greeted = true;
+      this.ev.cue('custodian-bell', this.keeper.position as unknown as Vec3, '[a figure behind the counter — it watches]', 'info');
+    }
+    // head tracks the player while they're in the room
+    if (this.keeperHead && dist < 16) {
+      const want = Math.atan2(c.player.pos.x - this.keeper.position.x, c.player.pos.z - this.keeper.position.z);
+      const rel = want - this.keeper.rotation.y;
+      // clamp head turn to a natural range
+      const t = Math.atan2(Math.sin(rel), Math.cos(rel));
+      this.keeperHead.rotation.y += (Math.max(-1.1, Math.min(1.1, t)) - this.keeperHead.rotation.y) * Math.min(1, dt * 4);
+    }
+    // a dry parting shot the first time you leave after trading
+    if (!this.farewell && this.purchases > 0 && c.currentRoomIndex > this.room.index) {
+      this.farewell = true;
+      this.ev.cue('custodian-bell', null, '[somewhere behind you — the till closes]', 'info');
+    }
+  }
 
   override onInteract(it: Interactable): boolean {
     if (it.kind !== 'shop') return false;
@@ -170,12 +225,21 @@ export class CustodianEncounter extends Milestone {
     if (this.ev.spendImprints(price)) {
       sock.meta.sold = true;
       it.enabled = false;
+      this.purchases++;
       this.ev.giveItem(item, 1);
       this.ev.cue('purchase', it.pos, `[purchased — ${price} imprints]`, 'info');
     } else {
       this.ev.cue('door-locked', it.pos, `[${price} imprints required]`, 'warn');
     }
     return true;
+  }
+
+  override dispose(): void {
+    if (this.keeper) {
+      this.ev.ctx().removeEntityMesh(this.keeper);
+      this.keeper = null;
+      this.keeperHead = null;
+    }
   }
 }
 
