@@ -164,6 +164,7 @@ export const DEFAULT_KEYBINDS: Record<string, string> = {
   crouch: 'KeyC',
   interact: 'KeyE',
   useItem: 'KeyF',
+  toss: 'KeyT',
   slot1: 'Digit1',
   slot2: 'Digit2',
   slot3: 'Digit3',

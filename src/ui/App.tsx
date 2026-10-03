@@ -305,6 +305,7 @@ function SettingsPage() {
             {bind('Crouch', 'crouch')}
             {bind('Interact', 'interact')}
             {bind('Use item / lamp', 'useItem')}
+            {bind('Toss a pebble', 'toss')}
             {bind('Slot 1', 'slot1')}
             {bind('Slot 2', 'slot2')}
             {bind('Slot 3', 'slot3')}

@@ -266,6 +266,7 @@ export class Game {
       this.keys.add(e.code);
       if (e.code === this.keyFor('interact')) this.input.interactPressed = true;
       if (e.code === this.keyFor('useItem')) this.useLamp();
+      if (e.code === this.keyFor('toss')) this.tossPebble();
       for (let i = 0; i < 4; i++) {
         if (e.code === this.keyFor(`slot${i + 1}`)) {
           this.activeSlot = i;
@@ -1980,6 +1981,20 @@ export class Game {
       mesh: null,
       landed: false,
     };
+  }
+
+  /** Toss a pebble — a free, weak lure on a cooldown. Quieter than the
+   *  wind-up alarm, but it costs nothing but nerve. */
+  private nextToss = 0;
+
+  private tossPebble(): void {
+    if (this.clock.time < this.nextToss) return;
+    this.nextToss = this.clock.time + 8;
+    const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+    const x = this.player.pos.x + fx * 3.5;
+    const z = this.player.pos.z + fz * 3.5;
+    this.audio.play('pebble', { x, y: 0.1, z }, '');
+    this.sound.emit({ x, y: 0.1, z, intensity: 0.45, category: 'distraction', caption: '' });
   }
 
   /** The numbers moved — on revisit, a room's exit-door plate can read a
