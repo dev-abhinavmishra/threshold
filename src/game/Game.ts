@@ -162,6 +162,14 @@ export class Game {
   private cornerFigRoom = -1;
   private cornerSeenT = 0;
   private cornerT = 0;
+  // The Shade — an apparition with no body of its own; only the torch beam
+  // gives it opacity. It never moves; walking into it dispels it.
+  private shadeFig: THREE.Object3D | null = null;
+  private shadeRig: RiggedFigure | null = null;
+  private shadeRoom = -1;
+  private shadeSeenT = 0;
+  private shadeRevealed = false;
+  private shadeMats: THREE.MeshStandardMaterial[] = [];
   private nextBreath = 0;
   private hemi: THREE.HemisphereLight | null = null;
   private lightning = 0;
@@ -2702,6 +2710,92 @@ export class Game {
     else if (fig.userData.figureParts) tickFigure(fig, this.clock.time);
   }
 
+  /** The Shade — stands dead still; opacity is wholly beam-driven. */
+  private maybeShade(under = false): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
+    if (!under && this.currentRoom < 9) return;
+    if (under && this.currentRoom < 3) return;
+    const scare = this.streams.roomStream('scare', this.currentRoom + 347 + (under ? 977 : 0));
+    if (!scare.bool(0.14)) return;
+    if (this.shadeFig) this.clearShade();
+    // stands on the far side of the room, off the door line, facing the entry
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    const lx = (scare.bool() ? 1 : -1) * (room.width * 0.22 + scare.float() * room.width * 0.12);
+    const lz = room.depth * 0.28 + scare.float() * room.depth * 0.12;
+    const wx = room.origin.x + lx * c + lz * s;
+    const wz = room.origin.z - lx * s + lz * c;
+    const rig = riggedFigure('inkGhost');
+    const fig = rig ? rig.group : tallFigure({ height: 2.05, body: MAT.shadowFigure(), eyes: 'white', hood: true });
+    if (rig) { rig.play('idle', 0); this.shadeRig = rig; }
+    // beam-driven opacity needs per-instance materials — rig bodies already
+    // clone theirs; the tallFigure fallback shares MAT.* so clone that here
+    fig.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const mats = Array.isArray(m.material) ? m.material : [m.material];
+      const out = mats.map((mm) => (rig ? mm : mm.clone()) as THREE.MeshStandardMaterial);
+      if (!rig) m.material = Array.isArray(m.material) ? out : out[0];
+      for (const cl of out) {
+        if (this.shadeMats.includes(cl)) continue;
+        cl.transparent = true;
+        cl.opacity = 0.02;
+        cl.depthWrite = false;
+        this.shadeMats.push(cl);
+      }
+    });
+    fig.position.set(wx, room.origin.y, wz);
+    fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
+    fig.userData.shade = true;
+    this.entityGroup.add(fig);
+    this.shadeFig = fig;
+    this.shadeRoom = this.currentRoom;
+    this.shadeSeenT = 0;
+    this.shadeRevealed = false;
+  }
+
+  private clearShade(): void {
+    if (this.shadeFig) this.entityGroup.remove(this.shadeFig);
+    for (const m of this.shadeMats) m.dispose();
+    this.shadeMats = [];
+    this.shadeFig = null;
+    this.shadeRig = null;
+    this.shadeRoom = -1;
+    this.shadeSeenT = 0;
+    this.shadeRevealed = false;
+  }
+
+  private updateShade(dt: number): void {
+    if (this.shadeRoom !== this.currentRoom && this.shadeFig) this.clearShade();
+    const fig = this.shadeFig;
+    if (!fig) return;
+    const dx = fig.position.x - this.player.pos.x, dz = fig.position.z - this.player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const cp = Math.cos(this.player.pitch);
+    const fx = Math.sin(this.player.yaw) * cp, fz = Math.cos(this.player.yaw) * cp;
+    const facing = dist > 0.001 ? (fx * dx + fz * dz) / dist : 0;
+    const inBeam = (this.lampOn || this.pulseLampOn) && facing > 0.72 && dist < 14;
+    const target = inBeam ? 0.62 : 0.02;
+    const k = Math.min(1, dt * 6);
+    for (const m of this.shadeMats) m.opacity += (target - m.opacity) * k;
+    if (inBeam) {
+      this.shadeSeenT += dt;
+      if (!this.shadeRevealed && this.shadeSeenT > 0.28) {
+        this.shadeRevealed = true;
+        this.cue('whisper', { x: fig.position.x, y: 1.5, z: fig.position.z }, '[the light settles on a shape]', 'warn');
+      }
+    }
+    if (dist < 2.1) {
+      const was = this.shadeRevealed;
+      const px = fig.position.x, pz = fig.position.z;
+      this.clearShade();
+      if (was) this.cue('amb-settle', { x: px, y: 1, z: pz }, '[only darkness here]', 'warn');
+      return;
+    }
+    if (this.shadeRig) this.shadeRig.update(dt);
+    else if (fig.userData.figureParts) tickFigure(fig, this.clock.time);
+  }
+
   private updateRats(dt: number): void {
     for (const r of [...this.rats]) {
       r.t += dt;
@@ -2792,6 +2886,7 @@ export class Game {
       this.maybeHauntDoor();
       this.maybeFarSound();
       this.maybeCrosser();
+      this.maybeShade();
       this.maybeBreathing();
       this.maybePiano();
       this.maybeDoorTry();
@@ -2817,6 +2912,7 @@ export class Game {
         this.maybeBookDrop();
         this.maybeEchoRoom(true);
         this.maybePhoneRing(true);
+        this.maybeShade(true);
       }
     }
     // death echo: the building remembers where it took you
@@ -3178,6 +3274,7 @@ export class Game {
     this.updateMaelstrom(dt);
     this.updateRats(dt);
     this.updateCornerWatcher(dt);
+    this.updateShade(dt);
     this.updateRelic(dt);
     this.updateMirrorFigure(dt);
     this.updateMoths(dt);

@@ -34,6 +34,7 @@ ported to the subfloor.
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
 | Crosser | +733 | timed | a masked figure strides across a far doorway, once, mid-stride animation | none |
+| The Shade | +347 (+977) | timed, ≥9 | a figure that has no body until the beam catches it — it stands, only ever at opacity the light grants | it can't move — the dark never belonged to it |
 | Unseen steps | +131 (0.16) | timed | five weighted paces crossing a room | none |
 
 ## Door states (world, not beats)

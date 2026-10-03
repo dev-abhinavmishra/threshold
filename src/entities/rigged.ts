@@ -153,27 +153,37 @@ export function riggedFigure(kind: keyof typeof RIGGED): RiggedFigure | null {
   bb.getCenter(c);
   body.position.set(-c.x, -bb.min.y, -c.z);
 
-  const tuned = new Set<string>();
+  // SkeletonUtils.clone shares materials with the cached source — clone per
+  // body or per-spec tint/opacity would compound across every spawn.
   body.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh) return;
     m.castShadow = true;
     m.frustumCulled = false; // skinned bounds go stale on animated rigs
-    const mat = m.material as THREE.MeshStandardMaterial;
-    if (!mat || tuned.has(mat.uuid)) return;
-    tuned.add(mat.uuid);
-    if (spec.tint !== undefined) mat.color.multiplyScalar(spec.tint);
-    if (spec.emissive !== undefined) {
-      mat.emissive = mat.color.clone();
-      mat.emissiveIntensity = spec.emissive;
+    if (Array.isArray(m.material)) m.material = m.material.map((mm) => mm.clone());
+    else m.material = (m.material as THREE.Material).clone();
+  });
+  const tuned = new Set<string>();
+  body.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    for (const mat of mats as THREE.MeshStandardMaterial[]) {
+      if (!mat || tuned.has(mat.uuid)) continue;
+      tuned.add(mat.uuid);
+      if (spec.tint !== undefined) mat.color.multiplyScalar(spec.tint);
+      if (spec.emissive !== undefined) {
+        mat.emissive = mat.color.clone();
+        mat.emissiveIntensity = spec.emissive;
+      }
+      if (spec.opacity !== undefined) {
+        mat.transparent = true;
+        mat.opacity = spec.opacity;
+        mat.depthWrite = false;
+      }
+      mat.metalness = 0;
+      mat.roughness = Math.max(mat.roughness ?? 0.5, 0.6);
     }
-    if (spec.opacity !== undefined) {
-      mat.transparent = true;
-      mat.opacity = spec.opacity;
-      mat.depthWrite = false;
-    }
-    mat.metalness = 0;
-    mat.roughness = Math.max(mat.roughness ?? 0.5, 0.6);
   });
 
   const group = new THREE.Group();
