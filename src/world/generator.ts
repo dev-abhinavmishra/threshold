@@ -21,6 +21,7 @@ import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
 import { ENTITY_TIER, tierMap, planBeats } from './pacing';
+import { applyForeshadowing } from './foreshadow';
 
 export interface GenOptions {
   seedText: string;
@@ -443,6 +444,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
 
   // Encounter scheduling via director rules.
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
+  applyForeshadowing(mainRooms, streams.stream('scare'));
 
   // Underscript
   let underRooms: RoomInstance[] = [];
