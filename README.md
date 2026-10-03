@@ -29,6 +29,7 @@ npm run dev        # → http://localhost:5173
 | Interact | E |
 | Slam door (loud, fast) | Shift + E |
 | Creep door (slow, quiet) | C + E |
+| Peek keyhole (locked door) | C + hold E |
 | Lamp | F |
 | Item slots | 1–4 |
 | Pause | Esc |

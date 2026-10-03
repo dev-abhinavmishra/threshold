@@ -36,7 +36,7 @@ import {
 import { Editor, Grafter } from '../entities/setpieces';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY } from '../game/config';
 import type {
-  Difficulty, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document,
+  Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document,
 } from '../game/types';
 import { useGameStore, loadSettings, saveSettings, loadMeta, saveMeta, saveCheckpoint, loadCheckpoint, clearCheckpoint, type CheckpointSave } from './store';
 import { DOCUMENTS } from './documents';
@@ -124,6 +124,8 @@ export class Game {
   /** Staged arrival captions for a fresh run (lobby cold-open). */
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
   private dread = 0;
+  /** Keyhole peek: camera pushed through a locked door for a look beyond. */
+  private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number } | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
 
@@ -555,6 +557,54 @@ export class Game {
 
   /* ==================== interactions ==================== */
 
+  /** Push the view through the keyhole: freeze the body, drive the camera
+   *  half a metre past the door plane, hold, retract. Look stays live. */
+  private startPeek(it: Interactable): void {
+    const p = this.player;
+    if (p.dead || p.hiddenSpot || this.peek) return;
+    const eye = v3();
+    p.eyePos(eye);
+    const dir = v3();
+    p.lookDir(dir);
+    dir.y = 0;
+    const dl = Math.hypot(dir.x, dir.z) || 1;
+    dir.x /= dl; dir.z /= dl;
+    this.peek = { eye, dir, t: 0, baseFov: this.camera.fov };
+    p.frozen = true;
+    this.camera.fov = this.camera.fov * 0.8;
+    this.camera.updateProjectionMatrix();
+    this.cue('door-peek', it.pos, '[through the keyhole]', 'info');
+  }
+
+  private updatePeek(dt: number): void {
+    const pk = this.peek;
+    if (!pk) return;
+    if (this.player.dead || this.player.hiddenSpot || this.player.protection === 'hidden') {
+      this.endPeek();
+      return;
+    }
+    pk.t += dt;
+    // depth: 0.8s in, 1.8s hold, 0.8s out
+    const depth = pk.t < 0.8 ? (pk.t / 0.8) * 0.55
+      : pk.t < 2.6 ? 0.55
+      : pk.t < 3.4 ? (1 - (pk.t - 2.6) / 0.8) * 0.55
+      : -1;
+    if (depth < 0) { this.endPeek(); return; }
+    this.camera.position.set(
+      pk.eye.x + pk.dir.x * depth,
+      pk.eye.y - 0.15,
+      pk.eye.z + pk.dir.z * depth,
+    );
+  }
+
+  private endPeek(): void {
+    if (!this.peek) return;
+    this.player.frozen = false;
+    this.camera.fov = this.peek.baseFov;
+    this.camera.updateProjectionMatrix();
+    this.peek = null;
+  }
+
   private rebuildInteractables(): void {
     this.interaction.clear();
     const rooms = this.activeRooms();
@@ -567,6 +617,18 @@ export class Game {
         kind: 'exitHide', id: 'exit-hide', pos: this.player.hiddenSpot.exitPos,
         prompt: 'Leave hiding', data: this.player.hiddenSpot, enabled: true, priority: 5,
       });
+    }
+    // Crouched at a locked door: a keyhole-peek target outranks the lock.
+    if (this.player.crouching) {
+      for (const it of this.interaction.interactables) {
+        const d = it.data as Door | undefined;
+        if (it.kind !== 'door' || !d?.locked || d.falseDoor) continue;
+        this.interaction.add({
+          kind: 'peek', id: `peek-${it.id}`, pos: it.pos,
+          prompt: `Peek Door ${d.label}`, holdTime: 0.9,
+          data: d, enabled: true, priority: 4,
+        });
+      }
     }
     // Redactor false doors become interactable
     for (const e of this.entities) {
@@ -616,6 +678,11 @@ export class Game {
             this.spawnEntity(new Hollow());
           }
         }
+        return;
+      }
+      case 'peek': {
+        // Tap only rattles — the peek itself fires on hold completion.
+        this.cue('door-locked', it.pos, '[locked — hold to peek]', 'warn');
         return;
       }
       case 'door': {
@@ -1987,7 +2054,10 @@ export class Game {
       this.input.interactPressed = false;
       this.tryInteract();
     }
-    if (held) this.tryInteract();
+    if (held) {
+      if (held.kind === 'peek') this.startPeek(held);
+      else this.tryInteract();
+    }
     // hold-type milestone interactions (pylons)
     if (this.interaction.focused && this.keys.has(this.keyFor('interact'))) {
       const ms = this.milestones.get(this.currentRoom);
@@ -2040,6 +2110,7 @@ export class Game {
     this.camera.rotation.set(0, 0, 0);
     this.camera.rotateY(this.player.yaw + Math.PI);
     this.camera.rotateX(this.player.pitch);
+    this.updatePeek(dt);
     if (!this.fillLight) {
       this.fillLight = new THREE.PointLight(0x9a8f7a, 0.85, 6.5, 2);
       this.scene.add(this.fillLight);

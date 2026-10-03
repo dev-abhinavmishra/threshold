@@ -101,7 +101,6 @@ export class Whisper extends Entity {
    *  relocating the real whisper with a tightened strike window. */
   private decoyMesh: THREE.Object3D | null = null;
   private decoyPos = v3();
-  private decoyed = false;
 
   constructor() { super('whisper', ENTITY_TUNING.whisper); }
 
@@ -123,7 +122,6 @@ export class Whisper extends Entity {
     c.addEntityMesh(this.mesh);
     // ~1/3 of whispers lead with a decoy silhouette at a different bearing
     if (rng.bool(0.34)) {
-      this.decoyed = true;
       const da = a + (rng.bool() ? 1 : -1) * (0.9 + rng.float() * 0.9);
       this.decoyPos = v3(c.player.pos.x + Math.cos(da) * r * 0.8, 0, c.player.pos.z + Math.sin(da) * r * 0.8);
       const decoy = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'none', eyes: 'white', hood: true, tattered: true });

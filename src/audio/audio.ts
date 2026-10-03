@@ -78,6 +78,7 @@ const CUES: Record<string, CueSpec> = {
   'husk-calm': { freq: 92, dur: 1.0, type: 'triangle', gain: 0.12, sweep: 70 },
   'door-open': { freq: 240, dur: 0.35, type: 'triangle', gain: 0.16, sweep: 180 },
   'door-slam': { freq: 110, dur: 0.55, type: 'sawtooth', gain: 0.45, sweep: 60, noise: true },
+  'door-peek': { freq: 180, dur: 0.5, type: 'triangle', gain: 0.07, sweep: 120 },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },
