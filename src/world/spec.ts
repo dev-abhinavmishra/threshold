@@ -54,6 +54,8 @@ export type PropKind =
   | 'dollCluster'
   | 'hallFigure'
   | 'hauntedPortrait'
+  | 'pianoUpright'
+  | 'rubblePile'
   | 'bunsenBurner' | 'goblets' | 'rifle'
   // sprint 21 — extraction batch 3
   | 'daybed' | 'ottoman' | 'coffeeTable' | 'sideTable' | 'horseStatue'

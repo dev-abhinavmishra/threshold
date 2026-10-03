@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -454,6 +454,61 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       g.add(doll);
     }
     return single(g, 1.1, 0.7, 0.6);
+  },
+  // Upright parlor piano — body, fallboard, key slip, castored legs.
+  pianoUpright: (_s, rng) => {
+    const g = new THREE.Group();
+    const body = MAT.darkOak();
+    g.add(mesh(box(1.46, 1.28, 0.64), body, 0, 0.72, -0.1));
+    // top lid overhang + carved front panel
+    g.add(mesh(box(1.52, 0.05, 0.7), body, 0, 1.4, -0.08));
+    g.add(mesh(box(1.34, 0.42, 0.04), TEX.woodCarved(), 0, 1.16, 0.23));
+    // fallboard slope covering the keys + the keys themselves
+    const fall = mesh(box(1.32, 0.36, 0.04), body, 0, 0.86, 0.26);
+    fall.rotation.x = -0.22;
+    g.add(fall);
+    g.add(mesh(box(1.3, 0.05, 0.3), body, 0, 0.72, 0.3));
+    g.add(mesh(box(1.18, 0.022, 0.24), MAT.paper(), 0, 0.75, 0.32));
+    for (let i = 0; i < 18; i++) {
+      g.add(mesh(box(0.028, 0.024, 0.1), MAT.ink(), -0.56 + i * 0.066 + (i % 7 < 3 ? 0.03 : 0.045), 0.764, 0.26));
+    }
+    // music rest + candle nubs + pedals
+    g.add(mesh(box(0.5, 0.34, 0.03), body, 0, 1.18, 0.26));
+    for (const px of [-0.14, 0, 0.14]) {
+      const pedal = mesh(box(0.05, 0.02, 0.14), MAT.brass(), px, 0.02, 0.24);
+      g.add(pedal);
+    }
+    for (const sx of [-0.6, 0.6]) {
+      g.add(mesh(cyl(0.05, 0.04, 0.68, 8), body, sx, 0.34, 0.16));
+      if (rng.bool(0.4)) g.add(mesh(box(0.14, 0.1, 0.05), MAT.wax(), sx * 0.8, 1.45, -0.1));
+    }
+    return single(g, 1.55, 1.45, 0.75);
+  },
+  // Rubble — fallen plaster chunks and snapped lath at the foot of a wall,
+  // over a dust-mound decal.
+  rubblePile: (_s, rng) => {
+    const g = new THREE.Group();
+    const dust = decalQuad(floorStain(rng), 1.1 + rng.float() * 0.5, 1.0 + rng.float() * 0.4);
+    dust.rotation.x = -Math.PI / 2;
+    dust.rotation.z = rng.float() * Math.PI;
+    dust.position.y = 0.012;
+    g.add(dust);
+    const lumps = 5 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < lumps; i++) {
+      const r = 0.04 + rng.float() * 0.12;
+      const lump = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), rng.bool(0.7) ? MAT.plaster() : MAT.plasterDark());
+      lump.position.set((rng.float() - 0.5) * 0.9, r * 0.6, (rng.float() - 0.5) * 0.6);
+      lump.rotation.set(rng.float() * 3, rng.float() * 3, rng.float() * 3);
+      lump.scale.y = 0.5 + rng.float() * 0.5;
+      lump.castShadow = true;
+      g.add(lump);
+    }
+    for (let i = 0; i < 2 + Math.floor(rng.float() * 3); i++) {
+      const lath = mesh(box(0.035, 0.02, 0.4 + rng.float() * 0.4), MAT.darkOak(), (rng.float() - 0.5) * 0.7, 0.02 + i * 0.012, (rng.float() - 0.5) * 0.5);
+      lath.rotation.y = rng.float() * Math.PI;
+      g.add(lath);
+    }
+    return single(g, 1.1, 0.22, 0.9);
   },
   // Gilt-framed portrait whose painted head slowly tracks the player — but
   // only while they're not looking (weeping-angel 'watch', no creep).
