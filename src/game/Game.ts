@@ -1636,6 +1636,17 @@ export class Game {
     }
   }
 
+  /** Revisit scare: back at the front desk, the register has signed you in again. */
+  private reSigned = false;
+  private maybeReSignature(): void {
+    if (this.reSigned) return;
+    if (!this.meta.documents.includes(DOCUMENTS[0]?.id ?? '')) return;
+    const rng = this.streams.roomStream('scare', 711);
+    if (!rng.bool(0.6)) return;
+    this.reSigned = true;
+    this.cue('register-sign', null, `[the register has a fresh signature — yours]`, 'warn');
+  }
+
   private maybeBlackout(roomIndex: number): void {
     if (this.blackedOut.has(roomIndex) || this.pendingBlackout) return;
     const room = this.activeRooms()[roomIndex];
@@ -2053,7 +2064,10 @@ export class Game {
       this.stats.roomsVisited = Math.max(this.stats.roomsVisited, this.currentRoom);
       const revisit = this.visitedRooms.has(this.currentRoom);
       this.visitedRooms.add(this.currentRoom);
-      if (revisit) this.maybeShiftDoor(this.currentRoom);
+      if (revisit) {
+        this.maybeShiftDoor(this.currentRoom);
+        if (this.currentRoom === 0) this.maybeReSignature();
+      }
       this.maybeSpawnRat();
       this.maybeBlackout(this.currentRoom);
       this.maybeRelocateRelic(prev);
