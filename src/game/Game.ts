@@ -400,6 +400,67 @@ export class Game {
     this.doorStates.clear();
     this.hazard = new HazardField();
     this.roomBounds.clear();
+    // the prop layer holds no memory across runs — every one-time
+    // arm/fire decision resets so a retry or reseed replays honestly
+    this.hauntedRooms.clear();
+    this.blackedOut.clear();
+    this.pendingBlackout = null;
+    this.pendingDoorOpen = null;
+    this.peek = null;
+    this.peekEyeDecisions.clear();
+    this.peekEyeUsed.clear();
+    this.chalkMarks.clear();
+    this.visitedRooms.clear();
+    this.relabeled.clear();
+    this.wallWords.clear();
+    this.tenantMoved.clear();
+    this.deepSeen.clear();
+    this.playedPianos.clear();
+    this.litTVs.clear();
+    this.woundClocks.clear();
+    this.crackedVents.clear();
+    this.litHearths.clear();
+    this.answeredPhones.clear();
+    this.armedTraps.clear();
+    this.snappedTraps.clear();
+    this.priedTraps.clear();
+    this.liveTraps = [];
+    this.liveTickProps = [];
+    this.pipeTickNext = 0;
+    this.liveBooks = [];
+    this.bookNear = 0;
+    this.bookTarget = null;
+    this.bookWhispered.clear();
+    this.liveRugs = [];
+    this.armedRugs.clear();
+    this.slippedRugs.clear();
+    this.livePuddles = [];
+    this.armedPuddles.clear();
+    this.slippedPuddles.clear();
+    this.ranWashers.clear();
+    this.finishedWashers.clear();
+    this.emptiedWashers.clear();
+    this.runningWashers = [];
+    this.activeWashKeys.clear();
+    this.printedPages.clear();
+    this.typedKeys.clear();
+    this.lookedWindows.clear();
+    this.drunkCoolers.clear();
+    this.satSeats.clear();
+    this.resting = null;
+    this.luggageArmed.clear();
+    this.luggageSpawned.clear();
+    this.luggageNoticed.clear();
+    this.creakyRooms.clear();
+    this.nextCreak = 0;
+    this.creakParity = 0;
+    this.statuePlans.clear();
+    this.coffinOpened = false;
+    this.liveChandeliers = [];
+    this.armedChandeliers.clear();
+    this.droppedChandeliers.clear();
+    this.warnedChandeliers.clear();
+    this.pendingChanDrop = null;
     this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
@@ -800,11 +861,12 @@ export class Game {
       this.liveBooks = [];
       this.liveRugs = [];
       this.livePuddles = [];
+      this.liveChandeliers = [];
       this.bookNear = 0;
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -827,6 +889,12 @@ export class Game {
             const rkey = `${this.space}:${pr.index}:rug${rg++}`;
             if (!this.armedRugs.has(rkey)) this.armedRugs.set(rkey, this.streams.roomStream('scare', pr.index * 617 + rg - 1).bool(0.35));
             if (this.armedRugs.get(rkey) && !this.slippedRugs.has(rkey)) this.liveRugs.push({ x: wx, z: wz, key: rkey });
+          }
+          // chandeliers creak overhead — loud noise under one drops it
+          if (p.kind === 'chandelier') {
+            const ck = `${this.space}:${pr.index}:chan${chn++}`;
+            if (!this.armedChandeliers.has(ck)) this.armedChandeliers.set(ck, this.streams.roomStream('scare', pr.index * 701 + chn - 1).bool(0.35));
+            if (this.armedChandeliers.get(ck) && !this.droppedChandeliers.has(ck)) this.liveChandeliers.push({ x: wx, z: wz, key: ck });
           }
           // wet floors take running feet — crouch-wading stays upright
           if (p.kind === 'puddle') {
@@ -2199,6 +2267,7 @@ export class Game {
       this.ensureLuggage(i, built);
       this.ensureStatue(i, built);
       this.ensureRug(i, built);
+      this.ensureChandelier(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2730,6 +2799,14 @@ export class Game {
   private livePuddles: { x: number; z: number; key: string }[] = [];
   private armedPuddles = new Map<string, boolean>();
   private slippedPuddles = new Set<string>();
+  /* — the glass falls: armed chandeliers creak when you stand under
+     them; a loud enough noise there brings the whole thing down — */
+  private liveChandeliers: { x: number; z: number; key: string }[] = [];
+  private armedChandeliers = new Map<string, boolean>();
+  private droppedChandeliers = new Set<string>();
+  private warnedChandeliers = new Set<string>();
+  private pendingChanDrop: { key: string; x: number; z: number; t: number } | null = null;
+  private chanHooked = false;
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -2861,6 +2938,25 @@ export class Game {
         g.userData.rugDone = true;
       }
     }
+  }
+
+  /** Armed chandeliers lean on their chain; dropped ones lie where they fell. */
+  private ensureChandelier(i: number, built: { group: THREE.Group }): void {
+    let n = 0;
+    built.group.traverse((o) => {
+      if (o.name !== `chan-${i}`) return;
+      const key = `${this.space}:${i}:chan${n++}`;
+      if (o.userData.chanDone) return;
+      if (this.droppedChandeliers.has(key)) {
+        o.userData.chanDone = true;
+        o.position.y = 0.12;
+        o.rotation.x += 0.9;
+        o.rotation.z += 0.5;
+      } else if (this.armedChandeliers.get(key)) {
+        o.userData.chanDone = true;
+        o.rotation.z = 0.03;
+      }
+    });
   }
 
   private ensureLuggage(i: number, built: { group: THREE.Group }): void {
@@ -4055,6 +4151,47 @@ export class Game {
           window.setTimeout(() => { if (p.speedMul === 0.72) p.speedMul = 1; }, 1400);
         }
         this.player.panic = Math.min(1, this.player.panic + 0.05);
+      }
+    }
+
+    // Chandeliers — standing under an armed one earns a creak (the tell);
+    // a loud emit within earshot drops the glass on whoever is beneath
+    if (!this.chanHooked) {
+      this.chanHooked = true;
+      this.sound.on((ev) => {
+        if (ev.intensity < 0.6 || this.pendingChanDrop) return;
+        for (const ch of this.liveChandeliers) {
+          const ex = ch.x - ev.x, ez = ch.z - ev.z;
+          if (ex * ex + ez * ez > 36) continue;
+          const px = ch.x - this.player.pos.x, pz = ch.z - this.player.pos.z;
+          if (px * px + pz * pz < 2.56) {
+            this.pendingChanDrop = { key: ch.key, x: ch.x, z: ch.z, t: this.clock.time + 0.35 };
+          }
+          break;
+        }
+      });
+    }
+    for (const ch of this.liveChandeliers) {
+      const dx = ch.x - this.player.pos.x, dz = ch.z - this.player.pos.z;
+      if (dx * dx + dz * dz < 1.44 && !this.warnedChandeliers.has(ch.key)) {
+        this.warnedChandeliers.add(ch.key);
+        this.audio.play('chain-creak', { x: ch.x, y: 2.6, z: ch.z }, '[the chain overhead creaks]', 'warn');
+      }
+    }
+    if (this.pendingChanDrop && tA >= this.pendingChanDrop.t) {
+      const d = this.pendingChanDrop;
+      this.pendingChanDrop = null;
+      if (!this.droppedChandeliers.has(d.key)) {
+        this.droppedChandeliers.add(d.key);
+        this.audio.play('chandelier-fall', { x: d.x, y: 1.4, z: d.z }, '[the glass falls]', 'warn');
+        this.sound.emit({ x: d.x, y: 0.1, z: d.z, intensity: 1.0, category: 'footstep', caption: '[a crash of glass]' });
+        this.player.panic = Math.min(1, this.player.panic + 0.2);
+        const pdx = d.x - this.player.pos.x, pdz = d.z - this.player.pos.z;
+        if (pdx * pdx + pdz * pdz < 2.25) this.damagePlayer(18, 'hazard', 'The glass fell.');
+        for (const b of this.streamer.builtIndices) {
+          const bd = this.streamer.get(b);
+          if (bd) this.ensureChandelier(b, bd);
+        }
       }
     }
 

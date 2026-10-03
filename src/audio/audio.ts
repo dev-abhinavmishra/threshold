@@ -63,6 +63,8 @@ const CUES: Record<string, CueSpec> = {
   'rug-slide': { freq: 180, dur: 0.3, type: 'sawtooth', gain: 0.16, sweep: -90, noise: true },
   'floor-creak': { freq: 290, dur: 0.42, type: 'sawtooth', gain: 0.09, sweep: -130, noise: true },
   'puddle-splash': { freq: 210, dur: 0.5, type: 'triangle', gain: 0.22, sweep: -160, noise: true },
+  'chain-creak': { freq: 700, dur: 0.5, type: 'sawtooth', gain: 0.12, sweep: -210, noise: true },
+  'chandelier-fall': { freq: 2400, dur: 0.7, type: 'square', gain: 0.32, sweep: -2100, noise: true },
   'fire-crackle': { freq: 220, dur: 0.6, type: 'triangle', gain: 0.07, sweep: -80, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },
