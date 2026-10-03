@@ -469,19 +469,32 @@ export class Game {
   }
 
   private populateShop(room: RoomInstance): void {
-    const stock: { id: ItemId; price: number }[] = [
+    // Seeded stock: the Custodian's wares differ run to run — a shuffled
+    // subset of the full pool, so repeat visits read as different shelves.
+    const pool: { id: ItemId; price: number }[] = [
       { id: 'sparkFlash', price: 60 },
       { id: 'bandage', price: 25 },
       { id: 'latchpick', price: 50 },
       { id: 'windAlarm', price: 55 },
       { id: 'wardSeal', price: 90 },
     ];
+    const rng = this.streams.roomStream('loot', room.index + 377);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = rng.int(0, i);
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const stock = pool.slice(0, rng.int(3, 5));
     let slot = 0;
     for (const sock of room.sockets) {
-      if (sock.meta.shop !== undefined && slot < stock.length) {
-        sock.meta.shopItem = stock[slot].id;
-        sock.meta.price = stock[slot].price;
-        slot++;
+      if (sock.meta.shop !== undefined) {
+        if (slot < stock.length) {
+          sock.meta.shopItem = stock[slot].id;
+          sock.meta.price = stock[slot].price;
+          slot++;
+        } else {
+          // unstocked pedestal — the shelf is bare this run
+          sock.meta.taken = true;
+        }
       }
     }
     useGameStore.setState({ shopItems: stock.map((s, i) => ({ ...s, slot: i, sold: false })) });
