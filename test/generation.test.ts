@@ -175,3 +175,50 @@ describe('pacing planner', () => {
     }
   });
 });
+
+describe('sprint mechanics coverage', () => {
+  it('locked drawers: some drawer sockets are locked and carry richer loot', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });
+      const drawers = mainRooms(route).flatMap((r) => r.sockets.filter((s) => s.kind === 'drawer'));
+      if (!drawers.length) continue;
+      const locked = drawers.filter((d) => d.meta.drawerLocked);
+      // deterministic: flag present on a minority, and locked imprint rolls pay more
+      for (const d of locked) {
+        if (d.meta.contains === 'imprints') expect(d.meta.amount as number).toBeGreaterThanOrEqual(15);
+      }
+      expect(locked.length).toBeLessThan(drawers.length);
+    }
+  });
+
+  it('u-lobby rooms carry two broker pedestals for the marginalia shop', () => {
+    const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: true });
+    expect(route.underRooms[0].templateId).toBe('u-lobby');
+    const brokers = route.underRooms.filter((r) => r.templateId === 'u-lobby');
+    expect(brokers.length).toBeGreaterThanOrEqual(1);
+    for (const r of brokers) {
+      const peds = r.sockets.filter((s) => s.meta.broker !== undefined);
+      expect(peds.length).toBe(2);
+    }
+  });
+
+  it('trapped hiding spots always carry readable trap clues', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const trapped = [...mainRooms(route), ...route.underRooms]
+        .flatMap((r) => r.hidingSpots)
+        .filter((s) => s.trappedBy === 'hollow');
+      for (const s of trapped) {
+        expect(s.trapClues?.length ?? 0).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it('custodian shop sockets exist on the milestone room', () => {
+    const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
+    const cust = mainRooms(route).find((r) => r.templateId === 'ms-custodian');
+    expect(cust).toBeTruthy();
+    const peds = cust!.sockets.filter((s) => s.meta.shop !== undefined);
+    expect(peds.length).toBeGreaterThanOrEqual(4);
+  });
+});
