@@ -799,11 +799,12 @@ export class Game {
       this.liveTickProps = [];
       this.liveBooks = [];
       this.liveRugs = [];
+      this.livePuddles = [];
       this.bookNear = 0;
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, sn2 = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -826,6 +827,12 @@ export class Game {
             const rkey = `${this.space}:${pr.index}:rug${rg++}`;
             if (!this.armedRugs.has(rkey)) this.armedRugs.set(rkey, this.streams.roomStream('scare', pr.index * 617 + rg - 1).bool(0.35));
             if (this.armedRugs.get(rkey) && !this.slippedRugs.has(rkey)) this.liveRugs.push({ x: wx, z: wz, key: rkey });
+          }
+          // wet floors take running feet — crouch-wading stays upright
+          if (p.kind === 'puddle') {
+            const pkey = `${this.space}:${pr.index}:pud${pd2++}`;
+            if (!this.armedPuddles.has(pkey)) this.armedPuddles.set(pkey, this.streams.roomStream('scare', pr.index * 619 + pd2 - 1 + 977).bool(0.4));
+            if (this.armedPuddles.get(pkey) && !this.slippedPuddles.has(pkey)) this.livePuddles.push({ x: wx, z: wz, key: pkey });
           }
           // written things whisper once if you linger close
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
@@ -2720,6 +2727,9 @@ export class Game {
   private liveRugs: { x: number; z: number; key: string }[] = [];
   private armedRugs = new Map<string, boolean>();
   private slippedRugs = new Set<string>();
+  private livePuddles: { x: number; z: number; key: string }[] = [];
+  private armedPuddles = new Map<string, boolean>();
+  private slippedPuddles = new Set<string>();
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -4045,6 +4055,25 @@ export class Game {
           window.setTimeout(() => { if (p.speedMul === 0.72) p.speedMul = 1; }, 1400);
         }
         this.player.panic = Math.min(1, this.player.panic + 0.05);
+      }
+    }
+
+    // Wet floors — running feet lose the room; crouch-wading keeps you up
+    if (!this.player.crouching) {
+      for (const pd of this.livePuddles) {
+        const dx = pd.x - this.player.pos.x, dz = pd.z - this.player.pos.z;
+        if (dx * dx + dz * dz < 0.8 * 0.8) {
+          this.slippedPuddles.add(pd.key);
+          const at = { x: pd.x, y: 0.05, z: pd.z };
+          this.audio.play('puddle-splash', at, '[the floor takes your feet — water everywhere]', 'warn');
+          this.sound.emit({ x: at.x, y: 0.1, z: at.z, intensity: 0.45, category: 'footstep', caption: '[a splash]' });
+          if (this.player.speedMul === 1) {
+            this.player.speedMul = 0.6;
+            const p = this.player;
+            window.setTimeout(() => { if (p.speedMul === 0.6) p.speedMul = 1; }, 1800);
+          }
+          this.player.panic = Math.min(1, this.player.panic + 0.07);
+        }
       }
     }
 

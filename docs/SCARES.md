@@ -52,6 +52,7 @@ ported to the subfloor.
 | Loose rug | +617 (0.35/rug) | rugs with a curled corner | steps out from under you once: a stumble (×0.72 for 1.4s), a small footstep-class emit, a panic tick | watch the floor — a curled corner means it lies |
 | Rest a moment | — (interaction) | benches and chairs, once each | sit for 3s frozen and exposed; stamina returns in full when you rise | the wood creaks its welcome — rest is loud and still |
 | The boards remember | +619 (0.22/room) | seeded rooms, both floors | upright strides answer with a creak and a small footstep-class emit | crouch and the house forgets you crossed |
+| Wet floor | +619+977 (0.4/puddle) | puddles | running feet lose it once: a hard stumble (×0.6 for 1.8s) and a splash that carries | crouch-wade the wet — standing water takes standing feet |
 | Music box | +0 (0.1) | timed, domestic biomes | tinny note drift from room center | none |
 | Door knock | +999 (0.14) | timed | slow fist on the entry door | don't answer |
 | Elsewhere sound | +555 | timed | a big sound two rooms away | it's elsewhere — or it isn't |
