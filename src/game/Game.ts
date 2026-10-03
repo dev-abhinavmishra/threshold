@@ -19,7 +19,7 @@ import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
-import { preloadFigures } from '../entities/rigged';
+import { preloadFigures, riggedFigure, type RiggedFigure } from '../entities/rigged';
 import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
 import { PlayerController, type MoveInput } from '../player/controller';
@@ -99,9 +99,15 @@ export class Game {
   private relicSeen = true;
   private relicHome: THREE.Vector3 | null = null;
   private mirrorFig: THREE.Object3D | null = null;
+  private mirrorRig: RiggedFigure | null = null;
   private mirrorFigRoom = -1;
   private mirrorSeenT = 0;
   private mirrorLostT = 0;
+  private cornerFig: THREE.Object3D | null = null;
+  private cornerRig: RiggedFigure | null = null;
+  private cornerFigRoom = -1;
+  private cornerSeenT = 0;
+  private cornerT = 0;
   private nextBreath = 0;
   private hemi: THREE.HemisphereLight | null = null;
   private lightning = 0;
@@ -1421,6 +1427,7 @@ export class Game {
   private clearRats(): void {
     for (const r of this.rats) this.entityGroup.remove(r.obj);
     this.rats = [];
+    if (this.cornerFig) { this.entityGroup.remove(this.cornerFig); this.cornerFig = null; this.cornerRig = null; }
     for (const m of this.moths) this.entityGroup.remove(m.obj);
     this.moths = [];
   }
@@ -1513,6 +1520,7 @@ export class Game {
     if (this.mirrorFig && (!room || this.mirrorFigRoom !== this.currentRoom)) {
       this.entityGroup.remove(this.mirrorFig);
       this.mirrorFig = null;
+      this.mirrorRig = null;
       this.mirrorSeenT = 0;
     }
     const mirror = spec?.props.find((p) => p.kind === 'mirror');
@@ -1532,7 +1540,9 @@ export class Game {
       if ((fx * ddx + fz * ddz) / (md || 1) < 0.78) return;
       // spawn just off the player's shoulder
       const rx = fz, rz = -fx;
-      const fig = tallFigure({ height: 2.15, hood: true, eyes: 'white' });
+      const rig = riggedFigure('inkGhost');
+      const fig = rig ? rig.group : tallFigure({ height: 2.15, hood: true, eyes: 'white' });
+      if (rig) { this.mirrorRig = rig; rig.play('idle', 0); }
       fig.position.set(
         this.player.pos.x - fx * 1.7 + rx * 0.85,
         room.origin.y,
@@ -1558,6 +1568,7 @@ export class Game {
       if (this.mirrorSeenT > 0.4) {
         this.entityGroup.remove(fig);
         this.mirrorFig = null;
+        this.mirrorRig = null;
         this.cue('amb-settle', { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z }, '[nothing there]', 'warn');
       }
     } else {
@@ -1570,10 +1581,82 @@ export class Game {
         const ddx = mx - this.player.pos.x, ddz = mz - this.player.pos.z;
         const md = Math.hypot(ddx, ddz);
         this.mirrorLostT = (fx2 * ddx + fz2 * ddz) / (md || 1) < 0.55 ? this.mirrorLostT + dt : 0;
-        if (this.mirrorLostT > 2.5) { this.entityGroup.remove(fig); this.mirrorFig = null; this.mirrorLostT = 0; }
+        if (this.mirrorLostT > 2.5) { this.entityGroup.remove(fig); this.mirrorFig = null; this.mirrorRig = null; this.mirrorLostT = 0; }
       }
     }
-    if (this.mirrorFig?.userData.figureParts) tickFigure(this.mirrorFig, this.clock.time);
+    if (this.mirrorRig) this.mirrorRig.update(dt);
+    else if (this.mirrorFig?.userData.figureParts) tickFigure(this.mirrorFig, this.clock.time);
+  }
+
+  // Corner watcher — in dark rooms something small and wrong occupies the far
+  // corner. Direct gaze makes it fold into the dark; it never twice haunts
+  // the same room index.
+  private updateCornerWatcher(dt: number): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (this.cornerFig && (!room || this.cornerFigRoom !== this.currentRoom)) {
+      this.entityGroup.remove(this.cornerFig);
+      this.cornerFig = null;
+      this.cornerRig = null;
+      this.cornerSeenT = 0;
+    }
+    if (!room || !room.darkRoom || this.currentRoom < 12 || room.biome === 'underscript') {
+      if (!this.cornerFig) return;
+    }
+    const scare = this.streams.roomStream('scare', this.currentRoom + 977);
+    if (!this.cornerFig) {
+      if (!room || !room.darkRoom || this.currentRoom < 12 || room.biome === 'underscript') return;
+      if (!scare.bool(0.3)) return;
+      // player must be inside the room's bounds
+      const lx = this.player.pos.x - room.origin.x, lz = this.player.pos.z - room.origin.z;
+      if (Math.abs(lx) > room.width / 2 || Math.abs(lz) > room.depth / 2) return;
+      // farthest corner, scaled down — a crouch, not a stand
+      const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+      let bx = 0, bz = 0, best = -1;
+      for (const [cx, cz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const) {
+        const px = room.origin.x + (cx * (room.width / 2 - 0.8)) * c + (cz * (room.depth / 2 - 0.8)) * s;
+        const pz = room.origin.z - (cx * (room.width / 2 - 0.8)) * s + (cz * (room.depth / 2 - 0.8)) * c;
+        const d = Math.hypot(px - this.player.pos.x, pz - this.player.pos.z);
+        if (d > best) { best = d; bx = px; bz = pz; }
+      }
+      const rig = riggedFigure('inkGhost');
+      const fig = rig ? rig.group : tallFigure({ height: 1.3, hood: true, eyes: 'white' });
+      if (rig) { this.cornerRig = rig; rig.play('idle', 0); }
+      fig.scale.multiplyScalar(0.62);
+      fig.position.set(bx, room.origin.y, bz);
+      fig.rotation.y = Math.atan2(this.player.pos.x - bx, this.player.pos.z - bz);
+      this.entityGroup.add(fig);
+      this.cornerFig = fig;
+      this.cornerFigRoom = this.currentRoom;
+      this.cornerSeenT = 0;
+      this.cornerT = 0;
+      this.cue('amb-settle', { x: bx, y: 0.8, z: bz }, '[something shifts in the corner]', 'warn');
+      return;
+    }
+    this.cornerT += dt;
+    const fig = this.cornerFig;
+    const dx = fig.position.x - this.player.pos.x, dz = fig.position.z - this.player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    const cp = Math.cos(this.player.pitch);
+    const fx = Math.sin(this.player.yaw) * cp, fz = Math.cos(this.player.yaw) * cp;
+    const facing = dist > 0.001 ? (fx * dx + fz * dz) / dist : 0;
+    if (facing > 0.88 && this.lampOn) {
+      this.cornerSeenT += dt;
+      if (this.cornerSeenT > 0.22) {
+        this.entityGroup.remove(fig);
+        this.cornerFig = null;
+        this.cornerRig = null;
+        this.cue('amb-settle', { x: fig.position.x, y: 1, z: fig.position.z }, '[the corner is empty]', 'warn');
+        return;
+      }
+    } else this.cornerSeenT = Math.max(0, this.cornerSeenT - dt);
+    if (this.cornerT > 14) {
+      this.entityGroup.remove(fig);
+      this.cornerFig = null;
+      this.cornerRig = null;
+      return;
+    }
+    if (this.cornerRig) this.cornerRig.update(dt);
+    else if (fig.userData.figureParts) tickFigure(fig, this.clock.time);
   }
 
   private updateRats(dt: number): void {
@@ -1865,6 +1948,7 @@ export class Game {
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
     this.updateRats(dt);
+    this.updateCornerWatcher(dt);
     this.updateRelic(dt);
     this.updateMirrorFigure(dt);
     this.updateMoths(dt);
