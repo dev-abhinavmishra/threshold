@@ -779,6 +779,114 @@ def doorPlaque():
         cube('digit', (sx, -d / 2 - 0.004, 0), (0.045, 0.006, h * 0.5), WORN, 0.002)
     join_all('doorPlaque')
 
+def hallTree():
+    # Coat/hat hall tree — turned post, crown of hooks, drip tray base.
+    import bpy
+    cyl('post', (0, 0, 0.95), 0.035, 1.9, WOOD, 14)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=14, ring_count=8, location=(0, 0, 1.95))
+    fin = bpy.context.object
+    fin.name = 'finial'
+    fin.scale = (0.05, 0.05, 0.07)
+    fin.data.materials.append(WORN)
+    # crown hooks — four curved arms out from the post at two heights
+    for i in range(4):
+        a = i * math.pi / 2
+        for z, r in ((1.72, 0.11), (1.52, 0.09)):
+            x, y = math.cos(a) * r, math.sin(a) * r
+            arm = cyl('hook', (x * 0.55, y * 0.55, z), 0.011, r * 1.05, IRON, 8)
+            arm.rotation_euler[1] = math.pi / 2
+            arm.rotation_euler[2] = a
+            tip = cyl('hookTip', (x, y, z + 0.035), 0.011, 0.07, IRON, 8)
+    # tray + legs
+    cyl('tray', (0, 0, 0.09), 0.21, 0.05, WORN, 18)
+    for i in range(4):
+        a = i * math.pi / 2 + math.pi / 4
+        leg = cube('leg', (math.cos(a) * 0.11, math.sin(a) * 0.11, 0.045), (0.22, 0.045, 0.045), WOOD, 0.006)
+        leg.rotation_euler[2] = a
+    join_all('hallTree')
+
+def umbrellaStand():
+    # Brass umbrella stand — open cylinder of spindles with a drip pan.
+    import bpy
+    cyl('pan', (0, 0, 0.03), 0.16, 0.05, IRON, 18)
+    torus('rimB', (0, 0, 0.06), 0.155, 0.009, WORN)
+    torus('rimT', (0, 0, 0.42), 0.155, 0.009, WORN)
+    for i in range(10):
+        a = i * math.pi / 5
+        cyl('spindle', (math.cos(a) * 0.152, math.sin(a) * 0.152, 0.24), 0.008, 0.38, IRON, 6)
+    # a cane + folded umbrella resting inside
+    stick = cyl('cane', (0.05, 0.02, 0.34), 0.012, 0.72, WOOD, 8)
+    stick.rotation_euler[0] = 0.1
+    um = cyl('brolly', (-0.05, -0.01, 0.3), 0.035, 0.6, CLOTH, 10)
+    um.rotation_euler[1] = -0.08
+    join_all('umbrellaStand')
+
+def washStand():
+    # Marble-top washstand — tiled backsplash, basin, shelf, turned legs.
+    import bpy
+    w, d, h = 0.85, 0.46, 0.86
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('leg', (sx * (w / 2 - 0.05), sy * (d / 2 - 0.05), h / 2), 0.028, h, WOOD, 10)
+    cube('skirt', (0, 0, h - 0.09), (w - 0.1, d - 0.1, 0.12), WOOD, 0.008)
+    cube('shelf', (0, 0, 0.18), (w - 0.12, d - 0.12, 0.035), WORN, 0.005)
+    cube('top', (0, 0, h), (w, d, 0.045), STONE, 0.008)
+    # tiled backsplash
+    cube('splash', (0, d / 2 - 0.02, h + 0.22), (w, 0.04, 0.44), STONE, 0.006)
+    # basin sunk in the top — ring + bowl
+    torus('basinRim', (0, -0.02, h + 0.035), 0.14, 0.018, STONE)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=18, ring_count=10, location=(0, -0.02, h + 0.01))
+    bowl = bpy.context.object
+    bowl.name = 'bowl'
+    bowl.scale = (0.15, 0.15, 0.07)
+    bowl.data.materials.append(STONE)
+    # jug beside the basin
+    cyl('jug', (0.26, -0.05, h + 0.11), 0.055, 0.16, WORN, 12)
+    cyl('jugNeck', (0.26, -0.05, h + 0.22), 0.028, 0.07, WORN, 10)
+    join_all('washStand')
+
+def mailCart():
+    # Mail/linen cart — brass frame on casters with a slung canvas bag.
+    import bpy
+    w, d, h = 1.0, 0.5, 0.75
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('post', (sx * w / 2, sy * d / 2, h / 2 + 0.1), 0.016, h, WORN, 8)
+    for z in (0.16, h + 0.05):
+        cube('railL', (0, d / 2, z), (w, 0.022, 0.022), WORN, 0.004)
+        cube('railL2', (0, -d / 2, z), (w, 0.022, 0.022), WORN, 0.004)
+        cube('railS', (w / 2, 0, z), (0.022, d, 0.022), WORN, 0.004)
+        cube('railS2', (-w / 2, 0, z), (0.022, d, 0.022), WORN, 0.004)
+    # canvas bag slung inside — slumped box
+    bag = cube('bag', (0, 0, h / 2 + 0.02), (w - 0.08, d - 0.08, h - 0.2), CLOTH, 0.05)
+    # casters
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6, location=(sx * w / 2, sy * d / 2, 0.07))
+            wh = bpy.context.object
+            wh.name = 'caster'
+            wh.scale = (0.055, 0.055, 0.07)
+            wh.data.materials.append(IRON)
+    # push handles
+    for sx in (-1, 1):
+        torus('handle', (sx * (w / 2 + 0.02), 0, h + 0.1), 0.09, 0.012, IRON, rot=(0, math.pi / 2, 0))
+    join_all('mailCart')
+
+def podiumLectern():
+    # Sloped lectern — column foot, book lip, reading slope.
+    w, d = 0.55, 0.42
+    cyl('foot', (0, 0, 0.04), 0.24, 0.06, WOOD, 18)
+    cyl('column', (0, 0, 0.5), 0.05, 0.95, WOOD, 12)
+    cube('collar', (0, 0, 0.82), (0.14, 0.14, 0.05), WORN, 0.006)
+    slope = cube('slope', (0, -0.02, 1.05), (w, d, 0.04), WOOD, 0.008)
+    slope.rotation_euler[0] = -0.32
+    lip = cube('lip', (0, -d / 2 + 0.03, 0.97), (w, 0.035, 0.05), WORN, 0.005)
+    lip.rotation_euler[0] = -0.32
+    # a bound ledger left open on the slope
+    book = cube('ledger', (0, -0.04, 1.08), (0.34, 0.26, 0.025), CLOTH, 0.006)
+    book.rotation_euler[0] = -0.32
+    join_all('podiumLectern')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -791,6 +899,8 @@ PIECES = {
     'ironGrate': ironGrate,
     'keyRack': keyRack, 'counterBell': counterBell, 'luggageRack': luggageRack,
     'doorPlaque': doorPlaque,
+    'hallTree': hallTree, 'umbrellaStand': umbrellaStand, 'washStand': washStand,
+    'mailCart': mailCart, 'podiumLectern': podiumLectern,
 }
 
 def main():

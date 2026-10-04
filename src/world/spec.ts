@@ -34,6 +34,7 @@ export type PropKind =
   | 'boneArch' | 'toppledColumn' | 'wallNiche' | 'stairGate'
   | 'transomWindow' | 'bookCart' | 'radiatorFin' | 'dumbwaiter' | 'ironGrate'
   | 'keyRack' | 'counterBell' | 'luggageRack'
+  | 'hallTree' | 'umbrellaStand' | 'washStand' | 'mailCart' | 'podiumLectern'
   | 'boilerDrum' | 'pipeManifold' | 'stackShelf'
   | 'breakerPanel' | 'wallVent' | 'portcullis'
   | 'wardrobe' | 'dresser' | 'nightstand'

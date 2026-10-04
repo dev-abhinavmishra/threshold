@@ -681,3 +681,13 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `counterBell/` | Front-desk service bell (plinth, dome, plunger) | lobby front counter |
 | `luggageRack/` | Folding luggage rack with straps | lobby luggage corner, guest rooms |
 | `doorPlaque/` | Brass room-number plaque with raised digits | mounted beside every non-industrial door jamb |
+
+## Blender prefab mill additions — sprint 190 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `hallTree/` | Coat/hat hall tree (turned post, hook crown, drip tray) | corridors, lobby, guest rooms |
+| `umbrellaStand/` | Brass umbrella stand with cane + folded umbrella | lobby, corridors |
+| `washStand/` | Marble-top washstand (basin, tiled splash, jug, shelf) | guest rooms |
+| `mailCart/` | Brass-frame mail/linen cart with canvas bag + casters | corridors, records |
+| `podiumLectern/` | Sloped lectern with bound ledger | records rooms |

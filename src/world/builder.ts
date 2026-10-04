@@ -1417,18 +1417,47 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         }
       } catch { /* dressing only */ }
     }
-    // Direction signs on corridor walls — institutional boards beside exits.
-    if (spec.biome === 'corridor' && rng.float() < 0.4) {
+    // Direction signs on corridor walls — institutional boards that point at
+    // the real exit: arrow direction is projected from the exit port's local
+    // position through the sign's facing, and the label advertises what the
+    // route is actually approaching (the Index, the Engine, room bands).
+    if (spec.biome === 'corridor' && rng.float() < 0.5) {
       const spot = pickWallSpot(0.5);
       if (spot) {
-        const label = CORRIDOR_SIGNS[Math.floor(rng.float() * CORRIDOR_SIGNS.length)];
+        // Exit local position from the first (main-route) port.
+        const ex = spec.exits[0];
+        const exLocal = ex
+          ? (ex.wall === 'e' ? { x: w / 2, z: ex.offset }
+            : ex.wall === 'w' ? { x: -w / 2, z: ex.offset }
+            : ex.wall === 'n' ? { x: ex.offset, z: d / 2 }
+            : { x: ex.offset, z: -d / 2 })
+          : null;
+        // A '→' in texture space points along local +X rotated by mountYaw:
+        // worldDir = (cos yaw, -sin yaw). Arrow points toward the exit when the
+        // projection of (exit - spot) on that axis is positive.
+        const yaw = mountYaw[spot.wall];
+        let arrow = '→';
+        if (exLocal) {
+          const wx = Math.cos(yaw), wz = -Math.sin(yaw);
+          const dx = exLocal.x - (spot.wall === 'e' ? w / 2 : spot.wall === 'w' ? -w / 2 : spot.along);
+          const dz = exLocal.z - (spot.wall === 'n' ? d / 2 : spot.wall === 's' ? -d / 2 : spot.along);
+          arrow = wx * dx + wz * dz >= 0 ? '→' : '←';
+        }
+        // Text advertises the route's upcoming landmark, else a room band.
+        const next = room.index + 1;
+        const text = next <= 50 && next > 44 ? 'THE INDEX'
+          : next < 100 && next > 92 ? 'THE ENGINE'
+          : next === 51 ? 'NIGHT DESK'
+          : rng.float() < 0.5 ? `ROOMS ${String(next).padStart(3, '0')}–${String(Math.min(next + 9, 100)).padStart(3, '0')}`
+          : CORRIDOR_SIGNS[Math.floor(rng.float() * CORRIDOR_SIGNS.length)].replace(/[→←]/g, '').trim();
+        const label = `${text} ${arrow}`;
         const board = new THREE.Mesh(texBox(1.1, 0.28, 0.04), signMaterial(label) ?? MAT.charcoal());
         const lp2 = spot.wall === 'e' ? { x: w / 2 - 0.06, z: spot.along }
           : spot.wall === 'w' ? { x: -w / 2 + 0.06, z: spot.along }
           : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.06 }
           : { x: spot.along, z: -d / 2 + 0.06 };
         board.position.set(lp2.x, 1.95, lp2.z);
-        board.rotation.y = mountYaw[spot.wall];
+        board.rotation.y = yaw;
         group.add(board);
       }
     }
@@ -1436,10 +1465,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // Floor props — seeded dressing per biome, biased to walls, lane-clear.
     // `minDim` gates room-scale props to spaces that can take them.
     const floorSet: { kind: PropKind; p: number; wallBias?: boolean; minDim?: number }[] = ({
-      corridor: [{ kind: 'wetFloor', p: 0.25 }, { kind: 'stool', p: 0.15, wallBias: true }, { kind: 'bin', p: 0.3, wallBias: true }, { kind: 'broom', p: 0.15, wallBias: true }, { kind: 'baseballBat', p: 0.12, wallBias: true }, { kind: 'handTruck', p: 0.14, wallBias: true }, { kind: 'tyre', p: 0.08, wallBias: true }, { kind: 'spade', p: 0.1, wallBias: true }, { kind: 'plunger', p: 0.1, wallBias: true }, { kind: 'hallFigure', p: 0.09 }, { kind: 'rubblePile', p: 0.08, wallBias: true }],
-      records: [{ kind: 'stool', p: 0.3, wallBias: true }, { kind: 'plasticCrate', p: 0.3, wallBias: true }, { kind: 'ladder', p: 0.15, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }, { kind: 'screenPanels', p: 0.15, wallBias: true }, { kind: 'cardboardBox', p: 0.25, wallBias: true }, { kind: 'shipModel', p: 0.1 }, { kind: 'watcherFigure', p: 0.07, wallBias: true }, { kind: 'deadTenant', p: 0.06, wallBias: true }, { kind: 'hallFigure', p: 0.05 }, { kind: 'rubblePile', p: 0.12, wallBias: true }],
-      lobby: [{ kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }, { kind: 'screenPanels', p: 0.25, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }, { kind: 'standingFrame', p: 0.2, wallBias: true }, { kind: 'katana', p: 0.1, wallBias: true }, { kind: 'ornament', p: 0.15 }, { kind: 'dollCluster', p: 0.05, wallBias: true }, { kind: 'pianoUpright', p: 0.1, wallBias: true, minDim: 4.5 }, { kind: 'shell', p: 0.08 }],
-      guest: [{ kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }, { kind: 'nightstand', p: 0.5, wallBias: true }, { kind: 'bedOld', p: 0.3, wallBias: true }, { kind: 'screenPanels', p: 0.2, wallBias: true }, { kind: 'masonryHeater', p: 0.25, wallBias: true }, { kind: 'broom', p: 0.1, wallBias: true }, { kind: 'baseballBat', p: 0.15, wallBias: true }, { kind: 'gothicCommode', p: 0.3, wallBias: true }, { kind: 'pianoUpright', p: 0.08, wallBias: true, minDim: 4.5 }, { kind: 'rubberBoots', p: 0.12 }, { kind: 'suitcase', p: 0.2, wallBias: true }, { kind: 'crutches', p: 0.08, wallBias: true }, { kind: 'standingFrame', p: 0.1, wallBias: true }, { kind: 'sportsBall', p: 0.12 }, { kind: 'gamepad', p: 0.12 }, { kind: 'gameConsole', p: 0.1 }, { kind: 'cigaretteCase', p: 0.08 }, { kind: 'cardboardBox', p: 0.14, wallBias: true }, { kind: 'dollCluster', p: 0.14, wallBias: true }, { kind: 'fruit', p: 0.08 }, { kind: 'cakeSlice', p: 0.06 }, { kind: 'fishHat', p: 0.05 }],
+      corridor: [{ kind: 'wetFloor', p: 0.25 }, { kind: 'stool', p: 0.15, wallBias: true }, { kind: 'bin', p: 0.3, wallBias: true }, { kind: 'broom', p: 0.15, wallBias: true }, { kind: 'baseballBat', p: 0.12, wallBias: true }, { kind: 'handTruck', p: 0.14, wallBias: true }, { kind: 'tyre', p: 0.08, wallBias: true }, { kind: 'spade', p: 0.1, wallBias: true }, { kind: 'plunger', p: 0.1, wallBias: true }, { kind: 'hallFigure', p: 0.09 }, { kind: 'rubblePile', p: 0.08, wallBias: true }, { kind: 'hallTree', p: 0.12, wallBias: true }, { kind: 'umbrellaStand', p: 0.1, wallBias: true }, { kind: 'mailCart', p: 0.08 }],
+      records: [{ kind: 'podiumLectern', p: 0.12, wallBias: true }, { kind: 'mailCart', p: 0.15 }, { kind: 'stool', p: 0.3, wallBias: true }, { kind: 'plasticCrate', p: 0.3, wallBias: true }, { kind: 'ladder', p: 0.15, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }, { kind: 'screenPanels', p: 0.15, wallBias: true }, { kind: 'cardboardBox', p: 0.25, wallBias: true }, { kind: 'shipModel', p: 0.1 }, { kind: 'watcherFigure', p: 0.07, wallBias: true }, { kind: 'deadTenant', p: 0.06, wallBias: true }, { kind: 'hallFigure', p: 0.05 }, { kind: 'rubblePile', p: 0.12, wallBias: true }],
+      lobby: [{ kind: 'hallTree', p: 0.15, wallBias: true }, { kind: 'umbrellaStand', p: 0.12, wallBias: true }, { kind: 'wetFloor', p: 0.2 }, { kind: 'armchair', p: 0.35, wallBias: true }, { kind: 'bin', p: 0.35, wallBias: true }, { kind: 'screenPanels', p: 0.25, wallBias: true }, { kind: 'foldingStool', p: 0.2, wallBias: true }, { kind: 'standingFrame', p: 0.2, wallBias: true }, { kind: 'katana', p: 0.1, wallBias: true }, { kind: 'ornament', p: 0.15 }, { kind: 'dollCluster', p: 0.05, wallBias: true }, { kind: 'pianoUpright', p: 0.1, wallBias: true, minDim: 4.5 }, { kind: 'shell', p: 0.08 }],
+      guest: [{ kind: 'washStand', p: 0.3, wallBias: true }, { kind: 'hallTree', p: 0.12, wallBias: true }, { kind: 'luggageRack', p: 0.12, wallBias: true }, { kind: 'television', p: 0.4, wallBias: true }, { kind: 'armchair', p: 0.25, wallBias: true }, { kind: 'nightstand', p: 0.5, wallBias: true }, { kind: 'bedOld', p: 0.3, wallBias: true }, { kind: 'screenPanels', p: 0.2, wallBias: true }, { kind: 'masonryHeater', p: 0.25, wallBias: true }, { kind: 'broom', p: 0.1, wallBias: true }, { kind: 'baseballBat', p: 0.15, wallBias: true }, { kind: 'gothicCommode', p: 0.3, wallBias: true }, { kind: 'pianoUpright', p: 0.08, wallBias: true, minDim: 4.5 }, { kind: 'rubberBoots', p: 0.12 }, { kind: 'suitcase', p: 0.2, wallBias: true }, { kind: 'crutches', p: 0.08, wallBias: true }, { kind: 'standingFrame', p: 0.1, wallBias: true }, { kind: 'sportsBall', p: 0.12 }, { kind: 'gamepad', p: 0.12 }, { kind: 'gameConsole', p: 0.1 }, { kind: 'cigaretteCase', p: 0.08 }, { kind: 'cardboardBox', p: 0.14, wallBias: true }, { kind: 'dollCluster', p: 0.14, wallBias: true }, { kind: 'fruit', p: 0.08 }, { kind: 'cakeSlice', p: 0.06 }, { kind: 'fishHat', p: 0.05 }],
       gallery: [{ kind: 'watcherFigure', p: 0.13, wallBias: true }, { kind: 'deadTenant', p: 0.07, wallBias: true }, { kind: 'cannon', p: 0.18, wallBias: true, minDim: 5.5 }, { kind: 'bench', p: 0.3 }, { kind: 'armchair', p: 0.2, wallBias: true }, { kind: 'masonryHeater', p: 0.2, wallBias: true }, { kind: 'screenPanels', p: 0.2, wallBias: true }, { kind: 'galleryStatue', p: 0.2, wallBias: true }, { kind: 'pianoUpright', p: 0.16, wallBias: true, minDim: 4.5 }, { kind: 'dollCluster', p: 0.06, wallBias: true }, { kind: 'standingFrame', p: 0.25, wallBias: true }, { kind: 'katana', p: 0.15, wallBias: true }, { kind: 'spinningWheel', p: 0.12, wallBias: true }],
       maintenance: [{ kind: 'coveredCar', p: 0.1, wallBias: true, minDim: 6.5 }, { kind: 'barrel', p: 0.55, wallBias: true }, { kind: 'propaneTank', p: 0.35, wallBias: true }, { kind: 'toolChest', p: 0.4, wallBias: true }, { kind: 'ladder', p: 0.35, wallBias: true }, { kind: 'bucket', p: 0.3 }, { kind: 'plasticCrate', p: 0.4, wallBias: true }, { kind: 'wrench', p: 0.25 }, { kind: 'plasticCrate2', p: 0.25, wallBias: true }, { kind: 'jerrycan', p: 0.3, wallBias: true }, { kind: 'oilTin', p: 0.25 }, { kind: 'tirePump', p: 0.2, wallBias: true }, { kind: 'woodLadder', p: 0.2, wallBias: true }, { kind: 'cementBag', p: 0.3, wallBias: true }, { kind: 'compostBags', p: 0.3, wallBias: true }, { kind: 'drillPress', p: 0.3, wallBias: true }, { kind: 'jerrycanP', p: 0.25, wallBias: true }, { kind: 'broom', p: 0.25, wallBias: true }, { kind: 'dustpan', p: 0.2 }, { kind: 'sprayCans', p: 0.2 }, { kind: 'rustCan', p: 0.2 }, { kind: 'cleanerBottle', p: 0.2 }, { kind: 'bleachBottle', p: 0.2 }, { kind: 'ammoBox', p: 0.15, wallBias: true }, { kind: 'megaphone', p: 0.1 }, { kind: 'deadTree', p: 0.05, wallBias: true }, { kind: 'crowbar', p: 0.2 }, { kind: 'boltCutters', p: 0.15 }, { kind: 'bunsenBurner', p: 0.1 }, { kind: 'rifle', p: 0.08, wallBias: true }, { kind: 'compressor', p: 0.25, wallBias: true }, { kind: 'handTruck', p: 0.3, wallBias: true }, { kind: 'tyre', p: 0.2, wallBias: true }, { kind: 'wheelRim', p: 0.2, wallBias: true }, { kind: 'spade', p: 0.15, wallBias: true }, { kind: 'powerDrill', p: 0.2 }, { kind: 'pliers', p: 0.2 }, { kind: 'tapeMeasure', p: 0.15 }, { kind: 'handPlane', p: 0.15 }, { kind: 'trowel', p: 0.12 }, { kind: 'metalDetector', p: 0.1, wallBias: true }, { kind: 'plunger', p: 0.12, wallBias: true }, { kind: 'rubberBoots', p: 0.12 }, { kind: 'gallonJug', p: 0.2 }, { kind: 'plasticBin', p: 0.25, wallBias: true }, { kind: 'thermos', p: 0.15 }, { kind: 'machete', p: 0.08 }, { kind: 'pickaxe', p: 0.15, wallBias: true }, { kind: 'blowtorch', p: 0.15 }, { kind: 'gardenGloves', p: 0.15 }, { kind: 'fishingKnife', p: 0.1 }, { kind: 'compostBag', p: 0.2, wallBias: true }, { kind: 'cardboardBox', p: 0.22, wallBias: true }],
       unlit: [{ kind: 'lantern', p: 0.4, wallBias: true }, { kind: 'flashlight', p: 0.2 }, { kind: 'barrel', p: 0.3, wallBias: true }, { kind: 'deadTree', p: 0.08, wallBias: true }, { kind: 'sprayCans', p: 0.15 }, { kind: 'rustCan', p: 0.15 }, { kind: 'ammoBox', p: 0.12, wallBias: true }, { kind: 'deadBranch', p: 0.3, wallBias: true }, { kind: 'watcherFigure', p: 0.12, wallBias: true }, { kind: 'deadTenant', p: 0.08, wallBias: true }, { kind: 'dollCluster', p: 0.09, wallBias: true }, { kind: 'hallFigure', p: 0.05 }, { kind: 'rubblePile', p: 0.15, wallBias: true }, { kind: 'rootGrowth', p: 0.12, wallBias: true }, { kind: 'weedCluster', p: 0.14 }],
