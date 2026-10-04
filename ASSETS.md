@@ -691,3 +691,19 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `washStand/` | Marble-top washstand (basin, tiled splash, jug, shelf) | guest rooms |
 | `mailCart/` | Brass-frame mail/linen cart with canvas bag + casters | corridors, records |
 | `podiumLectern/` | Sloped lectern with bound ledger | records rooms |
+
+## Blender prefab mill additions — sprint 202 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `cageLocker/` | Wire-mesh locker bank (rod door, hasp + padlock) | guest-dormitory, guest-storage, laundry-hall, records-cage-room, maint-fabshop |
+| `bellCart/` | Brass hotel luggage cart (arched crown, carpeted deck, casters) | guest-reception, corr-grand-hall, lobby-foyer |
+| `teaTrolley/` | Two-tier serving cart (spoked wheels, push handle) | suite-split |
+| `bedBench/` | Upholstered foot-of-bed bench | guest-twin, suite-split, guest-two-baths |
+| `radiatorTall/` | Tall slim-column radiator (11 fins) | corr-wide, corr-grand-hall, lobby-waiting |
+| `linenHamper/` | X-frame canvas laundry hamper | corr-closet-branch, guest-storage, laundry-hall |
+| `basinSink/` | Pedestal basin (backsplash, twin taps, p-trap) | guest-bath-ante, guest-two-baths, laundry-hall |
+| `pegRail/` | Wall coat peg rail with draped coat | corridor + guest wall dressing (seeded) |
+| `towelRail/` | Wall towel bar with hanging towel | guest-bath-ante, guest-two-baths |
+| `ceilingHook/` | Chain-hung meat/hoist hook (plate + links + hook) | morgue-drawers, maint-fabshop, u-corridor |
+| `ovalMirror/` | Ribbon-crest oval mirror (variant of `mirror`) | guest/gallery walls |

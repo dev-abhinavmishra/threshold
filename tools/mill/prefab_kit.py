@@ -1081,6 +1081,290 @@ def libraryLadder():
     join_all('libraryLadder')
 
 
+def cageLocker():
+    """Wire-mesh storage locker — corner posts + rails, rod-mesh walls, a
+    hasp-and-padlock door. Staff/dormitory storage. ~0.9 wide, 1.9 tall."""
+    w, h, d = 0.9, 1.9, 0.55
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cube('post', (sx * (w / 2 - 0.03), sy * (d / 2 - 0.03), h / 2),
+                 (0.05, 0.05, h), IRON, 0.005)
+    for z in (0.05, h - 0.05):
+        cube('railF', (0, -d / 2 + 0.03, z), (w, 0.05, 0.05), IRON, 0.005)
+        cube('railB', (0, d / 2 - 0.03, z), (w, 0.05, 0.05), IRON, 0.005)
+        cube('railL', (-w / 2 + 0.03, 0, z), (0.05, d, 0.05), IRON, 0.005)
+        cube('railR', (w / 2 - 0.03, 0, z), (0.05, d, 0.05), IRON, 0.005)
+    # rod mesh — verticals on every face, sparse horizontal ties
+    nv = 10
+    for i in range(nv):
+        x = -w / 2 + 0.08 + i * (w - 0.16) / (nv - 1)
+        cyl('rodF', (x, -d / 2 + 0.03, h / 2), 0.006, h - 0.12, IRON, 6)
+        cyl('rodB', (x, d / 2 - 0.03, h / 2), 0.006, h - 0.12, IRON, 6)
+    for i in range(6):
+        y = -d / 2 + 0.08 + i * (d - 0.16) / 5
+        cyl('rodL', (-w / 2 + 0.03, y, h / 2), 0.006, h - 0.12, IRON, 6)
+        cyl('rodR', (w / 2 - 0.03, y, h / 2), 0.006, h - 0.12, IRON, 6)
+    for z in (h * 0.33, h * 0.62, h * 0.85):
+        cube('tieF', (0, -d / 2 + 0.03, z), (w - 0.12, 0.012, 0.014), IRON, 0.002)
+        cube('tieB', (0, d / 2 - 0.03, z), (w - 0.12, 0.012, 0.014), IRON, 0.002)
+        cube('tieL', (-w / 2 + 0.03, 0, z), (0.012, d - 0.12, 0.014), IRON, 0.002)
+        cube('tieR', (w / 2 - 0.03, 0, z), (0.012, d - 0.12, 0.014), IRON, 0.002)
+    # door mid-rail + hasp + padlock on the front face
+    cube('doorRail', (0, -d / 2 + 0.02, h * 0.52), (w - 0.1, 0.05, 0.05), IRON, 0.004)
+    cube('hasp', (w / 2 - 0.14, -d / 2 - 0.005, h * 0.55), (0.05, 0.025, 0.11), IRON, 0.003)
+    torus('padShackle', (w / 2 - 0.14, -d / 2 - 0.03, h * 0.49), 0.028, 0.008,
+          BRASS, rot=(math.pi / 2, 0, 0), seg=12)
+    cube('padBody', (w / 2 - 0.14, -d / 2 - 0.03, h * 0.44), (0.05, 0.025, 0.06), BRASS, 0.004)
+    join_all('cageLocker')
+
+
+def bellCart():
+    """Hotel luggage cart — brass birdcage frame: deck with carpet inlay,
+    corner posts, arched crown rail, hanging rail, four casters."""
+    w, h, d = 1.1, 1.9, 0.62
+    cube('deck', (0, 0, 0.14), (w, d, 0.09), WORN, 0.02)
+    cube('carpet', (0, 0, 0.19), (w - 0.12, d - 0.12, 0.015), CLOTH, 0.004)
+    # skirt rails under the deck
+    for z in (0.09,):
+        cube('skirtF', (0, -d / 2 + 0.02, z), (w, 0.025, 0.05), BRASS, 0.004)
+        cube('skirtB', (0, d / 2 - 0.02, z), (w, 0.025, 0.05), BRASS, 0.004)
+    # casters — wheels on the ends, axle along y
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            wh = cyl('wheel', (sx * (w / 2 - 0.07), sy * (d / 2 - 0.07), 0.045),
+                     0.05, 0.03, IRON, 12)
+            wh.rotation_euler[0] = math.pi / 2
+    # corner posts up to the crown
+    post_h = h - 0.42
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('post', (sx * (w / 2 - 0.04), sy * (d / 2 - 0.04), post_h / 2 + 0.16),
+                0.018, post_h, BRASS, 10)
+    # arched crown band (half-annulus) across the width
+    ring_seg('arch', (0, 0, post_h + 0.16), 0.52, 0.48, 0.045, BRASS, segs=18)
+    # hanging rail just under the crown
+    rail = cyl('hangRail', (0, -d / 2 + 0.04, post_h + 0.12), 0.014, w - 0.14, BRASS, 8)
+    rail.rotation_euler[1] = math.pi / 2
+    # push handle on the back — posts + crossbar
+    for sx in (-1, 1):
+        cyl('handlePost', (sx * (w / 2 - 0.04), d / 2 + 0.02, 1.2), 0.012, 0.12,
+            BRASS, 8).rotation_euler[0] = math.pi / 2
+    hb = cyl('handleBar', (0, d / 2 + 0.08, 1.2), 0.014, w - 0.16, BRASS, 8)
+    hb.rotation_euler[1] = math.pi / 2
+    join_all('bellCart')
+
+
+def teaTrolley():
+    """Two-tier serving trolley — shelf pair, slim brass legs, big spoked
+    side wheels + front casters, push handle."""
+    w, h, d = 0.9, 0.85, 0.55
+    for z in (0.3, 0.78):
+        cube('shelf', (0, 0, z), (w, d, 0.035), WOOD, 0.01)
+        cube('lipF', (0, -d / 2 + 0.015, z + 0.028), (w, 0.02, 0.05), WORN, 0.004)
+        cube('lipB', (0, d / 2 - 0.015, z + 0.028), (w, 0.02, 0.05), WORN, 0.004)
+        cube('lipL', (-w / 2 + 0.015, 0, z + 0.028), (0.02, d, 0.05), WORN, 0.004)
+        cube('lipR', (w / 2 - 0.015, 0, z + 0.028), (0.02, d, 0.05), WORN, 0.004)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('leg', (sx * (w / 2 - 0.03), sy * (d / 2 - 0.03), h / 2 + 0.02),
+                0.014, h - 0.04, BRASS, 8)
+    # rear axle with big spoked wheels
+    cyl('axle', (0, -d / 2 + 0.06, 0.14), 0.011, w + 0.04, IRON, 8).rotation_euler[1] = math.pi / 2
+    for sx in (-1, 1):
+        wx = sx * (w / 2 + 0.02)
+        torus('wheel', (wx, -d / 2 + 0.06, 0.14), 0.115, 0.014, IRON,
+              rot=(0, math.pi / 2, 0), seg=18)
+        for a in range(4):
+            cyl('spoke', (wx, -d / 2 + 0.06, 0.14), 0.006, 0.21, IRON, 6
+                ).rotation_euler[0] = a * math.pi / 4
+        cyl('hub', (wx, -d / 2 + 0.06, 0.14), 0.02, 0.05, BRASS, 8).rotation_euler[1] = math.pi / 2
+    # front casters
+    for sx in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6, radius=0.045,
+            location=(sx * (w / 2 - 0.05), d / 2 - 0.05, 0.05))
+        bpy.context.object.data.materials.append(IRON)
+    # push handle — uprights + grip at the back edge
+    for sx in (-1, 1):
+        cyl('hPost', (sx * (w / 2 - 0.04), -d / 2 + 0.03, h + 0.1), 0.012, 0.28,
+            BRASS, 8).rotation_euler[0] = -0.25
+    hg = cyl('hGrip', (0, -d / 2 - 0.02, h + 0.19), 0.013, w - 0.1, BRASS, 8)
+    hg.rotation_euler[1] = math.pi / 2
+    join_all('teaTrolley')
+
+
+def bedBench():
+    """Upholstered foot-of-bed bench — padded seat with welt cord, turned
+    legs, side + end stretchers, button tufts."""
+    w, h, d = 1.3, 0.48, 0.42
+    cube('seat', (0, 0, h - 0.08), (w, d, 0.14), CLOTH, 0.05)
+    cube('welt', (0, 0, h - 0.155), (w + 0.02, d + 0.02, 0.03), WORN, 0.01)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            lx, ly = sx * (w / 2 - 0.05), sy * (d / 2 - 0.05)
+            cyl('leg', (lx, ly, (h - 0.16) / 2), 0.028, h - 0.16, WOOD, 10)
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6,
+                radius=0.034, location=(lx, ly, (h - 0.16) * 0.5))
+            bpy.context.object.data.materials.append(WOOD)
+    for sx in (-1, 1):
+        cyl('stretchL', (sx * (w / 2 - 0.05), 0, 0.13), 0.011, d - 0.08, WOOD, 8
+            ).rotation_euler[0] = math.pi / 2
+    for sy in (-1, 1):
+        cyl('stretchS', (0, sy * (d / 2 - 0.05), 0.13), 0.011, w - 0.08, WOOD, 8
+            ).rotation_euler[1] = math.pi / 2
+    # tuft buttons across the seat top
+    for i in range(5):
+        x = -w / 2 + 0.16 + i * (w - 0.32) / 4
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6,
+            radius=0.016, location=(x, 0, h - 0.005))
+        bpy.context.object.data.materials.append(WORN)
+    join_all('bedBench')
+
+
+def radiatorTall():
+    """Tall column radiator — 11 slim columns between two headers, supply
+    pipe + wheel valve, bleeder cock. Narrower/taller than radiatorFin."""
+    w, h, d = 0.72, 1.05, 0.24
+    cube('headLo', (0, 0, h * 0.15), (w - 0.06, d * 0.7, 0.06), IRON, 0.01)
+    cube('headHi', (0, 0, h * 0.86), (w - 0.06, d * 0.7, 0.06), IRON, 0.01)
+    n = 11
+    for i in range(n):
+        x = -w / 2 + 0.07 + i * (w - 0.14) / (n - 1)
+        cyl('fin', (x, 0, h * 0.5), 0.028, h * 0.68, IRON, 8)
+    for sx in (-1, 1):
+        cube('foot', (sx * (w / 2 - 0.09), 0, 0.05), (0.1, d, 0.1), IRON, 0.01)
+    cyl('pipe', (w / 2 - 0.01, 0, h * 0.3), 0.022, h * 0.6, IRON, 10)
+    torus('valve', (w / 2 - 0.01, -0.06, h * 0.5), 0.05, 0.011, IRON,
+          rot=(math.pi / 2, 0, 0), seg=12)
+    cyl('bleed', (-w / 2 + 0.01, 0, h * 0.88), 0.008, 0.05, BRASS, 8)
+    join_all('radiatorTall')
+
+
+def linenHamper():
+    """Canvas laundry hamper — splayed wood frame with rails, slumped
+    canvas bag, folded linen on top."""
+    w, h, d = 0.6, 0.72, 0.55
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cube('leg', (sx * (w / 2 - 0.03), sy * (d / 2 - 0.03), h / 2),
+                       (0.04, 0.04, h), WOOD, 0.004)
+            leg.rotation_euler[0] = sy * -0.04
+            leg.rotation_euler[1] = sx * 0.04
+    for z in (0.12, h - 0.05):
+        cube('railF', (0, -d / 2 + 0.02, z), (w, 0.03, 0.04), WOOD, 0.003)
+        cube('railB', (0, d / 2 - 0.02, z), (w, 0.03, 0.04), WOOD, 0.003)
+        cube('railL', (-w / 2 + 0.02, 0, z), (0.03, d, 0.04), WOOD, 0.003)
+        cube('railR', (w / 2 - 0.02, 0, z), (0.03, d, 0.04), WOOD, 0.003)
+    cube('bag', (0, 0, h * 0.5), (w - 0.09, d - 0.09, h - 0.16), CLOTH, 0.09)
+    cube('linen', (-0.06, 0.01, h - 0.03), (w * 0.42, d * 0.55, 0.1), STONE, 0.03)
+    cube('linen2', (0.09, -0.03, h + 0.04), (w * 0.34, d * 0.45, 0.08), WORN, 0.03)
+    join_all('linenHamper')
+
+
+def basinSink():
+    """Pedestal basin — column foot, shell bowl with rim, tiled backsplash,
+    twin brass taps. Hotel-bath dressing. ~0.95 tall."""
+    w, h, d = 0.55, 0.95, 0.45
+    cyl('foot', (0, 0.04, 0.04), 0.14, 0.07, STONE, 14)
+    ped = cyl('column', (0, 0.04, h * 0.42), 0.09, h * 0.78, STONE, 14)
+    ped.scale.x = 1.2
+    bpy.ops.object.transform_apply(scale=True)
+    # shell bowl — flattened sphere + rim torus
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=12,
+        radius=0.27, location=(0, 0, h * 0.88))
+    bowl = bpy.context.object
+    bowl.name = 'bowl'
+    bowl.scale = (0.95, 0.8, 0.42)
+    bpy.ops.object.transform_apply(scale=True)
+    bowl.data.materials.append(STONE)
+    rim = torus('rim', (0, 0, h * 0.9), 0.235, 0.022, STONE, seg=20)
+    rim.scale.x = 1.1
+    bpy.ops.object.transform_apply(scale=True)
+    # backsplash against the wall
+    cube('splash', (0, d / 2 - 0.02, h * 0.92 + 0.12), (w, 0.04, 0.26), STONE, 0.008)
+    cube('splashCap', (0, d / 2 - 0.02, h * 0.92 + 0.26), (w + 0.02, 0.05, 0.03), WORN, 0.006)
+    # twin taps on the rear rim
+    for sx in (-1, 1):
+        cyl('tap', (sx * 0.12, d / 2 - 0.1, h * 0.94), 0.014, 0.1, BRASS, 8)
+        cyl('tapArm', (sx * 0.12, d / 2 - 0.15, h * 0.99), 0.011, 0.09, BRASS, 8
+            ).rotation_euler[0] = math.pi / 2
+        torus('tapX', (sx * 0.12, d / 2 - 0.1, h * 0.99 + 0.01), 0.028, 0.008,
+              BRASS, seg=10)
+    join_all('basinSink')
+
+
+def pegRail():
+    """Wall peg rail — wood backer board, five iron pegs, one draped coat.
+    Center-anchored wall mount."""
+    w = 1.0
+    cube('backer', (0, 0, 0), (w, 0.04, 0.16), WOOD, 0.008)
+    cube('backerCap', (0, -0.005, 0.09), (w + 0.02, 0.05, 0.03), WORN, 0.005)
+    for i in range(5):
+        x = -w / 2 + 0.12 + i * (w - 0.24) / 4
+        cyl('peg', (x, -0.05, -0.02), 0.012, 0.12, IRON, 8).rotation_euler[0] = math.pi / 2
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6,
+            radius=0.019, location=(x, -0.115, -0.02))
+        bpy.context.object.data.materials.append(IRON)
+    # one peg carries a draped coat — slumped slab + collar fold
+    coat = cube('coat', (0.12, -0.1, -0.34), (0.3, 0.15, 0.62), CLOTH, 0.05)
+    coat.rotation_euler[2] = 0.05
+    cube('collar', (0.12, -0.07, -0.06), (0.24, 0.1, 0.08), WORN, 0.03)
+    join_all('pegRail')
+
+
+def towelRail():
+    """Wall towel rail — brass brackets + bar, folded towel draped over.
+    Center-anchored wall mount."""
+    w = 0.5
+    cube('plateL', (-w / 2 + 0.025, 0, 0), (0.05, 0.03, 0.1), BRASS, 0.006)
+    cube('plateR', (w / 2 - 0.025, 0, 0), (0.05, 0.03, 0.1), BRASS, 0.006)
+    for sx in (-1, 1):
+        cyl('arm', (sx * (w / 2 - 0.025), -0.05, 0), 0.01, 0.1, BRASS, 8
+            ).rotation_euler[0] = math.pi / 2
+    cyl('bar', (0, -0.1, 0), 0.011, w - 0.08, BRASS, 8).rotation_euler[1] = math.pi / 2
+    # towel over the bar — crown fold + hanging face
+    cube('towelTop', (0.03, -0.1, 0.015), (0.3, 0.14, 0.04), CLOTH, 0.015)
+    cube('towelHang', (0.03, -0.13, -0.22), (0.3, 0.045, 0.42), CLOTH, 0.015)
+    cube('towelStripe', (0.03, -0.155, -0.3), (0.28, 0.012, 0.04), WORN, 0.004)
+    join_all('towelRail')
+
+
+def ceilingHook():
+    """Hoist chain + open hook — ceiling plate, alternating link run,
+    shackle and a gaping iron hook. Center-anchored, hangs ~0.95."""
+    cyl('plate', (0, 0, 0.94), 0.07, 0.03, IRON, 14)
+    cyl('stud', (0, 0, 0.9), 0.018, 0.06, IRON, 8)
+    n = 6
+    for i in range(n):
+        z = 0.86 - i * 0.075
+        torus('link', (0, 0, z), 0.03, 0.008, IRON,
+              rot=(math.pi / 2 if i % 2 == 0 else 0, math.pi / 2 if i % 2 else 0, 0), seg=10)
+    cyl('shackle', (0, 0, 0.46), 0.028, 0.1, IRON, 8)
+    torus('hook', (0, 0, 0.3), 0.06, 0.014, IRON, rot=(0, math.pi / 2, 0), seg=14)
+    cyl('hookTip', (0, -0.05, 0.4), 0.013, 0.12, IRON, 8).rotation_euler[0] = 0.5
+    join_all('ceilingHook')
+
+
+def ovalMirror():
+    """Oval wall mirror — brass egg frame, glass face, ribbon crest.
+    Center-anchored wall mount; variant of 'mirror'."""
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=16,
+        radius=0.3, location=(0, 0.005, 0))
+    face = bpy.context.object
+    face.name = 'glass'
+    face.scale = (0.75, 0.08, 1.08)
+    bpy.ops.object.transform_apply(scale=True)
+    face.data.materials.append(IRON)
+    frame = torus('frame', (0, -0.005, 0), 0.235, 0.026, BRASS,
+                  rot=(math.pi / 2, 0, 0), seg=24)
+    frame.scale = (0.98, 1, 1.36)
+    bpy.ops.object.transform_apply(scale=True)
+    # ribbon crest above the crown
+    torus('crest', (0, -0.01, 0.36), 0.045, 0.014, BRASS, rot=(math.pi / 2, 0, 0), seg=10)
+    cube('crestL', (-0.045, -0.01, 0.33), (0.07, 0.02, 0.09), BRASS, 0.005).rotation_euler[1] = -0.3
+    cube('crestR', (0.045, -0.01, 0.33), (0.07, 0.02, 0.09), BRASS, 0.005).rotation_euler[1] = 0.3
+    join_all('ovalMirror')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1099,6 +1383,10 @@ PIECES = {
     'mailCart': mailCart, 'podiumLectern': podiumLectern,
     'plinth': plinth, 'displayCase': displayCase, 'ropeBarrier': ropeBarrier,
     'exhibitLabel': exhibitLabel, 'libraryLadder': libraryLadder,
+    'cageLocker': cageLocker, 'bellCart': bellCart, 'teaTrolley': teaTrolley,
+    'bedBench': bedBench, 'radiatorTall': radiatorTall, 'linenHamper': linenHamper,
+    'basinSink': basinSink, 'pegRail': pegRail, 'towelRail': towelRail,
+    'ceilingHook': ceilingHook, 'ovalMirror': ovalMirror,
 }
 
 def main():

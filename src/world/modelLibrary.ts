@@ -157,6 +157,16 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   ropeBarrier: { dir: 'ropeBarrier', height: 0.95, collider: [2.4, 0.95, 0.2] },
   exhibitLabel: { dir: 'exhibitLabel', height: 0.15, collider: [0, 0, 0], anchor: 'center' },
   libraryLadder: { dir: 'libraryLadder', height: 2.6, collider: [0.55, 2.6, 0.5] },
+  cageLocker: { dir: 'cageLocker', height: 1.9, collider: [0.95, 1.9, 0.62] },
+  bellCart: { dir: 'bellCart', height: 2.05, collider: [1.15, 1.9, 0.68] },
+  teaTrolley: { dir: 'teaTrolley', height: 0.95, collider: [1.0, 0.85, 0.62] },
+  bedBench: { dir: 'bedBench', height: 0.49, collider: [1.32, 0.49, 0.44] },
+  radiatorTall: { dir: 'radiatorTall', height: 0.98, collider: [0.78, 0.98, 0.26] },
+  linenHamper: { dir: 'linenHamper', height: 0.8, collider: [0.65, 0.72, 0.6] },
+  basinSink: { dir: 'basinSink', height: 1.1, collider: [0.58, 0.95, 0.5] },
+  pegRail: { dir: 'pegRail', height: 0.72, collider: [0, 0, 0], anchor: 'center' },
+  towelRail: { dir: 'towelRail', height: 0.48, collider: [0, 0, 0], anchor: 'center' },
+  ceilingHook: { dir: 'ceilingHook', height: 0.73, collider: [0, 0, 0], anchor: 'center' },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
@@ -184,7 +194,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
     dir: 'brass_candleholders', height: 0.8, collider: [0, 0, 0],
     variants: [{ dir: 'wooden_candlestick', height: 0.5, collider: [0, 0, 0] }],
   },
-  mirror: { dir: 'ornate_mirror_01', height: 1.4, collider: [0, 0, 0], anchor: 'center' },
+  mirror: {
+    dir: 'ornate_mirror_01', height: 1.4, collider: [0, 0, 0], anchor: 'center',
+    variants: [{ dir: 'ovalMirror', height: 0.9, collider: [0, 0, 0], anchor: 'center' }],
+  },
   chandelier: {
     dir: 'Chandelier_01', height: 1.7, collider: [0, 0, 0], anchor: 'center',
     variants: [

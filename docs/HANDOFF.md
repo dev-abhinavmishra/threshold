@@ -109,23 +109,31 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 199)
+CURRENT STATE (as of ~sprint 202)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
   prints income-vs-cost per seed), synthesized audio + captions,
-  PBR textures + ~65 milled props + 17 rigged figures, decal wear system,
+  PBR textures + ~76 milled props + 17 rigged figures, decal wear system,
   beat-planner pacing, debug panel. Ambient Curator scheduled post-Index.
   Locked/toll doors wear milled hardware synced to door.locked.
   Corridor runners + Curator emit positional footstep foley; SoundEvent has
   optional 'source' field (listeners skip self-noise).
+  Sprint 201 corridor dressing pass: conduit/vent/exit-sign/keyRack/
+  extinguisher anchors on all 7 corridor templates + seeded wetFloor/
+  hangingCable/radiator variety; WALL_MOUNT_Y gained keyRack, exitSign,
+  wallVent, extinguisher, fireAlarm.
+  Sprint 202 service-wing mill batch: cageLocker, bellCart, teaTrolley,
+  bedBench, radiatorTall, linenHamper, basinSink, pegRail, towelRail,
+  ceilingHook, ovalMirror (mirror variant) — dressed into 20 templates
+  incl. dormitory locker bank, reception/foyer bell carts, morgue +
+  fabshop hoist hooks, laundry hampers, bath anteroom basins;
+  WALL_MOUNT_Y gained pegRail + towelRail.
+  Locked-drawer imprint floor fixed (15–30, was 8–22 vs test floor 15).
   e2e covers: asset-served, menu/HUD/settings/archive, death→retry, quit→
   Continue, underscript descent, victory screen, 15s soak.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - More mill batches: bedroom/guest/corridor dressing is older than the
-    museum/maintenance kits — new pieces (curtains, washstands variants,
-    radiators, cage lockers, ceiling hooks).
   - Entity feel: spawn stingers, telegraph polish, near-miss variety.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
@@ -135,6 +143,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     restricting SSAO to 'high' only when fps allows, or half-res.
   - e2e: chase-sequence and hiding-spot coverage still missing (needs a
     scripted entity drive).
+  - More mill batches if dressing still reads thin: curtain variants,
+    upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
 ```
 
 ---

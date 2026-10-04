@@ -39,6 +39,8 @@ export type PropKind =
   | 'breakerPanel' | 'wallVent' | 'portcullis'
   | 'conduitRun' | 'sumpPump' | 'hangingCable' | 'ductRun'
   | 'plinth' | 'displayCase' | 'ropeBarrier' | 'exhibitLabel' | 'libraryLadder'
+  | 'cageLocker' | 'bellCart' | 'teaTrolley' | 'bedBench' | 'radiatorTall'
+  | 'linenHamper' | 'basinSink' | 'pegRail' | 'towelRail' | 'ceilingHook'
   | 'wardrobe' | 'dresser' | 'nightstand'
   | 'barrel' | 'wineBarrel' | 'pipeManifold' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'

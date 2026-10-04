@@ -18,6 +18,9 @@ const MILL_DIRS = [
   'conduitRun', 'sumpPump', 'hangingCable', 'ductRun',
   'doorChain', 'tollPlate',
   'plinth', 'displayCase', 'ropeBarrier', 'exhibitLabel', 'libraryLadder',
+  'cageLocker', 'bellCart', 'teaTrolley', 'bedBench', 'radiatorTall',
+  'linenHamper', 'basinSink', 'pegRail', 'towelRail', 'ceilingHook',
+  'ovalMirror',
 ];
 
 const FIGURES = [

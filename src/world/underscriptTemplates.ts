@@ -46,6 +46,7 @@ const u_corridor: RoomTemplate = {
       ...(rng.bool(0.5) ? [{ kind: 'plasticCrate2' as const, x: -1.0, z: -3.0 }] : []),
       ...(rng.bool(0.35) ? [{ kind: 'mousetrap' as const, x: 1.1, z: -1.5 }] : []),
       ...(rng.bool(0.3) ? [{ kind: 'rustCan' as const, x: -1.1, z: 2.5 }] : []),
+      ...(rng.bool(0.45) ? [{ kind: 'ceilingHook' as const, x: 0.6, z: -3.2, y: 2.13 }] : []),
     ],
     sockets: rng.bool(0.35) ? [{ kind: 'loot', x: 0.9, z: 1.2, meta: {} }] : [],
     weight: 16,

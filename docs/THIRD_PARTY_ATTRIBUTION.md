@@ -13,7 +13,7 @@ Runtime deps: `three` (MIT), `react`/`react-dom` (MIT), `zustand` (MIT), `vite`,
 Per-file provenance (poly.pizza ids + model dirs) lives in `ASSETS.md` — it's the source of truth, appended per sprint.
 
 ## Original assets
-- `tools/mill/prefab_kit.py` — headless Blender 4.2 prefab mill (archway, colonnade, vault, fireplace, windowArch, hatch, medallion, scissorgate, balustrade, boilerDrum, pipeManifold, stackShelf, breakerPanel, wallVent, portcullis, wardrobe, dresser, nightstand) — authored for this project, original.
+- `tools/mill/prefab_kit.py` — headless Blender 4.2 prefab mill (archway, colonnade, vault, fireplace, windowArch, hatch, medallion, scissorgate, balustrade, boilerDrum, pipeManifold, stackShelf, breakerPanel, wallVent, portcullis, wardrobe, dresser, nightstand, boneArch, toppledColumn, wallNiche, stairGate, transomWindow, bookCart, radiatorFin, dumbwaiter, ironGrate, keyRack, counterBell, luggageRack, doorPlaque, hallTree, umbrellaStand, washStand, mailCart, podiumLectern, conduitRun, sumpPump, hangingCable, ductRun, doorChain, tollPlate, plinth, displayCase, ropeBarrier, exhibitLabel, libraryLadder, cageLocker, bellCart, teaTrolley, bedBench, radiatorTall, linenHamper, basinSink, pegRail, towelRail, ceilingHook, ovalMirror) — authored for this project, original.
 - All audio is synthesized in `src/audio/audio.ts` — no third-party audio files.
 - All decals are canvas-generated at runtime — no third-party decal files.
 
