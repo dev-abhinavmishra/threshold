@@ -54,8 +54,9 @@ export type EntityId =
   | 'orrery'
   | 'lurker'
   | 'behemoth'
-  // The toll-taker
-  | 'collector';
+  // The toll-taker and the mimic
+  | 'collector'
+  | 'singer';
 
 export type ItemId =
   | 'handLamp'

@@ -67,6 +67,7 @@ const FORESHADOW_TELLS: Record<string, ForeshadowTell[]> = {
   behemoth: [{ wall: true, tex: crackDecal, w: 1.4, h: 1.4 }, { wall: true, tex: grimeStreak, w: 0.9, h: 1.9 }],
   orrery: [{ wall: true, tex: grimeStreak, w: 0.9, h: 1.9, cy: 0.7 }],
   collector: [{ tex: floorStain, w: 0.5, h: 0.5, n: 3 }, { wall: true, tex: handPrints, w: 0.5, h: 0.6, cy: 0.8 }],
+  singer: [{ tex: footprintTrail, w: 0.8, h: 1.6, n: 2 }],
 };
 
 // Soft radial sprite for dust motes — unmapped PointsMaterial renders as

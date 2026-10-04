@@ -37,6 +37,7 @@ import {
 } from '../encounters/milestones';
 import { Editor, Grafter } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
+import { Singer } from '../entities/singer';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
@@ -640,13 +641,14 @@ export class Game {
   /* ==================== entity context ==================== */
 
   private entityCtx(): EntityCtx {
+    const clock = this.clock;
     return {
       player: this.player,
       rooms: this.activeRooms(),
       currentRoomIndex: this.currentRoom,
       sound: this.sound,
       streams: this.streams,
-      now: this.clock.time,
+      get now() { return clock.time; },
       seed: this.streams.stream('entity').int(0, 0x7fffffff),
       cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
       damagePlayer: (a, src, hint) => this.damagePlayer(a, src, hint),
@@ -722,6 +724,7 @@ export class Game {
       case 'editor': this.spawnEntity(new Editor()); break;
       case 'grafter': this.spawnEntity(new Grafter()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
+      case 'singer': this.spawnEntity(new Singer()); break;
       case 'pursuer': case 'curator': case 'hazard': break; // milestone-triggered only
       default: break;
     }

@@ -142,6 +142,10 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 1.6, speed: 2.2, damage: 0, killRange: 0, seeRange: 8,
     cooldown: 14, spawnChance: 0.32, minRoom: 18,
   },
+  singer: {
+    warningTime: 0, speed: 2.4, damage: 0, killRange: 0, seeRange: 12,
+    cooldown: 18, spawnChance: 0.3, minRoom: 22,
+  },
 };
 
 export interface DifficultyMod {
