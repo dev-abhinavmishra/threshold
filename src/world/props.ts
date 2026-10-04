@@ -1222,6 +1222,29 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     const b = builders[spec.kind];
     prop = b ? b(spec, rng) : single(new THREE.Group(), 0.4, 0.4, 0.4);
   }
+  // Some portraits are occupied: a pair of painted eyes that only open in
+  // your periphery — the game fades them out under direct observation.
+  // Attached at buildProp level so GLB frames and the procedural fallback
+  // both get exactly one pair.
+  if (spec.kind === 'painting' && rng.bool(0.3)) {
+    const eyeMat = new THREE.MeshBasicMaterial({
+      color: 0xd8c9a3, transparent: true, opacity: 0, depthWrite: false,
+    });
+    const gaze = new THREE.Group();
+    for (const sx of [-0.09, 0.09]) {
+      const eye = new THREE.Mesh(new THREE.PlaneGeometry(0.026, 0.017), eyeMat);
+      eye.position.set(sx, 0, 0);
+      gaze.add(eye);
+    }
+    gaze.position.set(0, 0.14, 0.08);
+    gaze.userData.anim = 'gaze';
+    gaze.userData.animSeed = rng.float() * 10;
+    gaze.userData.gazeMat = eyeMat;
+    gaze.userData.lx = 0;
+    gaze.userData.ly = 0.14;
+    gaze.userData.gazed = false;
+    prop.group.add(gaze);
+  }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
   // Rotate local colliders with the prop yaw (axis-aligned rotations only for

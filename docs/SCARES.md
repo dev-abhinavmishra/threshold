@@ -100,6 +100,7 @@ ported to the subfloor.
 - **Sweep telegraph**: corridor runners dim lamps along their path front as a travelling wave (`telegraphSpan`).
 - **Clock ticks**: near a running grandfather clock, once a second.
 - **Under-draft**: periodic cold pull near the Underscript passage.
+- **Painted eyes**: ~3/10 paintings carry a gaze — eyes that open only while unobserved (out of the view cone or too far to read), drifting toward your position; look at one and they are just paint again. First full open whispers a cue per painting.
 - **Foreshadow marks**: the room before a scheduled entity carries that entity's tell as decals — runner trails (`pursuer`/`sweep`/`reprise`), high claw-marks (`returner`), glass-web cracks (`stillframe`), black handprints (`redactor`/`hollow`/`witness`), peeled strips (`whisper`/`curator`), ink blobs (`inkling`), a drag smear (`maelstrom`), a sleep ring (`husk`), grit + cracks (`grafter`), red warning stripes (`editor`/`redline`), doubled footprints (`echoskin`), frame-edge scratches (`margin`), low scratches (`lurker`), wide cracks (`behemoth`), low grime (`orrery`), coin-spill stains + low handprints (`collector`). ~4/5 of scheduled entities leave a mark; main floor only.
 
 ## Testing hooks

@@ -2430,8 +2430,10 @@ export class Game {
           const dist = Math.hypot(dx, dz);
           if (dist > 0.01 && dist < 17) {
             const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
-            const seen = (fx * dx + fz * dz) / dist > 0.6;
-            if (!seen) {
+            // +dot = player's facing continues through the object = the
+            // player faces AWAY from it. Weeping-angel: move only then.
+            const unobserved = (fx * dx + fz * dz) / dist > 0.6;
+            if (unobserved) {
               const parentYaw = o.parent ? o.parent.rotation.y : 0;
               o.rotation.y = Math.atan2(dx, dz) - parentYaw;
               const creep = (o.userData.creep as number) ?? 0;
@@ -2445,6 +2447,40 @@ export class Game {
                 o.userData.creep = creep + step;
               }
             }
+          }
+        } else if (kind === 'gaze') {
+          // Painted eyes — they only open while unobserved. Direct view
+          // snaps them shut (fast fade out); periphery and darkness let them
+          // open and drift toward the player's position.
+          const mat = o.userData.gazeMat as THREE.MeshBasicMaterial | undefined;
+          if (!mat) continue;
+          o.getWorldPosition(Game.watchPos);
+          const dx = this.player.pos.x - Game.watchPos.x;
+          const dz = this.player.pos.z - Game.watchPos.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 14) continue;
+          const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+          // +dot = player's facing continues through the object = player
+          // faces AWAY. The painting is in view when dot < -0.55.
+          const away = dist > 0.01 ? (fx * dx + fz * dz) / dist : 0;
+          const target = away > -0.55 && dist < 10 ? 0.85 : 0;
+          const rate = target < mat.opacity ? 6 : 1.4; // shut fast, open slow
+          const nv = mat.opacity + Math.sign(target - mat.opacity) * Math.min(Math.abs(target - mat.opacity), dt * rate);
+          mat.opacity = nv;
+          if (nv > 0.3 && away > -0.55 && dist > 0.4) {
+            // pupils track the player in the painting's own plane
+            const parentYaw = o.parent ? o.parent.rotation.y : 0;
+            const cy = Math.cos(parentYaw), sy = Math.sin(parentYaw);
+            const lx = (dx * cy + dz * sy) / dist;
+            const dy = ((this.player.pos.y + 1.5) - Game.watchPos.y) / dist;
+            o.position.x = (o.userData.lx as number) + Math.max(-1, Math.min(1, lx)) * 0.022;
+            o.position.y = (o.userData.ly as number) + Math.max(-1, Math.min(1, dy)) * 0.016;
+          }
+          if (nv >= 0.8 && !o.userData.gazed) {
+            // once per painting — it narrates the discovery, not the habit
+            o.userData.gazed = true;
+            this.audio.play('watch-eyes', { x: Game.watchPos.x, y: Game.watchPos.y, z: Game.watchPos.z });
+            this.cue('watch-eyes', { x: Game.watchPos.x, y: Game.watchPos.y, z: Game.watchPos.z }, '[the painted eyes are open]', 'info');
           }
         } else if (kind === 'vanish') {
           // Hallway figure — present only while unobserved. Once it has sat in

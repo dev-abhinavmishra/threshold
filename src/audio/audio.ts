@@ -71,6 +71,7 @@ const CUES: Record<string, CueSpec> = {
   'collector-paid': { freq: 1900, dur: 0.5, type: 'sine', gain: 0.12, sweep: 400 },
   'collector-refuse': { freq: 1200, dur: 0.45, type: 'square', gain: 0.1, sweep: -300, noise: true },
   'collector-leave': { freq: 700, dur: 0.5, type: 'sine', gain: 0.08, sweep: -200 },
+  'watch-eyes': { freq: 2400, dur: 0.5, type: 'sine', gain: 0.05, sweep: -600 },
   'fire-crackle': { freq: 220, dur: 0.6, type: 'triangle', gain: 0.07, sweep: -80, noise: true },
   'redactor-sense': { freq: 320, dur: 0.6, type: 'sine', gain: 0.1, sweep: 310 },
   'redactor-sting': { freq: 240, dur: 0.3, type: 'square', gain: 0.3, sweep: 100, noise: true },
