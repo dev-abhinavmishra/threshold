@@ -61,6 +61,8 @@ export interface SoundEvent {
   direction?: 'left' | 'right' | 'ahead' | 'behind' | 'above' | 'below';
   /** Floor surface under the emitter (wood/carpet/stone/metal/concrete/paper) — varies footstep timbre. */
   surface?: string;
+  /** Emitting entity id — lets listeners ignore their own noise. */
+  source?: string;
 }
 
 type SoundListener = (event: SoundEvent) => void;

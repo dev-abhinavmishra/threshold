@@ -52,6 +52,7 @@ export class CorridorRunner extends Entity {
   /** Rebound variant: sweep reverses once for a faster surprise pass. */
   private rebounded = false;
   private reboundBoost = 1;
+  private stepT = 0;
 
   constructor(id: EntityId, opts: CorridorOptions = {}) {
     super(id, ENTITY_TUNING[id]);
@@ -231,6 +232,18 @@ export class CorridorRunner extends Entity {
       // Kill check — the runner must be near the player's room segment.
       const p = c.player;
       const d = v3dist(f.pos, p.pos);
+      // Positional stride — the pass is heard approaching and receding; cadence
+      // follows actual speed so a slowed near-miss reads as hesitant steps.
+      this.stepT -= dt;
+      if (this.stepT <= 0) {
+        const heavy = this.opts.behemoth || this.id === 'maelstrom';
+        this.stepT = (heavy ? 0.7 : 0.42) * (this.tuning.speed / Math.max(1, speed));
+        c.sound.emit({
+          x: f.pos.x, y: 1.0, z: f.pos.z,
+          intensity: Math.min(1.3, Math.max(0.15, 1.3 - d / 18)) * (heavy ? 1.25 : 1),
+          category: 'footstep', caption: '', source: this.id,
+        });
+      }
       // Near-miss: passing the hide slows the thing and creaks the spot —
       // once per spot, so a re-hide can still be grazed.
       if (p.hiddenSpot && d < 5.5 && !this.nearMissSpots.has(p.hiddenSpot)) {

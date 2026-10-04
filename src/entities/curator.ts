@@ -36,6 +36,7 @@ export class Curator extends Entity {
   private heardRecently: Vec3 | null = null;
   private containmentRoom: RoomInstance | null = null;
   private lastSoundAt = -99;
+  private stepT = 0;
 
   constructor() { super('curator', ENTITY_TUNING.curator); }
 
@@ -108,7 +109,7 @@ export class Curator extends Entity {
   }
 
   private hear(e: SoundEvent): void {
-    if (this.state !== 'engage') return;
+    if (this.state !== 'engage' || e.source === this.id) return;
     const c = this.ctx;
     const d = v3dist(this.pos, { x: e.x, y: e.y, z: e.z });
     // Hearing radius scales with intensity; crouch-walking whispers ~3m,
@@ -246,6 +247,15 @@ export class Curator extends Entity {
         const step = Math.min(speed * dt, dist);
         this.pos.x += (d.x / dist) * step;
         this.pos.z += (d.z / dist) * step;
+        this.stepT -= dt;
+        if (this.stepT <= 0) {
+          this.stepT = Math.max(0.3, 0.9 / speed);
+          c.sound.emit({
+            x: this.pos.x, y: 0.5, z: this.pos.z,
+            intensity: Math.min(0.7, speed / 7),
+            category: 'footstep', caption: '', source: this.id,
+          });
+        }
       }
     }
 
