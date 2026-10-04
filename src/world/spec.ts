@@ -284,6 +284,26 @@ export function portOutwardDir(port: Port): { x: number; z: number } {
   }
 }
 
+/** True when a room-local point sits inside a port's approach lane —
+ * the strip from just outside the door plane to ~2m into the room,
+ * as wide as the leaf plus clearance. Kept prop-free so furniture
+ * can't pinch the doorway a player must walk through. */
+export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>, x: number, z: number, r = 0.55): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    const a = -((x - lp.x) * dir.x + (z - lp.z) * dir.z);       // depth into the room
+    const b = Math.abs((x - lp.x) * -dir.z + (z - lp.z) * dir.x); // lateral offset
+    return a > -0.4 - r && a < 2.0 + r && b < port.width / 2 + 0.6 + r;
+  });
+}
+
+/** Drop props and hiding spots whose centers land inside a door lane. */
+export function clearDoorLanes(spec: RoomSpec): void {
+  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !inDoorLane(spec, p.x, p.z));
+  spec.hiding = spec.hiding.filter((h) => !inDoorLane(spec, h.x, h.z));
+}
+
 /** Standard nav spine: entry → center → exit for simple rooms. */
 export function spineNav(width: number, depth: number, entry: Port, exit: Port): LocalNav[] {
   const e = portLocalPos(exit, width, depth);

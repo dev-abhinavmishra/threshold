@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos } from './spec';
+import { portLocalPos, inDoorLane } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -1548,6 +1548,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // named props (Game animates them) and anything carrying userData.anim
   // stay live objects.
   const bakeable: THREE.Object3D[] = [];
+  const laneSpec = { width: w, depth: d, entry: spec.entry, exits: spec.exits };
   for (const p of passthrough) {
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
@@ -1569,6 +1570,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'statue' || p.kind === 'marbleBust') built.group.name = `stat-${room.index}`;
       if (p.kind === 'rug') built.group.name = `rug-${room.index}`;
       if (p.kind === 'chandelier') built.group.name = `chan-${room.index}`;
+      // A wide prop centered beside a door can still reach into its lane —
+      // drop any whose solid collider footprint touches the approach strip.
+      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && inDoorLane(laneSpec, c.x, c.z, Math.hypot(c.w, c.d) / 2))) continue;
       group.add(built.group);
       let animated = false;
       built.group.traverse((o) => { if (o.userData.anim) animated = true; });

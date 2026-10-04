@@ -16,7 +16,7 @@ import type {
 } from '../game/types';
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
-import { portLocalPos, portOutwardDir } from './spec';
+import { portLocalPos, portOutwardDir, clearDoorLanes, inDoorLane } from './spec';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
@@ -152,6 +152,7 @@ function pickSpec(
 /** Convert placed spec to a RoomInstance (world-space data, no meshes). */
 function instantiate(index: number, label: string, placed: PlacedRoom, isMainRouteExit: boolean): RoomInstance {
   const { spec, origin, yaw } = placed;
+  clearDoorLanes(spec);
   const colliders: Aabb[] = spec.colliders
     .filter((c) => !c.losOnly)
     .map((c) => {
@@ -824,11 +825,13 @@ function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng')
     if (covered) continue;
     const w = r.spec?.width ?? 6;
     const d = r.spec?.depth ?? 8;
-    const corner = rng.pick([
+    const corners = [
       { x: -w / 2 + 0.9, z: -d / 2 + 0.9, yaw: 0 },
       { x: w / 2 - 0.9, z: -d / 2 + 0.9, yaw: Math.PI / 2 },
       { x: -w / 2 + 0.9, z: d / 2 - 0.9, yaw: -Math.PI / 2 },
-    ]);
+    ];
+    const clear = r.spec ? corners.filter((c) => !inDoorLane(r.spec!, c.x, c.z)) : corners;
+    const corner = rng.pick(clear.length ? clear : corners);
     const center = localToWorld(r.origin, r.yaw, corner.x, 0, corner.z);
     const dYaw = r.yaw + corner.yaw;
     const dir = { x: Math.sin(dYaw), z: Math.cos(dYaw) };

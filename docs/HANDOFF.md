@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 202)
+CURRENT STATE (as of ~sprint 204)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -139,6 +139,15 @@ CURRENT STATE (as of ~sprint 202)
   fallbacks open pos-clusters and step teleports past prop pinches.
   e2e covers: asset-served, menu/HUD/settings/archive, death→retry, quit→
   Continue, underscript descent, victory screen, chase spawn+seal, 15s soak.
+  Sprint 204 door-lane clearance: real bug found by the chase e2e — props/
+  hiding spots could land inside a door's approach lane and pinch an open
+  doorway. inDoorLane(spec,x,z,r) is the lane test (strip -0.4..2m into the
+  room, port.width/2+0.6 wide + r); clearDoorLanes(spec) filters spec.props
+  (y<=1.9 only — above-lintel mounts are fine) + spec.hiding at instantiate;
+  builder drops any built prop whose non-walkable collider footprint reaches
+  a lane (catches wide props centered beside the door); foreshadow tells and
+  injected corner hide spots lane-guard at push time. Regression test
+  sweeps all seeds: no spec prop/hiding in any lane.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Entity feel: spawn stingers, telegraph polish, near-miss variety.

@@ -3,7 +3,7 @@ import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos } from '../src/world/spec';
+import { portLocalPos, inDoorLane } from '../src/world/spec';
 
 // Must match src/world/generator.ts rotXZ (world-space convention).
 function rotXZ(x: number, z: number, yaw: number): { x: number; z: number } {
@@ -299,5 +299,20 @@ describe('sprint mechanics coverage', () => {
     expect(cust).toBeTruthy();
     const peds = cust!.sockets.filter((s) => s.meta.shop !== undefined);
     expect(peds.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it('no prop or hiding spot lands inside a door approach lane', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...mainRooms(route), ...route.underRooms]) {
+        const spec = r.spec!;
+        for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9)) {
+          expect(inDoorLane(spec, p.x, p.z), `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z}`).toBe(false);
+        }
+        for (const h of spec.hiding) {
+          expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
+        }
+      }
+    }
   });
 });

@@ -15,3 +15,4 @@
 | 11 | medium | 'watch' anim gate inverted — watches crept only while *observed*, contradicting their SCARES entry | Fixed — sprint 177 |
 | 12 | medium | Loot pass rolled `contains` over `arrivalRegister` meta (~50% of seeds) — register read "Take Imprints", arrival objective unsatisfiable | Fixed — sprint 180 skip-guard + seed regression test |
 | 13 | low | `?debug` panel renders but `window.__thresholdGame` handle is dev-build only — production preview builds can't be probed the same way | Expected |
+| 14 | high | Authored props/hiding spots could land inside a door's approach lane and pinch an open doorway, blocking traversal (observed: chase-room entry in QA run) | Fixed — sprint 204 `inDoorLane`/`clearDoorLanes` at spec level + builder collider-extent check + foreshadow/injected-corner lane guards + seed regression test |

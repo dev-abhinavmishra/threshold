@@ -9,7 +9,7 @@
  */
 import type { Rng } from '../engine/rng';
 import type { RoomInstance } from '../game/types';
-import type { PropKind } from './spec';
+import { inDoorLane, type PropKind } from './spec';
 
 const TELLS: Record<string, PropKind[][]> = {
   // two candidate sets per entity: nearer rooms pull from later sets
@@ -51,6 +51,7 @@ export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {
           const side = rng.bool(0.5) ? 1 : -1;
           const x = side * rng.range(hw * 0.55, hw * 0.9);
           const z = rng.range(-hh * 0.6, hh * 0.75);
+          if (inDoorLane(spec, x, z)) continue;
           spec.props.push({
             kind,
             x, z,
