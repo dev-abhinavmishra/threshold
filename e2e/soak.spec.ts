@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
  * software-GL cleanup a beat before the context closes.
  */
 
+
 test('QA run plays 15s with no page errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));

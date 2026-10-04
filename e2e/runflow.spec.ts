@@ -6,6 +6,7 @@ import { test, expect } from '@playwright/test';
  * deterministic kill instead of driving a sighted entity to a killing blow.
  */
 
+
 test('death shows the death screen and retry restarts the run', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -53,5 +54,32 @@ test('quit to menu keeps the checkpoint; Continue resumes the run', async ({ pag
   // Checkpoint was written at run start — the menu must offer Continue.
   await page.getByRole('button', { name: 'Continue', exact: true }).click({ force: true });
   await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  expect(errors).toEqual([]);
+});
+
+test('underscript entry streams the subfloor and walks clean', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  // Jump the threshold — enterUnderscript teleports into U-000 and checkpoints.
+  const space = await page.evaluate(() => {
+    const g = window.__thresholdGame as { enterUnderscript(): void; space: string };
+    g.enterUnderscript();
+    return g.space;
+  });
+  expect(space).toBe('under');
+
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.down('w');
+    await page.waitForTimeout(650);
+    await page.keyboard.up('w');
+    await page.waitForTimeout(250);
+  }
   expect(errors).toEqual([]);
 });
