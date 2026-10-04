@@ -667,3 +667,8 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `toppledColumn/` | Broken column (stump + fallen drum + capital) | gallery-broken, unlit rooms |
 | `wallNiche/` | Arched wall niche (dome shell + pilasters + sill) | galleries, cathedral, grand hall |
 | `stairGate/` | Sealed stairwell (risers + landing + iron gate) | lobby-waiting |
+| `transomWindow/` | Half-round door fanlight with radial muntins | corridor + guest door heads |
+| `bookCart/` | Library cart with leaning book rows | records biomes |
+| `radiatorFin/` | Cast-iron column radiator | guest, lobby, corridor walls |
+| `dumbwaiter/` | Service dumbwaiter with car + pulley | maintenance, records walls |
+| `ironGrate/` | Floor drain grate, one bent bar | maintenance + crypt floors |

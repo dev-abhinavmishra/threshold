@@ -32,6 +32,7 @@ export type PropKind =
   | 'archway' | 'colonnade' | 'fireplace' | 'windowArch' | 'hatch'
   | 'medallion' | 'vault' | 'scissorgate' | 'balustrade'
   | 'boneArch' | 'toppledColumn' | 'wallNiche' | 'stairGate'
+  | 'transomWindow' | 'bookCart' | 'radiatorFin' | 'dumbwaiter' | 'ironGrate'
   | 'boilerDrum' | 'pipeManifold' | 'stackShelf'
   | 'breakerPanel' | 'wallVent' | 'portcullis'
   | 'wardrobe' | 'dresser' | 'nightstand'

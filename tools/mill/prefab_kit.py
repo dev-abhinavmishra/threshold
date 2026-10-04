@@ -31,13 +31,17 @@ STONE = None
 DARK = None
 IRON = None
 WOOD = None
+WORN = None
+CLOTH = None
 
 def init_mats():
-    global STONE, DARK, IRON, WOOD
+    global STONE, DARK, IRON, WOOD, WORN, CLOTH
     STONE = mat('stone', (0.42, 0.38, 0.33))
     DARK = mat('darkwood', (0.16, 0.10, 0.07), rough=0.7)
     WOOD = mat('oakwood', (0.32, 0.22, 0.13), rough=0.8)
     IRON = mat('iron', (0.11, 0.11, 0.12), rough=0.45, metal=0.85)
+    WORN = mat('wornleather', (0.28, 0.18, 0.11), rough=0.85)
+    CLOTH = mat('bookcloth', (0.2, 0.24, 0.2), rough=0.9)
 
 # ---------- build helpers ----------
 
@@ -596,6 +600,118 @@ def stairGate():
     join_all('stairGate')
 
 
+
+def transomWindow():
+    """Door fanlight — half-round transom with radial muntins over a sill."""
+    w, r = 1.3, 0.55
+    # sill + side jambs
+    cube('sill', (0, 0, 0.04), (w + 0.1, 0.14, 0.08), STONE, 0.01)
+    for sx in (-1, 1):
+        cube('jamb', (sx * (w / 2 - 0.03), 0, 0.04 + r / 2), (0.06, 0.1, r), STONE, 0.008)
+    # arched head band
+    ring_seg('head', (0, 0, 0.04 + r), w / 2 + 0.05, w / 2 - 0.03, 0.1, STONE, 16)
+    # dark glass pane behind
+    cube('glass', (0, 0.035, 0.04 + r / 2), (w - 0.06, 0.02, r), DARK, 0.005)
+    # radial muntins — five spokes fanning from the sill center
+    for i in range(5):
+        a = math.pi * (i + 0.5) / 5
+        bar = cube('muntin', (0, -0.005, 0.04 + r / 2), (0.025, 0.02, r * 0.92), IRON, 0.002)
+        bar.rotation_euler[1] = a - math.pi / 2
+    # center hub
+    cyl('hub', (0, -0.01, 0.04), 0.05, 0.06, IRON, 10)
+    join_all('transomWindow')
+
+
+def bookCart():
+    """Library cart — two canted shelves, push handle, four casters."""
+    w, h, d = 0.9, 1.0, 0.5
+    # end panels
+    for sx in (-1, 1):
+        cube('end', (sx * (w / 2 - 0.025), 0, h / 2), (0.05, d, h), WOOD, 0.008)
+    # two shelves canted toward each other
+    for i, zz in enumerate((0.32, 0.72)):
+        sh = cube('shelf', (0, 0, zz), (w - 0.08, d - 0.06, 0.035), WOOD, 0.006)
+        sh.rotation_euler[0] = 0.18 if i == 0 else -0.18
+    # book rows on each shelf (leaning)
+    rng = [(i * 0.13 - 0.32) for i in range(6)]
+    for zz, tilt in ((0.36, 0.18), (0.76, -0.18)):
+        for i, x in enumerate(rng):
+            bh = 0.2 + (i % 3) * 0.03
+            bk = cube('book', (x, -0.02 + (i % 2) * 0.06, zz + bh / 2),
+                      (0.05, 0.16, bh), WORN if i % 4 == 0 else CLOTH, 0.003)
+            bk.rotation_euler[1] = (i % 5 - 2) * 0.05
+            bk.rotation_euler[0] = tilt
+    # push handle across the top
+    cyl('hnd', (0, -d / 2 - 0.05, h - 0.02), 0.02, w - 0.1, IRON, 10).rotation_euler[2] = math.pi / 2
+    for sx in (-1, 1):
+        cyl('post', (sx * (w / 2 - 0.05), -d / 2 - 0.02, h - 0.12), 0.015, 0.2, IRON, 8)
+    # casters
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('wheel', (sx * (w / 2 - 0.06), sy * (d / 2 - 0.08), 0.05), 0.05, 0.03, IRON, 10).rotation_euler[0] = math.pi / 2
+    join_all('bookCart')
+
+
+def radiatorFin():
+    """Cast-iron column radiator — fin tubes on feet, supply valve at one end."""
+    w, h, d = 1.0, 0.65, 0.2
+    # two headers
+    cube('headLo', (0, 0, h * 0.22), (w - 0.08, d * 0.8, 0.07), IRON, 0.01)
+    cube('headHi', (0, 0, h * 0.82), (w - 0.08, d * 0.8, 0.07), IRON, 0.01)
+    # fin columns
+    n = 9
+    for i in range(n):
+        x = -w / 2 + 0.09 + i * (w - 0.18) / (n - 1)
+        cyl('fin', (x, 0, h * 0.5), 0.035, h * 0.66, IRON, 8)
+    # feet
+    for sx in (-1, 1):
+        cube('foot', (sx * (w / 2 - 0.12), 0, 0.05), (0.12, d, 0.1), IRON, 0.01)
+    # supply pipe + wheel valve on the right
+    cyl('pipe', (w / 2 - 0.02, 0, h * 0.35), 0.025, h * 0.7, IRON, 10)
+    torus('valve', (w / 2 - 0.02, -0.06, h * 0.55), 0.055, 0.012, IRON, rot=(math.pi / 2, 0, 0), seg=14)
+    join_all('radiatorFin')
+
+
+def dumbwaiter():
+    """Service dumbwaiter — recessed wall shaft, car caught between floors."""
+    w, h, d = 0.9, 1.8, 0.5
+    # shaft back + side jambs
+    cube('shaft', (0, d / 2 - 0.02, h / 2), (w, 0.05, h), DARK, 0.005)
+    for sx in (-1, 1):
+        cube('jamb', (sx * (w / 2 + 0.05), 0, h / 2), (0.1, d, h), WOOD, 0.012)
+    cube('header', (0, 0, h - 0.05), (w + 0.2, d, 0.1), WOOD, 0.012)
+    cube('sillB', (0, 0, 0.05), (w + 0.2, d, 0.1), WOOD, 0.012)
+    # car shelf mid-shaft with a covered dish
+    cube('car', (0, d / 2 - 0.06, h * 0.44), (w - 0.1, d * 0.7, 0.05), IRON, 0.006)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=14, ring_count=8, radius=0.16,
+        location=(0, d / 2 - 0.1, h * 0.44 + 0.1))
+    dish = bpy.context.object
+    dish.scale = (1, 1, 0.55)
+    bpy.ops.object.transform_apply(scale=True)
+    dish.data.materials.append(IRON)
+    # rope + pulley
+    cyl('rope', (w / 4, d / 2 - 0.1, h / 2), 0.012, h - 0.2, WORN, 6)
+    cyl('pulley', (w / 4, d / 2 - 0.1, h - 0.12), 0.07, 0.04, IRON, 12).rotation_euler[0] = math.pi / 2
+    join_all('dumbwaiter')
+
+
+def ironGrate():
+    """Floor drain grate — frame with parallel bars and one bent bar."""
+    w = 0.9
+    for sx in (-1, 1):
+        cube('frameX', (sx * (w / 2 - 0.03), 0, 0.02), (0.06, w, 0.04), IRON, 0.004)
+    for sy in (-1, 1):
+        cube('frameY', (0, sy * (w / 2 - 0.03), 0.02), (w, 0.06, 0.04), IRON, 0.004)
+    n = 7
+    for i in range(n):
+        x = -w / 2 + 0.1 + i * (w - 0.2) / (n - 1)
+        bar = cube('bar', (x, 0, 0.02), (0.035, w - 0.1, 0.035), IRON, 0.004)
+        if i == 4:
+            bar.rotation_euler[0] = 0.22
+            bar.location.y -= 0.04
+    join_all('ironGrate')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -603,6 +719,9 @@ PIECES = {
     'doorLeaf': door_leaf,
     'boneArch': boneArch, 'toppledColumn': toppledColumn,
     'wallNiche': wallNiche, 'stairGate': stairGate,
+    'transomWindow': transomWindow, 'bookCart': bookCart,
+    'radiatorFin': radiatorFin, 'dumbwaiter': dumbwaiter,
+    'ironGrate': ironGrate,
 }
 
 def main():

@@ -130,6 +130,13 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   toppledColumn: { dir: 'toppledColumn', height: 1.1, collider: [2.0, 1.1, 0.8] },
   wallNiche: { dir: 'wallNiche', height: 2.2, collider: [0, 0, 0], anchor: 'center' },
   stairGate: { dir: 'stairGate', height: 3.2, collider: [1.7, 3.2, 2.5] },
+  // Wall-mounted / door-framing pieces must not carry colliders — a solid box
+  // here seals the lane they decorate (archway lesson, sprint 183).
+  transomWindow: { dir: 'transomWindow', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
+  bookCart: { dir: 'bookCart', height: 1.0, collider: [0.9, 1.0, 0.55] },
+  radiatorFin: { dir: 'radiatorFin', height: 0.65, collider: [1.0, 0.65, 0.22] },
+  dumbwaiter: { dir: 'dumbwaiter', height: 1.8, collider: [0, 0, 0], anchor: 'center' },
+  ironGrate: { dir: 'ironGrate', height: 0.05, collider: [0, 0, 0] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
