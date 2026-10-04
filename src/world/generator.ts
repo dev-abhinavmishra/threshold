@@ -521,7 +521,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           if (!lootRng.bool(0.38 * underMul)) continue;
           s.filled = true;
           const roll = lootRng.weighted(underTable, (t) => t.w).item;
-          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: lootRng.int(3, 16) };
+          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: lootRng.int(2, 9) };
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-u${room.index}` };
           else s.meta = { contains: roll };
           if (s.kind === 'drawer' && lootRng.bool(0.25)) s.meta.drawerLocked = true;
@@ -754,7 +754,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
           const locked = lootRng.bool(0.18);
           const roll = lootRng.weighted(itemTable, (t) => t.w).item;
           // Locked drawers pay better: richer imprints than open ones.
-          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: locked ? lootRng.int(15, 40) : lootRng.int(4, 22) };
+          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: locked ? lootRng.int(8, 22) : lootRng.int(3, 14) };
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-${room.index}` };
           else s.meta = { contains: roll };
           if (locked) s.meta.drawerLocked = true;
@@ -763,7 +763,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
         if (lootRng.bool(0.5 * resourceMul)) {
           s.filled = true;
           const roll = lootRng.weighted(itemTable, (t) => t.w).item;
-          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: lootRng.int(6, 30) };
+          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: lootRng.int(4, 18) };
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-${room.index}` };
           else s.meta = { contains: roll };
         }
