@@ -13,6 +13,7 @@ import { Curator } from '../entities/curator';
 import { Pursuer, Orrery } from '../entities/setpieces';
 import { corridorPath } from '../entities/base';
 import { tallFigure, tickFigure } from '../entities/figure';
+import { riggedFigure, type RiggedFigure } from '../entities/rigged';
 import { MAT } from '../world/materials';
 
 export interface MilestoneEvents {
@@ -160,6 +161,7 @@ export class CustodianEncounter extends Milestone {
   /** shop sockets on 'itemPedestal' with meta.shop = slot index. */
   private keeper: THREE.Object3D | null = null;
   private keeperHead: THREE.Object3D | null = null;
+  private keeperRig: RiggedFigure | null = null;
   private greeted = false;
   private farewell = false;
   private purchases = 0;
@@ -173,8 +175,10 @@ export class CustodianEncounter extends Milestone {
     const c = this.ev.ctx();
     // The Custodian: a robed keeper behind the counter — tracks the player,
     // never moves its feet. Non-hostile, but not friendly either.
-    const fig = tallFigure({ height: 2.05, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber', hood: true, tattered: true });
+    const rig = riggedFigure('hooded');
+    const fig = rig ? rig.group : tallFigure({ height: 2.05, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber', hood: true, tattered: true });
     if (!fig) return;
+    this.keeperRig = rig;
     const r = this.room;
     const yaw = r.yaw;
     const cos = Math.cos(yaw), sin = Math.sin(yaw);
@@ -195,6 +199,7 @@ export class CustodianEncounter extends Milestone {
     if (!this.keeper) this.spawnKeeper();
     if (!this.keeper) return;
     tickFigure(this.keeper, c.now);
+    this.keeperRig?.update(dt);
     const dist = v3dist(this.keeper.position as unknown as Vec3, c.player.pos);
     // greet when the player first notices it within the room
     if (!this.greeted && dist < 12) {
@@ -239,6 +244,7 @@ export class CustodianEncounter extends Milestone {
       this.ev.ctx().removeEntityMesh(this.keeper);
       this.keeper = null;
       this.keeperHead = null;
+      this.keeperRig = null;
     }
   }
 }

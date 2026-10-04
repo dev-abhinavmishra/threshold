@@ -38,6 +38,7 @@ import {
 import { Editor, Grafter } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
+import { Curator } from '../entities/curator';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
@@ -728,7 +729,10 @@ export class Game {
       case 'grafter': this.spawnEntity(new Grafter()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
-      case 'pursuer': case 'curator': case 'hazard': break; // milestone-triggered only
+      // Ambient Curator: post-Index it walks the deep stacks — scheduled only
+      // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
+      case 'curator': this.spawnEntity(new Curator()); break;
+      case 'pursuer': case 'hazard': break; // milestone-triggered only
       default: break;
     }
   }
@@ -2572,6 +2576,7 @@ export class Game {
     // Entity figure idle animation — breathing sway + eye pulse.
     const t = this.clock.time;
     this.entityGroup.traverse((o) => {
+      (o.userData.rig as RiggedFigure | undefined)?.update(dt);
       if (o.userData.figureParts) {
         tickFigure(o, t);
         // Broker figures track the player with their head.
@@ -3326,7 +3331,8 @@ export class Game {
     if (this.space !== 'under' || this.brokerFigs.has(roomIndex)) return;
     const room = this.activeRooms()[roomIndex];
     if (!room || room.templateId !== 'u-lobby') return;
-    const fig = tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'mask', eyes: 'white', hood: true });
+    const rig = riggedFigure('hooded');
+    const fig = rig ? rig.group : tallFigure({ height: 1.9, body: MAT.shadowFigure(), face: 'mask', eyes: 'white', hood: true });
     const yaw = room.yaw;
     const cos = Math.cos(yaw), sin = Math.sin(yaw);
     const lx = 0, lz = 3.0; // behind the counter at local z 2.2
@@ -3335,6 +3341,7 @@ export class Game {
     fig.position.set(wx, room.origin.y, wz);
     fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
     fig.userData.broker = true;
+    if (rig) fig.userData.rig = rig;
     this.entityGroup.add(fig);
     this.brokerFigs.set(roomIndex, fig);
     // first sighting — the building has staff down here too

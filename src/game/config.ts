@@ -96,7 +96,7 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
   },
   curator: {
     warningTime: 0, speed: 3.6, damage: 100, killRange: 1.5, seeRange: 0,
-    cooldown: 999, spawnChance: 0, minRoom: 50,
+    cooldown: 999, spawnChance: 0.22, minRoom: 56, biomes: ['records', 'gallery', 'unlit'],
   },
   hollow: {
     warningTime: 0, speed: 0, damage: 55, killRange: 0.8, seeRange: 0,

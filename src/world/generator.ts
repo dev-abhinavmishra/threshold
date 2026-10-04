@@ -866,7 +866,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
     if (tier === 0 && !encRng.bool(0.15)) continue;
 
     for (const [id, t] of Object.entries(ENTITY_TUNING) as [EntityId, EntityTuning][]) {
-      if (['pursuer', 'curator', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin'].includes(id)) continue;
+      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin'].includes(id)) continue;
       if (t.spawnChance <= 0) continue;
       if (room.index < t.minRoom || (t.maxRoom !== undefined && room.index > t.maxRoom)) continue;
       if ((cooldowns.get(id) ?? -999) + t.cooldown > room.index) continue;
