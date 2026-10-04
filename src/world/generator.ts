@@ -361,17 +361,45 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
       if (!placedRoom) throw new Error(`Milestone ${entry.fixed} unplaceable at ${i}`);
     } else {
       const candidates = pickSpec(MAIN_TEMPLATES, structRng, i, entry.biomeBias ?? biomeBiasFor(i));
-      for (const cand of candidates) {
+      // Corridor-flood guard: a corridor spec fits almost anywhere, so once
+      // corridors start landing back-to-back the chain is stuck in a pocket
+      // where they short-circuit every furnished room drawn after them. Keep
+      // the normal draw order while the run is healthy; after 2+ consecutive
+      // corridors, try furnished candidates first — and if none place, draw
+      // one more round before conceding the slot.
+      let consec = 0;
+      for (let k = rooms.length - 1; k >= 0; k--) {
+        if (rooms[k].index < 0) continue;          // branch closets ride the tail
+        if (rooms[k].biome === 'corridor') consec++; else break;
+      }
+      const flooding = consec >= 2;
+      const ordered = flooding
+        ? [...candidates].sort((a, b) => Number(a.spec.biome === 'corridor') - Number(b.spec.biome === 'corridor'))
+        : candidates;
+      for (const cand of ordered) {
         placedRoom = tryPlace(cand.spec, connPos, connDir, placed)
           ?? jitteredPlace(cand.spec, connPos, connDir, placed);
         if (placedRoom) break;
+      }
+      if (!placedRoom && flooding) {
+        const extra = pickSpec(MAIN_TEMPLATES, structRng, i + 1000, entry.biomeBias ?? biomeBiasFor(i));
+        for (const cand of extra) {
+          if (cand.spec.biome === 'corridor') continue;
+          placedRoom = tryPlace(cand.spec, connPos, connDir, placed)
+            ?? jitteredPlace(cand.spec, connPos, connDir, placed);
+          if (placedRoom) break;
+        }
       }
       if (!placedRoom) {
         // Guaranteed fit: corridor fallbacks. When lateral drift is near the
         // map bound (or the chain is backtracking south), prefer a turn
         // corridor so the chain bends back along the spine instead of
-        // marching out of bounds and flooding with corridors.
-        const turning = (Math.abs(connPos.x) > 40 && Math.abs(connDir.x) > 0.7) || connDir.z < -0.7;
+        // marching out of bounds and flooding with corridors. Also fires when
+        // the connector is already outside the x-bound and marching parallel
+        // to it — otherwise forced corridors escape sideways forever while
+        // every furnished room is bound-rejected.
+        const outX = Math.abs(connPos.x) > 70;
+        const turning = outX || (Math.abs(connPos.x) > 40 && Math.abs(connDir.x) > 0.7) || connDir.z < -0.7;
         const fallbacks: RoomSpec[] = [];
         if (turning) {
           const lturn = MAIN_TEMPLATE_MAP.get('corr-l-turn')!.build(streams.roomStream('structure', i));
@@ -380,8 +408,16 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
             nav: lturn.nav.map((n) => ({ ...n, x: -n.x })),
           };
           // 'e' exit maps to world dir (connDir.z, -connDir.x); 'w' its opposite.
-          // Prefer the turn that keeps northward progress.
-          if (-connDir.x > 0) fallbacks.push(lturn, mirrored); else fallbacks.push(mirrored, lturn);
+          if (outX) {
+            // Steer back inside: prefer the variant whose exit points toward
+            // the spine (x sign opposite to the connector's).
+            const exitX = (sp: RoomSpec) => portWorld(placeSpec(sp, connPos, connDir), sp.exits[0]).dir.x;
+            const want = -Math.sign(connPos.x);
+            fallbacks.push(...(exitX(lturn) * want > 0 ? [lturn, mirrored] : [mirrored, lturn]));
+          } else {
+            // Prefer the turn that keeps northward progress.
+            if (-connDir.x > 0) fallbacks.push(lturn, mirrored); else fallbacks.push(mirrored, lturn);
+          }
         }
         fallbacks.push(MAIN_TEMPLATE_MAP.get('corr-straight')!.build(streams.roomStream('structure', i)));
         for (const fb of fallbacks) {

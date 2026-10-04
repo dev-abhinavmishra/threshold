@@ -2138,6 +2138,83 @@ const roomBunker: RoomTemplate = {
   }),
 };
 
+
+// The lobby the guests remember — a grand stair sealed at its gate,
+// mail niches behind the counter, luggage that never got claimed.
+const roomLobbyFoyer: RoomTemplate = {
+  id: 'lobby-foyer',
+  build: (_rng) => spec('lobby-foyer', 'lobby', 11, 8, 4.2, {
+    props: [
+      { kind: 'stairGate', x: 0, z: 3.4, yaw: Math.PI },
+      { kind: 'balustrade', x: -2.2, z: 3.4 }, { kind: 'balustrade', x: 2.2, z: 3.4 },
+      { kind: 'counter', x: -3.6, z: 0.6, yaw: Math.PI / 2, scale: 2.2 },
+      { kind: 'wallNiche', x: -5.32, z: -1.0, y: 0.4, yaw: Math.PI / 2 },
+      { kind: 'wallNiche', x: -5.32, z: 0.2, y: 0.4, yaw: Math.PI / 2 },
+      { kind: 'wallNiche', x: -5.32, z: 1.4, y: 0.4, yaw: Math.PI / 2 },
+      { kind: 'register', x: -3.6, z: 0.5, y: 0.95, yaw: Math.PI / 2 },
+      { kind: 'trolley', x: 2.8, z: -0.8, yaw: -0.35 },
+      { kind: 'suitcase', x: 3.3, z: -0.2, yaw: 0.5 },
+      { kind: 'suitcase', x: 3.05, z: 0.45, yaw: -0.2 },
+      { kind: 'sofa', x: 1.6, z: -2.6, yaw: Math.PI },
+      { kind: 'coffeeTable', x: 1.6, z: -1.5 },
+      { kind: 'vase', x: 1.6, z: -1.5, y: 0.5 },
+      { kind: 'planter', x: -4.6, z: -2.8 }, { kind: 'planter', x: 4.6, z: -2.8 },
+      { kind: 'radiatorFin', x: 5.32, z: 1.8, yaw: -Math.PI / 2 },
+      { kind: 'wetFloor', x: -0.8, z: -1.0 },
+      { kind: 'clock', x: 0, z: -3.6, y: 2.4 },
+      { kind: 'chandelier', x: 0, z: 0, y: 3.6 },
+      { kind: 'rug', x: 0, z: -1.2, scale: 1.4 },
+      { kind: 'transomWindow', x: 0, z: -3.92, y: 2.7 },
+      { kind: 'transomWindow', x: 0, z: 3.92, y: 2.7, yaw: Math.PI },
+      { kind: 'payphone', x: 5.32, z: -2.4, y: 0.6, yaw: -Math.PI / 2 },
+      { kind: 'bin', x: -4.8, z: 2.6 },
+      ...wallProps(11, 8, _rng, ['painting', 'wallSconce', 'wallClock'], 4),
+    ],
+    sockets: lootSockets([[-3.6, 0.6], [4.6, -2.8]]),
+    hiding: [
+      { kind: 'cabinet', x: -4.6, z: 2.4, yaw: Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'losAlcove', x: 4.6, z: 2.6, yaw: -Math.PI / 2, propKind: 'partition' },
+    ],
+    safeZones: [{ x: 4.6, z: 2.6, w: 1.3, d: 1.3 }],
+    lights: [
+      { x: 0, y: 3.4, z: 0, color: 0xffd9a4, intensity: 0.5, range: 9, group: 'main', breakable: true },
+    ],
+    weight: 5, minRoom: 15, darkChance: 0.2, perf: 4,
+  }),
+};
+
+// A chapel the House cannot enter — checkpoint rooms that still ask a tithe
+// of attention: pews, a bare altar, candles someone keeps replacing.
+const roomSanctuary: RoomTemplate = {
+  id: 'safe-sanctuary',
+  build: (_rng) => spec('safe-sanctuary', 'safe', 7, 8, 3.6, {
+    props: [
+      { kind: 'bench', x: -1.6, z: -0.6, yaw: 0 }, { kind: 'bench', x: 1.6, z: -0.6, yaw: 0 },
+      { kind: 'bench', x: -1.6, z: 0.8, yaw: 0 }, { kind: 'bench', x: 1.6, z: 0.8, yaw: 0 },
+      { kind: 'bench', x: -1.6, z: 2.2, yaw: 0 }, { kind: 'bench', x: 1.6, z: 2.2, yaw: 0 },
+      { kind: 'table', x: 0, z: -2.9 },
+      { kind: 'candle', x: -0.4, z: -2.9, y: 0.78 }, { kind: 'candle', x: 0.4, z: -2.9, y: 0.78 },
+      { kind: 'candle', x: 0, z: -2.7, y: 0.78 },
+      { kind: 'wallNiche', x: 0, z: -3.82, y: 0.5, yaw: 0 },
+      { kind: 'bust', x: 0, z: -3.5, y: 0.62, yaw: 0 },
+      { kind: 'rug', x: 0, z: -0.4, scale: 1.2 },
+      { kind: 'rootGrowth', x: -3.2, z: -3.4 },
+      { kind: 'candle', x: -2.9, z: 3.4, y: 0.02 }, { kind: 'candle', x: -3.1, z: 3.2, y: 0.02 },
+      { kind: 'books', x: 0.2, z: -2.75, y: 0.78 },
+      { kind: 'ottoman', x: 0, z: -1.6, yaw: Math.PI },
+      { kind: 'wallVent', x: 3.32, z: 1.8, y: 2.4, yaw: -Math.PI / 2 },
+      ...wallProps(7, 8, _rng, ['painting', 'wallSconce'], 3),
+    ],
+    sockets: lootSockets([[0, -2.9], [-2.9, 3.4]]),
+    hiding: [{ kind: 'cabinet', x: 3.1, z: 3.3, yaw: -Math.PI / 2, propKind: 'cabinet' }],
+    lights: [
+      { x: 0, y: 2.6, z: -2.4, color: 0xffc98a, intensity: 0.6, range: 6, group: 'main', breakable: true },
+      { x: 0, y: 2.9, z: 2.0, color: 0x9fb6ff, intensity: 0.3, range: 7, group: 'dim', breakable: true },
+    ],
+    weight: 4, minRoom: 34, darkChance: 0, floor: 'carpet',
+  }),
+};
+
 export const MAIN_TEMPLATES: RoomTemplate[] = [
   corridorStraight, corridorWide, corridorL, corridorZig, corridorJunction,
   guestRoom, guestTwin, suiteSplit, bathAnte,
@@ -2152,7 +2229,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomMotelCorridor, roomOfficeBullpen, roomAnomalyTall, roomImpossible, maintServer,
   roomGreenRecords, roomDuel, roomVaulted,
   roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
-  roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker, roomCathedral,
+  roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker, roomLobbyFoyer, roomSanctuary, roomCathedral,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];
