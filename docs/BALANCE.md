@@ -28,3 +28,16 @@ Method: per-entity + per-decile encounter histograms over the 5 QA seeds via
 - Distribution: sweep 24 · hollow 21 · redactor 19 · whisper 18 · witness 14 ·
   grafter 14 · lurker 14 · reprise 13 · echoskin 12 · husk 9 · inkling 7 ·
   maelstrom 6 · behemoth 1 — signature chases stay frequent, apex threats rare.
+
+## Roster update (sprint 179, standard seeds)
+
+- Main floor: sweep 22 · hollow 23 · redactor 19 · whisper 18 · witness 16 ·
+  reprise 15 · inkling 14 · lurker 13 · grafter 12 · echoskin 11 · husk 10 ·
+  maelstrom 6 · collector 4 · singer 3 · behemoth 1 — the two additions stay
+  rare on purpose: the Collector's toll is a negotiation, the Singer a
+  slow-burn tail; either one more often would read as noise.
+- Underscript: redline 63 · margin 54 · stillframe 44 · returner 39 ·
+  grafter 36 · editor 5 — dense by design; the subfloor is the gauntlet.
+- shortRun/'qa' caveat: guarantee windows (reprise@31+, maelstrom@55+,
+  echoskin@63+) don't exist under ~31 rooms, so a qa route shows ~3
+  scheduled encounters — sparse is the mode, not the balance.
