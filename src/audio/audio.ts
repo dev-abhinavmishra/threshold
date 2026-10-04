@@ -127,6 +127,8 @@ const CUES: Record<string, CueSpec> = {
   'pebble': { freq: 700, dur: 0.08, type: 'triangle', gain: 0.05, sweep: 300, noise: true },
   'machine': { freq: 110, dur: 0.5, type: 'triangle', gain: 0.12, sweep: 160, noise: true },
   'door-creak': { freq: 190, dur: 1.1, type: 'triangle', gain: 0.06, sweep: 130 },
+  'door-breath': { freq: 65, dur: 2.4, type: 'sine', gain: 0.13, sweep: 22, noise: true },
+  'door-answer': { freq: 150, dur: 0.7, type: 'sine', gain: 0.07, sweep: -40 },
   'door-locked': { freq: 150, dur: 0.2, type: 'square', gain: 0.2 },
   'door-unlock': { freq: 330, dur: 0.25, type: 'triangle', gain: 0.2, sweep: 440 },
   'drawer': { freq: 280, dur: 0.2, type: 'triangle', gain: 0.1 },

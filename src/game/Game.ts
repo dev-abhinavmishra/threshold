@@ -413,6 +413,9 @@ export class Game {
     this.peekEyeUsed.clear();
     this.chalkMarks.clear();
     this.visitedRooms.clear();
+    this.listenAcc.clear();
+    this.listenDone.clear();
+    this.doorKnocks.length = 0;
     this.relabeled.clear();
     this.wallWords.clear();
     this.tenantMoved.clear();
@@ -2320,6 +2323,7 @@ export class Game {
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
+      this.tickDoorListening(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
       // breathing rooms pulse their lights on a slow cycle
@@ -2507,6 +2511,12 @@ export class Game {
           }
         }
       }
+    }
+
+    // Delayed knock answers from door listening.
+    while (this.doorKnocks.length && this.doorKnocks[0].at <= this.clock.time) {
+      const k = this.doorKnocks.shift()!;
+      this.audio.play('knock', { x: k.x, y: 1.2, z: k.z });
     }
 
     // Working clocks tock once a second — a metronome for rooms that keep
@@ -3254,6 +3264,9 @@ export class Game {
     this.pianoFired = false;
   }
   private nextClockTick = 0;
+  private listenAcc = new Map<string, number>();
+  private listenDone = new Set<string>();
+  private doorKnocks: { at: number; x: number; z: number }[] = [];
   private clockNear = 0;
   private readonly clockPos = new THREE.Vector3();
   private clockT = 0;
@@ -3294,6 +3307,52 @@ export class Game {
     const greet = this.streams.roomStream('scare', roomIndex + 881);
     if (greet.bool(0.75)) {
       this.cue('custodian-bell', fig.position as unknown as Vec3, '[something stands behind the counter]', 'info');
+    }
+  }
+
+  /** Door listening — linger facing a closed door and the House may let you
+   *  hear what waits beyond it. Real when a scheduled encounter or live
+   *  threat sits near the far side; otherwise a seeded lie (~1/7 doors).
+   *  ~1/5 of triggers answer back instead: three slow knocks. Once per door. */
+  private tickDoorListening(i: number): void {
+    const room = this.activeRooms()[i];
+    if (!room || this.player.hiddenSpot || this.peek) return;
+    const p = this.player;
+    const fx = Math.sin(p.yaw), fz = Math.cos(p.yaw);
+    for (const d of room.doors) {
+      if (d.openT > 0.05 || d.opening || this.listenDone.has(d.id)) continue;
+      const dx = d.pos.x - p.pos.x, dz = d.pos.z - p.pos.z;
+      const dist = Math.hypot(dx, dz);
+      const facing = dist > 0.01 && dist < 2.4 ? (fx * dx + fz * dz) / dist : 0;
+      if (facing <= 0.55) { this.listenAcc.delete(d.id); continue; }
+      const acc = (this.listenAcc.get(d.id) ?? 0) + this.clock.dt;
+      if (acc < 2.4) { this.listenAcc.set(d.id, acc); continue; }
+      this.listenDone.add(d.id);
+      this.listenAcc.delete(d.id);
+      const rooms = this.activeRooms();
+      let real = false;
+      for (const j of [i - 1, i + 1]) {
+        const r = rooms[j];
+        if (r && r.scheduled.length > 0) { real = true; break; }
+      }
+      if (!real) {
+        for (const e of this.entities) {
+          if (e.state === 'done') continue;
+          const tp = e.threatPos();
+          if (tp && Math.hypot(tp.x - d.pos.x, tp.z - d.pos.z) < 14) { real = true; break; }
+        }
+      }
+      let h = 0;
+      for (const ch of d.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      const rng = this.streams.roomStream('scare', h % 104729);
+      if (!real && !rng.bool(0.14)) continue;
+      if (rng.bool(0.22)) {
+        this.cue('door-answer', d.pos, '[something answers — three slow knocks]', 'warn');
+        for (let k = 0; k < 3; k++) this.doorKnocks.push({ at: this.clock.time + 0.2 + k * 0.42, x: d.pos.x, z: d.pos.z });
+      } else {
+        this.cue('door-breath', d.pos, '[something breathes on the other side]', 'warn');
+        this.sound.emit({ x: d.pos.x, y: 1.1, z: d.pos.z, intensity: 0.15, category: 'ambient', caption: '' });
+      }
     }
   }
 
