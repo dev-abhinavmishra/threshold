@@ -37,6 +37,37 @@ export interface BuiltRoom {
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
+// Entity tell marks — what a thing leaves in the room before it. `wall`
+// marks go on a free stretch of wall; floor marks lie on the walk path.
+interface ForeshadowTell {
+  wall?: boolean;
+  tex: (r: import('../engine/rng').Rng) => THREE.Texture | null;
+  w: number; h: number; n?: number; cy?: number;
+}
+const FORESHADOW_TELLS: Record<string, ForeshadowTell[]> = {
+  pursuer: [{ tex: footprintTrail, w: 0.9, h: 3.6 }, { wall: true, tex: scratchMarks, w: 0.9, h: 1.1 }],
+  reprise: [{ tex: footprintTrail, w: 0.9, h: 4.0, n: 2 }],
+  sweep: [{ tex: footprintTrail, w: 0.9, h: 3.8 }],
+  returner: [{ wall: true, tex: scratchMarks, w: 1.0, h: 1.2, cy: 1.9 }],
+  stillframe: [{ wall: true, tex: crackDecal, w: 1.1, h: 1.1 }, { tex: floorStain, w: 1.2, h: 1.2 }],
+  redactor: [{ wall: true, tex: handPrints, w: 0.8, h: 1.0, n: 2 }],
+  margin: [{ wall: true, tex: scratchMarks, w: 0.6, h: 0.8, cy: 1.0 }],
+  whisper: [{ wall: true, tex: peeledWallpaper, w: 0.9, h: 1.6 }],
+  echoskin: [{ tex: footprintTrail, w: 0.9, h: 3.2, n: 2 }],
+  inkling: [{ tex: floorStain, w: 1.0, h: 1.0, n: 3 }, { wall: true, tex: bloodSmear, w: 0.8, h: 0.7, cy: 0.8 }],
+  maelstrom: [{ tex: bloodSmear, w: 2.2, h: 1.1 }],
+  curator: [{ tex: floorStain, w: 0.8, h: 0.8, n: 3 }, { wall: true, tex: peeledWallpaper, w: 0.7, h: 1.2 }],
+  husk: [{ tex: floorStain, w: 2.2, h: 2.2 }],
+  hollow: [{ wall: true, tex: handPrints, w: 0.8, h: 1.0 }, { tex: floorStain, w: 0.9, h: 0.9 }],
+  witness: [{ wall: true, tex: handPrints, w: 0.9, h: 1.3, n: 2, cy: 1.8 }],
+  grafter: [{ wall: true, tex: crackDecal, w: 1.2, h: 1.2 }, { tex: floorStain, w: 0.9, h: 0.9, n: 2 }],
+  editor: [{ wall: true, tex: () => warningStripe(), w: 0.5, h: 2.0, cy: 1.4 }],
+  redline: [{ wall: true, tex: () => warningStripe(), w: 0.5, h: 2.0, cy: 1.4 }],
+  lurker: [{ wall: true, tex: scratchMarks, w: 0.9, h: 0.7, cy: 0.6 }],
+  behemoth: [{ wall: true, tex: crackDecal, w: 1.4, h: 1.4 }, { wall: true, tex: grimeStreak, w: 0.9, h: 1.9 }],
+  orrery: [{ wall: true, tex: grimeStreak, w: 0.9, h: 1.9, cy: 0.7 }],
+};
+
 // Soft radial sprite for dust motes — unmapped PointsMaterial renders as
 // hard squares; a radial gradient reads as a dust grain.
 let dustTex: THREE.Texture | null = null;
@@ -1311,6 +1342,31 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set((rng.float() - 0.5) * (w - sz), h - 0.06, (rng.float() - 0.5) * (d - sz));
       group.add(m);
+    }
+
+    // The house tells on itself — the entity scheduled in the NEXT room
+    // leaves its mark in this one: prints, scuffs, drag-lines a careful
+    // player learns to read before the door.
+    if (room.foreshadow && rng.float() < 0.8) {
+      for (const t of FORESHADOW_TELLS[room.foreshadow] ?? []) {
+        for (let n = 0; n < (t.n ?? 1); n++) {
+          if (t.wall) {
+            const spot = pickWallSpot(t.w);
+            if (!spot) break;
+            wallDecal(spot.wall, t.tex(rng), t.w, t.h, spot.along, t.cy ?? (1.2 + rng.float() * 0.9));
+          } else {
+            const m = decalQuad(t.tex(rng), t.w, t.h);
+            m.rotation.x = -Math.PI / 2;
+            m.rotation.z = t.h >= 2.5
+              ? (d >= w ? 0 : Math.PI / 2) + (rng.float() - 0.5) * 0.4
+              : rng.float() * Math.PI;
+            m.position.set(
+              (rng.float() - 0.5) * Math.max(0.4, w - t.w - 0.6), 0.0075,
+              (rng.float() - 0.5) * Math.max(0.4, d - t.h - 0.6));
+            group.add(m);
+          }
+        }
+      }
     }
 
     // Wall-mounted props (models are center-anchored; face +z → yaw per wall).

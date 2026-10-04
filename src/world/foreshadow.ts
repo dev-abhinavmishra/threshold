@@ -38,6 +38,9 @@ export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {
       for (let back = 1; back <= 2; back++) {
         const prev = byIndex.get(room.index - back);
         if (!prev || !prev.spec || prev.authored) continue;
+        // The nearest approach room carries the entity's mark — scuffs,
+        // prints, drag-lines the mesh builder lays down as decals.
+        if (back === 1 && !prev.foreshadow && prev.scheduled.length === 0) prev.foreshadow = sch.entity;
         const set = sets[Math.min(back - 1, sets.length - 1)];
         const spec = prev.spec;
         const hw = spec.width / 2 - 1.2, hh = spec.depth / 2 - 1.2;

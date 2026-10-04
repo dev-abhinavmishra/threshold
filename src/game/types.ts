@@ -181,6 +181,9 @@ export interface RoomInstance {
   safeZones: Aabb[];
   /** Per-room encounter metadata set by the director. */
   scheduled: ScheduledEncounter[];
+  /** Entity scheduled in the NEXT room — set by applyForeshadowing so this
+   *  room can dress the approach with that entity's tell marks. */
+  foreshadow?: EntityId;
   /** Optional branch room index connected through a side door. */
   branchOf?: number;
   /** Gap corridor bridging prev exit → this room's entry (jittered milestones). */
