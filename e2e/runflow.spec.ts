@@ -83,3 +83,26 @@ test('underscript entry streams the subfloor and walks clean', async ({ page }) 
   }
   expect(errors).toEqual([]);
 });
+
+test('victory shows the completion screen and returns to menu', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  // Crossing the Engine threshold is a hundred-room walk — force the same
+  // code path the milestone calls.
+  await page.evaluate(() => {
+    const g = window.__thresholdGame as { victory(): void };
+    g.victory();
+  });
+  await expect(page.locator('.overlay.victory')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('.victory-title')).toHaveText('The hundredth door closes behind you');
+
+  await page.getByRole('button', { name: 'Return to threshold' }).click({ force: true });
+  await expect(page.locator('.menu-inner')).toBeVisible({ timeout: 10_000 });
+  expect(errors).toEqual([]);
+});

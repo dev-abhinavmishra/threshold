@@ -30,7 +30,10 @@ GATES (run before every push, in this order)
   main; 'stable-pre-rehaul' tag is the restore point.
 
 KEY CONVENTIONS (hard-won — do not relearn by trial)
-- window.__thresholdGame exists in DEV only (vite dev server, not preview).
+- window.__thresholdGame exists in DEV and in ANY build with ?debug in the
+  URL (prod preview included) — e2e uses /?debug to drive damagePlayer(),
+  victory(), enterUnderscript(), teleport() directly. Private TS fields are
+  reachable at runtime (g.renderer.info, g.streamer.get(i), g.space).
   player.pos/vel are plain {x,y,z}; player.teleport(x,y,z,yaw) exists.
   Player spawns facing +z; forward = (sin yaw, cos yaw); WASD works without
   pointer lock.
@@ -80,6 +83,20 @@ KEY CONVENTIONS (hard-won — do not relearn by trial)
 - Assets are CC0 ONLY: ambientCG PBR textures, Poly Haven GLTFs
   (scripts/fetch_ph.py <slug>), poly.pizza/Quaternius rigged figures, mill
   originals. Catalogue every fetch in ASSETS.md + docs/THIRD_PARTY_ATTRIBUTION.md.
+- Perf rules: room builder merges every unnamed, unanimated prop into
+  per-material meshes (the 'bake') — name a prop group (xxx-N) or set
+  userData.anim anywhere in it to keep it live. Room lights mark ONE
+  light userData.shadowEligible; Game enables castShadow only in the
+  player's room (a point-light shadow is 6 scene renders). Never enable
+  castShadow on more lights.
+- renderer.info under the composer reads only the last pass — set
+  info.autoReset=false + info.reset() + wait a frame to count real calls.
+- e2e suite: playwright.config serial (workers:1), retries:1, 90s timeout.
+  assets.spec = served-asset check; runflow.spec = death/retry, checkpoint,
+  underscript, victory via ?debug handle; soak.spec = 15s gameplay walk (runs
+  last alphabetically). Context-setup stalls and tab crashes are software-GL
+  flake — retries absorb them; orphaned chromium browsers from killed probe
+  scripts accumulate and starve the box, kill strays by PID.
 - pkill -f 'vite' will kill your own shell — match more narrowly or use
   lsof -ti:PORT | xargs kill.
 - Do NOT pkill node/playwright broadly; scripts are short-lived anyway.
@@ -92,22 +109,32 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 193)
+CURRENT STATE (as of ~sprint 199)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
-  economy (imprints/marginalia/toll doors), synthesized audio + captions,
-  PBR textures + ~60 milled props + 17 rigged figures, decal wear system,
+  economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
+  prints income-vs-cost per seed), synthesized audio + captions,
+  PBR textures + ~65 milled props + 17 rigged figures, decal wear system,
   beat-planner pacing, debug panel. Ambient Curator scheduled post-Index.
   Locked/toll doors wear milled hardware synced to door.locked.
+  Corridor runners + Curator emit positional footstep foley; SoundEvent has
+  optional 'source' field (listeners skip self-noise).
+  e2e covers: asset-served, menu/HUD/settings/archive, death→retry, quit→
+  Continue, underscript descent, victory screen, 15s soak.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - More mill batches for sparse biomes (gallery plinths, records carts).
-  - Entity feel passes: spawn stingers, footstep foley, telegraph polish.
-  - Playtest balance: imprints/marginalia economy curve vs toll/key costs.
-  - More rigged figure coverage; ambient scheduling for remaining
-    milestone-only entities (pursuer/hazard stay authored-only).
-  - Perf: draw-call audit, more instancing for repeated mill props.
-  - e2e coverage for the Underscript descent + death/retry loop.
+  - More mill batches: bedroom/guest/corridor dressing is older than the
+    museum/maintenance kits — new pieces (curtains, washstands variants,
+    radiators, cage lockers, ceiling hooks).
+  - Entity feel: spawn stingers, telegraph polish, near-miss variety.
+  - Economy: economy is now ~5x coverage — if playtests still feel rich,
+    raise vend prices or trim loot weights rather than payouts again.
+  - Milestone-only entities stay authored-only (pursuer/hazard); ambient
+    scheduling is done for everything else.
+  - Perf: SSAO pass is the next multiplier after the shadow fix — consider
+    restricting SSAO to 'high' only when fps allows, or half-res.
+  - e2e: chase-sequence and hiding-spot coverage still missing (needs a
+    scripted entity drive).
 ```
 
 ---
