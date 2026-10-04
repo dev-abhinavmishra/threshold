@@ -2173,6 +2173,40 @@ export class Game {
       saveCheckpoint(this.checkpoint);
       this.cue('checkpoint', null, '[a breath — progress recorded]', 'info');
     }
+    this.foreshadowRoom(room);
+  }
+
+  /** The milestone-only entities never spawn in ordinary rooms, but the House
+   *  lets them be heard: seeded ambient foreshadowing. Pursuer footfalls mass
+   *  ahead of the chases, the Curator turns pages in the deep stacks, the
+   *  maintenance spine ticks, and the Unlit stretch groans under the House. */
+  private foreshadowRoom(room: RoomInstance): void {
+    const key = `fs-${this.space}-${room.index}`;
+    if (this.space !== 'main' || room.authored || room.biome === 'safe' || this.spawned.has(key)) return;
+    this.spawned.add(key);
+    const rng = this.streams.roomStream('scare', room.index + 3077);
+    const rooms = this.activeRooms();
+    const ahead = rooms[Math.min(room.index + 1, rooms.length - 1)];
+    const far = { x: ahead.origin.x, y: ahead.origin.y + 1.4, z: ahead.origin.z };
+    for (const chase of [30, 80]) {
+      const d = chase - room.index;
+      if (d >= 1 && d <= 5 && rng.bool(0.3 + (5 - d) * 0.12)) {
+        this.cue('husk-foot', far, '[heavy footfalls, far ahead — then nothing]', 'warn');
+        this.sound.emit({ x: far.x, y: 1.2, z: far.z, intensity: 0.3, category: 'footstep', caption: '' });
+        return;
+      }
+    }
+    if (room.index >= 45 && (room.biome === 'records' || room.biome === 'gallery') && rng.bool(0.22)) {
+      this.cue('book-drop', far, '[pages turning somewhere deep in the stacks]', 'info');
+      return;
+    }
+    if (room.biome === 'maintenance' && rng.bool(0.3)) {
+      this.cue(rng.bool(0.4) ? 'steam-hiss' : 'pipe-tick', far, '[metal fatigues in the walls]', 'info');
+      return;
+    }
+    if (room.biome === 'unlit' && rng.bool(0.35)) {
+      this.cue('amb-distant', far, '[the House groans somewhere below]', 'warn');
+    }
   }
 
   private updatePanic(dt: number): void {
