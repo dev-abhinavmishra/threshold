@@ -1338,6 +1338,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         : { x: spot.along, z: -d / 2 + 0.07 };
       try {
         const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
+        if (mt.kind === 'securityCam') built.group.name = `cam-${room.index}`;
         group.add(built.group);
         if (SCONCE_KINDS.has(mt.kind) && !sconcePos) {
           const inX = spot.wall === 'e' ? -0.3 : spot.wall === 'w' ? 0.3 : 0;
@@ -1461,6 +1462,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit') built.group.name = `hearth-${room.index}`;
       if (p.kind === 'payphone') built.group.name = `phone-${room.index}`;
       if (p.kind === 'mousetrap') built.group.name = `trap-${room.index}`;
+      if (p.kind === 'securityCam') built.group.name = `cam-${room.index}`;
       if (p.kind === 'washer') built.group.name = `wash-${room.index}`;
       if (p.kind === 'printer' || p.kind === 'printerRow') built.group.name = `print-${room.index}`;
       if (p.kind === 'typewriter') built.group.name = `type-${room.index}`;

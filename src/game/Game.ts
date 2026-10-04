@@ -461,6 +461,8 @@ export class Game {
     this.droppedChandeliers.clear();
     this.warnedChandeliers.clear();
     this.pendingChanDrop = null;
+    this.camObjs.clear();
+    this.camTicked.clear();
     this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
@@ -2268,6 +2270,7 @@ export class Game {
       this.ensureStatue(i, built);
       this.ensureRug(i, built);
       this.ensureChandelier(i, built);
+      this.ensureCam(i, built);
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
@@ -2807,6 +2810,10 @@ export class Game {
   private warnedChandeliers = new Set<string>();
   private pendingChanDrop: { key: string; x: number; z: number; t: number } | null = null;
   private chanHooked = false;
+  /* — the house watches: armed cameras pan to track you and, once
+     their glass settles on you for a breath, they report you — */
+  private camObjs = new Map<string, { o: THREE.Object3D; i: number; expo: number; fired: boolean }>();
+  private camTicked = new Set<string>();
   private ranWashers = new Set<string>();
   private printedPages = new Set<string>();
   private typedKeys = new Set<string>();
@@ -2938,6 +2945,20 @@ export class Game {
         g.userData.rugDone = true;
       }
     }
+  }
+
+  /** Cameras register into camObjs when their room streams in — armed
+   *  ones get a slow servo toward the player in the tick above. */
+  private ensureCam(i: number, built: { group: THREE.Group }): void {
+    let n = 0;
+    built.group.traverse((o) => {
+      if (o.name !== `cam-${i}`) return;
+      const key = `${this.space}:${i}:cam${n++}`;
+      const armed = this.streams.roomStream('scare', i * 707 + n - 1).bool(0.45);
+      if (!this.camObjs.has(key)) this.camObjs.set(key, { o, i, expo: 0, fired: false });
+      o.userData.camArmed = armed;
+      if (!armed) o.userData.camDone = true;
+    });
   }
 
   /** Armed chandeliers lean on their chain; dropped ones lie where they fell. */
@@ -4192,6 +4213,42 @@ export class Game {
           const bd = this.streamer.get(b);
           if (bd) this.ensureChandelier(b, bd);
         }
+      }
+    }
+
+    // Cameras — armed units servo toward you inside their room; hold in
+    // their glass for 1.2s and they ping the house with where you are
+    {
+      const builtSet = new Set(this.streamer.builtIndices);
+      for (const [key, cm] of this.camObjs) {
+        if (cm.fired || !builtSet.has(cm.i)) { cm.expo = 0; continue; }
+        cm.o.getWorldPosition(this.tmpV3);
+        const dx = this.player.pos.x - this.tmpV3.x, dz = this.player.pos.z - this.tmpV3.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 8 || dist < 0.4) { cm.expo = 0; continue; }
+        // desired local yaw: world direction minus the room's own yaw
+        const room = this.activeRooms()[cm.i];
+        const yawOff = room ? room.yaw : 0;
+        const want = Math.atan2(dx, dz) - yawOff - Math.PI / 2;
+        let d = want - cm.o.rotation.y;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        const maxTurn = 0.55 * this.clock.dt;
+        cm.o.rotation.y += Math.abs(d) < maxTurn ? d : Math.sign(d) * maxTurn;
+        if (!this.camTicked.has(key) && Math.abs(d) > 0.3) {
+          this.camTicked.add(key);
+          this.audio.play('cam-servo', { x: this.tmpV3.x, y: this.tmpV3.y, z: this.tmpV3.z }, '[something motorized turns]');
+        }
+        // in the glass: aligned with its forward and you are upright
+        if (Math.abs(d) < 0.4) {
+          cm.expo += this.clock.dt * (this.player.crouching ? 0.45 : 1);
+          if (cm.expo >= 1.2 && !cm.fired) {
+            cm.fired = true;
+            this.audio.play('cam-lock', { x: this.tmpV3.x, y: this.tmpV3.y, z: this.tmpV3.z }, '[the camera finds you]', 'warn');
+            this.sound.emit({ x: this.player.pos.x, y: 0.4, z: this.player.pos.z, intensity: 0.5, category: 'footstep', caption: '[a lens reports you]' });
+            this.player.panic = Math.min(1, this.player.panic + 0.12);
+          }
+        } else cm.expo = Math.max(0, cm.expo - this.clock.dt * 1.5);
       }
     }
 
