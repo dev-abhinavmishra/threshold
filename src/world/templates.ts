@@ -875,6 +875,94 @@ const roomUnlitStacks: RoomTemplate = {
   }),
 };
 
+// The Sunken Vault — endgame mill architecture: arch-framed doors, vault
+// ceiling panels, a portcullised side bay, and a bier someone left open.
+const roomUnlitVault: RoomTemplate = {
+  id: 'unlit-vault',
+  build: (_rng) => spec('unlit-vault', 'unlit', 10, 12, 4.2, {
+    props: [
+      { kind: 'archway', x: 0, z: -5.8 },
+      { kind: 'archway', x: 0, z: 5.8, yaw: Math.PI },
+      { kind: 'vault', x: 0, z: -2.8, y: 3.9 },
+      { kind: 'vault', x: 0, z: 2.8, y: 3.9 },
+      { kind: 'medallion', x: 0, z: 0, y: 4.15 },
+      { kind: 'portcullis', x: -4.9, z: 0, y: 0, yaw: Math.PI / 2 },
+      { kind: 'coffin', x: 0, z: 1.2 },
+      { kind: 'watcherFigure', x: -3.8, z: -4.6, yaw: Math.PI / 4 },
+      { kind: 'statue', x: 4.0, z: -4.8, yaw: -Math.PI / 4 },
+      { kind: 'statue', x: 4.0, z: 4.8, yaw: -Math.PI * 0.75 },
+      { kind: 'bust', x: -4.2, z: 2.6, y: 1.1 },
+      { kind: 'rubblePile', x: 3.4, z: -1.2 },
+      { kind: 'rubblePile', x: -2.8, z: 3.6 },
+      { kind: 'rootGrowth', x: 4.6, z: 0.4 },
+      { kind: 'candle', x: -1.1, z: 0.6 },
+      { kind: 'candle', x: 1.2, z: 2.0 },
+      { kind: 'candle', x: -0.6, z: 3.1 },
+      { kind: 'paperStack', x: -1.8, z: -3.2 },
+      { kind: 'snare', x: 1.6, z: -2.4 },
+      { kind: 'puddle', x: -1.2, z: -0.8 },
+    ],
+    sockets: lootSockets([[-4.2, 2.6], [3.4, -1.2]]),
+    hiding: [
+      { kind: 'cabinet', x: -4.4, z: -4.4, yaw: Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'losAlcove', x: 4.4, z: 4.2, yaw: -Math.PI / 2, propKind: 'partition' },
+    ],
+    safeZones: [{ x: 4.4, z: 4.2, w: 1.3, d: 1.3 }],
+    lights: [
+      { x: -1.1, y: 1.4, z: 0.6, color: 0xffa04a, intensity: 0.28, range: 3.5, group: 'dim', breakable: true },
+      { x: 0, y: 3.2, z: -4.0, color: 0x776a45, intensity: 0.16, range: 4, group: 'dim', breakable: true },
+    ],
+    weight: 6,
+    darkChance: 0.9,
+    minRoom: 88,
+    perf: 5,
+    floor: 'stone',
+  }),
+};
+
+// The Undercroft — a low crypt aisle: shelf-niches, a floor hatch that
+// doesn't go anywhere you want, and tenants seated where they were left.
+const roomUnlitCrypt: RoomTemplate = {
+  id: 'unlit-crypt',
+  build: (_rng) => spec('unlit-crypt', 'unlit', 8, 10, 3.0, {
+    props: [
+      { kind: 'stackShelf', x: -3.4, z: -1.4, yaw: Math.PI / 2 },
+      { kind: 'stackShelf', x: -3.4, z: 1.2, yaw: Math.PI / 2 },
+      { kind: 'stackShelf', x: 3.4, z: -0.2, yaw: -Math.PI / 2 },
+      { kind: 'coffin', x: 0.6, z: -3.0, yaw: Math.PI / 2 },
+      { kind: 'deadTenant', x: -2.6, z: 4.2, yaw: Math.PI },
+      { kind: 'dollCluster', x: 1.8, z: 4.0 },
+      { kind: 'hatch', x: 2.4, z: 1.4 },
+      { kind: 'wallVent', x: -3.9, z: -3.2, y: 2.2, yaw: Math.PI / 2 },
+      { kind: 'mirror', x: 0, z: 4.92, y: 1.55, yaw: Math.PI },
+      { kind: 'candle', x: -1.0, z: -4.0 },
+      { kind: 'candle', x: 2.2, z: -4.2 },
+      { kind: 'weedCluster', x: -1.4, z: 0.2 },
+      { kind: 'rootGrowth', x: 3.0, z: 3.4 },
+      { kind: 'paperScatter', x: -0.8, z: 1.8 },
+      { kind: 'snare', x: -1.6, z: -1.8 },
+      { kind: 'puddle', x: 0.8, z: 0.4 },
+    ],
+    colliders: [
+      { x: -3.4, z: -1.4, w: 0.6, d: 1.8, h: 2.3 },
+      { x: -3.4, z: 1.2, w: 0.6, d: 1.8, h: 2.3 },
+      { x: 3.4, z: -0.2, w: 0.6, d: 1.8, h: 2.3 },
+    ],
+    sockets: lootSockets([[2.6, -4.3], [-3.0, -4.3]]),
+    hiding: [
+      { kind: 'cabinet', x: 3.4, z: -4.3, yaw: -Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'losAlcove', x: -3.4, z: -4.3, yaw: Math.PI / 2, propKind: 'partition' },
+    ],
+    safeZones: [{ x: -3.4, z: -4.3, w: 1.2, d: 1.2 }],
+    lights: [{ x: -1.0, y: 1.3, z: -4.0, color: 0xffa04a, intensity: 0.24, range: 3, group: 'dim', breakable: true }],
+    weight: 6,
+    darkChance: 0.92,
+    minRoom: 88,
+    perf: 4,
+    floor: 'stone',
+  }),
+};
+
 const roomClinic: RoomTemplate = {
   id: 'special-clinic',
   build: (_rng) => spec('special-clinic', 'safe', 7, 6, 2.9, {
@@ -2024,6 +2112,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   maintPipes, maintBoiler, maintStairsUp, maintFlooded,
   galleryPortraits, galleryAtrium, galleryMezzanine,
   roomHedge, roomDorm, roomLobbySmall, roomDarkHall, roomUnlitStacks,
+  roomUnlitVault, roomUnlitCrypt,
   roomPuzzleValve, roomArchiveAlcove, roomGalleryBroken, roomLongHall,
   roomBranchCloset, roomStorage, roomNarrowService, roomElevatorLobby,
   roomRecordsCage, roomObsGallery, roomCrawl, roomRotunda,
