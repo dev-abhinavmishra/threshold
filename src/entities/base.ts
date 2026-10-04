@@ -34,6 +34,13 @@ export interface EntityCtx {
   difficulty: import('../game/types').Difficulty;
   accessibility: { reducedMotion: boolean; captions: boolean; minigameAssist: number };
   gameState: () => string;
+  /** Register/unregister a promptable interaction point tied to the entity.
+   *  Re-applied across room-stream rebuilds while registered. */
+  addInteractable: (it: import('../player/interaction').Interactable) => void;
+  removeInteractable: (id: string) => void;
+  /** Distance to the nearest living spatial threat other than `exclude`
+   *  (or null) — used for 'tell me what you heard' whispers. */
+  nearestThreat: (exclude: Entity) => { d: number; p: Vec3 } | null;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

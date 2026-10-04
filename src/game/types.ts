@@ -53,7 +53,9 @@ export type EntityId =
   // Set-piece systems
   | 'orrery'
   | 'lurker'
-  | 'behemoth';
+  | 'behemoth'
+  // The toll-taker
+  | 'collector';
 
 export type ItemId =
   | 'handLamp'

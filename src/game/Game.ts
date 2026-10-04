@@ -36,6 +36,7 @@ import {
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
 import { Editor, Grafter } from '../entities/setpieces';
+import { Collector } from '../entities/collector';
 import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
@@ -463,6 +464,7 @@ export class Game {
     this.pendingChanDrop = null;
     this.camObjs.clear();
     this.camTicked.clear();
+    this.dynamicInteractables = [];
     this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
@@ -663,8 +665,31 @@ export class Game {
         minigameAssist: this.settings.minigameAssist,
       },
       gameState: () => useGameStore.getState().phase,
+      addInteractable: (it) => {
+        this.dynamicInteractables.push(it);
+        this.interaction.add(it);
+      },
+      removeInteractable: (id) => {
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => x.id !== id);
+        this.interaction.interactables = this.interaction.interactables.filter((x) => x.id !== id);
+      },
+      nearestThreat: (exclude) => {
+        let best: { d: number; p: import('../engine/math').Vec3 } | null = null;
+        for (const e of this.entities) {
+          if (e === exclude || e.state === 'done') continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          const d = Math.hypot(tp.x - this.player.pos.x, tp.z - this.player.pos.z);
+          if (!best || d < best.d) best = { d, p: tp };
+        }
+        return best;
+      },
     };
   }
+
+  /** Interactable points registered by living entities (e.g. the
+   *  Collector's toll) — re-applied after every stream rebuild. */
+  private dynamicInteractables: import('../player/interaction').Interactable[] = [];
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -696,6 +721,7 @@ export class Game {
       case 'behemoth': this.spawnEntity(new CorridorRunner('behemoth', { behemoth: true, passes: 2 })); break;
       case 'editor': this.spawnEntity(new Editor()); break;
       case 'grafter': this.spawnEntity(new Grafter()); break;
+      case 'collector': this.spawnEntity(new Collector()); break;
       case 'pursuer': case 'curator': case 'hazard': break; // milestone-triggered only
       default: break;
     }
@@ -832,6 +858,8 @@ export class Game {
         prompt: 'Leave hiding', data: this.player.hiddenSpot, enabled: true, priority: 5,
       });
     }
+    // Entity-registered points (the Collector's toll) survive rebuilds.
+    for (const it of this.dynamicInteractables) this.interaction.add(it);
     // Crouched at a locked door: a keyhole-peek target outranks the lock.
     if (this.player.crouching) {
       for (const it of this.interaction.interactables) {
@@ -1178,6 +1206,21 @@ export class Game {
       case 'lore':
       case 'card': {
         this.resolveSocketLoot(it);
+        return;
+      }
+      case 'toll': {
+        // The Collector's price — imprints first, a marginalia if you're poor.
+        const d = it.data as { pay?: () => void } | undefined;
+        let paid = false;
+        if (this.imprints >= 2) { this.imprints -= 2; paid = true; }
+        else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
+        if (paid && d?.pay) {
+          it.enabled = false;
+          d.pay();
+        } else {
+          this.cue('collector-refuse', it.pos, '[empty pockets — the rattle goes on]', 'warn');
+          this.sound.emit({ x: it.pos.x, y: 1.0, z: it.pos.z, intensity: 0.4, category: 'footstep', caption: '[a petulant rattle]' });
+        }
         return;
       }
       case 'coffin': {

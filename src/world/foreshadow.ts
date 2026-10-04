@@ -27,6 +27,7 @@ const TELLS: Record<string, PropKind[][]> = {
   returner:   [['hallFigure'], ['lantern']],
   lurker:     [['toolbox', 'wrench'], ['papers']],
   behemoth:   [['rubblePile'], ['rubble', 'wallVent']],
+  collector:  [['lantern'], ['papers', 'paperScatter']],
 };
 
 export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {
