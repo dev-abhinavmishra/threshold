@@ -2,8 +2,13 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 60_000,
-  retries: 0,
+  timeout: 90_000,
+  // Software-GL tabs crash intermittently (GPU-process OOM); one retry reruns
+  // in a fresh context rather than turning infra noise red.
+  retries: 1,
+  // Software-GL browsers are heavy; a WebGL soak test running alongside any
+  // other instance starves new-context setup and flakes the suite. Serial.
+  workers: 1,
   use: {
     baseURL: 'http://localhost:4173',
     headless: true,

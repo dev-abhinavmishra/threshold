@@ -28,8 +28,9 @@ export default function App() {
       const g = new Game(canvasRef.current);
       gameInstance = g;
       g.run();
-      if (import.meta.env.DEV) (window as unknown as { __thresholdGame?: Game }).__thresholdGame = g;
-      if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
+      const debugOn = import.meta.env.DEV || new URLSearchParams(location.search).has('debug');
+      if (debugOn) (window as unknown as { __thresholdGame?: Game }).__thresholdGame = g;
+      if (debugOn) {
         void import('../game/debug').then(({ debugApi, installDebugPanel }) => {
           installDebugPanel(g, debugApi(g));
         });

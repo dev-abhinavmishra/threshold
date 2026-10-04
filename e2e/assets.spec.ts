@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Asset + deep-run regression: every vendored/milled model the modelLibrary
- * can reach must be served (a missing GLB is a silent fallback), and a QA
- * run must survive ~15s of real gameplay with zero page errors — this is the
- * net that catches a bad mill export, a foreshadow crash, or a reverb NaN.
+ * Asset regression: every vendored/milled model the modelLibrary can reach
+ * must be served (a missing GLB is a silent fallback). The gameplay soak is
+ * in soak.spec.ts, which runs after this file.
  */
 
 const MILL_DIRS = [
@@ -40,21 +39,5 @@ test('all milled and rigged assets are served', async ({ request }) => {
   expect(missing).toEqual([]);
 });
 
-test('QA run plays 15s with no page errors', async ({ page }) => {
-  const errors: string[] = [];
-  page.on('pageerror', (e) => errors.push(String(e)));
-  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto('/');
-  await page.getByRole('button', { name: /QA/ }).click();
-  await page.getByRole('button', { name: 'New Run' }).click();
-  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
-  // walk forward through several rooms — triggers generation, streaming,
-  // foreshadow cues, per-room reverb, and any scheduled entity spawns
-  for (let i = 0; i < 15; i++) {
-    await page.keyboard.down('w');
-    await page.waitForTimeout(700);
-    await page.keyboard.up('w');
-    await page.waitForTimeout(300);
-  }
-  expect(errors).toEqual([]);
-});
+// The 15s gameplay soak lives in soak.spec.ts — it runs last so its heavy
+// browser teardown can't starve other specs' context setup under software GL.
