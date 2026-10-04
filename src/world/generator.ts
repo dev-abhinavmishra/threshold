@@ -754,7 +754,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
           const locked = lootRng.bool(0.18);
           const roll = lootRng.weighted(itemTable, (t) => t.w).item;
           // Locked drawers pay better: richer imprints than open ones.
-          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: locked ? lootRng.int(8, 22) : lootRng.int(3, 14) };
+          if (roll === 'imprints') s.meta = { contains: 'imprints', amount: locked ? lootRng.int(15, 30) : lootRng.int(3, 14) };
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-${room.index}` };
           else s.meta = { contains: roll };
           if (locked) s.meta.drawerLocked = true;

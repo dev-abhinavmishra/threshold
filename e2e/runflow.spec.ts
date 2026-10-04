@@ -69,7 +69,7 @@ test('underscript entry streams the subfloor and walks clean', async ({ page }) 
 
   // Jump the threshold — enterUnderscript teleports into U-000 and checkpoints.
   const space = await page.evaluate(() => {
-    const g = window.__thresholdGame as { enterUnderscript(): void; space: string };
+    const g = (window as unknown as { __thresholdGame: { enterUnderscript(): void; space: string } }).__thresholdGame;
     g.enterUnderscript();
     return g.space;
   });
@@ -96,7 +96,7 @@ test('victory shows the completion screen and returns to menu', async ({ page })
   // Crossing the Engine threshold is a hundred-room walk — force the same
   // code path the milestone calls.
   await page.evaluate(() => {
-    const g = window.__thresholdGame as { victory(): void };
+    const g = (window as unknown as { __thresholdGame: { victory(): void } }).__thresholdGame;
     g.victory();
   });
   await expect(page.locator('.overlay.victory')).toBeVisible({ timeout: 10_000 });

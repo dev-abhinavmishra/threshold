@@ -97,6 +97,7 @@ function defaultLights(w: number, d: number, h: number): LightSpec[] {
 const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
   painting: 1.6, wallSconce: 2.05, mirror: 1.55, wallClock: 2.25, sign: 2.1, curtain: 1.25,
   ductCirc: 2.3, ductRect: 2.35, gutter: 2.4, indPipes: 1.8, cableTray: 2.3, lifebuoy: 1.7,
+  keyRack: 1.5, exitSign: 2.35, wallVent: 2.25, extinguisher: 1.15, fireAlarm: 1.9,
 };
 const WALL_THIN: ReadonlySet<PropKind> = new Set(Object.keys(WALL_MOUNT_Y) as PropKind[]);
 
@@ -125,15 +126,25 @@ const lootSockets = (spots: [number, number][]): LocalSocket[] =>
 
 const corridorStraight: RoomTemplate = {
   id: 'corr-straight',
-  build: (rng) => spec('corr-straight', 'corridor', 3.2, 7 + rng.int(0, 4), 2.9, {
+  build: (rng) => {
+    const d = 7 + rng.int(0, 4);
+    return spec('corr-straight', 'corridor', 3.2, d, 2.9, {
     entryOff: 0,
     props: [
-      ...wallProps(3.2, 8, rng, ['painting', 'wallSconce', 'sign', 'wallClock'], rng.int(2, 4)),
+      ...wallProps(3.2, d, rng, ['painting', 'wallSconce', 'sign', 'wallClock', 'keyRack', 'exitSign'], rng.int(2, 4)),
       { kind: 'rug', x: 0, z: 0 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'payphone', x: 1.3, z: -1.2, yaw: -Math.PI / 2 },
       { kind: 'bin', x: 1.35, z: -0.35, yaw: -Math.PI / 2 },
+      { kind: 'conduitRun', x: 0, z: 0, y: 2.72 },
+      { kind: 'hangingCable', x: -0.7, z: 1.8, y: 2.75 },
+      { kind: 'exitSign', x: 0, z: -d / 2 + 0.12, y: 2.62 },
+      { kind: 'extinguisher', x: -1.42, z: 0.6, y: 1.15, yaw: Math.PI / 2 },
+      { kind: 'wallVent', x: 1.42, z: 2.4, y: 2.3, yaw: -Math.PI / 2 },
+      ...(rng.bool(0.45) ? [{ kind: 'umbrellaStand' as const, x: -1.25, z: -3.1 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'wetFloor' as const, x: 0.5, z: 2.9, yaw: 0.4 }] : []),
+      ...(rng.bool(0.4) ? [{ kind: 'radiatorFin' as const, x: -1.35, z: 1.8, yaw: Math.PI / 2 }] : []),
     ],
     sockets: rng.bool(0.4) ? [{ kind: 'drawer', x: 1.0, z: 1.5, meta: {} }] : [],
     lights: [
@@ -141,7 +152,8 @@ const corridorStraight: RoomTemplate = {
       { x: 0, y: 2.6, z: 2, color: 0xffd9a0, intensity: 0.8, range: 5, group: 'main', breakable: true },
     ],
     weight: 20,
-  }),
+    });
+  },
 };
 
 const corridorWide: RoomTemplate = {
@@ -166,6 +178,13 @@ const corridorWide: RoomTemplate = {
       { kind: 'planter', x: -2.5, z: 3.7 },
       { kind: 'bin', x: 2.6, z: 1.6 },
       { kind: 'papers', x: 2.0, z: 2.4, y: 0.8 },
+      { kind: 'mailCart', x: -2.5, z: 0.2, yaw: Math.PI / 2 },
+      { kind: 'luggageRack', x: 2.5, z: 3.6 },
+      { kind: 'fireAlarm', x: -2.9, z: -2.0, y: 1.9, yaw: Math.PI / 2 },
+      { kind: 'exitSign', x: 0, z: -4.35, y: 2.6 },
+      ...(rng.bool(0.4) ? [{ kind: 'wetFloor' as const, x: 0.8, z: -1.6, yaw: 0.7 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'handTruck' as const, x: 2.55, z: -2.2, yaw: -Math.PI / 2 }] : []),
+      ...(rng.bool(0.3) ? [{ kind: 'hangingCable' as const, x: 1.1, z: -0.6, y: 2.9 }] : []),
       ...wallProps(6, 9, rng, ['painting', 'plant', 'wallSconce', 'wallClock'], 3),
     ],
     sockets: lootSockets([[2.2, 2.5]]),
@@ -179,7 +198,15 @@ const corridorL: RoomTemplate = {
   id: 'corr-l-turn',
   build: (rng) => spec('corr-l-turn', 'corridor', 4, 8, 2.9, {
     exits: [P(1.2, 'e'), P(0, 'n', 1.4)], // exit east; north retained only if branch
-    props: wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain', 'wallClock'], 3),
+    props: [
+      ...wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain', 'wallClock', 'keyRack'], 3),
+      { kind: 'conduitRun', x: 0, z: 0, y: 2.68 },
+      { kind: 'radiatorFin', x: -1.82, z: -0.6, yaw: Math.PI / 2 },
+      { kind: 'wallVent', x: 1.82, z: -2.2, y: 2.25, yaw: -Math.PI / 2 },
+      { kind: 'exitSign', x: 1.9, z: 1.2, y: 2.55, yaw: -Math.PI / 2 },
+      ...(rng.bool(0.4) ? [{ kind: 'hangingCable' as const, x: 0.3, z: -0.9, y: 2.7 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'bin' as const, x: -1.6, z: 2.6 }] : []),
+    ],
     sockets: rng.bool(0.5) ? drawerSockets([[0.8, 2.2]]) : [],
     nav: [
       { id: 'entry', x: 0, z: -3.1, links: ['elbow'], tags: ['door', 'entry'] },
@@ -200,7 +227,13 @@ const corridorZig: RoomTemplate = {
       { kind: 'partition', x: 0.9, z: 1.6, scale: 2.6 },
       { kind: 'drawerUnit', x: 1.9, z: -3, yaw: -Math.PI / 2 },
       { kind: 'bin', x: -2.2, z: 3.6 },
-      ...wallProps(5, 10, rng, ['wallSconce', 'sign', 'wallClock'], 3),
+      { kind: 'conduitRun', x: 0, z: 0, y: 2.68 },
+      { kind: 'wallVent', x: -2.32, z: 0.4, y: 2.25, yaw: Math.PI / 2 },
+      { kind: 'extinguisher', x: 2.32, z: 2.8, y: 1.15, yaw: -Math.PI / 2 },
+      ...(rng.bool(0.4) ? [{ kind: 'wetFloor' as const, x: -0.9, z: 0.3, yaw: -0.3 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'hangingCable' as const, x: -0.5, z: -2.6, y: 2.72 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'radiatorFin' as const, x: 2.3, z: -0.8, yaw: -Math.PI / 2 }] : []),
+      ...wallProps(5, 10, rng, ['wallSconce', 'sign', 'wallClock', 'fireAlarm'], 3),
     ],
     sockets: drawerSockets([[1.9, -3]]),
     hiding: [{ kind: 'cabinet', x: -1.9, z: 2.8, yaw: Math.PI / 2, propKind: 'cabinet' }],
@@ -227,6 +260,14 @@ const corridorJunction: RoomTemplate = {
       { kind: 'payphone', x: 3.0, z: -1.9, yaw: -Math.PI / 2 },
       { kind: 'bin', x: 3.0, z: -1.1 },
       { kind: 'bench', x: -3.0, z: 0.6, yaw: Math.PI / 2 },
+      { kind: 'chainBulb', x: 0, z: 0, y: 2.78 },
+      { kind: 'keyRack', x: -1.6, z: -3.32, y: 1.5 },
+      { kind: 'mailCart', x: -2.7, z: 1.9, yaw: Math.PI / 2 },
+      { kind: 'umbrellaStand', x: 2.7, z: -3.0 },
+      { kind: 'exitSign', x: 0, z: -3.4, y: 2.58 },
+      { kind: 'exitSign', x: -3.35, z: -1.8, y: 2.58, yaw: Math.PI / 2 },
+      ...(rng.bool(0.35) ? [{ kind: 'wetFloor' as const, x: 1.4, z: 0.9, yaw: 1.1 }] : []),
+      ...(rng.bool(0.3) ? [{ kind: 'hangingCable' as const, x: 0.9, z: -1.5, y: 2.8 }] : []),
     ],
     sockets: lootSockets([[-2.6, 2.4]]),
     hiding: [{ kind: 'cabinet', x: 2.6, z: -2.4, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -1183,6 +1224,14 @@ const roomBranchCloset: RoomTemplate = {
       { kind: 'cabinet', x: 2.1, z: 1.4, yaw: -Math.PI / 2 },
       { kind: 'drawerUnit', x: -2.0, z: 1.8, yaw: Math.PI / 2 },
       { kind: 'bin', x: -2.2, z: -2.6 },
+      { kind: 'radiatorFin', x: -2.32, z: -0.4, yaw: Math.PI / 2 },
+      { kind: 'wallVent', x: 2.32, z: -1.6, y: 2.25, yaw: -Math.PI / 2 },
+      { kind: 'keyRack', x: -0.8, z: -3.85, y: 1.5 },
+      { kind: 'exitSign', x: 0, z: -3.9, y: 2.55 },
+      { kind: 'exitSign', x: 2.4, z: 1.4, y: 2.35, yaw: -Math.PI / 2 },
+      { kind: 'conduitRun', x: 0, z: 0, y: 2.7 },
+      ...(rng.bool(0.4) ? [{ kind: 'hallTree' as const, x: 2.0, z: -3.3, yaw: -Math.PI / 2 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'hangingCable' as const, x: -0.9, z: -1.1, y: 2.72 }] : []),
       ...wallProps(5, 8, rng, ['wallSconce', 'sign', 'wallClock'], 3),
     ],
     sockets: [...drawerSockets([[-2.0, 1.8]]), ...lootSockets([[2.1, 1.4]])],
@@ -1370,7 +1419,7 @@ const roomRotunda: RoomTemplate = {
 
 const roomMotelCorridor: RoomTemplate = {
   id: 'corr-doors-row',
-  build: (_rng) => spec('corr-doors-row', 'corridor', 6, 9, 3.0, {
+  build: (rng) => spec('corr-doors-row', 'corridor', 6, 9, 3.0, {
     props: [
       { kind: 'painting', x: -2.8, z: -2.4, y: 1.7, yaw: Math.PI / 2 },
       { kind: 'painting', x: 2.8, z: -0.8, y: 1.7, yaw: -Math.PI / 2 },
@@ -1382,6 +1431,13 @@ const roomMotelCorridor: RoomTemplate = {
       { kind: 'payphone', x: 2.55, z: -3.4, yaw: -Math.PI / 2 },
       { kind: 'bench', x: -2.5, z: -3.3, yaw: Math.PI / 2 },
       { kind: 'bin', x: 2.5, z: -2.3 },
+      { kind: 'keyRack', x: 1.4, z: -4.35, y: 1.5 },
+      { kind: 'radiatorFin', x: -2.82, z: 2.4, yaw: Math.PI / 2 },
+      { kind: 'wallVent', x: 2.82, z: 0.6, y: 2.3, yaw: -Math.PI / 2 },
+      { kind: 'exitSign', x: 0, z: -4.42, y: 2.55 },
+      { kind: 'conduitRun', x: 0, z: 0, y: 2.76 },
+      ...(rng.bool(0.4) ? [{ kind: 'luggageRack' as const, x: -2.4, z: 0.4, yaw: Math.PI / 2 }] : []),
+      ...(rng.bool(0.35) ? [{ kind: 'wetFloor' as const, x: -0.9, z: -1.4, yaw: 0.9 }] : []),
     ],
     sockets: lootSockets([[2.4, 3.2], [-2.4, -3.2]]),
     hiding: [{ kind: 'cabinet', x: 2.4, z: 3.2, yaw: -Math.PI / 2, propKind: 'cabinet' }],
