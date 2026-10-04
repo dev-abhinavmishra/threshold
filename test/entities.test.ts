@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner } from '../src/entities/corridor';
-import { Witness, Hollow } from '../src/entities/room';
+import { Witness, Hollow, Lurker } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -107,6 +107,54 @@ describe('CorridorRunner (sweep/reprise)', () => {
       + (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length;
     expect(killed).toBeGreaterThan(0);
     sw.dispose();
+  });
+});
+
+describe('corridor telegraph + near-miss', () => {
+  it('warn front is audible: floor-creaks crawling, door shiver on arrival', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    let t = 0; let steps = 0;
+    const ctxMut = ctx as { now: number };
+    while (sw.state === 'warn' && steps++ < 400) { ctxMut.now = t; sw.update(0.05); t += 0.05; }
+    const calls = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as string);
+    expect(calls.filter((n) => n === 'floor-creak').length).toBeGreaterThan(1);
+    const rattles = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.filter((c) => c[0] === 'door-rattle');
+    expect(rattles.some((c) => /shivers/.test(String(c[2])))).toBe(true);
+    sw.dispose();
+  });
+
+  it('near-miss fires exactly once per hiding spot', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: { kind: string } | null };
+    const mid = rooms[20].origin;
+    player.pos = v3(mid.x, 0, mid.z);
+    player.hiddenSpot = { kind: 'cabinet' };
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    let t = 0; let steps = 0;
+    const ctxMut = ctx as { now: number };
+    while (sw.state !== 'done' && steps++ < 4000) { ctxMut.now = t; sw.update(0.05); t += 0.05; }
+    const nearMisses = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.filter(
+      (c) => /tests the door|breathing held|stops — listening|saw the door close/.test(String(c[2])),
+    );
+    expect(nearMisses.length).toBe(1);
+    sw.dispose();
+  });
+});
+
+describe('arrival dim', () => {
+  it('lurker dims the room when it arrives', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const l = new Lurker();
+    l.spawn(ctx);
+    const calls = (ctx.flickerRoom as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls.some((c) => c[0] === 20 && c[1] === 'dim')).toBe(true);
+    l.dispose();
   });
 });
 

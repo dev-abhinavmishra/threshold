@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 204)
+CURRENT STATE (as of ~sprint 205)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -148,9 +148,27 @@ CURRENT STATE (as of ~sprint 204)
   a lane (catches wide props centered beside the door); foreshadow tells and
   injected corner hide spots lane-guard at push time. Regression test
   sweeps all seeds: no spec prop/hiding in any lane.
+  Sprint 205 entity feel: REAL BUG found in flickerRoom — 'sweep'/'reprise'/
+  'dim' wrote l.intensity via setInterval but the per-frame light loop
+  recomputes intensity from userData.baseIntensity every frame, stomping
+  the flicker within ~16ms. flickerRoom now writes baseIntensity (flicker
+  is visible, 'dim' persists). dimmedRooms caps 'dim' to once per room per
+  run (no compounding to darkness). Corridor warn front is now AUDIBLE:
+  floor-creak every ~3.5m of front travel + door-rattle '[the door
+  shivers]' when the front reaches the player's entryPos (thresholdTravel
+  = path distance to rooms[cur].entryPos). Near-miss variety: seeded pick
+  of 3 variants (door-test taps / stops-listening 2.3s / breathe 1.2s) +
+  'saw the door close' strong variant when player hid <1.6s ago (except
+  maelstrom) + scheduled second 'knock' touch. Arrival dim on spawn:
+  lurker, inkling, echoskin, margin, stillframe, singer (skipped subtle
+  entities — witness/redactor keep stealth). Entity unit tests exist in
+  test/entities.test.ts — makeCtx + fakePlayer harness, ctx.cue mock.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Entity feel: spawn stingers, telegraph polish, near-miss variety.
+  - Lamp emissive on 'dim' rooms: flicker-branch lamps still pulse emissive
+    at old level while light dims — sync lamp glow to effective intensity.
+  - Remaining entity-feel gaps: whisper/margin could use positional
+    misdirection cues; husk stir could drop the room's tone bed briefly.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient

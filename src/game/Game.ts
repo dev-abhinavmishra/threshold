@@ -186,6 +186,9 @@ export class Game {
   private nextSteps = 55;
   private nextPiano = 70;
   private blackedOut = new Set<number>();
+  /** Rooms already dimmed by an arrival flicker — the house flinches once
+   *  per room, so stacked encounters can't compound into darkness. */
+  private dimmedRooms = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
   /** Staged arrival captions for a fresh run (lobby cold-open). */
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
@@ -407,6 +410,7 @@ export class Game {
     // arm/fire decision resets so a retry or reseed replays honestly
     this.hauntedRooms.clear();
     this.blackedOut.clear();
+    this.dimmedRooms.clear();
     this.pendingBlackout = null;
     this.pendingDoorOpen = null;
     this.peek = null;
@@ -758,13 +762,21 @@ export class Game {
           (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.04;
         }
       } else {
-        const base = l.intensity;
+        // Flicker/dim writes ride on baseIntensity — the per-frame ambient
+        // loop recomputes l.intensity from it every frame, so writing
+        // intensity directly would be stomped within a frame.
+        const base = (l.userData.baseIntensity as number) ?? l.intensity;
         let f = 0;
         const iv = setInterval(() => {
-          l.intensity = f++ % 2 ? base * 0.15 : base;
+          l.userData.baseIntensity = f++ % 2 ? base * 0.15 : base;
           if (f > (this.settings.reducedFlashes ? 2 : 8)) {
             clearInterval(iv);
-            l.intensity = mode === 'dim' ? base * 0.5 : base;
+            l.userData.baseIntensity = mode === 'dim' ? base * 0.5 : base;
+            const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
+            if (lamp && mode === 'dim') {
+              lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
+              (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.7;
+            }
           }
         }, 70);
       }

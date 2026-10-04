@@ -217,6 +217,7 @@ export class Lurker extends Entity {
     this.mesh = g;
     c.addEntityMesh(this.mesh);
     this.rig?.play('idle');
+    c.flickerRoom(c.currentRoomIndex, 'dim');
     c.cue('lurker-stalk', this.pos, '[something crouches — it hates the light]', { severity: 'warn' });
   }
 
@@ -298,6 +299,7 @@ export class Inkling extends Entity {
     this.mesh = g;
     g.position.copy(this.pos as unknown as THREE.Vector3);
     c.addEntityMesh(g);
+    c.flickerRoom(c.currentRoomIndex, 'dim');
     c.cue('inkling-settle', this.pos, '[something gathers in the dark — mind your light]', { severity: 'warn' });
     this.state = 'engage';
   }
@@ -347,6 +349,7 @@ export class EchoSkin extends Entity {
 
   protected override onSpawn(): void {
     this.state = 'engage';
+    this.ctx.flickerRoom(this.ctx.currentRoomIndex, 'dim');
     this.ctx.cue('echoskin-steps', null, '[footsteps continue after yours stop]', { severity: 'warn' });
     const rig = riggedFigure('demon');
     rig?.play('idle');
@@ -497,6 +500,7 @@ export class Stillframe extends Entity {
     const c = this.ctx;
     const assist = c.accessibility.minigameAssist;
     this.grace = 1.2 + assist * 1.2;
+    c.flickerRoom(c.currentRoomIndex, 'dim');
     c.cue('stillframe-snap', null, '[a shutter — freeze]', { severity: 'danger' });
     this.window = { start: c.now + 0.55, end: c.now + 0.55 + this.grace + 1.6 };
     const geo = new THREE.PlaneGeometry(1.1, 1.5);
@@ -555,6 +559,7 @@ export class Margin extends Entity {
     g.add(edge);
     this.mesh = g;
     c.addEntityMesh(g);
+    c.flickerRoom(c.currentRoomIndex, 'dim');
     c.cue('margin-edge', null, '[something waits at the edge of sight]', { severity: 'warn' });
     this.state = 'engage';
     this.d = 14;

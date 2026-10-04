@@ -50,6 +50,7 @@ export class Singer extends Entity {
     g.position.copy(this.pos);
     this.mesh = g;
     c.addEntityMesh(g);
+    c.flickerRoom(c.currentRoomIndex, 'dim');
     this.state = 'engage';
   }
 

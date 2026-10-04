@@ -49,6 +49,15 @@ export class CorridorRunner extends Entity {
   private brokeLights = new Set<number>();
   private nearMissSpots = new Set<object>();
   private nearMissUntil = 0;
+  /** Second touch of a furniture-check — scheduled game-time. */
+  private pendingTap = 0;
+  /** Path distance the warn front has already creaked past. */
+  private lastFrontTick = 0;
+  /** Path distance at which the warn front reaches the player's room. */
+  private thresholdTravel = 0;
+  private frontArrived = false;
+  private wasHidden = false;
+  private playerHidAt = -99;
   /** Rebound variant: sweep reverses once for a faster surprise pass. */
   private rebounded = false;
   private reboundBoost = 1;
@@ -72,6 +81,19 @@ export class CorridorRunner extends Entity {
     if (this.opts.fromAhead) this.path = this.path.slice().reverse();
     this.totalLen = pathLength(this.path);
     this.traveled = 0;
+
+    // The telegraph front crawls along the pass route; the distance at
+    // which it reaches the player's own door is where the arrival rattle
+    // fires — before the body itself gets there.
+    const entry = c.rooms[c.currentRoomIndex]?.entryPos;
+    this.thresholdTravel = this.totalLen;
+    if (entry) {
+      let acc = 0;
+      for (let i = 0; i < this.path.length - 1; i++) {
+        acc += v3dist(this.path[i], this.path[i + 1]);
+        if (v3dist(this.path[i], entry) < 0.6) { this.thresholdTravel = acc; break; }
+      }
+    }
 
     // Warning cues — each family has a distinct language.
     const tune = this.tuning;
@@ -199,6 +221,19 @@ export class CorridorRunner extends Entity {
         this.warned = true;
         c.cue(this.id + '-approach', this.path[0], '', { severity: 'warn' });
       }
+      // The darkness front is heard crawling toward the player: a floor
+      // creak every few metres, then the door shivering as it arrives.
+      const frac = Math.min(1, Math.max(0, 1 - this.warnT / this.warnTotal));
+      const front = frac * this.totalLen;
+      if (front > 0.5 && front - this.lastFrontTick > 3.5) {
+        this.lastFrontTick = front;
+        c.cue('floor-creak', followPath(this.path, front).pos, '', { severity: 'warn' });
+      }
+      if (!this.frontArrived && front >= this.thresholdTravel) {
+        this.frontArrived = true;
+        const rp = c.rooms[c.currentRoomIndex]?.entryPos ?? null;
+        c.cue('door-rattle', rp, '[the door shivers — it is here]', { severity: 'danger' });
+      }
       if (this.warnT <= 0) {
         this.state = 'engage';
         this.mesh = this.buildMesh();
@@ -244,12 +279,37 @@ export class CorridorRunner extends Entity {
           category: 'footstep', caption: '', source: this.id,
         });
       }
-      // Near-miss: passing the hide slows the thing and creaks the spot —
-      // once per spot, so a re-hide can still be grazed.
+      // Track fresh hides — a runner that watched the door close plays the
+      // harder near-miss.
+      if (p.hiddenSpot && !this.wasHidden) this.playerHidAt = c.now;
+      this.wasHidden = !!p.hiddenSpot;
+      // Near-miss: passing the hide slows the thing — once per spot, so a
+      // re-hide can still be grazed. Variants keep repeat encounters from
+      // reading identically.
       if (p.hiddenSpot && d < 5.5 && !this.nearMissSpots.has(p.hiddenSpot)) {
         this.nearMissSpots.add(p.hiddenSpot);
-        this.nearMissUntil = c.now + 1.2;
-        c.cue('hide-creak', p.pos, '[it slows — breathing held]', { severity: 'warn' });
+        const recentHide = c.now - this.playerHidAt < 1.6;
+        const pick = this.rng.float();
+        if (recentHide && this.id !== 'maelstrom') {
+          this.nearMissUntil = c.now + 2.4;
+          c.cue('door-breath', p.pos, '[it saw the door close]', { severity: 'danger' });
+          this.pendingTap = c.now + 0.8;
+        } else if (pick < 0.35) {
+          this.nearMissUntil = c.now + 1.8;
+          c.cue('door-rattle', p.pos, '[it tests the door of your hiding place]', { severity: 'warn' });
+          this.pendingTap = c.now + 0.6;
+        } else if (pick < 0.65) {
+          this.nearMissUntil = c.now + 2.3;
+          c.cue('hide-creak', p.pos, '[it stops — listening]', { severity: 'warn' });
+        } else {
+          this.nearMissUntil = c.now + 1.2;
+          c.cue('hide-creak', p.pos, '[it slows — breathing held]', { severity: 'warn' });
+        }
+      }
+      // The second touch of a furniture-check lands a beat later.
+      if (this.pendingTap && c.now >= this.pendingTap) {
+        this.pendingTap = 0;
+        if (p.hiddenSpot && d < 7) c.cue('knock', p.pos, '[a second touch — patient]', { severity: 'warn' });
       }
       if (!this.hasKilled && d < this.tuning.killRange + 8) {
         const verdict = playerExposed(c, f.pos);
