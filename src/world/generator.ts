@@ -709,7 +709,9 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
   ];
   for (const room of rooms) {
     for (const s of room.sockets) {
-      if (s.filled || s.kind === 'key') continue;
+      // Meta-flagged sockets (arrival register, shop/broker markers) are
+      // authored — the loot table must not roll 'contains' over them.
+      if (s.filled || s.kind === 'key' || s.meta.arrivalRegister || s.meta.broker !== undefined || s.meta.shop !== undefined) continue;
       if (s.kind === 'drawer') {
         if (lootRng.bool(0.55 * resourceMul)) {
           s.filled = true;

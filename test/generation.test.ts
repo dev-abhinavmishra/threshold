@@ -53,6 +53,22 @@ describe('route generation', () => {
     expect(route.underRooms[120].templateId).toBe('u-dead-end-loot');
   });
 
+  it('the lobby register keeps its special meta on every seed', () => {
+    // The loot pass must not roll a plain 'contains' over the authored
+    // arrivalRegister socket — that turned "Sign the register" into
+    // "Take Imprints" on ~half of seeds and made the arrival objective
+    // unsatisfiable.
+    for (const seed of SEEDS) {
+      for (const [difficulty, shortRun] of [['standard', false], ['qa', true]] as const) {
+        const route = generateRoute({ seedText: seed, difficulty, includeUnderscript: false, shortRun });
+        const lobby = mainRooms(route).find((r) => r.templateId === 'ms-lobby');
+        const reg = lobby?.sockets.find((s) => s.meta.arrivalRegister);
+        expect(reg, `${seed}/${difficulty}: register socket missing or overwritten`).toBeTruthy();
+        expect(reg!.meta.contains, `${seed}/${difficulty}: register meta clobbered by loot`).toBeUndefined();
+      }
+    }
+  });
+
   it('main-route rooms do not overlap (AABB)', () => {
     const route = generateRoute({ seedText: SEEDS[1], difficulty: 'standard', includeUnderscript: false });
     // Corridors are thin connectors that legitimately tile/touch; real room
