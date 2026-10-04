@@ -106,3 +106,155 @@ test('victory shows the completion screen and returns to menu', async ({ page })
   await expect(page.locator('.menu-inner')).toBeVisible({ timeout: 10_000 });
   expect(errors).toEqual([]);
 });
+
+test('chase room spawns the Pursuer and clears it at the end room', async ({ page }) => {
+  // SwiftShader starves rAF so badly that real-time keyboard input barely
+  // advances the sim (clock freezes at ~0.1s). Drive the game's own frame
+  // loop instead: fixed-step clock + manual g.frame() calls with rendering
+  // nooped — milestones, interactables, entities and the streamer all run
+  // their real code paths; only rasterization is skipped. godMode keeps the
+  // Pursuer from ending the scripted walk; the spawn/seal assertions stay.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  const chaseIdx = await page.evaluate(() => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        renderFrame(): void;
+        clock: { tick(): boolean; dt: number; time: number };
+        godMode: boolean;
+        route: { rooms: { index: number; spec: { special?: string } }[] };
+      };
+    }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    return g.route.rooms.find((x) => x.spec.special === 'chase1')?.index ?? null;
+  });
+  expect(chaseIdx).not.toBeNull();
+
+  // Jump to just inside the room before the chase — debug-jump semantics:
+  // currentRoom AND player move together (the streamer windows on
+  // currentRoom). Room origins can sit inside furniture, so stand a bit
+  // back from the doorway instead of at the room center.
+  await page.evaluate((idx: number) => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        currentRoom: number;
+        player: { teleport(x: number, y: number, z: number, yaw?: number): void };
+        route: { rooms: { index: number; origin: { x: number; z: number }; doors: { id: string; pos: { x: number; z: number } }[] }[] };
+      };
+    }).__thresholdGame;
+    const rooms = g.route.rooms;
+    const prev = rooms[idx - 1], chase = rooms[idx];
+    g.currentRoom = idx - 1;
+    const door = chase.doors.find((d) => d.id.includes('-in')) ?? prev.doors[prev.doors.length - 1];
+    const dx = prev.origin.x - door.pos.x, dz = prev.origin.z - door.pos.z;
+    const L = Math.hypot(dx, dz) || 1;
+    // pos.y is feet, not eye — groundHeight settles it
+    g.player.teleport(door.pos.x + (dx / L) * 1.5, 0, door.pos.z + (dz / L) * 1.5, Math.atan2(-dx, -dz));
+  }, chaseIdx!);
+
+  // In-page sim walk: hold W, aim at the exit-door leaf (this room's -out or
+  // the next room's -in leaf while it is closed). E is pressed ONLY when a
+  // door prompt is focused — hiding spots sit next to doors and outscore
+  // them in the focus ray, so blind E presses just hide the player. When
+  // the door won't take focus the aim oscillates until it does. A jammed
+  // door gets unlocked the same way a key would (this test covers
+  // spawn+seal, not locks).
+  const walkTo = (target: number, maxSec: number) => page.evaluate(({ target, maxSec }) => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        currentRoom: number;
+        frame(): void;
+        keys: Set<string>;
+        input: { interactPressed: boolean };
+        interaction: { focused: { prompt: string } | null };
+        player: { pos: { x: number; y: number; z: number }; yaw: number; pitch: number; eyeHeight: number; teleport(x: number, y: number, z: number, yaw?: number): void };
+        route: { rooms: {
+          index: number; origin: { x: number; z: number };
+          doors: { id: string; pos: { x: number; y: number; z: number }; isMainRoute: boolean; falseDoor?: boolean; openT: number; locked: boolean; opening: boolean }[];
+        }[] };
+        entities: { id: string }[];
+      };
+    }).__thresholdGame;
+    const rooms = g.route.rooms;
+    const unlockCluster = (door: { pos: { x: number; z: number } }) => {
+      for (const r of rooms) for (const d of r.doors) {
+        if (Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6) d.locked = false;
+      }
+    };
+    g.keys.add('KeyW');
+    let markX = g.player.pos.x, markZ = g.player.pos.z, stallWindows = 0, bypassed = 0;
+    for (let f = Math.ceil(maxSec * 30); f > 0 && g.currentRoom < target; f--) {
+      const cur = rooms[g.currentRoom];
+      const next = rooms[Math.min(g.currentRoom + 1, rooms.length - 1)];
+      const door = cur?.doors.find((d) => d.isMainRoute && !d.falseDoor && d.id.includes('-out'))
+        ?? next?.doors.find((d) => d.isMainRoute && !d.falseDoor && d.id.includes('-in'));
+      const t = door && door.openT < 0.8 ? door.pos : next.origin;
+      const dist = Math.hypot(t.x - g.player.pos.x, t.z - g.player.pos.z);
+      const baseYaw = Math.atan2(t.x - g.player.pos.x, t.z - g.player.pos.z);
+      g.player.yaw = baseYaw + (stallWindows > 0 ? Math.sin(f * 0.2) * 0.6 : 0);
+      // Door interactables sit at leaf center (y+0.6) — level aim misses the
+      // 0.86 align gate, so pitch the eye down at it like a player would.
+      const aimY = door && door.openT < 0.8 ? door.pos.y + 0.6 : g.player.pos.y + g.player.eyeHeight;
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(aimY - eyeY, dist || 1)));
+      const focused = g.interaction.focused?.prompt ?? '';
+      g.input.interactPressed = /door/i.test(focused);
+      g.frame();
+      // Pinned players slide along colliders and jitter >0.005/frame, so
+      // measure displacement over 15-frame windows instead of per frame.
+      if (f % 15 === 0) {
+        const moved = Math.hypot(g.player.pos.x - markX, g.player.pos.z - markZ);
+        if (moved < 0.45) {
+          stallWindows++;
+          if (door && stallWindows >= 3 && door.locked) unlockCluster(door);
+          // Adjacent props can out-focus the leaf forever in some layouts;
+          // open the pos-cluster like the interact path would (door.opening).
+          if (door && stallWindows >= 3 && door.openT < 0.8 && dist < 2.5) {
+            for (const r of rooms) for (const d of r.doors) {
+              if (Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6) d.opening = true;
+            }
+          }
+          // Pinned at an open doorway (prop/frame pinch in some layouts):
+          // step through the gap — the test covers spawn+seal, not pathing.
+          if (door && stallWindows >= 3 && door.openT >= 0.8 && dist < 2.5) {
+            const dx = next.origin.x - door.pos.x, dz = next.origin.z - door.pos.z;
+            const L = Math.hypot(dx, dz) || 1;
+            g.player.teleport(door.pos.x + (dx / L) * 0.8, g.player.pos.y, door.pos.z + (dz / L) * 0.8, g.player.yaw);
+            bypassed++; stallWindows = 0;
+          } else if (stallWindows >= 3 && (!door || door.openT >= 0.8 || dist >= 2.5)) {
+            // Wedged mid-room on furniture: step toward the target.
+            const L = Math.hypot(t.x - g.player.pos.x, t.z - g.player.pos.z) || 1;
+            g.player.teleport(g.player.pos.x + ((t.x - g.player.pos.x) / L) * 2.5, g.player.pos.y, g.player.pos.z + ((t.z - g.player.pos.z) / L) * 2.5, g.player.yaw);
+            bypassed++; stallWindows = 0;
+          }
+        } else { stallWindows = 0; markX = g.player.pos.x; markZ = g.player.pos.z; }
+      }
+    }
+    g.keys.delete('KeyW');
+    return { room: g.currentRoom, pursuer: g.entities.some((e) => e.id === 'pursuer'), bypassed };
+  }, { target, maxSec });
+
+  const entered = await walkTo(chaseIdx!, 25);
+  expect(entered.room).toBeGreaterThanOrEqual(chaseIdx!);
+  expect(entered.pursuer).toBe(true);
+
+  const sealed = await walkTo(chaseIdx! + 3, 60);
+  expect(sealed.room).toBeGreaterThanOrEqual(chaseIdx! + 3);
+  // The Pursuer's despawn runs a beat after the seal room registers —
+  // settle a second of sim time before asserting it's gone.
+  const pursuerGone = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: { frame(): void; entities: { id: string }[] } }).__thresholdGame;
+    for (let f = 0; f < 90 && g.entities.some((e) => e.id === 'pursuer'); f++) g.frame();
+    return !g.entities.some((e) => e.id === 'pursuer');
+  });
+  expect(pursuerGone).toBe(true);
+  expect(errors).toEqual([]);
+});

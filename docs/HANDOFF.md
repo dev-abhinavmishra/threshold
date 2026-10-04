@@ -130,8 +130,15 @@ CURRENT STATE (as of ~sprint 202)
   fabshop hoist hooks, laundry hampers, bath anteroom basins;
   WALL_MOUNT_Y gained pegRail + towelRail.
   Locked-drawer imprint floor fixed (15–30, was 8–22 vs test floor 15).
+  Sprint 203 chase-sequence e2e: sim-drives frame() (renderFrame noop +
+  clock.tick→1/30) through real interaction paths — QA run, debug-jump to
+  chase-1 door-front, sim-walk in (Pursuer spawns on entry), sim-walk to
+  seal room (Pursuer despawns). Door focus needs pitch aimed at leaf
+  center (y+0.6) — level aim fails the 0.86 align gate; E only fires on
+  /door/ prompts (adjacent hide spots out-focus leaves); pinned-walker
+  fallbacks open pos-clusters and step teleports past prop pinches.
   e2e covers: asset-served, menu/HUD/settings/archive, death→retry, quit→
-  Continue, underscript descent, victory screen, 15s soak.
+  Continue, underscript descent, victory screen, chase spawn+seal, 15s soak.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Entity feel: spawn stingers, telegraph polish, near-miss variety.
@@ -141,8 +148,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     scheduling is done for everything else.
   - Perf: SSAO pass is the next multiplier after the shadow fix — consider
     restricting SSAO to 'high' only when fps allows, or half-res.
-  - e2e: chase-sequence and hiding-spot coverage still missing (needs a
-    scripted entity drive).
+  - e2e: hiding-spot coverage still missing (hide-in/leave via sim-drive,
+    same pattern as the chase test).
   - More mill batches if dressing still reads thin: curtain variants,
     upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
 ```
