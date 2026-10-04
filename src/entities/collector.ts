@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { Entity } from './base';
 import { v3, v3copy, v3dist, type Vec3 } from '../engine/math';
 import { tallFigure } from './figure';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import { MAT } from '../world/materials';
 import { ENTITY_TUNING } from '../game/config';
 import { Rng } from '../engine/rng';
@@ -19,6 +20,7 @@ type Phase = 'approach' | 'demand' | 'follow' | 'paid' | 'leave';
 
 export class Collector extends Entity {
   private mesh: THREE.Object3D | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private homeRoom = 0;
   private lastRoom = 0;
@@ -51,10 +53,13 @@ export class Collector extends Entity {
     this.state = 'engage';
 
     // Hooded porter silhouette + the tin it rattles.
-    const g = tallFigure({
-      height: 1.85, body: MAT.shadowFigure(), face: 'mask',
-      faceMat: MAT.paper(), eyes: 'amber', hood: true, tattered: true,
-    });
+    const rig = riggedFigure('hooded');
+    const g = rig?.group
+      ?? tallFigure({
+        height: 1.85, body: MAT.shadowFigure(), face: 'mask',
+        faceMat: MAT.paper(), eyes: 'amber', hood: true, tattered: true,
+      });
+    this.rig = rig;
     const tin = new THREE.Mesh(
       new THREE.CylinderGeometry(0.07, 0.09, 0.22, 8), MAT.brass());
     tin.position.set(0.42, 0.95, 0.16);
@@ -87,6 +92,7 @@ export class Collector extends Entity {
     const c = this.ctx;
     const p = c.player;
     const dist = v3dist(this.pos, p.pos);
+    this.rig?.update(dt);
 
 
     // Face the player while it has business with them.
@@ -96,8 +102,9 @@ export class Collector extends Entity {
 
     switch (this.phase) {
       case 'approach': {
-        if (dist > 1.9) this.step(p.pos, this.tuning.speed, dt);
+        if (dist > 1.9) { this.step(p.pos, this.tuning.speed, dt); this.rig?.play('move'); }
         else {
+          this.rig?.play('idle');
           this.phase = 'demand';
           c.addInteractable({
             kind: 'toll', id: this.tollId, pos: this.pos,
@@ -124,7 +131,8 @@ export class Collector extends Entity {
         const dir = v3();
         p.lookDir(dir);
         this.moveTarget = v3(p.pos.x - dir.x * 4.5, 0, p.pos.z - dir.z * 4.5);
-        if (v3dist(this.pos, this.moveTarget) > 1.2) this.step(this.moveTarget, this.tuning.speed * 1.35, dt);
+        if (v3dist(this.pos, this.moveTarget) > 1.2) { this.step(this.moveTarget, this.tuning.speed * 1.35, dt); this.rig?.play('move'); }
+        else this.rig?.play('idle');
         // The rattle is a real sound — hunters hear it.
         this.rattleT += dt;
         if (this.rattleT > 3.2) {
@@ -162,7 +170,7 @@ export class Collector extends Entity {
       }
       case 'leave': {
         const home = c.spawnAt(this.homeRoom);
-        if (v3dist(this.pos, home) > 0.8) this.step(home, this.tuning.speed * 1.6, dt);
+        if (v3dist(this.pos, home) > 0.8) { this.step(home, this.tuning.speed * 1.6, dt); this.rig?.play('move'); }
         if (this.mesh) this.mesh.rotation.y = Math.atan2(home.x - this.pos.x, home.z - this.pos.z);
         if (v3dist(this.pos, home) < 1.0 || dist > 14) this.done();
         break;

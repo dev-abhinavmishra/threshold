@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Entity } from './base';
 import { v3, v3dist, type Vec3 } from '../engine/math';
 import { tallFigure } from './figure';
+import { riggedFigure, type RiggedFigure } from './rigged';
 import { MAT } from '../world/materials';
 import { ENTITY_TUNING } from '../game/config';
 
@@ -17,6 +18,7 @@ import { ENTITY_TUNING } from '../game/config';
  */
 export class Singer extends Entity {
   private mesh: THREE.Object3D | null = null;
+  private rig: RiggedFigure | null = null;
   private pos = v3();
   private homeRoom = 0;
   private trail: ({ x: number; z: number; y: number } & { t: number })[] = [];
@@ -37,10 +39,14 @@ export class Singer extends Entity {
     this.homeRoom = c.currentRoomIndex;
     // Materialize a couple of doors back — it has to catch up to sing.
     this.pos = c.spawnAt(Math.max(0, c.currentRoomIndex - 2));
-    const g = tallFigure({
-      height: 1.15, body: MAT.shadowFigure(), face: 'none',
-      hood: true, tattered: true,
-    });
+    const rig = riggedFigure('ghostSkull');
+    const g = rig?.group
+      ?? tallFigure({
+        height: 1.15, body: MAT.shadowFigure(), face: 'none',
+        hood: true, tattered: true,
+      });
+    this.rig = rig;
+    if (rig) g.userData.hover = 0.95; // the skull flies — it never touches floor
     g.position.copy(this.pos);
     this.mesh = g;
     c.addEntityMesh(g);
@@ -82,6 +88,7 @@ export class Singer extends Entity {
       if (target) {
         this.stepT += dt;
         this.step(target, this.tuning.speed, dt);
+        this.rig?.play('move');
         if (this.mesh) this.mesh.rotation.y = Math.atan2(target.x - this.pos.x, target.z - this.pos.z);
         // Its steps are real footsteps — hunters hear a decoy, you hear a tail.
         if (this.stepT > 0.62) {
@@ -91,6 +98,7 @@ export class Singer extends Entity {
         if (v3dist(this.pos, target) < 0.4) this.trail.splice(this.trail.indexOf(target), 1);
       } else {
         this.stepT = 0; // silent when the trail runs out — it waits for you
+        this.rig?.play('idle');
       }
       // it never follows past ~2 rooms or when you stop provoking it
       if (this.trail.length === 0 && dist > 18) this.done();
@@ -99,11 +107,13 @@ export class Singer extends Entity {
       this.fleeT += dt;
       const home = c.spawnAt(this.homeRoom);
       this.step(home, this.tuning.speed * 1.9, dt);
+      this.rig?.play('move', 0.08);
       if (this.mesh) this.mesh.rotation.y = Math.atan2(home.x - this.pos.x, home.z - this.pos.z);
       if (this.fleeT > 2.4 || v3dist(this.pos, home) < 1 || dist > 16) this.done();
     }
 
-    if (this.mesh) this.mesh.position.set(this.pos.x, this.pos.y, this.pos.z);
+    if (this.mesh) this.mesh.position.set(this.pos.x, this.pos.y + (this.mesh.userData.hover ?? 0), this.pos.z);
+    this.rig?.update(dt);
   }
 
   private step(target: Vec3, speed: number, dt: number): void {

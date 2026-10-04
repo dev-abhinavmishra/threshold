@@ -98,6 +98,16 @@ export const RIGGED: Record<string, RigSpec> = {
     file: 'quaternius_tribal.glb', height: 2.2, tint: 0.38, emissive: 0.04,
     clips: { idle: ['idle'], move: ['run', 'walk', 'sprint'], attack: ['punch', 'bite_front'] },
   },
+  /** Hooded porter — the Collector's toll-taker silhouette. */
+  hooded: {
+    file: 'quaternius_hooded.glb', height: 1.85, tint: 0.35, emissive: 0.03,
+    clips: { idle: ['idle_neutral', 'idle'], move: ['run', 'walk'], attack: ['punch', 'kick'] },
+  },
+  /** Floating skull — the Singer's sound-mimic head; no body to trust. */
+  ghostSkull: {
+    file: 'quaternius_ghostskull.glb', height: 0.55, tint: 0.5, emissive: 0.14,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
 };
 
 interface RigSource { scene: THREE.Group; animations: THREE.AnimationClip[] }

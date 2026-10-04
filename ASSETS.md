@@ -651,3 +651,10 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `wardrobe` | Double-door wardrobe: cornice, panelled doors, bun feet, escutcheons | guest-standard, suite-split |
 | `dresser` | Three-drawer chest: overhanging top, recessed faces, pulls | guest-standard, suite-split |
 | `nightstand` | Bedside cabinet variant (merged into existing `nightstand` variants) | guest-standard, suite-split |
+
+## Figures — Quaternius via poly.pizza (CC0), sprint 181
+
+| File | Source model | poly.pizza id | Rigged for |
+| --- | --- | --- | --- |
+| `quaternius_hooded.glb` | Hooded Adventurer | `y9KWOVG21R` | Collector (toll-taker body) |
+| `quaternius_ghostskull.glb` | Ghost Skull | `TX8r9WBXpe` | Singer (floating mimic head) |
