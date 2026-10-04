@@ -658,3 +658,12 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | --- | --- | --- | --- |
 | `quaternius_hooded.glb` | Hooded Adventurer | `y9KWOVG21R` | Collector (toll-taker body) |
 | `quaternius_ghostskull.glb` | Ghost Skull | `TX8r9WBXpe` | Singer (floating mimic head) |
+
+## Blender prefab mill additions — sprint 183 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `boneArch/` | Ribcage door arch (ribs + femur posts + crown vertebrae) | unlit biome door frames |
+| `toppledColumn/` | Broken column (stump + fallen drum + capital) | gallery-broken, unlit rooms |
+| `wallNiche/` | Arched wall niche (dome shell + pilasters + sill) | galleries, cathedral, grand hall |
+| `stairGate/` | Sealed stairwell (risers + landing + iron gate) | lobby-waiting |

@@ -492,11 +492,117 @@ def door_leaf():
         cyl('knob', (0.4, sy * (t / 2 + 0.045), 1.05), 0.035, 0.035, IRON, 14).rotation_euler[0] = math.pi / 2
     join_all('doorLeaf')
 
+
+def boneArch():
+    """Ribcage door arch — a rack of half-arch ribs stepping back over the
+    opening, femur posts at the spring line, vertebrae along the crown."""
+    w, h, d = 2.2, 3.0, 0.5
+    n = 9
+    spring = h * 0.45          # ribs spring from here
+    r_out = w * 0.52           # crown lands at spring + r_out ≈ h*0.45+1.14
+    for i in range(n):
+        y = -d / 2 + i * (d / (n - 1))
+        ring_seg('rib', (0, y, spring), r_out, r_out - 0.07, 0.028, DARK, 18)
+        # rib ends get knob swellings where they meet the posts
+        for sx in (-1, 1):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.05,
+                location=(sx * r_out * 0.97, y, spring))
+            bpy.context.object.data.materials.append(DARK)
+    # femur posts carry the spring line
+    for sx in (-1, 1):
+        for i in range(n):
+            y = -d / 2 + i * (d / (n - 1))
+            cyl('femur', (sx * r_out * 0.97, y, spring / 2), 0.032, spring, DARK, 8)
+    # spine beam + vertebra bumps along the crown
+    crown = spring + r_out
+    cube('spine', (0, 0, crown - 0.02), (0.13, d + 0.08, 0.12), DARK, 0.01)
+    for i in range(n):
+        y = -d / 2 + i * (d / (n - 1))
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.055,
+            location=(0, y, crown + 0.03))
+        bpy.context.object.data.materials.append(STONE)
+    join_all('boneArch')
+
+
+def toppledColumn():
+    """Broken column: standing stump with torn rim + fallen drum + capital."""
+    r = 0.22
+    cyl('stump', (0, 0, 0.5), r, 1.0, STONE, 14)
+    cube('base', (0, 0, 0.08), (0.6, 0.6, 0.16), STONE, 0.015)
+    # jagged crown — a ring of tilted chips
+    for i in range(9):
+        a = i / 9 * math.tau
+        chip = cube('chip', (math.cos(a) * r * 0.82, math.sin(a) * r * 0.82, 1.02 + (i % 3) * 0.03),
+                    (0.1, 0.1, 0.12 + (i % 3) * 0.05), STONE, 0.01)
+        chip.rotation_euler[2] = a
+    # fallen drum beside it, axis along x, resting on debris
+    drum = cyl('drum', (0.85, 0.15, r), r * 0.92, 0.9, STONE, 14)
+    drum.rotation_euler[1] = math.pi / 2
+    drum.rotation_euler[2] = 0.16
+    cube('cap', (1.45, 0.32, 0.16), (0.5, 0.5, 0.3), STONE, 0.015).rotation_euler[2] = 0.5
+    join_all('toppledColumn')
+
+
+def wallNiche():
+    """Arched wall niche — back panel, half-dome shell, sill, side pilasters."""
+    w, h, d = 1.1, 2.2, 0.42
+    cube('back', (0, d / 2 - 0.03, h / 2), (w, 0.06, h), DARK, 0.01)
+    for sx in (-1, 1):
+        cube('pilaster', (sx * (w / 2 + 0.07), 0, h * 0.42), (0.14, d, h * 0.84), STONE, 0.015)
+    ring_seg('dome', (0, 0, h - w / 2 - 0.05), w / 2 + 0.14, w / 2, d, STONE, 16)
+    # half-dome shell — squashed sphere, back half only
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=w / 2,
+        location=(0, d / 2 - 0.06, h - w / 2 - 0.05))
+    dome = bpy.context.object
+    dome.scale = (1, 0.5, 0.6)
+    bpy.ops.object.transform_apply(scale=True)
+    dome.data.materials.append(DARK)
+    cube('sill', (0, -0.02, h - w / 2 - 0.12 - 0.55), (w + 0.1, d * 0.8, 0.08), STONE, 0.012)
+    cube('header', (0, 0, h - 0.04), (w + 0.4, d, 0.14), STONE, 0.015)
+    join_all('wallNiche')
+
+
+def stairGate():
+    """Sealed stairwell: eight risers to a landing walled by an iron gate."""
+    w, d = 1.6, 2.4
+    step_h, step_d = 0.17, 0.28
+    n = 7
+    for i in range(n):
+        cube('riser', (0, -d / 2 + (i + 0.5) * step_d, (i + 0.5) * step_h),
+             (w, step_d, (i + 1) * step_h), STONE, 0.008)
+    # landing deck at the top
+    land_d = d - n * step_d + 0.7
+    cube('deck', (0, -d / 2 + n * step_d + land_d / 2, n * step_h - 0.08),
+         (w, land_d, 0.16), STONE, 0.01)
+    top_z = n * step_h
+    # gate across the landing end
+    gw, gh = w - 0.1, 2.0
+    gy = -d / 2 + n * step_d + land_d - 0.08
+    for sx in (-1, 1):
+        cube('gatepost', (sx * (gw / 2 - 0.04), gy, top_z + gh / 2), (0.08, 0.1, gh), IRON, 0.006)
+    for i in range(7):
+        x = -gw / 2 + 0.12 + i * (gw - 0.24) / 6
+        cyl('gbar', (x, gy, top_z + gh / 2), 0.02, gh - 0.15, IRON, 8)
+    for z in (top_z + 0.35, top_z + gh - 0.35):
+        cube('gstrap', (0, gy - 0.01, z), (gw - 0.1, 0.03, 0.06), IRON, 0.003)
+    # side balustrade along the run
+    for sx in (-1, 1):
+        cube('rail', (sx * (w / 2 - 0.03), -d / 2 + n * step_d / 2, top_z * 0.62),
+             (0.06, n * step_d, 0.06), IRON, 0.005).rotation_euler[1] = 0.0
+        for i in range(4):
+            zstep = (i + 0.5) / 4 * n * step_h
+            cyl('baluster', (sx * (w / 2 - 0.03), -d / 2 + (i + 0.7) * step_d, zstep / 2 + 0.3),
+                0.018, zstep, IRON, 8)
+    join_all('stairGate')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
     'colonnade': colonnade, 'scissorgate': scissorgate, 'balustrade': balustrade, 'boilerDrum': boilerDrum, 'pipeManifold': pipeManifold, 'stackShelf': stackShelf, 'breakerPanel': breakerPanel, 'wallVent': wallVent, 'portcullis': portcullis, 'wardrobe': wardrobe, 'dresser': dresser, 'nightstand': nightstand,
     'doorLeaf': door_leaf,
+    'boneArch': boneArch, 'toppledColumn': toppledColumn,
+    'wallNiche': wallNiche, 'stairGate': stairGate,
 }
 
 def main():

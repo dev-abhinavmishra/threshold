@@ -106,7 +106,9 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   },
   ceilingLamp: { dir: 'hanging_industrial_lamp', height: 0.9, collider: [0, 0, 0], anchor: 'center' },
   // Blender prefab mill — tools/mill/prefab_kit.py (original, ours)
-  archway: { dir: 'archway', height: 3.4, collider: [2.6, 3.4, 0.34] },
+  // archway frames doorways — solid collider would seal the lane; walls
+  // behind it already carry collision
+  archway: { dir: 'archway', height: 3.4, collider: [0, 0, 0] },
   colonnade: { dir: 'colonnade', height: 3.0, collider: [5.8, 3.0, 0.3] },
   fireplace: { dir: 'fireplace', height: 1.7, collider: [2.2, 1.7, 0.55] },
   windowArch: { dir: 'windowArch', height: 2.4, collider: [0, 0, 0], anchor: 'center' },
@@ -124,6 +126,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   wardrobe: { dir: 'wardrobe', height: 2.2, collider: [1.3, 2.2, 0.62] },
   dresser: { dir: 'dresser', height: 0.98, collider: [1.0, 0.98, 0.55] },
   doorLeaf: { dir: 'doorLeaf', height: 2.2, collider: [1.0, 2.2, 0.09] },
+  boneArch: { dir: 'boneArch', height: 2.5, collider: [0, 0, 0] },
+  toppledColumn: { dir: 'toppledColumn', height: 1.1, collider: [2.0, 1.1, 0.8] },
+  wallNiche: { dir: 'wallNiche', height: 2.2, collider: [0, 0, 0], anchor: 'center' },
+  stairGate: { dir: 'stairGate', height: 3.2, collider: [1.7, 3.2, 2.5] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
