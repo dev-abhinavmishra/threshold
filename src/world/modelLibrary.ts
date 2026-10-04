@@ -146,6 +146,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   radiatorFin: { dir: 'radiatorFin', height: 0.65, collider: [1.0, 0.65, 0.22] },
   dumbwaiter: { dir: 'dumbwaiter', height: 1.8, collider: [0, 0, 0], anchor: 'center' },
   ironGrate: { dir: 'ironGrate', height: 0.05, collider: [0, 0, 0] },
+  conduitRun: { dir: 'conduitRun', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
+  sumpPump: { dir: 'sumpPump', height: 1.0, collider: [0.6, 1.0, 0.6] },
+  hangingCable: { dir: 'hangingCable', height: 0.6, collider: [0, 0, 0], anchor: 'center' },
+  ductRun: { dir: 'ductRun', height: 0.7, collider: [0, 0, 0], anchor: 'center' },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],

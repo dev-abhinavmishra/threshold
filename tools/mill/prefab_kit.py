@@ -887,6 +887,79 @@ def podiumLectern():
     book.rotation_euler[0] = -0.32
     join_all('podiumLectern')
 
+
+def pipe_seg(name, p0, p1, r, material, seg=10):
+    """Cylinder strut between two points."""
+    import mathutils
+    a, b = mathutils.Vector(p0), mathutils.Vector(p1)
+    d = b - a
+    mid = (a + b) / 2
+    o = cyl(name, mid, r, d.length, material, seg)
+    o.rotation_mode = 'QUATERNION'
+    o.rotation_quaternion = d.to_track_quat('Z', 'Y')
+    return o
+
+
+def conduitRun():
+    """Wall-mounted conduit bundle — three runs on saddles with a junction
+    box and a rising stub. Underscript service-wall dressing."""
+    w = 2.6
+    for zi, z in enumerate((0.05, 0.13, 0.21)):
+        cyl('pipe', (0, 0.05 + zi * 0.012, z), 0.028, w, IRON, 10).rotation_euler[1] = math.pi / 2
+    for x in (-1.1, -0.35, 0.35, 1.1):
+        cube('saddle', (x, 0.05, 0.13), (0.06, 0.1, 0.3), IRON, 0.008)
+    cube('jbox', (0.9, 0.08, 0.13), (0.22, 0.12, 0.26), DARK, 0.01)
+    cyl('stub', (0.9, 0.06, 0.45), 0.028, 0.5, IRON, 10)
+    join_all('conduitRun')
+
+
+def sumpPump():
+    """Cast sump pump — ribbed pot, motor cap, discharge riser elbowing to
+    the wall. Underscript floor plant."""
+    cyl('base', (0, 0, 0.03), 0.3, 0.06, IRON, 18)
+    cyl('pot', (0, 0, 0.3), 0.24, 0.5, IRON, 16)
+    for i in range(3):
+        torus('rib', (0, 0, 0.16 + i * 0.14), 0.25, 0.018, IRON, seg=20)
+    cyl('motor', (0, 0, 0.62), 0.16, 0.22, DARK, 14)
+    cyl('riser', (0.18, 0, 0.75), 0.035, 0.5, IRON, 10)
+    torus('elbow', (0.18, 0.06, 0.99), 0.06, 0.035, IRON, rot=(0, math.pi / 2, 0), seg=16)
+    cyl('wallstub', (0.18, 0.14, 0.99), 0.035, 0.22, IRON, 10).rotation_euler[0] = math.pi / 2
+    join_all('sumpPump')
+
+
+def hangingCable():
+    """Drooping cable catenary between two wall brackets + a slack twin —
+    Underscript span dressing, hung high."""
+    span, dip = 3.0, 0.55
+    n = 16
+    for cable, r, off in ((0, 0.02, 0.0), (1, 0.013, 0.05)):
+        pts = []
+        for i in range(n + 1):
+            t = i / n
+            x = -span / 2 + span * t
+            z = -dip * math.sin(math.pi * t) * (1 + 0.15 * cable)
+            pts.append((x, 0.02 + off, z))
+        for i in range(n):
+            pipe_seg('cab', pts[i], pts[i + 1], r, WORN, 6)
+    for sx in (-1, 1):
+        cube('bracket', (sx * span / 2, 0.06, -0.02), (0.08, 0.12, 0.2), IRON, 0.008)
+        torus('eye', (sx * span / 2, 0.02, 0.02), 0.04, 0.012, IRON, rot=(math.pi / 2, 0, 0), seg=12)
+    join_all('hangingCable')
+
+
+def ductRun():
+    """Sheet-metal HVAC duct — seamed box run with hanger straps and an
+    elbow dropping toward the wall. Ceiling dressing."""
+    w, h, d = 2.4, 0.34, 0.42
+    cube('duct', (0, 0, 0), (w, d, h), IRON, 0.01)
+    for x in (-0.8, -0.2, 0.4, 1.0):
+        cube('seam', (x, 0, 0), (0.04, d + 0.02, h + 0.02), IRON, 0.004)
+    for x in (-0.9, 0.7):
+        cube('strap', (x, -0.02, h / 2 + 0.1), (0.03, 0.02, 0.22), IRON, 0.003)
+    cube('elbow', (w / 2 + 0.15, 0.1, -h / 2 - 0.16), (0.4, d * 0.8, 0.4), IRON, 0.01).rotation_euler[0] = -0.5
+    join_all('ductRun')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -901,6 +974,8 @@ PIECES = {
     'doorPlaque': doorPlaque,
     'hallTree': hallTree, 'umbrellaStand': umbrellaStand, 'washStand': washStand,
     'mailCart': mailCart, 'podiumLectern': podiumLectern,
+    'conduitRun': conduitRun, 'sumpPump': sumpPump,
+    'hangingCable': hangingCable, 'ductRun': ductRun,
 }
 
 def main():

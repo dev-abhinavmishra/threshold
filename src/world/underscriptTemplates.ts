@@ -40,6 +40,8 @@ const u_corridor: RoomTemplate = {
       { kind: 'manhole', x: 0.5, z: 0.8, y: 0.01 },
       { kind: 'wallVent', x: 1.28, z: -1.6, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'breakerPanel', x: -1.28, z: 2.0, y: 0.7, yaw: Math.PI / 2 },
+      { kind: 'conduitRun', x: 1.3, z: -0.5, y: 1.7, yaw: -Math.PI / 2 },
+      { kind: 'hangingCable', x: 0, z: 2.8, y: 2.25 },
       ...(rng.bool(0.4) ? [{ kind: 'printer' as const, x: 0.9, z: 1.2 }] : []),
       ...(rng.bool(0.5) ? [{ kind: 'plasticCrate2' as const, x: -1.0, z: -3.0 }] : []),
       ...(rng.bool(0.35) ? [{ kind: 'mousetrap' as const, x: 1.1, z: -1.5 }] : []),
@@ -61,6 +63,7 @@ const u_officeRow: RoomTemplate = {
       { kind: 'cassettePlayer', x: 2.6, z: -1.75, y: 0.78 },
       { kind: 'fluoroTube', x: -2, z: -0.5, y: 2.6 }, { kind: 'fluoroTube', x: 2, z: 0.5, y: 2.6 },
       { kind: 'typewriter', x: 0, z: 0.75, y: 0.78 },
+      { kind: 'ductRun', x: 0, z: 1.5, y: 2.5, yaw: Math.PI / 2 },
     ],
     sockets: [{ kind: 'loot', x: 0, z: -1.8, meta: {} }, { kind: 'loot', x: -3.4, z: 3.0, meta: {} }],
     hiding: [
@@ -108,6 +111,7 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'dartboard', x: 0.8, z: -2.93, y: 1.7 },
       { kind: 'lifebuoy', x: -1.2, z: -2.95, y: 1.7 },
       { kind: 'fishHat', x: 2.1, z: 1.4 },
+      { kind: 'sumpPump', x: -2.4, z: 0.9 },
       { kind: 'sign', x: 0, z: 2.95, y: 1.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.5 },
     ],
@@ -132,6 +136,8 @@ const u_recordsCageRoom: RoomTemplate = {
       { kind: 'stackShelf', x: -3.35, z: 0.4, yaw: Math.PI / 2 },
       { kind: 'cableTray', x: 0, z: -1, y: 2.6 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.7 },
+      { kind: 'conduitRun', x: 3.4, z: 1.0, y: 1.9, yaw: -Math.PI / 2 },
+      { kind: 'hangingCable', x: 0, z: 2.2, y: 2.55 },
     ],
     sockets: [{ kind: 'loot', x: -2, z: -0.6, meta: {} }, { kind: 'drawer', x: 2.8, z: -2.2, meta: {} }],
     hiding: [
@@ -158,6 +164,9 @@ const u_longHall: RoomTemplate = {
       { kind: 'cableTray', x: -1.3, z: -2, y: 2.3 },
       { kind: 'portcullis', x: -0.6, z: 6.9, yaw: Math.PI },
       { kind: 'hatch', x: 1.15, z: -6.9 },
+      { kind: 'ductRun', x: 0.9, z: 0, y: 2.3, yaw: Math.PI / 2 },
+      { kind: 'conduitRun', x: -1.5, z: -4, y: 1.6, yaw: Math.PI / 2 },
+      { kind: 'hangingCable', x: 0, z: 4.5, y: 2.3 },
     ],
     hiding: [{ kind: 'cabinet', x: -1.1, z: -6.5, yaw: Math.PI / 2, propKind: 'locker' }],
     sockets: [{ kind: 'loot', x: 1.0, z: -3, meta: {} }],
@@ -176,6 +185,7 @@ const u_stairLanding: RoomTemplate = {
       { kind: 'cementBag', x: -2.0, z: 1.9 },
       { kind: 'compostBags', x: -2.2, z: -1.8 },
       { kind: 'fireAlarm', x: 2.45, z: 0.5, y: 1.8, yaw: -Math.PI / 2 },
+      { kind: 'sumpPump', x: 1.9, z: 1.6 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 4.2 },
     ],
     colliders: [{ x: 0, z: 1.4, w: 3.0, d: 0.1, h: 1.1 }],
@@ -209,6 +219,8 @@ const u_openOffice: RoomTemplate = {
       // back wall of the basement office floor
       { kind: 'overheadCrane', x: 2.8, z: 4.2 },
       { kind: 'pistol', x: 4.5, z: 0.75, y: 0.75 },
+      { kind: 'ductRun', x: 0, z: 0.5, y: 2.55, yaw: Math.PI / 2 },
+      { kind: 'hangingCable', x: -1.5, z: -3.8, y: 2.5 },
     ],
     sockets: [
       { kind: 'loot', x: -3.6, z: -2.2, meta: {} }, { kind: 'loot', x: 2.4, z: 0.4, meta: {} },
@@ -239,6 +251,8 @@ const u_serverRoom: RoomTemplate = {
       { kind: 'pipeManifold', x: 0, z: -3.85, yaw: 0 },
       { kind: 'breakerPanel', x: 3.85, z: 2.0, y: 0.8, yaw: -Math.PI / 2 },
       { kind: 'wallVent', x: -3.85, z: 2.6, y: 1.8, yaw: Math.PI / 2 },
+      { kind: 'conduitRun', x: -3.9, z: -1.0, y: 1.9, yaw: Math.PI / 2 },
+      { kind: 'hangingCable', x: 1.5, z: 2.5, y: 2.55 },
     ],
     colliders: [
       { x: -2.4, z: -2.4, w: 1.9, d: 1.0, h: 1.6 },
@@ -292,6 +306,8 @@ const u_printShop: RoomTemplate = {
       { kind: 'paperStack', x: -3.2, z: 1.8 }, { kind: 'paperStack', x: 3.2, z: 1.8 },
       { kind: 'projector', x: 0, z: 0.45, y: 0.95 },
       { kind: 'fluoroTube', x: 0, z: -1, y: 2.6 },
+      { kind: 'conduitRun', x: -3.9, z: 0.5, y: 1.8, yaw: Math.PI / 2 },
+      { kind: 'ductRun', x: 0, z: 1.8, y: 2.45 },
     ],
     sockets: [{ kind: 'loot', x: 0, z: 0.4, meta: {} }, { kind: 'loot', x: -3.2, z: 1.8, meta: {} }],
     hiding: [{ kind: 'cabinet', x: 3.4, z: -0.6, yaw: -Math.PI / 2, propKind: 'locker' }],
@@ -316,6 +332,8 @@ const u_lobby: RoomTemplate = {
       { kind: 'bin', x: -4.0, z: -2.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 3.1 },
       { kind: 'exitSign', x: 0, z: 3.4, y: 2.6 },
+      { kind: 'ductRun', x: -1, z: -0.5, y: 2.9, yaw: Math.PI / 2 },
+      { kind: 'sumpPump', x: 4.2, z: 2.8 },
     ],
     sockets: [
       { kind: 'loot', x: 0, z: 2.2, meta: {} },
@@ -334,6 +352,7 @@ const u_deadEnd: RoomTemplate = {
     exits: [P(1.2, 'e'), P(0, 'n')],
     props: [
       { kind: 'filing', x: 1.4, z: -1.8 }, { kind: 'filing', x: 1.4, z: -1.1 },
+      { kind: 'sumpPump', x: -1.4, z: -1.7 },
       { kind: 'crate', x: -1.2, z: 1.6 },
       { kind: 'chest', x: -1.0, z: 0.2, yaw: 0.6 },
       { kind: 'suitcase', x: 0.6, z: 1.9, yaw: -0.5 },
@@ -352,6 +371,7 @@ const u_doubleCubicle: RoomTemplate = {
       { kind: 'cubicle', x: -3, z: 1.2, yaw: Math.PI }, { kind: 'cubicle', x: -0.6, z: 1.2, yaw: Math.PI }, { kind: 'cubicle', x: 1.8, z: 1.2, yaw: Math.PI },
       { kind: 'breakTable', x: 4.0, z: -0.4 },
       { kind: 'fluoroTube', x: -2, z: -0.4, y: 2.6 }, { kind: 'fluoroTube', x: 2, z: 0.4, y: 2.6 },
+      { kind: 'ductRun', x: 0, z: -3.0, y: 2.5 },
     ],
     sockets: [{ kind: 'loot', x: -3, z: -2, meta: {} }, { kind: 'loot', x: 1.8, z: 1.2, meta: {} }, { kind: 'drawer', x: -0.6, z: -2, meta: {} }],
     hiding: [
@@ -372,6 +392,7 @@ const u_narrowStacks: RoomTemplate = {
       { kind: 'stackShelf', x: 2.55, z: 0.15, yaw: -Math.PI / 2 },
       { kind: 'filing', x: 2.2, z: 1.4 }, { kind: 'filing', x: 2.2, z: 2.1 },
       { kind: 'fluoroTube', x: 0, z: -2, y: 2.7 }, { kind: 'fluoroTube', x: 0, z: 2, y: 2.7 },
+      { kind: 'conduitRun', x: -2.9, z: 3, y: 1.8, yaw: Math.PI / 2 },
     ],
     colliders: [
       { x: -2.2, z: -3.05, w: 0.6, d: 1.4, h: 1.3 }, { x: -2.2, z: -0.35, w: 0.6, d: 1.4, h: 1.3 },
