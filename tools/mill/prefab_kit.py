@@ -1002,6 +1002,85 @@ def tollPlate():
     join_all('tollPlate')
 
 
+def plinth():
+    """Stone display plinth — stepped base, tapered shaft, molded cap.
+    Gallery pedestal for busts/vases. ~1.1 tall."""
+    cube('base1', (0, 0, 0.05), (0.62, 0.62, 0.10), STONE, 0.015)
+    cube('base2', (0, 0, 0.15), (0.52, 0.52, 0.10), STONE, 0.01)
+    cube('shaft', (0, 0, 0.6), (0.44, 0.44, 0.8), STONE, 0.012)
+    cube('cap1', (0, 0, 1.02), (0.5, 0.5, 0.07), STONE, 0.01)
+    cube('cap2', (0, 0, 1.075), (0.56, 0.56, 0.06), STONE, 0.012)
+    join_all('plinth')
+
+
+def displayCase():
+    """Museum vitrine — dark plinth base, glass hood, a small artifact inside.
+    Gallery centerpiece dressing. ~1.5 tall."""
+    cube('base', (0, 0, 0.35), (0.8, 0.8, 0.7), DARK, 0.015)
+    cube('baseTrim', (0, 0, 0.72), (0.84, 0.84, 0.05), WOOD, 0.008)
+    # artifact — a small pot/vase silhouette on the pedestal
+    cyl('artBody', (0, 0, 0.9), 0.11, 0.26, BRASS, 14)
+    torus('artLip', (0, 0, 1.04), 0.09, 0.018, BRASS, seg=16)
+    cyl('artNeck', (0, 0, 1.1), 0.045, 0.1, BRASS, 12)
+    # glass hood — thin box, keep as separate mesh (alpha material)
+    import bpy
+    m = bpy.data.materials.new('glass'); m.use_nodes = True
+    b = m.node_tree.nodes['Principled BSDF']
+    b.inputs['Base Color'].default_value = (0.8, 0.85, 0.9, 1)
+    b.inputs['Roughness'].default_value = 0.08
+    b.inputs['Alpha'].default_value = 0.16
+    m.surface_render_method = 'DITHERED'
+    cube('hood', (0, 0, 1.0), (0.7, 0.7, 0.62), m, 0.008)
+    join_all('displayCase')
+
+
+def ropeBarrier():
+    """Twin brass stanchions + a sagging velvet rope — the museum 'do not
+    cross' line. ~2.4 wide, 0.95 tall."""
+    for sx in (-1.2, 1.2):
+        cyl('post', (sx, 0, 0.45), 0.025, 0.9, BRASS, 12)
+        bpy_sphere = cyl('finial', (sx, 0, 0.92), 0.05, 0.08, BRASS, 12)
+        torus('collar', (sx, 0, 0.78), 0.05, 0.015, BRASS, seg=14)
+        cyl('base', (sx, 0, 0.03), 0.16, 0.06, BRASS, 18)
+    # rope catenary — fat worn strand drooping between the posts
+    n, dip = 12, 0.22
+    for i in range(n):
+        t0, t1 = i / n, (i + 1) / n
+        p0 = (-1.2 + 2.4 * t0, 0, 0.8 - dip * math.sin(math.pi * t0))
+        p1 = (-1.2 + 2.4 * t1, 0, 0.8 - dip * math.sin(math.pi * t1))
+        pipe_seg('rope', p0, p1, 0.03, WORN, 8)
+    join_all('ropeBarrier')
+
+
+def exhibitLabel():
+    """Small angled exhibit label plate on a tilted stand — sits under
+    paintings or beside cases. ~0.2 wide."""
+    cube('plate', (0, -0.02, 0.08), (0.22, 0.015, 0.14), WORN, 0.004).rotation_euler[0] = -0.5
+    cube('strut', (0, 0.03, 0.04), (0.02, 0.02, 0.09), IRON, 0.003).rotation_euler[0] = -0.5
+    cube('foot', (0, 0.05, 0.005), (0.08, 0.06, 0.01), IRON, 0.002)
+    join_all('exhibitLabel')
+
+
+def libraryLadder():
+    """Rolling library ladder — tall rails, rungs, top hooks that catch a
+    shelf rail, little wheels. Leans ~10deg. ~2.6 tall."""
+    lean = math.radians(10)
+    for sx in (-0.22, 0.22):
+        r = cube('rail', (sx, 0, 1.25), (0.05, 0.04, 2.5), WOOD, 0.006)
+        r.rotation_euler[0] = -lean
+    for i in range(7):
+        y = -0.02 + 0.055 * i  # shift along lean
+        z = 0.28 + i * 0.3
+        rung = cyl('rung', (0, -z * math.tan(lean) * 0 + 0, z), 0.02, 0.44, WOOD, 8)
+        rung.rotation_euler[1] = math.pi / 2
+        rung.location.y = z * math.tan(lean)
+    # top hooks + wheels
+    for sx in (-0.22, 0.22):
+        torus('hook', (sx, 0.28, 2.48), 0.06, 0.018, IRON, rot=(math.pi / 2, 0, 0), seg=12)
+        torus('wheel', (sx, 0.01, 0.05), 0.05, 0.018, IRON, rot=(0, math.pi / 2, 0), seg=12)
+    join_all('libraryLadder')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1018,6 +1097,8 @@ PIECES = {
     'conduitRun': conduitRun, 'sumpPump': sumpPump, 'hangingCable': hangingCable, 'ductRun': ductRun,
     'doorChain': doorChain, 'tollPlate': tollPlate,
     'mailCart': mailCart, 'podiumLectern': podiumLectern,
+    'plinth': plinth, 'displayCase': displayCase, 'ropeBarrier': ropeBarrier,
+    'exhibitLabel': exhibitLabel, 'libraryLadder': libraryLadder,
 }
 
 def main():

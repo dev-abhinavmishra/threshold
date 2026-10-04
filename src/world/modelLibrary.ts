@@ -152,6 +152,11 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   ductRun: { dir: 'ductRun', height: 0.7, collider: [0, 0, 0], anchor: 'center' },
   doorChain: { dir: 'doorChain', height: 0.62, collider: [0, 0, 0], anchor: 'center' },
   tollPlate: { dir: 'tollPlate', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
+  plinth: { dir: 'plinth', height: 1.1, collider: [0.6, 1.1, 0.6] },
+  displayCase: { dir: 'displayCase', height: 1.55, collider: [0.85, 1.55, 0.85] },
+  ropeBarrier: { dir: 'ropeBarrier', height: 0.95, collider: [2.4, 0.95, 0.2] },
+  exhibitLabel: { dir: 'exhibitLabel', height: 0.15, collider: [0, 0, 0], anchor: 'center' },
+  libraryLadder: { dir: 'libraryLadder', height: 2.6, collider: [0.55, 2.6, 0.5] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],

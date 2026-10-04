@@ -38,6 +38,7 @@ export type PropKind =
   | 'boilerDrum' | 'pipeManifold' | 'stackShelf'
   | 'breakerPanel' | 'wallVent' | 'portcullis'
   | 'conduitRun' | 'sumpPump' | 'hangingCable' | 'ductRun'
+  | 'plinth' | 'displayCase' | 'ropeBarrier' | 'exhibitLabel' | 'libraryLadder'
   | 'wardrobe' | 'dresser' | 'nightstand'
   | 'barrel' | 'wineBarrel' | 'pipeManifold' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
