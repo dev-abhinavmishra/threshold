@@ -17,6 +17,7 @@ const MILL_DIRS = [
   'keyRack', 'counterBell', 'luggageRack', 'doorPlaque',
   'hallTree', 'umbrellaStand', 'washStand', 'mailCart', 'podiumLectern',
   'conduitRun', 'sumpPump', 'hangingCable', 'ductRun',
+  'doorChain', 'tollPlate',
 ];
 
 const FIGURES = [

@@ -30,18 +30,20 @@ def mat(name, color, rough=0.85, metal=0.0):
 STONE = None
 DARK = None
 IRON = None
+BRASS = None
 WOOD = None
 WORN = None
 CLOTH = None
 
 def init_mats():
-    global STONE, DARK, IRON, WOOD, WORN, CLOTH
+    global STONE, DARK, IRON, WOOD, WORN, CLOTH, BRASS
     STONE = mat('stone', (0.42, 0.38, 0.33))
     DARK = mat('darkwood', (0.16, 0.10, 0.07), rough=0.7)
     WOOD = mat('oakwood', (0.32, 0.22, 0.13), rough=0.8)
     IRON = mat('iron', (0.11, 0.11, 0.12), rough=0.45, metal=0.85)
     WORN = mat('wornleather', (0.28, 0.18, 0.11), rough=0.85)
     CLOTH = mat('bookcloth', (0.2, 0.24, 0.2), rough=0.9)
+    BRASS = mat('brass', (0.42, 0.30, 0.12), rough=0.35, metal=0.9)
 
 # ---------- build helpers ----------
 
@@ -960,6 +962,46 @@ def ductRun():
     join_all('ductRun')
 
 
+def doorChain():
+    """Padlocked hasp + draped chain — mounted on a locked door leaf at
+    handle height. Reads 'this door is barred' from across the room.
+    Normalized ~0.62 wide, front face +y→glTF -z convention matches props."""
+    # hasp plates — one on the leaf edge, one on the jamb beside it
+    cube('plateA', (-0.18, 0.03, 0.0), (0.16, 0.06, 0.3), IRON, 0.008)
+    cube('plateB', (0.24, 0.03, 0.0), (0.14, 0.06, 0.26), IRON, 0.008)
+    for px in (-0.18, 0.24):
+        for pz in (-0.1, 0.1):
+            cyl('rivet', (px, -0.015, pz), 0.014, 0.02, IRON, 8).rotation_euler[0] = math.pi / 2
+    # chain catenary drooping between the two hasps
+    n, dip = 10, 0.16
+    for i in range(n):
+        t0, t1 = i / n, (i + 1) / n
+        x0 = -0.14 + 0.36 * t0
+        z0 = -dip * math.sin(math.pi * t0)
+        x1 = -0.14 + 0.36 * t1
+        z1 = -dip * math.sin(math.pi * t1)
+        pipe_seg('link', (x0, -0.06, z0), (x1, -0.06, z1), 0.016, WORN, 6)
+    # padlock hanging off the chain's low point
+    cube('lock', (0.03, -0.06, -0.26), (0.11, 0.07, 0.14), BRASS, 0.012)
+    torus('shackle', (0.03, -0.055, -0.18), 0.045, 0.012, IRON, rot=(math.pi / 2, 0, 0), seg=14)
+    cyl('keyhole', (0.03, -0.098, -0.26), 0.012, 0.02, DARK, 8).rotation_euler[0] = math.pi / 2
+    join_all('doorChain')
+
+
+def tollPlate():
+    """Brass toll plate — heavy escutcheon with a coin slot and a ring of
+    rivets, mounted on the 'it asks a toll' branch doors. ~0.3 wide."""
+    cube('plate', (0, 0.02, 0), (0.3, 0.04, 0.42), BRASS, 0.02)
+    cube('slot', (0, -0.005, 0.06), (0.14, 0.02, 0.03), DARK, 0.004)
+    # shallow embossed bezel around the slot
+    cube('bezel', (0, -0.002, 0.06), (0.18, 0.012, 0.07), BRASS, 0.008)
+    for ang in range(6):
+        a = ang * math.pi / 3
+        cyl('rivet', (0.11 * math.cos(a), -0.005, 0.11 * math.sin(a) - 0.04), 0.016, 0.02, BRASS, 8).rotation_euler[0] = math.pi / 2
+    torus('ring', (0, -0.01, -0.16), 0.045, 0.011, BRASS, rot=(math.pi / 2, 0, 0), seg=16)
+    join_all('tollPlate')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -973,9 +1015,9 @@ PIECES = {
     'keyRack': keyRack, 'counterBell': counterBell, 'luggageRack': luggageRack,
     'doorPlaque': doorPlaque,
     'hallTree': hallTree, 'umbrellaStand': umbrellaStand, 'washStand': washStand,
+    'conduitRun': conduitRun, 'sumpPump': sumpPump, 'hangingCable': hangingCable, 'ductRun': ductRun,
+    'doorChain': doorChain, 'tollPlate': tollPlate,
     'mailCart': mailCart, 'podiumLectern': podiumLectern,
-    'conduitRun': conduitRun, 'sumpPump': sumpPump,
-    'hangingCable': hangingCable, 'ductRun': ductRun,
 }
 
 def main():

@@ -788,6 +788,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     doorLeaves.set(doorId, leaf);
     leaf.userData.hinge = hinge;
     leaf.userData.closedYaw = 0;
+    leaf.userData.leafW = leafW;
   }
 
   // Lit sconce/cage fixtures put a real warm point light into the room —

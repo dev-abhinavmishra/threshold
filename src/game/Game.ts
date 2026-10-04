@@ -2254,7 +2254,8 @@ export class Game {
         // animate leaf(es)
         const built = this.streamer.get(r.index);
         if (built) {
-          const leaf = built.doorLeaves.get(d.id);
+          const leaf = built.doorLeaves.get(this.doorLeafKey(r, d));
+          this.syncLockHardware(d, leaf);
           if (leaf) {
             const hinge = leaf.userData.hinge as THREE.Group | undefined;
             if (hinge) {
@@ -2274,6 +2275,7 @@ export class Game {
                 const ex = prevRoom.spec.exits[0];
                 const k = `door-${r.index - 1}-out-${ex.wall}${ex.offset.toFixed(1)}`;
                 const leaf2 = prev.doorLeaves.get(k);
+                this.syncLockHardware(d, leaf2);
                 if (leaf2) {
                   const hinge2 = leaf2.userData.hinge as THREE.Group | undefined;
                   if (hinge2) hinge2.rotation.y = d.openT * 1.9;
@@ -2291,6 +2293,37 @@ export class Game {
       }
     }
     void dt;
+  }
+
+  /** Leaf map key for a door record — branch toll doors live on the parent's
+   *  out port, keyed by wall+offset rather than by door id. */
+  private doorLeafKey(room: RoomInstance, d: RoomInstance['doors'][number]): string {
+    const m = /^door-(-?\d+)-b(\d+)$/.exec(d.id);
+    if (m) {
+      const ex = room.spec?.exits[Number(m[2])];
+      if (ex) return `door-${room.index}-out-${ex.wall}${ex.offset.toFixed(1)}`;
+    }
+    return d.id;
+  }
+
+  /** Locked doors wear their state — a chained hasp on key-locked leaves, a
+   *  brass toll plate on 'it asks a toll' doors. Attached/detached with
+   *  d.locked so unlocking strips the hardware off the leaf. */
+  private syncLockHardware(d: RoomInstance['doors'][number], leaf: THREE.Object3D | undefined): void {
+    if (!leaf) return;
+    const hw = leaf.getObjectByName('lockHw');
+    if (!d.locked) {
+      if (hw) leaf.remove(hw);
+      return;
+    }
+    if (hw) return;
+    const toll = d.lockId === 'toll';
+    const inst = modelInstance(toll ? 'tollPlate' : 'doorChain', 0);
+    if (!inst) return;
+    inst.name = 'lockHw';
+    const leafW = (leaf.userData.leafW as number | undefined) ?? 0.9;
+    inst.position.set(leafW / 2 - 0.18, toll ? 0.05 : -0.02, 0.055);
+    leaf.add(inst);
   }
 
   /* ==================== atmosphere ==================== */

@@ -150,6 +150,8 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   sumpPump: { dir: 'sumpPump', height: 1.0, collider: [0.6, 1.0, 0.6] },
   hangingCable: { dir: 'hangingCable', height: 0.6, collider: [0, 0, 0], anchor: 'center' },
   ductRun: { dir: 'ductRun', height: 0.7, collider: [0, 0, 0], anchor: 'center' },
+  doorChain: { dir: 'doorChain', height: 0.62, collider: [0, 0, 0], anchor: 'center' },
+  tollPlate: { dir: 'tollPlate', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
