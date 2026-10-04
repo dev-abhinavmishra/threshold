@@ -773,6 +773,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     hinge.add(leaf);
     hinge.position.set(-port.width / 2 + 0.05, 0, 0);
     frame.add(hinge);
+    // Room-number plaque beside the jamb — the hotel registers every door.
+    const plaque = modelInstance('doorPlaque');
+    if (plaque && !industrial) {
+      plaque.position.set(port.width / 2 + 0.34, 1.92, 0.05);
+      frame.add(plaque);
+    }
     frame.position.set(lp.x, 0, lp.z);
     if (port.wall === 'e') frame.rotation.y = -Math.PI / 2;
     else if (port.wall === 'w') frame.rotation.y = Math.PI / 2;

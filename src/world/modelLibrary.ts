@@ -133,6 +133,10 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   // Wall-mounted / door-framing pieces must not carry colliders — a solid box
   // here seals the lane they decorate (archway lesson, sprint 183).
   transomWindow: { dir: 'transomWindow', height: 0.75, collider: [0, 0, 0], anchor: 'center' },
+  keyRack: { dir: 'keyRack', height: 1.6, collider: [0, 0, 0], anchor: 'center' },
+  doorPlaque: { dir: 'doorPlaque', height: 0.2, collider: [0, 0, 0], anchor: 'center' },
+  counterBell: { dir: 'counterBell', height: 0.1, collider: [0, 0, 0] },
+  luggageRack: { dir: 'luggageRack', height: 0.55, collider: [0.62, 0.55, 0.42] },
   bookCart: { dir: 'bookCart', height: 1.0, collider: [0.9, 1.0, 0.55] },
   radiatorFin: { dir: 'radiatorFin', height: 0.65, collider: [1.0, 0.65, 0.22] },
   dumbwaiter: { dir: 'dumbwaiter', height: 1.8, collider: [0, 0, 0], anchor: 'center' },

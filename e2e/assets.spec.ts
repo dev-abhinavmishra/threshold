@@ -14,6 +14,7 @@ const MILL_DIRS = [
   'dresser', 'nightstand', 'doorLeaf',
   'boneArch', 'toppledColumn', 'wallNiche', 'stairGate',
   'transomWindow', 'bookCart', 'radiatorFin', 'dumbwaiter', 'ironGrate',
+  'keyRack', 'counterBell', 'luggageRack', 'doorPlaque',
 ];
 
 const FIGURES = [

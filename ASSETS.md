@@ -672,3 +672,12 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `radiatorFin/` | Cast-iron column radiator | guest, lobby, corridor walls |
 | `dumbwaiter/` | Service dumbwaiter with car + pulley | maintenance, records walls |
 | `ironGrate/` | Floor drain grate, one bent bar | maintenance + crypt floors |
+
+## Blender prefab mill additions — sprint 189 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `keyRack/` | Pigeonhole key rack (8×4 cubbies, some holding folded letters, brass rail) | lobby back wall, flanking the lift |
+| `counterBell/` | Front-desk service bell (plinth, dome, plunger) | lobby front counter |
+| `luggageRack/` | Folding luggage rack with straps | lobby luggage corner, guest rooms |
+| `doorPlaque/` | Brass room-number plaque with raised digits | mounted beside every non-industrial door jamb |

@@ -20,7 +20,7 @@ export interface DebugApi {
 }
 
 interface GameInternals {
-  rooms: { index: number; origin: { x: number; y: number; z: number } }[];
+  route: { rooms: { index: number; origin: { x: number; y: number; z: number } }[] } | null;
   currentRoom: number;
   player: { pos: { x: number; y: number; z: number } };
   entities: { id: string; state: string; stateT: number }[];
@@ -35,9 +35,11 @@ export function debugApi(game: Game): DebugApi {
   const g = game as unknown as GameInternals;
   const api: DebugApi = {
     jump: (room) => {
-      const i = Math.max(0, Math.min(g.rooms.length - 1, room));
+      const arr = g.route?.rooms ?? [];
+      if (!arr.length) return;
+      const i = Math.max(0, Math.min(arr.length - 1, room));
       g.currentRoom = i;
-      const o = g.rooms[i].origin;
+      const o = arr[i].origin;
       g.player.pos.x = o.x; g.player.pos.y = o.y; g.player.pos.z = o.z;
     },
     spawn: (id) => {

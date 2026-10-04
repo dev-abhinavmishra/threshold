@@ -712,6 +712,73 @@ def ironGrate():
     join_all('ironGrate')
 
 
+
+def keyRack():
+    # Hotel front-desk key/mail pigeonhole grid — the wall of cubbies behind
+    # the counter. z is up, +y into the wall.
+    w, h, d = 2.4, 1.6, 0.22
+    cube('back', (0, d / 2 - 0.015, h / 2), (w, 0.03, h), WOOD, 0.004)
+    for sx in (-1, 1):
+        cube('side', (sx * (w / 2 - 0.025), 0, h / 2), (0.05, d, h), WOOD, 0.004)
+    for sz in (0, 1):
+        cube('top', (0, 0, sz * (h - 0.05) + 0.025), (w, d, 0.05), WOOD, 0.004)
+    cols, rows = 8, 4
+    cw, ch = (w - 0.14) / cols, (h - 0.14) / rows
+    for r in range(1, rows):
+        z = 0.07 + r * ch
+        cube('shelf', (0, 0, z), (w - 0.1, d - 0.03, 0.022), WORN, 0.002)
+    for c in range(1, cols):
+        x = -w / 2 + 0.07 + c * cw
+        cube('div', (x, 0, h / 2), (0.022, d - 0.03, h - 0.1), WORN, 0.002)
+    import random
+    random.seed(7)
+    for r in range(rows):
+        for c in range(cols):
+            if random.random() < 0.22:
+                x = -w / 2 + 0.07 + (c + 0.5) * cw
+                z = 0.07 + (r + 0.3) * ch
+                cube('letter', (x, 0.02, z), (cw * 0.55, 0.015, ch * 0.3), CLOTH, 0.001)
+    cube('rail', (0, 0, h + 0.02), (w + 0.06, d + 0.03, 0.05), IRON, 0.003)
+    join_all('keyRack')
+
+
+def counterBell():
+    # Small desk-service bell: dome + plunger on a low plinth.
+    cyl('plinth', (0, 0, 0.015), 0.045, 0.03, IRON)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=20, ring_count=10, radius=0.038, location=(0, 0, 0.045))
+    dome = bpy.context.object; dome.name = 'dome'; dome.scale.z = 0.72
+    dome.data.materials.append(IRON)
+    cyl('plunger', (0, 0, 0.085), 0.006, 0.02, WORN, 8)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.011, location=(0, 0, 0.098))
+    knob = bpy.context.object; knob.name = 'knob'; knob.data.materials.append(IRON)
+    join_all('counterBell')
+
+
+def luggageRack():
+    # Folded-iron luggage stand: two X frames + webbing straps across the top.
+    w, h, d = 0.62, 0.55, 0.42
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cube('leg', (sx * (w / 2 - 0.03), sy * (d / 2 - 0.03), h / 2), (0.03, 0.03, h), IRON, 0.003)
+            leg.rotation_euler[1] = sy * 0.08
+    for i in range(4):
+        y = -d / 2 + 0.08 + i * (d - 0.16) / 3
+        cube('strap', (0, y, h - 0.02), (w - 0.04, 0.06, 0.035), CLOTH, 0.002)
+    for sx in (-1, 1):
+        cube('siderail', (sx * (w / 2 - 0.03), 0, h * 0.55), (0.028, d - 0.05, 0.03), IRON, 0.002)
+    join_all('luggageRack')
+
+def doorPlaque():
+    # Brass room-number plaque — small raised-rim plate mounted beside a door.
+    w, h, d = 0.34, 0.2, 0.028
+    cube('plate', (0, 0, 0), (w, d, h), IRON, 0.006)
+    cube('rimT', (0, -0.002, h / 2 - 0.014), (w - 0.04, d + 0.004, 0.014), WORN, 0.003)
+    cube('rimB', (0, -0.002, -h / 2 + 0.014), (w - 0.04, d + 0.004, 0.014), WORN, 0.003)
+    # three raised digit strokes so the plate reads as numbered from a distance
+    for i, sx in enumerate((-0.09, 0.0, 0.09)):
+        cube('digit', (sx, -d / 2 - 0.004, 0), (0.045, 0.006, h * 0.5), WORN, 0.002)
+    join_all('doorPlaque')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -722,6 +789,8 @@ PIECES = {
     'transomWindow': transomWindow, 'bookCart': bookCart,
     'radiatorFin': radiatorFin, 'dumbwaiter': dumbwaiter,
     'ironGrate': ironGrate,
+    'keyRack': keyRack, 'counterBell': counterBell, 'luggageRack': luggageRack,
+    'doorPlaque': doorPlaque,
 }
 
 def main():
