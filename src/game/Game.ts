@@ -4802,6 +4802,16 @@ export class Game {
       milestone: 'gallery', safe: 'safe', underscript: 'under',
     };
     this.audio.setZone(ZONE_MAP[zoneRoom?.biome ?? 'corridor'] ?? 'corridor');
+    // per-room wet trim — volume sets the tail's size, soft floors and paper
+    // stacks eat it, darkness reads emptier.
+    if (zoneRoom) {
+      const vol = zoneRoom.width * zoneRoom.depth * zoneRoom.height;
+      let wet = clamp(Math.sqrt(vol) / 9, 0.5, 1.5);
+      if (zoneRoom.floorMaterial === 'carpet') wet *= 0.75;
+      else if (zoneRoom.floorMaterial === 'paper') wet *= 0.7;
+      if (zoneRoom.darkRoom) wet *= 1.15;
+      this.audio.setWetMul(wet);
+    }
     // occlusion: fraction of nearby doors closed — closed door behind muffles the world
     let closed = 0, total = 0;
     for (const d of this.doorsAt(this.player.pos)) { total++; if (!d.opening) closed++; }

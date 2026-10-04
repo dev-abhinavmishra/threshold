@@ -188,6 +188,8 @@ export class AudioManager {
   private wetGain: GainNode | null = null;
   private occlusionFilter: BiquadFilterNode | null = null;
   private zone: ZoneKind = 'corridor';
+  /** Per-room wet trim — multiplies the zone's base wet level. */
+  private wetMul = 1;
   private occlusion = 0;
   captionsEnabled = true;
 
@@ -267,7 +269,15 @@ export class AudioManager {
     this.zone = z;
     if (!this.ctx || !this.convolver || !this.wetGain) return;
     this.convolver.buffer = this.impulse(ZONE_TAIL[z], ZONE_DAMP[z]);
-    this.wetGain.gain.setTargetAtTime(ZONE_WET[z], this.ctx.currentTime, 0.4);
+    this.wetGain.gain.setTargetAtTime(ZONE_WET[z] * this.wetMul, this.ctx.currentTime, 0.4);
+  }
+
+  /** Per-room wet trim — room volume, floor material, and darkness reshape
+   *  the send so a closet and a cathedral don't share one tail. */
+  setWetMul(m: number): void {
+    if (!this.ctx || !this.wetGain || Math.abs(m - this.wetMul) < 0.02) return;
+    this.wetMul = m;
+    this.wetGain.gain.setTargetAtTime(ZONE_WET[this.zone] * m, this.ctx.currentTime, 0.6);
   }
 
   /** 0 = open space, 1 = listener sealed behind closed doors. */
