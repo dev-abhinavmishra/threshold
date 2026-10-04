@@ -11,3 +11,7 @@
 | 7 | low | Player sprint has no stamina tradeoff; hiding is binary | Closed — stamina drain/regen shipped; door intent (slam/creep) added sprint 95 |
 | 8 | info | QA renders use BLENDER_WORKBENCH — not the game renderer | Expected |
 | 9 | info | E2E runs on SwiftShader — screenshots darker/noisier than real GPU | Expected |
+| 10 | medium | `EntityCtx.now` captured `clock.time` by value at spawn — every `c.now` timer (corridor pause/near-miss, curator recency, minigame windows) compared against a constant | Fixed — sprint 179 live getter |
+| 11 | medium | 'watch' anim gate inverted — watches crept only while *observed*, contradicting their SCARES entry | Fixed — sprint 177 |
+| 12 | medium | Loot pass rolled `contains` over `arrivalRegister` meta (~50% of seeds) — register read "Take Imprints", arrival objective unsatisfiable | Fixed — sprint 180 skip-guard + seed regression test |
+| 13 | low | `?debug` panel renders but `window.__thresholdGame` handle is dev-build only — production preview builds can't be probed the same way | Expected |
