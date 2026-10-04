@@ -4600,6 +4600,18 @@ export class Game {
 
     // streamer + interactables
     this.streamer.update(this.activeRooms(), this.currentRoom, 1, this.space === 'main' ? this.route!.branchRooms : []);
+    // Shadow budget: the eligible room light casts only in the player's room —
+    // point-light shadows render the scene six times, so streaming several
+    // shadowed rooms would multiply draw calls per frame.
+    const shadowsOn = QUALITY[this.settings.quality].shadowMap;
+    for (const i of this.streamer.builtIndices) {
+      const b = this.streamer.get(i);
+      if (!b) continue;
+      for (const l of b.lights) {
+        const want = shadowsOn && i === this.currentRoom && l.userData.shadowEligible === true;
+        if (l.castShadow !== want) l.castShadow = want;
+      }
+    }
     this.rebuildInteractables();
     const eye = v3();
     this.player.eyePos(eye);

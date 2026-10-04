@@ -1544,6 +1544,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     } catch { for (const e of list) passthrough.push(e.spec); }
   }
 
+  // Bakeable static props merge into one mesh per material at the end —
+  // named props (Game animates them) and anything carrying userData.anim
+  // stay live objects.
+  const bakeable: THREE.Object3D[] = [];
   for (const p of passthrough) {
     try {
       const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
@@ -1566,6 +1570,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'rug') built.group.name = `rug-${room.index}`;
       if (p.kind === 'chandelier') built.group.name = `chan-${room.index}`;
       group.add(built.group);
+      let animated = false;
+      built.group.traverse((o) => { if (o.userData.anim) animated = true; });
+      if (!built.group.name && !animated) bakeable.push(built.group);
       wireColliders(built);
       groundShadow(built, p.x, p.z, p.y ?? 0);
       if (p.kind === 'puddle' || p.kind === 'steamVent') dripSpots.push([p.x, p.z]);
@@ -1589,6 +1596,42 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     } catch {
       // skip broken prop rather than fail room
+    }
+  }
+
+  // Static-prop bake: merge every bakeable prop's meshes into one mesh per
+  // material, in room-local space. Cuts draw calls sharply in dressed rooms —
+  // dozens of prop groups become a handful of merged meshes.
+  if (bakeable.length) {
+    group.updateMatrixWorld(true);
+    const buckets = new Map<THREE.Material, { geos: THREE.BufferGeometry[]; cast: boolean }>();
+    for (const grp of bakeable) {
+      grp.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || Array.isArray(m.material)) return;
+        const mat = m.material as THREE.Material;
+        const b = buckets.get(mat) ?? { geos: [], cast: m.castShadow };
+        b.geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
+        buckets.set(mat, b);
+      });
+      grp.removeFromParent();
+    }
+    for (const [mat, b] of buckets) {
+      let merged: THREE.BufferGeometry | null = null;
+      try { merged = b.geos.length === 1 ? b.geos[0] : mergeGeometries(b.geos, false); } catch { merged = null; }
+      if (!merged) {
+        for (const geo of b.geos) {
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = b.cast;
+          mesh.receiveShadow = true;
+          group.add(mesh);
+        }
+        continue;
+      }
+      const mesh = new THREE.Mesh(merged, mat);
+      mesh.castShadow = b.cast;
+      mesh.receiveShadow = true;
+      group.add(mesh);
     }
   }
 
@@ -1769,7 +1812,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     pl.userData.ls = ls;
     pl.userData.baseIntensity = pl.intensity;
     if (quality === 'high' && !shadowAssigned && !room.darkRoom) {
-      pl.castShadow = true;
+      // Eligible to cast — Game enables castShadow only for the room the
+      // player occupies; a point-light shadow is six scene renders, so one
+      // active shadow light is the budget.
+      pl.userData.shadowEligible = true;
       pl.shadow.mapSize.set(512, 512);
       pl.shadow.bias = -0.01;
       pl.shadow.camera.near = 0.2;
