@@ -23,6 +23,9 @@ const MILL_DIRS = [
   'ovalMirror',
   'curtainRod', 'curtainLong', 'headboard', 'stoveRange', 'potRack',
   'dishDrainer', 'linenShelf', 'choppingBlock', 'copperSet', 'manglePress',
+  'chapelPew', 'prayerKneeler', 'chapelAltar', 'votiveStand',
+  'candelabrum', 'settee', 'dressingScreen', 'vanityTable', 'sideboard',
+  'writingDesk', 'globeStand',
 ];
 
 const FIGURES = [

@@ -722,3 +722,14 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `choppingBlock/` | Butcher's chopping block (knife) | u-break |
 | `copperSet/` | Wall-hung copper pan set | u-break |
 | `manglePress/` | Laundry mangle (twin rollers, crank, tray) | u-break, laundry-hall |
+| `chapelPew/` | Oak pew (reclined back, hymnal ledge, panelled ends) | gallery-chapel, safe-sanctuary |
+| `prayerKneeler/` | Prie-dieu (kneel pad, sloped shelf, rest panel) | gallery-chapel, safe-sanctuary |
+| `chapelAltar/` | Stone altar (mensa slab, velvet frontal, candle sockets, missal) | gallery-chapel, safe-sanctuary |
+| `votiveStand/` | Tiered votive rack (3 raked trays, 18 cups, sand tray) | gallery-chapel, safe-sanctuary, gallery-cathedral |
+| `candelabrum/` | Five-arm floor candelabrum (brass, drip pans, wax) | gallery-chapel, safe-sanctuary, gallery-cathedral |
+| `settee/` | Upholstered two-seat (rolled arms, bun feet) | suite-split, guest-suite-grand, guest-reception, lobby-waiting |
+| `dressingScreen/` | Three-panel folding screen (linen panels, zigzag fold) | guest-twin, suite-split, guest-suite-grand |
+| `vanityTable/` | Dressing vanity (drawers, tilted mirror, stool) | guest-standard, suite-split, guest-two-baths, guest-suite-grand |
+| `sideboard/` | Serving sideboard (paneled doors, drawers, backsplash) | lobby-waiting, gallery-banquet, gallery-chapel |
+| `writingDesk/` | Pedestal desk (leather top, twin pedestals, inkstand) | records-office, records-bullpen, guest-suite-grand |
+| `globeStand/` | Tilted globe in brass meridian on tripod stand | library-stacks, records-office, gallery-atrium, guest-suite-grand |

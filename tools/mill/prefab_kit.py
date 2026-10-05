@@ -35,9 +35,12 @@ WOOD = None
 WORN = None
 CLOTH = None
 VELVET = None
+CANDLE = None
+MIRROR = None
+LINEN = None
 
 def init_mats():
-    global STONE, DARK, IRON, WOOD, WORN, CLOTH, BRASS, VELVET
+    global STONE, DARK, IRON, WOOD, WORN, CLOTH, BRASS, VELVET, CANDLE, MIRROR, LINEN
     STONE = mat('stone', (0.42, 0.38, 0.33))
     DARK = mat('darkwood', (0.16, 0.10, 0.07), rough=0.7)
     WOOD = mat('oakwood', (0.32, 0.22, 0.13), rough=0.8)
@@ -46,6 +49,9 @@ def init_mats():
     CLOTH = mat('bookcloth', (0.2, 0.24, 0.2), rough=0.9)
     BRASS = mat('brass', (0.42, 0.30, 0.12), rough=0.35, metal=0.9)
     VELVET = mat('velvet', (0.30, 0.07, 0.08), rough=0.95)
+    CANDLE = mat('wax', (0.83, 0.79, 0.66), rough=0.55)
+    MIRROR = mat('mirror', (0.6, 0.65, 0.7), rough=0.1, metal=1.0)
+    LINEN = mat('linen', (0.72, 0.66, 0.55), rough=0.9)
 
 # ---------- build helpers ----------
 
@@ -1651,6 +1657,272 @@ def manglePress():
     join_all('manglePress')
 
 
+def sphere(name, loc, r, material, seg=24, ring=16):
+    bpy.ops.mesh.primitive_uv_sphere_add(
+        segments=seg, ring_count=ring, radius=r, location=loc)
+    o = bpy.context.object
+    o.name = name
+    o.data.materials.append(material)
+    return o
+
+
+def chapelPew():
+    """Long oak pew — seat slab, reclined back with book ledge, panelled
+    ends with stepped crown. Front is -Y: faces +Z at yaw 0."""
+    w, d = 2.2, 0.55
+    seat_z = 0.46
+    # solid end cheeks with stepped crown
+    for sx in (-1, 1):
+        x = sx * (w / 2 - 0.035)
+        cube('end', (x, 0, 0.42), (0.06, d, 0.84), WOOD, 0.012)
+        cube('endCrown', (x, 0.06, 0.88), (0.065, d - 0.12, 0.12), WOOD, 0.02)
+    # seat + under-rail
+    cube('seat', (0, -0.03, seat_z), (w - 0.1, d - 0.1, 0.05), WOOD, 0.01)
+    cube('rail', (0, -d / 2 + 0.06, 0.2), (w - 0.12, 0.04, 0.08), DARK, 0.008)
+    # back: reclined slab + cap + hymnal ledge on its rear
+    back = cube('back', (0, d / 2 - 0.04, 0.72), (w - 0.1, 0.05, 0.5), WOOD, 0.012)
+    back.rotation_euler[0] = -0.10
+    cap = cube('backCap', (0, d / 2 + 0.03, 0.96), (w - 0.1, 0.07, 0.06), DARK, 0.015)
+    cap.rotation_euler[0] = -0.10
+    ledge = cube('ledge', (0, d / 2 + 0.08, 0.62), (w - 0.14, 0.12, 0.035), DARK, 0.008)
+    ledge.rotation_euler[0] = -0.10
+    join_all('chapelPew')
+
+
+def prayerKneeler():
+    """Prie-dieu: kneel pad, sloped arm shelf, upright rest panel, solid
+    side cheeks. Front -Y faces +Z at yaw 0."""
+    w, h, d = 0.62, 0.98, 0.5
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.03), 0, h / 2 - 0.04), (0.055, d - 0.06, h - 0.08), DARK, 0.012)
+    cube('base', (0, 0, 0.05), (w - 0.08, d - 0.08, 0.09), WOOD, 0.008)
+    cube('kneel', (0, -0.04, 0.24), (w - 0.14, 0.3, 0.09), VELVET, 0.03)
+    shelf = cube('shelf', (0, -d / 2 + 0.12, h - 0.08), (w - 0.1, 0.24, 0.05), WOOD, 0.01)
+    shelf.rotation_euler[0] = 0.42
+    cube('rest', (0, -d / 2 + 0.045, h - 0.34), (w - 0.12, 0.045, 0.3), VELVET, 0.015)
+    join_all('prayerKneeler')
+
+
+def chapelAltar():
+    """Stone altar table — plinth, paneled base, mensa slab with lip,
+    velvet frontal, twin candle sockets, tilted missal stand."""
+    w, h, d = 1.7, 1.05, 0.72
+    cube('plinth', (0, 0, 0.055), (w + 0.12, d + 0.1, 0.11), STONE, 0.02)
+    cube('base', (0, 0.02, h / 2), (w - 0.16, d - 0.14, h - 0.2), STONE, 0.02)
+    # recessed panel on the front of the base
+    cube('panel', (0, -d / 2 + 0.06, h / 2), (w - 0.4, 0.03, h - 0.4), DARK, 0.015)
+    cube('slab', (0, 0, h - 0.06), (w, d, 0.12), STONE, 0.018)
+    cube('lip', (0, 0, h - 0.14), (w - 0.14, d - 0.1, 0.06), STONE, 0.012)
+    # velvet frontal hanging over the front edge of the slab
+    cube('frontal', (0, -d / 2 - 0.01, h - 0.4), (w - 0.34, 0.02, 0.5), VELVET, 0.008)
+    cube('frontalTop', (0, -d / 2 + 0.12, h - 0.005), (w - 0.34, 0.26, 0.02), VELVET, 0.006)
+    # candle sockets on the slab
+    for sx in (-1, 1):
+        cyl('socket', (sx * (w / 2 - 0.24), 0, h + 0.025), 0.04, 0.05, BRASS, 12)
+        cyl('wax', (sx * (w / 2 - 0.24), 0, h + 0.17), 0.022, 0.24, CANDLE, 10)
+    # tilted missal stand
+    cube('missalPost', (0, 0.1, h + 0.07), (0.06, 0.06, 0.14), DARK, 0.008)
+    stand = cube('missal', (0, 0.1, h + 0.15), (0.34, 0.24, 0.03), DARK, 0.008)
+    stand.rotation_euler[0] = 0.5
+    join_all('chapelAltar')
+
+
+def votiveStand():
+    """Tiered votive stand — iron A-frame, three raked trays of small
+    candle cups over a sand tray. Reads as chapel furniture instantly."""
+    w, h, d = 0.62, 1.18, 0.42
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cyl('leg', (sx * (w / 2 - 0.03), sy * (d / 2 - 0.03), h / 2 - 0.1),
+                      0.016, h - 0.16, IRON, 8)
+            leg.rotation_euler[1] = sx * 0.1
+            leg.rotation_euler[0] = sy * -0.1
+    cube('sandTray', (0, 0, 0.18), (w - 0.14, d - 0.1, 0.05), IRON, 0.008)
+    cube('sand', (0, 0, 0.215), (w - 0.2, d - 0.16, 0.02), STONE, 0.004)
+    for tier in range(3):
+        z = 0.56 + tier * 0.2
+        tray = cube('tray', (0, 0.02 - tier * 0.03, z), (w - 0.12, 0.2, 0.03), IRON, 0.006)
+        tray.rotation_euler[0] = 0.38
+        for i in range(6):
+            x = -w / 2 + 0.12 + i * (w - 0.24) / 5
+            cup = cyl('cup', (x, 0.02 - tier * 0.03, z + 0.05), 0.018, 0.045, IRON, 8)
+            cup.rotation_euler[0] = 0.38
+            wax = cyl('wax', (x, 0.02 - tier * 0.03, z + 0.08), 0.013, 0.03, CANDLE, 8)
+            wax.rotation_euler[0] = 0.38
+    join_all('votiveStand')
+
+
+def candelabrum():
+    """Floor candelabrum — brass tripod pole, five scroll arms with drip
+    pans and wax candles. Candle flames are lit by the light rig."""
+    h = 1.5
+    # tripod feet
+    for i in range(3):
+        a = i * 2 * math.pi / 3
+        pipe_seg('foot', (0, 0, 0.1), (math.cos(a) * 0.24, math.sin(a) * 0.24, 0.0), 0.018, BRASS)
+        sphere('ball', (math.cos(a) * 0.24, math.sin(a) * 0.24, 0.0), 0.03, BRASS, 12, 8)
+    cyl('pole', (0, 0, h / 2), 0.028, h, BRASS, 12)
+    sphere('knop', (0, 0, 0.55), 0.05, BRASS, 14, 10)
+    sphere('knop2', (0, 0, 0.9), 0.045, BRASS, 14, 10)
+    # five arms off the crown hub
+    hub_z = h - 0.22
+    cyl('hub', (0, 0, hub_z), 0.07, 0.1, BRASS, 14)
+    for i in range(5):
+        a = i * 2 * math.pi / 5
+        ca, sa = math.cos(a), math.sin(a)
+        pipe_seg('armOut', (ca * 0.03, sa * 0.03, hub_z), (ca * 0.2, sa * 0.2, hub_z + 0.06), 0.014, BRASS)
+        pipe_seg('armUp', (ca * 0.2, sa * 0.2, hub_z + 0.06), (ca * 0.24, sa * 0.24, hub_z + 0.22), 0.014, BRASS)
+        cyl('pan', (ca * 0.24, sa * 0.24, hub_z + 0.24), 0.045, 0.015, BRASS, 12)
+        cyl('wax', (ca * 0.24, sa * 0.24, hub_z + 0.33), 0.018, 0.16, CANDLE, 8)
+    join_all('candelabrum')
+
+
+def settee():
+    """Upholstered two-seat settee — velvet seat/back cushions on a wood
+    frame, rolled arms, turned bun feet."""
+    w, d = 1.65, 0.78
+    cube('frame', (0, 0, 0.26), (w - 0.2, d - 0.12, 0.26), DARK, 0.02)
+    cube('seat', (0, -0.03, 0.47), (w - 0.34, d - 0.24, 0.16), VELVET, 0.05)
+    back = cube('back', (0, d / 2 - 0.1, 0.72), (w - 0.24, 0.14, 0.5), VELVET, 0.05)
+    back.rotation_euler[0] = -0.1
+    cube('backBoard', (0, d / 2 - 0.02, 0.68), (w - 0.2, 0.05, 0.46), DARK, 0.02)
+    for sx in (-1, 1):
+        cube('arm', (sx * (w / 2 - 0.09), -0.02, 0.6), (0.17, d - 0.14, 0.32), VELVET, 0.05)
+        cyl('armRoll', (sx * (w / 2 - 0.09), 0.0, 0.78), 0.1, d - 0.18, VELVET, 14).rotation_euler[0] = math.pi / 2
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('foot', (sx * (w / 2 - 0.16), sy * (d / 2 - 0.12), 0.06), 0.045, 0.12, DARK, 12)
+            sphere('footBall', (sx * (w / 2 - 0.16), sy * (d / 2 - 0.12), 0.03), 0.05, DARK, 12, 8)
+    join_all('settee')
+
+
+def dressingScreen():
+    """Three-panel folding screen — dark frame, inset linen panels, hinged
+    in a shallow zigzag. Panels run ~1.9 tall: door-lane safe by height."""
+    panel_w, h = 0.62, 1.9
+    gap = 0.015
+    angles = (-0.42, 0.0, 0.42)
+    xs = (-(panel_w + gap), 0, panel_w + gap)
+    for x, ang in zip(xs, angles):
+        parts = [
+            cube('frame', (x, 0, h / 2), (panel_w, 0.045, h), DARK, 0.012),
+            cube('panel', (x, 0, h / 2), (panel_w - 0.14, 0.02, h - 0.18), LINEN, 0.01),
+            cube('railTop', (x, 0, h - 0.045), (panel_w, 0.06, 0.09), WOOD, 0.01),
+            cube('railBot', (x, 0, 0.05), (panel_w, 0.06, 0.1), WOOD, 0.01),
+        ]
+        # fold each panel around Z — shallow zigzag when viewed from above
+        for o in parts:
+            o.rotation_euler[2] = ang
+            o.location.y = -math.sin(ang) * x
+    for sx in (-1, 1):
+        cube('foot', (sx * (panel_w + gap + panel_w / 2 - 0.1), 0, 0.02), (0.2, 0.3, 0.04), DARK, 0.01)
+    join_all('dressingScreen')
+
+
+def vanityTable():
+    """Dressing vanity — slim table with two drawers, tilted framed mirror
+    on posts, tucked stool. Front -Y."""
+    w, d = 1.15, 0.46
+    top_z = 0.76
+    cube('top', (0, 0, top_z), (w, d, 0.05), WOOD, 0.015)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cube('leg', (sx * (w / 2 - 0.05), sy * (d / 2 - 0.05), top_z / 2 - 0.01),
+                       (0.06, 0.06, top_z - 0.05), WOOD, 0.012)
+            leg.rotation_euler[1] = sx * 0.04
+            leg.rotation_euler[0] = sy * -0.04
+    # two drawers under the top
+    for sx in (-1, 1):
+        cube('drawer', (sx * (w / 4 - 0.01), -d / 2 - 0.005, top_z - 0.11), (w / 2 - 0.12, 0.03, 0.14), DARK, 0.008)
+        cyl('pull', (sx * (w / 4 - 0.01), -d / 2 - 0.035, top_z - 0.11), 0.015, 0.03, BRASS, 8).rotation_euler[0] = math.pi / 2
+    # mirror posts + tilted framed mirror
+    for sx in (-1, 1):
+        cyl('post', (sx * (w / 2 - 0.06), 0.08, top_z + 0.42), 0.016, 0.85, DARK, 10)
+        sphere('finial', (sx * (w / 2 - 0.06), 0.08, top_z + 0.86), 0.03, BRASS, 10, 8)
+    frame = cube('mFrame', (0, 0.08, top_z + 0.46), (0.62, 0.045, 0.7), DARK, 0.02)
+    face = cube('mGlass', (0, 0.055, top_z + 0.46), (0.52, 0.02, 0.6), MIRROR, 0.015)
+    for o in (frame, face):
+        o.rotation_euler[0] = -0.1
+    # stool tucked under: low cushion on splayed legs
+    cube('stoolSeat', (0, -0.16, 0.3), (0.42, 0.34, 0.08), VELVET, 0.03)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('stoolLeg', (sx * 0.16, -0.16 + sy * 0.12, 0.14), 0.02, 0.28, WOOD, 8)
+    join_all('vanityTable')
+
+
+def sideboard():
+    """Corridor sideboard — long low serving cabinet, twin paneled doors,
+    three top drawers, backsplash rail. Front -Y."""
+    w, h, d = 1.8, 0.98, 0.5
+    cube('body', (0, 0, h / 2 - 0.08), (w - 0.08, d - 0.06, h - 0.16), WOOD, 0.015)
+    cube('top', (0, 0, h - 0.05), (w, d + 0.02, 0.06), WOOD, 0.012)
+    cube('splash', (0, d / 2 - 0.02, h + 0.06), (w, 0.04, 0.22), DARK, 0.012)
+    # three top drawers
+    for i in range(3):
+        x = -w / 3 + i * (w / 3)
+        cube('drawer', (x, -d / 2 + 0.005, h - 0.2), (w / 3 - 0.16, 0.03, 0.14), DARK, 0.008)
+        cyl('dpull', (x, -d / 2 - 0.025, h - 0.2), 0.014, 0.03, BRASS, 8).rotation_euler[0] = math.pi / 2
+    # twin doors below
+    for sx in (-1, 1):
+        cube('door', (sx * w / 4, -d / 2 + 0.005, 0.36), (w / 2 - 0.1, 0.03, 0.52), DARK, 0.01)
+        cube('panelIn', (sx * w / 4, -d / 2 - 0.02, 0.36), (w / 2 - 0.26, 0.02, 0.36), WOOD, 0.02)
+        cyl('knob', (sx * (w / 4 - 0.14), -d / 2 - 0.045, 0.36), 0.02, 0.03, BRASS, 10).rotation_euler[0] = math.pi / 2
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cube('foot', (sx * (w / 2 - 0.08), sy * (d / 2 - 0.08), 0.045), (0.07, 0.07, 0.09), DARK, 0.01)
+    join_all('sideboard')
+
+
+def writingDesk():
+    """Pedestal writing desk — twin drawer pedestals, leather-inlaid top,
+    modesty panel, inkstand. For study/records rooms."""
+    w, h, d = 1.5, 0.78, 0.8
+    cube('top', (0, 0, h - 0.025), (w, d, 0.05), WOOD, 0.015)
+    cube('leather', (0, 0, h + 0.003), (w - 0.3, d - 0.24, 0.015), CLOTH, 0.01)
+    for sx in (-1, 1):
+        px = sx * (w / 2 - 0.24)
+        cube('ped', (px, 0, h / 2 - 0.06), (0.44, d - 0.1, h - 0.12), WOOD, 0.012)
+        for i in range(3):
+            z = 0.2 + i * 0.19
+            cube('drawer', (px, -d / 2 + 0.045, z), (0.36, 0.03, 0.15), DARK, 0.008)
+            cyl('pull', (px, -d / 2 + 0.015, z), 0.014, 0.03, BRASS, 8).rotation_euler[0] = math.pi / 2
+    cube('modesty', (0, d / 2 - 0.14, h / 2 - 0.05), (w - 0.56, 0.05, h - 0.3), WOOD, 0.01)
+    # inkstand on top
+    cube('inkBase', (0.35, -0.18, h + 0.02), (0.26, 0.12, 0.04), DARK, 0.008)
+    for sx in (-1, 1):
+        cyl('inkPot', (0.35 + sx * 0.07, -0.18, h + 0.06), 0.025, 0.05, BRASS, 10)
+    join_all('writingDesk')
+
+
+def globeStand():
+    """Standing globe — tilted sphere in a brass meridian ring on a tall
+    tripod stand. Study piece."""
+    r = 0.22
+    cz = 1.02
+    tilt = math.radians(23.5)
+    globe = sphere('globe', (0, 0, cz), r, CLOTH, 28, 18)
+    # axis pin through the tilted poles
+    pin = cyl('axis', (0, 0, cz), 0.008, r * 2 + 0.16, BRASS, 8)
+    pin.rotation_euler[1] = tilt
+    globe.rotation_euler[1] = tilt
+    # meridian half-ring around the tilted axis
+    ring = torus('meridian', (0, 0, cz), r + 0.045, 0.012, BRASS, (0, 0, 0), 32)
+    ring.rotation_euler[0] = math.pi / 2
+    ring.rotation_euler[1] = tilt
+    # stand: pole, tripod, cradle ring
+    cyl('pole', (0, 0, 0.4), 0.03, 0.8, DARK, 12)
+    ring2 = torus('cradle', (0, 0, 0.62), r + 0.02, 0.02, DARK, (0, 0, 0), 28)
+    ring2.rotation_euler[0] = math.pi / 2
+    for i in range(3):
+        a = i * 2 * math.pi / 3 + math.pi / 6
+        leg = cyl('leg', (math.cos(a) * 0.14, math.sin(a) * 0.14, 0.2), 0.018, 0.42, DARK, 8)
+        leg.rotation_euler[1] = math.cos(a) * 0.45
+        leg.rotation_euler[0] = -math.sin(a) * 0.45
+    sphere('finialTop', (0, 0, 0.72), 0.04, BRASS, 12, 8)
+    join_all('globeStand')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1678,6 +1950,12 @@ PIECES = {
     'dishDrainer': dishDrainer, 'linenShelf': linenShelf,
     'choppingBlock': choppingBlock, 'copperSet': copperSet,
     'manglePress': manglePress,
+    'chapelPew': chapelPew, 'prayerKneeler': prayerKneeler,
+    'chapelAltar': chapelAltar, 'votiveStand': votiveStand,
+    'candelabrum': candelabrum, 'settee': settee,
+    'dressingScreen': dressingScreen, 'vanityTable': vanityTable,
+    'sideboard': sideboard, 'writingDesk': writingDesk,
+    'globeStand': globeStand,
 }
 
 def main():

@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 217)
+CURRENT STATE (as of sprint 218)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -307,6 +307,22 @@ CURRENT STATE (as of sprint 217)
   focused like a player would; (e) the runner entity is REMOVED from
   g.entities on done — re-spawn for a second leg rather than reusing the
   ref.
+  Sprint 218 chapel/study mill batch (11 pieces, new gallery-chapel
+  room): chapelPew, prayerKneeler, chapelAltar, votiveStand,
+  candelabrum, settee, dressingScreen, vanityTable, sideboard,
+  writingDesk, globeStand — all in tools/mill/prefab_kit.py (new mats
+  wax/mirror/linen). New room gallery-chapel (11×14×5, gallery biome,
+  weight 5, minRoom 28): twin pew blocks on a centre aisle, kneelers,
+  altar + candelabra + votive racks in the chancel, arches, high
+  windowArches. safe-sanctuary converted to the same kit (pews face
+  the altar south — yaw flips with room layout). Dressing added to
+  guest-standard/-twin/-two-baths/suite-split/suite-grand/reception,
+  lobby-waiting, records-office/-bullpen, library-stacks, gallery-
+  atrium/-banquet/-cathedral (14 templates total). LEARNINGS: milled
+  pieces need PropKind entries in spec.ts + MODEL_FOR in modelLibrary
+  + MILL_DIRS in assets.spec.ts + ASSETS.md table (4 registration
+  points); solid-furniture hiding spots must be losAlcove/cabinet —
+  underFurniture only under furniture with a real gap.
   Sprint 217 adaptive post budget (src/game/postGovernor.ts): fps EMA
   governor sheds post steps under sustained low fps — SSAO → bloom →
   render scale 0.7 — and restores one step at a time with hysteresis

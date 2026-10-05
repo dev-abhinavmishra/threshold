@@ -177,6 +177,17 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   choppingBlock: { dir: 'choppingBlock', height: 0.95, collider: [1.0, 0.95, 0.65] },
   copperSet: { dir: 'copperSet', height: 0.38, collider: [0, 0, 0] },
   manglePress: { dir: 'manglePress', height: 1.2, collider: [1.0, 1.2, 0.6] },
+  chapelPew: { dir: 'chapelPew', height: 1.0, collider: [2.2, 1.0, 0.6] },
+  prayerKneeler: { dir: 'prayerKneeler', height: 0.98, collider: [0.62, 0.98, 0.5] },
+  chapelAltar: { dir: 'chapelAltar', height: 1.32, collider: [1.7, 1.05, 0.72] },
+  votiveStand: { dir: 'votiveStand', height: 1.18, collider: [0.62, 1.18, 0.42] },
+  candelabrum: { dir: 'candelabrum', height: 1.5, collider: [0.5, 1.5, 0.5] },
+  settee: { dir: 'settee', height: 0.95, collider: [1.65, 0.95, 0.78] },
+  dressingScreen: { dir: 'dressingScreen', height: 1.9, collider: [1.9, 1.9, 0.35] },
+  vanityTable: { dir: 'vanityTable', height: 1.7, collider: [1.15, 1.7, 0.55] },
+  sideboard: { dir: 'sideboard', height: 1.2, collider: [1.8, 1.2, 0.5] },
+  writingDesk: { dir: 'writingDesk', height: 0.82, collider: [1.5, 0.82, 0.8] },
+  globeStand: { dir: 'globeStand', height: 1.3, collider: [0.5, 1.3, 0.5] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
