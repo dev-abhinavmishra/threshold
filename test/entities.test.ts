@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner } from '../src/entities/corridor';
-import { Witness, Hollow, Lurker } from '../src/entities/room';
+import { Witness, Hollow, Lurker, Margin, Husk } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -169,6 +169,42 @@ describe('Witness', () => {
     w.dispose();
     const removes = (ctx.removeEntityMesh as ReturnType<typeof vi.fn>).mock.calls.length;
     expect(removes).toBe(adds);
+  });
+});
+
+describe('Margin misdirection', () => {
+  it('emits positional rustles from the mirrored edge while unseen', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const m = new Margin();
+    m.spawn(ctx);
+    // Margin sits at yaw±1.35 — facing ~cos(1.35)≈0.22 < 0.35, so the
+    // unseen (closing) branch drives the rustle timer.
+    const ctxMut = ctx as { now: number };
+    let t = 0;
+    for (let i = 0; i < 80 && m.state !== 'done'; i++) { ctxMut.now = t; m.update(0.05); t += 0.05; }
+    const rustles = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.filter((c) => c[0] === 'margin-rustle');
+    expect(rustles.length).toBeGreaterThanOrEqual(2);
+    // Each rustle is positional (a real Vec3), not the entity's null cue.
+    for (const r of rustles) expect(r[1]).not.toBeNull();
+    m.dispose();
+  });
+});
+
+describe('Husk presence', () => {
+  it('ducks the room tone when it stirs', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, duckTone: vi.fn() });
+    const h = new Husk();
+    h.spawn(ctx);
+    // Crowd it: proximity anger crosses the stir threshold in ~0.3s.
+    const tp = h.threatPos();
+    if (tp) { ctx.player.pos.x = tp.x; ctx.player.pos.z = tp.z; }
+    const ctxMut = ctx as { now: number };
+    let t = 0;
+    for (let i = 0; i < 20; i++) { ctxMut.now = t; h.update(0.05); t += 0.05; }
+    expect((ctx.duckTone as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThanOrEqual(1);
+    h.dispose();
   });
 });
 

@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 206)
+CURRENT STATE (as of ~sprint 207)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -173,12 +173,21 @@ CURRENT STATE (as of ~sprint 206)
   menu/HUD/settings/archive, death→retry, quit→Continue, underscript
   descent, victory, chase spawn+seal, hiding enter/protect/leave, soak.
   13 tests.
+  Sprint 207 lamp-emissive + presence: flicker-paired lamp glow now scales
+  l.intensity/origBaseIntensity (new builder userData) so 'dim'-settled
+  rooms' fixtures actually go half-glow (was pulsing full emissive — a
+  sprint-205 leftover). audio.duckRoomTone(seconds,level) dips the biome
+  bed with restore scheduled on the AudioParam timeline; ctx.duckTone?
+  exposed to entities — husk stirs (2.6s) + bellows (5s) gulp the room's
+  ambience. Margin emits 'margin-rustle' positional cues from the
+  MIRRORED edge while closing unseen (audio lies about which side).
+  Tests: margin rustles ≥2 positional + husk duckTone on crowd-stir.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Lamp emissive on 'dim' rooms: flicker-branch lamps still pulse emissive
-    at old level while light dims — sync lamp glow to effective intensity.
-  - Remaining entity-feel gaps: whisper/margin could use positional
-    misdirection cues; husk stir could drop the room's tone bed briefly.
+  - Non-flicker lights have no lampMesh pairing — their fixtures can't dip
+    on 'dim'/'break'. Pair each built light to its nearest lampMeshes mesh.
+  - More tone-duck callers: corridor 'door-rattle' (front arrives), hollow
+    grapple, stillframe snap — pick only presence beats, not spam.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient

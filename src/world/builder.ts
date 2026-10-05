@@ -1815,6 +1815,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     pl.position.set(ls.x, ls.y, ls.z);
     pl.userData.ls = ls;
     pl.userData.baseIntensity = pl.intensity;
+    // Authoring intensity — lamp emissive is scaled against this, not the
+    // live baseIntensity (which flicker/dim passes rewrite).
+    pl.userData.origBaseIntensity = pl.intensity;
     if (quality === 'high' && !shadowAssigned && !room.darkRoom) {
       // Eligible to cast — Game enables castShadow only for the room the
       // player occupies; a point-light shadow is six scene renders, so one
@@ -1829,7 +1832,6 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     group.add(pl);
     lights.push(pl);
     pl.userData.group = ls.group;
-    pl.userData.baseIntensity = pl.intensity;
   }
   if (room.darkRoom) {
     for (const b of lampMeshes) (b.material as THREE.MeshStandardMaterial) = MAT.charcoal();

@@ -30,6 +30,9 @@ export interface EntityCtx {
   addEntityMesh: (obj: import('three').Object3D) => void;
   removeEntityMesh: (obj: import('three').Object3D) => void;
   flickerRoom: (roomIndex: number, mode: 'sweep' | 'reprise' | 'dim' | 'break') => void;
+  /** Dip the biome room-tone bed for `seconds` then ease back — the house
+   *  holding its breath. Optional: no-ops when no bed is playing. */
+  duckTone?: (seconds: number, level?: number) => void;
   spawnAt: (roomIndex: number) => Vec3;
   difficulty: import('../game/types').Difficulty;
   accessibility: { reducedMotion: boolean; captions: boolean; minigameAssist: number };

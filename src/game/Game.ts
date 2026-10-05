@@ -675,6 +675,7 @@ export class Game {
         minigameAssist: this.settings.minigameAssist,
       },
       gameState: () => useGameStore.getState().phase,
+      duckTone: (s, l) => this.audio.duckRoomTone(s, l),
       addInteractable: (it) => {
         this.dynamicInteractables.push(it);
         this.interaction.add(it);
@@ -772,11 +773,6 @@ export class Game {
           if (f > (this.settings.reducedFlashes ? 2 : 8)) {
             clearInterval(iv);
             l.userData.baseIntensity = mode === 'dim' ? base * 0.5 : base;
-            const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-            if (lamp && mode === 'dim') {
-              lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-              (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.7;
-            }
           }
         }, 70);
       }
@@ -2421,7 +2417,12 @@ export class Game {
         const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
         l.intensity = (l.userData.baseIntensity as number) * f * breath * tele;
         const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-        if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.4 * f * breath * tele;
+        if (lamp) {
+          // Fixture glow tracks the light's real output — including dim/
+          // flicker writes to baseIntensity — not just the flicker factor.
+          const ob = (l.userData.origBaseIntensity as number) || 1;
+          (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = Math.min(1.6, Math.max(0.04, 1.4 * (l.intensity / ob)));
+        }
       }
       if (built.dust) {
         built.dust.rotation.y += dt * 0.02;

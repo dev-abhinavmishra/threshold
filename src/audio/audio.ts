@@ -83,6 +83,7 @@ const CUES: Record<string, CueSpec> = {
   'stillframe-snap': { freq: 2400, dur: 0.07, type: 'square', gain: 0.3 },
   'margin-edge': { freq: 90, dur: 1.0, type: 'triangle', gain: 0.16 },
   'margin-shift': { freq: 120, dur: 0.6, type: 'triangle', gain: 0.2, sweep: 60 },
+  'margin-rustle': { freq: 240, dur: 0.3, type: 'sawtooth', gain: 0.07, sweep: -80, noise: true },
   'hollow-wake': { freq: 80, dur: 0.8, type: 'sawtooth', gain: 0.3, sweep: 50 },
   'hollow-release': { freq: 300, dur: 0.5, type: 'sine', gain: 0.16, sweep: 500 },
   'curator-enter': { freq: 140, dur: 1.4, type: 'triangle', gain: 0.3, sweep: 100 },
@@ -422,6 +423,20 @@ export class AudioManager {
 
   private roomTone: { src: AudioBufferSourceNode; gain: GainNode; filter: BiquadFilterNode; osc?: OscillatorNode } | null = null;
   private roomToneKey = '';
+
+  /** Briefly dip the room-tone bed to a fraction of its level, easing back.
+   *  Called by entities at moments of presence (husk stir, margin reveal) —
+   *  the silence reads as a held breath. Restore is scheduled on the
+   *  AudioParam timeline, so no per-frame tick is needed. */
+  duckRoomTone(seconds = 1.6, level = 0.25): void {
+    const rt = this.roomTone;
+    if (!rt || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const restore = rt.gain.gain.value;
+    rt.gain.gain.cancelScheduledValues(now);
+    rt.gain.gain.setTargetAtTime(level * restore, now, 0.12);
+    rt.gain.gain.setTargetAtTime(restore, now + seconds, 0.5);
+  }
 
   /** Looping ambience for the current space — noise bed + optional hum on
    *  the 'voice' (ambience) bus. Call when the room or subfloor changes. */

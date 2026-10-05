@@ -545,6 +545,9 @@ export class Margin extends Entity {
   private rig: RiggedFigure | null = null;
   private instability = 0;
   private d = 14;
+  /** Beats until the next ventriloquist rustle — the sound comes from the
+   *  wrong edge, so audio alone can't be trusted to find it. */
+  private rustleT = 0;
 
   constructor() { super('margin', ENTITY_TUNING.margin); }
 
@@ -592,6 +595,14 @@ export class Margin extends Entity {
       }
     } else {
       this.d = Math.max(1.2, this.d - this.tuning.speed * dt);
+      // Positional misdirection: a soft rustle from the mirrored edge.
+      this.rustleT -= dt;
+      if (this.rustleT <= 0) {
+        this.rustleT = 1.25 + new Rng(c.seed + Math.floor(c.now * 7)).float() * 0.9;
+        const mx = p.pos.x + Math.sin(p.yaw - side * 1.35) * this.d;
+        const mz = p.pos.z + Math.cos(p.yaw - side * 1.35) * this.d;
+        c.cue('margin-rustle', v3(mx, 0, mz), '', { severity: 'warn' });
+      }
       if (this.d <= this.tuning.killRange) {
         c.damagePlayer(this.tuning.damage, 'margin', 'Margin moves when unseen. Glance at it — but never too long.');
         this.done();
@@ -734,6 +745,7 @@ export class Husk extends Entity {
       this.anger = Math.max(0, this.anger - dt * 0.12);
       if (this.anger > 0.5 && !this.stirred) {
         this.stirred = true;
+        c.duckTone?.(2.6);
         c.cue('husk-stir', this.pos, '[the figure in the corner shifts]', { severity: 'warn' });
         if (this.mesh) this.mesh.rotation.x = 0.08;
       }
@@ -744,6 +756,7 @@ export class Husk extends Entity {
         this.lastSeen = v3(p.pos.x, 0, p.pos.z);
         if (this.mesh) this.mesh.rotation.x = 0;
         this.rig?.play('move', 0.08);
+        c.duckTone?.(5);
         c.cue('husk-bellow', this.pos, '[it wakes]', { severity: 'danger' });
       }
       return;
