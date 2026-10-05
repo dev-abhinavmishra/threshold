@@ -24,6 +24,7 @@ import { preloadModels, modelInstance } from '../world/modelLibrary';
 import { preloadFigures, riggedFigure, type RiggedFigure } from '../entities/rigged';
 import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
+import { HeldView } from './viewmodel';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
@@ -1071,7 +1072,7 @@ export class Game {
   private tryInteract(): void {
     const it = this.interaction.focused;
     if (!it) return;
-    this.vmThrustT = this.clock.time;
+    this.heldView?.thrust();
     // milestones first
     const ms = this.milestones.get(this.currentRoom);
     if (ms?.onInteract(it)) return;
@@ -1594,6 +1595,7 @@ export class Game {
         return;
       }
       this.pulseLampOn = !this.pulseLampOn;
+      this.heldView?.use('pulseLamp');
       this.cue('ui-click', null, this.pulseLampOn ? '[pulse lamp humming]' : '');
       return;
     }
@@ -1604,6 +1606,7 @@ export class Game {
         return;
       }
       this.lampOn = !this.lampOn;
+      this.heldView?.use('handLamp');
       this.cue('ui-click', null, this.lampOn ? '[lamp on]' : '[lamp off]');
     }
   }
@@ -1613,6 +1616,7 @@ export class Game {
     const item = slotItems[this.activeSlot];
     // lamps pass through at 0 charge so their case can report the dead battery
     if (!item || (item.count <= 0 && item.id !== 'handLamp' && item.id !== 'pulseLamp')) return;
+    this.heldView?.use(item.id);
     switch (item.id) {
       case 'handLamp':
         if (!this.lampOn && item.count <= 0) {
@@ -4775,77 +4779,27 @@ export class Game {
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
-    // Handheld torch — flashlight + gloved hand held low-right in frame.
-    // The viewmodel raises in on toggle, lags behind look, bobs with gait,
-    // and lunges toward whatever you reach for.
-    if (this.lampOn || this.pulseLampOn) {
-      if (!this.heldGroup) {
-        this.heldGroup = new THREE.Group();
-        const m = modelInstance('flashlight', 0.35);
-        if (m) {
-          this.fitHeldModel(m);
-          this.heldTorch = m;
-        } else {
-          const fallback = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, 0.22, 10), MAT.steel());
-          fallback.rotation.x = Math.PI / 2;
-          this.heldTorch = fallback;
-          this.heldTorchFallback = true;
-        }
-        this.heldGroup.add(this.heldTorch);
-        this.heldGroup.add(this.buildTorchHand());
-        this.scene.add(this.heldGroup);
-        this.vmLagQ.copy(this.camera.quaternion);
-      }
-      // The GLTF queue drip-feeds at boot — upgrade the fallback cylinder to
-      // the real flashlight model once it arrives.
-      if (this.heldTorchFallback) {
-        const m = modelInstance('flashlight', 0.35);
-        if (m) {
-          this.fitHeldModel(m);
-          this.heldGroup!.remove(this.heldTorch!);
-          this.heldGroup!.add(m);
-          this.heldTorch = m;
-          this.heldTorchFallback = false;
-        }
-      }
-      const heldGroup = this.heldGroup;
-      const heldTorch = this.heldTorch;
-      if (!heldGroup || !heldTorch) return;
-      heldGroup.visible = true;
-      heldTorch.visible = true;
-      this.camera.getWorldDirection(Game.torchFwd);
-      Game.torchRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
-      Game.torchUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
-      this.vmRaise = Math.min(1, this.vmRaise + dt * 3.2);
-      const speed = Math.hypot(this.player.vel.x, this.player.vel.z);
-      const thrust = Math.sin(Math.min(1, (this.clock.time - this.vmThrustT) / 0.32) * Math.PI) * 0.07;
-      heldGroup.position.set(eye.x, eye.y, eye.z)
-        .addScaledVector(Game.torchRight, 0.24)
-        .addScaledVector(Game.torchUp, -0.19 - (1 - this.vmRaise) * 0.24)
-        .addScaledVector(Game.torchFwd, 0.38 + thrust);
-      heldGroup.quaternion.copy(this.camera.quaternion);
-      heldGroup.rotateY(-0.06);
-      heldGroup.rotateX(0.05 + (1 - this.vmRaise) * 0.7);
-      if (!this.settings.reducedMotion) {
-        // Look-lag: the model trails a smoothed camera quaternion, so quick
-        // turns swing it off-axis before it catches up.
-        this.vmLagQ.slerp(this.camera.quaternion, 1 - Math.exp(-dt * 11));
-        const dq = this.camera.quaternion.clone().multiply(this.vmLagQ.clone().invert());
-        const e = new THREE.Euler().setFromQuaternion(dq, 'YXZ');
-        heldGroup.position
-          .addScaledVector(Game.torchRight, -e.y * 0.05)
-          .addScaledVector(Game.torchUp, e.x * 0.045);
-        heldGroup.rotateZ(-e.y * 0.3);
-        heldGroup.rotateX(e.x * 0.15);
-        // Gait bob driven by ground speed — settles to a breath when still.
-        this.vmBobPhase += dt * (0.9 + speed * 2.6);
-        const amp = 0.003 + Math.min(1, speed / 3) * 0.009;
-        heldGroup.position
-          .addScaledVector(Game.torchRight, Math.sin(this.vmBobPhase) * amp)
-          .addScaledVector(Game.torchUp, Math.sin(this.vmBobPhase * 2) * amp * 0.6);
-        const sway = Math.sin(this.clock.time * 5.2) * 0.012 + Math.sin(this.clock.time * 1.7) * 0.008;
-        heldGroup.rotateZ(sway);
-      }
+    // Held-item viewmodel — the active slot's item carried low-right in
+    // frame, gripped by a gloved hand. While a lamp beam is lit the lamp is
+    // the in-hand item (the light needs a source); otherwise whatever the
+    // player selected shows. Sway trails look, bob follows stride, and a
+    // reach for a door/threshold lunges the item toward it.
+    if (!this.heldView) this.heldView = new HeldView(this.scene);
+    const slotItems = this.inventory.filter((i) => ITEM_DEFS[i.id]?.slotItem);
+    const equipped = slotItems[this.activeSlot]?.id ?? null;
+    const beamOn = this.lampOn || this.pulseLampOn;
+    this.heldView.update(dt, this.camera, eye, {
+      itemId: equipped,
+      lampOn: this.lampOn,
+      pulseLampOn: this.pulseLampOn,
+      speed: Math.hypot(this.player.vel.x, this.player.vel.z),
+      crouching: this.player.crouching,
+      reducedMotion: this.settings.reducedMotion,
+      hidden: this.peek !== null,
+      yaw: this.player.yaw,
+      pitch: this.player.pitch,
+    });
+    if (beamOn) {
       // Fake-volumetric beam — two nested additive cones from the torch
       // head, alpha-ramped so the air carries light without a floor hit.
       if (!this.beamGroup) {
@@ -4892,11 +4846,12 @@ export class Game {
         this.scene.add(this.beamGroup);
       }
       this.beamGroup.visible = true;
-      heldTorch.getWorldPosition(this.tmpV3);
-      this.beamGroup.position.copy(this.tmpV3).addScaledVector(Game.torchFwd, 0.12);
+      // beam pours from the held lamp's tip, not the eye
+      const tip = this.heldView.tipWorld(Game.beamTip);
+      this.beamGroup.position.set(tip.x, tip.y, tip.z).addScaledVector(Game.torchFwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion), 0.12);
       // During look-lag swings the cone can cross the near plane and smear
       // across the whole screen — fade it by its distance from the eye.
-      const beamFade = Math.min(1, Math.max(0, (this.tmpV3.distanceTo(eye) - 0.12) / 0.25));
+      const beamFade = Math.min(1, Math.max(0, (Math.hypot(tip.x - eye.x, tip.y - eye.y, tip.z - eye.z) - 0.12) / 0.25));
       this.beamGroup.quaternion.copy(this.camera.quaternion);
       for (const { mat, base } of this.beamMats) mat.opacity = base * this.lampFade * beamFade;
       // motes orbit the beam axis slowly and fall toward the viewer
@@ -4913,10 +4868,8 @@ export class Game {
         arr.needsUpdate = true;
         this.motesMat.opacity = 0.4 * this.lampFade * beamFade;
       }
-    } else if (this.heldGroup) {
-      this.heldGroup.visible = false;
-      this.vmRaise = 0;
-      if (this.beamGroup) this.beamGroup.visible = false;
+    } else if (this.beamGroup) {
+      this.beamGroup.visible = false;
     }
     // Lamp batteries — hand lamp sips (~180s), pulse lamp gulps (~90s) and
     // cranks back loudly. HUD reads count as charge %.
@@ -4999,61 +4952,10 @@ export class Game {
 
   private lampLight: THREE.SpotLight | null = null;
   private fillLight: THREE.PointLight | null = null;
-  private heldTorch: THREE.Object3D | null = null;
-  private heldTorchFallback = false;
-  private heldGroup: THREE.Group | null = null;
-  private vmLagQ = new THREE.Quaternion();
-  private vmBobPhase = 0;
-  private vmThrustT = -10;
-  private vmRaise = 0;
+  private heldView: HeldView | null = null;
   private static watchPos = new THREE.Vector3();
   private static torchFwd = new THREE.Vector3();
-  private static torchRight = new THREE.Vector3();
-  private static torchUp = new THREE.Vector3();
-
-  /** Scale/orient/center a vendored model for the low-right held pose. */
-  private fitHeldModel(m: THREE.Object3D): void {
-    // spec.height scales by Y, which over-inflates props authored lying
-    // flat — rescale by longest axis (~0.26 m) and point it forward.
-    const bb0 = new THREE.Box3().setFromObject(m);
-    const s0 = bb0.getSize(new THREE.Vector3());
-    if (s0.x >= s0.y && s0.x >= s0.z) m.rotation.y = Math.PI / 2;
-    else if (s0.y >= s0.z) m.rotation.x = Math.PI / 2;
-    const bb = new THREE.Box3().setFromObject(m);
-    const size = bb.getSize(new THREE.Vector3());
-    m.scale.multiplyScalar(0.26 / (Math.max(size.x, size.y, size.z) || 1));
-    bb.setFromObject(m);
-    m.position.sub(bb.getCenter(new THREE.Vector3()));
-  }
-
-  /** Forearm + gloved hand curled around the held torch — built once. */
-  private buildTorchHand(): THREE.Group {
-    const g = new THREE.Group();
-    const skin = new THREE.MeshStandardMaterial({ color: 0x6e5f4f, roughness: 0.9 });
-    const glove = new THREE.MeshStandardMaterial({ color: 0x2c2620, roughness: 0.95 });
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.34, 8), MAT.charcoal());
-    arm.position.set(0.06, -0.13, 0.17);
-    arm.rotation.set(-0.9, 0.15, -0.55);
-    g.add(arm);
-    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.045, 0.075), glove);
-    palm.position.set(0.015, -0.045, 0.015);
-    palm.rotation.set(0.15, 0, -0.2);
-    g.add(palm);
-    const finger = (x: number, y: number, z: number, ry: number) => {
-      const f = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.05, 6), skin);
-      f.position.set(x, y, z);
-      f.rotation.set(Math.PI / 2 - 0.35, ry, 0);
-      g.add(f);
-    };
-    finger(-0.028, -0.01, -0.01, 0.1);
-    finger(-0.01, -0.004, -0.012, 0.05);
-    finger(0.008, -0.004, -0.01, -0.05);
-    const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.05, 6), skin);
-    thumb.position.set(0.032, -0.028, 0.03);
-    thumb.rotation.set(0.5, 0, -0.7);
-    g.add(thumb);
-    return g;
-  }
+  private static beamTip: Vec3 = v3();
 
   private publishHud(): void {
     const st = useGameStore.getState();

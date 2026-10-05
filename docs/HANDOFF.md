@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 212)
+CURRENT STATE (as of sprint 213)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -222,37 +222,41 @@ CURRENT STATE (as of sprint 212)
   inside evaluate. GOTCHA: playwright webServer serves a PREBUILT
   dist/ (build && preview, reuseExistingServer) — after editing src,
   kill the :4173 preview or the suite runs yesterday's bundle.
-  15 e2e tests.
-  Sprint 212 held-torch viewmodel: heldGroup {flashlight GLB +
-  buildTorchHand() procedural forearm/glove/3 fingers/thumb} held
-  low-right; raises in on toggle (vmRaise→1, ~0.35s y+rotX ramp), look-lag
-  via vmLagQ slerp (rate 11/s → pos ±5cm, rotateZ/rotateX), gait bob
-  (vmBobPhase by ground speed, settles to breath), interact thrust
-  (vmThrustT stamped in tryInteract, 0.32s sine 0.07m lunge).
+  16 e2e tests.
+  Sprint 212/213 held viewmodel: `HeldView` (src/game/viewmodel.ts) —
+  EVERY equipped slot item shows in-hand low-right (per-item pose +
+  mesh: GLB for lamp/lighter/watch, procedural for the rest, vmFallback
+  stand-ins hot-swap to the GLB when the preload drip lands it), a
+  procedural gloved hand (fist or palm grip per item) wraps it; lit
+  lamp overrides the equipped slot so the beam has a source. Look-lag
+  (exponential yaw/pitch smoothing, ±0.16/±0.12 rad, sway group), gait
+  bob by ground speed + idle breath, equip raise (0.32s ease-out cubic
+  y/roll/dip), per-item use motions (jab/key-twist/drink/tilt/crank —
+  vm-crank group spins), interact thrust (0.32s 0.07m lunge, fired in
+  tryInteract → heldView.thrust()), peek hides. Beam cones + dust motes
+  anchor at heldView.tipWorld() (item tip), and beamFade=
+  clamp((dist(eye,tip)-0.12)/0.25) multiplies beamMats+motesMat so
+  lag-swings can't smear the cone across the near plane.
   LEARNINGS: (a) the lamp key path needs inventory handLamp/pulseLamp
   count>0 — harnesses must set g.lampOn=true directly, toggleLamp?.() is
   a silent no-op; (b) modelInstance returns null until the drip-fed
-  preload reaches that dir — heldTorchFallback retries each frame and
-  hot-swaps the fallback cylinder for the GLB; (c) spec.height
-  normalizes by bbox Y and over-inflates models authored lying flat ×4+
-  — fitHeldModel() rescales by longest axis (0.26m), rotates longest→z,
-  centers; (d) REAL BUG — beam cones smeared the whole screen during
-  lag swings: origin tracked lagged torch pos and the cone crossed the
-  near plane → beamFade=(dist(eye,origin)-0.12)/0.25 multiplies
-  beamMats + motesMat opacity; (e) page.screenshot times out / the tab
-  crashes under load — grab canvas.toDataURL() inside evaluate right
-  after g.frame() instead (toDataURL is valid same-task, no
-  preserveDrawingBuffer needed); (f) heldGroup/beamGroup are created
-  inside renderFrame — they don't exist under the stubbed renderFrame,
-  probe only after a real frame.
+  preload reaches that dir — UPGRADEABLE retries each frame and
+  hot-swaps the fallback for the GLB; (c) spec.height normalizes by
+  bbox Y and over-inflates models authored lying flat ×4+ —
+  viewmodel.fitHeld() rescales by longest axis (0.26m), rotates
+  longest→z, centers; (d) page.screenshot times out / the tab crashes
+  under load — grab canvas.toDataURL() inside evaluate right after
+  g.frame() instead (toDataURL is valid same-task, no
+  preserveDrawingBuffer needed); (e) checkpoint-seed inventory via
+  addInitScript(threshold.run.v1) instead of g.inventory.push —
+  start() resets inventory async and will wipe a mid-boot grant;
+  (f) heldView/beamGroup are created inside renderFrame — they don't
+  exist under the stubbed renderFrame, probe only after a real frame.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material
     clones per emitter per room — check memory on long runs; share clones
     per room where the tag set is identical.
-  - Viewmodel follow-up: hand wrap was authored around the fallback
-    cylinder — eyeball it on the real GLB (wait for preload), and the
-    held pose for carried items (imprints/marginalia) is still bare.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
