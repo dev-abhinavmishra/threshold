@@ -1,0 +1,224 @@
+/**
+ * Rigged CC0 creature bodies (public/assets/figures/*.glb — Quaternius,
+ * full animation sets). Loads once, clones via SkeletonUtils so each entity
+ * gets its own bind pose + AnimationMixer. Returns null until loaded —
+ * callers fall back to tallFigure so spawns never block on the network.
+ */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { clone as skClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+
+interface RigSpec {
+  file: string;
+  /** Target height in meters. */
+  height: number;
+  /** Preferred clips, by substring — first hit wins. */
+  clips: { idle: string[]; move: string[]; attack: string[] };
+  /** Multiply material color (house-tint). */
+  tint?: number;
+  /** Transparency for apparitions. */
+  opacity?: number;
+  /** Additive emissive lift so the body reads in darkness. */
+  emissive?: number;
+}
+
+export const RIGGED: Record<string, RigSpec> = {
+  /** Translucent wraith — Whisper's localized silhouette, Margin's edge-shape. */
+  ghost: {
+    file: 'quaternius_ghost.glb', height: 1.9, opacity: 0.5, emissive: 0.25,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
+  /** Horned thing that fills doorways — Pursuer core, EchoSkin stalker. */
+  demon: {
+    file: 'quaternius_demon.glb', height: 2.3, tint: 0.45,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying', 'run'], attack: ['headbutt', 'punch'] },
+  },
+  /** Ink-black ghost variant for the Underscript. */
+  inkGhost: {
+    file: 'quaternius_ghost.glb', height: 2.1, tint: 0.06, opacity: 0.85, emissive: 0.05,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
+  /** Skeletal runner — corridor passes and the chase lead. */
+  skeleton: {
+    file: 'quaternius_skeleton.glb', height: 2.2, tint: 0.6,
+    clips: { idle: ['idle'], move: ['run', 'walk'], attack: ['punch', 'sword'] },
+  },
+  /** Tar-dark slime — the Inkling's mass, agitated by held light. */
+  slime: {
+    file: 'quaternius_slime.glb', height: 0.6, tint: 0.08, emissive: 0.05,
+    clips: { idle: ['idle'], move: ['walk', 'jump'], attack: ['bite_front', 'jump'] },
+  },
+  /** Robed archivist — the Curator's body under its measuring rods. */
+  wizard: {
+    file: 'quaternius_wizard.glb', height: 2.8, tint: 0.35, emissive: 0.04,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'punch', 'jump'] },
+  },
+  /** Deep-blue winged thing — the Editor patrolling the Underscript. */
+  blueDemon: {
+    file: 'quaternius_bluedemon.glb', height: 2.6, tint: 0.4, emissive: 0.06,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
+  /** Hovering rock-thing — the Grafter, Underscript roamer. */
+  goleling: {
+    file: 'quaternius_goleling.glb', height: 2.2, tint: 0.45, emissive: 0.04,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
+  /** Big pale sleeper — the Husk dozing in the big rooms. */
+  yeti: {
+    file: 'quaternius_yeti.glb', height: 2.5, tint: 0.5, emissive: 0.02,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'jump'] },
+  },
+  /** Armoured brute — the Reprise that hauls itself down the corridor again. */
+  orc: {
+    file: 'quaternius_orc.glb', height: 2.4, tint: 0.4,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'jump'] },
+  },
+  /** Antlered sprinter — the Returner closing from ahead, full run clip. */
+  monkroose: {
+    file: 'quaternius_monkroose.glb', height: 2.1, tint: 0.45,
+    clips: { idle: ['idle'], move: ['run', 'walk'], attack: ['punch', 'bite_front'] },
+  },
+  /** Crouched ambusher — the Lurker's barely-visible stalker shape. */
+  ninja: {
+    file: 'quaternius_ninja.glb', height: 1.55, tint: 0x151018, emissive: 0x220a00,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front'] },
+  },
+  /** Wide-winged corridor mass — the Behemoth's airborne blockade. */
+  dragon: {
+    file: 'quaternius_dragon.glb', height: 1.8, tint: 0x0a0c14, emissive: 0x0a0518,
+    clips: { idle: ['flying_idle'], move: ['fast_flying'], attack: ['headbutt'] },
+  },
+  /** Grey intruder — the thing that was already inside the cabinet. */
+  alien: {
+    file: 'quaternius_alien.glb', height: 1.7, tint: 0.35, emissive: 0.08,
+    clips: { idle: ['idle'], move: ['walk'], attack: ['bite_front', 'punch', 'jump'] },
+  },
+  /** Masked hunter — the figure that crosses a far doorway, seen mid-stride. */
+  tribal: {
+    file: 'quaternius_tribal.glb', height: 2.2, tint: 0.38, emissive: 0.04,
+    clips: { idle: ['idle'], move: ['run', 'walk', 'sprint'], attack: ['punch', 'bite_front'] },
+  },
+  /** Hooded porter — the Collector's toll-taker silhouette. */
+  hooded: {
+    file: 'quaternius_hooded.glb', height: 1.85, tint: 0.35, emissive: 0.03,
+    clips: { idle: ['idle_neutral', 'idle'], move: ['run', 'walk'], attack: ['punch', 'kick'] },
+  },
+  /** Floating skull — the Singer's sound-mimic head; no body to trust. */
+  ghostSkull: {
+    file: 'quaternius_ghostskull.glb', height: 0.55, tint: 0.5, emissive: 0.14,
+    clips: { idle: ['flying_idle', 'idle'], move: ['fast_flying', 'flying'], attack: ['headbutt', 'punch'] },
+  },
+};
+
+interface RigSource { scene: THREE.Group; animations: THREE.AnimationClip[] }
+
+const loader = new GLTFLoader();
+const cache = new Map<string, RigSource>();
+const pending = new Set<string>();
+
+export function preloadFigures(): void {
+  const files = [...new Set(Object.values(RIGGED).map((s) => s.file))];
+  for (const file of files) {
+    if (cache.has(file) || pending.has(file)) continue;
+    pending.add(file);
+    loader
+      .loadAsync(`/assets/figures/${file}`)
+      .then((g) => cache.set(file, { scene: g.scene as THREE.Group, animations: g.animations }))
+      .catch(() => { /* procedural fallback stays */ })
+      .finally(() => pending.delete(file));
+  }
+}
+
+function pickClip(anims: THREE.AnimationClip[], keys: string[]): THREE.AnimationClip | null {
+  const lower = anims.map((a) => a.name.toLowerCase());
+  for (const k of keys) {
+    const i = lower.findIndex((n) => n.includes(k));
+    if (i >= 0) return anims[i];
+  }
+  return anims[0] ?? null;
+}
+
+export interface RiggedFigure {
+  group: THREE.Group;
+  /** Tick the mixer each frame. */
+  update(dt: number): void;
+  /** Crossfade to a named state. */
+  play(state: 'idle' | 'move' | 'attack', fade?: number): void;
+}
+
+/** A cloned rigged body scaled to spec.height, floor-anchored, mixer primed. */
+export function riggedFigure(kind: keyof typeof RIGGED): RiggedFigure | null {
+  const spec = RIGGED[kind];
+  const src = cache.get(spec.file);
+  if (!src) return null;
+
+  const body = skClone(src.scene) as THREE.Group;
+  const bb = new THREE.Box3().setFromObject(body);
+  const size = new THREE.Vector3();
+  bb.getSize(size);
+  const s = spec.height / (size.y || 1);
+  body.scale.setScalar(s);
+  bb.setFromObject(body);
+  const c = new THREE.Vector3();
+  bb.getCenter(c);
+  body.position.set(-c.x, -bb.min.y, -c.z);
+
+  // SkeletonUtils.clone shares materials with the cached source — clone per
+  // body or per-spec tint/opacity would compound across every spawn.
+  body.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    m.castShadow = true;
+    m.frustumCulled = false; // skinned bounds go stale on animated rigs
+    if (Array.isArray(m.material)) m.material = m.material.map((mm) => mm.clone());
+    else m.material = (m.material as THREE.Material).clone();
+  });
+  const tuned = new Set<string>();
+  body.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh) return;
+    const mats = Array.isArray(m.material) ? m.material : [m.material];
+    for (const mat of mats as THREE.MeshStandardMaterial[]) {
+      if (!mat || tuned.has(mat.uuid)) continue;
+      tuned.add(mat.uuid);
+      if (spec.tint !== undefined) mat.color.multiplyScalar(spec.tint);
+      if (spec.emissive !== undefined) {
+        mat.emissive = mat.color.clone();
+        mat.emissiveIntensity = spec.emissive;
+      }
+      if (spec.opacity !== undefined) {
+        mat.transparent = true;
+        mat.opacity = spec.opacity;
+        mat.depthWrite = false;
+      }
+      mat.metalness = 0;
+      mat.roughness = Math.max(mat.roughness ?? 0.5, 0.6);
+    }
+  });
+
+  const group = new THREE.Group();
+  group.add(body);
+  group.userData.rigged = kind;
+
+  const mixer = new THREE.AnimationMixer(body);
+  const actions: Partial<Record<'idle' | 'move' | 'attack', THREE.AnimationAction>> = {};
+  let current: THREE.AnimationAction | null = null;
+  const resolve = (state: 'idle' | 'move' | 'attack') => {
+    if (!actions[state]) {
+      const clip = pickClip(src.animations, spec.clips[state]);
+      if (!clip) return null;
+      actions[state] = mixer.clipAction(clip);
+    }
+    return actions[state]!;
+  };
+  const play = (state: 'idle' | 'move' | 'attack', fade = 0.25) => {
+    const next = resolve(state);
+    if (!next || next === current) return;
+    next.reset().setLoop(THREE.LoopRepeat, Infinity).fadeIn(fade).play();
+    current?.fadeOut(fade);
+    current = next;
+  };
+  play('idle', 0);
+
+  return { group, play, update: (dt: number) => mixer.update(dt) };
+}
