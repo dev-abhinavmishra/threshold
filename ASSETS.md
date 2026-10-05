@@ -733,3 +733,18 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `sideboard/` | Serving sideboard (paneled doors, drawers, backsplash) | lobby-waiting, gallery-banquet, gallery-chapel |
 | `writingDesk/` | Pedestal desk (leather top, twin pedestals, inkstand) | records-office, records-bullpen, guest-suite-grand |
 | `globeStand/` | Tilted globe in brass meridian on tripod stand | library-stacks, records-office, gallery-atrium, guest-suite-grand |
+| `cubicle/` | Three-wall office pod (cloth panels, desk, shelf, pinboard) | u-office-row, u-double-cubicle, u-open-office |
+| `recordsCage/` | Wire-mesh storage cage (frame, bar grid, padlocked door, shelf) | u-records-cage |
+| `printerRow/` | Credenza with three printers + paper sheets | u-print-shop, u-open-office |
+| `printer/` | Desktop printer (feed tray, output slot, paper) | u-corridor, u-long-hall, u-break |
+| `typewriter/` | Vintage typewriter (platen, carriage lever, stepped keys) | u-office-row |
+| `waterCooler/` | Bottle-top water cooler (twin taps, drip tray) | u-break, u-open-office, u-lobby |
+| `breakTable/` | Formica-top table on splayed tube legs | u-break, u-double-cubicle |
+| `counter/` | Reception counter (paneled front, toe kick, counter top) | u-lobby |
+| `machineBox/` | Server cabinet (vent slats, LED strip, cable loom, casters) | u-server, ms-under-entrance, corridors |
+| `paperStack/` | Stacked reams of paper | u-print-shop |
+| `partition/` | Free-standing office partition on disc feet | u-partition-maze, losAlcove hiding (all rooms) |
+| `fluoroTube/` | Hanging twin-tube fluorescent fixture | all u-rooms, corridors |
+| `exitSign/` | Lit exit sign box (legend plate, hanging bracket) | u-long-hall, u-stair-landing, u-lobby |
+| `vendingUnit/` | Glass-front vending machine (coil racks, keypad, pickup flap) | vend sockets (generator-placed) |
+| `keyCabinet/` | Wall key cabinet (open door, hook rows, brass keys) | u-corridor, u-server, u-lobby |

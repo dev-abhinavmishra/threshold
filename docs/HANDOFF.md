@@ -109,12 +109,12 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 219)
+CURRENT STATE (as of sprint 220)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
   prints income-vs-cost per seed), synthesized audio + captions,
-  PBR textures + ~76 milled props + 17 rigged figures, decal wear system,
+  PBR textures + ~91 milled props + 17 rigged figures, decal wear system,
   beat-planner pacing, debug panel. Ambient Curator scheduled post-Index.
   Locked/toll doors wear milled hardware synced to door.locked.
   Corridor runners + Curator emit positional footstep foley; SoundEvent has
@@ -363,6 +363,23 @@ CURRENT STATE (as of sprint 219)
   UnderscriptGate.onInteract; (e) seal-clamp sockets are kind 'key' —
   one may carry contains:'doorKey' for the room's own lockId (clamp A
   at seed 'threshold' does), so releasing it also grants the key.
+  Sprint 220 underscript mill batch (15 pieces, ~all u-rooms upgraded):
+  cubicle, recordsCage, printerRow, printer, typewriter, waterCooler,
+  breakTable, counter, machineBox, paperStack, partition, fluoroTube,
+  exitSign, vendingUnit, keyCabinet — PropKind + MODEL_FOR + MILL_DIRS +
+  ASSETS.md rows; u-templates referenced these kinds procedurally so
+  milling same-named models upgrades every usage for free (partition is
+  the losAlcove hiding propKind across the whole game). vend sockets in
+  BOTH generator sites now push a milled vendingUnit beside the socket
+  (lx+0.45 so the glass front aligns at the socket); keyCabinet dressed
+  into u-corridor/u-server/u-lobby. LEARNINGS: (a) blender
+  rotation_euler[1] is the DEPTH axis — a door hinge swings on [2] (Z);
+  wrong-axis swings leak mesh past the collider; (b) joined meshes can
+  keep a non-zero node translation — check node.translation + accessor
+  bounds TOGETHER when sanity-checking extents; (c) narrow rooms
+  (u-corridor) put generator-placed props inside door lanes — guard
+  pushes with inDoorLane(spec,x,z); the interaction socket alone is the
+  fallback (pre-batch behavior).
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -376,9 +393,9 @@ NEXT SPRINT IDEAS (pick the biggest first)
     scheduling is done for everything else.
   - e2e: remaining untested paths — underscript seep/clamor ambience,
     broker/shop trades, puzzle/routing-board encounters.
-  - More mill batches if dressing still reads thin: armchair/settee
-    variants, dressing screens, luggage racks, vanity sets, corridor
-    sideboards, chapel/study pieces.
+  - More mill batches if dressing still reads thin: main-route sideboard
+    variants + corridor furniture; u-room kit is milled now (sprint 220) —
+    next under-room depth is variants/weathering, not new kinds.
 ```
 
 ---

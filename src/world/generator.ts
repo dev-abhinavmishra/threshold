@@ -539,6 +539,11 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
           meta: { vend: true, price: lootRng.int(5, 11), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
         });
+        // The machine is real now — vend sockets hang on a milled unit
+        // (skipped where a door lane claims the footprint).
+        if (!inDoorLane(room.spec, lx + 0.45, lz)) {
+          room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
+        }
       }
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
@@ -801,6 +806,11 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
       kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
       meta: { vend: true, price: lootRng.int(4, 9), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
     });
+    // The machine is real now — vend sockets hang on a milled unit
+    // (skipped where a door lane claims the footprint).
+    if (!inDoorLane(room.spec, lx + 0.45, lz)) {
+      room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
+    }
   }
 
   void branches;

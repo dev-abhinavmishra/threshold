@@ -26,6 +26,9 @@ const MILL_DIRS = [
   'chapelPew', 'prayerKneeler', 'chapelAltar', 'votiveStand',
   'candelabrum', 'settee', 'dressingScreen', 'vanityTable', 'sideboard',
   'writingDesk', 'globeStand',
+  'cubicle', 'recordsCage', 'printerRow', 'printer', 'typewriter',
+  'waterCooler', 'breakTable', 'counter', 'machineBox', 'paperStack',
+  'partition', 'fluoroTube', 'exitSign', 'vendingUnit', 'keyCabinet',
 ];
 
 const FIGURES = [

@@ -1923,6 +1923,276 @@ def globeStand():
     join_all('globeStand')
 
 
+# ---------- underscript / office-basement batch ----------
+
+def cubicle():
+    """Three-wall cubicle pod: cloth panels (back + two wings), desk slab,
+    overhead shelf, pinboard strip. Underscript office staple."""
+    h = 1.42
+    # panels — front is -Y, so the pod opens -Y with the desk across it
+    cube('back', (0, 0.75, h / 2), (1.6, 0.08, h), LINEN, 0.015)
+    cube('wingL', (-0.78, 0.2, h / 2), (0.08, 1.2, h), LINEN, 0.015)
+    cube('wingR', (0.78, 0.2, h / 2), (0.08, 1.2, h), LINEN, 0.015)
+    # panel trim
+    for px in (-0.78, 0.78):
+        cube('ptrim', (px, 0.2, h - 0.03), (0.1, 1.22, 0.05), DARK, 0.008)
+    cube('btrim', (0, 0.75, h - 0.03), (1.62, 0.1, 0.05), DARK, 0.008)
+    # desk slab + modesty rail + shelf + pinboard
+    cube('desk', (0, 0.15, 0.73), (1.5, 0.62, 0.05), WOOD, 0.012)
+    cube('rail', (0, 0.42, 0.55), (1.45, 0.04, 0.28), WORN, 0.006)
+    cube('shelf', (0, 0.62, 1.2), (1.4, 0.26, 0.04), WOOD, 0.01)
+    cube('pin', (0, 0.71, 1.0), (0.8, 0.02, 0.3), WORN, 0.005)
+    join_all('cubicle')
+
+
+def recordsCage():
+    """Wire-mesh storage cage: iron frame, bar grid walls, hinged door with
+    a brass padlock, one inner shelf. u-records-cage anchor piece."""
+    w, d, h = 2.2, 1.8, 2.4
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('post', (sx * w / 2, sy * d / 2, h / 2), 0.035, h, IRON, 10)
+    # top + mid + bottom rails, all four walls
+    for z in (0.06, h - 0.06, h / 2):
+        for sx in (-1, 1):
+            cube('rail', (sx * w / 2, 0, z), (0.06, d, 0.06), IRON, 0.008)
+        for sy in (-1, 1):
+            cube('rail', (0, sy * d / 2, z), (w, 0.06, 0.06), IRON, 0.008)
+    # mesh: vertical bars every ~0.22 on back + sides (door leaves the
+    # front-right quarter open at y=-d/2)
+    for i in range(9):
+        x = -w / 2 + 0.12 + i * 0.22
+        cyl('bar', (x, d / 2, h / 2), 0.011, h - 0.12, IRON, 6)
+    for sy in (-1, 1):
+        for i in range(7):
+            y = -d / 2 + 0.14 + i * 0.22
+            cyl('bar', (sy * w / 2, y, h / 2), 0.011, h - 0.12, IRON, 6)
+    # door on the front-left corner, swung ajar around its hinge edge
+    dw = 0.8
+    door = cube('dframe', (-w / 2 + dw / 2 + 0.1, -d / 2, h / 2), (dw, 0.05, h - 0.15), IRON, 0.01)
+    for i in range(3):
+        cyl('dbar', (-w / 2 + 0.22 + i * 0.24, -d / 2 - 0.01, h / 2), 0.011, h - 0.2, IRON, 6)
+    door.rotation_euler[2] = -0.5
+    door.location.x += 0.12
+    door.location.y -= 0.12
+    cube('padlock', (-w / 2 + dw + 0.06, -d / 2 - 0.05, 1.0), (0.09, 0.05, 0.11), BRASS, 0.015)
+    # inner shelf
+    cube('shelf', (0, 0, 0.9), (w - 0.15, d - 0.15, 0.04), WORN, 0.008)
+    join_all('recordsCage')
+
+
+def printerRow():
+    """Credenza with three printers and paper trays — u-print-shop."""
+    cube('base', (0, 0, 0.35), (2.6, 0.55, 0.7), WORN, 0.02)
+    cube('top', (0, 0, 0.72), (2.7, 0.6, 0.05), DARK, 0.012)
+    cube('kick', (0, -0.02, 0.05), (2.5, 0.5, 0.08), DARK, 0.005)
+    for i in range(3):
+        x = -0.85 + i * 0.85
+        cube('body', (x, 0, 0.9), (0.6, 0.45, 0.32), IRON, 0.03)
+        cube('slot', (x, -0.24, 0.86), (0.4, 0.03, 0.04), DARK, 0.004)
+        # paper sheet out of the output tray
+        sheet = cube('sheet', (x, -0.32, 0.8), (0.32, 0.22, 0.012), LINEN, 0.002)
+        sheet.rotation_euler[0] = -0.18
+        cyl('knob', (x + 0.22, -0.15, 1.06), 0.015, 0.02, BRASS, 8)
+    join_all('printerRow')
+
+
+def printer():
+    """Single desktop printer — feed tray, output slot, paper sheet."""
+    cube('body', (0, 0, 0.16), (0.46, 0.4, 0.3), IRON, 0.03)
+    cube('lid', (0, 0.02, 0.32), (0.4, 0.34, 0.04), DARK, 0.015)
+    cube('tray', (0, 0.22, 0.34), (0.32, 0.16, 0.02), DARK, 0.008)
+    sheet = cube('sheet', (0, -0.26, 0.22), (0.3, 0.2, 0.01), LINEN, 0.002)
+    sheet.rotation_euler[0] = -0.2
+    cube('slot', (0, -0.2, 0.2), (0.34, 0.02, 0.03), DARK, 0.003)
+    cyl('button', (0.17, -0.1, 0.33), 0.012, 0.015, BRASS, 8)
+    join_all('printer')
+
+
+def typewriter():
+    """Vintage typewriter — platen, carriage return arm, stepped keys."""
+    cube('base', (0, 0, 0.09), (0.36, 0.32, 0.18), DARK, 0.02)
+    cube('deck', (0, -0.02, 0.17), (0.32, 0.24, 0.03), IRON, 0.008)
+    platen = cyl('platen', (0, 0.11, 0.24), 0.035, 0.36, DARK, 12)
+    platen.rotation_euler[1] = math.pi / 2
+    lever = cyl('lever', (0.2, 0.08, 0.27), 0.008, 0.16, IRON, 8)
+    lever.rotation_euler[0] = 0.5
+    # stepped key rows
+    for i in range(3):
+        for j in range(9):
+            cube('key', (-0.13 + j * 0.033 + i * 0.008, -0.12 + i * 0.055, 0.19 + i * 0.022),
+                 (0.024, 0.024, 0.018), BRASS, 0.004)
+    sheet = cube('paper', (0, 0.13, 0.34), (0.26, 0.012, 0.16), LINEN, 0.002)
+    sheet.rotation_euler[0] = 0.12
+    join_all('typewriter')
+
+
+def waterCooler():
+    """Bottle-top water cooler — white column, blue-white bottle, twin taps."""
+    cube('body', (0, 0, 0.5), (0.36, 0.36, 1.0), LINEN, 0.03)
+    cube('drip', (0, -0.19, 0.42), (0.24, 0.05, 0.1), IRON, 0.01)
+    for i, x in enumerate((-0.07, 0.07)):
+        cyl('tap', (x, -0.2, 0.72), 0.015, 0.08, BRASS, 8).rotation_euler[0] = math.pi / 2
+        sphere('tapKnob', (x, -0.21, 0.76), 0.02, BRASS if i == 0 else IRON, 8, 6)
+    # bottle: squat cylinder + shoulder + neck, slightly cloudy
+    cyl('bottle', (0, 0, 1.16), 0.15, 0.3, CANDLE, 16)
+    sphere('shoulder', (0, 0, 1.31), 0.15, CANDLE, 16, 12)
+    cyl('neck', (0, 0, 1.42), 0.05, 0.12, CANDLE, 10)
+    cube('dripTray', (0, -0.19, 0.36), (0.22, 0.06, 0.02), DARK, 0.005)
+    join_all('waterCooler')
+
+
+def breakTable():
+    """Formica-top break table on splayed tube legs — u-break."""
+    w, d = 1.6, 0.9
+    cube('top', (0, 0, 0.76), (w, d, 0.05), LINEN, 0.015)
+    cube('edge', (0, 0, 0.72), (w - 0.06, d - 0.06, 0.05), WORN, 0.01)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cyl('leg', (sx * (w / 2 - 0.12), sy * (d / 2 - 0.12), 0.36), 0.025, 0.72, IRON, 8)
+            leg.rotation_euler[0] = -sy * 0.12
+            leg.rotation_euler[1] = sx * 0.12
+    # stretcher bars
+    for sy in (-1, 1):
+        pipe_seg('str', (-w / 2 + 0.12, sy * (d / 2 - 0.12), 0.18), (w / 2 - 0.12, sy * (d / 2 - 0.12), 0.18), 0.015, IRON)
+    join_all('breakTable')
+
+
+def counter():
+    """Reception counter — paneled front, toe kick, overhanging counter top."""
+    w, d, h = 2.6, 0.7, 1.1
+    cube('body', (0, 0.02, h / 2), (w, d - 0.08, h), WOOD, 0.02)
+    cube('kick', (0, -d / 2 + 0.04, 0.06), (w - 0.1, 0.08, 0.1), DARK, 0.005)
+    # front panels
+    for i in range(4):
+        cube('panel', (-w / 2 + 0.36 + i * 0.62, -d / 2 - 0.02, 0.55), (0.5, 0.03, 0.72), WORN, 0.012)
+    cube('top', (0, -0.02, h + 0.025), (w + 0.16, d + 0.14, 0.05), DARK, 0.012)
+    cube('backrail', (0, d / 2 - 0.05, h - 0.18), (w - 0.1, 0.05, 0.3), WORN, 0.008)
+    join_all('counter')
+
+
+def machineBox():
+    """Server cabinet — vent slats, LED strip, side cable loom, casters.
+    Replaces the generic box in u-server and machine rooms."""
+    w, d, h = 0.8, 0.75, 1.9
+    cube('cab', (0, 0, h / 2), (w, d, h), IRON, 0.02)
+    cube('bezel', (0, -d / 2 - 0.01, h - 0.25), (w - 0.12, 0.04, 0.28), DARK, 0.01)
+    # vent slats down the front door
+    for i in range(6):
+        cube('vent', (0, -d / 2 - 0.012, h - 0.55 - i * 0.18), (w - 0.16, 0.02, 0.06), DARK, 0.004)
+    # status LED strip
+    for i in range(5):
+        sphere('led', (-w / 2 + 0.12 + i * 0.05, -d / 2 - 0.03, h - 0.24), 0.012, BRASS, 8, 6)
+    # side cable loom
+    for i in range(4):
+        pipe_seg('loom', (w / 2 + 0.02, d / 2 - 0.1 - i * 0.07, 0.2), (w / 2 + 0.02, d / 2 - 0.1 - i * 0.07, h - 0.5), 0.018, DARK)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('caster', (sx * (w / 2 - 0.08), sy * (d / 2 - 0.08), 0.04), 0.04, 0.03, DARK, 8)
+    join_all('machineBox')
+
+
+def paperStack():
+    """Stacked reams of paper, slightly askew."""
+    for i in range(5):
+        s = cube('ream', (0.01 * (i % 2), 0.005 * (i % 3), 0.045 + i * 0.09), (0.5, 0.36, 0.085), LINEN, 0.008)
+        s.rotation_euler[2] = (i % 3 - 1) * 0.04
+    cube('band', (0, 0, 0.13), (0.52, 0.1, 0.09), WORN, 0.004)
+    join_all('paperStack')
+
+
+def partition():
+    """Free-standing office partition — cloth panel on disc feet, dark trim.
+    Also the losAlcove hiding prop everywhere."""
+    h = 1.6
+    cube('panel', (0, 0, h / 2), (1.6, 0.09, h - 0.08), LINEN, 0.012)
+    cube('toptrim', (0, 0, h - 0.03), (1.62, 0.11, 0.05), DARK, 0.008)
+    cube('bottrim', (0, 0, 0.08), (1.62, 0.11, 0.08), DARK, 0.008)
+    for sx in (-1, 1):
+        cyl('foot', (sx * 0.55, 0, 0.02), 0.16, 0.03, IRON, 16)
+        cube('stem', (sx * 0.55, 0, 0.08), (0.06, 0.08, 0.1), IRON, 0.005)
+    join_all('partition')
+
+
+def fluoroTube():
+    """Hanging twin-tube fluorescent — iron housing, two tubes, stems to
+    ceiling mount. Center-anchored; place at ceiling height."""
+    cube('housing', (0, 0, 0.05), (1.2, 0.18, 0.1), IRON, 0.015)
+    cube('diffuser', (0, 0, -0.02), (1.14, 0.14, 0.04), DARK, 0.008)
+    for sy in (-1, 1):
+        tube = cyl('tube', (0, sy * 0.04, -0.045), 0.016, 1.08, CANDLE, 10)
+        tube.rotation_euler[1] = math.pi / 2
+        for sx in (-1, 1):
+            cube('cap', (sx * 0.55, sy * 0.04, -0.04), (0.05, 0.04, 0.05), DARK, 0.005)
+    for sx in (-1, 1):
+        cyl('stem', (sx * 0.5, 0, 0.2), 0.012, 0.3, IRON, 8)
+    cube('mount', (0, 0, 0.36), (0.2, 0.14, 0.03), IRON, 0.005)
+    join_all('fluoroTube')
+
+
+def exitSign():
+    """Glowing exit sign box — dark housing, red legend plate both sides,
+    hanging bracket. Center-anchored."""
+    cube('housing', (0, 0, 0), (0.42, 0.12, 0.22), DARK, 0.012)
+    for sy in (-1, 1):
+        cube('plate', (0, sy * 0.065, -0.01), (0.36, 0.01, 0.15), VELVET, 0.004)
+        # legend bars — the letter strokes of the lit sign
+        for i in range(4):
+            cube('bar', (-0.11 + i * 0.075, sy * 0.072, -0.01), (0.045, 0.006, 0.09), CANDLE, 0.002)
+    cyl('bracket', (0, 0, 0.16), 0.015, 0.12, IRON, 8)
+    cube('mountTop', (0, 0, 0.22), (0.16, 0.1, 0.02), IRON, 0.005)
+    join_all('exitSign')
+
+
+def vendingUnit():
+    """Glass-front vending machine — lit display case with three coil racks,
+    keypad column, pickup flap. Placed at vend sockets."""
+    w, d, h = 0.9, 0.7, 1.9
+    cube('cab', (0, 0.03, h / 2), (w, d - 0.06, h), IRON, 0.02)
+    cube('kick', (0, -d / 2 + 0.06, 0.08), (w - 0.1, 0.06, 0.12), DARK, 0.008)
+    # glass front: frame + mirror-pane inset (reads as dark glass)
+    cube('winFrame', (-0.08, -d / 2 - 0.005, h * 0.62), (w - 0.3, 0.05, h * 0.62), DARK, 0.012)
+    cube('glass', (-0.08, -d / 2 - 0.012, h * 0.62), (w - 0.38, 0.02, h * 0.56), MIRROR, 0.004)
+    # three coil racks behind the glass
+    for i in range(3):
+        z = h * 0.34 + i * h * 0.2
+        cube('tray', (-0.08, -d / 2 + 0.1, z), (w - 0.4, 0.24, 0.03), DARK, 0.005)
+        for j in range(5):
+            torus('coil', (-0.26 + j * 0.09, -d / 2 + 0.1, z + 0.06), 0.03, 0.008, BRASS, (math.pi / 2, 0, 0), 10)
+    # keypad column + coin slot
+    cube('pad', (w / 2 - 0.11, -d / 2 - 0.02, h * 0.62), (0.16, 0.04, 0.5), DARK, 0.008)
+    for i in range(9):
+        cube('key', (w / 2 - 0.11, -d / 2 - 0.045, h * 0.75 - (i // 3) * 0.06), (0.035, 0.015, 0.04), LINEN, 0.004).location.x = (w / 2 - 0.15) + (i % 3) * 0.045
+    cube('coinSlot', (w / 2 - 0.11, -d / 2 - 0.045, h * 0.5), (0.05, 0.015, 0.08), BRASS, 0.004)
+    # pickup flap
+    cube('flap', (0, -d / 2 - 0.01, h * 0.12), (w - 0.3, 0.03, h * 0.14), DARK, 0.01)
+    join_all('vendingUnit')
+
+
+def keyCabinet():
+    """Wall-mounted key cabinet — shallow steel box, door swung open, hook
+    rows with a few brass keys. Center-anchored."""
+    w, h = 0.5, 0.7
+    cube('box', (0, 0.06, 0), (w, 0.12, h), IRON, 0.015)
+    cube('inner', (0, -0.005, 0), (w - 0.06, 0.02, h - 0.06), DARK, 0.005)
+    # door swung open on its left hinge edge
+    door = cube('door', (-w / 2 - 0.02, -0.16, 0), (0.02, 0.34, h - 0.02), IRON, 0.008)
+    door.rotation_euler[2] = -0.55
+    door.location.y -= 0.1
+    # hook rows + hanging keys
+    for r in range(3):
+        z = h * 0.28 - r * h * 0.24
+        cube('rail', (0, -0.02, z), (w - 0.1, 0.02, 0.02), BRASS, 0.003)
+        for c in range(4):
+            x = -w / 2 + 0.1 + c * 0.11
+            cyl('hook', (x, -0.04, z - 0.02), 0.006, 0.03, BRASS, 6).rotation_euler[0] = math.pi / 2
+            if (r + c) % 3 != 0:
+                # key: bow torus + shaft
+                torus('bow', (x, -0.055, z - 0.055), 0.012, 0.004, BRASS, (math.pi / 2, 0, 0), 12)
+                cube('shaft', (x, -0.055, z - 0.085), (0.008, 0.006, 0.05), BRASS, 0.001)
+    join_all('keyCabinet')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1956,6 +2226,14 @@ PIECES = {
     'dressingScreen': dressingScreen, 'vanityTable': vanityTable,
     'sideboard': sideboard, 'writingDesk': writingDesk,
     'globeStand': globeStand,
+    'cubicle': cubicle, 'recordsCage': recordsCage,
+    'printerRow': printerRow, 'printer': printer,
+    'typewriter': typewriter, 'waterCooler': waterCooler,
+    'breakTable': breakTable, 'counter': counter,
+    'machineBox': machineBox, 'paperStack': paperStack,
+    'partition': partition, 'fluoroTube': fluoroTube,
+    'exitSign': exitSign, 'vendingUnit': vendingUnit,
+    'keyCabinet': keyCabinet,
 }
 
 def main():
