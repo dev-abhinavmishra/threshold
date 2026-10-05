@@ -141,13 +141,17 @@ CURRENT STATE (as of sprint 215)
   Continue, underscript descent, victory screen, chase spawn+seal, 15s soak.
   Sprint 204 door-lane clearance: real bug found by the chase e2e — props/
   hiding spots could land inside a door's approach lane and pinch an open
-  doorway. inDoorLane(spec,x,z,r) is the lane test (strip -0.4..2m into the
-  room, port.width/2+0.6 wide + r); clearDoorLanes(spec) filters spec.props
-  (y<=1.9 only — above-lintel mounts are fine) + spec.hiding at instantiate;
-  builder drops any built prop whose non-walkable collider footprint reaches
-  a lane (catches wide props centered beside the door); foreshadow tells and
-  injected corner hide spots lane-guard at push time. Regression test
-  sweeps all seeds: no spec prop/hiding in any lane.
+  doorway. inDoorLane(spec,x,z,r) is the lane test (strip -0.4..1.4+r deep,
+  port.width/2+0.15+r lateral — the door-rect, tightened in sprint 215's
+  fix: the old 2m/0.6 approach strip silently culled beds/headboards/
+  dressers standing next to doors in guest-twin/standard/suite-split
+  since sprint 204); clearDoorLanes(spec) filters spec.props (y<=1.9
+  only — above-lintel mounts are fine) + spec.hiding at instantiate;
+  builder drops built props whose non-walkable collider AABB overlaps the
+  door rect — footprintInDoorLane(spec,cx,cz,hw,hd), real half-extents,
+  NOT the old circumradius (it killed beds ~4m from the leaf); foreshadow
+  tells and injected corner hide spots lane-guard at push time.
+  Regression test sweeps all seeds: no spec prop/hiding in any lane.
   Sprint 205 entity feel: REAL BUG found in flickerRoom — 'sweep'/'reprise'/
   'dim' wrote l.intensity via setInterval but the per-frame light loop
   recomputes intensity from userData.baseIntensity every frame, stomping
@@ -252,17 +256,16 @@ CURRENT STATE (as of sprint 215)
   start() resets inventory async and will wipe a mid-boot grant;
   (f) heldView/beamGroup are created inside renderFrame — they don't
   exist under the stubbed renderFrame, probe only after a real frame.
-  Sprint 214 lamp-material clone diet: the builder.ts:1864 pairing loop
-  cloned EVERY paired fixture's material per light (3/room max × ~220
-  rooms). Now one clone per SOURCE MATERIAL per room (map keyed src
-  uuid) — the ambient loop's dim/break writes are room-level, so all
-  same-source meshes read identical values; flicker/anim meshes keep
-  their own clones (per-mesh seeds). flickerRoom 'break' and
-  blackoutRoom each ALSO re-cloned the lamp material + wrote a manual
-  emissive — deleted: the ambient loop's dead branch (blackedOut) writes
-  0.02 the very next frame, and pairing guarantees the mesh material is
-  already a clone. Unit coverage: generation.test.ts asserts same-source
-  pairing shares one clone and distinct kinds keep separate ones.
+  Sprint 214 lamp-material clone diet — REVERTED by Devin Review F2 in
+  sprint 215's fix pass: per-light writes are genuinely independent
+  (baseIntensity jitter 0.88-1.14 at Game.ts, alternating sweep flicker
+  writes 0.15x vs 1x), so a shared clone collapses same-source fixtures
+  to whichever light wrote last. Back to one clone per paired light;
+  kept: flickerRoom 'break' + blackoutRoom no longer re-clone/write
+  emissive manually (the ambient loop's blackedOut branch writes 0.02
+  next frame — those had also written to the SHARED cache material
+  before). generation.test.ts asserts per-light clones ≠ each other and
+  ≠ the MAT cache instance.
   Sprint 215 guest/scullery mill batch: 10 new pieces — curtainRod +
   curtainLong (fold-rib panels, pelmet/tie-backs), headboard (upholstered,
   brass finials), linenShelf (stacked folded linen), and a kitchen kit for
@@ -279,7 +282,13 @@ CURRENT STATE (as of sprint 215)
   rides the exemption over the table, copperSet hangs at 1.95); (b) bed
   head = +z end of the 'bed' prop at yaw 0 — headboards sit ~0.2m behind
   that at yaw PI; (c) route.underRooms is a SEPARATE array from
-  route.rooms — underscript probes must scan it (space==='under' rooms).
+  route.rooms — underscript probes must scan it (space==='under' rooms);
+  (d) viewmodel swap/GLB-upgrade must free geometries via
+  disposeOwned() — only vmGeo-tagged procedural geometries are owned;
+  GLB clone children share the cached source's buffers, materials are
+  MAT/module consts, neither is disposable; (e) heldView 'equipped' gate
+  must mirror the HUD inventory filter (count>0 || lamps) or a drained
+  item stays visibly held after the HUD already dropped it.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
