@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 215)
+CURRENT STATE (as of sprint 216)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -289,6 +289,24 @@ CURRENT STATE (as of sprint 215)
   MAT/module consts, neither is disposable; (e) heldView 'equipped' gate
   must mirror the HUD inventory filter (count>0 || lamps) or a drained
   item stays visibly held after the HUD already dropped it.
+  Sprint 216 mechanics e2e (e2e/mechanics.spec.ts): sim-drive coverage
+  for three untested paths — witness drain (face it → health falls ~14/s;
+  break sight → drain stops), maelstrom stabilize minigame (real hide via
+  interact path + spawnById('maelstrom') + stabilizeTriggered; rhythm
+  hold closes it clean — still hidden, no damage — passive play eats
+  failT>2.4 → 45hp + exitHiding), toll door (seed 'threshold' has
+  door-5-b1/door-17-b1; too-poor refuses locked, 5 imprints pays 3 and
+  opens the leaf). LEARNINGS: (a) stabilize's success signature is
+  "still hidden + undamaged" — the runner despawns mid-minigame so its
+  flag is unreachable; (b) minigame failT only accumulates while the
+  needle is >0.42 off-center — passive fail lands ~15s, rhythm success
+  ~10.5s — near-wire race by design; (c) full-route e2e needs a SEEDED
+  'Seeded Run' (QA shortRun has no branch doors/late entities) — drive
+  .seed-input via the native-setter + input event; (d) loot items near a
+  leaf ('Take spark Flash') out-focus the door — press E on whatever is
+  focused like a player would; (e) the runner entity is REMOVED from
+  g.entities on done — re-spawn for a second leg rather than reusing the
+  ref.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -302,8 +320,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     scheduling is done for everything else.
   - Perf: SSAO pass is the next multiplier after the shadow fix — consider
     restricting SSAO to 'high' only when fps allows, or half-res.
-  - e2e: remaining untested paths — maelstrom stabilize minigame, witness
-    drain, underscript seep/clamor, toll-door purchase.
+  - e2e: remaining untested paths — underscript seep/clamor ambience,
+    vend purchase flow, locked-keyed door + key pickup round-trip.
   - More mill batches if dressing still reads thin: armchair/settee
     variants, dressing screens, luggage racks, vanity sets, corridor
     sideboards, chapel/study pieces.
