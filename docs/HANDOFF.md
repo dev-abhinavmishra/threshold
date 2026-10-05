@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 214)
+CURRENT STATE (as of sprint 215)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -263,6 +263,23 @@ CURRENT STATE (as of sprint 214)
   0.02 the very next frame, and pairing guarantees the mesh material is
   already a clone. Unit coverage: generation.test.ts asserts same-source
   pairing shares one clone and distinct kinds keep separate ones.
+  Sprint 215 guest/scullery mill batch: 10 new pieces — curtainRod +
+  curtainLong (fold-rib panels, pelmet/tie-backs), headboard (upholstered,
+  brass finials), linenShelf (stacked folded linen), and a kitchen kit for
+  u-break: stoveRange (replaces 'stove'), potRack, dishDrainer,
+  choppingBlock, copperSet, manglePress. Dressed into guest-standard/-twin/
+  -dormitory/-storage/-two-baths/-reception, suite-split, guest-suite-grand
+  (wallProps kind lists), laundry-hall. WALL_MOUNT_Y gained curtainRod
+  (1.1), curtainLong (1.18), potRack (1.6).
+  LEARNINGS: (a) clearDoorLanes CULLS spec.props with y<=1.9 inside a door
+  lane — a 6x6 u-break with opposing doors loses almost every low prop
+  (chairs, center-ish furniture); first pass here silently dropped 6/6 new
+  u-break props — verify placements reach spec.props in a real generateRoute
+  dump, not just the template source; y>1.9 mounts always survive (potRack
+  rides the exemption over the table, copperSet hangs at 1.95); (b) bed
+  head = +z end of the 'bed' prop at yaw 0 — headboards sit ~0.2m behind
+  that at yaw PI; (c) route.underRooms is a SEPARATE array from
+  route.rooms — underscript probes must scan it (space==='under' rooms).
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -278,8 +295,9 @@ NEXT SPRINT IDEAS (pick the biggest first)
     restricting SSAO to 'high' only when fps allows, or half-res.
   - e2e: remaining untested paths — maelstrom stabilize minigame, witness
     drain, underscript seep/clamor, toll-door purchase.
-  - More mill batches if dressing still reads thin: curtain variants,
-    upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
+  - More mill batches if dressing still reads thin: armchair/settee
+    variants, dressing screens, luggage racks, vanity sets, corridor
+    sideboards, chapel/study pieces.
 ```
 
 ---

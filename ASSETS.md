@@ -707,3 +707,18 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `towelRail/` | Wall towel bar with hanging towel | guest-bath-ante, guest-two-baths |
 | `ceilingHook/` | Chain-hung meat/hoist hook (plate + links + hook) | morgue-drawers, maint-fabshop, u-corridor |
 | `ovalMirror/` | Ribbon-crest oval mirror (variant of `mirror`) | guest/gallery walls |
+
+## Blender prefab mill additions — sprint 215 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `curtainRod/` | Brass rod + short swag panels (fold-rib) | guest-standard, suite-split, guest-suite-grand walls |
+| `curtainLong/` | Full drop curtain, pelmet + tie-backs | guest-twin, suite-split, guest-suite-grand, guest-reception |
+| `headboard/` | Upholstered headboard (posts, brass finials, tuft buttons) | guest-standard, guest-twin, suite-split, guest-two-baths |
+| `stoveRange/` | Cast-iron range (hob rings, fire door, flue) | u-break (replaces `stove`) |
+| `potRack/` | Ceiling-hung pan rack (rail + hooks + pans) | u-break |
+| `dishDrainer/` | Wire dish rack | u-break |
+| `linenShelf/` | Tall shelf with stacked folded linen | guest-dormitory, laundry-hall, guest-storage |
+| `choppingBlock/` | Butcher's chopping block (knife) | u-break |
+| `copperSet/` | Wall-hung copper pan set | u-break |
+| `manglePress/` | Laundry mangle (twin rollers, crank, tray) | u-break, laundry-hall |

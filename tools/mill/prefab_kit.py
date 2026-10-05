@@ -34,9 +34,10 @@ BRASS = None
 WOOD = None
 WORN = None
 CLOTH = None
+VELVET = None
 
 def init_mats():
-    global STONE, DARK, IRON, WOOD, WORN, CLOTH, BRASS
+    global STONE, DARK, IRON, WOOD, WORN, CLOTH, BRASS, VELVET
     STONE = mat('stone', (0.42, 0.38, 0.33))
     DARK = mat('darkwood', (0.16, 0.10, 0.07), rough=0.7)
     WOOD = mat('oakwood', (0.32, 0.22, 0.13), rough=0.8)
@@ -44,6 +45,7 @@ def init_mats():
     WORN = mat('wornleather', (0.28, 0.18, 0.11), rough=0.85)
     CLOTH = mat('bookcloth', (0.2, 0.24, 0.2), rough=0.9)
     BRASS = mat('brass', (0.42, 0.30, 0.12), rough=0.35, metal=0.9)
+    VELVET = mat('velvet', (0.30, 0.07, 0.08), rough=0.95)
 
 # ---------- build helpers ----------
 
@@ -1365,6 +1367,290 @@ def ovalMirror():
     join_all('ovalMirror')
 
 
+def curtainRod():
+    """Drawn-open curtain pair on a brass rod — finials, brackets into the
+    wall (+y), gathered-fold panels bunched at both ends with tieback
+    cinches. Center-anchored wall mount; rod crowns ~2.05m."""
+    rod = cyl('rod', (0, -0.09, 2.05), 0.016, 2.2, BRASS, 10)
+    rod.rotation_euler[1] = math.pi / 2
+    for sx in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8,
+            radius=0.038, location=(sx * 1.13, -0.09, 2.05))
+        bpy.context.object.data.materials.append(BRASS)
+        # bracket: wall plate + angled arm
+        bx = sx * 0.92
+        cube('brkPlate', (bx, 0.015, 2.05), (0.05, 0.03, 0.12), BRASS, 0.004)
+        arm = cyl('brkArm', (bx, -0.05, 2.05), 0.012, 0.1, BRASS, 8)
+        arm.rotation_euler[0] = math.pi / 2
+        # bunched panel: 5 fold ribs alternating depth, cinched mid
+        for i in range(5):
+            fx = sx * (0.98 - i * 0.055)
+            fy = -0.09 + (0.02 if i % 2 else -0.015)
+            rib = cube('fold', (fx, fy, 1.18), (0.055, 0.05, 1.72), VELVET, 0.012)
+            rib.rotation_euler[2] = -sx * 0.02 * i
+        # tieback band + tails below the cinch
+        band = torus('tieback', (sx * 0.87, -0.1, 1.15), 0.09, 0.018, BRASS,
+                     rot=(0, math.pi / 2, 0), seg=12)
+        band.scale = (1, 1, 0.6)
+        cube('tail1', (sx * 0.82, -0.1, 1.02), (0.05, 0.04, 0.3), VELVET, 0.01)
+        cube('tail2', (sx * 0.9, -0.1, 1.04), (0.05, 0.04, 0.26), VELVET, 0.01)
+    join_all('curtainRod')
+
+
+def curtainLong():
+    """Floor-length closed curtains — header valance, two full-drop fold
+    columns meeting center with a soft overlap, hem weight bar. Covers a
+    ~1.6m opening; center-anchored wall mount."""
+    w, h = 1.7, 2.3
+    cube('valance', (0, -0.08, h - 0.08), (w, 0.1, 0.16), VELVET, 0.03)
+    cube('valanceTrim', (0, -0.115, h - 0.165), (w, 0.02, 0.03), WORN, 0.006)
+    # two panel columns of alternating-depth fold ribs, center overlap
+    for side, x0 in ((-1, -0.82), (1, 0.14)):
+        for i in range(5):
+            x = x0 + i * 0.14
+            fy = -0.085 + (0.022 if i % 2 else -0.02)
+            rib = cube('fold', (x, fy, h / 2 - 0.12), (0.15, 0.06, h - 0.42), VELVET, 0.02)
+            rib.rotation_euler[1] = (0.012 if i % 2 else -0.012)
+    # hem bar + floor puddle suggestion (a shallow extra fold at bottom)
+    cube('hem', (0, -0.08, 0.05), (w - 0.05, 0.07, 0.08), VELVET, 0.02)
+    rod = cyl('rod', (0, -0.06, h + 0.03), 0.014, w + 0.15, BRASS, 10)
+    rod.rotation_euler[1] = math.pi / 2
+    join_all('curtainLong')
+
+
+def headboard():
+    """Tall upholstered headboard — dark posts with ball finials, padded
+    inset panel with a 4x2 button tuft grid, shaped crown rail.
+    Floor-standing, sits flush behind a bed."""
+    w, h, d = 1.7, 1.45, 0.14
+    for sx in (-1, 1):
+        post = cyl('post', (sx * (w / 2 - 0.05), 0, h / 2 + 0.05), 0.045, h + 0.1, DARK, 10)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8,
+            radius=0.055, location=(sx * (w / 2 - 0.05), 0, h + 0.12))
+        bpy.context.object.data.materials.append(BRASS)
+    # crown rail with a shallow arch — two angled slabs + center slab
+    cube('railC', (0, 0, h + 0.02), (0.7, d, 0.14), DARK, 0.03)
+    l = cube('railL', (-0.42, 0, h - 0.005), (0.25, d, 0.12), DARK, 0.025)
+    l.rotation_euler[1] = 0.3
+    r = cube('railR', (0.42, 0, h - 0.005), (0.25, d, 0.12), DARK, 0.025)
+    r.rotation_euler[1] = -0.3
+    # padded inset
+    cube('pad', (0, -0.005, h * 0.52), (w - 0.18, 0.1, h - 0.32), WORN, 0.05)
+    # button tufts — small brass studs sunk into the pad
+    for ix in range(4):
+        for iz in range(2):
+            x = (ix - 1.5) * 0.36
+            z = h * 0.52 + (iz - 0.5) * 0.42
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6,
+                radius=0.018, location=(x, -0.058, z))
+            bpy.context.object.data.materials.append(BRASS)
+    # bottom rail + legs behind
+    cube('railB', (0, 0, 0.12), (w - 0.1, d, 0.1), DARK, 0.015)
+    join_all('headboard')
+
+
+def stoveRange():
+    """Cast-iron kitchen range — firebox door + round latch, hob rings and
+    top plate, oven handle bar, back splash lip, chimney stub, claw feet."""
+    w, h, d = 1.15, 0.92, 0.68
+    cube('body', (0, 0, h / 2 + 0.06), (w, d, h - 0.16), IRON, 0.02)
+    # top plate + hob rings
+    cube('topPlate', (0, 0, h + 0.02), (w + 0.02, d + 0.02, 0.05), IRON, 0.012)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            torus('hob', (sx * w / 4 - 0.01, sy * d / 4 - 0.01, h + 0.05),
+                  0.13, 0.02, IRON, seg=16)
+    # back splash lip
+    cube('splash', (0, d / 2 - 0.02, h + 0.16), (w + 0.02, 0.04, 0.28), IRON, 0.01)
+    # firebox door: proud slab + frame ribs + round latch
+    cube('door', (0, -d / 2 - 0.015, 0.48), (0.62, 0.05, 0.5), IRON, 0.015)
+    cube('doorLip', (0, -d / 2 - 0.045, 0.48), (0.5, 0.02, 0.38), DARK, 0.008)
+    latch = cyl('latch', (0.24, -d / 2 - 0.06, 0.48), 0.022, 0.05, BRASS, 10)
+    latch.rotation_euler[0] = math.pi / 2
+    cyl('latchHub', (0.24, -d / 2 - 0.035, 0.48), 0.035, 0.02, BRASS, 10).rotation_euler[0] = math.pi / 2
+    # oven handle bar under the top plate
+    hb = cyl('ovenBar', (0, -d / 2 - 0.06, 0.78), 0.014, w - 0.15, BRASS, 8)
+    hb.rotation_euler[1] = math.pi / 2
+    # chimney stub rising off the back corner
+    ch = cyl('chimney', (w / 4, d / 2 - 0.06, h + 0.38), 0.09, 0.6, IRON, 14)
+    torus('chimCap', (w / 4, d / 2 - 0.06, h + 0.66), 0.1, 0.02, IRON, seg=14)
+    # claw feet
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=6,
+                radius=0.075, location=(sx * (w / 2 - 0.08), sy * (d / 2 - 0.08), 0.06))
+            bpy.context.object.scale = (1, 1, 0.75)
+            bpy.context.object.data.materials.append(IRON)
+    join_all('stoveRange')
+
+
+def potRack():
+    """Wall pot rack — oak back shelf, brass hanging rail beneath, five
+    S-hooks, two hanging pans and a ladle. Center-anchored wall mount."""
+    w = 0.9
+    cube('shelf', (0, -0.12, 0.42), (w, 0.24, 0.03), WOOD, 0.008)
+    cube('lip', (0, -0.235, 0.44), (w, 0.02, 0.05), WORN, 0.005)
+    # wall cleats
+    for sx in (-1, 1):
+        cube('cleat', (sx * (w / 2 - 0.08), -0.02, 0.4), (0.06, 0.05, 0.12), DARK, 0.006)
+    rail = cyl('rail', (0, -0.14, 0.28), 0.011, w - 0.1, BRASS, 8)
+    rail.rotation_euler[1] = math.pi / 2
+    # S-hooks: little tori around the rail
+    hook_x = [-0.32, -0.16, 0.0, 0.16, 0.32]
+    for hx in hook_x:
+        torus('hook', (hx, -0.14, 0.245), 0.028, 0.006, BRASS, rot=(math.pi / 2, 0, 0), seg=10)
+    # two pans hanging from the middle hooks
+    for i, hx in enumerate((-0.16, 0.16)):
+        pan_y, pan_z = -0.16, 0.14 - i * 0.015
+        cyl('pan', (hx, pan_y, pan_z), 0.075 - i * 0.01, 0.035, BRASS, 14)
+        hnd = cube('panHnd', (hx, pan_y, pan_z + 0.12), (0.018, 0.02, 0.14), BRASS, 0.004)
+        hnd.rotation_euler[0] = 0.1 * (1 if i else -1)
+    # ladle on the last hook — stem + bowl
+    cyl('ladleStem', (0.32, -0.15, 0.13), 0.007, 0.2, BRASS, 8)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.035,
+        location=(0.32, -0.15, 0.03))
+    ladle = bpy.context.object
+    ladle.scale = (1, 1, 0.55)
+    ladle.data.materials.append(BRASS)
+    join_all('potRack')
+
+
+def dishDrainer():
+    """Counter dish drainer — wood drip tray, six tilted plate slots,
+    cutlery cup with upright spoons. Small tabletop clutter piece."""
+    w, d = 0.52, 0.36
+    cube('tray', (0, 0, 0.015), (w, d, 0.03), WOOD, 0.008)
+    cube('trayLipF', (0, -d / 2 + 0.01, 0.045), (w, 0.02, 0.04), WORN, 0.004)
+    cube('trayLipB', (0, d / 2 - 0.01, 0.045), (w, 0.02, 0.04), WORN, 0.004)
+    # plate slots — thin slots tilted ~12°, growing toward the back
+    for i in range(6):
+        x = -0.19 + i * 0.075
+        slot = cube('plate', (x, -0.02, 0.1 + i * 0.003), (0.055, 0.26, 0.13), STONE, 0.012)
+        slot.rotation_euler[0] = 0.2
+    # wire dividers over the slots
+    for i in range(5):
+        div = cyl('div', (-0.155 + i * 0.075, 0, 0.1), 0.004, d - 0.04, BRASS, 6)
+        div.rotation_euler[0] = math.pi / 2
+    # cutlery cup + three upright spoons
+    cyl('cup', (0.19, 0.1, 0.09), 0.045, 0.12, WORN, 12)
+    for i, (ox, oy) in enumerate(((-0.015, 0), (0.015, 0.01), (0, -0.015))):
+        sp = cyl('spoon', (0.19 + ox, 0.1 + oy, 0.19), 0.005, 0.14, BRASS, 6)
+        sp.rotation_euler[2] = (i - 1) * 0.15
+    join_all('dishDrainer')
+
+
+def linenShelf():
+    """Open linen shelving — tall oak frame, five shelves, folded sheet and
+    towel piles with slight offsets, rolled towels crowning the top."""
+    w, h, d = 1.25, 2.05, 0.5
+    for sx in (-1, 1):
+        cube('side', (sx * (w / 2 - 0.03), 0, h / 2), (0.06, d, h), WOOD, 0.01)
+    for iz, z in enumerate((0.1, 0.52, 0.94, 1.36, 1.78, 2.02)):
+        cube('shelf', (0, 0, z), (w - 0.08, d - 0.06, 0.035), WOOD, 0.006)
+        if iz >= 5:
+            continue
+        # folded piles per shelf — 2 stacks of rounded linens
+        for k in range(2):
+            bx = -0.28 + k * 0.55 + (0.02 if iz % 2 else -0.01)
+            for j in range(3 + (iz + k) % 2):
+                cube('linen', (bx, -0.02 + 0.01 * j, z + 0.055 + j * 0.055),
+                     (0.42 - 0.04 * (j % 2), d - 0.18, 0.05), CLOTH, 0.02)
+    # rolled towels on the top shelf
+    for i in range(3):
+        r = cyl('roll', (-0.32 + i * 0.3, -0.05, 2.08), 0.045, 0.34, CLOTH, 10)
+        r.rotation_euler[0] = math.pi / 2
+    cube('back', (0, d / 2 - 0.03, h / 2), (w - 0.08, 0.03, h), DARK, 0.005)
+    join_all('linenShelf')
+
+
+def choppingBlock():
+    """Butcher's chopping block — thick end-grain top on splayed legs with
+    stretchers, a knife stuck into the surface and a cleaver mark."""
+    w, h, d = 0.95, 0.85, 0.62
+    cube('top', (0, 0, h - 0.09), (w, d, 0.18), WOOD, 0.02)
+    cube('topEdge', (0, 0, h - 0.175), (w + 0.015, d + 0.015, 0.03), WORN, 0.008)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cyl('leg', (sx * (w / 2 - 0.09), sy * (d / 2 - 0.09), (h - 0.18) / 2 + 0.03),
+                      0.045, h - 0.18, DARK, 10)
+            leg.rotation_euler[0] = sy * -0.07
+            leg.rotation_euler[1] = sx * 0.07
+    # side + end stretchers
+    for sy in (-1, 1):
+        cube('stretchX', (0, sy * (d / 2 - 0.07), 0.28), (w - 0.14, 0.04, 0.05), DARK, 0.008)
+    for sx in (-1, 1):
+        cube('stretchY', (sx * (w / 2 - 0.07), 0, 0.28), (0.04, d - 0.14, 0.05), DARK, 0.008)
+    # knife stuck tip-down near the front corner
+    blade = cube('blade', (-w / 2 + 0.16, -d / 2 + 0.12, h + 0.075), (0.035, 0.09, 0.15), IRON, 0.004)
+    blade.rotation_euler[2] = -0.12
+    cube('knifeHdl', (-w / 2 + 0.175, -d / 2 + 0.12, h + 0.175), (0.03, 0.05, 0.11), WORN, 0.008)
+    join_all('choppingBlock')
+
+
+def copperSet():
+    """Copper pot stack — nested saucepans and a tipped pan leaning against
+    them, lids and riveted handles. Counter/shelf clutter piece."""
+    # big stockpot + lid
+    cyl('stock', (0, 0, 0.11), 0.115, 0.2, BRASS, 16)
+    cyl('stockRim', (0, 0, 0.215), 0.12, 0.015, BRASS, 16)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.105,
+        location=(0, 0, 0.225))
+    lid = bpy.context.object
+    lid.scale = (1, 1, 0.3)
+    lid.data.materials.append(BRASS)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.018,
+        location=(0, 0, 0.27))
+    bpy.context.object.data.materials.append(IRON)
+    # side handles — little tori
+    for sx in (-1, 1):
+        torus('hnd', (sx * 0.125, 0, 0.14), 0.03, 0.008, BRASS,
+              rot=(0, math.pi / 2, 0), seg=10)
+    # medium pan balanced on top, slightly off-center
+    cyl('pan2', (0.02, -0.01, 0.31), 0.085, 0.09, BRASS, 14)
+    cyl('pan2Rim', (0.02, -0.01, 0.355), 0.088, 0.012, BRASS, 14)
+    hnd2 = cube('pan2Hnd', (0.02, -0.2, 0.33), (0.025, 0.22, 0.02), BRASS, 0.004)
+    hnd2.rotation_euler[0] = 0.06
+    # tipped pan leaning against the stack
+    tip = cyl('pan3', (0.22, 0.06, 0.12), 0.08, 0.05, BRASS, 14)
+    tip.rotation_euler[1] = math.pi / 2 - 0.35
+    t3h = cube('pan3Hnd', (0.22, -0.14, 0.05), (0.2, 0.025, 0.02), BRASS, 0.004)
+    t3h.rotation_euler[2] = -0.12
+    join_all('copperSet')
+
+
+def manglePress():
+    """Laundry wringer mangle — oak A-frame, rubber roller pair in a top
+    housing, hand crank on the side, drip tray beneath. Reads instantly
+    as a washroom fixture."""
+    w, h, d = 0.95, 1.15, 0.55
+    # frame: splayed side posts + cross rails
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            leg = cyl('leg', (sx * (w / 2 - 0.07), sy * (d / 2 - 0.07), h / 2 - 0.02),
+                      0.035, h - 0.04, DARK, 10)
+            leg.rotation_euler[0] = sy * -0.1
+            leg.rotation_euler[1] = sx * 0.1
+    for sy in (-1, 1):
+        cube('railX', (0, sy * (d / 2 - 0.06), h - 0.32), (w - 0.1, 0.045, 0.06), DARK, 0.008)
+    # top housing: side cheeks + rollers
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.05), 0, h - 0.14), (0.07, 0.3, 0.34), WOOD, 0.015)
+    for z, r in ((h - 0.1, 0.075), (h - 0.23, 0.075)):
+        roller = cyl('roller', (0, 0, z), r, w - 0.18, WORN, 16)
+        roller.rotation_euler[1] = math.pi / 2
+        for sx in (-1, 1):
+            cyl('axle', (sx * (w / 2 - 0.02), 0, z), 0.018, 0.08, IRON, 8).rotation_euler[1] = math.pi / 2
+    # hand crank: side arm + grip
+    cyl('crankArm', (w / 2 + 0.03, -0.04, h - 0.23), 0.011, 0.14, IRON, 8).rotation_euler[0] = math.pi / 2
+    cube('crankBend', (w / 2 + 0.03, -0.11, h - 0.29), (0.025, 0.025, 0.13), IRON, 0.005)
+    cyl('crankGrip', (w / 2 + 0.03, -0.11, h - 0.36), 0.013, 0.1, WOOD, 8)
+    # drip tray slung under the rollers
+    cube('tray', (0, 0, h - 0.42), (w - 0.16, 0.34, 0.03), IRON, 0.008)
+    for sx in (-1, 1):
+        cube('trayLip', (sx * (w / 2 - 0.09), 0, h - 0.4), (0.02, 0.34, 0.06), IRON, 0.005)
+    join_all('manglePress')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1387,6 +1673,11 @@ PIECES = {
     'bedBench': bedBench, 'radiatorTall': radiatorTall, 'linenHamper': linenHamper,
     'basinSink': basinSink, 'pegRail': pegRail, 'towelRail': towelRail,
     'ceilingHook': ceilingHook, 'ovalMirror': ovalMirror,
+    'curtainRod': curtainRod, 'curtainLong': curtainLong,
+    'headboard': headboard, 'stoveRange': stoveRange, 'potRack': potRack,
+    'dishDrainer': dishDrainer, 'linenShelf': linenShelf,
+    'choppingBlock': choppingBlock, 'copperSet': copperSet,
+    'manglePress': manglePress,
 }
 
 def main():

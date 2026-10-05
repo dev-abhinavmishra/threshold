@@ -167,6 +167,16 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   pegRail: { dir: 'pegRail', height: 0.72, collider: [0, 0, 0], anchor: 'center' },
   towelRail: { dir: 'towelRail', height: 0.48, collider: [0, 0, 0], anchor: 'center' },
   ceilingHook: { dir: 'ceilingHook', height: 0.73, collider: [0, 0, 0], anchor: 'center' },
+  curtainRod: { dir: 'curtainRod', height: 2.15, collider: [0, 0, 0], anchor: 'center' },
+  curtainLong: { dir: 'curtainLong', height: 2.4, collider: [0, 0, 0], anchor: 'center' },
+  headboard: { dir: 'headboard', height: 1.5, collider: [1.75, 1.5, 0.2] },
+  stoveRange: { dir: 'stoveRange', height: 1.05, collider: [1.2, 1.0, 0.72] },
+  potRack: { dir: 'potRack', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
+  dishDrainer: { dir: 'dishDrainer', height: 0.22, collider: [0, 0, 0] },
+  linenShelf: { dir: 'linenShelf', height: 2.1, collider: [1.3, 2.1, 0.55] },
+  choppingBlock: { dir: 'choppingBlock', height: 0.95, collider: [1.0, 0.95, 0.65] },
+  copperSet: { dir: 'copperSet', height: 0.38, collider: [0, 0, 0] },
+  manglePress: { dir: 'manglePress', height: 1.2, collider: [1.0, 1.2, 0.6] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],
