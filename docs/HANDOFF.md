@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 209)
+CURRENT STATE (as of ~sprint 210)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -201,6 +201,15 @@ CURRENT STATE (as of ~sprint 209)
   by the room's mean light mul (0 when blackedOut). NOTE: THREE
   material.clone() JSON-serializes userData — never store Object3D refs
   before a clone; set lightRef AFTER cloning (see poolMat2).
+  Sprint 210 hollow-trap + panic-eject e2e: QA short runs use a random
+  seed — pin one (g.startRun({seedText:'trap-seed-7'}) inside evaluate,
+  re-stub renderFrame after; the patched clock tick survives startRun).
+  Traps only roll on rooms index>=12 with >=2 spots at 30% — probe seeds
+  before pinning. Eject path: panic decays hard during the runner's warn
+  phase (0.15/s), so pin g.player.panic=0.999 per frame and the first
+  engage-within-30m frame crosses 1 -> panicEject. Assertions prove the
+  sweep really engaged within 30m (engage+near tracked per frame).
+  14 e2e tests.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Remaining glow leaks: 'flicker'-anim fixture meshes run their own
@@ -217,8 +226,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     scheduling is done for everything else.
   - Perf: SSAO pass is the next multiplier after the shadow fix — consider
     restricting SSAO to 'high' only when fps allows, or half-res.
-  - e2e: Hollow-trap coverage (trapped spot → grapple → struggle-free) and
-    panic-eject are still untested paths via sim-drive.
+  - e2e: remaining untested paths — maelstrom stabilize minigame, witness
+    drain, underscript seep/clamor, toll-door purchase.
   - More mill batches if dressing still reads thin: curtain variants,
     upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
 ```

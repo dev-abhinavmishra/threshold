@@ -375,3 +375,141 @@ test('hiding spot: enter hides the player, leave restores them', async ({ page }
   expect(result.left).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('hollow trap + panic eject: struggle frees the player, panic ejects them', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        renderFrame(): void;
+        clock: { tick(): boolean; dt: number; time: number };
+        godMode: boolean;
+        frame(): void;
+        startRun(opts: { seedText: string }): void;
+        input: { interactPressed: boolean };
+        interaction: { focused: { prompt: string } | null };
+        currentRoom: number;
+        player: {
+          pos: { x: number; y: number; z: number };
+          yaw: number; pitch: number; eyeHeight: number;
+          hiddenSpot: { id: string; exitPos: { x: number; y: number; z: number } } | null;
+          protection: string;
+          panic: number;
+          dead: boolean;
+          teleport(x: number, y: number, z: number, yaw?: number): void;
+        };
+        entities: { id: string; state: string }[];
+        spawnById(id: string): void;
+        route: { rooms: {
+          index: number; origin: { x: number; z: number };
+          hidingSpots: { id: string; kind: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
+        }[] };
+      };
+    }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    // Hollow traps are rare on short runs — pin a seed known to carry them.
+    g.startRun({ seedText: 'trap-seed-7' });
+    g.renderFrame = () => {};
+    for (let f = 0; f < 40; f++) g.frame(); // let the streamer rebuild
+
+    const rooms = g.route.rooms;
+    const pressIfFocused = (re: RegExp) => { g.input.interactPressed = re.test(g.interaction.focused?.prompt ?? ''); g.frame(); };
+    const aimAt = (p: { x: number; y: number; z: number }) => {
+      const dx = p.x - g.player.pos.x, dz = p.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(dx, dz);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const dist = Math.hypot(dx, dz);
+      g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(p.y - eyeY, dist || 1)));
+    };
+    const enterSpot = (spot: { exitPos: { x: number; y: number; z: number } }, room: { origin: { x: number; z: number } }) => {
+      const dx = room.origin.x - spot.exitPos.x, dz = room.origin.z - spot.exitPos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(spot.exitPos.x + (dx / L) * 1.1, 0, spot.exitPos.z + (dz / L) * 1.1, Math.atan2(-dx, -dz));
+      for (let f = 0; f < 30; f++) {
+        aimAt(spot.exitPos);
+        pressIfFocused(/hide/i);
+        if (g.player.hiddenSpot) return true;
+      }
+      return false;
+    };
+
+    // --- part 1: hollow trap ---
+    let trappedRoom = -1;
+    let hollowSpawned = false, struggledOut = false;
+    outer:
+    for (const room of rooms) {
+      if (room.index < 2) continue;
+      for (const spot of room.hidingSpots) {
+        if (spot.trappedBy !== 'hollow') continue;
+        g.currentRoom = room.index;
+        if (!enterSpot(spot, room)) continue;
+        trappedRoom = room.index;
+        // Grapple: each 'Leave hiding' press struggles; release needs 3.
+        hollowSpawned = g.entities.some((e) => e.id === 'hollow');
+        for (let f = 0; f < 40 && g.player.hiddenSpot; f++) {
+          const s = g.player.hiddenSpot;
+          if (s) aimAt(s.exitPos);
+          pressIfFocused(/leave/i);
+        }
+        struggledOut = !g.player.hiddenSpot;
+        break outer;
+      }
+    }
+    if (trappedRoom < 0) return { stage: 'no-trapped-spot' };
+
+    // --- part 2: panic eject ---
+    // Hide again in a clean spot, push panic to the brink, and spawn a
+    // corridor runner near — panic crosses 1 and ejects the body.
+    let panicEjected = false, rehidden = false;
+    let maxPanic = 0, engagedSeen = false, nearSeen = false;
+    outer2:
+    for (const room of rooms) {
+      if (room.index < 2) continue;
+      for (const spot of room.hidingSpots) {
+        if (spot.trappedBy) continue;
+        g.currentRoom = room.index;
+        if (!enterSpot(spot, room)) continue;
+        rehidden = true;
+        g.player.panic = 0.99;
+        g.spawnById('sweep');
+        // Panic decays through the warn phase — hold it at the brink so the
+        // first engaged near-pass crosses 1.
+        for (let f = 0; f < 1200 && g.player.hiddenSpot; f++) {
+          g.player.panic = Math.max(g.player.panic, 0.999);
+          g.frame();
+          maxPanic = Math.max(maxPanic, g.player.panic);
+          const sw = g.entities.find((e) => e.id === 'sweep');
+          if (sw?.state === 'engage') {
+            engagedSeen = true;
+            const pp = (sw as { posApprox?: () => { x: number; z: number } }).posApprox?.();
+            if (pp && Math.hypot(pp.x - g.player.pos.x, pp.z - g.player.pos.z) < 30) nearSeen = true;
+          }
+        }
+        panicEjected = !g.player.hiddenSpot;
+        break outer2;
+      }
+    }
+    return { stage: 'done', trappedRoom, hollowSpawned, struggledOut, rehidden, panicEjected, dead: g.player.dead, maxPanic, engagedSeen, nearSeen };
+  });
+
+  expect(result.stage).toBe('done');
+  expect(result.hollowSpawned).toBe(true);
+  expect(result.struggledOut).toBe(true);
+  expect(result.rehidden).toBe(true);
+  // The sweep must actually have engaged nearby — the eject is threat-driven,
+  // not incidental.
+  expect(result.engagedSeen).toBe(true);
+  expect(result.nearSeen).toBe(true);
+  expect(result.panicEjected).toBe(true);
+  expect(result.dead).toBe(false);
+  expect(errors).toEqual([]);
+});
