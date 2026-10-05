@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 218)
+CURRENT STATE (as of sprint 219)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -338,6 +338,31 @@ CURRENT STATE (as of sprint 218)
   EffectComposer — no rebuild needed; EMA convergence lag (~4-5 samples)
   counts inside the sustain window, so thresholds are wall-time not
   sample-time.
+  Sprint 219 mechanics e2e part 2 (e2e/mechanics.spec.ts, 6/6 passing):
+  vend purchase (seed 'threshold' room 17 — feed at imprints<price
+  refuses, exact pay charges + grants vendItem + sock.meta.taken),
+  keyed-door round-trip (keyPairs[0] 13→14 — take doorKey from its
+  socket, held 'Unlock Door N' consumes it, leaf opens), underscript
+  descent/exit (ms-under-entrance @61 — 'Open Underscript passage'
+  refuses while clamps<2, release both seal clamps + resonanceKey →
+  enterUnderscript → space 'under' room 0; underExit on the deepest
+  under-room → 'main' at underReturn 70, underscriptCompleted + free
+  palimpsest). LEARNINGS: (a) page.evaluate bodies serialize into the
+  page — module-scope helpers/imports are NOT reachable; inline all
+  helpers per-evaluate and declare g with a full structural interface
+  (module-level `interface ThresholdG` — types are erased so the cast
+  survives serialization; bare `any` fails eslint, untyped callback
+  params fail noImplicitAny on any-typed receivers); (b) stand on the
+  room-INTERIOR side of a wall-hugging interactable — fixed world
+  offsets (pos+1,+0.3) put the player inside wall colliders and the
+  seal clamp never focuses; teleport pos→room.origin*1.15; (c)
+  holdTime interactables fire on a plain E-press too — tryInteract()
+  runs on interactPressed independent of updateHold; (d) the gate has
+  TWO underEntrance sockets ('Inspect sealed passage' at entryPos y0
+  AND 'Open Underscript passage' at the door) — either routes to
+  UnderscriptGate.onInteract; (e) seal-clamp sockets are kind 'key' —
+  one may carry contains:'doorKey' for the room's own lockId (clamp A
+  at seed 'threshold' does), so releasing it also grants the key.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -350,7 +375,7 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
   - e2e: remaining untested paths — underscript seep/clamor ambience,
-    vend purchase flow, locked-keyed door + key pickup round-trip.
+    broker/shop trades, puzzle/routing-board encounters.
   - More mill batches if dressing still reads thin: armchair/settee
     variants, dressing screens, luggage racks, vanity sets, corridor
     sideboards, chapel/study pieces.

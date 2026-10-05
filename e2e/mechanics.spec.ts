@@ -309,3 +309,264 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
   expect(result.openT).toBeGreaterThan(0.5);
   expect(errors).toEqual([]);
 });
+
+interface GSock { kind: string; pos: { x: number; y: number; z: number }; meta: Record<string, unknown> }
+interface GDoor { pos: { x: number; y: number; z: number }; locked: boolean; lockId?: string; openT: number }
+interface GRoom {
+  index: number; templateId?: string;
+  origin: { x: number; z: number };
+  entryPos: { x: number; y: number; z: number };
+  sockets: GSock[]; doors: GDoor[];
+}
+interface ThresholdG {
+  renderFrame(): void;
+  clock: { tick(): boolean; dt: number; time: number };
+  godMode: boolean;
+  frame(): void;
+  currentRoom: number;
+  space: string;
+  imprints: number;
+  inventory: { id: string; count: number }[];
+  milestones: { get(i: number): { clamps: Set<string> } | undefined };
+  giveItem(id: string, n?: number): void;
+  stats: { underscriptDeepest: number; underscriptCompleted: boolean };
+  input: { interactPressed: boolean };
+  keys: Set<string>;
+  interaction: { focused?: { prompt: string; holdTime?: number } | null };
+  player: {
+    pos: { x: number; y: number; z: number };
+    yaw: number; pitch: number; eyeHeight: number;
+    teleport(x: number, y: number, z: number, yaw?: number): void;
+  };
+  route: {
+    rooms: GRoom[]; underRooms: GRoom[]; underReturn: number;
+    keyPairs: { keyRoom: number; lockRoom: number; lockId: string }[];
+  };
+}
+
+test('vend machine refuses on short funds, sells on exact pay', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    // Stand on the interior side of an interactable — a fixed world offset
+    // can land inside a wall/prop and shove the player back out.
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    let sock: GSock | null = null, room: GRoom | null = null;
+    for (const r of g.route.rooms) {
+      const s = r.sockets.find((x) => x.meta?.vend === true && x.meta.taken !== true);
+      if (s) { sock = s; room = r; break; }
+    }
+    if (!sock || !room) return { stage: 'no-vend' } as const;
+    const price = sock.meta.price as number, item = sock.meta.vendItem as string;
+    g.currentRoom = room.index;
+    standAt(room, sock.pos);
+
+    // Short funds: the feed completes and the machine refuses.
+    g.imprints = price - 1;
+    const promptsA = drive(sock.pos, /feed the machine/i, () => false, 70);
+    const refused = sock.meta.taken !== true && g.imprints === price - 1;
+
+    // Exact pay: feed again — charged, item granted, socket spent.
+    g.imprints = price;
+    standAt(room, sock.pos);
+    drive(sock.pos, /feed the machine/i, () => sock.meta.taken === true, 70);
+    const inv = g.inventory.find((s) => s.id === item);
+    const sold = sock.meta.taken === true && g.imprints === 0 && !!inv;
+    return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints, inv: g.inventory.map((s) => s.id) };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused, result.promptsA).toBe(true);
+  expect(result.sold, JSON.stringify(result.inv)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('keyed door: find the brass key, return, unlock the lock', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    // Stand on the interior side of an interactable — a fixed world offset
+    // can land inside a wall/prop and shove the player back out.
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    const pair = g.route.keyPairs[0];
+    if (!pair) return { stage: 'no-keypair' } as const;
+    const keyRoom = g.route.rooms.find((r) => r.index === pair.keyRoom);
+    const lockRoom = g.route.rooms.find((r) => r.index === pair.lockRoom);
+    const keySock = keyRoom?.sockets.find((s) => s.meta?.contains === 'doorKey' && s.meta?.lockId === pair.lockId);
+    const door = lockRoom?.doors.find((d) => d.lockId === pair.lockId);
+    if (!keyRoom || !lockRoom || !keySock || !door) return { stage: 'no-fixture' } as const;
+    const wasLocked = door.locked === true;
+
+    // Take the key from its socket in the key room.
+    g.currentRoom = keyRoom.index;
+    standAt(keyRoom, keySock.pos);
+    const keyPrompts = drive(keySock.pos, /take|search|drawer|loot|sign/i,
+      () => (g.inventory.find((x) => x.id === 'doorKey')?.count ?? 0) >= 1, 90);
+    if (!keySock.meta.taken) return { stage: 'no-key', keyPrompts } as const;
+
+    // Return and unlock — the held Unlock consumes the brass key.
+    g.currentRoom = lockRoom.index;
+    standAt(lockRoom, door.pos);
+    const doorPrompts = drive(door.pos, /unlock|door|peek/i, () => !door.locked, 90);
+    for (let f = 0; f < 60 && door.openT < 0.5; f++) g.frame();
+    const keyLeft = g.inventory.find((x) => x.id === 'doorKey')?.count ?? 0;
+    return { stage: 'done', wasLocked, keyPrompts, doorPrompts, paid: !door.locked, openT: door.openT, keyLeft };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.wasLocked).toBe(true);
+  expect(result.paid, result.doorPrompts).toBe(true);
+  expect(result.openT).toBeGreaterThan(0.5);
+  expect(result.keyLeft).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('underscript gate: seal clamps + resonance key descend, exit returns with palimpsest', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    // Stand on the interior side of an interactable — a fixed world offset
+    // can land inside a wall/prop and shove the player back out.
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    const entrance = g.route.rooms.find((r) => r.templateId === 'ms-under-entrance');
+    if (!entrance) return { stage: 'no-entrance' } as const;
+    const gate = g.milestones.get(entrance.index);
+    const doorSock = entrance.sockets.find((s) => s.meta?.underDoor === true);
+    const clamps = entrance.sockets.filter((s) => !!s.meta?.sealClamp);
+    if (!gate || !doorSock || clamps.length < 2) return { stage: 'no-fixture' } as const;
+    g.currentRoom = entrance.index;
+
+    // First refusal: sealed shut — no clamps released, no key.
+    standAt(entrance, doorSock.pos);
+    drive(doorSock.pos, /underscript|open|sealed|inspect/i, () => g.space === 'under', 30);
+    const refusedEarly = g.space === 'main';
+
+    // Release both hold-to-release clamps, then open with the resonance key.
+    for (const c of clamps) {
+      standAt(entrance, c.pos);
+      drive(c.pos, /release seal clamp|take|search/i, () => false, 80);
+    }
+    const clampsDone = gate.clamps.size;
+    g.giveItem('resonanceKey', 1);
+    standAt(entrance, doorSock.pos);
+    drive(doorSock.pos, /underscript|open|inspect/i, () => g.space === 'under', 60);
+    const underStart = { room: g.currentRoom, space: g.space };
+    if (g.space !== 'under') return { stage: 'no-descent', refusedEarly, clampsDone } as const;
+
+    // Reach the deepest room, exit back to the Meridian.
+    g.stats.underscriptDeepest = g.route.underRooms.length - 1;
+    const exitRoom = g.route.underRooms[g.route.underRooms.length - 1];
+    const exitSock = exitRoom.sockets.find((s) => s.meta?.underExit === true);
+    if (!exitSock) return { stage: 'no-exit', refusedEarly, clampsDone, underStart } as const;
+    g.currentRoom = exitRoom.index;
+    standAt(exitRoom, exitSock.pos);
+    drive(exitSock.pos, /return to the meridian|take|open/i, () => g.space === 'main', 60);
+    return {
+      stage: 'done', refusedEarly, clampsDone, underStart, space: g.space, room: g.currentRoom,
+      palimpsest: g.inventory.some((s) => s.id === 'palimpsest'),
+      completed: g.stats.underscriptCompleted === true, returnIdx: g.route.underReturn,
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refusedEarly).toBe(true);
+  expect(result.clampsDone).toBe(2);
+  expect(result.underStart).toEqual({ room: 0, space: 'under' });
+  expect(result.space).toBe('main');
+  expect(result.completed).toBe(true);
+  expect(result.palimpsest).toBe(true);
+  expect(errors).toEqual([]);
+});
