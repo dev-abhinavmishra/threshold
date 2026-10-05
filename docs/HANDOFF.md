@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 207)
+CURRENT STATE (as of ~sprint 208)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -182,12 +182,25 @@ CURRENT STATE (as of ~sprint 207)
   ambience. Margin emits 'margin-rustle' positional cues from the
   MIRRORED edge while closing unseen (audio lies about which side).
   Tests: margin rustles ≥2 positional + husk duckTone on crowd-stir.
+  Sprint 208 full lamp pairing + more tone ducks: REAL BUG — the sconce
+  PointLight was pushed into built.lights with no userData.baseIntensity,
+  so the ambient loop wrote NaN into its intensity every frame. Fixed at
+  creation. Every built light now pairs to its spec-aligned lamp mesh
+  (lampMeshes index-aligns with spec.lights; lights[] is a re-sorted
+  slice — pair via l.userData.ls identity, per-light material clone,
+  skip userData.anim meshes which have their own lightRef coupling).
+  Ambient loop writes glow for ALL paired lights incl. dead rooms →0.02.
+  More duckTone callers: corridor door-rattle arrival (1.8s), stillframe
+  snap (1.4s), hollow grapple (2.2s).
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Non-flicker lights have no lampMesh pairing — their fixtures can't dip
-    on 'dim'/'break'. Pair each built light to its nearest lampMeshes mesh.
-  - More tone-duck callers: corridor 'door-rattle' (front arrives), hollow
-    grapple, stillframe snap — pick only presence beats, not spam.
+  - Decal/light-shaft sync: shafts + lamp-glow decals (ensureCam/sconce
+    pools) stay bright in 'dim'/'break' rooms — scale decal opacity off
+    the paired light like lampMesh does.
+  - Quality-mode scaling: lampMesh pairing adds one material clone per
+    light per room — check memory on long runs; share clones per room.
+  - Player hand/held-item viewmodel polish: current carryables float;
+    a simple rigged hand or sway bob sells presence cheaply.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient

@@ -2409,17 +2409,23 @@ export class Game {
       const breath = i === this.breathingRoom ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9)) : 1;
       const tele = this.telegraphMul.get(i) ?? 1;
       for (const l of built.lights) {
-        if (dead) { l.intensity = 0; continue; }
-        if (!l.userData.flicker) { l.intensity = (l.userData.baseIntensity as number) * breath * tele; continue; }
-        const s = (l.userData.flickerSeed as number) ?? 0;
-        // Squared-off pseudo-noise: mostly steady with occasional deep dips.
-        const n = Math.sin(t * 11.3 + s) * Math.sin(t * 5.7 + s * 1.7) * Math.sin(t * 2.9 + s * 0.6);
-        const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
-        l.intensity = (l.userData.baseIntensity as number) * f * breath * tele;
         const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
+        if (dead) {
+          l.intensity = 0;
+          if (lamp) (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.02;
+          continue;
+        }
+        if (!l.userData.flicker) l.intensity = (l.userData.baseIntensity as number) * breath * tele;
+        else {
+          const s = (l.userData.flickerSeed as number) ?? 0;
+          // Squared-off pseudo-noise: mostly steady with occasional deep dips.
+          const n = Math.sin(t * 11.3 + s) * Math.sin(t * 5.7 + s * 1.7) * Math.sin(t * 2.9 + s * 0.6);
+          const f = n > 0.82 ? 0.15 : n > 0.62 ? 0.55 : 1.0;
+          l.intensity = (l.userData.baseIntensity as number) * f * breath * tele;
+        }
+        // Fixture glow tracks the light's real output — including dim,
+        // break and telegraph writes to baseIntensity.
         if (lamp) {
-          // Fixture glow tracks the light's real output — including dim/
-          // flicker writes to baseIntensity — not just the flicker factor.
           const ob = (l.userData.origBaseIntensity as number) || 1;
           (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = Math.min(1.6, Math.max(0.04, 1.4 * (l.intensity / ob)));
         }

@@ -1670,6 +1670,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   if (sconcePos && !room.darkRoom) {
     const sl = new THREE.PointLight(0xffc878, 0.55, 4.5, 2);
     sl.position.set(sconcePos.x, sconcePos.y, sconcePos.z);
+    sl.userData.baseIntensity = sl.intensity;
+    sl.userData.origBaseIntensity = sl.intensity;
     group.add(sl);
     lights.push(sl);
     // Light throw — a warm radial wash on the wall behind the sconce and a
@@ -1833,6 +1835,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     lights.push(pl);
     pl.userData.group = ls.group;
   }
+  // Pair each built light to its authored fixture mesh (lampMeshes are
+  // pushed one-per-spec-light in spec order; lights[] is a re-sorted
+  // slice). Glow meshes get per-light material clones so the ambient loop
+  // can dip them with dim/break without touching shared cache materials.
+  if (!room.darkRoom) {
+    const lampByLs = new Map<unknown, THREE.Mesh>();
+    spec.lights.forEach((ls, i) => { const m = lampMeshes[i]; if (m) lampByLs.set(ls, m); });
+    for (const l of lights) {
+      const m = lampByLs.get(l.userData.ls);
+      if (!m || m.userData.anim) continue;
+      m.material = (m.material as THREE.MeshStandardMaterial).clone();
+      l.userData.lampMesh = m;
+    }
+  }
   if (room.darkRoom) {
     for (const b of lampMeshes) (b.material as THREE.MeshStandardMaterial) = MAT.charcoal();
   }
@@ -1895,18 +1911,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(dust);
     }
 
-    // ~1-in-5 lit rooms get a flickering main fixture.
+    // ~1-in-5 lit rooms get a flickering main fixture. Its lampMesh (if
+    // the pairing pass set one) dips in sync via the ambient loop.
     if (lights.length && rng.float() < 0.2) {
       const l = lights[0];
       l.userData.flicker = true;
       l.userData.flickerSeed = rng.float() * 100;
-      // Clone the paired fixture material so its emissive can dip in sync
-      // without touching the shared cache.
-      const lamp = lampMeshes[0];
-      if (lamp) {
-        lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-        l.userData.lampMesh = lamp;
-      }
     }
   }
 

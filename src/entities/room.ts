@@ -501,6 +501,7 @@ export class Stillframe extends Entity {
     const assist = c.accessibility.minigameAssist;
     this.grace = 1.2 + assist * 1.2;
     c.flickerRoom(c.currentRoomIndex, 'dim');
+    c.duckTone?.(1.4);
     c.cue('stillframe-snap', null, '[a shutter — freeze]', { severity: 'danger' });
     this.window = { start: c.now + 0.55, end: c.now + 0.55 + this.grace + 1.6 };
     const geo = new THREE.PlaneGeometry(1.1, 1.5);
@@ -641,6 +642,7 @@ export class Hollow extends Entity {
         c.addEntityMesh(rig.group);
       }
     }
+    c.duckTone?.(2.2);
     c.cue('hollow-wake', null, '[the cabinet breathes — get out]', { severity: 'danger' });
   }
 

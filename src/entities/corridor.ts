@@ -231,6 +231,7 @@ export class CorridorRunner extends Entity {
       }
       if (!this.frontArrived && front >= this.thresholdTravel) {
         this.frontArrived = true;
+        c.duckTone?.(1.8);
         const rp = c.rooms[c.currentRoomIndex]?.entryPos ?? null;
         c.cue('door-rattle', rp, '[the door shivers — it is here]', { severity: 'danger' });
       }
