@@ -2470,20 +2470,27 @@ export class Game {
         pos.needsUpdate = true;
       }
       if (this.dread < 0.55) this.clockT += this.clock.dt;
+      // Powered devices (LEDs, monitors, tuned screens) share the room's
+      // mains — they dim and die with its lights. Open flame does not.
+      const deviceMul = dead ? 0 : Math.min(1, roomMul);
       for (const o of built.animated) {
         const kind = o.userData.anim as string;
         const s = (o.userData.animSeed as number) ?? 0;
         if (kind === 'blink') {
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
-          mat.emissiveIntensity = (Math.sin(t * 1.7 + s * 3.1) + Math.sin(t * 4.3 + s)) > 0.9 ? 0.04 : 1.1;
+          mat.emissiveIntensity = ((Math.sin(t * 1.7 + s * 3.1) + Math.sin(t * 4.3 + s)) > 0.9 ? 0.04 : 1.1) * deviceMul;
         } else if (kind === 'screen') {
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
           const n = Math.sin(t * 13.7 + s) * Math.sin(t * 3.1 + s * 2.3);
-          mat.emissiveIntensity = n > 0.55 ? 0.1 : 0.85 + Math.sin(t * 29 + s) * 0.12;
+          mat.emissiveIntensity = (n > 0.55 ? 0.1 : 0.85 + Math.sin(t * 29 + s) * 0.12) * deviceMul;
         } else if (kind === 'tv-live') {
           // tuned channel — steady bright, only a thin shimmer
           const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
-          mat.emissiveIntensity = 1.05 + Math.sin(t * 7 + s) * 0.05 + Math.sin(t * 23 + s * 5) * 0.04;
+          mat.emissiveIntensity = (1.05 + Math.sin(t * 7 + s) * 0.05 + Math.sin(t * 23 + s * 5) * 0.04) * deviceMul;
+        } else if (kind === 'device') {
+          // Powered fixture glow — tracks the room's mains, same as screens.
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          mat.emissiveIntensity = ((o.userData.baseEm as number) ?? mat.emissiveIntensity) * deviceMul;
         } else if (kind === 'spin') {
           o.rotation.y += dt * ((o.userData.animSpeed as number) ?? 2.2);
         } else if (kind === 'sway') {

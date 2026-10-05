@@ -513,3 +513,78 @@ test('hollow trap + panic eject: struggle frees the player, panic ejects them', 
   expect(result.dead).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('powered emissives die with room power: break and dim scale device glow', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  const result = await page.evaluate(async () => {
+    type Dev = { userData: { anim?: string; baseEm?: number }; material: { emissiveIntensity: number } };
+    const g = (window as unknown as {
+      __thresholdGame: {
+        renderFrame(): void;
+        clock: { tick(): boolean; dt: number; time: number };
+        godMode: boolean;
+        frame(): void;
+        startRun(opts: { seedText: string }): void;
+        flickerRoom(i: number, mode: 'break' | 'dim'): void;
+        currentRoom: number;
+        player: { pos: { x: number; y: number; z: number }; teleport(x: number, y: number, z: number): void };
+        route: { rooms: { index: number; origin: { x: number; y: number; z: number } }[] };
+        streamer: { get(i: number): { animated: Dev[] } | undefined };
+      };
+    }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    g.startRun({ seedText: 'trap-seed-7' });
+    g.renderFrame = () => {};
+    for (let f = 0; f < 40; f++) g.frame();
+
+    // Find the first room carrying a powered emissive (device/screen/blink).
+    let roomIndex = -1, before = 0;
+    for (const room of g.route.rooms) {
+      if (room.index < 1) continue;
+      g.currentRoom = room.index;
+      g.player.teleport(room.origin.x, room.origin.y, room.origin.z);
+      for (let f = 0; f < 30 && g.streamer.get(room.index) === undefined; f++) g.frame();
+      const built = g.streamer.get(room.index);
+      const dev = built?.animated.find((o) => o.userData.anim === 'device' || o.userData.anim === 'screen' || o.userData.anim === 'blink');
+      if (dev && dev.material.emissiveIntensity > 0.5) {
+        roomIndex = room.index;
+        before = dev.material.emissiveIntensity;
+        break;
+      }
+    }
+    if (roomIndex < 0) return { stage: 'no-device-room', roomIndex: -1, before: 0, afterDim: 0, afterBreak: 0 };
+
+    // 'dim' halves powered glow; 'break' kills it. The flicker interval is
+    // wall-clock — give it real time to settle at half, then sim-drive again.
+    g.flickerRoom(roomIndex, 'dim');
+    await new Promise((r) => setTimeout(r, 900));
+    for (let f = 0; f < 30; f++) g.frame();
+    const built = g.streamer.get(roomIndex)!;
+    const dev = built.animated.find((o) => o.userData.anim === 'device' || o.userData.anim === 'screen' || o.userData.anim === 'blink')!;
+    const afterDim = dev.material.emissiveIntensity;
+    g.flickerRoom(roomIndex, 'break');
+    for (let f = 0; f < 30; f++) g.frame();
+    const afterBreak = dev.material.emissiveIntensity;
+    return { stage: 'done', roomIndex, before, afterDim, afterBreak };
+  });
+
+  if (result.stage === 'no-device-room') {
+    test.info().annotations.push({ type: 'note', description: 'No powered device found on this route — skipping assertions.' });
+    return;
+  }
+  expect(result.before).toBeGreaterThan(0.5);
+  // dim settles lights at ~50% — device glow must track it, not stay full.
+  expect(result.afterDim).toBeLessThan(result.before * 0.7);
+  expect(result.afterDim).toBeGreaterThan(0.01);
+  expect(result.afterBreak).toBeLessThan(0.05);
+  expect(errors).toEqual([]);
+});

@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 210)
+CURRENT STATE (as of ~sprint 211)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -210,14 +210,24 @@ CURRENT STATE (as of ~sprint 210)
   engage-within-30m frame crosses 1 -> panicEject. Assertions prove the
   sweep really engaged within 30m (engage+near tracked per frame).
   14 e2e tests.
+  Sprint 211 powered-emissive audit: deviceMul = dead?0:min(1,roomMul)
+  scales mains-powered glow — blink/screen/tv-live anims multiply
+  emissiveIntensity; new 'device' anim kind for static powered emitters
+  (GLB lit fixtures minus open flame, floor-lamp bead, machineBox /
+  printerRow / vending LEDs — each material-cloned + baseEm stored;
+  GLB clones share materials so clone BEFORE tagging/writing). Fire
+  (flame), exit signs, alarm domes, boiler pilot, window night-glow
+  stay lit — not mains-powered. 'dim' flicker rides wall-clock
+  setInterval — sim-drive can't wait it out: await setTimeout ~900ms
+  inside evaluate. GOTCHA: playwright webServer serves a PREBUILT
+  dist/ (build && preview, reuseExistingServer) — after editing src,
+  kill the :4173 preview or the suite runs yesterday's bundle.
+  15 e2e tests.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Remaining glow leaks: 'flicker'-anim fixture meshes run their own
-    lightRef coupling (works), but fireplace embers, exit signs and other
-    authored emissive decals ignore room dim state — audit animated[]
-    kinds for dim-awareness.
-  - Quality-mode scaling: lampMesh pairing adds one material clone per
-    light per room — check memory on long runs; share clones per room.
+  - Quality-mode scaling: lampMesh pairing + device tagging add material
+    clones per emitter per room — check memory on long runs; share clones
+    per room where the tag set is identical.
   - Player hand/held-item viewmodel polish: current carryables float;
     a simple rigged hand or sway bob sells presence cheaply.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,

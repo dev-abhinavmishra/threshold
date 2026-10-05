@@ -208,7 +208,10 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const g = new THREE.Group();
     g.add(mesh(cyl(0.03, 0.16, 1.5), MAT.brass(), 0, 0.75, 0));
     g.add(mesh(cyl(0.22, 0.28, 0.3), MAT.paper(), 0, 1.6, 0));
-    g.add(mesh(box(0.01, 0.06, 0.01), MAT.amberDim(), 0, 1.55, 0));
+    const bead = mesh(box(0.01, 0.06, 0.01), MAT.amberDim().clone(), 0, 1.55, 0);
+    bead.userData.anim = 'device';
+    bead.userData.baseEm = (bead.material as THREE.MeshStandardMaterial).emissiveIntensity;
+    g.add(bead);
     return { group: g, colliders: [{ x: 0, z: 0, w: 0.3, d: 0.3, h: 1.8 }] };
   },
   wallSconce: (_s) => {
@@ -740,9 +743,13 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const w = (s.scale ?? 1) * 1.4;
     g.add(mesh(box(w, 1.6, 0.9), MAT.steelDark(), 0, 0.8, 0));
     g.add(mesh(box(w * 0.8, 0.4, 0.05), MAT.steel(), 0, 1.1, 0.46));
-    for (let i = 0; i < 4; i++)
-      g.add(mesh(box(0.08, 0.08, 0.03), rng.bool(0.7) ? MAT.amberDim() : MAT.redLamp(),
-        -w * 0.3 + i * w * 0.2, 1.15, 0.49));
+    for (let i = 0; i < 4; i++) {
+      const led = mesh(box(0.08, 0.08, 0.03), (rng.bool(0.7) ? MAT.amberDim() : MAT.redLamp()).clone(),
+        -w * 0.3 + i * w * 0.2, 1.15, 0.49);
+      led.userData.anim = 'device';
+      led.userData.baseEm = (led.material as THREE.MeshStandardMaterial).emissiveIntensity;
+      g.add(led);
+    }
     return single(g, w, 1.6, 0.95);
   },
   hangingPanels: (_s, rng) => {
@@ -869,7 +876,12 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     for (let i = 0; i < 3; i++) {
       g.add(mesh(box(0.5, 0.4, 0.4), MAT.steel(), (i - 1) * 0.65, 0.2, 0));
       g.add(mesh(box(0.4, 0.06, 0.3), MAT.paper(), (i - 1) * 0.65, 0.44, 0.05));
-      if (rng.bool(0.4)) g.add(mesh(box(0.06, 0.06, 0.03), MAT.redLamp(), (i - 1) * 0.65 + 0.15, 0.42, 0.2));
+      if (rng.bool(0.4)) {
+        const led = mesh(box(0.06, 0.06, 0.03), MAT.redLamp().clone(), (i - 1) * 0.65 + 0.15, 0.42, 0.2);
+        led.userData.anim = 'device';
+        led.userData.baseEm = (led.material as THREE.MeshStandardMaterial).emissiveIntensity;
+        g.add(led);
+      }
     }
     return single(g, 2.0, 0.6, 0.5);
   },
@@ -1126,7 +1138,12 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     disc.rotation.x = Math.PI / 2;
     g.add(disc);
     for (let i = 0; i < 3; i++) {
-      const btn = mesh(box(0.05, 0.03, 0.02), (rng.bool(0.4) ? MAT.screenGreen() : MAT.charcoal()), -0.24 + i * 0.1, 1.0, 0.34);
+      const lit = rng.bool(0.4);
+      const btn = mesh(box(0.05, 0.03, 0.02), (lit ? MAT.screenGreen() : MAT.charcoal()).clone(), -0.24 + i * 0.1, 1.0, 0.34);
+      if (lit) {
+        btn.userData.anim = 'device';
+        btn.userData.baseEm = (btn.material as THREE.MeshStandardMaterial).emissiveIntensity;
+      }
       g.add(btn);
     }
     return single(g, 0.78, 1.1, 0.72);
@@ -1203,13 +1220,21 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (m.isMesh) {
-          const mat = m.material as THREE.MeshStandardMaterial;
-          if (mat && mat.emissive) {
+          // Clone before lifting/tagging — model clones share materials, and
+          // per-instance anim writes would otherwise bleed across rooms.
+          const src = m.material as THREE.MeshStandardMaterial;
+          if (src && src.emissive) {
+            const mat = src.clone();
+            m.material = mat;
             mat.emissive = glow;
             mat.emissiveIntensity = spec.kind === 'chandelier' || spec.kind === 'lanternChandelier' ? 0.35 : 0.55;
             if (openFlame) {
               m.userData.anim = 'flame';
               m.userData.animSeed = rng.float() * 100;
+              m.userData.baseEm = mat.emissiveIntensity;
+            } else {
+              // Mains-powered fixture — the game dims it with the room.
+              m.userData.anim = 'device';
               m.userData.baseEm = mat.emissiveIntensity;
             }
           }
