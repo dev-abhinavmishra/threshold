@@ -37,6 +37,17 @@ export interface BuiltRoom {
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
+// Signature of everything mergeGeometries() requires to match across
+// geometries: attribute names, index-ness, morph attribute names and
+// morphTargetsRelative. Buckets with identical signatures always merge.
+function mergeSig(g: THREE.BufferGeometry): string {
+  const morph = Object.keys(g.morphAttributes).sort().join(';');
+  return Object.keys(g.attributes).sort().join(',')
+    + (morph ? `|ma:${morph}` : '')
+    + (g.morphTargetsRelative ? '|m' : '')
+    + (g.index ? '|i' : '');
+}
+
 // Entity tell marks — what a thing leaves in the room before it. `wall`
 // marks go on a free stretch of wall; floor marks lie on the walk path.
 interface ForeshadowTell {
@@ -1608,19 +1619,27 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // dozens of prop groups become a handful of merged meshes.
   if (bakeable.length) {
     group.updateMatrixWorld(true);
-    const buckets = new Map<THREE.Material, { geos: THREE.BufferGeometry[]; cast: boolean }>();
+    // Bucket by material + attribute signature: mergeGeometries() returns null
+    // (and spams console.error) when geometries disagree on attributes, morph
+    // keys, or indexing — e.g. two props sharing a material but one carrying
+    // uv2/color or morph targets.
+    const buckets = new Map<string, { mat: THREE.Material; geos: THREE.BufferGeometry[]; cast: boolean }>();
     for (const grp of bakeable) {
       grp.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh || Array.isArray(m.material)) return;
         const mat = m.material as THREE.Material;
-        const b = buckets.get(mat) ?? { geos: [], cast: m.castShadow };
-        b.geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
-        buckets.set(mat, b);
+        const g = m.geometry.clone().applyMatrix4(m.matrixWorld);
+        const sig = mergeSig(g);
+        const key = mat.uuid + '|' + sig;
+        const b = buckets.get(key) ?? { mat, geos: [], cast: m.castShadow };
+        b.geos.push(g);
+        buckets.set(key, b);
       });
       grp.removeFromParent();
     }
-    for (const [mat, b] of buckets) {
+    for (const b of buckets.values()) {
+      const mat = b.mat;
       let merged: THREE.BufferGeometry | null = null;
       try { merged = b.geos.length === 1 ? b.geos[0] : mergeGeometries(b.geos, false); } catch { merged = null; }
       if (!merged) {
@@ -2108,7 +2127,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         mat.map?.uuid ?? '-', mat.normalMap?.uuid ?? '-', mat.opacity.toFixed(2),
         mat.transparent ? 't' : 'o', mat.side, mat.flatShading ? 1 : 0,
       ].join('|');
-      const sig = Object.keys(m.geometry.attributes).sort().join(',') + (m.geometry.index ? '|i' : '');
+      const sig = mergeSig(m.geometry);
       const key = ms + '||' + sig;
       let b = buckets.get(key);
       if (!b) { b = { mat, geos: [], cast: false, recv: false }; buckets.set(key, b); }
