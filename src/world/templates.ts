@@ -313,7 +313,9 @@ const guestRoom: RoomTemplate = {
       { kind: 'ottoman', x: -1.8, z: 0.1, yaw: 0.3 },
       { kind: 'pillows', x: -1.8, z: 2.15, y: 0.58 },
       { kind: 'headboard', x: -1.8, z: 2.82, yaw: Math.PI },
-      { kind: 'curtainRod', x: 0, z: -2.88, y: 1.1, yaw: 0 },
+      // rod + swag dresses the doorway transom — mounted above the 1.9
+      // door-lane exemption (it's over the leaf, not in the walkway)
+      { kind: 'curtainRod', x: 0, z: -2.88, y: 2.15, yaw: 0 },
       { kind: 'sideTable', x: -2.9, z: -1.2 },
       { kind: 'radio', x: -2.9, z: -1.2, y: 0.62 },
       { kind: 'ukulele', x: 1.6, z: -1.45, y: 0.48 },
@@ -370,7 +372,9 @@ const suiteSplit: RoomTemplate = {
       { kind: 'fireplace', x: -4.2, z: 0.9, yaw: Math.PI / 2 },
       { kind: 'sofa', x: -2.4, z: 0.8, yaw: Math.PI / 2 },
       { kind: 'table', x: -2.4, z: -1.4 },
-      { kind: 'bed', x: 3, z: 1.8 },
+      // bed hugs the east wall so its footboard corner clears the
+      // exit-door rectangle (door at x2 — see clearDoorLanes)
+      { kind: 'bed', x: 3.6, z: 1.8 },
       { kind: 'dresser', x: 4.25, z: 0.4, yaw: -Math.PI / 2 },
       { kind: 'nightstand', x: 3.9, z: 1.7 },
       { kind: 'wardrobe', x: 4.0, z: -2.6, yaw: Math.PI },
@@ -386,9 +390,9 @@ const suiteSplit: RoomTemplate = {
       { kind: 'wineBottles', x: -2.3, z: -1.3, y: 0.8 },
       { kind: 'frameStand', x: 3.0, z: -1.9, y: 0.8 },
       { kind: 'ottoman', x: -1.5, z: 1.7 },
-      { kind: 'bedBench', x: 3, z: 0.4 },
+      { kind: 'bedBench', x: 3.6, z: 0.4 },
       { kind: 'teaTrolley', x: -1.3, z: -1.7, yaw: 0.2 },
-      { kind: 'headboard', x: 3, z: 3.15, yaw: Math.PI },
+      { kind: 'headboard', x: 3.6, z: 3.15, yaw: Math.PI },
       { kind: 'curtainLong', x: -4.35, z: -1.6, y: 1.18, yaw: Math.PI / 2 },
       ...wallProps(9, 7, rng, ['painting', 'lamp', 'wallClock', 'pegRail', 'curtainRod'], 4),
     ],
@@ -396,7 +400,7 @@ const suiteSplit: RoomTemplate = {
     hiding: [
       { kind: 'cabinet', x: -3.8, z: -2.4, yaw: Math.PI / 2, propKind: 'cabinet' },
       { kind: 'losAlcove', x: -3.6, z: 2.4, yaw: Math.PI / 2, propKind: 'partition' },
-      { kind: 'underFurniture', x: 3, z: 1.8, yaw: Math.PI, propKind: 'bed' },
+      { kind: 'underFurniture', x: 3.6, z: 1.8, yaw: Math.PI, propKind: 'bed' },
     ],
     safeZones: [{ x: -3.6, z: 2.4, w: 1.4, d: 1.4 }],
     nav: [
@@ -1593,20 +1597,22 @@ const roomDuel: RoomTemplate = {
     props: [
       { kind: 'partition', x: 0.6, z: 0, scale: 6, yaw: Math.PI / 2 },
       { kind: 'bed', x: -2.6, z: 1.6 },
-      { kind: 'bed', x: 2.9, z: 1.6 },
+      // right bed shifted east — its footboard corner clipped the exit
+      // door rectangle at x1.5 (see clearDoorLanes)
+      { kind: 'bed', x: 3.25, z: 1.6 },
       { kind: 'drawerUnit', x: -3.6, z: -2.2 },
       { kind: 'drawerUnit', x: 3.7, z: -2.2 },
       { kind: 'lamp', x: -2.6, z: -0.8 },
       { kind: 'bin', x: 1.6, z: -3.0 },
       { kind: 'basinSink', x: -0.4, z: -3.2, yaw: 0 }, { kind: 'basinSink', x: 2.6, z: -3.2, yaw: 0 },
       { kind: 'towelRail', x: -0.4, z: -3.35, y: 1.35, yaw: 0 }, { kind: 'towelRail', x: 2.6, z: -3.35, y: 1.35, yaw: 0 },
-      { kind: 'bedBench', x: -2.6, z: 0.3 }, { kind: 'bedBench', x: 2.9, z: 0.3 },
-      { kind: 'headboard', x: -2.6, z: 3.0, yaw: Math.PI }, { kind: 'headboard', x: 2.9, z: 3.0, yaw: Math.PI },
+      { kind: 'bedBench', x: -2.6, z: 0.3 }, { kind: 'bedBench', x: 3.25, z: 0.3 },
+      { kind: 'headboard', x: -2.6, z: 3.0, yaw: Math.PI }, { kind: 'headboard', x: 3.15, z: 3.0, yaw: Math.PI },
     ],
     sockets: [...drawerSockets([[-3.6, -2.2], [3.7, -2.2]]), ...lootSockets([[0.4, 2.8]])],
     hiding: [
       { kind: 'underFurniture', x: -2.6, z: 1.6, yaw: Math.PI, propKind: 'bed' },
-      { kind: 'underFurniture', x: 2.9, z: 1.6, yaw: Math.PI, propKind: 'bed' },
+      { kind: 'underFurniture', x: 3.25, z: 1.6, yaw: Math.PI, propKind: 'bed' },
       { kind: 'cabinet', x: 0.6, z: -2.6, yaw: 0, propKind: 'cabinet' },
     ],
     nav: [

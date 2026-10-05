@@ -4779,7 +4779,12 @@ export class Game {
     // reach for a door/threshold lunges the item toward it.
     if (!this.heldView) this.heldView = new HeldView(this.scene);
     const slotItems = this.inventory.filter((i) => ITEM_DEFS[i.id]?.slotItem);
-    const equipped = slotItems[this.activeSlot]?.id ?? null;
+    // HUD hides count-0 entries — the hand should too, or a drained tonic
+    // stays visibly held. Lamps stay equippable at 0 (their case reports
+    // the dead battery).
+    const slotEntry = slotItems[this.activeSlot];
+    const equipped = slotEntry && (slotEntry.count > 0 || slotEntry.id === 'handLamp' || slotEntry.id === 'pulseLamp')
+      ? slotEntry.id : null;
     const beamOn = this.lampOn || this.pulseLampOn;
     this.heldView.update(dt, this.camera, eye, {
       itemId: equipped,

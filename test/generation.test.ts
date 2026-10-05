@@ -321,10 +321,11 @@ describe('sprint mechanics coverage', () => {
 });
 
 describe('room build — lamp material pairing', () => {
-  // sprint 214: paired lamp meshes share one clone per source material —
-  // the ambient loop writes the same emissive dip to every one of them, so
-  // per-mesh clones only existed to hold identical values.
-  it('two fixtures on the same source material share a single clone', () => {
+  // paired lamp meshes take their own clone per fixture: per-light
+  // baseIntensity jitter and alternating sweep flicker make the ambient
+  // loop's emissive writes differ per light, so a shared clone would show
+  // whichever light wrote last. Clones still never touch the MAT cache.
+  it('two fixtures on the same source material get independent clones', () => {
     const route = generateRoute({ seedText: 'lamp-clone', difficulty: 'standard', includeUnderscript: false });
     const room = mainRooms(route).find((r) => r.spec && !r.darkRoom)!;
     const spec = {
@@ -339,10 +340,11 @@ describe('room build — lamp material pairing', () => {
       .map((l) => l.userData.lampMesh as THREE.Mesh | undefined)
       .filter((m): m is THREE.Mesh => !!m);
     expect(paired.length).toBe(2);
-    expect(paired[0].material).toBe(paired[1].material);
+    expect(paired[0].material).not.toBe(paired[1].material);
     // still a clone — the shared cache material must stay untouched by
     // per-room emissive writes.
     expect(paired[0].material).not.toBe(MAT.redLamp());
+    expect(paired[1].material).not.toBe(MAT.redLamp());
   });
 
   it('distinct fixture kinds keep separate clones', () => {

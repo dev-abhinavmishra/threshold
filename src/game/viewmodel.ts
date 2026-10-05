@@ -62,7 +62,20 @@ const pickMat = new THREE.MeshStandardMaterial({ color: 0x8f8a80, metalness: 0.7
 function mesh(geo: THREE.BufferGeometry, mat: THREE.Material, x = 0, y = 0, z = 0): THREE.Mesh {
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x, y, z);
+  // geometries made here are per-build owned — GLB clone children share
+  // their source's geometry and must never be disposed through us.
+  m.userData.vmGeo = true;
   return m;
+}
+
+/** Free per-build geometries in a subtree (never materials — those are
+ *  shared MAT/module consts; never GLB children, which share the cached
+ *  source's buffers). */
+function disposeOwned(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh && m.userData.vmGeo) m.geometry.dispose();
+  });
 }
 
 /** The hand each item sits in — forearm wedge entering frame bottom-right,
@@ -377,7 +390,9 @@ export class HeldView {
       this.shownId = want;
       this.raiseT = 0;
       this.itemId = null;
+      disposeOwned(this.item);
       this.item.clear();
+      disposeOwned(this.handSlot);
       this.handSlot.clear();
     }
     // (re)build until the model path yields a mesh
@@ -400,6 +415,7 @@ export class HeldView {
       const rebuilt = buildItem(this.itemId);
       if (rebuilt && !rebuilt.userData.vmFallback) {
         const pose = POSES[this.itemId];
+        disposeOwned(this.item);
         this.item.clear();
         if (pose) {
           rebuilt.scale.setScalar(pose.scale);

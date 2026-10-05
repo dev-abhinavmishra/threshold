@@ -287,17 +287,40 @@ export function portOutwardDir(port: Port): { x: number; z: number } {
   }
 }
 
-/** True when a room-local point sits inside a port's approach lane —
+/** True when a room-local point sits inside a port's doorway lane —
  * the strip from just outside the door plane to ~2m into the room,
- * as wide as the leaf plus clearance. Kept prop-free so furniture
- * can't pinch the doorway a player must walk through. */
+ * roughly leaf-wide. Kept prop-free so furniture can't pinch the
+ * doorway a player must walk through. (Lateral clearance was widened
+ * once; it ate beds/wardrobes sitting harmlessly beside doors — the
+ * pad now covers the leaf and frame, not a walkway beside them.) */
 export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>, x: number, z: number, r = 0.55): boolean {
   return [spec.entry, ...spec.exits].some((port) => {
     const lp = portLocalPos(port, spec.width, spec.depth);
     const dir = portOutwardDir(port);
     const a = -((x - lp.x) * dir.x + (z - lp.z) * dir.z);       // depth into the room
     const b = Math.abs((x - lp.x) * -dir.z + (z - lp.z) * dir.x); // lateral offset
-    return a > -0.4 - r && a < 2.0 + r && b < port.width / 2 + 0.6 + r;
+    return a > -0.4 - r && a < 2.0 + r && b < port.width / 2 + 0.15 + r;
+  });
+}
+
+/** Footprint-aware variant for built colliders (axis-aligned room-space
+ * boxes): a collider is in-lane only when its box actually reaches the
+ * doorway rectangle — the leaf swing zone ~1.4m deep, leaf-wide laterally.
+ * Lets beds/wardrobes sit beside a door while still catching props whose
+ * bulk covers the door itself. */
+export function footprintInDoorLane(
+  spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>,
+  cx: number, cz: number, hw: number, hd: number,
+): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    // reach along the port's depth/lateral axes = the half-extent on each
+    const reachD = Math.abs(dir.x) > 0.5 ? hw : hd;
+    const reachL = Math.abs(dir.x) > 0.5 ? hd : hw;
+    const a = -((cx - lp.x) * dir.x + (cz - lp.z) * dir.z);
+    const b = Math.abs((cx - lp.x) * -dir.z + (cz - lp.z) * dir.x);
+    return a > -0.4 - reachD && a < 1.4 + reachD && b < port.width / 2 + reachL;
   });
 }
 

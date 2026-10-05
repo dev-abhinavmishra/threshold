@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos, inDoorLane } from './spec';
+import { portLocalPos, footprintInDoorLane } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -1581,9 +1581,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'statue' || p.kind === 'marbleBust') built.group.name = `stat-${room.index}`;
       if (p.kind === 'rug') built.group.name = `rug-${room.index}`;
       if (p.kind === 'chandelier') built.group.name = `chan-${room.index}`;
-      // A wide prop centered beside a door can still reach into its lane —
-      // drop any whose solid collider footprint touches the approach strip.
-      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && inDoorLane(laneSpec, c.x, c.z, Math.hypot(c.w, c.d) / 2))) continue;
+      // A wide prop beside a door can still reach into the doorway — drop
+      // any whose solid collider footprint overlaps the door rectangle.
+      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
       group.add(built.group);
       let animated = false;
       built.group.traverse((o) => { if (o.userData.anim) animated = true; });
@@ -1863,22 +1863,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
   // Pair each built light to its authored fixture mesh (lampMeshes are
   // pushed one-per-spec-light in spec order; lights[] is a re-sorted
-  // slice). Paired meshes take one clone PER SOURCE MATERIAL per room —
-  // the ambient loop writes the same emissive dip to every one of them
-  // (dim/break are room-level), so a shared clone behaves identically to
-  // per-light clones at a fraction of the memory on long runs. Flicker/
-  // anim meshes keep their own clone — their seeds differ per mesh.
+  // slice). Each paired mesh takes its own material clone — per-light
+  // writes are live: baseIntensity jitter (Game.ts range(0.88,1.14)) and
+  // alternating sweep flicker differentiate paired lights, so a shared
+  // clone would collapse fixtures to whichever light wrote last.
+  // Flicker/anim meshes skip pairing entirely (their own lightRef
+  // coupling handles glow).
   if (!room.darkRoom) {
     const lampByLs = new Map<unknown, THREE.Mesh>();
     spec.lights.forEach((ls, i) => { const m = lampMeshes[i]; if (m) lampByLs.set(ls, m); });
-    const lampMats = new Map<string, THREE.MeshStandardMaterial>();
     for (const l of lights) {
       const m = lampByLs.get(l.userData.ls);
       if (!m || m.userData.anim) continue;
-      const src = m.material as THREE.MeshStandardMaterial;
-      let cl = lampMats.get(src.uuid);
-      if (!cl) { cl = src.clone(); lampMats.set(src.uuid, cl); }
-      m.material = cl;
+      m.material = (m.material as THREE.MeshStandardMaterial).clone();
       l.userData.lampMesh = m;
     }
   }
