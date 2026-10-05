@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 213)
+CURRENT STATE (as of sprint 214)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -252,11 +252,24 @@ CURRENT STATE (as of sprint 213)
   start() resets inventory async and will wipe a mid-boot grant;
   (f) heldView/beamGroup are created inside renderFrame — they don't
   exist under the stubbed renderFrame, probe only after a real frame.
+  Sprint 214 lamp-material clone diet: the builder.ts:1864 pairing loop
+  cloned EVERY paired fixture's material per light (3/room max × ~220
+  rooms). Now one clone per SOURCE MATERIAL per room (map keyed src
+  uuid) — the ambient loop's dim/break writes are room-level, so all
+  same-source meshes read identical values; flicker/anim meshes keep
+  their own clones (per-mesh seeds). flickerRoom 'break' and
+  blackoutRoom each ALSO re-cloned the lamp material + wrote a manual
+  emissive — deleted: the ambient loop's dead branch (blackedOut) writes
+  0.02 the very next frame, and pairing guarantees the mesh material is
+  already a clone. Unit coverage: generation.test.ts asserts same-source
+  pairing shares one clone and distinct kinds keep separate ones.
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Quality-mode scaling: lampMesh pairing + device tagging add material
-    clones per emitter per room — check memory on long runs; share clones
-    per room where the tag set is identical.
+  - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
+    sconce) and per-device prop clones (LED/screen/button) stay — each
+    carries per-light/per-seed data; a per-room audit of clone counts on
+    long runs is still open (measure via renderer.info.memory? no —
+    enumerate scene.traverse materials).
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient

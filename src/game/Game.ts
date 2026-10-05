@@ -758,11 +758,8 @@ export class Game {
         l.userData.flicker = false;
         l.userData.baseIntensity = 0;
         l.intensity = 0;
-        const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-        if (lamp) {
-          lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-          (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.04;
-        }
+        // No lampMesh write needed: the ambient loop's dead branch drops
+        // every paired fixture's emissive next frame.
       } else {
         // Flicker/dim writes ride on baseIntensity — the per-frame ambient
         // loop recomputes l.intensity from it every frame, so writing
@@ -3532,11 +3529,7 @@ export class Game {
       l.userData.flicker = false;
       l.userData.baseIntensity = 0;
       l.intensity = 0;
-      const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-      if (lamp) {
-        lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-        (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.05;
-      }
+      // Paired lamp meshes die via the ambient loop's dead branch.
     }
   }
 

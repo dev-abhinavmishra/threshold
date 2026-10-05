@@ -4,6 +4,9 @@ import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
 import { portLocalPos, inDoorLane } from '../src/world/spec';
+import { buildRoomMesh } from '../src/world/builder';
+import { MAT } from '../src/world/materials';
+import * as THREE from 'three';
 
 // Must match src/world/generator.ts rotXZ (world-space convention).
 function rotXZ(x: number, z: number, yaw: number): { x: number; z: number } {
@@ -314,5 +317,49 @@ describe('sprint mechanics coverage', () => {
         }
       }
     }
+  });
+});
+
+describe('room build — lamp material pairing', () => {
+  // sprint 214: paired lamp meshes share one clone per source material —
+  // the ambient loop writes the same emissive dip to every one of them, so
+  // per-mesh clones only existed to hold identical values.
+  it('two fixtures on the same source material share a single clone', () => {
+    const route = generateRoute({ seedText: 'lamp-clone', difficulty: 'standard', includeUnderscript: false });
+    const room = mainRooms(route).find((r) => r.spec && !r.darkRoom)!;
+    const spec = {
+      ...room.spec!,
+      lights: [
+        { x: 1, y: 2.5, z: 1, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+        { x: 3, y: 2.5, z: 3, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+      ],
+    };
+    const built = buildRoomMesh(room, spec, 7, 'high');
+    const paired = built.lights
+      .map((l) => l.userData.lampMesh as THREE.Mesh | undefined)
+      .filter((m): m is THREE.Mesh => !!m);
+    expect(paired.length).toBe(2);
+    expect(paired[0].material).toBe(paired[1].material);
+    // still a clone — the shared cache material must stay untouched by
+    // per-room emissive writes.
+    expect(paired[0].material).not.toBe(MAT.redLamp());
+  });
+
+  it('distinct fixture kinds keep separate clones', () => {
+    const route = generateRoute({ seedText: 'lamp-clone-2', difficulty: 'standard', includeUnderscript: false });
+    const room = mainRooms(route).find((r) => r.spec && !r.darkRoom && r.biome !== 'maintenance')!;
+    const spec = {
+      ...room.spec!,
+      lights: [
+        { x: 1, y: 2.5, z: 1, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+        { x: 3, y: 2.5, z: 3, color: 0xffdd88, intensity: 0.6, range: 3, group: 'accent' as const },
+      ],
+    };
+    const built = buildRoomMesh(room, spec, 7, 'high');
+    const paired = built.lights
+      .map((l) => l.userData.lampMesh as THREE.Mesh | undefined)
+      .filter((m): m is THREE.Mesh => !!m);
+    expect(paired.length).toBe(2);
+    expect(paired[0].material).not.toBe(paired[1].material);
   });
 });

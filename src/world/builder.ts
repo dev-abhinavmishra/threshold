@@ -1863,15 +1863,22 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
   // Pair each built light to its authored fixture mesh (lampMeshes are
   // pushed one-per-spec-light in spec order; lights[] is a re-sorted
-  // slice). Glow meshes get per-light material clones so the ambient loop
-  // can dip them with dim/break without touching shared cache materials.
+  // slice). Paired meshes take one clone PER SOURCE MATERIAL per room —
+  // the ambient loop writes the same emissive dip to every one of them
+  // (dim/break are room-level), so a shared clone behaves identically to
+  // per-light clones at a fraction of the memory on long runs. Flicker/
+  // anim meshes keep their own clone — their seeds differ per mesh.
   if (!room.darkRoom) {
     const lampByLs = new Map<unknown, THREE.Mesh>();
     spec.lights.forEach((ls, i) => { const m = lampMeshes[i]; if (m) lampByLs.set(ls, m); });
+    const lampMats = new Map<string, THREE.MeshStandardMaterial>();
     for (const l of lights) {
       const m = lampByLs.get(l.userData.ls);
       if (!m || m.userData.anim) continue;
-      m.material = (m.material as THREE.MeshStandardMaterial).clone();
+      const src = m.material as THREE.MeshStandardMaterial;
+      let cl = lampMats.get(src.uuid);
+      if (!cl) { cl = src.clone(); lampMats.set(src.uuid, cl); }
+      m.material = cl;
       l.userData.lampMesh = m;
     }
   }
