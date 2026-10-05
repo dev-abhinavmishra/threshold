@@ -258,3 +258,120 @@ test('chase room spawns the Pursuer and clears it at the end room', async ({ pag
   expect(pursuerGone).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('hiding spot: enter hides the player, leave restores them', async ({ page }) => {
+  // Sim-drive (same pattern as the chase test): fixed-step clock + manual
+  // frame() so SwiftShader's starved rAF doesn't matter. Covers the real
+  // interact path — focus scoring, enterHiding, exitHiding, protection.
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto('/?debug');
+  await page.getByRole('button', { name: /QA/ }).click();
+  await page.getByRole('button', { name: 'New Run' }).click();
+  await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+  await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        renderFrame(): void;
+        clock: { tick(): boolean; dt: number; time: number };
+        godMode: boolean;
+        frame(): void;
+        input: { interactPressed: boolean };
+        interaction: { focused: { prompt: string } | null };
+        currentRoom: number;
+        player: {
+          pos: { x: number; y: number; z: number };
+          yaw: number; pitch: number; eyeHeight: number;
+          hiddenSpot: { id: string; exitPos: { x: number; y: number; z: number } } | null;
+          protection: string;
+          dead: boolean;
+          teleport(x: number, y: number, z: number, yaw?: number): void;
+        };
+        entities: { id: string; state: string }[];
+        spawnById(id: string): void;
+        route: { rooms: {
+          index: number; origin: { x: number; z: number };
+          hidingSpots: { id: string; kind: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
+        }[] };
+      };
+    }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+
+    const rooms = g.route.rooms;
+    const pressIfFocused = (re: RegExp) => { g.input.interactPressed = re.test(g.interaction.focused?.prompt ?? ''); g.frame(); };
+    const aimAt = (p: { x: number; y: number; z: number }) => {
+      const dx = p.x - g.player.pos.x, dz = p.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(dx, dz);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const dist = Math.hypot(dx, dz);
+      g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(p.y - eyeY, dist || 1)));
+    };
+
+    // Try each candidate spot until one takes focus — some spots sit at
+    // angles or ranges the focus ray can't reach from a fair approach.
+    let entered: { room: number; spot: string } | null = null;
+    outer:
+    for (const room of rooms) {
+      if (room.index < 2) continue; // skip the spawn room's staging
+      const spots = room.hidingSpots.filter((s) => !s.trappedBy);
+      for (const spot of spots) {
+        g.currentRoom = room.index;
+        // Stand inside the room facing the spot — exitPos is the interact
+        // point, approach it from the room-center side.
+        const dx = room.origin.x - spot.exitPos.x, dz = room.origin.z - spot.exitPos.z;
+        const L = Math.hypot(dx, dz) || 1;
+        g.player.teleport(spot.exitPos.x + (dx / L) * 1.1, 0, spot.exitPos.z + (dz / L) * 1.1, Math.atan2(-dx, -dz));
+        for (let f = 0; f < 30; f++) {
+          aimAt(spot.exitPos);
+          pressIfFocused(/hide/i);
+          if (g.player.hiddenSpot) break;
+        }
+        if (g.player.hiddenSpot) { entered = { room: room.index, spot: spot.id }; break outer; }
+      }
+    }
+    if (!entered) return { ok: false, stage: 'no-spot-focused' };
+    const hiddenProt = g.player.protection;
+    const viewInside = !!g.player.hiddenSpot;
+
+    // Hiding must actually protect: spawn a sweep while hidden with
+    // godMode off — the runner passes through the player's room and the
+    // spot's protection is the only thing between them.
+    g.godMode = false;
+    g.spawnById('sweep');
+    // Done entities are disposed and dropped from g.entities — wait for
+    // the runner to appear, then leave (or be caught mid-'done').
+    let spawned = false, sweepDone = false;
+    for (let f = 0; f < 4000; f++) {
+      g.frame();
+      const sw = g.entities.find((e) => e.id === 'sweep');
+      if (sw) spawned = true;
+      if (spawned && (!sw || sw.state === 'done')) { sweepDone = true; break; }
+    }
+    g.godMode = true;
+    const survivedHidden = !g.player.dead && !!g.player.hiddenSpot;
+
+    // While hidden the exitHide interactable ('Leave hiding') is the only
+    // registered prompt — aim out at exitPos and leave through it.
+    let focusedLeave = false;
+    for (let f = 0; f < 30 && g.player.hiddenSpot; f++) {
+      const spot = g.player.hiddenSpot;
+      if (!spot) break;
+      aimAt(spot.exitPos);
+      if (/leave/i.test(g.interaction.focused?.prompt ?? '')) focusedLeave = true;
+      pressIfFocused(/leave/i);
+    }
+    const left = !g.player.hiddenSpot;
+    return { ok: left && viewInside, stage: 'exit', hiddenProt, focusedLeave, left, entered, sweepDone, survivedHidden };
+  });
+
+  expect(result.stage !== 'no-spot-focused' ? '' : 'no hiding spot took focus').toBe('');
+  expect(result.hiddenProt).toBe('hidden');
+  expect(result.sweepDone).toBe(true);
+  expect(result.survivedHidden).toBe(true);
+  expect(result.left).toBe(true);
+  expect(errors).toEqual([]);
+});

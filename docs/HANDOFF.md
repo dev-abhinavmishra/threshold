@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 205)
+CURRENT STATE (as of ~sprint 206)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -163,6 +163,16 @@ CURRENT STATE (as of ~sprint 205)
   lurker, inkling, echoskin, margin, stillframe, singer (skipped subtle
   entities — witness/redactor keep stealth). Entity unit tests exist in
   test/entities.test.ts — makeCtx + fakePlayer harness, ctx.cue mock.
+  Sprint 206 hiding-spot e2e (sim-drive): teleport 1.1m room-side of an
+  untrapped spot's exitPos, aim+press until /hide/i prompt fires, assert
+  protection==='hidden', then spawnById('sweep') WITH godMode OFF — the
+  runner's pass must complete and the hidden player survives (protection
+  proven live, not vacuous), then leave via /leave/i prompt. NOTE: done
+  entities are disposed AND removed from g.entities — wait for
+  spawn-then-absent, not state==='done'. e2e covers: asset-served,
+  menu/HUD/settings/archive, death→retry, quit→Continue, underscript
+  descent, victory, chase spawn+seal, hiding enter/protect/leave, soak.
+  13 tests.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Lamp emissive on 'dim' rooms: flicker-branch lamps still pulse emissive
@@ -175,8 +185,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     scheduling is done for everything else.
   - Perf: SSAO pass is the next multiplier after the shadow fix — consider
     restricting SSAO to 'high' only when fps allows, or half-res.
-  - e2e: hiding-spot coverage still missing (hide-in/leave via sim-drive,
-    same pattern as the chase test).
+  - e2e: Hollow-trap coverage (trapped spot → grapple → struggle-free) and
+    panic-eject are still untested paths via sim-drive.
   - More mill batches if dressing still reads thin: curtain variants,
     upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
 ```
