@@ -707,3 +707,17 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `towelRail/` | Wall towel bar with hanging towel | guest-bath-ante, guest-two-baths |
 | `ceilingHook/` | Chain-hung meat/hoist hook (plate + links + hook) | morgue-drawers, maint-fabshop, u-corridor |
 | `ovalMirror/` | Ribbon-crest oval mirror (variant of `mirror`) | guest/gallery walls |
+
+## Blender prefab mill additions — sprint 213 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `kitchenRange/` | Cast-iron range (firebox door, hotplate rings, flue pipe, side shelf) | kitchen-service |
+| `sculleryRack/` | Wall plate rack — slatted shelves, dividers, plates, drip rail (wall-mount) | kitchen-service, scullery |
+| `potRack/` | Wall pot rail — arms, hooks, hanging pans + ladle (wall-mount) | kitchen-service, scullery |
+| `pantryShelf/` | Tall pantry shelf with jars, tins, boxes, bread box | kitchen-service |
+| `stackedLinen/` | Linen press — 4 shelves of folded cloth piles | scullery, laundry-hall, staff-dining |
+| `upholsteredHeadboard/` | 3×2 tufted padded headboard with nailheads | guest-standard, guest-twin, suite-split, staff-dining |
+| `coalScuttle/` | Tilted coal hod with brass handle, coal lumps, shovel | kitchen-service |
+
+New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.

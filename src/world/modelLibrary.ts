@@ -167,6 +167,14 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   pegRail: { dir: 'pegRail', height: 0.72, collider: [0, 0, 0], anchor: 'center' },
   towelRail: { dir: 'towelRail', height: 0.48, collider: [0, 0, 0], anchor: 'center' },
   ceilingHook: { dir: 'ceilingHook', height: 0.73, collider: [0, 0, 0], anchor: 'center' },
+  // sprint 213 — service-wing mill batch
+  kitchenRange: { dir: 'kitchenRange', height: 1.15, collider: [1.5, 1.15, 0.8] },
+  sculleryRack: { dir: 'sculleryRack', height: 0.78, collider: [0, 0, 0], anchor: 'center' },
+  potRack: { dir: 'potRack', height: 0.55, collider: [0, 0, 0], anchor: 'center' },
+  pantryShelf: { dir: 'pantryShelf', height: 1.9, collider: [1.32, 1.9, 0.5] },
+  stackedLinen: { dir: 'stackedLinen', height: 1.8, collider: [1.12, 1.8, 0.55] },
+  upholsteredHeadboard: { dir: 'upholsteredHeadboard', height: 1.28, collider: [0, 0, 0] },
+  coalScuttle: { dir: 'coalScuttle', height: 0.58, collider: [0.4, 0.58, 0.4] },
 
   crate: {
     dir: 'wooden_crate_01', height: 0.5, collider: [0.85, 0.5, 0.45],

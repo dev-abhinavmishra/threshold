@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 212)
+CURRENT STATE (as of sprint 213)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -245,6 +245,20 @@ CURRENT STATE (as of sprint 212)
   preserveDrawingBuffer needed); (f) heldGroup/beamGroup are created
   inside renderFrame — they don't exist under the stubbed renderFrame,
   probe only after a real frame.
+  Sprint 213 service-wing batch: 7 new mill pieces — kitchenRange
+  (cast-iron range w/ firebox door, hotplates, flue), sculleryRack +
+  potRack (wall-mounted; WALL_MOUNT_Y 1.75/1.85), pantryShelf (seeded
+  jars/tins), stackedLinen (linen press), upholsteredHeadboard (3x2
+  tufted pads), coalScuttle. Three NEW room families added —
+  kitchen-service (9x9 tile-wall/metal-floor), scullery (7x8),
+  staff-dining (8x9 wood/records) — registered MAIN_TEMPLATES,
+  minRoom 40-46, weights 6-7. Headboard dressed into
+  guest-standard/guest-twin/suite-split; stackedLinen into
+  laundry-hall. NOTE: spec 'floor' enum is
+  stone|wood|carpet|metal|concrete|paper — NO 'tile' (tile is
+  wall-only). Door-lane guard caught the rack at x-0.6 — keep
+  wall-mounts >=1m off door lanes. 67 mill dirs; MILL_DIRS in
+  e2e/assets.spec now covers all 7.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material

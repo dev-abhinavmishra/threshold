@@ -417,7 +417,7 @@ test('hollow trap + panic eject: struggle frees the player, panic ejects them', 
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
     // Hollow traps are rare on short runs — pin a seed known to carry them.
-    g.startRun({ seedText: 'trap-seed-7' });
+    g.startRun({ seedText: 'trap-seed-2' });
     g.renderFrame = () => {};
     for (let f = 0; f < 40; f++) g.frame(); // let the streamer rebuild
 
@@ -542,7 +542,7 @@ test('powered emissives die with room power: break and dim scale device glow', a
     g.renderFrame = () => {};
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
-    g.startRun({ seedText: 'trap-seed-7' });
+    g.startRun({ seedText: 'trap-seed-2' });
     g.renderFrame = () => {};
     for (let f = 0; f < 40; f++) g.frame();
 
