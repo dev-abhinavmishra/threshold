@@ -2408,6 +2408,7 @@ export class Game {
       // breathing rooms pulse their lights on a slow cycle
       const breath = i === this.breathingRoom ? 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9)) : 1;
       const tele = this.telegraphMul.get(i) ?? 1;
+      let roomMul = 0, roomMulN = 0;
       for (const l of built.lights) {
         const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
         if (dead) {
@@ -2425,14 +2426,36 @@ export class Game {
         }
         // Fixture glow tracks the light's real output — including dim,
         // break and telegraph writes to baseIntensity.
+        const ob = (l.userData.origBaseIntensity as number) || 1;
+        roomMul += l.intensity / ob; roomMulN++;
         if (lamp) {
-          const ob = (l.userData.origBaseIntensity as number) || 1;
           (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = Math.min(1.6, Math.max(0.04, 1.4 * (l.intensity / ob)));
         }
+      }
+      roomMul = roomMulN ? Math.min(1.3, roomMul / roomMulN) : 1;
+      // Glow decals (shafts, pools, sconce throws) ride the same multiplier
+      // as their light — resolved lazily through lsRef/lightRef.
+      for (const m of built.shafts) {
+        const mat = m.material as THREE.MeshBasicMaterial;
+        if (m.userData.baseOpacity === undefined) m.userData.baseOpacity = mat.opacity;
+        if (m.userData.lightRef === undefined) {
+          m.userData.lightRef = m.userData.lsRef
+            ? built.lights.find((l) => l.userData.ls === m.userData.lsRef) ?? null
+            : null;
+        }
+        const lr = m.userData.lightRef as THREE.PointLight | null;
+        if (!lr) continue;
+        const ob = (lr.userData.origBaseIntensity as number) || 1;
+        const mul = Math.min(1.3, Math.max(0, lr.intensity / ob));
+        mat.opacity = (m.userData.baseOpacity as number) * mul;
       }
       if (built.dust) {
         built.dust.rotation.y += dt * 0.02;
         built.dust.position.y = Math.sin(t * 0.13 + (built.dust.userData.phase as number)) * 0.12;
+        // Motes need light to catch — thin them out as the room dims.
+        const dm = built.dust.material as THREE.PointsMaterial;
+        if (built.dust.userData.baseOpacity === undefined) built.dust.userData.baseOpacity = dm.opacity;
+        dm.opacity = (built.dust.userData.baseOpacity as number) * (dead ? 0 : Math.min(1, roomMul));
       }
       if (built.drips) {
         const pos = built.drips.geometry.getAttribute('position') as THREE.BufferAttribute;

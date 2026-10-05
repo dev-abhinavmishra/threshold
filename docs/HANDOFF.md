@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of ~sprint 208)
+CURRENT STATE (as of ~sprint 209)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -192,11 +192,21 @@ CURRENT STATE (as of ~sprint 208)
   Ambient loop writes glow for ALL paired lights incl. dead rooms →0.02.
   More duckTone callers: corridor door-rattle arrival (1.8s), stillframe
   snap (1.4s), hollow grapple (2.2s).
+  Sprint 209 glow-decal sync: shafts/pools/sconce throws now live in
+  built.shafts (sconce decals moved in — shafts declared beside
+  lampMeshes/lights) tagged userData.lsRef or lightRef; ambient loop
+  lazily resolves each to a light and scales material.opacity by
+  intensity/origBaseIntensity — 'dim'/'break'/telegraph visibly drains
+  fake-volumetrics + sconce spill, not just lamp glow. Dust motes thin
+  by the room's mean light mul (0 when blackedOut). NOTE: THREE
+  material.clone() JSON-serializes userData — never store Object3D refs
+  before a clone; set lightRef AFTER cloning (see poolMat2).
 
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Decal/light-shaft sync: shafts + lamp-glow decals (ensureCam/sconce
-    pools) stay bright in 'dim'/'break' rooms — scale decal opacity off
-    the paired light like lampMesh does.
+  - Remaining glow leaks: 'flicker'-anim fixture meshes run their own
+    lightRef coupling (works), but fireplace embers, exit signs and other
+    authored emissive decals ignore room dim state — audit animated[]
+    kinds for dim-awareness.
   - Quality-mode scaling: lampMesh pairing adds one material clone per
     light per room — check memory on long runs; share clones per room.
   - Player hand/held-item viewmodel polish: current carryables float;

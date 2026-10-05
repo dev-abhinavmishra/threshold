@@ -1667,6 +1667,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // ceiling, fluoro tubes in service spaces, pendants in tall rooms.
   const lampMeshes: THREE.Mesh[] = [];
   const lights: THREE.PointLight[] = [];
+  // Glow decals tied to a light (shafts, pools, sconce throws) — the ambient
+  // loop scales their opacity off the paired light's real output.
+  const shafts: THREE.Mesh[] = [];
   if (sconcePos && !room.darkRoom) {
     const sl = new THREE.PointLight(0xffc878, 0.55, 4.5, 2);
     sl.position.set(sconcePos.x, sconcePos.y, sconcePos.z);
@@ -1686,16 +1689,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
       });
       throwMat.userData.decalMat = true;
+      throwMat.userData.lightRef = sl;
       const wash = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.7), throwMat);
       wash.position.set(wallX, sconcePos.y + 0.15, wallZ);
       wash.rotation.y = onX ? -sgn * Math.PI / 2 : (sgn > 0 ? Math.PI : 0);
       wash.renderOrder = 2;
       group.add(wash);
-      const poolMat2 = throwMat.clone(); poolMat2.userData.decalMat = true; poolMat2.opacity = 0.2;
+      shafts.push(wash);
+      // clone() JSON-copies userData — reset the light ref explicitly.
+      const poolMat2 = throwMat.clone(); poolMat2.userData.decalMat = true; poolMat2.opacity = 0.2; poolMat2.userData.lightRef = sl;
       const fpool = new THREE.Mesh(new THREE.CircleGeometry(0.85, 16), poolMat2);
       fpool.rotation.x = -Math.PI / 2;
       fpool.position.set(sconcePos.x * 0.92, 0.013, sconcePos.z * 0.92);
       group.add(fpool);
+      shafts.push(fpool);
     }
   }
   const maxLights = quality === 'low' ? 1 : quality === 'medium' ? 2 : 3;
@@ -1855,7 +1862,6 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
   // Fake-volumetric light shafts under lit fixtures + drifting dust motes.
   // Skipped for dark rooms (no light to scatter through).
-  const shafts: THREE.Mesh[] = [];
   let dust: THREE.Points | null = null;
   if (!room.darkRoom) {
     let shaftCount = 0;
@@ -1875,6 +1881,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         }),
       );
       shaft.position.set(ls.x, topY - len / 2, ls.z);
+      shaft.userData.lsRef = ls;
       group.add(shaft);
       shafts.push(shaft);
       shaftCount++;
@@ -1888,7 +1895,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       );
       pool.rotation.x = -Math.PI / 2;
       pool.position.set(ls.x, 0.014, ls.z);
+      pool.userData.lsRef = ls;
       group.add(pool);
+      shafts.push(pool);
     }
 
     // Dust motes — sparse additive points drifting inside lit rooms.
