@@ -244,6 +244,7 @@ export interface SettingsData {
   hintFrequency: 'minimal' | 'standard' | 'frequent';
   minigameAssist: number; // 0..1 eases QTE/stabilization difficulty
   quality: 'low' | 'medium' | 'high';
+  adaptiveQuality: boolean; // auto-shed post effects (SSAO→bloom→scale) at low fps
   keybinds: Record<string, string>;
   reducePanicFx: boolean;
 }

@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 216)
+CURRENT STATE (as of sprint 217)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -307,6 +307,21 @@ CURRENT STATE (as of sprint 216)
   focused like a player would; (e) the runner entity is REMOVED from
   g.entities on done — re-spawn for a second leg rather than reusing the
   ref.
+  Sprint 217 adaptive post budget (src/game/postGovernor.ts): fps EMA
+  governor sheds post steps under sustained low fps — SSAO → bloom →
+  render scale 0.7 — and restores one step at a time with hysteresis
+  (2.5s continuous <45fps to shed, 10s >56fps to restore; any recovery
+  clears the sustain counter so jank never banks a step). Passes toggle
+  via pass.enabled (no composer rebuild); render scale writes
+  renderer.setPixelRatio(base*mul) + composer.setPixelRatio/setSize.
+  Steps ladder is built from the live pass set: 'medium' has no SSAO
+  step, 'low' degrades to scale only. Settings.adaptiveQuality (default
+  on) gates it — off restores everything at once. postGov.hardReset()
+  on any quality-preset change. 6 vitest specs cover order/hysteresis/
+  presets/disabled-reset. LEARNINGS: pass.enabled skips the pass in
+  EffectComposer — no rebuild needed; EMA convergence lag (~4-5 samples)
+  counts inside the sustain window, so thresholds are wall-time not
+  sample-time.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -318,8 +333,6 @@ NEXT SPRINT IDEAS (pick the biggest first)
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
-  - Perf: SSAO pass is the next multiplier after the shadow fix — consider
-    restricting SSAO to 'high' only when fps allows, or half-res.
   - e2e: remaining untested paths — underscript seep/clamor ambience,
     vend purchase flow, locked-keyed door + key pickup round-trip.
   - More mill batches if dressing still reads thin: armchair/settee

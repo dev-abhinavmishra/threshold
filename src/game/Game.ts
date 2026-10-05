@@ -10,6 +10,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { PostGovernor } from './postGovernor';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { GameClock } from '../engine/clock';
@@ -201,6 +202,11 @@ export class Game {
   private peekEye: THREE.Group | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
+  private ssaoPass: SSAOPass | null = null;
+  private bloomPass: UnrealBloomPass | null = null;
+  private postGov: PostGovernor | null = null;
+  private basePixelRatio = 1;
+  private lastFrameNow = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -224,7 +230,8 @@ export class Game {
   private initThree(): void {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
     const q = QUALITY[this.settings.quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatioCap));
+    this.basePixelRatio = Math.min(window.devicePixelRatio, q.pixelRatioCap);
+    this.renderer.setPixelRatio(this.basePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -266,11 +273,24 @@ export class Game {
       ssao.minDistance = 0.002;
       ssao.maxDistance = 0.12;
       composer.addPass(ssao);
+      this.ssaoPass = ssao;
     }
     if (q !== 'low') {
       const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.42, 0.93);
       composer.addPass(bloom);
+      this.bloomPass = bloom;
     }
+    // Adaptive post budget — the governor sheds SSAO → bloom → render
+    // scale under sustained low fps and restores with hysteresis.
+    this.postGov = new PostGovernor({
+      setSsao: (on) => { if (this.ssaoPass) this.ssaoPass.enabled = on; },
+      setBloom: (on) => { if (this.bloomPass) this.bloomPass.enabled = on; },
+      setScale: (mul) => {
+        this.renderer.setPixelRatio(this.basePixelRatio * mul);
+        this.composer?.setPixelRatio(this.renderer.getPixelRatio());
+        this.composer?.setSize(window.innerWidth, window.innerHeight);
+      },
+    }, { hasSsao: !!this.ssaoPass, hasBloom: !!this.bloomPass });
     this.grainUniforms = {
       tDiffuse: { value: null },
       uTime: { value: 0 },
@@ -2088,7 +2108,9 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.streamer.setQuality(s.quality);
     const q = QUALITY[s.quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatioCap));
+    this.basePixelRatio = Math.min(window.devicePixelRatio, q.pixelRatioCap);
+    this.renderer.setPixelRatio(this.basePixelRatio);
+    this.postGov?.hardReset();
     this.scene.fog = new THREE.FogExp2(0x050505, q.fogDensity);
     useGameStore.setState({ settings: s });
   }
@@ -3989,9 +4011,13 @@ export class Game {
 
   private frame = (): void => {
     this.raf = requestAnimationFrame(this.frame);
+    const now = performance.now();
+    const realDt = this.lastFrameNow ? (now - this.lastFrameNow) / 1000 : 0;
+    this.lastFrameNow = now;
     const st = useGameStore.getState();
     const running = st.phase === 'PLAYING' || st.phase === 'MINIGAME';
-    if (!running || !this.clock.tick(performance.now())) {
+    this.postGov?.update(realDt, this.settings.adaptiveQuality && running);
+    if (!running || !this.clock.tick(now)) {
       this.renderFrame();
       return;
     }

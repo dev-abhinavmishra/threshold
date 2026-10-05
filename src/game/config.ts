@@ -201,6 +201,7 @@ export function defaultSettings(): SettingsData {
     hintFrequency: 'standard',
     minigameAssist: 0,
     quality: 'medium',
+    adaptiveQuality: true,
     keybinds: { ...DEFAULT_KEYBINDS },
     reducePanicFx: false,
   };
