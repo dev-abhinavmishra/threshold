@@ -1009,3 +1009,174 @@ export class Porter extends Entity {
     this.rig = null;
   }
 }
+
+/* ============================ GROUNDSWELL ============================ */
+/** The room itself fighting back: every few seconds a swell line travels the
+ *  floor from the entry door toward the exit — a raised hump of boards you
+ *  can see coming as a dark strip + a dust lift. Inside the band when it
+ *  passes → stumble (rooted) + damage. The counterplay is spatial: sidestep
+ *  into the calm strips along the walls, or stand still nowhere. */
+export class Groundswell extends Entity {
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private axis = v3();        // unit vector, entry→exit
+  private perp = v3();        // lateral unit vector
+  private start = v3();       // wave origin (entry door)
+  private center = v3();
+  private span = 0;           // corridor length the wave travels
+  private crossHalf = 0;      // room half-width across the axis
+  private front = -1;         // metres along axis reached; -1 = idle
+  private waveAt = 0;
+  private waves = 0;
+  private struck = false;
+  private rumbleT = 0;
+  private swell: THREE.Mesh | null = null;
+  private pts: THREE.Points | null = null;
+  private pPos: Float32Array | null = null;
+  private pLife: Float32Array | null = null;
+  private pIdx = 0;
+
+  constructor() { super('groundswell', ENTITY_TUNING.groundswell); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    this.rng = new Rng(c.seed);
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = c.currentRoomIndex;
+    const ex = room.exitPos, en = room.entryPos;
+    const ax = ex.x - en.x, az = ex.z - en.z;
+    const len = Math.hypot(ax, az);
+    if (len < 6) { this.done(); return; }   // too short to wave through
+    this.axis = v3(ax / len, 0, az / len);
+    this.perp = v3(-this.axis.z, 0, this.axis.x);
+    this.start = v3(en.x, 0, en.z);
+    this.center = v3(room.origin.x, 0, room.origin.z);
+    this.span = len;
+    this.crossHalf = Math.min(room.spec?.width ?? 10, room.spec?.depth ?? 10) / 2;
+    this.waveAt = c.now + this.tuning.warningTime;
+    // The swell strip: a dark hump spanning the calm-bounded middle of the
+    // room; its scale.y pulses as it passes.
+    const stripLen = Math.max(1.5, (this.crossHalf - 1.0) * 2);
+    const geo = new THREE.BoxGeometry(stripLen, 1, 1.35);
+    geo.translate(0, 0.5, 0);
+    this.swell = new THREE.Mesh(geo, MAT.darkOak());
+    this.swell.scale.y = 0.001;
+    this.swell.visible = false;
+    this.swell.rotation.y = Math.atan2(this.perp.x, this.perp.z) + Math.PI / 2;
+    c.addEntityMesh(this.swell);
+    // Dust lift along the front.
+    this.pPos = new Float32Array(36 * 3);
+    this.pLife = new Float32Array(36);
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.BufferAttribute(this.pPos, 3));
+    const pm = new THREE.PointsMaterial({ color: 0x9a8a6d, size: 0.05, transparent: true, opacity: 0.55, depthWrite: false });
+    this.pts = new THREE.Points(pg, pm);
+    this.pts.frustumCulled = false;
+    c.addEntityMesh(this.pts);
+    this.state = 'engage';
+    c.cue('floor-creak', this.start, '[the floor holds its breath]', { severity: 'warn' });
+    c.sound.emit({ x: this.center.x, y: 0.2, z: this.center.z, intensity: 0.5, category: 'ambient', caption: '', source: this.id });
+  }
+
+  private frontPos(out: Vec3, f: number): Vec3 {
+    out.x = this.start.x + this.axis.x * f;
+    out.z = this.start.z + this.axis.z * f;
+    out.y = 0;
+    return out;
+  }
+
+  private spawnDust(f: number): void {
+    if (!this.pPos || !this.pLife) return;
+    for (let k = 0; k < 2; k++) {
+      const i = this.pIdx = (this.pIdx + 1) % 36;
+      const lat = this.rng.range(-(this.crossHalf - 1.1), this.crossHalf - 1.1);
+      this.pPos[i * 3] = this.start.x + this.axis.x * f + this.perp.x * lat;
+      this.pPos[i * 3 + 1] = 0.05 + this.rng.float() * 0.25;
+      this.pPos[i * 3 + 2] = this.start.z + this.axis.z * f + this.perp.z * lat;
+      this.pLife[i] = 0.55;
+    }
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    if (c.currentRoomIndex !== this.hostRoom || (this.waves >= 4 && this.front < 0)) {
+      c.cue('floor-creak', this.center, '[the floor settles]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    // Dust drift
+    if (this.pPos && this.pLife) {
+      for (let i = 0; i < 36; i++) {
+        if (this.pLife[i] <= 0) continue;
+        this.pLife[i] -= dt;
+        this.pPos[i * 3 + 1] += dt * 0.5;
+        if (this.pLife[i] <= 0) this.pPos[i * 3 + 1] = -99;
+      }
+      const attr = this.pts!.geometry.getAttribute('position') as THREE.BufferAttribute;
+      attr.needsUpdate = true;
+    }
+
+    if (this.front < 0) {
+      if (c.now >= this.waveAt) {
+        this.front = 0;
+        this.struck = false;
+        this.waves++;
+        this.rumbleT = 0;
+        c.cue('rug-slide', this.start, this.waves === 1
+          ? '[the boards lift — a swell running the length of the room]'
+          : '[another swell — sidestep it]', { severity: 'warn' });
+      }
+      return;
+    }
+
+    // Wave front advances
+    this.front += 3.2 * dt;
+    const f = this.front;
+    this.rumbleT -= dt;
+    if (this.rumbleT <= 0) {
+      this.rumbleT = 0.35;
+      const fp = this.frontPos(v3(), f);
+      c.sound.emit({ x: fp.x, y: 0.2, z: fp.z, intensity: 0.45, category: 'ambient', caption: '', source: this.id });
+    }
+    if (this.swell) {
+      const fp = this.frontPos(v3(), f);
+      this.swell.visible = true;
+      this.swell.position.set(fp.x, 0, fp.z);
+      this.swell.scale.y = 0.05 + Math.sin(Math.min(1, f / 0.8) * Math.PI * 0.5) * 0.1;
+    }
+    this.spawnDust(f);
+
+    // Hit test — inside the moving band, outside the calm wall strips.
+    if (!this.struck && !p.dead && !p.hiddenSpot) {
+      const relX = p.pos.x - this.start.x, relZ = p.pos.z - this.start.z;
+      const along = relX * this.axis.x + relZ * this.axis.z;
+      const lateral = Math.abs(relX * this.perp.x + relZ * this.perp.z);
+      const roomLat = Math.abs((p.pos.x - this.center.x) * this.perp.x + (p.pos.z - this.center.z) * this.perp.z);
+      if (Math.abs(along - f) < 0.7 && roomLat < this.crossHalf - 1.0) {
+        this.struck = true;
+        p.rootedUntil = c.now + 0.7;
+        c.damagePlayer(this.tuning.damage, 'groundswell', 'The floor lifts in waves — read the dust and sidestep the hump before it reaches you.');
+        c.cue('luggage-thud', { x: p.pos.x, y: 0.3, z: p.pos.z }, '[the boards heave under you]', { severity: 'danger' });
+        c.sound.emit({ x: p.pos.x, y: 0.4, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[heaved]', source: this.id });
+      }
+      void lateral;
+    }
+
+    if (f >= this.span) {
+      this.front = -1;
+      this.waveAt = c.now + 4.6 + this.rng.float() * 1.4;
+      if (this.swell) this.swell.visible = false;
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage' || this.front < 0) return null;
+    return this.frontPos(v3(), this.front);
+  }
+
+  protected override onDone(): void {
+    if (this.swell) { this.ctx.removeEntityMesh(this.swell); this.swell = null; }
+    if (this.pts) { this.ctx.removeEntityMesh(this.pts); this.pts = null; }
+  }
+}

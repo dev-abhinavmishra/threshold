@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner, Warden } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
-import { Witness, Hollow, Lurker, Margin, Husk, Porter } from '../src/entities/room';
+import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -443,6 +443,73 @@ describe('Warden (sprint 234)', () => {
     expect(captions.some((c) => /whistle dies/.test(c))).toBe(true);
     expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
     warden.dispose();
+  });
+});
+
+describe('Groundswell (sprint 235)', () => {
+  const step = (e: Groundswell, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    for (let i = 0; i < Math.ceil(seconds / 0.05); i++) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('heaves a player standing in the wave path', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const room = rooms[28];
+    // Stand mid-room on the wave's travel line.
+    const mid = { x: (room.entryPos.x + room.exitPos.x) / 2, z: (room.entryPos.z + room.exitPos.z) / 2 };
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; rootedUntil: number };
+    player.pos = v3(mid.x, 0, mid.z);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (steps++ < 1000 && (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length === 0) {
+      ctxMut.now = t; gs.update(0.05); t += 0.05;
+    }
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBeGreaterThan(0);
+    expect(dmg[0][1]).toBe('groundswell');
+    expect(player.rootedUntil).toBeGreaterThan(0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /boards heave under you/.test(c))).toBe(true);
+    gs.dispose();
+  });
+
+  it('leaves the wall strips calm', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const room = rooms[28];
+    const ax = room.exitPos.x - room.entryPos.x, az = room.exitPos.z - room.entryPos.z;
+    const len = Math.hypot(ax, az);
+    const nx = ax / len, nz = az / len;
+    const px = -nz, pz = nx; // lateral
+    const crossHalf = Math.min(room.spec?.width ?? 10, room.spec?.depth ?? 10) / 2;
+    // Hug the wall — inside the calm strip the wave can't reach.
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(room.origin.x + px * (crossHalf - 0.4), 0, room.origin.z + pz * (crossHalf - 0.4));
+    step(gs, ctx, 30);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(gs.state).toBe('engage');
+    gs.dispose();
+  });
+
+  it('settles after its waves pass', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999); // out of the room — never in the band
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (gs.state !== 'done' && steps++ < 1200) { ctxMut.now = t; gs.update(0.05); t += 0.05; }
+    expect(gs.state).toBe('done');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /floor settles/.test(c))).toBe(true);
+    gs.dispose();
   });
 });
 

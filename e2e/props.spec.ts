@@ -745,14 +745,27 @@ test('the porter waits above the lintel — look up or it drops', async ({ page 
     if (!entB) return { stage: 'no-second' } as const;
     const hdrB = entB.threatPos();
     if (!hdrB) return { stage: 'no-threat-2' } as const;
-    // Stand ~3.5m inside the room, tilt the gaze up at the header.
+    // Tilt the gaze up at the header from inside the room — try several
+    // sight lines since furniture/bathroom walls can block any one of them.
     const back = Math.atan2(roomB.origin.x - hdrB.x, roomB.origin.z - hdrB.z);
-    g.player.teleport(hdrB.x + Math.sin(back) * 3.5, 0, hdrB.z + Math.cos(back) * 3.5);
+    const cands: [number, number][] = [
+      [3.5, 0], [2.5, 1.4], [2.5, -1.4], [4.5, 2.2], [4.5, -2.2], [6, 0], [1.8, 0.8],
+    ];
     let outcome = 'waiting';
-    for (let f = 0; f < 1200; f++) {
-      const dx = hdrB.x - g.player.pos.x, dz = hdrB.z - g.player.pos.z;
-      g.player.yaw = Math.atan2(dx, dz);
-      g.player.pitch = Math.atan2(hdrB.y - (g.player.pos.y + 1.62), Math.hypot(dx, dz));
+    outer:
+    for (const [dist, lat] of cands) {
+      const px = hdrB.x + Math.sin(back) * dist + Math.cos(back) * lat;
+      const pz = hdrB.z + Math.cos(back) * dist - Math.sin(back) * lat;
+      g.player.teleport(px, 0, pz);
+      for (let f = 0; f < 140; f++) {
+        const dx = hdrB.x - g.player.pos.x, dz = hdrB.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(dx, dz);
+        g.player.pitch = Math.atan2(hdrB.y - (g.player.pos.y + 1.62), Math.hypot(dx, dz));
+        if (entB.state === 'done' || !g.entities.includes(entB as never)) { outcome = 'withdrew'; break outer; }
+        g.frame();
+      }
+    }
+    for (let f = 0; f < 600 && outcome === 'waiting'; f++) {
       if (entB.state === 'done' || !g.entities.includes(entB as never)) { outcome = 'withdrew'; break; }
       g.frame();
     }
@@ -834,5 +847,60 @@ test('the warden paces its post — whistle, charge, loses the scent', async ({ 
   expect(r.resumed, `caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(r.caps.some((c) => /whistle — the Warden has you/.test(c))).toBe(true);
   expect(r.paced).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the groundswell heaves the floor — sidestep or stumble', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries groundswell @34 (maint-fabshop)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const gsRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'groundswell'));
+    if (!gsRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[gsRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(gsRoom.origin.x, 0, gsRoom.origin.z);
+    for (let f = 0; f < 20; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'groundswell') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+
+    // Stand on the moving hump itself — it must heave us.
+    let heaved = false;
+    for (let f = 0; f < 2200 && ent.state !== 'done'; f++) {
+      const tp = ent.threatPos();
+      if (tp) g.player.teleport(tp.x, 0, tp.z);
+      g.frame();
+      if (caps.some((c) => /boards heave under you/.test(c))) { heaved = true; break; }
+    }
+    // Then hold a wall strip calm — hug the room's edge through the rest.
+    let settled = false;
+    if (heaved) {
+      for (let f = 0; f < 3000 && ent.state !== 'done'; f++) {
+        const tp = ent.threatPos();
+        // Stay 1.6m off the room's centre-line laterally — outside the hump band.
+        if (tp) g.player.teleport(gsRoom.origin.x - (gsRoom.spec?.width ?? 8) / 2 + 0.4, 0, tp.z);
+        g.frame();
+      }
+      settled = caps.some((c) => /floor settles/.test(c));
+    }
+    return { stage: 'done', heaved, settled, breath: caps.some((c) => /holds its breath/.test(c)), caps: caps.slice(-8) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { heaved: boolean; settled: boolean; breath: boolean; caps: string[] };
+  expect(r.breath).toBe(true);
+  expect(r.heaved, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.settled, `caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(errors).toEqual([]);
 });

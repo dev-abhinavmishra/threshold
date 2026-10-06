@@ -32,7 +32,7 @@ import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner, Warden } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -91,6 +91,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   bellman: { sfx: 'knock', text: '[a knock — courteous, in no hurry]', sev: 'warn' },
   porter: { sfx: 'hide-creak', text: '[drips of dust — something clings overhead]', sev: 'warn' },
   warden: { sfx: 'footstep', text: '[measured pacing — something walks its post]', sev: 'warn' },
+  groundswell: { sfx: 'floor-creak', text: '[the boards groan — a swell in the floor]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -123,6 +124,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   bellman: '[the knocking quickens — it knows you are there]',
   porter: '[the dust pours — it is already above the door]',
   warden: '[the whistle again — it is still on station]',
+  groundswell: '[the floor rolls again]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -833,6 +835,8 @@ export class Game {
       case 'porter': this.spawnEntity(new Porter()); break;
       // The Warden: corridor patrol — whistle + charge on sight.
       case 'warden': this.spawnEntity(new Warden()); break;
+      // The Groundswell: the room itself heaves — sidestep the travelling hump.
+      case 'groundswell': this.spawnEntity(new Groundswell()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;

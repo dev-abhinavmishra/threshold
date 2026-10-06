@@ -712,6 +712,37 @@ line of sight mid-charge.*
   Mesh: orc rig + brass whistle cone (fallback tallFigure plate/white-eyes).
 - Gates: tsc, lint, 93 vitest (+3), 5-seed sim, props.spec 10/10, build.
 
+## Sprint 235 — the Groundswell (room hazard; the floor itself heaves)
+
+- Room-bound hazard on corridor/gallery/records/maintenance 30–80: 2.5s of
+  '[the floor holds its breath]', then a floorboard-wide hump travels
+  entry→exit at ~3.2 m/s, dust motes lifting ahead of it. Standing in the
+  band when the front passes → rooted 0.7s + 15dmg + '[the boards heave
+  under you]'. Sidestep to the wall strips (calm band ≈1m along each wall)
+  or ride it out between waves; ~4 waves then '[the floor settles]'.
+- Mechanics: axis = norm(exitPos−entryPos), span<6m rooms skip; front
+  advances on `front`, swell mesh = darkOak box strip across the room
+  (stripLen = crossHalf−1 each side) rotated to face the wave; 36-pt
+  THREE.Points dust recycled in pLife ring; rumble 'ambient' emit 0.35s;
+  hit once per run (`struck`), threatPos = hump centre while a wave runs.
+- Plumbing: EntityId 'groundswell'; tuning warningTime 2.5, damage 15,
+  cooldown 8, spawnChance 0.3, minRoom 30, maxRoom 80, biomes
+  corridor/gallery/records/maintenance — placed right after `warden` in
+  ENTITY_TUNING so it rolls on most seeds ('s'→34/42/68, 'threshold'→45/53,
+  'sim-seed-01'→65); ENTITY_TIER 1; FORBIDDEN_IN_MILESTONE; non-lethal so
+  NOT in the hasSurvivalOption gate; LISTEN_CUES '[boards groan]' +
+  ROUSED_LINES '[the floor rolls again]'.
+- E2E: 'the groundswell heaves the floor — sidestep or stumble' — teleport
+  onto the moving threatPos until it heaves, then hold a wall strip
+  through the remaining waves to 'floor settles'.
+- Porter spec hardening: phase-B gaze spot now iterates candidate sight
+  lines — guest-two-baths' bathroom wall can block the single `back`-axis
+  spot (schedule shifts moved porter rooms [29,53]→[28,47,56]).
+- Playwright stale-dist trap: a manually started `npm run preview` keeps
+  serving the OLD dist (webServer reuseExistingServer) — rebuild+kill
+  :4173 before expecting new code in e2e.
+- Gates: tsc, lint, 96 vitest (+3), 5-seed sim, props.spec 12/12, build.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

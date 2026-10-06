@@ -44,6 +44,7 @@ export type EntityId =
   | 'bellman'
   | 'porter'
   | 'warden'
+  | 'groundswell'
   // Underscript
   | 'redline'
   | 'stillframe'
