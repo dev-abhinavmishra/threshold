@@ -765,8 +765,11 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const w = (s.scale ?? 1) * 1.4;
     g.add(mesh(box(w, 1.6, 0.9), MAT.steelDark(), 0, 0.8, 0));
     g.add(mesh(box(w * 0.8, 0.4, 0.05), MAT.steel(), 0, 1.1, 0.46));
+    // 'device' anims carry no per-mesh seed — LEDs on one source material
+    // share the clone; the last write wins and every write is identical.
+    const ledPool = [MAT.amberDim().clone(), MAT.redLamp().clone()];
     for (let i = 0; i < 4; i++) {
-      const led = mesh(box(0.08, 0.08, 0.03), (rng.bool(0.7) ? MAT.amberDim() : MAT.redLamp()).clone(),
+      const led = mesh(box(0.08, 0.08, 0.03), rng.bool(0.7) ? ledPool[0] : ledPool[1],
         -w * 0.3 + i * w * 0.2, 1.15, 0.49);
       led.userData.anim = 'device';
       led.userData.baseEm = (led.material as THREE.MeshStandardMaterial).emissiveIntensity;
@@ -895,11 +898,13 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
   },
   printerRow: (_s, rng) => {
     const g = new THREE.Group();
+    let ledMat: THREE.MeshStandardMaterial | null = null;
     for (let i = 0; i < 3; i++) {
       g.add(mesh(box(0.5, 0.4, 0.4), MAT.steel(), (i - 1) * 0.65, 0.2, 0));
       g.add(mesh(box(0.4, 0.06, 0.3), MAT.paper(), (i - 1) * 0.65, 0.44, 0.05));
       if (rng.bool(0.4)) {
-        const led = mesh(box(0.06, 0.06, 0.03), MAT.redLamp().clone(), (i - 1) * 0.65 + 0.15, 0.42, 0.2);
+        ledMat ??= MAT.redLamp().clone();
+        const led = mesh(box(0.06, 0.06, 0.03), ledMat, (i - 1) * 0.65 + 0.15, 0.42, 0.2);
         led.userData.anim = 'device';
         led.userData.baseEm = (led.material as THREE.MeshStandardMaterial).emissiveIntensity;
         g.add(led);
@@ -1062,13 +1067,18 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(0.65, 2.0, 0.8), MAT.ink(), 0, 1.0, 0));
     g.add(mesh(box(0.55, 1.9, 0.04), MAT.steelDark(), 0, 1.0, 0.42));
     const leds = [MAT.screenGreen(), MAT.amberDim(), MAT.redLamp(), MAT.screenGreen()];
+    // 'blink' is seeded — LEDs that share (material clone, seed) render
+    // identically, so pool per row: a whole row is one server unit and
+    // blinks the same fault code. 7 clones per rack instead of 35.
     for (let row = 0; row < 7; row++) {
       const y = 0.35 + row * 0.24;
       g.add(mesh(box(0.5, 0.14, 0.02), MAT.charcoal(), 0, y, 0.45));
+      const rowMat = rng.pick(leds).clone();
+      const rowSeed = rng.float() * 100;
       for (let i = 0; i < 5; i++) {
-        const led = mesh(box(0.05, 0.04, 0.015), rng.pick(leds).clone(), -0.2 + i * 0.1, y, 0.47);
+        const led = mesh(box(0.05, 0.04, 0.015), rowMat, -0.2 + i * 0.1, y, 0.47);
         led.userData.anim = 'blink';
-        led.userData.animSeed = rng.float() * 100;
+        led.userData.animSeed = rowSeed;
         g.add(led);
       }
     }
@@ -1159,9 +1169,11 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const disc = mesh(cyl(0.19, 0.19, 0.02, 18), MAT.ink(), 0, 0.52, 0.345);
     disc.rotation.x = Math.PI / 2;
     g.add(disc);
+    let litMat: THREE.MeshStandardMaterial | null = null;
     for (let i = 0; i < 3; i++) {
       const lit = rng.bool(0.4);
-      const btn = mesh(box(0.05, 0.03, 0.02), (lit ? MAT.screenGreen() : MAT.charcoal()).clone(), -0.24 + i * 0.1, 1.0, 0.34);
+      if (lit) litMat ??= MAT.screenGreen().clone();
+      const btn = mesh(box(0.05, 0.03, 0.02), lit ? litMat! : MAT.charcoal(), -0.24 + i * 0.1, 1.0, 0.34);
       if (lit) {
         btn.userData.anim = 'device';
         btn.userData.baseEm = (btn.material as THREE.MeshStandardMaterial).emissiveIntensity;

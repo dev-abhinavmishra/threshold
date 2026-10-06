@@ -558,12 +558,23 @@ CURRENT STATE (as of sprint 223)
   every room carrying the kind since individual props can be
   lane-culled or inside a safe template.
 
+  Sprint 228 material-clone audit (tools/audit_materials.ts): builds a
+  ~50-room slice per seed and reports meshes/mats/anim per biome — run
+  `npx tsx tools/audit_materials.ts [seed...]` after touching props.
+  Baseline ~27-34 mats/room, ~1400 material instances per 50-room
+  slice. The offender: serverRack cloned 35 LED materials per rack.
+  Fix: 'blink' is seeded, so LEDs sharing (clone, seed) render
+  identically — pooled per row (7 clones/rack, a whole row blinks the
+  same fault code); 'device' anims carry no per-mesh seed, so
+  machineBox/printerRow/controlPanel LEDs now pool by source material
+  exactly. u-server peak 44→33 mats, ms-engine 55→46, slice total
+  -3%. Regression guard: rack = 35 LEDs / 7 material clones.
+  80 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
-  - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
-    sconce) and per-device prop clones (LED/screen/button) stay — each
-    carries per-light/per-seed data; a per-room audit of clone counts on
-    long runs is still open (measure via renderer.info.memory? no —
-    enumerate scene.traverse materials).
+  - Perf audit done (228): tools/audit_materials.ts reports per-biome
+    mats/meshes; LED clones pooled per row/source. Remaining clones are
+    per-seed-emissive (screens, sconce decals) — real per-instance data.
   - Economy: economy is now ~5x coverage — if playtests still feel rich,
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
