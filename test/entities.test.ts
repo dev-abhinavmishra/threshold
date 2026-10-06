@@ -1091,3 +1091,94 @@ describe('Returner answers the bell (sprint 253)', () => {
     void ctx;
   });
 });
+
+describe('Swamper (sprint 255)', () => {
+  const floodRoom = (): RoomInstance => ({
+    index: 5, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 20, depth: 20, spec: { width: 20, depth: 20, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [], flooded: true,
+  } as unknown as RoomInstance);
+
+  const hearingCtx = (rooms: RoomInstance[], drained = false) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      isRoomDrained: () => drained,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+    });
+    const emit = (x: number, z: number, intensity = 0.55, category = 'impact') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    const step = (sw: { update(dt: number): void }, n: number) => {
+      for (let i = 0; i < n; i++) { ctx.now += 0.05; sw.update(0.05); }
+    };
+    return { ctx, emit, step, heard: () => hear !== null };
+  };
+
+  it('lies under the flood, glides to a splash, and strikes a stirred wader', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step, heard } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    expect(heard()).toBe(true);
+    expect(sw.state).toBe('engage');
+    const pos = () => (sw as unknown as { pos: { x: number; z: number } }).pos;
+    const start = { x: pos().x, z: pos().z };
+    // a splash inside its room pulls it toward the point
+    emit(0, 6);
+    step(sw, 20);
+    expect(Math.hypot(pos().x - start.x, pos().z - start.z)).toBeGreaterThan(1);
+    // a wader stirring the flood at contact gets the strike
+    ctx.player.vel.x = 1.4;
+    step(sw, 140);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /the water stands up/.test(c))).toBe(true);
+    sw.dispose();
+  });
+
+  it('a crouched wader stirs nothing — contact without a splash is safe', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    ctx.player.crouching = true;
+    ctx.player.vel.x = 1.0;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    // a pebble splash pulls it straight onto the quiet wader
+    emit(0, 6);
+    step(sw, 120);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    sw.dispose();
+  });
+
+  it('noise beyond the flood never reaches it; an open drain empties the room of it', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    const pos = () => (sw as unknown as { pos: { x: number; z: number } }).pos;
+    const start = { x: pos().x, z: pos().z };
+    emit(200, 200); // far outside the room
+    step(sw, 10);
+    expect(Math.hypot(pos().x - start.x, pos().z - start.z)).toBeLessThan(1);
+    sw.dispose();
+    // drained — it leaves with the water
+    const { ctx: ctx2, step: step2 } = hearingCtx(rooms, true);
+    const sw2 = new Swamper();
+    sw2.spawn(ctx2);
+    step2(sw2, 3);
+    expect(sw2.state).toBe('done');
+    const captions = (ctx2.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /slips down the drain/.test(c))).toBe(true);
+    sw2.dispose();
+  });
+});

@@ -66,6 +66,8 @@ export interface GRoom {
   templateId?: string;
   origin: { x: number; z: number };
   yaw: number;
+  width?: number;
+  depth?: number;
   n: { x: number; z: number };
   entryPos: { x: number; z: number };
   exitPos: { x: number; z: number };

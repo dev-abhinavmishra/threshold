@@ -54,6 +54,7 @@ export type EntityId =
   | 'margin'
   | 'editor'
   | 'grafter'
+  | 'swamper'
   // Environmental
   | 'hazard'
   // Set-piece systems

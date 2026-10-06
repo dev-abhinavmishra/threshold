@@ -812,7 +812,11 @@ test("the under hears you — bell drifts the grafter, a crash catches the still
       && caps.some((c) => /alarm screams|bell screams/.test(c));
 
     // --- 2. the grafter drifts to a crash ---
-    const gRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    // pick a grafter room big enough to survive the settle — the corner it
+    // spawns in must be farther than it can walk in ~1.3s or it just eats
+    // the test player before the noise phase starts.
+    const gRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter')
+      && Math.hypot((r.width ?? 0) / 2, (r.depth ?? 0) / 2) - 1.2 >= 5);
     if (!gRoom) return { stage: 'no-grafter' } as const;
     g.player.teleport(gRoom.origin.x, 0, gRoom.origin.z);
     ga.currentRoom = gRoom.index;
@@ -885,3 +889,90 @@ test("the under hears you — bell drifts the grafter, a crash catches the still
   expect(r.latchCue, `no latch cue — caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(r.engaged, 'the quickened pass never started moving').toBe(true);
   expect(errors).toEqual([]);});
+
+// The Swamper (sprint 255): the drowned thing that lies in flooded halls —
+// splash noise pulls it to you; the drain empties the room of it.
+test('the swamper answers stirred water — the drain takes its medium', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': flooded u-3/24/48; swamper scheduled on u-24
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      entities: { id: string; state: string; threatPos(): { x: number; z: number } }[];
+      spawnScheduled(): void;
+      drainedRooms: Set<string>;
+    };
+
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => r.flooded && r.scheduled?.some((s) => s.entity === 'swamper'));
+    if (!room) return { stage: 'no-swamper-room' } as const;
+
+    // Wade in — it rises in the far corner.
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    ga.currentRoom = room.index;
+    ga.godMode = false;
+    for (let f = 0; f < 40; f++) g.frame();
+    const ent = ga.entities.find((e) => e.id === 'swamper');
+    if (!ent) return { stage: 'not-spawned' } as const;
+
+    // Stir the flood: upright wading splashes pull it in — and it takes the
+    // stirring thing.
+    const hp0 = g.player.health;
+    g.keys.add('KeyW');
+    let closeSeen = false;
+    for (let f = 0; f < 400; f++) {
+      g.frame();
+      const tp = ent.threatPos();
+      const d = Math.hypot(tp.x - g.player.pos.x, tp.z - g.player.pos.z);
+      if (d < 2) closeSeen = true;
+      if (g.player.health < hp0) break;
+      // keep wading through the middle of the room
+      if (f % 60 === 59) { const px = room.origin.x - g.player.pos.x, pz = room.origin.z - g.player.pos.z; g.player.yaw = Math.atan2(px, pz); }
+    }
+    g.keys.delete('KeyW');
+    const struck = g.player.health < hp0;
+    if (!struck) return { stage: 'no-strike', closeSeen, hp: g.player.health, caps } as const;
+    const rose = caps.some((c) => /water stands up|water is not empty/.test(c));
+
+    // The drain empties the room of it.
+    ga.godMode = true;
+    const DRAIN = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    const drainProp = room.spec?.props?.find((p) => DRAIN.has(p.kind));
+    if (!drainProp) return { stage: 'no-drain-prop', struck, closeSeen } as const;
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    const dp = { x: room.origin.x + drainProp.x * c + drainProp.z * s, z: room.origin.z - drainProp.x * s + drainProp.z * c };
+    g.player.teleport(dp.x + 1.0, 0, dp.z + 1.0);
+    for (let f = 0; f < 30; f++) g.frame();
+    const key = `under:${room.index}`;
+    for (let f = 0; f < 260 && !ga.drainedRooms.has(key); f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'drain' && i.enabled);
+      if (!it) break;
+      const ax = it.pos.x - g.player.pos.x, az = it.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(it.pos.y + 0.55 - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
+      if (/open the drain/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    if (!ga.drainedRooms.has(key)) return { stage: 'drain-failed', struck, closeSeen } as const;
+    for (let f = 0; f < 20; f++) g.frame();
+    const slipped = caps.some((c) => /slips down the drain/.test(c));
+    const gone = ent.state === 'done' || !ga.entities.includes(ent as never);
+
+    return { stage: 'done', room: room.index, struck, closeSeen, rose, slipped, gone, hp: g.player.health } as const;
+  });
+
+  if (result.stage === 'no-swamper-room' || result.stage === 'not-spawned') test.skip();
+  expect(result.struck, JSON.stringify(result)).toBe(true);
+  expect(result.rose, JSON.stringify(result)).toBe(true);
+  expect(result.gone, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor, Grafter } from '../entities/setpieces';
+import { Editor, Grafter, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -95,6 +95,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   groundswell: { sfx: 'floor-creak', text: '[the boards groan — a swell in the floor]', sev: 'warn' },
   inspector: { sfx: 'collector-rattle', text: '[a latch being tried — one after another]', sev: 'warn' },
   commissionaire: { sfx: 'collector-rattle', text: '[a gloved hand raps the frame — a door held shut]', sev: 'warn' },
+  swamper: { sfx: 'puddle-splash', text: '[water, and something in it — slow]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -133,6 +134,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   groundswell: '[the floor rolls again]',
   inspector: '[the keys again — it is still checking]',
   commissionaire: '[the rap again — it is still holding the doors]',
+  swamper: '[the flood stirs — it is still in the water]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -801,6 +803,7 @@ export class Game {
         return best;
       },
       purse: () => this.imprints,
+      isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
     };
   }
 
@@ -838,6 +841,8 @@ export class Game {
       case 'behemoth': this.spawnEntity(new CorridorRunner('behemoth', { behemoth: true, passes: 2 })); break;
       case 'editor': this.spawnEntity(new Editor()); break;
       case 'grafter': this.spawnEntity(new Grafter()); break;
+      // The Swamper: drowned thing that lies in flooded halls and hears splashes.
+      case 'swamper': this.spawnEntity(new Swamper()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
@@ -1594,7 +1599,7 @@ export class Game {
           margin: 'the handwritten edge', redline: 'the red margin',
           stillframe: 'the paused hall', editor: 'the revising hand',
           inkling: 'an inkstain walking', husk: 'a guest long emptied',
-          singer: 'the choir of one',
+          singer: 'the choir of one', swamper: 'a drowned porter in the flood',
         };
         const seen = new Set<string>();
         const parts: string[] = [];
@@ -1683,6 +1688,7 @@ export class Game {
           stillframe: 'a hall that will not move', editor: 'the revising hand',
           inkling: 'an inkstain walking', returner: 'a guest come back',
           sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
+          swamper: 'a drowned porter, under the water',
         };
         const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
         const filings: string[] = [];

@@ -51,6 +51,9 @@ export interface EntityCtx {
   /** The player's imprint purse — entities that tax it (the Collector)
    *  read it live. Optional: headless test ctxs may omit it. */
   purse?: () => number;
+  /** Flooded-hall drains: true once a room's water has been let out.
+   *  Optional: headless test ctxs may omit it. */
+  isRoomDrained?: (index: number) => boolean;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

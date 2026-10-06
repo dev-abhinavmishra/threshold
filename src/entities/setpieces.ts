@@ -11,6 +11,7 @@ import { MAT } from '../world/materials';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import { pointInRoom } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 import type { Vec3 } from '../engine/math';
 
@@ -453,6 +454,174 @@ export class Grafter extends Entity {
       if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
     }
     return -1;
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/* ============================ SWAMPER ============================ */
+/** The drowned crewman of the flooded halls. It lies under the standing
+ *  water and answers what the water carries — an upright wader stirs the
+ *  flood, and every splash it makes pulls the shape toward it. Crouch-
+ *  wading stirs nothing, and an opened drain takes its medium with it. */
+export class Swamper extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private target = v3();
+  private spawnRoom = 0;
+  private room: { origin: { x: number; z: number }; yaw: number; spec?: { width: number; depth: number } | null } | null = null;
+  private roomO = v3();
+  private roomW = 0;
+  private roomD = 0;
+  private huntUntil = 0;
+  private strikeCd = 0;
+  private surfT = 0;
+  private driftT = 0;
+  private rippleT = 0;
+  private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+
+  constructor() { super('swamper', ENTITY_TUNING.swamper); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.room = room;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    this.roomW = room.width;
+    this.roomD = room.depth;
+    // lie mid-room, on the far corner from where the player wades in
+    const p = c.player.pos;
+    let bx = this.roomO.x, bz = this.roomO.z, best = -1;
+    for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const px = this.roomO.x + cx * (this.roomW / 2 - 1.4);
+      const pz = this.roomO.z + cz * (this.roomD / 2 - 1.4);
+      const d = Math.hypot(px - p.x, pz - p.z);
+      if (d > best) { best = d; bx = px; bz = pz; }
+    }
+    this.pos = v3(bx, 0, bz);
+    this.target = v3(bx, 0, bz);
+    const g = new THREE.Group();
+    const rig = riggedFigure('inkGhost');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), MAT.ink());
+      body.position.y = 0.9;
+      g.add(body);
+    }
+    // the displacement it makes — a dark patch on the sheet
+    const patch = new THREE.Mesh(new THREE.CircleGeometry(0.8, 18), MAT.ink());
+    patch.rotation.x = -Math.PI / 2;
+    patch.position.y = 1.4; // local; group sits low so this skims the flood
+    g.add(patch);
+    g.position.set(this.pos.x, -1.35, this.pos.z);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('puddle-splash', this.pos, '[the water is not empty]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** Everything the flood carries reaches it — wading splashes, thrown
+   *  pebbles, the drain crank. It glides to the point and listens; if the
+   *  sound is still there, it takes it. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || !this.room) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!pointInRoom(this.room, e.x, e.z, 0.4)) return;
+    this.target = v3(e.x, 0, e.z);
+    this.huntUntil = c.now + 5;
+  }
+
+  private pickDrift(): void {
+    const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 131));
+    this.target = v3(
+      this.roomO.x + rng.range(-this.roomW / 2 + 1.4, this.roomW / 2 - 1.4),
+      0,
+      this.roomO.z + rng.range(-this.roomD / 2 + 1.4, this.roomD / 2 - 1.4),
+    );
+    this.driftT = this.ctx.now + 6;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.lifeT += dt;
+    // the flood is its medium — drain the room and it leaves with the water
+    if (c.isRoomDrained?.(this.spawnRoom)) {
+      c.cue('puddle-splash', this.pos, '[something slips down the drain]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2) { this.done(); return; }
+
+    const dP = v3dist(this.pos, p.pos);
+    // Strike: it knows you only by the water you move. An upright wader
+    // stirs; a crouched one is a stone.
+    const stirred = !p.crouching && Math.hypot(p.vel.x, p.vel.z) > 0.45 && p.protection !== 'hidden';
+    if (dP < this.tuning.killRange && stirred && c.now >= this.strikeCd) {
+      this.strikeCd = c.now + 8;
+      this.surfT = 0.9;
+      this.huntUntil = 0;
+      this.rig?.play('attack', 0.05);
+      c.cue('puddle-splash', this.pos, '[the water stands up]', { severity: 'danger' });
+      c.sound.emit({ x: p.pos.x, y: 0.3, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[the flood breaks]', source: 'swamper' });
+      c.damagePlayer(this.tuning.damage, 'swamper', 'The Swamper finds you by the water you move. Crouch-wade — or open the drain first.');
+      // slip back to the far corner and lie again
+      let bx = this.roomO.x, bz = this.roomO.z, best = -1;
+      for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+        const px = this.roomO.x + cx * (this.roomW / 2 - 1.4);
+        const pz = this.roomO.z + cz * (this.roomD / 2 - 1.4);
+        const d = Math.hypot(px - p.pos.x, pz - p.pos.z);
+        if (d > best) { best = d; bx = px; bz = pz; }
+      }
+      this.target = v3(bx, 0, bz);
+    }
+
+    const hunting = c.now < this.huntUntil;
+    const speed = hunting ? this.tuning.speed : 0.5;
+    const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.3) {
+      this.pos.x += (dx / dd) * speed * dt;
+      this.pos.z += (dz / dd) * speed * dt;
+      this.rig?.play('move');
+    } else if (hunting) {
+      // arrived at the sound and found it gone — it circles once, then lies
+      this.huntUntil = 0;
+      c.cue('puddle-splash', this.pos, '[the water moves where the sound was]', { severity: 'info' });
+    } else if (c.now > this.driftT) {
+      this.pickDrift();
+    } else {
+      this.rig?.play('idle');
+    }
+
+    // A quiet wader gets the tell instead of the teeth: a patch of moving
+    // water beside them is the only warning the flood gives.
+    if (!hunting && dP < 7 && c.now > this.rippleT) {
+      this.rippleT = c.now + 6;
+      c.cue('puddle-splash', this.pos, '[the water moves, close]', { severity: 'warn' });
+    }
+
+    if (this.mesh) {
+      this.surfT = Math.max(0, this.surfT - dt);
+      const rise = this.surfT > 0 ? 1.1 * Math.min(1, this.surfT / 0.45) : 0;
+      this.mesh.position.set(this.pos.x, -1.35 + rise, this.pos.z);
+      if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.update(dt);
   }
 
   protected override onDone(): void {

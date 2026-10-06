@@ -1416,3 +1416,42 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Under hazard layer landed; next: a lights-out variant for the same
     wet corridors (dying fixtures already exist — a hall where the mains
     are out entirely and the water hides the floor traps)?
+
+## Sprint 255 — the Swamper (the flooded halls answer back)
+
+- New under entity `swamper`: a drowned crewman that lies under sprint-254's
+  standing water — submerged hump (inkGhost rig) + a dark displacement
+  patch on the sheet, spawned only on `flooded` rooms (85% roll, cooldown
+  10 — every flooded hall usually has one).
+- It knows you only by what the water carries: any `noiseCanBeHeard` emit
+  inside its room pulls it gliding at 3.6m/s to the point; a wader still
+  stirring on contact gets `[the water stands up]` + 25dmg, then it slips
+  to the far corner and lies again (8s strike cooldown). Quiet tells:
+  `[the water moves, close]` when it drifts near a still wader.
+- Counterplay is sprint-254's own verbs: crouch-wading stirs nothing (it
+  never homes); `Open the drain` removes its medium — the moment the room
+  joins `drainedRooms` it cues `[something slips down the drain]` and
+  despawns (new `EntityCtx.isRoomDrained` hook). Its own strike emits are
+  `source`-marked so it can't lure itself.
+- THE BUG THIS SPRINT EXPOSED: main-route `scheduleEncounters` iterates
+  all of ENTITY_TUNING with an exclusion list — 'swamper' wasn't excluded,
+  so dry main rooms rolled a submerged-only entity (porters/collectors
+  displaced + swampers on dry floor). Fixed by adding it to the list —
+  new entity ids are global-by-default, gate them per-pass.
+- Under layout drift: shared 'encounter' stream — swamper draws on flooded
+  rooms reshuffled the whole under schedule ('s' grafter @5/19 → @6/27/…).
+  Exposed a real ambush: a grafter scheduled on u-lobby (9×7) spawns
+  ~1.25m off the player and kills inside ~1.3s — spec now picks a grafter
+  room with corner clearance ≥5m. Watch item: lethal scheduled entities
+  on tiny rooms are instant ambushes on entry.
+- vitest +3 (glide+strike, quiet crouch contact, out-of-room deafness +
+  drain despawn), entities.spec +1 leg. Listen/rouse/book-euphemism lines
+  all covered ('a drowned porter in the flood').
+- Gates: tsc, lint, 130 vitest, 5-seed sim, e2e 28/28, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - Tiny-room lethal ambush rule (above) — worth a scheduling sanity pass:
+    min room area for killRange entities, or survival-option gating.
+  - Lights-out wet corridors: dead mains on flooded halls (water hides
+    traps in the dark).
