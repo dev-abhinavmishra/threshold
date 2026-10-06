@@ -110,7 +110,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 216)
+CURRENT STATE (as of sprint 217)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -304,6 +304,24 @@ CURRENT STATE (as of sprint 216)
   pewRow (replaces cathedral benches), chapelAltar — dressed into
   staff-dining, banquet, cathedral, sanctuary, kitchen, guest rooms.
   ~72 mill dirs; MILL_DIRS covers all.
+  Sprint 217 door-lane audit + colliderBlocksLane: the builder-side lane
+  drop used inDoorLane(spec,x,z,r) with r = collider half-DIAGONAL —
+  treating every prop as a circle. ~298 fixed props were silently
+  deleted across the template set where ~196 only corner-kissed a lane
+  (rooms read sparse). New colliderBlocksLane(spec,x,z,w,d) in spec.ts:
+  per-port AABB strip ±(port.width/2+0.05) laterally, -0.05..1.5m deep;
+  blocks on >=0.15m material overlap in both axes OR collider spanning
+  the whole doorway >=0.4 deep. Builder uses it with the collider's
+  real w/d. Intended barricades whitelisted in the test: hatch,
+  portcullis, stairGate. The sweep also caught ~45 authored props
+  genuinely in a lane / OUT OF BOUNDS (corr-straight fireplace at
+  x=-5.15 in a 3.2-wide room — never rendered, deleted; dormitory beds,
+  gallery/suite/sanctuary dressing, boiler+generator, clinic, records,
+  library, fabshop, storage, bunker re-placed) / medallions above
+  2.9-3.6m ceilings (pulled below). Regression test now checks per-prop:
+  in-bounds (|x|<=w/2+0.3), y <= spec.height, and no collider lane
+  block. RULE: authoring a barricade prop inside a doorway is legal but
+  must be added to the test whitelist or the sweep fails.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material

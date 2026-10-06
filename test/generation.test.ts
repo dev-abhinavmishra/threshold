@@ -3,8 +3,10 @@ import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos, inDoorLane } from '../src/world/spec';
-import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
+import { portLocalPos, inDoorLane, colliderBlocksLane } from '../src/world/spec';
+import type { Port, PropSpec } from '../src/world/spec';
+import { MAIN_TEMPLATES, propsClash, CLASH_OK, resolveWallClashes } from '../src/world/templates';
+import { MODEL_FOR } from '../src/world/modelLibrary';
 import { SeedStreams } from '../src/engine/rng';
 
 // Must match src/world/generator.ts rotXZ (world-space convention).
@@ -313,6 +315,65 @@ describe('sprint mechanics coverage', () => {
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('wall-mounted props survive clash resolution on their own wall', () => {
+    // Regression: the free-axis bound must not constrain the pinned axis —
+    // WALL_THIN mounts sit 0.12–0.15m off the wall, well inside any 0.3m
+    // clearance band, so an axis-blind bound drops every painting/sconce.
+    const entry: Port = { offset: 0, wall: 's', width: 1.4 };
+    const exits: Port[] = [{ offset: 0, wall: 'n', width: 1.4 }];
+    const props: PropSpec[] = [
+      { kind: 'painting', x: 2.38, z: 0.5, y: 1.6, yaw: Math.PI / 2, meta: { wall: true } },
+      { kind: 'wallSconce', x: -2.35, z: -0.5, y: 2.05, yaw: -Math.PI / 2, meta: { wall: true } },
+      { kind: 'wallClock', x: 2.0, z: 2.85, y: 2.25, yaw: Math.PI, meta: { wall: true } },
+    ];
+    const out = resolveWallClashes(props, 5, 6, entry, exits);
+    expect(out).toHaveLength(3);
+  });
+
+  it('no fixed prop collider footprint reaches a door lane (builder would drop it)', () => {
+    // Mirrors builder.ts: a prop is discarded when one of its solid
+    // colliders materially overlaps the door's walk strip. Spec-level
+    // checks are center-only, so this sweeps the rotated collider
+    // footprint with the same colliderBlocksLane rule the builder uses.
+    for (const t of MAIN_TEMPLATES) {
+      for (const seed of ['a', 'b', 'c']) {
+        const spec = t.build(new SeedStreams(seed).roomStream('test', 1));
+        const lanes = { width: spec.width, depth: spec.depth, entry: spec.entry, exits: spec.exits };
+        for (const p of spec.props) {
+          // Center well outside the room = the prop renders inside/behind
+          // a wall and is never seen (e.g. fireplace at -5.15 in a 7-wide
+          // room). Wall-mounted pieces may sit slightly past the face.
+          expect(
+            Math.abs(p.x) <= spec.width / 2 + 0.3 && Math.abs(p.z) <= spec.depth / 2 + 0.3,
+            `${t.id} seed=${seed}: ${p.kind} @ ${p.x},${p.z} outside ${spec.width}x${spec.depth} room`,
+          ).toBe(true);
+          // Anchoring above the ceiling plane = invisible (e.g. ceiling
+          // medallions authored at y4.3 in a 2.9-high corridor).
+          expect(
+            (p.y ?? 0) <= spec.height,
+            `${t.id} seed=${seed}: ${p.kind} @ y${p.y} above ${spec.height}m ceiling`,
+          ).toBe(true);
+          if ((p.y ?? 0) > 1.9) continue;
+          // Barricade props exist to seal a dead end or gate a doorway —
+          // they are meant to sit in the lane (the builder still drops
+          // them if the port ends up live).
+          if (['hatch', 'portcullis', 'stairGate'].includes(p.kind)) continue;
+          const m = MODEL_FOR[p.kind as keyof typeof MODEL_FOR];
+          if (!m || !m.collider || m.collider[0] === 0) continue;
+          const [cw, , cd] = m.collider;
+          const yaw = p.yaw ?? 0;
+          const c = Math.abs(Math.cos(yaw)), s = Math.abs(Math.sin(yaw));
+          const hw = (cw / 2) * c + (cd / 2) * s;
+          const hd = (cw / 2) * s + (cd / 2) * c;
+          expect(
+            colliderBlocksLane(lanes, p.x, p.z, hw * 2, hd * 2),
+            `${t.id} seed=${seed}: ${p.kind} @ ${p.x},${p.z}`,
+          ).toBe(false);
         }
       }
     }

@@ -307,6 +307,43 @@ export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'e
   });
 }
 
+/** True when a solid collider (center x,z; full dims w,d, already
+ * world-axis-aligned) materially overlaps a port's core walk strip —
+ * the doorway region a player must pass: door width +0.05 lateral,
+ * -0.05..1.5m into the room. A corner that only kisses the strip's
+ * edge survives; the prop must intrude >=0.15m in both axes, or span
+ * the doorway outright. This is the rule builder.ts drops props on —
+ * inDoorLane(center, halfDiagonal) treated every collider as a worst-
+ * case circle and silently ate ~200 pieces of wall-hugging furniture. */
+export function colliderBlocksLane(
+  spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>,
+  x: number, z: number, w: number, d: number,
+): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    const lat = port.width / 2 + 0.05;
+    let aMin = Infinity, aMax = -Infinity, bMin = Infinity, bMax = -Infinity;
+    for (const [cx, cz] of [
+      [x - w / 2, z - d / 2], [x + w / 2, z - d / 2],
+      [x - w / 2, z + d / 2], [x + w / 2, z + d / 2],
+    ]) {
+      const a = -((cx - lp.x) * dir.x + (cz - lp.z) * dir.z);
+      const b = (cx - lp.x) * -dir.z + (cz - lp.z) * dir.x;
+      if (a < aMin) aMin = a;
+      if (a > aMax) aMax = a;
+      if (b < bMin) bMin = b;
+      if (b > bMax) bMax = b;
+    }
+    const oa = Math.min(aMax, 1.5) - Math.max(aMin, -0.05);
+    const ob = Math.min(bMax, lat) - Math.max(bMin, -lat);
+    if (oa >= 0.15 && ob >= 0.15) return true;
+    // a long collider spanning the doorway laterally is a wall across the path
+    if (oa >= 0.4 && bMin <= -lat + 0.05 && bMax >= lat - 0.05) return true;
+    return false;
+  });
+}
+
 /** Drop props and hiding spots whose centers land inside a door lane. */
 export function clearDoorLanes(spec: RoomSpec): void {
   spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !inDoorLane(spec, p.x, p.z));
