@@ -245,7 +245,8 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
     const ga = g as unknown as {
       currentRoom: number; keys: Set<string>;
       hazard: { steams: { pos: { x: number; y: number; z: number }; room: number;
-        phase: number; cycle: number; dead: boolean }[] };
+        phase: number; cycle: number; dead: boolean }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; readBy: string[] }[] };
     };
     const room = g.route.rooms.find((r) => (r.sockets ?? []).some((sk) => sk.meta?.hazard === 'steam'));
     if (!room) return { stage: 'no-vent' } as const;
@@ -269,7 +270,8 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
       bitten = g.player.health < hp0 - 3;
     }
 
-    // bleed the line — the fitting goes quiet
+    // bleed the line — the fitting goes quiet (and leaves sign)
+    const evBefore = ga.hazard.evidence.length;
     let bled = false;
     for (let f = 0; f < 140 && !bled; f++) {
       const it = g.interaction.interactables.find((i) => i.kind === 'bleed' && i.enabled);
@@ -287,6 +289,8 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
     for (let f = 0; f < 200; f++) g.frame();
     return { stage: 'done', room: room.index, warned, sawBlast, bitten, bled,
       quietAfter: g.player.health >= hpAfter - 0.01,
+      sign: ga.hazard.evidence.length > evBefore
+        && ga.hazard.evidence.slice(evBefore).some((e) => e.kind === 'line' && e.room === room.index),
       caps: caps.slice(-12) } as const;
   });
 
@@ -296,5 +300,6 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
   expect(result.bitten, JSON.stringify(result)).toBe(true);
   expect(result.bled, JSON.stringify(result)).toBe(true);
   expect(result.quietAfter, JSON.stringify(result)).toBe(true);
+  expect(result.sign, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

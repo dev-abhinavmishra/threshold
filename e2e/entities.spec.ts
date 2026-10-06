@@ -1104,3 +1104,57 @@ test('cut the seal — an upright player can disarm a dry wire', async ({ page }
   expect(result.disarmed, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('scent — a killed hazard signs the room, the Warden reads it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // warden on patrol at 33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string; threatPos?(): { x: number; y: number; z: number } | null }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    // stand in the room to spawn the patrol, then step out of its sight
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    const sign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: 0, readBy: [] as string[] };
+    ga.hazard.evidence.push(sign);
+    let closest = Infinity, investigated = false;
+    for (let f = 0; f < 700; f++) {
+      g.frame();
+      const tp = w.threatPos?.();
+      if (tp) closest = Math.min(closest, Math.hypot(tp.x - sign.pos.x, tp.z - sign.pos.z));
+      if (caps.some((c) => /reads the sign/.test(c))) investigated = true;
+      if (investigated && closest < 0.9) break;
+    }
+    return { stage: 'done', investigated, closest, read: sign.readBy,
+      backOnLine: w.state === 'engage', caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.investigated, JSON.stringify(result)).toBe(true);
+  expect(result.closest, JSON.stringify(result)).toBeLessThan(1.2);
+  expect(result.read.some((r) => r.startsWith('warden')), JSON.stringify(result)).toBe(true);
+  expect(result.backOnLine, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

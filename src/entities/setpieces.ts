@@ -332,6 +332,7 @@ export class Grafter extends Entity {
   private lifeT = 0;
   private noiseUnsub: (() => void) | null = null;
   private noiseDriftCd = 0;
+  private scentT = 0;
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
 
@@ -429,6 +430,20 @@ export class Grafter extends Entity {
     if (this.mesh) this.mesh.position.copy(this.pos);
     if (this.rig) this.rig.group.position.y = 0.12 + Math.sin(this.lifeT * 1.7) * 0.1;
 
+    // Scent: a killed hazard in its room reads as fresh footprints —
+    // the rubble drags itself over the sign.
+    this.scentT -= dt;
+    if (this.scentT <= 0) {
+      this.scentT = 1.6;
+      const evs = c.hazardEvidence?.(`grafter:${this.spawnRoom}`, this.pos.x, this.pos.z, 40) ?? [];
+      for (const ev of evs) {
+        if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
+        this.target = v3(ev.pos.x, 0, ev.pos.z);
+        this.roamT = 0;
+        c.cue('grafter-grind', this.pos, '[stone drags to the fresh sign]', { severity: 'warn' });
+        break;
+      }
+    }
     this.grindT += dt;
     if (this.grindT > 4.5) {
       this.grindT = 0;

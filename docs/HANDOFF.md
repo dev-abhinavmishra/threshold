@@ -1633,3 +1633,24 @@ NEXT SPRINT IDEAS (pick the biggest first)
   every hazard keeps its tell string and its damage hint, the drain
   keeps killing arcs (isRoomDrained).
 - Tests: 146 vitest (+3), sim, e2e all green.
+
+## Sprint 264 — 'scent' (killed hazards leave sign hunters can read)
+
+- `hazard.evidence` — every hazard death pushes a sign: snip ('wire'),
+  snare TRIP too, bleed ('line'), drain ('water'). Sign is permanent,
+  read-once per hunter (`readBy` keys like 'warden:33'). Quiet work is
+  marked work — the defuse verbs now cost you a footprint.
+- `EntityCtx.hazardEvidence(readerKey, x, z, r)` — returns fresh unread
+  sign in radius AND marks it read (one call, no separate mark step).
+- Readers: **Warden** polls during its a–b patrol (1.4s cadence); sign
+  in its room → walks it through the existing investigate path + '[it
+  reads the sign — someone has been here]' — eyes live the whole time,
+  so lingering near your own sign is a mistake. **Grafter** drags to
+  sign in its room on the roam cycle.
+- Harness traps logged: (1) warden's investigate CLEARS on arrival —
+  assert closest-approach over the window, not end position; (2) fake
+  hiddenSpot `{id}` crashes focus() — must be a real hidingSpots entry
+  (has exitPos); (3) playwright `-g` doesn't take two args — second
+  overrides first, run files separately; (4) `toContain` on string
+  arrays is exact-match, not substring.
+- Tests: 148 vitest (+2), sim, e2e leg 'scent'.

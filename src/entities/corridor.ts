@@ -427,6 +427,7 @@ export class Warden extends Entity {
   private expireT = 120;
   private investigate: Vec3 | null = null;   // a heard noise it walks to check
   private investigateScan = 0;
+  private scentT = 0;                          // evidence polling
   private noiseUnsub: (() => void) | null = null;
 
   constructor() { super('warden', ENTITY_TUNING.warden); }
@@ -606,6 +607,24 @@ export class Warden extends Entity {
         if (this.investigateScan > 1.8) this.investigate = null;
       }
       return;
+    }
+
+    // Scent: a hazard that died in its room is a footprint. It leaves
+    // the line to read the sign — quiet work is marked work.
+    this.scentT -= dt;
+    if (this.scentT <= 0) {
+      this.scentT = 1.4;
+      const evs = c.hazardEvidence?.(`warden:${this.hostRoom}`, this.pos.x, this.pos.z, 30) ?? [];
+      const room0 = c.rooms[this.hostRoom];
+      for (const ev of evs) {
+        if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
+        this.investigate = v3(ev.pos.x, 0, ev.pos.z);
+        this.investigateScan = 0;
+        c.cue('floor-creak', this.pos, '[it reads the sign — someone has been here]', { severity: 'warn' });
+        this.rig?.play('move', 0.1);
+        break;
+      }
+      if (this.investigate) return;
     }
 
     // Patrol between the doors; at each end it turns and scans.

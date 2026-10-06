@@ -494,6 +494,39 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('reads the sign — a killed hazard pulls it off the line to investigate', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const evidence = { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] };
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = !evidence.readBy.includes(key)
+          && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    let closest = Infinity, invSeen = false;
+    for (let i = 0; i < 160; i++) {
+      step(warden, ctx, 0.05);
+      const p = (warden as unknown as { pos: { x: number; z: number } }).pos;
+      closest = Math.min(closest, Math.hypot(p.x - evidence.pos.x, p.z - evidence.pos.z));
+      if ((warden as unknown as { investigate: unknown }).investigate) invSeen = true;
+    }
+    // it left the line and walked the sign, once
+    expect(invSeen, 'the warden should investigate the sign').toBe(true);
+    expect(closest, 'it walks all the way to the sign').toBeLessThan(0.8);
+    expect(evidence.readBy).toContain('warden:28');
+    expect(warden.state, 'then it resumes the patrol').toBe('engage');
+    warden.dispose();
+  });
+
   it('whistles and charges a player caught in the open', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
@@ -1219,6 +1252,37 @@ describe('Grafter (sprint 256)', () => {
     expect(ctx.killPlayer).not.toHaveBeenCalled();
     for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); } // past the rise
     expect(ctx.killPlayer).toHaveBeenCalledWith('grafter', expect.any(String));
+    g.dispose();
+  });
+
+  it('reads the sign — killed hazards drag the rubble to the mark', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    // the player hides in the far corner — the grafter never sees them
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    const evidence = { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] };
+    ctx.hazardEvidence = (key, x, z, r) => {
+      const out = !evidence.readBy.includes(key)
+        && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    let closest = Infinity;
+    for (let i = 0; i < 300; i++) {
+      ctx.now += 0.05; g.update(0.05);
+      const gp = (g as unknown as { pos: { x: number; z: number } }).pos;
+      closest = Math.min(closest, Math.hypot(gp.x - evidence.pos.x, gp.z - evidence.pos.z));
+    }
+    expect(closest, 'the rubble drags to the killed hazard').toBeLessThan(0.6);
+    expect(evidence.readBy).toContain('grafter:0');
     g.dispose();
   });
 });

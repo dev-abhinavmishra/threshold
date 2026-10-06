@@ -805,6 +805,12 @@ export class Game {
       },
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
+      hazardEvidence: (key, x, z, r) => {
+        const out = this.hazard.evidence.filter((e) => !e.readBy.includes(key)
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
+        for (const e of out) e.readBy.push(key);
+        return out;
+      },
     };
   }
 
@@ -1925,7 +1931,10 @@ export class Game {
         const d = it.data as { room: number; sx: number; sz: number };
         const hsn = this.hazard.snares.find((hz) => hz.room === d.room
           && Math.hypot(hz.pos.x - d.sx, hz.pos.z - d.sz) < 0.45);
-        if (hsn) hsn.armed = false;
+        if (hsn) {
+          hsn.armed = false;
+          this.hazard.evidence.push({ pos: v3(hsn.pos.x, 0, hsn.pos.z), room: hsn.room, kind: 'wire', t: this.clock.time, readBy: [] });
+        }
         const rm = this.activeRooms()[this.currentRoom];
         const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
         this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
@@ -1938,7 +1947,10 @@ export class Game {
         const d = it.data as { room: number; sx: number; sz: number };
         const st = this.hazard.steams.find((v) => v.room === d.room
           && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
-        if (st) st.dead = true;
+        if (st) {
+          st.dead = true;
+          this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room, kind: 'line', t: this.clock.time, readBy: [] });
+        }
         this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz }, '[the pressure falls — the line goes quiet]');
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
         return;
@@ -1961,6 +1973,7 @@ export class Game {
         const rIdx = Number(parts[1]);
         this.drainedRooms.add(`${this.space}:${rIdx}`);
         this.draining.set(rIdx, 0);
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: rIdx, kind: 'water', t: this.clock.time, readBy: [] });
         this.sound.emit({ x: it.pos.x, y: 0.9, z: it.pos.z, intensity: 0.55, category: 'machine', caption: '[the crank screams once]' });
         this.cue('puddle-splash', it.pos, '[the water finds the drain]', 'info');
         return;

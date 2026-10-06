@@ -862,6 +862,10 @@ export class HazardField {
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number }[] = [];
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
     cycle: number; dead: boolean; hitT?: number; warnT?: number }[] = [];
+  /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
+   *  scent a posted hunter can read — quiet work is marked work. */
+  evidence: { pos: import('../engine/math').Vec3; room: number;
+    kind: 'wire' | 'line' | 'water'; t: number; readBy: string[] }[] = [];
   lastTick = 0;
 
   constructor() {}
@@ -897,6 +901,7 @@ export class HazardField {
           continue;
         }
         s.armed = false;
+        this.evidence.push({ pos: v3(s.pos.x, 0, s.pos.z), room: s.room, kind: 'wire', t: ctx.now, readBy: [] });
         p.rootedUntil = ctx.now + 1.6;
         ctx.damagePlayer(8, 'hazard', 'Paper seals root and rustle. Step around them — everything heard that.');
         ctx.sound.emit({ x: s.pos.x, y: 0.4, z: s.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
