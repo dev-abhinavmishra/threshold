@@ -113,6 +113,9 @@ export type PropKind =
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
   | 'merchantCounter' | 'speakingTube' | 'printerRow' | 'alarm'
   | 'trench' | 'freightLift' | 'stairLanding' | 'liftShaft'
+  // sprint 213 — service-wing mill batch
+  | 'kitchenRange' | 'sculleryRack' | 'potRack' | 'pantryShelf'
+  | 'stackedLinen' | 'upholsteredHeadboard' | 'coalScuttle'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript

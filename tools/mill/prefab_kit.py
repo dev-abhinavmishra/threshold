@@ -1365,6 +1365,199 @@ def ovalMirror():
     join_all('ovalMirror')
 
 
+def kitchenRange():
+    """Cast-iron kitchen range — firebox door, hotplate top with rings,
+    flue pipe, side shelf, short legs. ~1.1 tall, 1.4 wide."""
+    w, d = 1.4, 0.72
+    # body on legs
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            cyl('leg', (sx * (w / 2 - 0.08), sz * (d / 2 - 0.08), 0.07), 0.028, 0.14, IRON, 8)
+    cube('body', (0, 0, 0.55), (w, d, 0.84), IRON, 0.02)
+    cube('toeKick', (0, 0, 0.16), (w - 0.1, d - 0.1, 0.1), DARK, 0.01)
+    # firebox door + grate air holes
+    cube('fireDoor', (0, -d / 2 - 0.012, 0.42), (0.42, 0.04, 0.34), DARK, 0.015)
+    torus('doorRing', (0.12, -d / 2 - 0.035, 0.42), 0.035, 0.009, IRON, seg=12)
+    for i in range(4):
+        cyl('vent', (-0.24 + i * 0.16, -d / 2 - 0.01, 0.66), 0.012, 0.05, BRASS, 6).rotation_euler[0] = math.pi / 2
+    # hotplate top — slab + two pot rings + raised back edge
+    cube('hotTop', (0, 0, 0.99), (w + 0.02, d + 0.02, 0.045), IRON, 0.01)
+    for sx in (-1, 1):
+        torus('ring', (sx * 0.32, -0.02, 1.015), 0.14, 0.014, DARK, seg=18)
+        cyl('ringPlug', (sx * 0.32, -0.02, 1.012), 0.1, 0.014, DARK, 16)
+    cube('backSplash', (0, d / 2 - 0.03, 1.18), (w, 0.05, 0.36), IRON, 0.012)
+    # flue pipe rising from rear left
+    pipe_seg('flue', (-0.45, d / 2 - 0.12, 1.0), (-0.45, d / 2 - 0.12, 2.4), 0.075, IRON, 14)
+    cyl('flueCollar', (-0.45, d / 2 - 0.12, 1.02), 0.095, 0.06, IRON, 14)
+    # right side warming shelf on brackets
+    cube('sideShelf', (w / 2 + 0.09, 0, 0.86), (0.2, d - 0.1, 0.03), IRON, 0.006)
+    pipe_seg('shBrace', (w / 2 + 0.16, -d / 2 + 0.08, 0.62), (w / 2 + 0.16, -d / 2 + 0.08, 0.85), 0.012, IRON, 8)
+    pipe_seg('shBrace2', (w / 2 + 0.16, d / 2 - 0.08, 0.62), (w / 2 + 0.16, d / 2 - 0.08, 0.85), 0.012, IRON, 8)
+    join_all('kitchenRange')
+
+
+def sculleryRack():
+    """Wall plate rack — two slatted shelves, plate dividers up top,
+    drip rail below. Center-anchored wall mount, ~0.75 tall, 1.0 wide."""
+    w, d = 1.0, 0.24
+    # back frame
+    cube('backTop', (0, 0, 0.36), (w, 0.03, 0.06), WOOD, 0.006)
+    cube('backBot', (0, 0, -0.36), (w, 0.03, 0.06), WOOD, 0.006)
+    for sx in (-1, 1):
+        cube('upright', (sx * (w / 2 - 0.03), 0, 0), (0.05, 0.04, 0.78), WOOD, 0.006)
+    # two slatted shelves (slats run x, gaps between)
+    for sh in (-0.02, -0.34):
+        for i in range(5):
+            cube('slat', (0, -d / 2 + 0.03 + i * (d - 0.06) / 4, sh), (w - 0.08, 0.025, 0.016), WOOD, 0.003)
+    # plate dividers on upper shelf
+    for i in range(6):
+        x = -w / 2 + 0.14 + i * 0.13
+        pipe_seg('divider', (x, -d / 2 + 0.02, -0.02), (x, -d / 2 + 0.02, 0.2), 0.006, IRON, 6)
+    # three standing plates
+    for i in range(3):
+        x = -0.26 + i * 0.26
+        pl = cyl('plate', (x, -0.05, 0.1), 0.09, 0.012, STONE, 16)
+        pl.rotation_euler[0] = math.pi / 2
+    # drip rail
+    cyl('dripRail', (0, -d / 2 + 0.02, -0.44), 0.009, w - 0.1, BRASS, 8).rotation_euler[1] = math.pi / 2
+    join_all('sculleryRack')
+
+
+def potRack():
+    """Hanging pot rail — iron bar between two wall arms, S-hooks, three
+    hanging pans and a ladle. Center-anchored wall mount, ~0.55 tall."""
+    w = 0.9
+    for sx in (-1, 1):
+        cube('armPlate', (sx * (w / 2 - 0.03), 0, 0.02), (0.04, 0.03, 0.1), IRON, 0.004)
+        pipe_seg('arm', (sx * (w / 2 - 0.03), 0, 0.04), (sx * (w / 2 - 0.03), -0.26, 0.04), 0.01, IRON, 8)
+        pipe_seg('brace', (sx * (w / 2 - 0.03), 0, -0.02), (sx * (w / 2 - 0.03), -0.22, 0.04), 0.007, IRON, 8)
+    cyl('rail', (0, -0.26, 0.04), 0.012, w - 0.06, IRON, 10).rotation_euler[1] = math.pi / 2
+    # hooks + cookware
+    for i, x in enumerate((-0.3, -0.08, 0.16, 0.34)):
+        torus('hook', (x, -0.26, -0.02), 0.018, 0.005, IRON, seg=10)
+        drop = -0.06 - 0.03 * (i % 2)
+        pr = 0.11 - 0.015 * (i % 3)
+        pan = cyl('pan', (x, -0.26, drop - 0.09), pr, 0.03, IRON if i % 3 else BRASS, 18)
+        torus('panRim', (x, -0.26, drop - 0.075), pr, 0.006, IRON, seg=16)
+        pipe_seg('handle', (x, -0.26, drop - 0.02), (x, -0.26, drop - 0.085), 0.008, IRON, 8)
+    # ladle at the right end — long stem + bowl
+    pipe_seg('ladleStem', (0.42, -0.26, 0.03), (0.42, -0.26, -0.2), 0.006, BRASS, 8)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.035, location=(0.42, -0.26, -0.22))
+    lb = bpy.context.object
+    lb.scale = (1, 1, 0.6)
+    bpy.ops.object.transform_apply(scale=True)
+    lb.data.materials.append(BRASS)
+    join_all('potRack')
+
+
+def pantryShelf():
+    """Deep pantry shelf — five boards on end cheeks, stocked with jars,
+    tins and a bread box. ~1.9 tall, 1.3 wide."""
+    w, d, h = 1.3, 0.45, 1.9
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.03), 0, h / 2), (0.06, d, h), WOOD, 0.008)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.06, 0.03, h - 0.1), WORN, 0.006)
+    import random
+    rng = random.Random(7)
+    levels = [0.06, 0.44, 0.82, 1.2, 1.58]
+    for li, lv in enumerate(levels):
+        cube('board', (0, 0, lv), (w - 0.06, d - 0.04, 0.035), WOOD, 0.005)
+        x = -w / 2 + 0.12
+        while x < w / 2 - 0.16:
+            r = rng.random()
+            if r < 0.45:
+                # jar — glass-ish stone body + lid
+                jr = 0.045 + rng.random() * 0.02
+                jh = 0.1 + rng.random() * 0.12
+                cyl('jar', (x, rng.uniform(-0.06, 0.06), lv + 0.02 + jh / 2), jr, jh, STONE, 10)
+                cyl('jarLid', (x, 0, lv + 0.02 + jh + 0.008), jr + 0.006, 0.016, BRASS, 10)
+                x += jr * 2 + 0.05
+            elif r < 0.8:
+                cube('tin', (x, rng.uniform(-0.04, 0.04), lv + 0.08), (0.1, 0.09, 0.12), WORN, 0.008)
+                x += 0.14
+            else:
+                cube('stackBox', (x, 0, lv + 0.1), (0.16, d * 0.6, 0.16), CLOTH, 0.01)
+                x += 0.22
+    cube('breadBox', (w / 2 - 0.2, -0.02, h - 0.13), (0.3, 0.3, 0.22), WOOD, 0.04)
+    join_all('pantryShelf')
+
+
+def stackedLinen():
+    """Open linen shelf — frame + four boards stacked with folded sheet
+    piles in two columns. ~1.8 tall, 1.1 wide."""
+    w, d, h = 1.1, 0.5, 1.8
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.03), 0, h / 2), (0.05, d, h), WOOD, 0.008)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.06, 0.03, h - 0.06), WORN, 0.006)
+    levels = [0.05, 0.48, 0.91, 1.34]
+    import random
+    rng = random.Random(11)
+    for lv in levels:
+        cube('board', (0, 0, lv), (w - 0.06, d - 0.02, 0.03), WOOD, 0.005)
+        for cx in (-0.26, 0.26):
+            n = 2 + int(rng.random() * 3)
+            for k in range(n):
+                cube('fold', (cx + rng.uniform(-0.02, 0.02), rng.uniform(-0.02, 0.02),
+                              lv + 0.045 + k * 0.075), (0.42, d - 0.12, 0.075),
+                     CLOTH if rng.random() > 0.3 else STONE, 0.02)
+    join_all('stackedLinen')
+
+
+def upholsteredHeadboard():
+    """Padded headboard — dark wood frame, six tufted cushion cells,
+    nailhead edge. Floor anchored ~1.3 tall, 1.7 wide."""
+    w = 1.7
+    cube('frameL', (-w / 2 + 0.04, 0, 0.62), (0.08, 0.09, 1.24), DARK, 0.01)
+    cube('frameR', (w / 2 - 0.04, 0, 0.62), (0.08, 0.09, 1.24), DARK, 0.01)
+    cube('frameTop', (0, 0, 1.2), (w, 0.09, 0.09), DARK, 0.01)
+    cube('frameBot', (0, 0, 0.05), (w, 0.09, 0.1), DARK, 0.01)
+    # tufted cushion grid — 3x2 cells of padded boxes
+    for ix in range(3):
+        for iz in range(2):
+            cube('pad', (-w / 2 + 0.11 + ix * (w - 0.22) / 2.0 + 0.0, -0.055, 0.5 + iz * 0.33),
+                 ((w - 0.26) / 3, 0.09, 0.3), WORN, 0.035)
+            # tuft button
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.014,
+                location=(-w / 2 + 0.11 + ix * (w - 0.22) / 2.0, -0.104, 0.5 + iz * 0.33))
+            bpy.context.object.data.materials.append(DARK)
+    # nailhead strip along the top frame edge
+    for i in range(12):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=6, ring_count=4, radius=0.008,
+            location=(-w / 2 + 0.12 + i * (w - 0.24) / 11, -0.046, 1.16))
+        bpy.context.object.data.materials.append(BRASS)
+    join_all('upholsteredHeadboard')
+
+
+def coalScuttle():
+    """Coal scuttle — tilted hod bucket, rim band, brass handle, spilling
+    coal lumps and a shovel. ~0.55 tall."""
+    hod = cyl('hod', (0, 0, 0.3), 0.19, 0.3, IRON, 16)
+    hod.scale = (1, 0.85, 1)
+    hod.rotation_euler[0] = 0.35
+    bpy.ops.object.transform_apply(scale=True)
+    torus('hodRim', (0, -0.115, 0.44), 0.185, 0.014, BRASS, rot=(0.35, 0, 0), seg=18)
+    cyl('hodFoot', (0, 0.045, 0.1), 0.14, 0.05, IRON, 14)
+    pipe_seg('handleA', (-0.17, 0.02, 0.38), (0, 0.12, 0.58), 0.012, BRASS, 8)
+    pipe_seg('handleB', (0.17, 0.02, 0.38), (0, 0.12, 0.58), 0.012, BRASS, 8)
+    cyl('grip', (0, 0.12, 0.59), 0.015, 0.1, WORN, 8).rotation_euler[2] = math.pi / 2
+    # coal lumps at the mouth + shovel leaning
+    import random
+    rng = random.Random(3)
+    for i in range(5):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.05 + rng.random() * 0.03,
+            location=(rng.uniform(-0.1, 0.1), -0.1 + rng.uniform(-0.02, 0.04), 0.42 + rng.uniform(-0.02, 0.05)))
+        bpy.context.object.data.materials.append(DARK)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.055,
+        location=(0.16, -0.2, 0.05))
+    bpy.context.object.data.materials.append(DARK)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.045,
+        location=(-0.12, -0.24, 0.04))
+    bpy.context.object.data.materials.append(DARK)
+    pipe_seg('shovelStick', (0.24, 0.1, 0.05), (0.34, 0.08, 0.62), 0.011, WORN, 8)
+    cube('shovelPan', (0.22, 0.09, 0.05), (0.14, 0.16, 0.03), IRON, 0.01)
+    join_all('coalScuttle')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1387,6 +1580,10 @@ PIECES = {
     'bedBench': bedBench, 'radiatorTall': radiatorTall, 'linenHamper': linenHamper,
     'basinSink': basinSink, 'pegRail': pegRail, 'towelRail': towelRail,
     'ceilingHook': ceilingHook, 'ovalMirror': ovalMirror,
+    'kitchenRange': kitchenRange, 'sculleryRack': sculleryRack,
+    'potRack': potRack, 'pantryShelf': pantryShelf,
+    'stackedLinen': stackedLinen, 'upholsteredHeadboard': upholsteredHeadboard,
+    'coalScuttle': coalScuttle,
 }
 
 def main():

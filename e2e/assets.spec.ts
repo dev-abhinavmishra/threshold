@@ -21,6 +21,8 @@ const MILL_DIRS = [
   'cageLocker', 'bellCart', 'teaTrolley', 'bedBench', 'radiatorTall',
   'linenHamper', 'basinSink', 'pegRail', 'towelRail', 'ceilingHook',
   'ovalMirror',
+  'kitchenRange', 'sculleryRack', 'potRack', 'pantryShelf', 'stackedLinen',
+  'upholsteredHeadboard', 'coalScuttle',
 ];
 
 const FIGURES = [

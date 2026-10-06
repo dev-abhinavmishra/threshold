@@ -153,6 +153,16 @@ function pickSpec(
 function instantiate(index: number, label: string, placed: PlacedRoom, isMainRouteExit: boolean): RoomInstance {
   const { spec, origin, yaw } = placed;
   clearDoorLanes(spec);
+  // Hiding spots render no mesh of their own — each needs furniture at its
+  // position to hide in/behind. Spawn the declared propKind when no prop is
+  // already there. Spots that survived clearDoorLanes are outside door lanes,
+  // so the spawned furniture is too.
+  for (const h of spec.hiding) {
+    const hasFurniture = spec.props.some(
+      (p) => Math.hypot(p.x - h.x, p.z - h.z) <= 1.3 && (p.y ?? 0) < 0.2,
+    );
+    if (!hasFurniture) spec.props.push({ kind: h.propKind, x: h.x, z: h.z, yaw: h.yaw });
+  }
   const colliders: Aabb[] = spec.colliders
     .filter((c) => !c.losOnly)
     .map((c) => {
