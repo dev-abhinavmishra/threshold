@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -118,12 +118,16 @@ export class InteractionSystem {
           kind = 'vend';
           prompt = `Feed the machine — ${sock.meta.price as number} imprints`;
         }
+        if (sock.meta.claim !== undefined) {
+          kind = 'claim';
+          prompt = `Claim the bag tagged '${sock.meta.claimTag as string}' — ${sock.meta.price as number} imprints`;
+        }
         if (sock.kind === 'clue' && !sock.meta.catalogue) { kind = 'card'; prompt = 'Take catalog card'; }
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
           data: sock, enabled: !sock.meta.taken, priority: kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' ? 1.2 : 0,
+          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' ? 1.2 : 0,
         });
       }
     }

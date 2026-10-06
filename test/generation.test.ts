@@ -265,6 +265,33 @@ describe('sprint mechanics coverage', () => {
     expect(anyVend).toBe(true);
   });
 
+  it("porter's cages: priced claim tags on guest/lobby rooms only", () => {
+    const VALID = /^(bandage|tonic|chalkSpool|latchpick|feltWrap|sparkFlash|doorChock|windAlarm|wardSeal|imprints|lore)$/;
+    let cages = 0, tags = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const claim = r.sockets.filter((x) => x.meta.claim);
+        if (!claim.length) continue;
+        cages++;
+        expect(['guest', 'lobby']).toContain(r.biome);
+        expect(r.authored).toBeFalsy();
+        // every cage hangs on a real cabinet
+        expect(r.spec?.props.some((p) => p.kind === 'keyCabinet')).toBe(true);
+        for (const s of claim) {
+          tags++;
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(6);
+          expect(s.meta.price as number).toBeLessThanOrEqual(15);
+          expect(String(s.meta.claimTag)).toBeTruthy();
+          expect(String(s.meta.contains)).toMatch(VALID);
+        }
+      }
+    }
+    // at 0.38 over ~20 eligible rooms, every seed should carry several
+    expect(cages).toBeGreaterThanOrEqual(SEEDS.length);
+    expect(tags).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');

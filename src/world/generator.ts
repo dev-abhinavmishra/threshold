@@ -830,6 +830,50 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     }
   }
 
+  // The porter's cage — the guest wing's own spend point. A key cabinet
+  // of "held bags" whose owners never came back: 2–3 claim tags per cage,
+  // each priced and semi-blind (the tag names the claimant, not the
+  // contents). Distinct from the vend machine's single stocked item.
+  const claimTags = ['Voss', 'Halloran', 'Marchetti', 'Oduya', 'Pemberton', 'Reyes', 'Sable', 'Thorne', 'Whitlock', 'Yarrow', 'Iverson', 'Cray', 'Bellamy', 'Renner', 'Ashcombe'];
+  const claimPool = [
+    'bandage', 'tonic', 'chalkSpool', 'latchpick', 'feltWrap', 'sparkFlash',
+    'doorChock', 'doorChock', 'windAlarm', 'wardSeal', 'imprints', 'lore',
+  ];
+  for (const room of rooms) {
+    if (room.authored || !room.spec || (room.biome !== 'guest' && room.biome !== 'lobby')) continue;
+    if (!lootRng.bool(0.38)) continue;
+    const w = room.spec.width, d = room.spec.depth;
+    // Try the wall spots in seeded order — first that's lane-free and
+    // clear of already-placed furniture wins.
+    const spots = [
+      { x: w / 2 - 1.1, z: lootRng.range(-d / 3, d / 3), yaw: -Math.PI / 2 },
+      { x: -w / 2 + 1.1, z: lootRng.range(-d / 3, d / 3), yaw: Math.PI / 2 },
+      { x: lootRng.range(-w / 4, w / 4), z: -d / 2 + 1.1, yaw: 0 },
+      { x: lootRng.range(-w / 4, w / 4), z: d / 2 - 1.1, yaw: Math.PI },
+    ];
+    // The cabinet carries no collider — clearance is for visual overlap only.
+    const spot = spots.find((s) => !inDoorLane(room.spec!, s.x, s.z) && !(room.spec!.props as { x: number; z: number; kind: string }[]).some((p) => !/runner|stain|tray/.test(p.kind) && Math.hypot(p.x - s.x, p.z - s.z) < 0.7));
+    if (!spot) continue;
+    room.spec.props.push({ kind: 'keyCabinet', x: spot.x, z: spot.z, yaw: spot.yaw });
+    const nBags = lootRng.int(2, 3);
+    const p = localToWorld(room.origin, room.yaw, spot.x, 0, spot.z);
+    const faceX = Math.sin(room.yaw + spot.yaw), faceZ = Math.cos(room.yaw + spot.yaw);
+    for (let i = 0; i < nBags; i++) {
+      const roll = claimPool[lootRng.int(0, claimPool.length - 1)];
+      const meta: Record<string, number | string | boolean> = {
+        claim: true, price: lootRng.int(6, 15), claimTag: claimTags[lootRng.int(0, claimTags.length - 1)],
+      };
+      if (roll === 'imprints') { meta.contains = 'imprints'; meta.amount = lootRng.int(8, 26); }
+      else meta.contains = roll;
+      const off = (i - (nBags - 1) / 2) * 0.3;
+      room.sockets.push({
+        kind: 'loot',
+        pos: v3(p.x + faceX * 0.42 - faceZ * off, 0.7, p.z + faceZ * 0.42 + faceX * off),
+        yaw: spot.yaw, filled: true, meta,
+      });
+    }
+  }
+
   void branches;
   return keyPairs;
 }

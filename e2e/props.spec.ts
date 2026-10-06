@@ -43,7 +43,7 @@ interface ThresholdG {
   doorTry: { id: string } | null;
   interaction: {
     focused?: { prompt: string; holdTime?: number; id?: string } | null;
-    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
+    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; data?: { meta?: Record<string, number | string | boolean> } }[];
   };
   entities: { id: string; state: string }[];
   route: { rooms: GRoom[]; branchRooms?: GRoom[] };
@@ -419,7 +419,7 @@ test('document pickup reaches the codex', async ({ page }) => {
     let sock: { pos: { x: number; y: number; z: number } } | null = null;
     let room: GRoom | null = null;
     for (const r of g.route.rooms) {
-      const s = r.sockets?.find((x) => (x.meta?.contains === 'lore' || x.meta?.contains === 'document') && x.meta?.taken !== true);
+      const s = r.sockets?.find((x) => (x.meta?.contains === 'lore' || x.meta?.contains === 'document') && !x.meta?.claim && !x.meta?.vend && x.meta?.taken !== true);
       if (s) { sock = s; room = r; break; }
     }
     if (!sock || !room) return { stage: 'no-lore-socket' } as const;
@@ -1609,5 +1609,77 @@ test('the door chock holds while you walk away — until something worries it lo
   expect(r.countAfterPull).toBe(2);   // the chock comes back to your pocket
   expect(r.loose, `bellman never kicked the wedge — ${tail}`).toBe(true);
   expect(r.opened, `leaf never swung after the chock gave — ${tail}`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("the porter's cage sells held bags — the tag is priced, the contents are blind", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': cages at 8, 12, 26, 54, 64
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number; inventory: { id: string; count: number }[]; documents: { id: string }[] };
+
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.claim));
+    if (!room) return { stage: 'no-cage' } as const;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+
+    const pt = g.interaction.interactables.find((i) => i.kind === 'claim');
+    if (!pt) return { stage: 'no-claim-point' } as const;
+    const prompt = pt.prompt;
+    const sock = pt.data!;
+    const meta = sock.meta as Record<string, number | string | boolean>;
+    const price = meta.price as number;
+    const contains = String(meta.contains);
+    const before = { purse: (purse.imprints = 80, 80), items: purse.inventory.reduce((a, i) => a + i.count, 0), docs: purse.documents.length };
+
+    // Refuse check first — a short purse is warned, not sold.
+    purse.imprints = price - 1;
+    for (let f = 0; f < 100; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+      if (caps.some((c) => /short\]/.test(c))) break;
+    }
+    g.keys.delete('KeyE');
+    const refusedShort = purse.imprints === price - 1;
+
+    purse.imprints = 80;
+    let paid = false;
+    for (let f = 0; f < 160 && !paid; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+      paid = meta.taken === true;
+    }
+    g.keys.delete('KeyE');
+    const itemsAfter = purse.inventory.reduce((a, i) => a + i.count, 0);
+    const docsAfter = purse.documents.length;
+    const gained = contains === 'imprints' ? purse.imprints > 80 - price : contains === 'lore' ? docsAfter > before.docs : itemsAfter > before.items;
+    return { stage: 'done', prompt, price, contains, paid, purseAfter: purse.imprints, gained, refusedShort, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; price: number; contains: string; paid: boolean; purseAfter: number; gained: boolean; refusedShort: boolean; caps: string[] };
+  expect(r.prompt).toMatch(/claim the bag tagged '.+' — \d+ imprints/i);
+  expect(r.refusedShort, 'short purse should be warned, not sold').toBe(true);
+  expect(r.paid, `claim never resolved — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.purseAfter, 'the price should come out of the purse').toBeLessThanOrEqual(80 - r.price + (r.contains === 'imprints' ? 26 : 0));
+  expect(r.gained, `nothing gained from the bag (${r.contains}) — caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(errors).toEqual([]);
 });

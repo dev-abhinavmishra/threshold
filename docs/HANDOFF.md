@@ -1100,3 +1100,42 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Brace UX watch: bracing a door you just closed vs an already-knocking
     bellman is a ~0.5s race — intended, but watch for feel complaints.
   - Milestone-set hearing remains a design call.
+
+## Sprint 244 — the porter's cage (guest-wing spend point)
+
+- The purse still accrued ~5x with no main-route spend between the
+  Custodian (52) and the underscript. New sink: a `keyCabinet` of "held
+  bags" on guest/lobby rooms (~38% roll → 2–5 cages/seed). Each cage
+  carries 2–3 claim tags, spread laterally along the cabinet face —
+  `Claim the bag tagged 'Voss' — 12 imprints` (hold 1.2). The tag names
+  the claimant, not the contents — semi-blind, so it reads as a claim,
+  not a shelf.
+- Pool: items (bandage/tonic/chalkSpool/latchpick/feltWrap/sparkFlash/
+  doorChock×2/windAlarm/wardSeal), a purse of imprints (8–26), or the
+  owner's papers (a codex document — '[the bag held someone's papers]').
+  Short purses get '[the claim is N imprints — M short]'. Claims are
+  the run's recurring drain, priced 6–15 vs the vend machine's 4–11.
+- Placement mirrors the vend block: seeded wall-spot candidates, first
+  that's lane-free and ~0.7m clear of placed furniture (the cabinet has
+  no collider — clearance is visual only, and loose props like
+  rugs/stains/trays don't count).
+- InteractKind 'claim'; registration keys `sock.meta.claim`; the Game
+  case pays, resolves `meta.contains` in the loot vocabulary (item /
+  'imprints' purse / 'lore' codex grant with the +6-imprints dedup
+  fallback), and marks the tag taken.
+- Generation regression caught: claim sockets share `contains:'lore'`
+  with free document sockets — the codex spec grabbed a priced tag and
+  never matched a take-prompt. Spec filters now exclude meta.claim/vend.
+- Trap learned: candidates spaced only in y on a wall socket stack focus-
+  collide — spread claim tags LATERALLY (±0.3m along the cabinet face).
+- Gates: tsc, lint, 118 vitest (+1 cage spec), 5-seed sim, props.spec
+  19/19, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Cage coverage is guest/lobby only — gallery/records wings still run
+    purse-rich with no sink (a records "fines drawer"? gallery "coatrack"?).
+  - Locked leaves still ghost the Bellman through walls (deliberate so
+    far — knock path skips them).
+  - Brace UX watch: bracing vs an already-knocking bellman is a ~0.5s
+    race — intended, but watch for feel complaints.
+  - Milestone-set hearing remains a design call.

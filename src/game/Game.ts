@@ -1509,6 +1509,44 @@ export class Game {
         this.giveItem(sock.meta.vendItem as ItemId, 1);
         return;
       }
+      case 'claim': {
+        // The porter's cage — a priced claim tag; the bag's contents are
+        // semi-blind until you pay. Contains resolves like loot sockets.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 8;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the claim is ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
+        const contains = sock.meta.contains as string | undefined;
+        if (contains === 'imprints') {
+          const amt = (sock.meta.amount as number) ?? 10;
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[the bag held a purse — +${amt} imprints]`);
+        } else if (contains === 'lore') {
+          const doc = DOCUMENTS[Math.abs(this.streams.stream('loot').int(0, DOCUMENTS.length - 1)) % DOCUMENTS.length];
+          if (doc && !this.documents.some((d) => d.id === doc.id)) {
+            this.documents.push({ ...doc, unlockedAt: Date.now() });
+            this.meta.documents.push(doc.id);
+            saveMeta(this.meta);
+            useGameStore.setState({ documents: this.loadDocs() });
+            this.cue('pickup', it.pos, `[the bag held someone's papers — ${doc.title}]`);
+          } else {
+            this.imprints += 6;
+            this.cue('pickup', it.pos, '[the bag held old papers — worth 6 imprints]');
+          }
+        } else if (contains) {
+          this.giveItem(contains as ItemId, 1);
+          const name = ITEM_DEFS[contains as ItemId]?.name.toLowerCase() ?? contains;
+          this.cue('pickup', it.pos, `[inside the bag — ${name}]`);
+        }
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {
