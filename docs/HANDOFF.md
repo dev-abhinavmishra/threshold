@@ -2112,3 +2112,12 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The Detective has a warrant escalation (phones ahead); the Auditor's
     equivalent could be a wanted poster — a marked face the under cast
     reads? (design call — how does a clerk share your face?)
+
+## Sprint 283 — the under split (under.spec.ts → under + undercast)
+Under followed the sprint-281 split: `under.spec.ts` keeps the spine
+(way-back traversal, electrified flood, steam line, old sign — 4 legs);
+new `undercast.spec.ts` takes the crew and its paper (haul, wash, lost
+property, crew board, claim register, audit — 6 legs). Both files are
+harness-typed — no local interface block this time (the legacy layer
+only exists in the mechanics lineage). 'the wash' keeps its known
+seed-gated skip (no laundress on 's').
