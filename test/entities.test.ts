@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
-import { Witness, Hollow, Lurker, Margin, Husk } from '../src/entities/room';
+import { Witness, Hollow, Lurker, Margin, Husk, Porter } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -24,7 +24,7 @@ function fakePlayer() {
     health: 100,
     inputs: { interactHeld: false, lampToggle: false },
     eyePos(out: { x: number; y: number; z: number }) { out.x = self.pos.x; out.y = self.pos.y + 1.62; out.z = self.pos.z; return out; },
-    lookDir(out: { x: number; y: number; z: number }) { out.x = Math.sin(self.yaw); out.y = 0; out.z = Math.cos(self.yaw); return out; },
+    lookDir(out: { x: number; y: number; z: number }) { const cp = Math.cos(self.pitch); out.x = Math.sin(self.yaw) * cp; out.y = Math.sin(self.pitch); out.z = Math.cos(self.yaw) * cp; return out; },
   };
   return self;
 }
@@ -299,6 +299,73 @@ describe('Bellman (sprint 232)', () => {
     expect(captions.some((c) => /falls away/.test(c))).toBe(true);
     expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
     b.dispose();
+  });
+});
+
+describe('Porter (sprint 233)', () => {
+  const step = (p: Porter, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    for (let i = 0; i < Math.ceil(seconds / 0.05); i++) { ctxMut.now = t; p.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('drops on a player who lingers under the lintel unlooked', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    // Stand under the exit door's header, gazing level — never look up.
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; pitch: number };
+    player.pos = v3(door.pos.x, 0, door.pos.z);
+    player.pitch = 0;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (porter.state !== 'done' && steps++ < 1000) { ctxMut.now = t; porter.update(0.05); t += 0.05; }
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBeGreaterThan(0);
+    expect(dmg[0][1]).toBe('porter');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /drops — from above/.test(c))).toBe(true);
+    porter.dispose();
+  });
+
+  it('withdraws when the player pitches the gaze up and holds it', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number; pitch: number };
+    // Stand 3.5m back from the door, gaze up at the header.
+    player.pos = v3(door.pos.x, 0, door.pos.z - 3.5);
+    const hdr = { x: door.pos.x, y: 2.3, z: door.pos.z };
+    const dx = hdr.x - player.pos.x, dz = hdr.z - player.pos.z;
+    const dh = Math.hypot(dx, dz);
+    player.yaw = Math.atan2(dx, dz);
+    player.pitch = Math.atan2(hdr.y - 1.62, dh);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (porter.state !== 'done' && steps++ < 1000) { ctxMut.now = t; porter.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /withdraws above the frame/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    porter.dispose();
+  });
+
+  it('sifts dust tells while it waits, without dropping early', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(door.pos.x, 0, door.pos.z - 6); // in the room, out of the drop arc
+    step(porter, ctx, 12);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /dust sifts down/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(porter.state).toBe('engage');
+    porter.dispose();
   });
 });
 

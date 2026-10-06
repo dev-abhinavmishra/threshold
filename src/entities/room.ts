@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
-import { v3, v3dist, clamp, type Vec3 } from '../engine/math';
+import { v3, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -870,5 +870,142 @@ export class HazardField {
         }
       }
     }
+  }
+}
+
+/* ============================ PORTER ============================ */
+/** Lintel ambusher — clings in the header space above the room's exit door.
+ *  Crossing under it unlooked drops it on you; the counterplay is a verb
+ *  nothing else in the hotel teaches: look UP. Hold the lintel in your gaze
+ *  ~0.9s and it withdraws into the structure. Dust tells sift down while it
+ *  waits. It climbs off when you leave the room. */
+export class Porter extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private header = v3();        // lintel point (door pos raised ~2.7m)
+  private doorPos = v3();       // the 2D crossing point it guards
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private siftT = 2.5;
+  private gazeT = 0;            // cumulative seconds under player gaze
+  private gazeCueAt = -10;
+  private underT = 0;           // seconds the player has lingered below
+  private expireT = 70;
+
+  constructor() { super('porter', ENTITY_TUNING.porter); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    this.rng = new Rng(c.seed);
+    this.hostRoom = c.currentRoomIndex;
+    const next = c.rooms[this.hostRoom + 1];
+    // The door the player will most likely walk under next — the next
+    // room's entry. Fall back to any honest door in this room.
+    const door = next?.doors.find((d) => d.id.endsWith('-in'))
+      ?? c.rooms[this.hostRoom]?.doors.find((d) => !d.falseDoor && !d.locked)
+      ?? c.rooms[this.hostRoom]?.doors[0];
+    const host = c.rooms[this.hostRoom];
+    // The lintel blocker spans y 2.15–2.9 in the wall plane — nothing inside
+    // it is ever visible. Cling just inside the room's airspace instead:
+    // ~0.5m in from the door, atop the surround at y 2.3.
+    if (door && host) {
+      const inX = host.origin.x - door.pos.x, inZ = host.origin.z - door.pos.z;
+      const inLen = Math.hypot(inX, inZ) || 1;
+      this.doorPos = v3(door.pos.x, 0, door.pos.z);
+      this.header = v3(door.pos.x + (inX / inLen) * 0.5, 2.3, door.pos.z + (inZ / inLen) * 0.5);
+    } else {
+      const ex = host?.exitPos ?? c.player.pos;
+      this.doorPos = v3(ex.x, 0, ex.z);
+      this.header = v3(ex.x, 2.3, ex.z);
+    }
+    const rig = riggedFigure('ninja');
+    this.rig = rig;
+    const g = rig?.group ?? tallFigure({
+      height: 1.0, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber', hood: true, tattered: true,
+    });
+    g.position.set(this.header.x, this.header.y, this.header.z);
+    g.rotation.x = 0.55;          // head-down clinging pose on the header
+    g.scale.setScalar(0.8);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    rig?.play('idle');
+    this.state = 'engage';
+    c.cue('hide-creak', this.header, '[dust sifts down — something clings above]', { severity: 'warn' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+
+    // Gone once the player leaves — it climbs down empty.
+    this.expireT -= dt;
+    if (c.currentRoomIndex !== this.hostRoom || this.expireT <= 0) {
+      c.cue('floor-creak', this.header, '[boards settle overhead]', { severity: 'info' });
+      this.done();
+      return;
+    }
+
+    // Dust tells — the only warning it gives.
+    this.siftT -= dt;
+    if (this.siftT <= 0) {
+      this.siftT = 4 + this.rng.float() * 4;
+      const drop = v3(this.header.x + this.rng.range(-0.4, 0.4), 1.4, this.header.z + this.rng.range(-0.4, 0.4));
+      c.cue(this.rng.bool(0.6) ? 'moth-flutter' : 'hide-creak', drop, '[dust sifts down]', { severity: 'info' });
+      c.sound.emit({ x: drop.x, y: 1.2, z: drop.z, intensity: 0.22, category: 'critter', caption: '', source: this.id });
+    }
+
+    // Spotted? Requires pitching the gaze UP at the header — the only threat
+    // in the hotel that checks the third axis of your look direction.
+    const dir = v3();
+    p.lookDir(dir);
+    const eye = v3();
+    p.eyePos(eye);
+    const to = v3(this.header.x - eye.x, this.header.y - eye.y, this.header.z - eye.z);
+    const len = Math.sqrt(to.x * to.x + to.y * to.y + to.z * to.z);
+    let gazing = false;
+    if (len > 1e-3) {
+      const dot = (dir.x * to.x + dir.y * to.y + dir.z * to.z) / len;
+      // dot alone isn't enough — at distance a level gaze covers the header
+      // (~7° above eye line) and would spot it for free. Require a genuinely
+      // upward pitch so the counterplay is always a deliberate look-up.
+      if (dot > 0.62 && dir.y > 0.1) {
+        const room = c.rooms[c.currentRoomIndex];
+        gazing = hasLineOfSight(eye, this.header, room ? room.losBlockers : []);
+      }
+    }
+    if (gazing) {
+      this.gazeT += dt;
+      if (c.now - this.gazeCueAt > 6) {
+        this.gazeCueAt = c.now;
+        c.cue('hide-creak', this.header, '[it pulls still above the frame]', { severity: 'warn' });
+      }
+      if (this.gazeT >= 0.9) {
+        c.cue('hide-creak', this.header, '[something withdraws above the frame]', { severity: 'info' });
+        this.done();
+        return;
+      }
+    } else {
+      this.gazeT = Math.max(0, this.gazeT - dt * 0.8);
+    }
+
+    // The drop — linger under the lintel unlooked.
+    const under = Math.hypot(p.pos.x - this.doorPos.x, p.pos.z - this.doorPos.z) < 0.95;
+    if (under && !gazing) this.underT += dt;
+    else this.underT = Math.max(0, this.underT - dt);
+    if (this.underT > 0.5) {
+      this.rig?.play('attack', 0.05);
+      c.damagePlayer(this.tuning.damage, 'porter', 'It waited above the lintel — look up before crossing.');
+      c.cue('impact', { x: this.header.x, y: 1.4, z: this.header.z }, '[it drops — from above]', { severity: 'danger' });
+      c.sound.emit({ x: this.header.x, y: 1, z: this.header.z, intensity: 0.9, category: 'impact', caption: '[drop]', source: this.id });
+      this.done();
+    }
+  }
+
+  override threatPos(): Vec3 | null { return this.state === 'engage' ? this.header : null; }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
   }
 }

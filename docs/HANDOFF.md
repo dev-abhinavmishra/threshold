@@ -642,6 +642,42 @@ CURRENT STATE (as of sprint 223)
   87 unit tests, e2e props.spec 8/8 (spec on 'threshold': spawn at
   door-35-in, follows crumbs through 2 rooms, yields under gaze).
 
+## Sprint 233 — the Porter (lintel ambusher; pitch-axis counterplay)
+*First entity that lives above the sight line — clings inside the room's
+airspace just over the exit door surround and drops on anyone who lingers
+beneath it unlooked. The counterplay is the only mechanic in the game that
+asks for a deliberately upward gaze: pitch up at the header and hold ~0.9s
+to make it withdraw. Together with the Bellman (trails behind) it brackets
+the player's two blind spots — behind and above.*
+
+- `src/entities/room.ts` `Porter` — header point = next room's `-in` door pos
+  + inward offset toward the host room's origin (0.5m, y 2.3). Mesh: ninja
+  rig (fallback tallFigure h=1.0 hooded/tattered), head-down pose (rot.x
+  0.55, scale 0.8). Dust tells every 4–8s ('dust sifts down', moth-flutter/
+  hide-creak sfx + critter emit). Drop when player lingers <0.95m under the
+  door >0.5s unlooked → damagePlayer(60) + '[it drops — from above]' + done.
+  Gaze: lookDir·to > 0.62 AND dir.y > 0.1 (dot alone lets a LEVEL gaze spot
+  it from ~6m for free — the upward pitch is the deliberate verb) + LOS via
+  room losBlockers; 0.9s holds → '[something withdraws above the frame]'.
+  Leaves on room-change or 70s expire ('[boards settle overhead]').
+- TRAP (vitest caught, real bug): the lintel blockers span y 2.15–2.9 in the
+  wall plane — a header point inside them is NEVER visible by LOS. Cling at
+  y 2.3, 0.5m inside the room airspace toward the room origin instead.
+- TRAP 2: entities.test.ts fakePlayer.lookDir hardcoded y=0 — a pitched gaze
+  was impossible in tests. Now matches controller.ts (sin/cos(pitch)).
+- Plumbing: EntityId 'porter'; tuning warningTime 0.8, damage 60, seeRange 9,
+  cooldown 8, spawnChance 0.3, minRoom 20, maxRoom 74, biomes corridor/guest/
+  records/gallery/maintenance/unlit; ENTITY_TIER 1; FORBIDDEN_IN_MILESTONE;
+  LISTEN_CUES ('[drips of dust — something clings overhead]') + ROUSED_LINES
+  ('[the dust pours — it is already above the door]'). NOT in hasSurvivalOption
+  — it damages, it cannot kill (non-lethal like HazardField).
+- Seed rolls: 's' @29,53; 'threshold' @39,54; 'sim-seed-01' @33,46,56.
+- e2e props.spec 'porter waits above the lintel' — two-phase: linger under
+  header unlooked → drop caption + done; second scheduled room → look-up
+  hold → 'withdraws' caption + done. godMode blocks damagePlayer too, so
+  assert on captions/state not health.
+- Gates: tsc, lint, 90 vitest (+3), 5-seed sim, playwright porter spec, build.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

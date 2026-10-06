@@ -32,7 +32,7 @@ import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -89,6 +89,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   collector: { sfx: 'collector-rattle', text: '[a rattle — counting]', sev: 'warn' },
   singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
   bellman: { sfx: 'knock', text: '[a knock — courteous, in no hurry]', sev: 'warn' },
+  porter: { sfx: 'hide-creak', text: '[drips of dust — something clings overhead]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -119,6 +120,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   collector: '[the rattle rattles — counting louder]',
   singer: '[the lullaby lifts — it heard you coming]',
   bellman: '[the knocking quickens — it knows you are there]',
+  porter: '[the dust pours — it is already above the door]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -825,6 +827,8 @@ export class Game {
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
       case 'bellman': this.spawnEntity(new Bellman()); break;
+      // The Porter: lintel ambusher — the counterplay is looking UP.
+      case 'porter': this.spawnEntity(new Porter()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;

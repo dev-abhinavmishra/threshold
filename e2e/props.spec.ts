@@ -693,3 +693,81 @@ test('the bellman trails your steps — knock, follow, yield to a held gaze', as
   expect(r.outcome).toBe('yielded');
   expect(errors).toEqual([]);
 });
+
+test('the porter waits above the lintel — look up or it drops', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries porter @29 and @53
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const porterRooms = g.route.rooms.filter((r) => r.scheduled?.some((s) => s.entity === 'porter'));
+    if (porterRooms.length < 2) return { stage: 'few-scheduled', count: porterRooms.length } as const;
+
+    // --- Phase 1: walk into the first scheduled room and linger under the
+    // exit door's header without ever looking up — it must drop on us.
+    const roomA = porterRooms[0];
+    const prev = g.route.rooms[roomA.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(roomA.origin.x, 0, roomA.origin.z);
+    for (let f = 0; f < 50; f++) g.frame();
+    const entA = g.entities.find((e) => e.id === 'porter') as Ent | undefined;
+    if (!entA) return { stage: 'not-spawned' } as const;
+    const hdrA = entA.threatPos();
+    if (!hdrA) return { stage: 'no-threat' } as const;
+    // Keep the gaze level and stand on the crossing point beneath it.
+    g.player.pitch = 0;
+    g.player.teleport(hdrA.x, 0, hdrA.z);
+    let dropped = false;
+    for (let f = 0; f < 300 && entA.state !== 'done'; f++) {
+      g.player.pitch = 0;
+      g.frame();
+    }
+    dropped = entA.state === 'done';
+
+    // --- Phase 2: the second scheduled room — this time look UP at the
+    // header and hold it; the porter must withdraw without touching us.
+    const roomB = porterRooms[1];
+    const prevB = g.route.rooms[roomB.index - 1];
+    g.player.teleport(prevB.origin.x, 0, prevB.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(roomB.origin.x, 0, roomB.origin.z);
+    for (let f = 0; f < 50; f++) g.frame();
+    const entB = g.entities.find((e) => e.id === 'porter' && e.state !== 'done') as Ent | undefined;
+    if (!entB) return { stage: 'no-second' } as const;
+    const hdrB = entB.threatPos();
+    if (!hdrB) return { stage: 'no-threat-2' } as const;
+    // Stand ~3.5m inside the room, tilt the gaze up at the header.
+    const back = Math.atan2(roomB.origin.x - hdrB.x, roomB.origin.z - hdrB.z);
+    g.player.teleport(hdrB.x + Math.sin(back) * 3.5, 0, hdrB.z + Math.cos(back) * 3.5);
+    let outcome = 'waiting';
+    for (let f = 0; f < 1200; f++) {
+      const dx = hdrB.x - g.player.pos.x, dz = hdrB.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(dx, dz);
+      g.player.pitch = Math.atan2(hdrB.y - (g.player.pos.y + 1.62), Math.hypot(dx, dz));
+      if (entB.state === 'done' || !g.entities.includes(entB as never)) { outcome = 'withdrew'; break; }
+      g.frame();
+    }
+    return {
+      stage: 'done', dropped, outcome, caps,
+    } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { dropped: boolean; outcome: string; caps: string[] };
+  expect(r.dropped).toBe(true);
+  expect(r.caps.some((c) => /drops — from above/.test(c)), `caps: ${r.caps.slice(-6).join(' | ')}`).toBe(true);
+  expect(r.caps.some((c) => /dust sifts down/.test(c))).toBe(true);
+  expect(r.outcome).toBe('withdrew');
+  expect(r.caps.some((c) => /withdraws above the frame/.test(c))).toBe(true);
+  expect(errors).toEqual([]);
+});
