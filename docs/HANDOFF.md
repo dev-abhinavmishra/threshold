@@ -1561,3 +1561,25 @@ NEXT SPRINT IDEAS (pick the biggest first)
   teleport 0.6m past the plane — the transition is the assertion.
 - **Also:** repo-root probe_*.mjs files are linted — delete them before
   `npm run lint`, not just before commit.
+
+## Sprint 260 — 'the water hums amber' (electrified-puddle resurrection)
+
+- Second half of the dead `HazardField` system: the `puddles` damage path
+  (4dmg/0.5s, 'Electrified water hums amber') was fully written but no
+  room ever emitted a `hazard:'puddle'` socket.
+- Wiring: `flooded && !darkRoom` under rooms — a LIVE flooded hall arcs
+  around up to 2 of its powered fittings (serverRack/machineBox/
+  controlPanel/fluoroTube/conduitRun/breakerPanel/pipeManifold → floor
+  hazard sockets, off door lanes). Drowned halls carry dead wires (the
+  snare branch), dry rooms carry nothing. Main route untouched — no
+  standing water up there. ~19 arcs across 5/6 seeds.
+- Runtime: the arc needs its medium — `isRoomDrained` skips the check
+  (drain kills the arc with the water), and a `[the water ahead hums
+  amber]` warn cue fires within radius+2.2 (4s cd) — readable before
+  it's lethal. Counterplay: the wide step or the drain.
+- **Harness trap:** sprite-less hazard assertions need blood — godMode
+  blocks damagePlayer, so the e2e leg drops it for the bite check.
+- e2e 'the water hums amber' (under.spec): edge-hover warns w/o damage,
+  step-in ticks health, drainedRooms makes the same spot safe.
+- Tests: 139 vitest (+3: two HazardField specs + generation gate that
+  arcs are flooded-lit-only and never on the main route), sim, build.

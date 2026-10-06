@@ -1265,3 +1265,41 @@ describe('HazardField snares (sprint 257)', () => {
     expect(ctx.damagePlayer).toHaveBeenCalledWith(8, 'hazard', expect.any(String));
   });
 });
+
+describe('HazardField electrified water (sprint 260)', () => {
+  const arcRoom = (flooded: boolean): RoomInstance => ({
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 10, spec: { width: 8, depth: 10, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded, darkRoom: false,
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'puddle', electrified: true } }],
+  } as unknown as RoomInstance);
+
+  it('live water ticks blood and hums before it bites', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [arcRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => false });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    // just outside the arc's reach — it warns, doesn't hurt
+    ctx.player.pos.x = 3.0; ctx.player.pos.z = 0;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), '[the water ahead hums amber]', expect.anything());
+    // inside — it ticks
+    ctx.player.pos.x = 1.5;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(4, 'hazard', expect.stringContaining('Electrified'));
+  });
+
+  it('the drain takes the arc with the water', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [arcRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => true });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).not.toHaveBeenCalled();
+  });
+});

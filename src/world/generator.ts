@@ -1257,6 +1257,21 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
         placed++;
       }
     }
+    // Electrified water — the flip side of drowned mains: a LIVE flooded
+    // hall arcs around its powered fittings (drowned halls carry dead
+    // wires instead). The drain takes the arc's medium with the water.
+    if (room.flooded && !room.darkRoom) {
+      const ARC_PROPS = new Set(['serverRack', 'machineBox', 'controlPanel', 'fluoroTube', 'conduitRun', 'breakerPanel', 'pipeManifold']);
+      const ar = streams.roomStream('dressing', 730 + i);
+      const lives = (room.spec?.props ?? []).filter((pp) => ARC_PROPS.has(pp.kind));
+      const count = Math.min(lives.length > 3 ? 2 : lives.length, 2);
+      for (let n = 0; n < count && lives.length; n++) {
+        const pick = lives.splice(ar.int(0, lives.length - 1), 1)[0];
+        const wp = localToWorld(room.origin, room.yaw, pick.x, 0, pick.z);
+        if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.5)) continue;
+        room.sockets.push({ kind: 'hazard', pos: wp, yaw: 0, filled: false, meta: { hazard: 'puddle', electrified: true } });
+      }
+    }
     rooms.push(room);
     const pw = portWorld(p, p.spec.exits[0]);
     connPos = pw.pos; connDir = pw.dir;

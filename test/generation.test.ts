@@ -730,3 +730,31 @@ describe('noise rouse rules (sprint 231)', () => {
     expect(withinRouseRadius(slam, 25, 0)).toBe(false);
   });
 });
+
+describe('electrified water (sprint 260)', () => {
+  it('arcs live flooded halls — lit only, never dark, never dry', () => {
+    let total = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        const arcs = (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'puddle');
+        if (!arcs.length) continue;
+        expect(r.flooded, `electrified socket in dry room ${seed}:${r.index}`).toBe(true);
+        expect(r.darkRoom, `electrified socket in dark room ${seed}:${r.index}`).toBe(false);
+        for (const a of arcs) {
+          expect(a.meta?.electrified).toBe(true);
+          // the arc sits inside the room footprint
+          const w = r.width ?? 4, d = r.depth ?? 4;
+          expect(Math.hypot(a.pos.x - r.origin.x, a.pos.z - r.origin.z))
+            .toBeLessThanOrEqual(Math.hypot(w / 2, d / 2) + 0.01);
+        }
+        total += arcs.length;
+      }
+      // main route never electrifies — the mains above aren't standing water
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'puddle').length).toBe(0);
+      }
+    }
+    expect(total).toBeGreaterThan(0);
+  });
+});

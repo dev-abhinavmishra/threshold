@@ -174,3 +174,58 @@ test('the way back — under-room traversal, backtrack, and the egress', async (
   expect(result.palimpsest).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the water hums amber — electrified live flood, the drain kills the arc', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // u-48: flooded + LIT — live water arcs its fittings
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; drainedRooms: Set<string>;
+      hazard: { puddles: { pos: { x: number; y: number; z: number }; room: number; radius: number }[] };
+    };
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => r.flooded && !r.darkRoom
+      && (r.sockets ?? []).some((sk) => sk.meta?.hazard === 'puddle'));
+    if (!room) return { stage: 'no-lit-flood' } as const;
+    const arc = ga.hazard.puddles.find((pu) => pu.room === room.index)!;
+
+    // hover at the hum's edge — it warns, doesn't bite
+    const hx = room.origin.x - arc.pos.x, hz = room.origin.z - arc.pos.z;
+    const L = Math.hypot(hx, hz) || 1;
+    g.player.teleport(arc.pos.x + (hx / L) * 2.4, 0, arc.pos.z + (hz / L) * 2.4);
+    ga.currentRoom = room.index;
+    const hp0 = g.player.health;
+    for (let f = 0; f < 80; f++) g.frame();
+    const warned = caps.some((c) => /hums amber/.test(c));
+    const safeAtEdge = g.player.health >= hp0 - 1;
+
+    // step in — the water bites (no godMode: blood is the assertion)
+    g.player.teleport(arc.pos.x + 0.3, 0, arc.pos.z + 0.3);
+    for (let f = 0; f < 60; f++) g.frame();
+    const bitten = g.player.health < hp0;
+
+    // drain the hall — the arc dies with its medium
+    ga.drainedRooms.add(`under:${room.index}`);
+    g.player.teleport(arc.pos.x + 0.3, 0, arc.pos.z + 0.3);
+    const hpAfterDrain = g.player.health;
+    for (let f = 0; f < 70; f++) g.frame();
+    const deadArc = g.player.health >= hpAfterDrain - 0.01;
+    return { stage: 'done', room: room.index, warned, safeAtEdge, bitten,
+      deadArc, hp: +g.player.health.toFixed(1), caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage === 'no-lit-flood') test.skip();
+  expect(result.warned, JSON.stringify(result)).toBe(true);
+  expect(result.safeAtEdge, JSON.stringify(result)).toBe(true);
+  expect(result.bitten, JSON.stringify(result)).toBe(true);
+  expect(result.deadArc, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

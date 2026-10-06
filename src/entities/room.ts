@@ -859,7 +859,7 @@ export class Husk extends Entity {
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {
   snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
-  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number }[] = [];
+  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number }[] = [];
   lastTick = 0;
 
   constructor() {}
@@ -899,8 +899,17 @@ export class HazardField {
       this.lastTick = 0;
       for (const pu of this.puddles) {
         if (pu.room !== ctx.currentRoomIndex) continue;
-        if (v3dist(p.pos, pu.pos) < pu.radius) {
+        // the arc needs its medium — a drained hall is just a wet floor
+        const rm = ctx.rooms[pu.room];
+        const live = !!rm?.flooded && !(ctx.isRoomDrained?.(pu.room) ?? false);
+        if (!live) continue;
+        const d = v3dist(p.pos, pu.pos);
+        if (d < pu.radius) {
           ctx.damagePlayer(4, 'hazard', 'Electrified water hums amber. Give it the wide step.');
+        } else if (d < pu.radius + 2.2 && ctx.now - (pu.humT ?? -10) > 4) {
+          // audible before it hurts — the fitting crackles as you close in
+          pu.humT = ctx.now;
+          ctx.cue('steam-hiss', pu.pos, '[the water ahead hums amber]', { severity: 'warn' });
         }
       }
     }
