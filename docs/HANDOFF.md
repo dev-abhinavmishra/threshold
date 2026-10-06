@@ -604,6 +604,22 @@ CURRENT STATE (as of sprint 223)
   are rare per seed — 's'/'threshold' have ZERO connectorIn rooms;
   'ash-vault-101' has 3 (longest ~47.5m). 82 unit tests.
 
+  Sprint 231 noise rouse: loud player noise now wakes dormant scheduled
+  encounters through closed doors. engine/noiseRouse.ts holds the pure
+  rules (noiseCanRouse: intensity>=0.55, player-ish categories only, no
+  entity-sourced or entity-cue feedback; withinRouseRadius: loudness*14m).
+  Game subscribes once in the ctor → onRouseNoise scans ALL built rooms'
+  doors (the door into room N is door-N-in owned by N, not the host's).
+  On rouse: ScheduledEncounter.roused=true, the leaf visibly shudders
+  (doorTry), the entity answers with its LISTEN_CUES sfx + ROUSED_LINES
+  agitated caption, and a quiet entity-cue re-emit lets Curator hear the
+  stir too. listenThrough reports the agitated variant. updateDoors
+  pre-spawns roused encounters at openT>=0.6 via spawnRousedThrough —
+  the entity is live before the player crosses in (spawned-set dedupe
+  vs spawnScheduled). E2E: sprint strides beside door-12-in on seed 's'
+  rouse the sweep; the spec also flips d.opening and asserts the entity
+  exists without entering room 12. 83 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

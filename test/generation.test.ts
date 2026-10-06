@@ -504,3 +504,26 @@ describe('connector corridor dressing (sprint 230)', () => {
     expect(surrounds % 2).toBe(0); // one per segment end
   });
 });
+
+describe('noise rouse rules (sprint 231)', () => {
+  it('only loud player-side noise wakes what waits beyond a door', async () => {
+    const { noiseCanRouse, withinRouseRadius, ROUSE_MIN_INTENSITY } = await import('../src/engine/noiseRouse');
+    const ev = (over: object) => ({ x: 0, y: 1, z: 0, caption: '', category: 'footstep' as const, intensity: 0.4, ...over });
+    expect(noiseCanRouse(ev({}))).toBe(false);                                  // walk steps stay quiet
+    expect(noiseCanRouse(ev({ intensity: 0.85, category: 'sprint' }))).toBe(true);
+    expect(noiseCanRouse(ev({ intensity: 1.5, category: 'door' }))).toBe(true);  // slam
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'item' }))).toBe(true);  // spark flash
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'entity-cue' }))).toBe(false); // no feedback loop
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'ambient' }))).toBe(false);
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'critter' }))).toBe(false);
+    expect(noiseCanRouse(ev({ intensity: 1.2, category: 'sprint', source: 'husk' }))).toBe(false); // entity noise doesn't rouse
+    expect(ROUSE_MIN_INTENSITY).toBeGreaterThan(0.4);
+    // radius: sprint stride hears ~12m out, a slam ~21m
+    const sprint = ev({ intensity: 0.85, category: 'sprint' });
+    expect(withinRouseRadius(sprint, 10, 0)).toBe(true);
+    expect(withinRouseRadius(sprint, 13, 0)).toBe(false);
+    const slam = ev({ intensity: 1.5, category: 'door' });
+    expect(withinRouseRadius(slam, 20, 0)).toBe(true);
+    expect(withinRouseRadius(slam, 25, 0)).toBe(false);
+  });
+});

@@ -205,6 +205,10 @@ export interface ScheduledEncounter {
   seed: number;
   /** For rebound entities. */
   passes?: number;
+  /** Set when loud player noise through the door woke it: the encounter
+   *  telegraphs (stir + shudder) and pre-spawns the moment the leaf opens,
+   *  instead of waiting for room entry. */
+  roused?: boolean;
 }
 
 export interface RunStats {

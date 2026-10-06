@@ -14,7 +14,8 @@ import { PostGovernor } from './postGovernor';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { GameClock } from '../engine/clock';
-import { SoundEventBus } from '../engine/events';
+import { SoundEventBus, type SoundEvent } from '../engine/events';
+import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
@@ -86,6 +87,35 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   behemoth: { sfx: 'behemoth-thud', text: '[something vast shifting]', sev: 'danger' },
   collector: { sfx: 'collector-rattle', text: '[a rattle — counting]', sev: 'warn' },
   singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
+};
+
+/** Agitated variants once a scheduled encounter has been roused by noise —
+ *  used by the rouse tell and by ear-to-the-seam listens. */
+const ROUSED_LINES: Record<EntityId, string> = {
+  sweep: '[floor-creaks racing the boards — it heard you]',
+  reprise: '[the creaking doubles back — it heard you]',
+  witness: '[the held breath sharpens — it knows]',
+  whisper: '[the whispering quickens — your name, faster]',
+  inkling: '[small feet scatter, then gather — alert]',
+  redactor: '[pages riffling — it marked the noise]',
+  echoskin: '[your footsteps, answering at a run]',
+  maelstrom: '[the held chord snaps taut]',
+  pursuer: '[heavy steps — already at the door]',
+  curator: '[ticking, quick — it has your measure]',
+  hollow: '[the hum swells to meet you]',
+  husk: '[the rattle quickens — it remembers hunger]',
+  redline: '[the machine catches — running now]',
+  stillframe: '[the stiff air tightens — posed]',
+  returner: '[steps — turned toward you]',
+  margin: '[the rustle skitters to the seam]',
+  editor: '[paper tearing — it found your page]',
+  grafter: '[grinding faster — assembling]',
+  hazard: '[the hiss steadies — breathing]',
+  orrery: '[gears spin up — counting faster]',
+  lurker: '[cloth drag, quick — crossing the room]',
+  behemoth: '[the vast thing shifts — floor settling]',
+  collector: '[the rattle rattles — counting louder]',
+  singer: '[the lullaby lifts — it heard you coming]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -245,6 +275,7 @@ export class Game {
     preloadFigures();
     this.bindInput();
     bindSoundBus(this.sound, this.audio);
+    this.sound.on((ev) => this.onRouseNoise(ev));
     this.audio.applySettings(this.settings);
     this.audio.onCaption((c) => {
       const st = useGameStore.getState();
@@ -482,6 +513,7 @@ export class Game {
     this.litHearths.clear();
     this.answeredPhones.clear();
     this.listenedDoors.clear();
+    this.rousedSpawned.clear();
     this.armedTraps.clear();
     this.snappedTraps.clear();
     this.priedTraps.clear();
@@ -812,10 +844,70 @@ export class Game {
     const target = this.roomBeyondDoor(door);
     if (!target) return { sfx: 'floor-creak', text: '[dead air — nothing behind it]' };
     const sched = target.scheduled[0];
-    if (sched) return LISTEN_CUES[sched.entity] ?? { sfx: 'floor-creak', text: '[something moves beyond]', sev: 'warn' as const };
+    if (sched) {
+      const base = LISTEN_CUES[sched.entity] ?? { sfx: 'floor-creak', text: '[something moves beyond]', sev: 'warn' as const };
+      return sched.roused
+        ? { sfx: base.sfx, text: ROUSED_LINES[sched.entity] ?? '[pacing — it heard you]', sev: 'danger' as const }
+        : base;
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
+  }
+
+  /** Doors that already pre-spawned their roused encounters (one-shot). */
+  private rousedSpawned = new Set<string>();
+
+  /** Loud-noise rouse: a loud enough player-side event near a closed door
+   *  wakes whatever is scheduled beyond it. The door shudders, the thing
+   *  inside answers with its own tell, listens thereafter report agitation,
+   *  and the encounter pre-spawns the moment the leaf opens. */
+  private onRouseNoise(ev: SoundEvent): void {
+    if (!noiseCanRouse(ev) || this.space !== 'main') return;
+    const cur = this.activeRooms()[this.currentRoom];
+    if (!cur) return;
+    const rooms = this.activeRooms();
+    // Check every built room's doors — the door to the next room is owned
+    // by *that* room (door-i-in), not the one the player stands in.
+    for (const i of this.streamer.builtIndices) {
+      const r = rooms.find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i);
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (d.openT > 0.4 || d.opening || d.falseDoor || d.deep) continue;
+        if (!withinRouseRadius(ev, d.pos.x, d.pos.z)) continue;
+        const beyond = this.roomBeyondDoor(d);
+        if (!beyond || beyond === cur) continue;
+        let fired = false;
+        for (const sch of beyond.scheduled) {
+          if (sch.roused) continue;
+          sch.roused = true;
+          fired = true;
+        }
+        if (!fired) continue;
+        const ent = beyond.scheduled[0].entity;
+        const pos = { x: d.pos.x, y: 1.2, z: d.pos.z };
+        this.cue(LISTEN_CUES[ent]?.sfx ?? 'floor-creak', pos,
+          ROUSED_LINES[ent] ?? '[something stirs beyond]', 'warn');
+        // The leaf rattles in its frame — visible tell while it runs.
+        this.doorTry = { id: d.id, pos: d.pos, at: this.clock.time, until: this.clock.time + 1.1, rung: true };
+        // Other listeners (the Curator) hear it stir too.
+        this.sound.emit({ ...pos, intensity: 0.3, category: 'entity-cue', caption: '', source: ent });
+      }
+    }
+  }
+
+  /** Pre-spawn scheduled encounters through a roused door as it opens —
+   *  the entity is already live before the player crosses the threshold. */
+  private spawnRousedThrough(d: Door): void {
+    const beyond = this.roomBeyondDoor(d);
+    if (!beyond) return;
+    for (const sch of beyond.scheduled) {
+      if (!sch.roused) continue;
+      const key = `${this.space}-${sch.entity}-${sch.triggerRoom}-${sch.seed}`;
+      if (this.spawned.has(key)) continue;
+      this.spawned.add(key);
+      this.spawnById(sch.entity, sch.passes);
+    }
   }
 
   /** The room on the far side of a door: probe both directions along the
@@ -2377,6 +2469,12 @@ export class Game {
       for (const d of r.doors) {
         if (d.opening && d.openT < 1) {
           d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1));
+          // Roused encounters pre-spawn as soon as the leaf has swung —
+          // the thing beyond is live before the player crosses in.
+          if (d.openT >= 0.6 && !this.rousedSpawned.has(d.id)) {
+            this.rousedSpawned.add(d.id);
+            this.spawnRousedThrough(d);
+          }
         } else if (!d.opening && d.openT > 0) {
           d.openT = Math.max(0, d.openT - dt * 2.2);
         }

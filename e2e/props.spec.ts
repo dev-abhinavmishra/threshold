@@ -38,6 +38,9 @@ interface ThresholdG {
   input: { interactPressed: boolean };
   keys: Set<string>;
   audio: { onCaption(fn: (c: { text: string; severity?: string }) => void): unknown };
+  sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void };
+  spawned: Set<string>;
+  doorTry: { id: string } | null;
   interaction: {
     focused?: { prompt: string; holdTime?: number } | null;
     interactables: { kind: string; id: string; pos: { x: number; y: number; z: number } }[];
@@ -68,8 +71,8 @@ interface GRoom {
   templateId?: string;
   origin: { x: number; z: number };
   yaw: number;
-  doors?: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number }[];
-  scheduled?: { entity: string }[];
+  doors?: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean }[];
+  scheduled?: { entity: string; roused?: boolean; triggerRoom: number; seed: number }[];
   darkRoom?: boolean;
   spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
   hidingSpots: { id: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
@@ -547,6 +550,75 @@ test('ear to the seam: listen reports what waits beyond a door', async ({ page }
   expect('none' in q ? 'none' : `quiet @${q.room} prompts[${q.prompts}]`).not.toBe('none');
   if (!('none' in q)) {
     expect(q.quietCap ?? `no quiet caption — caps[${q.caps}] dark ${q.dark} tpl ${q.tpl}`).toBeTruthy();
+  }
+  expect(errors).toEqual([]);
+});
+
+test('noise through the door rouses what waits beyond', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+
+    const main = g.route.rooms.filter((r) => r.index >= 0).sort((a, b) => a.index - b.index);
+    const inRoom = (r: GRoom, x: number, z: number) => {
+      const dx = x - r.origin.x, dz = z - r.origin.z;
+      const c = Math.cos(r.yaw), s = Math.sin(r.yaw);
+      const lx = dx * c - dz * s, lz = dx * s + dz * c;
+      return !!r.spec?.width && !!r.spec?.depth && Math.abs(lx) <= r.spec.width / 2 + 0.5 && Math.abs(lz) <= r.spec.depth / 2 + 0.5;
+    };
+
+    // First scheduled room on the main route; its entry door is door-N-in,
+    // owned by that room. Stand in the previous room beside it.
+    const nIdx = main.findIndex((r) => (r.scheduled?.length ?? 0) > 0);
+    if (nIdx <= 0) return { stage: 'no-scheduled' } as const;
+    const next = main[nIdx], host = main[nIdx - 1];
+    const door = (next.doors ?? []).find((d) => d.id === `door-${next.index}-in`);
+    if (!door) return { stage: 'no-door' } as const;
+    const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+    const cand = [1, -1].map((s) => ({ x: door.pos.x + nx * 1.6 * s, z: door.pos.z + nz * 1.6 * s }))
+      .find((p) => inRoom(host, p.x, p.z));
+    if (!cand) return { stage: 'no-stand' } as const;
+    g.player.teleport(cand.x, 0, cand.z);
+    g.currentRoom = host.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    if (next.scheduled![0].roused) return { stage: 'pre-roused' } as const;
+
+    // Sprint in place beside the door — strides emit 'sprint' noise at 0.85.
+    let yaw = door.yaw + Math.PI / 2;
+    for (let f = 0; f < 90 && !next.scheduled![0].roused; f++) {
+      yaw += 0.11; // circle so we stay beside the door
+      g.player.yaw = yaw;
+      g.keys.add('KeyW'); g.keys.add('ShiftLeft');
+      g.frame();
+    }
+    g.keys.delete('KeyW'); g.keys.delete('ShiftLeft');
+    const ent = next.scheduled![0].entity;
+    if (!next.scheduled![0].roused) return { stage: 'not-roused', ent, caps } as const;
+    const tell = caps.find((c) => /heard you|knows|stirs|alert/i.test(c));
+    const shudder = g.doorTry?.id === door.id;
+
+    // Open the leaf — the roused encounter spawns without room entry.
+    const before = g.entities.length;
+    door.opening = true;
+    for (let f = 0; f < 90; f++) g.frame();
+    const spawned = g.entities.some((e) => e.id === ent);
+
+    return { stage: 'done', ent, tell, shudder, spawned, before, after: g.entities.length, caps: caps.slice(-6) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage === 'done') {
+    expect(result.tell ?? `no rouse tell — caps[${result.caps}]`).toBeTruthy();
+    expect(result.spawned, `entity ${result.ent} did not pre-spawn`).toBe(true);
   }
   expect(errors).toEqual([]);
 });
