@@ -847,3 +847,54 @@ NEXT SPRINT IDEAS (pick the biggest first)
 ```
 
 ---
+
+## Sprint 238 — the floor hears you (noise reactions across the cast)
+
+- Discovery: only the Curator ever subscribed to `ctx.sound.on` — every
+  entity since sprint 230 was deaf, so the windAlarm lure's promise
+  ('sound-hunters go to it') was only ever true for one entity + the
+  behind-door rouse. Now the whole cast hears loud noise, each per its
+  archetype — noise is a real risk/reward channel, not just flavor.
+- Shared filter: `noiseCanRouse(e)` + `withinRouseRadius(e, x, z)` —
+  the SAME loud-only categories the door-rouse uses (sprint strides,
+  slams, machine knocks, 'distraction' lures); entity-sourced events
+  still never feed back. Radius = intensity * 14m.
+- Per-entity reactions:
+  - Warden — leaves its a–b line to walk to the sound (1.4x) and scan
+    1.8s; `canSee` stays live the whole trip (it walks with eyes).
+    windAlarm genuinely pulls it off post — the lure works now.
+  - Commissionaire — never leaves its post (it's the doorman), but pins
+    `pinYaw` on the sound for 3.5s: the sweep stops there, blinding the
+    room's far arc. Throw a lure to one side → cross the other.
+    `aimYaw()` centralizes pinned-vs-sweep for body+cone.
+  - Bellman — a loud sound drops `noiseCrumb` it stoops to sniff, then
+    resumes the trail. Your own sprint/slam sounds feed it too — noise
+    you make becomes part of the path it walks. Gated: ignores sounds
+    while frozen under gaze, still won't follow sound into resting
+    rooms, and noise during 'warn' queues until engage.
+  - Groundswell — loud noise while idle pulls `waveAt` to now+0.7s:
+    sprint through a swell room and the floor answers sooner.
+  - Inspector — a noise cuts the running lid test to its last 1.2s:
+    buys you seconds at the lid it is ON, at the price of hurrying it
+    toward yours. '[it glances up — then back to the lid]', 8s cd.
+- Test harness note: `makeCtx.sound.on` is a stub — hearing tests
+  re-inject `sound` with an `on` mock that captures the handler, then
+  feed SoundEvents directly (see 'Hearing the cast' describe block).
+- Traps found: bellman's warn-phase gate dropped pre-engage sounds —
+  fixed (warn counts as listening). Inspector's own rattle emits carry
+  `source` so it can't provoke itself — same protection everywhere via
+  the e.source check.
+- Vitest +5 (warden investigate, commissionaire pin, bellman crumb,
+  groundswell provoke, inspector glance): 107 total.
+- Gates: tsc, lint, 107 vitest, 5-seed sim, props.spec 13/13, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Entity e2e coverage for the hearing layer (props.spec has the base
+    entity loops; add lure-pull specs if the cast's noise reactions
+    need browser-level verification).
+  - The last deaf spot: milestone-only entities (pursuer/hazard) —
+    sound-driven reactions for the milestone set, or leave authored.
+  - Economy: still ~5x coverage; if playtests feel rich raise vend
+    prices rather than trim payouts.
+  - More mill batches if dressing reads thin: main-route sideboard
+    variants, corridor furniture; u-room variants done (226).
