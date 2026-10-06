@@ -1165,6 +1165,20 @@ export class Game {
       }
       }
     }
+    // Crouched on bare floor with a wrap: 'Forge the sign' — rub a scuff
+    // that smells like fresh work to anything that reads the boards.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+      && !this.hazard.evidence.some((e) => e.room === this.currentRoom
+        && Math.hypot(e.pos.x - this.player.pos.x, e.pos.z - this.player.pos.z) < 1.4)) {
+      this.interaction.add({
+        kind: 'forge', id: `forge-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x, y: 0.3, z: this.player.pos.z },
+        prompt: 'Forge the sign — felt wrap',
+        holdTime: 1.6, enabled: true, priority: 1,
+        data: { room: this.currentRoom },
+      });
+    }
     // Crouched at fresh sign: 'Scrub the sign' — a felt wrap rubbed over
     // the mark erases what a hunter could read. Quiet AND clean.
     if (this.player.crouching) {
@@ -2017,6 +2031,22 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
+        return;
+      }
+      case 'forge': {
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[a felt wrap holds the ash]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        this.hazard.evidence.push({
+          pos: v3(this.player.pos.x, 0, this.player.pos.z), room: this.currentRoom,
+          kind: 'wire', t: this.clock.time, readBy: [],
+        });
+        this.cue('item', it.pos, '[you rub a scuff into the boards — a lie in wire]');
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[felt on the boards]' });
         return;
       }
       case 'alarm': {

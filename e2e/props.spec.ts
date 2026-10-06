@@ -679,3 +679,51 @@ test('the scarred latch — a drawer somebody else already coaxed', async ({ pag
   expect(result.paidNothing, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the lie in wire — a forged sign reads like fresh work to a hunter', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number }; readBy: string[] }[] };
+      inventory: { id: string; count: number }[];
+    };
+    const room = g.route.rooms[4];
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    ga.currentRoom = 4;
+    ga.inventory.push({ id: 'feltWrap', count: 2 });
+    const ev0 = ga.hazard.evidence.length;
+    // kneel on bare boards — the wrap offers the lie
+    g.keys.add('KeyC');
+    for (let f = 0; f < 20; f++) g.frame();
+    const prompt = g.interaction.focused?.prompt ?? '';
+    g.keys.add('KeyE');
+    for (let f = 0; f < 80 && ga.hazard.evidence.length === ev0; f++) g.frame();
+    g.keys.delete('KeyE');
+    g.keys.delete('KeyC');
+    const ev = ga.hazard.evidence[ga.hazard.evidence.length - 1];
+    const wraps = ga.inventory.find((i) => i.id === 'feltWrap')?.count ?? 0;
+    const liesCaption = caps.some((c) => /lie in wire/.test(c));
+    // the forged mark is ordinary fresh sign — a hunter's getter would read it
+    const hunterReadable = !!ev && ev.room === 4 && ev.readBy.length === 0;
+    return { stage: 'done', prompt, grew: ga.hazard.evidence.length === ev0 + 1,
+      hunterReadable, spent: wraps === 1, liesCaption, caps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.prompt, JSON.stringify(result)).toMatch(/Forge the sign/);
+  expect(result.grew, JSON.stringify(result)).toBe(true);
+  expect(result.hunterReadable, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.liesCaption, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

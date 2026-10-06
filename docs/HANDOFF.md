@@ -1707,3 +1707,14 @@ NEXT SPRINT IDEAS (pick the biggest first)
 - The drawer-wired rolls live in TWO fill passes (main :852 SAFE_ROOM_TEMPLATES-guarded; under :585 'unwary' comment) — patch both or the route halves diverge.
 - `resolveSocketLoot`'s `contains === undefined` fallthrough pays default loot (+6 marginalia under / +imprints main) — a bare drawer needs the explicit `bare` flag, not an absent `contains`.
 - Socket `meta` is optional in the e2e route type — cast after the find, don't type the loop var non-nullable.
+
+## Sprint 269 — forge the sign (the scent-lure)
+
+- 'Forge the sign — felt wrap': crouched on bare floor with a wrap (and no existing sign within 1.4m) — 1.6s hold rubs a fake 'wire' evidence record at your position. Hunters read it as ordinary fresh sign: the warden investigates the empty spot, the grafter drags to it. The lure system gains a scent axis next to its sound axis.
+- The wrap is now the full sign tool: scrub (erase) + forge (fake). Both 1-feltWrap spends.
+- Registration is self-gating: the pushed evidence sits within the 1.4m gate → the point can't re-register where you just lied. Priority 1 keeps it under every other crouched verb.
+- Kind is always 'wire' — kind is cosmetic to hunters (they investigate any fresh record); only old-sign captions read it.
+
+**Traps**
+- e2e: check the focused PROMPT (/Forge the sign/), not the interactables list — the forge point and door verbs coexist; focus decides.
+- The 1.4m no-sign gate uses `e.room === this.currentRoom` — evidence.room is the room INDEX (matches currentRoom for main-space evidence since addFromRoom stores room.index).
