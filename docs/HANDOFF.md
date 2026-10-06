@@ -1834,3 +1834,35 @@ short-purse warning all read the under's purse. Payout: under items,
 - **`contains:'marginalia'` is a new payout name** — the dispatch's
   contains-switch needed the explicit branch; a bare `giveItem` on it
   would have thrown (not an ItemId).
+
+## Sprint 275 — the crew board (under foresight)
+
+**What:** the under's fifth paper and the first that sells *crew*, not
+cargo. `Check the crew board — N marginalia` (3–8) hangs 0.45 off storage
+hosts (`keyCabinet|cabinet|locker|stackShelf|cubicle`, roll 0.09 → ~4
+boards/seed). A read marks the next 12 under rooms' `scheduled` cast in
+crew euphemisms — `[the shift sheet marks: Door 045 — a grafter in the
+fill]` — or `[the sheet runs clean ahead — nobody signed on]`. One read
+per board (`meta.taken`).
+
+**Traps:**
+- **Interactable focus scores `dist - align - priority*0.3`** — a board
+  socket 0.45 off its host shares the prox window with the host's own
+  loot socket; equal priority is a coin toss. The board takes priority 3
+  (same tier as picks/defuses) or 'Take' wins.
+- **Elevated sockets evade the prox fallback AND the down-pitch idiom** —
+  `pos.y=1.0` puts prox at 1.35 even point-blank (fallback is <1.1), and
+  focus() aims at `pos + 0.6y`, i.e. eye level. Aim pitch at
+  `pos.y + 0.6`, not the raw pos.
+- **Teleporting beside a socket lands you inside its host collider** —
+  stand on the room-center side: `pos + (origin - pos).norm * 0.9`.
+- **E2e legs must exclude rooms earlier legs already visited** — spawn
+  keys are spent on entry. The shifted under schedule put the first
+  returner ON the fire-alarm room; the returner walked its pass during
+  the bell phase and phase 4 found `spawned` already consumed. Multi-leg
+  specs should pick their rooms `!visited`.
+- **Spec 'no-board' stage vs seed drift** — boards are seeded, not
+  guaranteed per seed; the spec skips when the roll finds nothing.
+- **Paper-read sockets stay `filled:true` with no `contains`** — the
+  cache spec's loot filter must exclude each paper kind (workOrder,
+  crewBoard, …) alongside `meta.vend`.

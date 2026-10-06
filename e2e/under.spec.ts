@@ -592,3 +592,65 @@ test('the lost property — marginalia claims on somebody else\'s effects', asyn
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the crew board — the shift sheet says who is signed on', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // crew board @ u-33, grafter signed @45
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const boardRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.crewBoard));
+    if (!boardRoom) return { stage: 'none' } as const;
+    g.player.teleport(boardRoom.origin.x, 0, boardRoom.origin.z);
+    ga.currentRoom = boardRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const board = (boardRoom.sockets ?? []).find((s) => s.meta?.crewBoard);
+    if (!board?.meta) return { stage: 'no-board' } as const;
+    const m0 = ga.marginalia;
+    let prompt = '';
+    const readCap = caps.length;
+    // stand on the room-center side of the board — the socket sits off its
+    // host prop, and teleporting +0.9 in raw x lands inside the collider
+    const bx = boardRoom.origin.x - board.pos.x, bz = boardRoom.origin.z - board.pos.z;
+    const bl = Math.hypot(bx, bz) || 1;
+    const stand = { x: board.pos.x + (bx / bl) * 0.9, z: board.pos.z + (bz / bl) * 0.9 };
+    for (let f = 0; f < 55; f++) {
+      g.player.teleport(stand.x, 0, stand.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      // focus() evaluates the direction to pos + 0.6y — the wall-mounted
+      // board is at y1.0 so its aim point sits at eye level, not the floor
+      g.player.pitch = Math.atan2((board.pos.y + 0.6) - eyeY, 0.95);
+      g.player.yaw = Math.atan2(board.pos.x - g.player.pos.x, board.pos.z - g.player.pos.z);
+      g.frame();
+      prompt = ga.interaction.focused?.prompt ?? prompt;
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const read = caps.slice(readCap).filter((c) => /shift sheet marks|runs clean/.test(c));
+    return { stage: 'done' as const, prompt, read,
+      spent: ga.marginalia < m0, taken: board.meta?.taken === true };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.prompt, JSON.stringify(result)).toMatch(/Check the crew board/);
+  expect((result.read ?? []).length, JSON.stringify(result)).toBeGreaterThan(0);
+  expect(result.read?.[0] ?? '', JSON.stringify(result)).toMatch(/Door \d{3}/);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.taken, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

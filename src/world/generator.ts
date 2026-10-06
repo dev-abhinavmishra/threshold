@@ -641,6 +641,25 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         }
       }
 
+      // The crew board — the under's entity foresight. The shift sheet
+      // says who is signed on down the line: the next dozen rooms' waiting
+      // things, in crew euphemisms. Pinned where crews sign out.
+      const BOARD_HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.09)) continue;
+        const host = room.spec.props.find((p) => BOARD_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.45, 1.0, hp.z + (toC.z / tcL) * 0.45),
+          yaw: room.yaw, filled: true,
+          meta: { crewBoard: true, price: lootRng.int(3, 8) },
+        });
+      }
+
       // The work-order book — the under's fourth paper. Where the books
       // above answer threats and staff, the order sheet answers CARGO:
       // which rooms still hold unclaimed stock (and where the egress is

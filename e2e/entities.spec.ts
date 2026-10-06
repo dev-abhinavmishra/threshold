@@ -858,8 +858,11 @@ test("the under hears you — bell drifts the grafter, a crash catches the still
     const snapCue = caps.some((c) => /shutter catches the noise/.test(c));
 
     // --- 4. the returner answers the bell ---
+    // exclude rooms already visited above — a returner scheduled there
+    // spawned on entry, walked its pass, and its spawn key is spent
     g.godMode = true;
-    const rRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'returner'));
+    const visited = new Set([bellRoom.index, gRoom.index, sRoom.index]);
+    const rRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'returner') && !visited.has(r.index));
     if (!rRoom) return { stage: 'no-returner' } as const;
     g.player.teleport(rRoom.origin.x, 0, rRoom.origin.z);
     ga.currentRoom = rRoom.index;

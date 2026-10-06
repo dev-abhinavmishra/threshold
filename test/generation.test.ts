@@ -414,7 +414,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -870,6 +870,27 @@ describe('the lost-property cage (sprint 274)', () => {
           `claim on a cage-less room ${seed} u-${r.index}`).toBe(true);
         const price = s.meta.price as number;
         expect(price >= 3 && price <= 9, `claim price ${price} in 3-9`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the crew board (sprint 275)', () => {
+  it('shift sheets pin to under storage furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets?.some((s) => s.meta?.crewBoard) ?? false,
+          `crew board on the main route ${seed}`).toBe(false);
+      }
+      const boards = route.underRooms.flatMap((r) =>
+        (r.sockets ?? []).filter((s) => s.meta?.crewBoard).map((s) => ({ r, s })));
+      for (const { r, s } of boards) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `board on a host-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 3 && price <= 8, `board price ${price} in 3-8`).toBe(true);
       }
     }
   });

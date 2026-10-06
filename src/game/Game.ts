@@ -1938,6 +1938,41 @@ export class Game {
         if (egress) this.cue('whisper', it.pos, `[the egress stamp is filed at Door ${String(egress.index).padStart(3, '0')}]`);
         return;
       }
+      case 'crewBoard': {
+        // The crew board — who is signed on down the line: the under's
+        // entity foresight, told in crew euphemisms. One read per board.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const CREW: Record<string, string> = {
+          swamper: 'hands in the water', hauler: 'a haul team on the line',
+          laundress: 'a laundress at the outflow', grafter: 'a grafter in the fill',
+          redline: 'the red margin', stillframe: 'the paused hall',
+          returner: 'a guest come back', margin: 'the handwritten edge',
+        };
+        const parts: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 12 || parts.length >= 5) continue;
+          for (const s of r.scheduled ?? []) {
+            const crew = CREW[s.entity] ?? 'a hand unlisted';
+            if (parts.length >= 5) break;
+            parts.push(`Door ${String(r.index).padStart(3, '0')} — ${crew}`);
+          }
+        }
+        const text = parts.length
+          ? `[the shift sheet marks: ${parts.join(' · ')}]`
+          : '[the sheet runs clean ahead — nobody signed on]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {

@@ -384,7 +384,10 @@ test('flooded halls: wading carries, crouch is quiet, the drain pays', async ({ 
 
     ga.enterUnderscript();
     const DRAIN = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
-    const room = g.route.underRooms.find((r) => r.flooded && r.spec?.props?.some((p) => DRAIN.has(p.kind)));
+    // a laundress fouls her own drain — the crank is choked while she works;
+    // 'the wash' covers her window, so this leg takes a hall she isn't on
+    const room = g.route.underRooms.find((r) => r.flooded && r.spec?.props?.some((p) => DRAIN.has(p.kind))
+      && !r.scheduled?.some((s) => s.entity === 'laundress'));
     if (!room) return { stage: 'no-flooded-drainable' } as const;
     const drainless = g.route.underRooms.filter((r) => r.flooded && !r.spec?.props?.some((p) => DRAIN.has(p.kind)));
 
@@ -433,6 +436,14 @@ test('flooded halls: wading carries, crouch is quiet, the drain pays', async ({ 
     // The drain — a real interactable on the room's pipework.
     const drainIt = g.interaction.interactables.find((i) => i.kind === 'drain' && i.enabled);
     if (!drainIt) return { stage: 'no-drain', noted, loudSplashes, quietSplashes, slowSeen } as const;
+    // stand on the room-center side of the pipework — drive() aims but
+    // never walks, and the wade phase leaves the player wherever it ends
+    {
+      const dx = room.origin.x - drainIt.pos.x, dz = room.origin.z - drainIt.pos.z;
+      const dl = Math.hypot(dx, dz) || 1;
+      ga.player.teleport(drainIt.pos.x + (dx / dl) * 0.9, 0, drainIt.pos.z + (dz / dl) * 0.9);
+      for (let f = 0; f < 5; f++) g.frame();
+    }
     const prompts = drive(drainIt.pos, /open the drain/i, () => ga.drainedRooms.has(key), 220);
     const drained = ga.drainedRooms.has(key);
     if (!drained) return { stage: 'drain-failed', noted, loudSplashes, quietSplashes, slowSeen, prompts } as const;
