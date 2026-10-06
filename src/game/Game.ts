@@ -1713,16 +1713,23 @@ export class Game {
         // semi-blind until you pay. Contains resolves like loot sockets.
         const sock = it.data as Socket;
         const price = (sock.meta.price as number) ?? 8;
-        if (this.imprints < price) {
-          this.cue('door-locked', it.pos, `[the claim is ${price} imprints — ${price - this.imprints} short]`, 'warn');
+        const cur = sock.meta.marginalia === true;
+        if ((cur ? this.marginalia : this.imprints) < price) {
+          this.cue('door-locked', it.pos,
+            `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        if (cur) this.marginalia -= price; else this.imprints -= price;
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         const contains = sock.meta.contains as string | undefined;
-        if (contains === 'imprints') {
+        if (contains === 'marginalia') {
+          const amt = (sock.meta.amount as number) ?? 8;
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[the effects held a purse — +${amt} marginalia]`);
+        } else if (contains === 'imprints') {
           const amt = (sock.meta.amount as number) ?? 10;
           this.imprints += amt;
           this.stats.imprintsEarned += amt;

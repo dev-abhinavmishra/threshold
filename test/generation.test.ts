@@ -853,3 +853,24 @@ describe('the laundress (sprint 272)', () => {
     }
   });
 });
+
+describe('the lost-property cage (sprint 274)', () => {
+  it('marginalia claims hang on under cage/locker furniture only', () => {
+    const HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets.some((s) => s.meta?.claim && s.meta?.marginalia),
+          `imprints-claim flagged marginalia on the main route ${seed}`).toBe(false);
+      }
+      const claims = route.underRooms.flatMap((r) =>
+        r.sockets.filter((s) => s.meta?.claim && s.meta?.marginalia).map((s) => ({ r, s })));
+      for (const { r, s } of claims) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `claim on a cage-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 3 && price <= 9, `claim price ${price} in 3-9`).toBe(true);
+      }
+    }
+  });
+});

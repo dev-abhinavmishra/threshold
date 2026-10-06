@@ -1813,3 +1813,24 @@ is real, the hiss at 1.6 is the warning).
 - **Proximity bites need a warning tier** — the hiss cue at 1.6m exists
   precisely so the <0.8 auto-aggravate is fair; bites without a tell are
   ambush, and ambush on a static guard is cheap.
+
+## Sprint 274 — the lost-property cage (under spend point)
+
+**What:** the porter's cage for the staff level. Claim sockets hang on under
+cage/locker furniture (`recordsCage|keyCabinet|locker|filing|cabinet`,
+~5–9 cages/seed at roll 0.08), tagged to staff who stopped answering —
+`Reclaim the effects tagged 'Briggs' — N marginalia` (3–9). Same claim
+mechanism, flagged `meta.marginalia` so the prompt, the charge, and the
+short-purse warning all read the under's purse. Payout: under items,
+`contains:'marginalia'` purse refunds, lore.
+
+**Traps:**
+- **Roll × host-incidence is the real density** — 0.3 on ~110 rooms with
+  locker/filing/cabinet everywhere produced 48–85 tags. Under furniture
+  hosts are common; the roll, not the host set, carries the rarity.
+- **Reusing a kind across currencies wants a flag, not a new kind** —
+  `meta.marginalia` on the same 'claim' dispatch kept prompt/charge/payout
+  as three small branches instead of a cloned verb.
+- **`contains:'marginalia'` is a new payout name** — the dispatch's
+  contains-switch needed the explicit branch; a bare `giveItem` on it
+  would have thrown (not an ItemId).

@@ -125,7 +125,9 @@ export class InteractionSystem {
         }
         if (sock.meta.claim !== undefined) {
           kind = 'claim';
-          prompt = `Claim the bag tagged '${sock.meta.claimTag as string}' — ${sock.meta.price as number} imprints`;
+          prompt = sock.meta.marginalia
+            ? `Reclaim the effects tagged '${sock.meta.claimTag as string}' — ${sock.meta.price as number} marginalia`
+            : `Claim the bag tagged '${sock.meta.claimTag as string}' — ${sock.meta.price as number} imprints`;
         }
         if (sock.meta.register !== undefined) {
           kind = 'register';

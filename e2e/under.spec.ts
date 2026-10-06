@@ -525,3 +525,70 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
   expect(result.keened, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the lost property — marginalia claims on somebody else\'s effects', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // lost-property tags @ u-1
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    // first: a broke claim — burn the purse, touch the tag, get told
+    ga.marginalia = 1;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    const shortCap = caps.length;
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const shortWarn = caps.slice(shortCap).some((c) => /short/.test(c) && /marginalia/.test(c));
+    const readPrompt = ga.interaction.focused?.prompt ?? '';
+    // then: pay a real claim
+    ga.marginalia = 30;
+    const m0 = ga.marginalia;
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    return { stage: 'done', readPrompt, shortWarn,
+      spent: ga.marginalia < m0 || caps.some((c) => /\+.*marginalia/.test(c)), paid } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.readPrompt, JSON.stringify(result)).toMatch(/Reclaim the effects tagged/);
+  expect(result.shortWarn, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

@@ -605,6 +605,42 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
         }
       }
+      // The lost-property cage — the under's recurring spend point, the
+      // porter's cage for the staff level. Misfiled effects hang on cage/
+      // locker furniture, tagged to owners who stopped answering — priced
+      // in marginalia, semi-blind like the bags above.
+      const LOST_PROP_HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);
+      const effectTags = ['Briggs', 'Okonkwo', 'Vasquez', 'Lindqvist', 'Mori', 'Cabrera', 'Ash', 'Delacroix', 'Fontaine', 'Greer', 'Hobbes', 'Iyer'];
+      const effectPool = [
+        'latchpick', 'doorChock', 'doorChock', 'feltWrap', 'chalkSpool',
+        'bandage', 'tonic', 'windAlarm', 'sparkFlash', 'marginalia', 'lore',
+      ];
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => LOST_PROP_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        const fx = toC.x / tcL, fz = toC.z / tcL;
+        const nTags = lootRng.int(2, 3);
+        for (let i = 0; i < nTags; i++) {
+          const roll = effectPool[lootRng.int(0, effectPool.length - 1)];
+          const meta: Record<string, number | string | boolean> = {
+            claim: true, marginalia: true, price: lootRng.int(3, 9),
+            claimTag: effectTags[lootRng.int(0, effectTags.length - 1)],
+          };
+          if (roll === 'marginalia') { meta.contains = 'marginalia'; meta.amount = lootRng.int(6, 14); }
+          else meta.contains = roll;
+          const off = (i - (nTags - 1) / 2) * 0.3;
+          room.sockets.push({
+            kind: 'loot',
+            pos: v3(hp.x + fx * 0.42 - fz * off, 0.7, hp.z + fz * 0.42 + fx * off),
+            yaw: room.yaw, filled: true, meta,
+          });
+        }
+      }
+
       // The work-order book — the under's fourth paper. Where the books
       // above answer threats and staff, the order sheet answers CARGO:
       // which rooms still hold unclaimed stock (and where the egress is
