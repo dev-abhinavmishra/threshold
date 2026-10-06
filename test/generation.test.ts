@@ -3,7 +3,10 @@ import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos, inDoorLane } from '../src/world/spec';
+import { portLocalPos, inDoorLane, footprintInDoorLane } from '../src/world/spec';
+import { modelCollider } from '../src/world/modelLibrary';
+import { buildProp } from '../src/world/props';
+import { Rng } from '../src/engine/rng';
 import { buildRoomMesh } from '../src/world/builder';
 import { MAT } from '../src/world/materials';
 import * as THREE from 'three';
@@ -306,13 +309,36 @@ describe('sprint mechanics coverage', () => {
     expect(peds.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('no prop or hiding spot lands inside a door approach lane', () => {
+  it('no solid prop collider reaches a door rectangle, and no hiding spot sits in a door approach lane', () => {
+    // The builder culls any solid collider whose box reaches the door
+    // rect (footprintInDoorLane) — this test pins the same honest rule at
+    // spec level, so an authored centerpiece can't be silently eaten.
+    const rng = new Rng(0xBEEF);
+    const footprint = (p: { kind: string; x: number; z: number; yaw?: number; scale?: number }): [number, number] => {
+      const m = modelCollider(p.kind);
+      if (m) return [(m[0] * (p.scale ?? 1)) / 2, (m[2] * (p.scale ?? 1)) / 2];
+      try {
+        const b = buildProp({ ...p } as never, rng.fork(1));
+        let hw = 0, hd = 0;
+        for (const c of b.colliders) {
+          if (!c.losOnly && !c.walkable) { hw = Math.max(hw, c.w / 2); hd = Math.max(hd, c.d / 2); }
+        }
+        return [hw, hd];
+      } catch { return [0.3, 0.3]; }
+    };
+    const laneOf = (spec: { width: number; depth: number; entry: never; exits: never[] }) =>
+      spec as Parameters<typeof footprintInDoorLane>[0];
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of [...mainRooms(route), ...route.underRooms]) {
         const spec = r.spec!;
         for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9)) {
-          expect(inDoorLane(spec, p.x, p.z), `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z}`).toBe(false);
+          const [hw, hd] = footprint(p);
+          if (hw === 0 && hd === 0) continue; // ghost — nothing solid to reach the rect
+          expect(
+            footprintInDoorLane(laneOf(spec as never), p.x, p.z, hw, hd),
+            `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z} (hw ${hw.toFixed(2)}, hd ${hd.toFixed(2)})`,
+          ).toBe(false);
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);

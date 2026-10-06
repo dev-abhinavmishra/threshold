@@ -110,9 +110,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 216)
-CURRENT STATE (as of sprint 222)
-CURRENT STATE (as of sprint 212)
+CURRENT STATE (as of sprint 223)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -451,6 +449,29 @@ CURRENT STATE (as of sprint 212)
   probe only after a real frame.
   - Mill: plated foods + pew rows + ceiling roses landed on main;
     remaining open kit — grand staircase pieces, arched window tracery.
+  Sprint 223 lane-cull systemic refactor + prop re-placement: found via
+  the sprint-222 audit — the center-based lane corridor (r=0.55) was
+  still silently eating authored props whose centers sat inside it even
+  though their real colliders never reached the door rect, while the
+  builder's footprint check culled others the spec-pass let through.
+  Now split honestly: clearDoorLanes(spec, isGhost?) drops a prop only
+  when its CENTER lands inside the door rectangle itself (r=0 reach —
+  ~70u-dead-center pieces are the only kills), ghost kinds
+  (archways/transoms/wall dressing, collider[0]===0 via modelCollider)
+  are never culled at spec level, and the builder's
+  footprintInDoorLane owns everything else. ~50 authored props that
+  GENUINELY covered doorways were re-placed by hand to clear their real
+  footprint (ms-lobby front desk cluster z 2.6→1.5, custodian shop
+  counter cluster −0.6z, wake coffin z 3.4→2.0, chapelAltar 5.6→5.0,
+  all the counters/cages/printerRows/cubicles, ironGates ±1.4→±1.9,
+  portcullis+hatch in the narrow service corridors, partition-maze
+  spots made lane-safe under both orientations). Test rewritten to the
+  honest rule: no solid prop collider reaches a door rect (footprint
+  via modelCollider/buildProp), hiding spots still keep the deep lane.
+  tools/verify_lanes.ts (from main's parallel work) also sweeps
+  DROP/ORPHAN/CLIP/CLASH per template × seed — run it after editing
+  template props.
+  78 unit tests.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -462,9 +483,6 @@ NEXT SPRINT IDEAS (pick the biggest first)
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
-  - Lane-cull audit follow-up: other authored centerpieces may have been
-    silently dropped pre-222 — diff spec.props vs each template's
-    authored list across all rooms/seeds and re-place what was eaten.
   - e2e: remaining — merchant/alarm/tv/clock/hearth prop interacts,
     underRooms beyond lobby depth (u-room exit/backtrack path), hiding
     spot enter/exit + trap reveal, document pickup → codex UI.

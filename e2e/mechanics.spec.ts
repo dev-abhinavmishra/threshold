@@ -9,14 +9,14 @@ import { test, expect, Page } from '@playwright/test';
 
 test.setTimeout(300_000);
 
-async function seededRun(page: Page): Promise<void> {
+async function seededRun(page: Page, seed = 'threshold'): Promise<void> {
   await page.goto('/?debug');
   const input = page.locator('.seed-input');
-  await input.evaluate((el: HTMLInputElement) => {
+  await input.evaluate((el: HTMLInputElement, s: string) => {
     const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!;
-    set.call(el, 'threshold');
+    set.call(el, s);
     el.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  }, seed);
   await page.getByRole('button', { name: 'Seeded Run' }).click();
   await expect(page.locator('.hud')).toBeVisible({ timeout: 90_000 });
   await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame, undefined, { timeout: 90_000 });
@@ -30,7 +30,7 @@ test('witness drains health while held in sight, stops when faced away', async (
   const result = await page.evaluate(() => {
     const g = (window as unknown as {
       __thresholdGame: {
-        renderFrame(): void;
+      renderFrame(): void;
         clock: { tick(): boolean; dt: number; time: number };
         godMode: boolean;
         frame(): void;
@@ -105,7 +105,7 @@ test('maelstrom stabilize minigame: rhythm hold succeeds, passive fails', async 
   const result = await page.evaluate(() => {
     const g = (window as unknown as {
       __thresholdGame: {
-        renderFrame(): void;
+      renderFrame(): void;
         clock: { tick(): boolean; dt: number; time: number };
         godMode: boolean;
         frame(): void;
@@ -221,7 +221,7 @@ test('maelstrom stabilize minigame: rhythm hold succeeds, passive fails', async 
 test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seededRun(page);
+  await seededRun(page, 's');
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as {
@@ -248,8 +248,9 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
 
-    // The 'threshold' seed generates toll doors on branch closets
-    // (door-5-b1, door-17-b1) — take the first.
+    // Seed 's' generates toll doors on branch closets (door-53-b1
+    // among them — seed 'threshold' lost its toll rooms when new
+    // templates shifted the layout, sprint 223).
     let door: { id: string; pos: { x: number; y: number; z: number }; locked: boolean; lockId?: string; openT: number; opening: boolean } | null = null;
     let parent: { index: number; origin: { x: number; z: number } } | null = null;
     for (const room of g.route.rooms) {
@@ -257,6 +258,7 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
       if (d) { door = d; parent = room; break; }
     }
     if (!door || !parent) return { stage: 'no-toll-door' } as const;
+    const doorAtFind = `${door.id}@${parent.index} locked=${door.locked}`;
 
     // Stand 1.2m room-side of the leaf, aimed at its center like the
     // chase-test door approach.
@@ -271,22 +273,34 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
       g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(door.pos.y + 0.6 - eyeY, dist || 1)));
     };
 
-    // Too poor — 2 imprints vs the 3 toll: refuse + stays locked. Loot
-    // near the leaf ('Take spark Flash') can out-focus it — take whatever
-    // is focused like a player would so the door gets its turn.
+    // Loot near the leaf can out-focus it — and the toll plate's own
+    // prompt is a take-family prompt ('Take' pressed the plate and PAID
+    // 3 imprints on the first draft of this spec). So: clear out-focus
+    // sockets while pinning the purse at 2 — a too-poor player stays
+    // too-poor even when a spark socket grants imprints mid-loop. The
+    // refusal itself must come from a door/toll-family prompt: pressing
+    // it with 2 imprints has to refuse and keep the leaf locked.
     g.imprints = 2;
     let refusePrompt = '';
+    const refuseLog: string[] = [];
     for (let f = 0; f < 40 && door.locked; f++) {
       aimAtLeaf();
-      refusePrompt = g.interaction.focused?.prompt ?? refusePrompt;
-      g.input.interactPressed = /door|take|loot|search/i.test(refusePrompt);
+      const prompt = g.interaction.focused?.prompt ?? '';
+      refuseLog.push(`${f}:${prompt}|i${g.imprints}|L${door.locked}`);
+      if (/door|unlock|toll|pay/i.test(prompt)) refusePrompt = prompt;
+      g.input.interactPressed = /door|unlock|toll|pay|take|loot|search/i.test(prompt);
       g.frame();
+      if (g.imprints > 2) g.imprints = 2;
     }
-    const stayedLocked = door.locked && g.imprints === 2;
+    g.input.interactPressed = false;
+    const stayedLocked = door.locked && /door|unlock|toll|pay/i.test(refusePrompt);
 
-    // Paid — 5 imprints: unlock takes 3, door opens, 2 remain.
+    // Paid — 5 imprints: unlock takes 3, door opens. A nearby loot
+    // socket may pad imprints before the unlocking press, so measure
+    // the charge itself: imprints delta across the frame that flipped
+    // the lock must be exactly -3 (the toll).
     g.imprints = 5;
-    let paid = false, presses = 0;
+    let paid = false, presses = 0, charge = 0, prev = g.imprints;
     const focusLog: string[] = [];
     for (let f = 0; f < 60 && !paid; f++) {
       aimAtLeaf();
@@ -294,18 +308,20 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
       if (f % 10 === 0) focusLog.push(prompt);
       g.input.interactPressed = /door|take|loot|search/i.test(prompt);
       if (g.input.interactPressed) presses++;
+      prev = g.imprints;
       g.frame();
-      if (!door.locked) paid = true;
+      if (!door.locked) { paid = true; charge = prev - g.imprints; }
     }
     // Let the leaf animate open to prove the path completes.
     for (let f = 0; f < 60 && door.openT < 0.5; f++) g.frame();
-    return { stage: 'done', refusePrompt, stayedLocked, paid, presses, focusLog, imprints: g.imprints, openT: door.openT };
+    return { stage: 'done', doorAtFind, refusePrompt, stayedLocked, paid, presses, focusLog, charge, imprints: g.imprints, openT: door.openT, refuseLog };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
-  expect(result.stayedLocked).toBe(true);
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stayedLocked, `${result.doorAtFind} refuse=${JSON.stringify(result.refuseLog)} imp=${result.imprints}`).toBe(true);
   expect(result.paid, `focus=${JSON.stringify(result.focusLog)} presses=${result.presses}`).toBe(true);
-  expect(result.imprints).toBe(2);
+  expect(result.charge).toBe(3);
+  expect(result.imprints).toBeGreaterThanOrEqual(2);
   expect(result.openT).toBeGreaterThan(0.5);
   expect(errors).toEqual([]);
 });
@@ -428,7 +444,7 @@ test('vend machine refuses on short funds, sells on exact pay', async ({ page })
     return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints, inv: g.inventory.map((s) => s.id) };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.refused, result.promptsA).toBe(true);
   expect(result.sold, JSON.stringify(result.inv)).toBe(true);
   expect(errors).toEqual([]);
@@ -497,7 +513,7 @@ test('keyed door: find the brass key, return, unlock the lock', async ({ page })
     return { stage: 'done', wasLocked, keyPrompts, doorPrompts, paid: !door.locked, openT: door.openT, keyLeft };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.wasLocked).toBe(true);
   expect(result.paid, result.doorPrompts).toBe(true);
   expect(result.openT).toBeGreaterThan(0.5);
@@ -583,7 +599,7 @@ test('underscript gate: seal clamps + resonance key descend, exit returns with p
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.refusedEarly).toBe(true);
   expect(result.clampsDone).toBe(2);
   expect(result.underStart).toEqual({ room: 0, space: 'under' });
@@ -662,7 +678,7 @@ test('custodian shop: short imprints refuses, paid pedestal sells and stocks out
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.refused).toBe(true);
   expect(result.refuseCap).toBeTruthy();
   expect(result.sold).toBe(true);
@@ -756,7 +772,7 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.refused).toBe(true);
   expect(result.refuseCap).toBeTruthy();
   expect(result.sold).toBe(true);
@@ -865,7 +881,7 @@ test('engine: relays unlock the routing board, sequence frees the lift to victor
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.phaseAfterRelays).toBe('routing');
   expect(result.wrongPressed).toBe(true);
   expect(result.rejected).toBe(true);
@@ -901,7 +917,7 @@ test('under-draft: the sealed passage breathes when you stand near it', async ({
     return { stage: 'done', caps: caps.filter((t) => /seeps|draft|breathes/.test(t)) } as const;
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   const caps = (result as { caps?: string[] }).caps ?? [];
   expect(caps.length).toBeGreaterThan(0);
   expect(caps[0]).toContain('cold draft seeps up');
@@ -1043,7 +1059,7 @@ test('index: five cards → master catalogue → seal console glyph order frees 
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.earlyRefused).toBe(true);
   expect(result.fiveCards).toBe(true);
   expect(result.catalogRead).toBe(true);
@@ -1060,7 +1076,7 @@ test('index: five cards → master catalogue → seal console glyph order frees 
 test('puzzle-valve: cracking the mechanism vents steam and yields its key', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seededRun(page);
+  await seededRun(page, 's');
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
@@ -1098,7 +1114,9 @@ test('puzzle-valve: cracking the mechanism vents steam and yields its key', asyn
 
     // The lock filler hides doorKeys inside puzzle sockets — before the
     // 'puzzle' switch case existed that key was unreachable and its
-    // main-route door could never unlock (seed 'threshold': room 71 → 72).
+    // main-route door could never unlock (seed 's': room 63 → lock-64;
+    // 'threshold' lost its keyed valve room when the layout shifted,
+    // sprint 223).
     const room = g.route.rooms.find((r) => r.templateId === 'puzzle-valve'
       && r.sockets.some((s) => s.meta.puzzle === 'valve' && s.meta.contains === 'doorKey'));
     if (!room) return { stage: 'no-fixture' } as const;
@@ -1128,7 +1146,7 @@ test('puzzle-valve: cracking the mechanism vents steam and yields its key', asyn
     return { stage: 'done', wasLocked, cracked, vented, hissCap, gotKey, opened, openT: door.openT };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.wasLocked).toBe(true);
   expect(result.cracked).toBe(true);
   expect(result.vented).toBe(true);
@@ -1189,7 +1207,7 @@ test('wake: lifting the coffin lid frees the bier document', async ({ page }) =>
     return { stage: 'done', sawPrompt, held, opened: g.coffinOpened, warmCap, doc };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.sawPrompt).toBe(true);
   expect(result.opened).toBe(true);
   expect(result.warmCap).toBe(true);
@@ -1255,7 +1273,7 @@ test('lens hall: tuning all four pylons solves the orrery', async ({ page }) => 
     };
   });
 
-  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.woke).toBe(true);
   expect(result.final?.length).toBe(4);
   expect(result.final?.every((p) => p >= 1)).toBe(true);
