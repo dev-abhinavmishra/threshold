@@ -1363,3 +1363,22 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Brace UX race watch; milestone-set hearing remains a design call.
   - Under-cast depth: the Returner (u-exit guard) is the only scheduled
     under entity with no noise verb — alarm pulls could wake it.
+
+## Sprint 253 — the returner answers the bell
+
+- The last deaf under-cast member heard: while the Returner is still
+  latching doors ahead (its 3.0s warn window), a crash within earshot of
+  the latching end shortens the warning to a heartbeat — once, then it
+  is already coming (`[the latching quickens toward the sound]`).
+- Fiction: the crew's bells were wired for it — pulling a fire alarm
+  near a warning returner is a summons, not a lure. The free bell now
+  has a real cost when the wrong thing is latching. Only the returner
+  subscribes (sweep/reprise/maelstrom passes stay scripted).
+- vitest: crash at its door shortens warnT ≤1.0 once; far/quiet noise
+  never reaches it; a sweep never subscribes. e2e leg 4 of "the under
+  hears you" drives it live — entities.spec 10/10.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - Under-cast depth done; next archetype: an under-room hazard layer
+    (flooding maintenance, lights-out server hall)?

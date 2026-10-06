@@ -65,6 +65,8 @@ export class CorridorRunner extends Entity {
   private rebounded = false;
   private reboundBoost = 1;
   private stepT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private bellAnswered = false;
 
   constructor(id: EntityId, opts: CorridorOptions = {}) {
     super(id, ENTITY_TUNING[id]);
@@ -132,7 +134,23 @@ export class CorridorRunner extends Entity {
       };
       this.hideWatch = setInterval(checkHidden, 120);
     }
+    // The Returner answers loud noise while still latching doors ahead —
+    // the crew's bells were wired for it, and a pulled alarm is a summons.
+    if (this.id === 'returner') this.noiseUnsub = c.sound.on((e) => this.hear(e));
     }
+
+  /** A crash within earshot of the latching end shortens the warning to a
+   *  heartbeat — it answers the bell once, then it's already coming. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'warn' || this.bellAnswered) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    const at = this.path[0] ?? c.player.pos;
+    if (!withinRouseRadius(e, at.x, at.z)) return;
+    this.bellAnswered = true;
+    this.warnT = Math.min(this.warnT, 1.0);
+    c.cue('returner-warn', at, '[the latching quickens toward the sound]', { severity: 'warn' });
+  }
 
   private hideWatch: ReturnType<typeof setInterval> | null = null;
 
@@ -378,6 +396,7 @@ export class CorridorRunner extends Entity {
 
   protected override onDone(): void {
     if (this.hideWatch) clearInterval(this.hideWatch);
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) {
       this.ctx.removeEntityMesh(this.mesh);
       this.mesh = null;

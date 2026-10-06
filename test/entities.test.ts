@@ -1030,3 +1030,64 @@ describe('Collector (sprint 242)', () => {
     col.dispose();
   });
 });
+
+describe('Returner answers the bell (sprint 253)', () => {
+  const hearingCtx = (rooms: RoomInstance[], idx: number) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: idx,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+    });
+    const emit = (x: number, z: number, intensity = 1, category = 'machine') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    return { ctx, emit, heard: () => hear !== null };
+  };
+
+  it('a crash within earshot of the latching end shortens the warning, once', () => {
+    const rooms = routeRooms();
+    const { ctx, emit, heard } = hearingCtx(rooms, 20);
+    const rt = new CorridorRunner('returner', { fromAhead: true });
+    rt.spawn(ctx);
+    expect(heard()).toBe(true); // only the returner subscribes
+    expect(rt.state).toBe('warn');
+    const warnT = () => (rt as unknown as { warnT: number }).warnT;
+    expect(warnT()).toBeGreaterThan(2);
+    const at = (rt as unknown as { path: { x: number; z: number }[] }).path[0];
+    // a far crash does not reach the latching
+    emit(at.x + 400, at.z + 400);
+    expect(warnT()).toBeGreaterThan(2);
+    // a crash at its door answers once
+    emit(at.x, at.z);
+    expect(warnT()).toBeLessThanOrEqual(1.0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /quickens toward the sound/.test(c))).toBe(true);
+    rt.update(0.05);
+    emit(at.x, at.z);
+    expect(warnT()).toBeLessThanOrEqual(1.0);
+    rt.dispose();
+  });
+
+  it('a quiet scuff or an engaged pass does not answer', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const rt = new CorridorRunner('returner', { fromAhead: true });
+    rt.spawn(ctx);
+    const at = (rt as unknown as { path: { x: number; z: number }[] }).path[0];
+    const warnT = () => (rt as unknown as { warnT: number }).warnT;
+    emit(at.x, at.z, 0.3); // below the in-room floor
+    expect(warnT()).toBeGreaterThan(2);
+    rt.dispose();
+    // a sweep never subscribes — the verb belongs to the returner alone
+    const { emit: emit2, heard: heard2 } = hearingCtx(rooms, 20);
+    void emit2;
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(makeCtx(rooms, { currentRoomIndex: 20 }));
+    expect(heard2()).toBe(false);
+    sw.dispose();
+    void ctx;
+  });
+});

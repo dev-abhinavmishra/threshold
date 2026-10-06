@@ -769,7 +769,7 @@ test('noise draws the patrol: the warden shoulders into the next room', async ({
   expect(errors).toEqual([]);
 });
 
-test("the under hears you — a pulled bell drifts the grafter, a crash catches the stillframe", async ({ page }) => {
+test("the under hears you — bell drifts the grafter, a crash catches the stillframe, the returner answers", async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await seededRun(page); // 's': fireAlarm @ u-7/10/13/…, stillframe @ u-7, grafter @ u-19/42/…
@@ -853,15 +853,35 @@ test("the under hears you — a pulled bell drifts the grafter, a crash catches 
     const hpAfter = (g.player as { health?: number }).health ?? -1;
     const snapCue = caps.some((c) => /shutter catches the noise/.test(c));
 
-    return { stage: 'done', bellRung, bellPos: bell.pos, driftToNoise, dragCue, snapCue, hpBefore, hpAfter, caps: caps.slice(-12) } as const;
+    // --- 4. the returner answers the bell ---
+    g.godMode = true;
+    const rRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'returner'));
+    if (!rRoom) return { stage: 'no-returner' } as const;
+    g.player.teleport(rRoom.origin.x, 0, rRoom.origin.z);
+    ga.currentRoom = rRoom.index;
+    for (let f = 0; f < 20; f++) g.frame();
+    const ret = ga.entities.find((e) => e.id === 'returner' && e.state !== 'done');
+    if (!ret) return { stage: 'no-returner-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    // a crash at the latching end — inside its corridor, bus-level honest
+    const lat = ret.threatPos();
+    (g as unknown as { sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void } })
+      .sound.emit({ x: lat.x, y: 1, z: lat.z, intensity: 1.0, category: 'machine', caption: '[a bell screams]' });
+    // the quickened pass should be moving within ~1.5s of frames (was ~3s)
+    let engaged = false;
+    for (let f = 0; f < 60 && !engaged; f++) { g.frame(); if (ret.state !== 'warn') engaged = true; }
+    const latchCue = caps.some((c) => /latching quickens/.test(c));
+
+    return { stage: 'done', bellRung, driftToNoise, dragCue, snapCue, hpBefore, hpAfter, latchCue, engaged, caps: caps.slice(-12) } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { bellRung: boolean; seen?: string[]; driftToNoise: boolean; dragCue: boolean; snapCue: boolean; hpBefore: number; hpAfter: number; caps: string[] };
-  expect(r.bellRung, `bell never pulled — seen: ${(r.seen ?? []).join(' · ')}`).toBe(true);
+  const r = result as { bellRung: boolean; driftToNoise: boolean; dragCue: boolean; snapCue: boolean; latchCue: boolean; engaged: boolean; hpBefore: number; hpAfter: number; caps: string[] };
+  expect(r.bellRung).toBe(true);
   expect(r.dragCue, `no drift cue — caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(r.driftToNoise).toBe(true);
   expect(r.snapCue).toBe(true);
   expect(r.hpAfter).toBeLessThan(r.hpBefore);
+  expect(r.latchCue, `no latch cue — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.engaged, 'the quickened pass never started moving').toBe(true);
   expect(errors).toEqual([]);});
