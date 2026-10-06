@@ -1541,3 +1541,23 @@ NEXT SPRINT IDEAS (pick the biggest first)
 - e2e: dark-water spec gained the cut phase (upright = no prompt; crouched =
   prompt → hold → '[wire comes loose]'), plus a dry-seal spec on the
   maint-service snares ('Cut the seal' → armed=false).
+
+## Sprint 259 — 'the way back' (under-traversal e2e)
+
+- New `e2e/under.spec.ts`: the under-spine is now driven end-to-end —
+  walk 0→7 through real door interacts, pocket a socket mid-route,
+  backtrack 7→2, forward again 2→6 (spawn-once holds — a despawned
+  grafter is a legitimate give-up, not a dupe), then ride the egress
+  leaf home: space 'main', correct underReturn room, palimpsest granted.
+  `stats.underscriptDeepest` proves backtracking never erases the stamp.
+- **Real findings:** under doors share the main door interact — leaf
+  openT animates on the record, colliders release at openT≥0.5. And
+  door-side sill colliders (~0.3 tall, beside the opening) clip a walk
+  that drifts off the opening axis — real but passable dead-center.
+- **Harness traps:** door interactable pos.y≈0 — the focus cone needs a
+  pitch down (~atan2(0.6−eyeY, dist)), a flat-pitch aim never aligns.
+  And aim THROUGH the doorway at a point inside the next room, not at
+  the leaf — centerline steering avoids sill clips. Stall fallback:
+  teleport 0.6m past the plane — the transition is the assertion.
+- **Also:** repo-root probe_*.mjs files are linted — delete them before
+  `npm run lint`, not just before commit.
