@@ -1329,6 +1329,64 @@ test('noise draws the patrol: the warden shoulders into the next room', async ({
   expect(errors).toEqual([]);
 });
 
+test('the collector counts your purse — the toll scales with what you carry', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await seededRun(page); // seed 's': collector @23
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+
+    const cRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'collector'));
+    if (!cRoom) return { stage: 'no-collector' } as const;
+    const prev = g.route.rooms[cRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(cRoom.origin.x, 0, cRoom.origin.z);
+    purse.imprints = 150;   // the tin should count it: 150 × 0.12 = 18
+
+    let toll: { pos: { x: number; y: number; z: number }; prompt: string } | null = null;
+    for (let f = 0; f < 500 && !toll; f++) {
+      g.frame();
+      const t = g.interaction.interactables.find((i) => i.kind === 'toll');
+      if (t) toll = t as unknown as { pos: { x: number; y: number; z: number }; prompt: string };
+    }
+    if (!toll) return { stage: 'no-toll', caps: caps.slice(-10) } as const;
+    const prompt = toll.prompt;
+
+    let paid = false;
+    for (let f = 0; f < 160 && !paid; f++) {
+      const ax = toll.pos.x - g.player.pos.x, az = toll.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(toll.pos.x - (ax / al) * 1.2, 0, toll.pos.z - (az / al) * 1.2);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(toll.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (/pay the toll/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+      paid = purse.imprints < 150;
+    }
+    g.keys.delete('KeyE');
+    return { stage: 'done', prompt, paid, purseAfter: purse.imprints, dead: g.player.dead, caps: caps.slice(-10), allCaps: caps } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; paid: boolean; purseAfter: number; dead: boolean; caps: string[]; allCaps: string[] };
+  expect(r.prompt, 'the ask should scale with the purse').toContain('18 imprints');
+  expect(r.paid, `toll never paid. caps: ${r.allCaps.join(' | ')}`).toBe(true);
+  expect(r.purseAfter).toBe(132);
+  expect(r.allCaps.some((c) => /tin accepts/.test(c))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('brace the door: the bellman tests the bar and loses interest', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));

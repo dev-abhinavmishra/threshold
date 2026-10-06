@@ -794,6 +794,7 @@ export class Game {
         }
         return best;
       },
+      purse: () => this.imprints,
     };
   }
 
@@ -1498,10 +1499,12 @@ export class Game {
         return;
       }
       case 'toll': {
-        // The Collector's price — imprints first, a marginalia if you're poor.
-        const d = it.data as { pay?: () => void } | undefined;
+        // The Collector's price — scales with the purse it counted on you;
+        // imprints first, a marginalia if you're poor.
+        const d = it.data as { pay?: () => void; price?: number } | undefined;
+        const price = d?.price ?? 2;
         let paid = false;
-        if (this.imprints >= 2) { this.imprints -= 2; paid = true; }
+        if (this.imprints >= price) { this.imprints -= price; paid = true; }
         else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;

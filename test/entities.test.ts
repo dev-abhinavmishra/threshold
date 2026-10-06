@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner, Warden } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
+import { Collector } from '../src/entities/collector';
 import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector, Commissionaire } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
@@ -916,5 +917,67 @@ describe('Hearing the cast (sprint 238)', () => {
     emit(pos.x + 1, pos.z + 1);
     expect((insp as unknown as { testT: number }).testT).toBeLessThanOrEqual(1.2);
     insp.dispose();
+  });
+});
+
+
+describe('Collector (sprint 242)', () => {
+  const collectorCtx = (rooms: RoomInstance[], purse: number) => {
+    const interactions: { kind: string; prompt: string; data: unknown }[] = [];
+    const ctx = makeCtx(rooms, {
+      purse: () => purse,
+      addInteractable: vi.fn((it) => { interactions.push(it as { kind: string; prompt: string; data: unknown }); }),
+      removeInteractable: vi.fn(),
+      nearestThreat: () => null,
+    });
+    return { ctx, interactions };
+  };
+  const untilDemand = (col: Collector, ctx: EntityCtx, max = 600) => {
+    const ctxMut = ctx as { now: number };
+    let t = ctxMut.now || 0, steps = 0;
+    while (steps++ < max && (col as unknown as { phase: string }).phase !== 'demand') {
+      ctxMut.now = t; col.update(0.05); t += 0.05;
+    }
+    return (col as unknown as { phase: string }).phase === 'demand';
+  };
+
+  it('the tin counts what you carry — the ask scales with the purse', () => {
+    for (const [purse, want] of [[5, 2], [50, 6], [150, 18], [400, 24]] as const) {
+      const rooms = routeRooms();
+      const { ctx, interactions } = collectorCtx(rooms, purse);
+      const col = new Collector();
+      col.spawn(ctx);
+      expect(untilDemand(col, ctx)).toBe(true);
+      const toll = interactions.find((i) => i.kind === 'toll');
+      expect(toll).toBeTruthy();
+      expect((toll!.data as { price: number }).price).toBe(want);
+      expect(toll!.prompt).toContain(`${want} imprints`);
+      col.dispose();
+    }
+  });
+
+  it('paying the scaled toll buys the whisper and sends it off', () => {
+    const rooms = routeRooms();
+    const { ctx, interactions } = collectorCtx(rooms, 150);
+    const col = new Collector();
+    col.spawn(ctx);
+    expect(untilDemand(col, ctx)).toBe(true);
+    const toll = interactions.find((i) => i.kind === 'toll');
+    expect(toll).toBeTruthy();
+    (toll!.data as { pay: () => void }).pay();
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /tin accepts/.test(c))).toBe(true);
+    expect((col as unknown as { phase: string }).phase).toBe('leave');
+    col.dispose();
+  });
+
+  it('a rich purse is announced — the rattle says it is counting', () => {
+    const rooms = routeRooms();
+    const { ctx } = collectorCtx(rooms, 300);
+    const col = new Collector();
+    col.spawn(ctx);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /counting what you carry/.test(c))).toBe(true);
+    col.dispose();
   });
 });

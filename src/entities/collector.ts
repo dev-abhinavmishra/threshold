@@ -69,7 +69,26 @@ export class Collector extends Entity {
     g.position.copy(this.pos);
     this.mesh = g;
     c.addEntityMesh(g);
-    c.cue('collector-rattle', this.pos, '[a tin of teeth rattles, patient]', { severity: 'warn' });
+    c.cue('collector-rattle', this.pos,
+      this.tollPrice() >= 8
+        ? '[a tin of teeth rattles — counting what you carry]'
+        : '[a tin of teeth rattles, patient]',
+      { severity: 'warn' });
+  }
+
+  /** The tin counts what you carry: the ask scales with the purse, so a
+   *  hoarded run draws a heavier toll — pay it or take the rattle with you. */
+  private tollPrice(): number {
+    return Math.min(24, Math.max(2, Math.floor((this.ctx.purse?.() ?? 0) * 0.12)));
+  }
+
+  private offerToll(): void {
+    this.ctx.addInteractable({
+      kind: 'toll', id: this.tollId, pos: this.pos,
+      prompt: `Pay the toll — ${this.tollPrice()} imprints or a marginalia`,
+      holdTime: 0.8, data: { pay: () => this.satisfy(), price: this.tollPrice() },
+      enabled: true, priority: 4,
+    });
   }
 
   /** Called from the 'toll' interact after the Game deducts payment. */
@@ -106,12 +125,7 @@ export class Collector extends Entity {
         else {
           this.rig?.play('idle');
           this.phase = 'demand';
-          c.addInteractable({
-            kind: 'toll', id: this.tollId, pos: this.pos,
-            prompt: 'Pay the toll — 2 imprints or a marginalia',
-            holdTime: 0.8, data: { pay: () => this.satisfy() },
-            enabled: true, priority: 4,
-          });
+          this.offerToll();
         }
         break;
       }
@@ -153,12 +167,7 @@ export class Collector extends Entity {
         // Coming back within reach re-opens the offer.
         if (dist < 1.9) {
           this.phase = 'demand';
-          c.addInteractable({
-            kind: 'toll', id: this.tollId, pos: this.pos,
-            prompt: 'Pay the toll — 2 imprints or a marginalia',
-            holdTime: 0.8, data: { pay: () => this.satisfy() },
-            enabled: true, priority: 4,
-          });
+          this.offerToll();
           break;
         }
         // Hidden players bore it.

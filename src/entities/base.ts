@@ -48,6 +48,9 @@ export interface EntityCtx {
   /** Distance to the nearest living spatial threat other than `exclude`
    *  (or null) — used for 'tell me what you heard' whispers. */
   nearestThreat: (exclude: Entity) => { d: number; p: Vec3 } | null;
+  /** The player's imprint purse — entities that tax it (the Collector)
+   *  read it live. Optional: headless test ctxs may omit it. */
+  purse?: () => number;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

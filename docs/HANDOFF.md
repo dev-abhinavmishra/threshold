@@ -1023,3 +1023,33 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The warden's own footstep emits are entity-sourced (inert) — a real
     player's sprint in the next room is now the dangerous version.
   - Economy still ~5x; milestone-set hearing remains a design call.
+
+## Sprint 242 — the tin counts what you carry (Collector purse-scaled toll)
+
+- The economy ran ~5x: purses of 390–570 vs flat asks of 2–3. The
+  Collector is the toll-taker — now its ask counts the purse:
+  `tollPrice = clamp(2, floor(purse × 0.12), 24)`, live via a new optional
+  `EntityCtx.purse` (Game wires `() => this.imprints`; headless ctxs omit).
+- A fat purse is announced: purse ≥ ~67 flips the spawn cue to '[a tin of
+  teeth rattles — counting what you carry]' — the honest tell that
+  hoarding draws a heavier ask. The prompt prints the live price; the
+  'toll' Game case reads `it.data.price` (falls back to 2 for legacy
+  registrations). Re-offers after a refused approach re-count the purse.
+- The choice is unchanged in shape: pay the scaled toll (it whispers the
+  nearest threat's distance) or refuse and drag its rattle two rooms —
+  real noise to anything that hunts by sound. Now meaningful at every
+  purse level instead of trivial once you're rich.
+- Vitest +3 (scale 5→2 / 50→6 / 150→18 / 400→24, pay→whisper→leave,
+  rich-purse spawn cue), props.spec +1 (real path: purse 150 → prompt
+  '18 imprints' → hold E → purse 132 → 'the tin accepts').
+- Gates: tsc, lint, 116 vitest, 5-seed sim, props.spec 17/17, build.
+- Trap learned: vitest describes nest — closing a describe early splits a
+  spec into an orphaned tail block. And for e2e toll math, `imprints`
+  is Game-private — cast `g as unknown as { imprints }`.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - The purse still accrues faster than it spends mid-run — the Collector
+    is now the progressive sink; watch whether tolls land often enough
+    (it's scheduled, not guaranteed).
+  - Door tolls stay flat 3 — optional loot closets, different mechanic.
+  - Milestone-set hearing remains a design call.
