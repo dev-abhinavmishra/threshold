@@ -1323,7 +1323,7 @@ describe('HazardField steam lines (sprint 261)', () => {
     st.phase = st.cycle - 1.0; // last 1.2s of the cycle — the hum
     h.update(ctx, 0.02);
     expect(ctx.damagePlayer).not.toHaveBeenCalled();
-    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), '[the line hums — it is about to vent]', expect.anything());
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), expect.stringContaining('about to vent'), expect.anything());
     // the vent opens — step inside and it ticks
     ctx.player.pos.x = 1.5;
     st.phase = 0.2;

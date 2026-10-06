@@ -88,7 +88,7 @@ export class InteractionSystem {
         this.add({
           kind: 'drawer', id: `drawer-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}`,
           pos: sock.pos,
-          prompt: locked ? 'Drawer (locked)' : wired ? 'Search drawer — the latch looks forced' : 'Search drawer',
+          prompt: locked ? 'Drawer (locked)' : wired ? 'Search drawer — the latch looks forced; kneel to coax it' : 'Search drawer',
           holdTime: locked ? 1.6 : 0.5,
           data: sock, enabled: !sock.meta.opened, priority: 1,
         });

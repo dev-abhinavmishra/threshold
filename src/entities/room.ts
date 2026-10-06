@@ -919,7 +919,7 @@ export class HazardField {
       }
       if (st.phase > st.cycle - 1.2 && d < 3.2 && ctx.now - (st.warnT ?? -10) > 3) {
         st.warnT = ctx.now;
-        ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent]', { severity: 'warn' });
+        ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent; the valve bleeds it]', { severity: 'warn' });
       }
     }
     this.lastTick += dt;

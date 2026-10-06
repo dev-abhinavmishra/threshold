@@ -1618,3 +1618,18 @@ NEXT SPRINT IDEAS (pick the biggest first)
   NEXT room; also aim pitches must use the live crouch eye (~0.95m),
   not the standing `eyeHeight`.
 - Tests: 143 vitest (+1 generation spec), sim, e2e leg 'wired drawers'.
+
+## Sprint 263 — the hazard-contract audit + tell coaching
+
+- Audited every damagePlayer source: entity attacks (hint+counterplay),
+  authored setpieces (orrery/editor/maelstrom — telegraphed), chandelier
+  drops (chain-creak warn), and the four hazard classes (snare/puddle/
+  steam/wired drawer). The contract held; the real gap was COACHING:
+  tells didn't teach the defuse until after you'd been bitten.
+- Tells now name the verb: drawer prompt 'the latch looks forced; kneel
+  to coax it'; steam warn 'about to vent; the valve bleeds it'.
+- New test/hazardContract.test.ts — the audit encoded as a regression
+  guard: every defuse kind must stay in InteractKind + press dispatch,
+  every hazard keeps its tell string and its damage hint, the drain
+  keeps killing arcs (isRoomDrained).
+- Tests: 146 vitest (+3), sim, e2e all green.
