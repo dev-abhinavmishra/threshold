@@ -7,8 +7,9 @@ context. Keep it updated when conventions change.
 
 ```
 You are continuing an autonomous multi-sprint build of THRESHOLD, an original
-first-person browser horror game, in repo dev-abhinavmishra/threshold on PR #1
-(branch devin/1790826595-threshold-game, base main). DOORS/Pressure (Roblox) is
+first-person browser horror game, in repo dev-abhinavmishra/threshold. PR #1 is
+merged — each new sprint goes on a fresh branch off main with its own PR (do
+NOT keep committing to devin/1790826595-threshold-game). DOORS/Pressure (Roblox) is
 the visual quality bar — the user has rejected flat/blocky art twice; every
 sprint should push density, realism, or gameplay depth. Do NOT stop at a plan
 or a partial slice — each sprint must be huge, tested, and pushed.
@@ -259,6 +260,26 @@ CURRENT STATE (as of sprint 213)
   wall-only). Door-lane guard caught the rack at x-0.6 — keep
   wall-mounts >=1m off door lanes. 67 mill dirs; MILL_DIRS in
   e2e/assets.spec now covers all 7.
+  Sprint 214 review-fix pass (Devin Review on PR #2, all confirmed):
+  (1) Hiding spots render NO furniture by themselves — propKind is
+    write-only intent metadata. instantiate() now guarantees furniture:
+    for each spec.hiding entry it pushes {kind:h.propKind,x,z,yaw} as a
+    prop iff no ground prop within 1.3m — fixes 41 orphan spots across
+    templates, not just flagged ones. Keep hand-placed hide furniture
+    co-located with the spot (<1.3m) or it spawns a duplicate.
+  (2) wallProps() gained exitLanes {xs?:offsets to avoid on the
+    exit(+z) wall, zs?:offsets on e/w walls} — retries 8x then drops.
+    Port offset = 'offset' field, default 0 for s-entry/n-exit.
+    clearDoorLanes keeps props with y>1.9 (hanging mounts immune);
+    lateral lane width is port.width/2+1.15 (=1.85 for 1.4 doors) and
+    the lane reaches 2.55m into the room.
+  (3) Model 'height' scales the WHOLE glTF — kitchenRange includes a
+    2.4m flue, so height must be 2.3 (body then renders ~1.15m matching
+    its collider), not body-height. Keep collider = interactable body.
+
+  WORKFLOW CHANGE: PR #1 merged. Post-merge sprints each get a fresh
+  branch off main + their own PR (sprint 213 = PR #2, branch
+  devin/1791165821-sprint-213).
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material
