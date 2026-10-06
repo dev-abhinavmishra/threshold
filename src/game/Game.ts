@@ -806,7 +806,10 @@ export class Game {
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       hazardEvidence: (key, x, z, r) => {
-        const out = this.hazard.evidence.filter((e) => !e.old && !e.readBy.includes(key)
+        // The Warden smells fresh kills; the dumber rubble chases ghosts —
+        // OLD sign still pulls a grafter (a spent-wire room is free bait).
+        const staleOk = key.startsWith('grafter:');
+        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && !e.readBy.includes(key)
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
         for (const e of out) e.readBy.push(key);
         return out;

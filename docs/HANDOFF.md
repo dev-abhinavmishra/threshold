@@ -1718,3 +1718,14 @@ NEXT SPRINT IDEAS (pick the biggest first)
 **Traps**
 - e2e: check the focused PROMPT (/Forge the sign/), not the interactables list — the forge point and door verbs coexist; focus decides.
 - The 1.4m no-sign gate uses `e.room === this.currentRoom` — evidence.room is the room INDEX (matches currentRoom for main-space evidence since addFromRoom stores room.index).
+
+## Sprint 270 — ghosts (hunter asymmetry on scent)
+
+- `hazardEvidence` getter: `key.startsWith('grafter:')` returns stale (`old`) sign too — the rubble chases ghosts; a spent-wire room is free bait. The Warden reads `!e.old` only — fresh kills.
+- Grafter caption names the read: '[stone drags to an old mark — it does not know]' vs '[...fresh sign]'. `EntityCtx.hazardEvidence` return gained `old?: boolean`.
+- Lore: old sign is now tri-directional — you read it (266), the dumb hunter believes it (270), the smart one doesn't.
+
+**Traps**
+- **Evidence pos must be a complete Vec3** — a planted `{x, z}` record (no `y`) makes `v3dist` NaN → the `d > 3` guard passes as false → the player-read fires `cue(pos=NaN)` → `exponentialRampToValueAtTime` throws inside `audio.play`. Always `v3(x, 0, z)` / `{x, y:0, z}`.
+- e2e hiding spots expose `exitPos`, not `pos`, in the harness type — teleport to `exitPos` + assign `hiddenSpot` (sprint-264 pattern).
+- Probe scripts need the repo's node_modules (run from repo root), the preview server on :4173 (`npm run preview -- --port 4173`), and the `?debug` + `.seed-input` fill + first-button-click boot (no `?seed=` URL param).

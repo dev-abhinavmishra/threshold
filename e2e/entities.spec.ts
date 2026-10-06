@@ -1158,3 +1158,54 @@ test('scent — a killed hazard signs the room, the Warden reads it', async ({ p
   expect(result.backOnLine, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's' grafter @6
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { evidence: { pos: { x: number; z: number }; room: number; kind: string; t: number; readBy: string[]; old?: boolean }[] };
+      entities: { id: string; update(d: number): void; pos?: { x: number; z: number } }[];
+    };
+    const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    if (!gRoom) return { stage: 'none-scheduled' } as const;
+    // hide in a real spot in the grafter's room — let it spawn + settle
+    const spot = gRoom.hidingSpots?.find((sp) => !sp.trappedBy);
+    if (!spot) return { stage: 'no-spot' } as const;
+    g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+    (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    // plant stale sign in the room — old evidence only a grafter smells
+    ga.hazard.evidence.push({
+      pos: { x: gRoom.origin.x, y: 0, z: gRoom.origin.z }, room: gRoom.index,
+      kind: 'wire', t: -1, readBy: [], old: true,
+    });
+    let closest = Infinity;
+    for (let f = 0; f < 900; f++) {
+      g.frame();
+      const gr = ga.entities.find((e) => e.id === 'grafter');
+      if (gr?.pos) closest = Math.min(closest,
+        Math.hypot(gr.pos.x - gRoom.origin.x, gr.pos.z - gRoom.origin.z));
+    }
+    const staleRead = ga.hazard.evidence[ga.hazard.evidence.length - 1].readBy.some((r) => r.startsWith('grafter'));
+    const ghostCaption = caps.some((c) => /old mark/.test(c));
+    return { stage: 'done', closest, staleRead, ghostCaption, caps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.staleRead, JSON.stringify(result)).toBe(true);
+  expect(result.closest, JSON.stringify(result)).toBeLessThan(3.2);
+  expect(result.ghostCaption, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

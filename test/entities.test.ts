@@ -1285,6 +1285,31 @@ describe('Grafter (sprint 256)', () => {
     expect(evidence.readBy).toContain('grafter:0');
     g.dispose();
   });
+
+  it('chases ghosts — stale sign names itself in the drag (sprint 270)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    const evidence = { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: -1, readBy: [] as string[], old: true };
+    ctx.hazardEvidence = (key, x, z, r) => {
+      const out = !evidence.readBy.includes(key)
+        && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; g.update(0.05); }
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /old mark/.test(t)), 'stale sign smells like stale sign').toBe(true);
+    g.dispose();
+  });
 });
 
 
