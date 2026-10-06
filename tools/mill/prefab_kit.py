@@ -1490,37 +1490,6 @@ def stoveRange():
     join_all('stoveRange')
 
 
-def potRack():
-    """Wall pot rack — oak back shelf, brass hanging rail beneath, five
-    S-hooks, two hanging pans and a ladle. Center-anchored wall mount."""
-    w = 0.9
-    cube('shelf', (0, -0.12, 0.42), (w, 0.24, 0.03), WOOD, 0.008)
-    cube('lip', (0, -0.235, 0.44), (w, 0.02, 0.05), WORN, 0.005)
-    # wall cleats
-    for sx in (-1, 1):
-        cube('cleat', (sx * (w / 2 - 0.08), -0.02, 0.4), (0.06, 0.05, 0.12), DARK, 0.006)
-    rail = cyl('rail', (0, -0.14, 0.28), 0.011, w - 0.1, BRASS, 8)
-    rail.rotation_euler[1] = math.pi / 2
-    # S-hooks: little tori around the rail
-    hook_x = [-0.32, -0.16, 0.0, 0.16, 0.32]
-    for hx in hook_x:
-        torus('hook', (hx, -0.14, 0.245), 0.028, 0.006, BRASS, rot=(math.pi / 2, 0, 0), seg=10)
-    # two pans hanging from the middle hooks
-    for i, hx in enumerate((-0.16, 0.16)):
-        pan_y, pan_z = -0.16, 0.14 - i * 0.015
-        cyl('pan', (hx, pan_y, pan_z), 0.075 - i * 0.01, 0.035, BRASS, 14)
-        hnd = cube('panHnd', (hx, pan_y, pan_z + 0.12), (0.018, 0.02, 0.14), BRASS, 0.004)
-        hnd.rotation_euler[0] = 0.1 * (1 if i else -1)
-    # ladle on the last hook — stem + bowl
-    cyl('ladleStem', (0.32, -0.15, 0.13), 0.007, 0.2, BRASS, 8)
-    bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.035,
-        location=(0.32, -0.15, 0.03))
-    ladle = bpy.context.object
-    ladle.scale = (1, 1, 0.55)
-    ladle.data.materials.append(BRASS)
-    join_all('potRack')
-
-
 def dishDrainer():
     """Counter dish drainer — wood drip tray, six tilted plate slots,
     cutlery cup with upright spoons. Small tabletop clutter piece."""
@@ -1701,30 +1670,6 @@ def prayerKneeler():
     shelf.rotation_euler[0] = 0.42
     cube('rest', (0, -d / 2 + 0.045, h - 0.34), (w - 0.12, 0.045, 0.3), VELVET, 0.015)
     join_all('prayerKneeler')
-
-
-def chapelAltar():
-    """Stone altar table — plinth, paneled base, mensa slab with lip,
-    velvet frontal, twin candle sockets, tilted missal stand."""
-    w, h, d = 1.7, 1.05, 0.72
-    cube('plinth', (0, 0, 0.055), (w + 0.12, d + 0.1, 0.11), STONE, 0.02)
-    cube('base', (0, 0.02, h / 2), (w - 0.16, d - 0.14, h - 0.2), STONE, 0.02)
-    # recessed panel on the front of the base
-    cube('panel', (0, -d / 2 + 0.06, h / 2), (w - 0.4, 0.03, h - 0.4), DARK, 0.015)
-    cube('slab', (0, 0, h - 0.06), (w, d, 0.12), STONE, 0.018)
-    cube('lip', (0, 0, h - 0.14), (w - 0.14, d - 0.1, 0.06), STONE, 0.012)
-    # velvet frontal hanging over the front edge of the slab
-    cube('frontal', (0, -d / 2 - 0.01, h - 0.4), (w - 0.34, 0.02, 0.5), VELVET, 0.008)
-    cube('frontalTop', (0, -d / 2 + 0.12, h - 0.005), (w - 0.34, 0.26, 0.02), VELVET, 0.006)
-    # candle sockets on the slab
-    for sx in (-1, 1):
-        cyl('socket', (sx * (w / 2 - 0.24), 0, h + 0.025), 0.04, 0.05, BRASS, 12)
-        cyl('wax', (sx * (w / 2 - 0.24), 0, h + 0.17), 0.022, 0.24, CANDLE, 10)
-    # tilted missal stand
-    cube('missalPost', (0, 0.1, h + 0.07), (0.06, 0.06, 0.14), DARK, 0.008)
-    stand = cube('missal', (0, 0.1, h + 0.15), (0.34, 0.24, 0.03), DARK, 0.008)
-    stand.rotation_euler[0] = 0.5
-    join_all('chapelAltar')
 
 
 def votiveStand():
@@ -2193,6 +2138,509 @@ def keyCabinet():
     join_all('keyCabinet')
 
 
+def kitchenRange():
+    """Cast-iron kitchen range — firebox door, hotplate top with rings,
+    flue pipe, side shelf, short legs. ~1.1 tall, 1.4 wide."""
+    w, d = 1.4, 0.72
+    # body on legs
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            cyl('leg', (sx * (w / 2 - 0.08), sz * (d / 2 - 0.08), 0.07), 0.028, 0.14, IRON, 8)
+    cube('body', (0, 0, 0.55), (w, d, 0.84), IRON, 0.02)
+    cube('toeKick', (0, 0, 0.16), (w - 0.1, d - 0.1, 0.1), DARK, 0.01)
+    # firebox door + grate air holes
+    cube('fireDoor', (0, -d / 2 - 0.012, 0.42), (0.42, 0.04, 0.34), DARK, 0.015)
+    torus('doorRing', (0.12, -d / 2 - 0.035, 0.42), 0.035, 0.009, IRON, seg=12)
+    for i in range(4):
+        cyl('vent', (-0.24 + i * 0.16, -d / 2 - 0.01, 0.66), 0.012, 0.05, BRASS, 6).rotation_euler[0] = math.pi / 2
+    # hotplate top — slab + two pot rings + raised back edge
+    cube('hotTop', (0, 0, 0.99), (w + 0.02, d + 0.02, 0.045), IRON, 0.01)
+    for sx in (-1, 1):
+        torus('ring', (sx * 0.32, -0.02, 1.015), 0.14, 0.014, DARK, seg=18)
+        cyl('ringPlug', (sx * 0.32, -0.02, 1.012), 0.1, 0.014, DARK, 16)
+    cube('backSplash', (0, d / 2 - 0.03, 1.18), (w, 0.05, 0.36), IRON, 0.012)
+    # flue pipe rising from rear left
+    pipe_seg('flue', (-0.45, d / 2 - 0.12, 1.0), (-0.45, d / 2 - 0.12, 2.4), 0.075, IRON, 14)
+    cyl('flueCollar', (-0.45, d / 2 - 0.12, 1.02), 0.095, 0.06, IRON, 14)
+    # right side warming shelf on brackets
+    cube('sideShelf', (w / 2 + 0.09, 0, 0.86), (0.2, d - 0.1, 0.03), IRON, 0.006)
+    pipe_seg('shBrace', (w / 2 + 0.16, -d / 2 + 0.08, 0.62), (w / 2 + 0.16, -d / 2 + 0.08, 0.85), 0.012, IRON, 8)
+    pipe_seg('shBrace2', (w / 2 + 0.16, d / 2 - 0.08, 0.62), (w / 2 + 0.16, d / 2 - 0.08, 0.85), 0.012, IRON, 8)
+    join_all('kitchenRange')
+
+
+def sculleryRack():
+    """Wall plate rack — two slatted shelves, plate dividers up top,
+    drip rail below. Center-anchored wall mount, ~0.75 tall, 1.0 wide."""
+    w, d = 1.0, 0.24
+    # back frame
+    cube('backTop', (0, 0, 0.36), (w, 0.03, 0.06), WOOD, 0.006)
+    cube('backBot', (0, 0, -0.36), (w, 0.03, 0.06), WOOD, 0.006)
+    for sx in (-1, 1):
+        cube('upright', (sx * (w / 2 - 0.03), 0, 0), (0.05, 0.04, 0.78), WOOD, 0.006)
+    # two slatted shelves (slats run x, gaps between)
+    for sh in (-0.02, -0.34):
+        for i in range(5):
+            cube('slat', (0, -d / 2 + 0.03 + i * (d - 0.06) / 4, sh), (w - 0.08, 0.025, 0.016), WOOD, 0.003)
+    # plate dividers on upper shelf
+    for i in range(6):
+        x = -w / 2 + 0.14 + i * 0.13
+        pipe_seg('divider', (x, -d / 2 + 0.02, -0.02), (x, -d / 2 + 0.02, 0.2), 0.006, IRON, 6)
+    # three standing plates
+    for i in range(3):
+        x = -0.26 + i * 0.26
+        pl = cyl('plate', (x, -0.05, 0.1), 0.09, 0.012, STONE, 16)
+        pl.rotation_euler[0] = math.pi / 2
+    # drip rail
+    cyl('dripRail', (0, -d / 2 + 0.02, -0.44), 0.009, w - 0.1, BRASS, 8).rotation_euler[1] = math.pi / 2
+    join_all('sculleryRack')
+
+
+def potRack():
+    """Hanging pot rail — iron bar between two wall arms, S-hooks, three
+    hanging pans and a ladle. Center-anchored wall mount, ~0.55 tall."""
+    w = 0.9
+    for sx in (-1, 1):
+        cube('armPlate', (sx * (w / 2 - 0.03), 0, 0.02), (0.04, 0.03, 0.1), IRON, 0.004)
+        pipe_seg('arm', (sx * (w / 2 - 0.03), 0, 0.04), (sx * (w / 2 - 0.03), -0.26, 0.04), 0.01, IRON, 8)
+        pipe_seg('brace', (sx * (w / 2 - 0.03), 0, -0.02), (sx * (w / 2 - 0.03), -0.22, 0.04), 0.007, IRON, 8)
+    cyl('rail', (0, -0.26, 0.04), 0.012, w - 0.06, IRON, 10).rotation_euler[1] = math.pi / 2
+    # hooks + cookware
+    for i, x in enumerate((-0.3, -0.08, 0.16, 0.34)):
+        torus('hook', (x, -0.26, -0.02), 0.018, 0.005, IRON, seg=10)
+        drop = -0.06 - 0.03 * (i % 2)
+        pr = 0.11 - 0.015 * (i % 3)
+        pan = cyl('pan', (x, -0.26, drop - 0.09), pr, 0.03, IRON if i % 3 else BRASS, 18)
+        torus('panRim', (x, -0.26, drop - 0.075), pr, 0.006, IRON, seg=16)
+        pipe_seg('handle', (x, -0.26, drop - 0.02), (x, -0.26, drop - 0.085), 0.008, IRON, 8)
+    # ladle at the right end — long stem + bowl
+    pipe_seg('ladleStem', (0.42, -0.26, 0.03), (0.42, -0.26, -0.2), 0.006, BRASS, 8)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.035, location=(0.42, -0.26, -0.22))
+    lb = bpy.context.object
+    lb.scale = (1, 1, 0.6)
+    bpy.ops.object.transform_apply(scale=True)
+    lb.data.materials.append(BRASS)
+    join_all('potRack')
+
+
+def pantryShelf():
+    """Deep pantry shelf — five boards on end cheeks, stocked with jars,
+    tins and a bread box. ~1.9 tall, 1.3 wide."""
+    w, d, h = 1.3, 0.45, 1.9
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.03), 0, h / 2), (0.06, d, h), WOOD, 0.008)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.06, 0.03, h - 0.1), WORN, 0.006)
+    import random
+    rng = random.Random(7)
+    levels = [0.06, 0.44, 0.82, 1.2, 1.58]
+    for li, lv in enumerate(levels):
+        cube('board', (0, 0, lv), (w - 0.06, d - 0.04, 0.035), WOOD, 0.005)
+        x = -w / 2 + 0.12
+        while x < w / 2 - 0.16:
+            r = rng.random()
+            if r < 0.45:
+                # jar — glass-ish stone body + lid
+                jr = 0.045 + rng.random() * 0.02
+                jh = 0.1 + rng.random() * 0.12
+                cyl('jar', (x, rng.uniform(-0.06, 0.06), lv + 0.02 + jh / 2), jr, jh, STONE, 10)
+                cyl('jarLid', (x, 0, lv + 0.02 + jh + 0.008), jr + 0.006, 0.016, BRASS, 10)
+                x += jr * 2 + 0.05
+            elif r < 0.8:
+                cube('tin', (x, rng.uniform(-0.04, 0.04), lv + 0.08), (0.1, 0.09, 0.12), WORN, 0.008)
+                x += 0.14
+            else:
+                cube('stackBox', (x, 0, lv + 0.1), (0.16, d * 0.6, 0.16), CLOTH, 0.01)
+                x += 0.22
+    cube('breadBox', (w / 2 - 0.2, -0.02, h - 0.13), (0.3, 0.3, 0.22), WOOD, 0.04)
+    join_all('pantryShelf')
+
+
+def stackedLinen():
+    """Open linen shelf — frame + four boards stacked with folded sheet
+    piles in two columns. ~1.8 tall, 1.1 wide."""
+    w, d, h = 1.1, 0.5, 1.8
+    for sx in (-1, 1):
+        cube('cheek', (sx * (w / 2 - 0.03), 0, h / 2), (0.05, d, h), WOOD, 0.008)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.06, 0.03, h - 0.06), WORN, 0.006)
+    levels = [0.05, 0.48, 0.91, 1.34]
+    import random
+    rng = random.Random(11)
+    for lv in levels:
+        cube('board', (0, 0, lv), (w - 0.06, d - 0.02, 0.03), WOOD, 0.005)
+        for cx in (-0.26, 0.26):
+            n = 2 + int(rng.random() * 3)
+            for k in range(n):
+                cube('fold', (cx + rng.uniform(-0.02, 0.02), rng.uniform(-0.02, 0.02),
+                              lv + 0.045 + k * 0.075), (0.42, d - 0.12, 0.075),
+                     CLOTH if rng.random() > 0.3 else STONE, 0.02)
+    join_all('stackedLinen')
+
+
+def upholsteredHeadboard():
+    """Padded headboard — dark wood frame, six tufted cushion cells,
+    nailhead edge. Floor anchored ~1.3 tall, 1.7 wide."""
+    w = 1.7
+    cube('frameL', (-w / 2 + 0.04, 0, 0.62), (0.08, 0.09, 1.24), DARK, 0.01)
+    cube('frameR', (w / 2 - 0.04, 0, 0.62), (0.08, 0.09, 1.24), DARK, 0.01)
+    cube('frameTop', (0, 0, 1.2), (w, 0.09, 0.09), DARK, 0.01)
+    cube('frameBot', (0, 0, 0.05), (w, 0.09, 0.1), DARK, 0.01)
+    # tufted cushion grid — 3x2 cells of padded boxes
+    for ix in range(3):
+        for iz in range(2):
+            cube('pad', (-w / 2 + 0.11 + ix * (w - 0.22) / 2.0 + 0.0, -0.055, 0.5 + iz * 0.33),
+                 ((w - 0.26) / 3, 0.09, 0.3), WORN, 0.035)
+            # tuft button
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.014,
+                location=(-w / 2 + 0.11 + ix * (w - 0.22) / 2.0, -0.104, 0.5 + iz * 0.33))
+            bpy.context.object.data.materials.append(DARK)
+    # nailhead strip along the top frame edge
+    for i in range(12):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=6, ring_count=4, radius=0.008,
+            location=(-w / 2 + 0.12 + i * (w - 0.24) / 11, -0.046, 1.16))
+        bpy.context.object.data.materials.append(BRASS)
+    join_all('upholsteredHeadboard')
+
+
+def coalScuttle():
+    """Coal scuttle — tilted hod bucket, rim band, brass handle, spilling
+    coal lumps and a shovel. ~0.55 tall."""
+    hod = cyl('hod', (0, 0, 0.3), 0.19, 0.3, IRON, 16)
+    hod.scale = (1, 0.85, 1)
+    hod.rotation_euler[0] = 0.35
+    bpy.ops.object.transform_apply(scale=True)
+    torus('hodRim', (0, -0.115, 0.44), 0.185, 0.014, BRASS, rot=(0.35, 0, 0), seg=18)
+    cyl('hodFoot', (0, 0.045, 0.1), 0.14, 0.05, IRON, 14)
+    pipe_seg('handleA', (-0.17, 0.02, 0.38), (0, 0.12, 0.58), 0.012, BRASS, 8)
+    pipe_seg('handleB', (0.17, 0.02, 0.38), (0, 0.12, 0.58), 0.012, BRASS, 8)
+    cyl('grip', (0, 0.12, 0.59), 0.015, 0.1, WORN, 8).rotation_euler[2] = math.pi / 2
+    # coal lumps at the mouth + shovel leaning
+    import random
+    rng = random.Random(3)
+    for i in range(5):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.05 + rng.random() * 0.03,
+            location=(rng.uniform(-0.1, 0.1), -0.1 + rng.uniform(-0.02, 0.04), 0.42 + rng.uniform(-0.02, 0.05)))
+        bpy.context.object.data.materials.append(DARK)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.055,
+        location=(0.16, -0.2, 0.05))
+    bpy.context.object.data.materials.append(DARK)
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=0.045,
+        location=(-0.12, -0.24, 0.04))
+    bpy.context.object.data.materials.append(DARK)
+    pipe_seg('shovelStick', (0.24, 0.1, 0.05), (0.34, 0.08, 0.62), 0.011, WORN, 8)
+    cube('shovelPan', (0.22, 0.09, 0.05), (0.14, 0.16, 0.03), IRON, 0.01)
+    join_all('coalScuttle')
+
+
+def curtainSwag():
+    """Window swag valance — brass rod with finials, a heavy sagging swag
+    (three cloth lobes) and two side tails. Center-anchored wall mount,
+    ~1.7 wide, hangs ~0.55 below the rod."""
+    cyl('rod', (0, 0, 0), 0.014, 1.7, BRASS, 10).rotation_euler[1] = math.pi / 2
+    for sx in (-1, 1):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.032,
+            location=(sx * 0.86, 0, 0))
+        bpy.context.object.data.materials.append(BRASS)
+        cube('bracket', (sx * 0.78, 0.05, 0.02), (0.025, 0.09, 0.05), BRASS, 0.005)
+    # swag: three flattened lobes dipping lowest at center
+    for i, (lx, s) in enumerate(((-0.45, 0.34), (0.0, 0.5), (0.45, 0.34))):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=12, radius=0.16,
+            location=(lx, -0.03, -0.12))
+        lobe = bpy.context.object
+        lobe.scale = (s / 0.32 * 1.15, 0.32, 0.62)
+        bpy.ops.object.transform_apply(scale=True)
+        lobe.data.materials.append(CLOTH)
+        # pleat ridges on each lobe
+        for k in range(4):
+            torus('pleat', (lx - 0.08 + k * 0.05, -0.085, -0.12), 0.1 + 0.05 * s,
+                  0.008, DARK, rot=(math.pi / 2, 0, 0), seg=12)
+    # side tails: stacked angled folds
+    for sx in (-1, 1):
+        for i in range(4):
+            cube('tail', (sx * 0.72, -0.02, -0.18 - i * 0.09),
+                 (0.16 - i * 0.018, 0.09, 0.11), CLOTH, 0.02).rotation_euler[1] = sx * 0.12
+        torus('tie', (sx * 0.72, -0.03, -0.4), 0.05, 0.012, BRASS,
+              rot=(math.pi / 2, 0, 0), seg=12)
+    join_all('curtainSwag')
+
+
+def drapePanel():
+    """Single floor-length drape panel — pleated cloth column (5 waved
+    slats), header rod pocket, tassel sash tied at mid-height.
+    Center-anchored wall mount, ~0.55 wide, ~2.3 tall."""
+    for i in range(5):
+        x = -0.22 + i * 0.11
+        d = 0.05 + (0.035 if i % 2 else 0)
+        cube('pleat', (x, d * 0.5 - 0.05, 0), (0.1, d, 2.3), CLOTH, 0.03)
+        # hem piping at bottom edge
+        cube('hem', (x, d * 0.5 - 0.05, -1.12), (0.1, d, 0.05), DARK, 0.01)
+    cyl('header', (0, 0, 1.17), 0.02, 0.55, DARK, 10).rotation_euler[1] = math.pi / 2
+    torus('sash', (0.05, 0.03, -0.1), 0.09, 0.014, BRASS,
+          rot=(0, 0, 0.3), seg=14)
+    cyl('tassel', (0.12, 0.05, -0.26), 0.022, 0.12, BRASS, 8)
+    join_all('drapePanel')
+
+
+def linenPress():
+    """Linen press — tall case with cornice, three open shelves of folded
+    stacks and two drawers with brass knobs below. ~2.0 tall, 1.3 wide."""
+    w, d, h = 1.3, 0.55, 2.0
+    cube('caseL', (-w / 2 + 0.04, 0, h / 2), (0.08, d, h), DARK, 0.01)
+    cube('caseR', (w / 2 - 0.04, 0, h / 2), (0.08, d, h), DARK, 0.01)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.1, 0.04, h - 0.1), WOOD, 0.006)
+    cube('cornice', (0, 0, h - 0.04), (w + 0.06, d + 0.06, 0.1), DARK, 0.015)
+    cube('plinth', (0, 0, 0.07), (w + 0.02, d + 0.02, 0.14), DARK, 0.01)
+    import random
+    rng = random.Random(21)
+    for lv in (0.92, 1.28, 1.64):
+        cube('shelf', (0, 0, lv), (w - 0.1, d - 0.05, 0.035), DARK, 0.005)
+        for cx in (-0.3, 0.05, 0.4):
+            for k in range(2 + int(rng.random() * 3)):
+                cube('linen', (cx + rng.uniform(-0.02, 0.02), rng.uniform(-0.02, 0.02),
+                               lv + 0.06 + k * 0.07), (0.3, d - 0.14, 0.065),
+                     CLOTH if rng.random() > 0.25 else STONE, 0.015)
+    for i, z in enumerate((0.3, 0.62)):
+        cube('drawer', (0, -d / 2 + 0.01, z), (w - 0.14, 0.05, 0.28), WOOD, 0.008)
+        for sx in (-0.4, 0.4):
+            bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.022,
+                location=(sx, -d / 2 - 0.03, z))
+            bpy.context.object.data.materials.append(BRASS)
+    join_all('linenPress')
+
+
+def candelabra():
+    """Floor candelabra — tripod feet, brass stem, three swept arms with
+    candle cups, drip pans and wax sticks. ~1.55 tall."""
+    cyl('base', (0, 0, 0.03), 0.16, 0.06, BRASS, 18)
+    cyl('stem', (0, 0, 0.75), 0.02, 1.4, BRASS, 10)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=10, ring_count=8, radius=0.035,
+        location=(0, 0, 0.42))
+    bpy.context.object.data.materials.append(BRASS)
+    for i in range(3):
+        ang = i * 2 * math.pi / 3
+        dx, dy = math.cos(ang), math.sin(ang)
+        # legs
+        pipe_seg('leg', (0, 0, 0.12), (dx * 0.2, dy * 0.2, 0.0), 0.013, BRASS, 8)
+        # arms sweep out then up
+        pipe_seg('arm', (0, 0, 1.28), (dx * 0.16, dy * 0.16, 1.36), 0.011, BRASS, 8)
+        pipe_seg('armUp', (dx * 0.16, dy * 0.16, 1.36), (dx * 0.16, dy * 0.16, 1.46), 0.011, BRASS, 8)
+        cyl('pan', (dx * 0.16, dy * 0.16, 1.46), 0.045, 0.015, BRASS, 12)
+        cyl('cup', (dx * 0.16, dy * 0.16, 1.49), 0.02, 0.05, BRASS, 10)
+        cyl('wax', (dx * 0.16, dy * 0.16, 1.55), 0.013, 0.09, STONE, 8)
+    cyl('panTop', (0, 0, 1.5), 0.05, 0.015, BRASS, 12)
+    cyl('cupTop', (0, 0, 1.53), 0.02, 0.05, BRASS, 10)
+    cyl('waxTop', (0, 0, 1.59), 0.013, 0.1, STONE, 8)
+    join_all('candelabra')
+
+
+def valveWheel():
+    """Gate valve wheel on a wall pipe stub — flange, riser, handwheel
+    torus with five spokes and hub cap. Center-anchored wall mount."""
+    cyl('flange', (0, 0.02, 0), 0.09, 0.03, IRON, 14).rotation_euler[0] = math.pi / 2
+    pipe_seg('stub', (0, 0.02, 0), (0, -0.16, 0), 0.032, IRON, 10)
+    cyl('hub', (0, -0.2, 0), 0.035, 0.05, BRASS, 10).rotation_euler[0] = math.pi / 2
+    torus('wheel', (0, -0.2, 0), 0.17, 0.016, IRON, rot=(math.pi / 2, 0, 0), seg=24)
+    for i in range(5):
+        ang = i * 2 * math.pi / 5
+        pipe_seg('spoke', (0, -0.2, 0), (math.cos(ang) * 0.16, -0.2, math.sin(ang) * 0.16),
+                 0.007, IRON, 6)
+    cyl('cap', (0, -0.23, 0), 0.028, 0.03, BRASS, 10).rotation_euler[0] = math.pi / 2
+    join_all('valveWheel')
+
+
+def dumbWaiterDoor():
+    """Dumbwaiter hatch — recessed frame, panel door dropped open with a
+    brass pull and a shelf lip sill. Center-anchored wall mount ~0.9."""
+    cube('frameT', (0, 0, 0.42), (0.95, 0.08, 0.07), DARK, 0.008)
+    cube('frameB', (0, 0, -0.42), (0.95, 0.08, 0.07), DARK, 0.008)
+    cube('frameL', (-0.44, 0, 0), (0.07, 0.08, 0.84), DARK, 0.008)
+    cube('frameR', (0.44, 0, 0), (0.07, 0.08, 0.84), DARK, 0.008)
+    cube('shaft', (0, 0.05, 0), (0.8, 0.06, 0.76), DARK, 0)
+    # open door: hinged at the sill, tipped out toward the room
+    door = cube('door', (0, -0.24, -0.38), (0.76, 0.5, 0.04), WOOD, 0.01)
+    door.rotation_euler[0] = math.pi / 2 - 0.12
+    cyl('pull', (0, -0.5, -0.36), 0.015, 0.14, BRASS, 8).rotation_euler[2] = math.pi / 2
+    cube('sill', (0, -0.06, -0.46), (1.0, 0.14, 0.05), DARK, 0.008)
+    join_all('dumbWaiterDoor')
+
+
+def apothecaryCabinet():
+    """Apothecary card cabinet — grid of 20 small drawers with brass bin
+    pulls under a heavy top slab. ~1.15 tall, 1.4 wide."""
+    w, d, h = 1.4, 0.5, 1.15
+    cube('caseL', (-w / 2 + 0.035, 0, h / 2), (0.07, d, h), DARK, 0.008)
+    cube('caseR', (w / 2 - 0.035, 0, h / 2), (0.07, d, h), DARK, 0.008)
+    cube('back', (0, d / 2 - 0.02, h / 2), (w - 0.08, 0.03, h - 0.08), WORN, 0.005)
+    cube('top', (0, 0, h - 0.025), (w + 0.04, d + 0.04, 0.05), DARK, 0.008)
+    cube('base', (0, 0, 0.05), (w + 0.02, d + 0.02, 0.1), DARK, 0.008)
+    cols, rows = 5, 4
+    for r in range(rows):
+        for c in range(cols):
+            x = -w / 2 + 0.07 + (c + 0.5) * (w - 0.14) / cols
+            z = 0.12 + (r + 0.5) * (h - 0.24) / rows
+            cube('drw', (x, -d / 2 + 0.015, z),
+                 ((w - 0.16) / cols - 0.015, 0.04, (h - 0.26) / rows - 0.015), WOOD, 0.004)
+            torus('binpull', (x, -d / 2 - 0.015, z - 0.01), 0.028, 0.006, BRASS,
+                  rot=(math.pi / 2, 0, 0), seg=10)
+            cube('label', (x, -d / 2 - 0.008, z + 0.025), (0.06, 0.01, 0.02), BRASS, 0.002)
+    join_all('apothecaryCabinet')
+
+
+def meatHook():
+    """Hanging carcass on a meat hook — chain link, gape hook, and a dark
+    slab of meat sagging off it. Center-anchored, hangs ~1.15."""
+    n = 5
+    for i in range(n):
+        torus('link', (0, 0, 1.1 - i * 0.07), 0.028, 0.007, IRON,
+              rot=(math.pi / 2 if i % 2 == 0 else 0, math.pi / 2 if i % 2 else 0, 0), seg=10)
+    torus('hook', (0, -0.02, 0.52), 0.05, 0.013, IRON, rot=(0, math.pi / 2, 0), seg=14)
+    cyl('hookTip', (0, -0.07, 0.58), 0.011, 0.1, IRON, 8).rotation_euler[0] = 0.6
+    # meat: a sagging dark slab with a fat cap and two rib hints
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=0.16, location=(0, 0.02, 0.3))
+    meat = bpy.context.object
+    meat.scale = (0.85, 0.55, 1.5)
+    bpy.ops.object.transform_apply(scale=True)
+    meat.data.materials.append(WORN)
+    cube('fat', (0, -0.03, 0.42), (0.2, 0.14, 0.06), STONE, 0.02).rotation_euler[2] = 0.15
+    for z in (0.18, 0.3):
+        torus('rib', (0, -0.06, z), 0.1, 0.008, STONE, rot=(0.2, math.pi / 2, 0), seg=10)
+    join_all('meatHook')
+
+
+def wineRack():
+    """Wall wine rack — frame with two diagonal slats forming a lattice
+    and six bottle necks resting in the cells. Center-anchored wall
+    mount ~0.9 tall, 0.8 wide."""
+    w, h = 0.8, 0.9
+    cube('rTop', (0, 0, h / 2 - 0.02), (w, 0.06, 0.05), DARK, 0.005)
+    cube('rBot', (0, 0, -h / 2 + 0.02), (w, 0.06, 0.05), DARK, 0.005)
+    cube('rL', (-w / 2 + 0.025, 0, 0), (0.05, 0.06, h), DARK, 0.005)
+    cube('rR', (w / 2 - 0.025, 0, 0), (0.05, 0.06, h), DARK, 0.005)
+    for sgn in (-1, 1):
+        s = cube('slat', (0, 0, 0), (w - 0.05, 0.04, 0.045), WOOD, 0.004)
+        s.rotation_euler[1] = sgn * 0.62
+        bpy.ops.object.transform_apply(rotation=True)
+        s.scale = (1.28, 1, 1)
+        bpy.ops.object.transform_apply(scale=True)
+        bpy.context.object.data.materials.append(WOOD)
+    import random
+    rng = random.Random(7)
+    for i in range(6):
+        x = -0.27 + (i % 3) * 0.27
+        z = 0.22 - (i // 3) * 0.4
+        b = cyl('bottle', (x, -0.02, z), 0.04, 0.26,
+                DARK if rng.random() > 0.4 else CLOTH, 10)
+        b.rotation_euler[0] = math.pi / 2 + 0.12
+        bpy.ops.object.transform_apply(rotation=True)
+        cyl('neck', (x, -0.16, z + 0.035), 0.013, 0.1, DARK, 8).rotation_euler[0] = math.pi / 2 + 0.12
+    join_all('wineRack')
+
+
+def grateDrain():
+    """Floor drain — recessed rim ring, iron grate slats and a dark
+    under-shadow disc. Floor prop ~0.6 diameter."""
+    torus('rim', (0, 0, 0.012), 0.26, 0.02, IRON, seg=24)
+    cyl('pit', (0, 0, -0.01), 0.25, 0.02, DARK, 20)
+    for i in range(7):
+        cube('slat', (-0.18 + i * 0.06, 0, 0.02), (0.03, 0.5, 0.02), IRON, 0.004)
+    torus('inner', (0, 0, 0.026), 0.13, 0.008, IRON, seg=20)
+    join_all('grateDrain')
+
+
+def platedRoast():
+    """Roast fowl on an oval serving platter — browned dome body, two leg
+    drums and a few garnish wedges. Table prop ~0.55 wide, ~0.24 tall."""
+    cyl('platter', (0, 0, 0.015), 0.27, 0.03, DARK, 24)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.17, segments=16, ring_count=8,
+                                         location=(0, 0, 0.13))
+    body = bpy.context.object
+    body.name = 'roast'
+    body.scale = (1.25, 0.85, 0.75)
+    bpy.ops.object.transform_apply(scale=True)
+    body.data.materials.append(WORN)
+    for sx in (-1, 1):
+        leg = cyl('leg', (sx * 0.16, -0.02, 0.1), 0.035, 0.16, WORN, 10)
+        leg.rotation_euler[1] = sx * 1.15
+        bpy.context.view_layer.update()
+    for i in range(5):
+        a = -0.6 + i * 0.3
+        cube('garnish', (math.sin(a) * 0.22, 0.1 + math.cos(a) * 0.05, 0.04),
+             (0.05, 0.09, 0.03), CLOTH, 0.008)
+    torus('rim', (0, 0, 0.03), 0.25, 0.012, BRASS, seg=24)
+    join_all('platedRoast')
+
+
+def platedPie():
+    """Pie in a tin — domed crust, crimped rim and a lattice top.
+    Table prop ~0.3 diameter, ~0.15 tall."""
+    cyl('tin', (0, 0, 0.03), 0.15, 0.06, IRON, 20)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.14, segments=16, ring_count=8,
+                                         location=(0, 0, 0.07))
+    dome = bpy.context.object
+    dome.name = 'crust'
+    dome.scale = (1, 1, 0.55)
+    bpy.ops.object.transform_apply(scale=True)
+    dome.data.materials.append(WORN)
+    torus('crimp', (0, 0, 0.1), 0.145, 0.018, WORN, seg=20)
+    for i in range(-2, 3):
+        cube('lat', (i * 0.045, 0, 0.135), (0.03, 0.24, 0.012), WORN, 0.005)
+        cube('lat', (0, i * 0.045, 0.145), (0.24, 0.03, 0.012), WORN, 0.005)
+    join_all('platedPie')
+
+
+def ceilingRose():
+    """Ornamental ceiling rose — flat backing disc, two concentric plaster
+    rings, a ring of small petals and a central hanging boss. Mounted
+    centre-anchored under the ceiling; ~1.1 diameter, ~0.2 deep."""
+    cyl('disc', (0, 0, -0.01), 0.55, 0.03, STONE, 32)
+    torus('outer', (0, 0, -0.02), 0.48, 0.035, STONE, seg=32)
+    torus('mid', (0, 0, -0.045), 0.3, 0.03, STONE, seg=24)
+    for i in range(12):
+        a = math.pi * 2 * i / 12
+        p = cube('petal', (math.cos(a) * 0.36, math.sin(a) * 0.36, -0.05),
+                 (0.07, 0.14, 0.04), STONE, 0.015)
+        p.rotation_euler[2] = a
+        bpy.context.view_layer.update()
+    cyl('boss', (0, 0, -0.1), 0.09, 0.12, DARK, 16)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.07, segments=12, ring_count=6,
+                                         location=(0, 0, -0.18))
+    bpy.context.object.data.materials.append(BRASS)
+    join_all('ceilingRose')
+
+
+def pewRow():
+    """Chapel pew — tall panel back, bench seat, closed end-cheeks and a
+    narrow kneeler shelf. ~2.4 wide x 0.6 deep x 1.05 tall; glTF +z is the
+    pew front (faces the altar)."""
+    cube('back', (0, -0.24, 0.62), (2.4, 0.07, 0.86), WOOD, 0.02)
+    cube('seat', (0, 0, 0.45), (2.3, 0.5, 0.07), WOOD, 0.015)
+    cube('apron', (0, 0.19, 0.25), (2.3, 0.06, 0.4), DARK, 0.01)
+    for sx in (-1, 1):
+        cube('cheek', (sx * 1.18, -0.02, 0.52), (0.08, 0.55, 1.0), DARK, 0.015)
+        cube('cheekCap', (sx * 1.18, -0.26, 1.03), (0.1, 0.1, 0.06), WORN, 0.01)
+    cube('shelf', (0, -0.34, 0.88), (2.2, 0.16, 0.04), WORN, 0.01)
+    for x in (-0.9, 0, 0.9):
+        cube('panel', (x, -0.275, 0.6), (0.5, 0.03, 0.5), DARK, 0.008)
+    join_all('pewRow')
+
+
+def chapelAltar():
+    """Draped stone altar — slab on block legs, long front cloth and two
+    brass candle prickets. ~1.6 wide x 0.8 deep x 1.15 tall; glTF +z faces
+    the congregation."""
+    cube('legL', (-0.6, 0, 0.42), (0.28, 0.6, 0.84), STONE, 0.02)
+    cube('legR', (0.6, 0, 0.42), (0.28, 0.6, 0.84), STONE, 0.02)
+    cube('slab', (0, 0, 0.9), (1.6, 0.8, 0.12), STONE, 0.015)
+    cube('cloth', (0, 0.3, 0.52), (1.5, 0.06, 0.75), CLOTH, 0.01)
+    cube('clothTop', (0, 0.05, 0.965), (1.5, 0.7, 0.03), CLOTH, 0.008)
+    for sx in (-1, 1):
+        cyl('pricket', (sx * 0.55, -0.05, 1.08), 0.03, 0.22, BRASS, 12)
+        cyl('wax', (sx * 0.55, -0.05, 1.23), 0.018, 0.09, STONE, 10)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.09, segments=12, ring_count=6,
+                                         location=(0, -0.15, 1.02))
+    bpy.context.object.data.materials.append(STONE)
+    join_all('chapelAltar')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -2216,12 +2664,11 @@ PIECES = {
     'basinSink': basinSink, 'pegRail': pegRail, 'towelRail': towelRail,
     'ceilingHook': ceilingHook, 'ovalMirror': ovalMirror,
     'curtainRod': curtainRod, 'curtainLong': curtainLong,
-    'headboard': headboard, 'stoveRange': stoveRange, 'potRack': potRack,
+    'headboard': headboard, 'stoveRange': stoveRange,
     'dishDrainer': dishDrainer, 'linenShelf': linenShelf,
     'choppingBlock': choppingBlock, 'copperSet': copperSet,
     'manglePress': manglePress,
-    'chapelPew': chapelPew, 'prayerKneeler': prayerKneeler,
-    'chapelAltar': chapelAltar, 'votiveStand': votiveStand,
+    'chapelPew': chapelPew, 'prayerKneeler': prayerKneeler, 'votiveStand': votiveStand,
     'candelabrum': candelabrum, 'settee': settee,
     'dressingScreen': dressingScreen, 'vanityTable': vanityTable,
     'sideboard': sideboard, 'writingDesk': writingDesk,
@@ -2234,6 +2681,18 @@ PIECES = {
     'partition': partition, 'fluoroTube': fluoroTube,
     'exitSign': exitSign, 'vendingUnit': vendingUnit,
     'keyCabinet': keyCabinet,
+    'kitchenRange': kitchenRange, 'sculleryRack': sculleryRack,
+    'potRack': potRack, 'pantryShelf': pantryShelf,
+    'stackedLinen': stackedLinen, 'upholsteredHeadboard': upholsteredHeadboard,
+    'coalScuttle': coalScuttle,
+    'curtainSwag': curtainSwag, 'drapePanel': drapePanel,
+    'linenPress': linenPress, 'candelabra': candelabra,
+    'valveWheel': valveWheel, 'dumbWaiterDoor': dumbWaiterDoor,
+    'apothecaryCabinet': apothecaryCabinet, 'meatHook': meatHook,
+    'wineRack': wineRack, 'grateDrain': grateDrain,
+    'platedRoast': platedRoast, 'platedPie': platedPie,
+    'ceilingRose': ceilingRose, 'pewRow': pewRow,
+    'chapelAltar': chapelAltar,
 }
 
 def main():

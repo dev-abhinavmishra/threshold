@@ -7,6 +7,8 @@ import { portLocalPos, inDoorLane } from '../src/world/spec';
 import { buildRoomMesh } from '../src/world/builder';
 import { MAT } from '../src/world/materials';
 import * as THREE from 'three';
+import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
+import { SeedStreams } from '../src/engine/rng';
 
 // Must match src/world/generator.ts rotXZ (world-space convention).
 function rotXZ(x: number, z: number, yaw: number): { x: number; z: number } {
@@ -314,6 +316,30 @@ describe('sprint mechanics coverage', () => {
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('no two fixed props materially overlap in any template', () => {
+    // Wall-hung filler is resolved inside spec(); this guards fixed
+    // furniture layouts against embeds like hatch-inside-headboard.
+    for (const t of MAIN_TEMPLATES) {
+      for (const seed of ['a', 'b', 'c']) {
+        const spec = t.build(new SeedStreams(seed).roomStream('test', 1));
+        const floor = spec.props.filter((p) => (p.y ?? 0) < 1.9 && !p.meta?.wall);
+        for (let i = 0; i < floor.length; i++) {
+          for (let j = i + 1; j < floor.length; j++) {
+            const a = floor[i], b = floor[j];
+            const ok = CLASH_OK.some(
+              ([x, y]) => (x === a.kind && y === b.kind) || (x === b.kind && y === a.kind),
+            );
+            if (ok) continue;
+            expect(
+              propsClash(a, b),
+              `${t.id} seed=${seed}: ${a.kind}(${a.x},${a.z}) vs ${b.kind}(${b.x},${b.z})`,
+            ).toBe(false);
+          }
         }
       }
     }

@@ -123,6 +123,15 @@ export type PropKind =
   | 'routingBoard' | 'orreryRig' | 'catalogTrack' | 'rollingLadder'
   | 'merchantCounter' | 'speakingTube' | 'printerRow' | 'alarm'
   | 'trench' | 'freightLift' | 'stairLanding' | 'liftShaft'
+  // sprint 213 — service-wing mill batch
+  | 'kitchenRange' | 'sculleryRack' | 'potRack' | 'pantryShelf'
+  | 'stackedLinen' | 'upholsteredHeadboard' | 'coalScuttle'
+  // sprint 215 — dressing batch: window/dining/service detail
+  | 'curtainSwag' | 'drapePanel' | 'linenPress' | 'candelabra'
+  | 'valveWheel' | 'dumbWaiterDoor' | 'apothecaryCabinet' | 'meatHook'
+  | 'wineRack' | 'grateDrain'
+  // sprint 216 — chapel / dining dressing batch
+  | 'platedRoast' | 'platedPie' | 'ceilingRose' | 'pewRow' | 'chapelAltar'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript
@@ -335,9 +344,17 @@ export function footprintInDoorLane(
   });
 }
 
-/** Drop props and hiding spots whose centers land inside a door lane. */
-export function clearDoorLanes(spec: RoomSpec): void {
-  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !inDoorLane(spec, p.x, p.z));
+/** Drop hiding spots inside a door lane. Props are only culled when
+ * their CENTER sits inside the door rectangle itself — anything wider
+ * defers to the builder's footprintInDoorLane, which judges real
+ * collider dims (the center-based corridor used to eat authored
+ * centerpieces and flat wall dressing whose colliders never touch the
+ * doorway: the wake's bier, counters, altars, paintings — sprint-223
+ * audit). `isGhost` marks kinds with no solid collider (archways, wall
+ * dressing, transoms) — they can never reach the door rect and are
+ * never culled. */
+export function clearDoorLanes(spec: RoomSpec, isGhost?: (kind: string) => boolean): void {
+  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || isGhost?.(p.kind) || !inDoorLane(spec, p.x, p.z, 0));
   spec.hiding = spec.hiding.filter((h) => !inDoorLane(spec, h.x, h.z));
 }
 

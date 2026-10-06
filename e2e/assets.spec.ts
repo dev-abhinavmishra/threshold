@@ -23,12 +23,16 @@ const MILL_DIRS = [
   'ovalMirror',
   'curtainRod', 'curtainLong', 'headboard', 'stoveRange', 'potRack',
   'dishDrainer', 'linenShelf', 'choppingBlock', 'copperSet', 'manglePress',
-  'chapelPew', 'prayerKneeler', 'chapelAltar', 'votiveStand',
-  'candelabrum', 'settee', 'dressingScreen', 'vanityTable', 'sideboard',
-  'writingDesk', 'globeStand',
-  'cubicle', 'recordsCage', 'printerRow', 'printer', 'typewriter',
-  'waterCooler', 'breakTable', 'counter', 'machineBox', 'paperStack',
-  'partition', 'fluoroTube', 'exitSign', 'vendingUnit', 'keyCabinet',
+  'chapelPew', 'prayerKneeler', 'chapelAltar', 'votiveStand', 'candelabrum',
+  'settee', 'dressingScreen', 'vanityTable', 'sideboard', 'writingDesk',
+  'globeStand', 'cubicle', 'recordsCage', 'printerRow', 'printer',
+  'typewriter', 'waterCooler', 'breakTable', 'counter', 'machineBox',
+  'paperStack', 'partition', 'fluoroTube', 'exitSign', 'vendingUnit',
+  'keyCabinet', 'kitchenRange', 'sculleryRack', 'pantryShelf',
+  'stackedLinen', 'upholsteredHeadboard', 'coalScuttle', 'curtainSwag',
+  'drapePanel', 'linenPress', 'candelabra', 'valveWheel', 'dumbWaiterDoor',
+  'apothecaryCabinet', 'meatHook', 'wineRack', 'grateDrain', 'platedRoast',
+  'platedPie', 'ceilingRose', 'pewRow',
 ];
 
 const FIGURES = [

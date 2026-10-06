@@ -7,8 +7,9 @@ context. Keep it updated when conventions change.
 
 ```
 You are continuing an autonomous multi-sprint build of THRESHOLD, an original
-first-person browser horror game, in repo dev-abhinavmishra/threshold on PR #1
-(branch devin/1790826595-threshold-game, base main). DOORS/Pressure (Roblox) is
+first-person browser horror game, in repo dev-abhinavmishra/threshold. PR #1 is
+merged — each new sprint goes on a fresh branch off main with its own PR (do
+NOT keep committing to devin/1790826595-threshold-game). DOORS/Pressure (Roblox) is
 the visual quality bar — the user has rejected flat/blocky art twice; every
 sprint should push density, realism, or gameplay depth. Do NOT stop at a plan
 or a partial slice — each sprint must be huge, tested, and pushed.
@@ -109,7 +110,9 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
+CURRENT STATE (as of sprint 216)
 CURRENT STATE (as of sprint 222)
+CURRENT STATE (as of sprint 212)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -433,6 +436,21 @@ CURRENT STATE (as of sprint 222)
   edits or specs test a stale bundle; (g) drive() press loops must
   gate on the FOCUSED prompt (a bare E-press fires whatever is
   focused — card sockets near the console would eat presses).
+  preload reaches that dir — heldTorchFallback retries each frame and
+  hot-swaps the fallback cylinder for the GLB; (c) spec.height
+  normalizes by bbox Y and over-inflates models authored lying flat ×4+
+  — fitHeldModel() rescales by longest axis (0.26m), rotates longest→z,
+  centers; (d) REAL BUG — beam cones smeared the whole screen during
+  lag swings: origin tracked lagged torch pos and the cone crossed the
+  near plane → beamFade=(dist(eye,origin)-0.12)/0.25 multiplies
+  beamMats + motesMat opacity; (e) page.screenshot times out / the tab
+  crashes under load — grab canvas.toDataURL() inside evaluate right
+  after g.frame() instead (toDataURL is valid same-task, no
+  preserveDrawingBuffer needed); (f) heldGroup/beamGroup are created
+  inside renderFrame — they don't exist under the stubbed renderFrame,
+  probe only after a real frame.
+  - Mill: plated foods + pew rows + ceiling roses landed on main;
+    remaining open kit — grand staircase pieces, arched window tracery.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -453,6 +471,7 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - More mill batches if dressing still reads thin: main-route sideboard
     variants + corridor furniture; u-room kit is milled now (sprint 220) —
     next under-room depth is variants/weathering, not new kinds.
+    Grand staircase kit + arched window tracery still open on main side.
 ```
 
 ---

@@ -17,6 +17,7 @@ import type {
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
 import { portLocalPos, portOutwardDir, clearDoorLanes, inDoorLane } from './spec';
+import { modelCollider } from './modelLibrary';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
@@ -152,7 +153,23 @@ function pickSpec(
 /** Convert placed spec to a RoomInstance (world-space data, no meshes). */
 function instantiate(index: number, label: string, placed: PlacedRoom, isMainRouteExit: boolean): RoomInstance {
   const { spec, origin, yaw } = placed;
-  clearDoorLanes(spec);
+  // Ghost-collider kinds (archways, transoms, wall dressing) can never
+  // reach a door rect — exempt them from the center-based spec cull.
+  const isGhost = (kind: string) => {
+    const c = modelCollider(kind);
+    return c !== null && c[0] === 0;
+  };
+  clearDoorLanes(spec, isGhost);
+  // Hiding spots render no mesh of their own — each needs furniture at its
+  // position to hide in/behind. Spawn the declared propKind when no prop is
+  // already there. Spots that survived clearDoorLanes are outside door lanes,
+  // so the spawned furniture is too.
+  for (const h of spec.hiding) {
+    const hasFurniture = spec.props.some(
+      (p) => Math.hypot(p.x - h.x, p.z - h.z) <= 1.3 && (p.y ?? 0) < 0.2,
+    );
+    if (!hasFurniture) spec.props.push({ kind: h.propKind, x: h.x, z: h.z, yaw: h.yaw });
+  }
   const colliders: Aabb[] = spec.colliders
     .filter((c) => !c.losOnly)
     .map((c) => {

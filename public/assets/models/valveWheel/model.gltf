@@ -15,7 +15,18 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"potRack"
+			"name":"valveWheel",
+			"rotation":[
+				0.7071068286895752,
+				0,
+				0,
+				0.7071068286895752
+			],
+			"translation":[
+				0,
+				0,
+				-0.019999999552965164
+			]
 		}
 	],
 	"materials":[
@@ -50,7 +61,7 @@
 	],
 	"meshes":[
 		{
-			"name":"Cube",
+			"name":"Cylinder",
 			"primitives":[
 				{
 					"attributes":{
@@ -77,125 +88,125 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":4420,
+			"count":1092,
 			"max":[
-				0.4560000002384186,
-				0.07000000029802322,
-				0.37599998712539673
+				0.1860000044107437,
+				0.23600001633167267,
+				0.18599998950958252
 			],
 			"min":[
-				-0.4399999976158142,
-				-0.19500000774860382,
-				-0.014999999664723873
+				-0.1860000044107437,
+				-0.014999999664723873,
+				-0.1860000193119049
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":4420,
+			"count":1092,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":4420,
+			"count":1092,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":6828,
+			"count":1716,
 			"type":"SCALAR"
 		},
 		{
 			"bufferView":4,
 			"componentType":5126,
-			"count":624,
+			"count":120,
 			"max":[
-				0.45499998331069946,
-				0.030000001192092896,
-				0.3700000047683716
+				0.03328697755932808,
+				0.26499998569488525,
+				0.03499998897314072
 			],
 			"min":[
-				-0.4083288609981537,
-				-0.2409999966621399,
-				0.14999999105930328
+				-0.03328697755932808,
+				0.19499999284744263,
+				-0.03500001132488251
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":5,
 			"componentType":5126,
-			"count":624,
+			"count":120,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":6,
 			"componentType":5126,
-			"count":624,
+			"count":120,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":7,
 			"componentType":5123,
-			"count":996,
+			"count":216,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":53040,
+			"byteLength":13104,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":53040,
-			"byteOffset":53040,
+			"byteLength":13104,
+			"byteOffset":13104,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":35360,
-			"byteOffset":106080,
+			"byteLength":8736,
+			"byteOffset":26208,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":13656,
-			"byteOffset":141440,
+			"byteLength":3432,
+			"byteOffset":34944,
 			"target":34963
 		},
 		{
 			"buffer":0,
-			"byteLength":7488,
-			"byteOffset":155096,
+			"byteLength":1440,
+			"byteOffset":38376,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":7488,
-			"byteOffset":162584,
+			"byteLength":1440,
+			"byteOffset":39816,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4992,
-			"byteOffset":170072,
+			"byteLength":960,
+			"byteOffset":41256,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1992,
-			"byteOffset":175064,
+			"byteLength":432,
+			"byteOffset":42216,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":177056,
+			"byteLength":42648,
 			"uri":"model.bin"
 		}
 	]
