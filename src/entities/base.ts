@@ -57,6 +57,8 @@ export interface EntityCtx {
   /** The audit tally — marginalia claims / sledge picks / basket steals
    *  the player hasn't settled for. Optional: headless ctxs may omit it. */
   claimsOwed?: () => number;
+  /** Held-property tally in imprints — the Detective's book. */
+  heldOwed?: () => number;
   /** Scent: killed hazards leave sign a hunter can read. Callers pass a
    *  reader key (e.g. 'warden:33'); returned marks are recorded as read
    *  so each hunter reads each sign once. Optional for headless ctxs. */

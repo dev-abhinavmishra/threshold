@@ -47,6 +47,7 @@ export type EntityId =
   | 'groundswell'
   | 'inspector'
   | 'commissionaire'
+  | 'detective'
   // Underscript
   | 'redline'
   | 'stillframe'

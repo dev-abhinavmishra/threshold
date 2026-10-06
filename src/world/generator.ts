@@ -1143,6 +1143,9 @@ function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng')
   }
 }
 
+/** Desk-family props the House Detective anchors to on the main route. */
+const DETECTIVE_DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+
 /* ==================== ENCOUNTER SCHEDULING ==================== */
 
 function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, opts: GenOptions, beats?: import('./pacing').Beat[]): void {
@@ -1176,6 +1179,8 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       if (id === 'inkling' && !room.darkRoom) continue;
       // The Inspector needs lids to test.
       if (id === 'inspector' && room.hidingSpots.length < 2) continue;
+      // The Detective needs a desk or counter to work from.
+      if (id === 'detective' && !(room.spec?.props ?? []).some((pp) => DETECTIVE_DESKS.has(pp.kind))) continue;
       if (id === 'echoskin' && room.index < 63) continue;
       if (id === 'maelstrom' && room.index < 55) continue;
       // Witness needs apertures.
@@ -1220,6 +1225,13 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
     const room = rooms.find((r) => r.index >= 30 && r.index <= 52 && !r.authored && r.biome !== 'safe'
       && r.scheduled.length === 0 && hasSurvivalOption(rooms, r.index) && windowCompatible(rooms, r, 'bellman'));
     if (room) room.scheduled.push({ entity: 'bellman', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
+  // The Detective teaches the settle-or-be-known fork — pin one at a desk
+  // room mid-route so every run carries the wire.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'detective'))) {
+    const room = rooms.find((r) => r.index >= 26 && r.index <= 58 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && (r.spec?.props ?? []).some((pp) => DETECTIVE_DESKS.has(pp.kind)));
+    if (room) room.scheduled.push({ entity: 'detective', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
   }
   // The Commissionaire gates the forward path — pin one early-mid so every
   // run teaches the bait-and-cross before the deep schedule can skip it.

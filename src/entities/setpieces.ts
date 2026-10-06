@@ -1165,3 +1165,185 @@ export class Auditor extends Entity {
     this.rig = null;
   }
 }
+
+/** The House Detective — a plain suit behind a desk or counter on the main
+ *  route, keeping the register of whose held property went out the door.
+ *  Every imprint claim drawn accrues to `heldOwed`. Walk into his room
+ *  owing and he clocks your face over a slow look — then he doesn't walk
+ *  after you. He lifts the house phone: for a stretch of route either way,
+ *  every room you enter rings ahead of you, and the room's listeners are
+ *  already awake when you arrive. Settle at his desk — pay the register,
+ *  he strikes your name — or outrun the wire. He never touches you; his
+ *  weapon is that the building now knows your face. */
+export class Detective extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private lifeT = 0;
+  private lookT = 0;
+  private lastPlayerRoom = -1;
+  private homebound = false;
+  private interactId: string | null = null;
+  /** His desk — the settle point anchors here. */
+  deskPos = v3();
+  /** He has looked up from the register and knows your face. */
+  clocked = false;
+  /** Your face is on the wire — rooms ahead ring for you. */
+  warranted = false;
+
+  constructor() { super('detective', ENTITY_TUNING.detective); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    const DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+    const desk = (room.spec?.props ?? []).find((pp) => DESKS.has(pp.kind));
+    const lx = desk ? desk.x : 0, lz = desk ? desk.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.deskPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // he stands the room-center side of the desk
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.deskPos.x + (ox / ol) * 0.7, 0, this.deskPos.z + (oz / ol) * 0.7);
+    const g = new THREE.Group();
+    // plain dark suit — the smallest figure in the library reads as a houseman
+    const rig = riggedFigure('ninja');
+    if (rig) { this.rig = rig; rig.play('idle', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.95, 4, 8), MAT.figureCloth());
+      body.position.y = 0.95;
+      g.add(body);
+    }
+    // the register — a thicker slab than the clerk's ledger
+    const reg = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.09, 0.32), MAT.darkOak());
+    reg.position.set(0, 1.0, 0.32);
+    reg.rotation.x = -0.3;
+    g.add(reg);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('chalk-mark', this.pos, '[a register opens — the house is checking names]', { severity: 'warn' });
+    this.state = 'engage';
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  private settleId(): string { return `settle-${this.spawnRoom}`; }
+
+  private openRegister(): void {
+    const c = this.ctx;
+    this.clocked = true;
+    this.warranted = true;
+    this.interactId = this.settleId();
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    c.addInteractable({
+      kind: 'settle', id: this.interactId,
+      pos: v3(this.deskPos.x + (ox / ol) * 1.15, 0.9, this.deskPos.z + (oz / ol) * 1.15),
+      prompt: 'Settle the account — see the register', holdTime: 1.0,
+      data: { detective: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 4,
+    });
+    c.cue('chalk-mark', this.pos, '[a plain suit lifts the house phone — your face goes on the wire]', { severity: 'warn' });
+  }
+
+  private closeRegister(): void {
+    if (this.interactId) { this.ctx.removeInteractable(this.interactId); this.interactId = null; }
+  }
+
+  /** The settle press reaches him — the Game has already taken the toll. */
+  settled(): void {
+    this.clocked = false;
+    this.warranted = false;
+    this.homebound = true;
+    this.closeRegister();
+    this.ctx.cue('checkpoint', this.pos, '[the detective strikes your name]', { severity: 'info' });
+  }
+
+  private cool(): void {
+    // the wire only reaches so far down the route
+    this.warranted = false;
+    this.clocked = false;
+    this.homebound = true;
+    this.closeRegister();
+    this.ctx.cue('chalk-mark', this.pos, '[the wire ahead of you goes quiet]', { severity: 'info' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.lifeT += dt;
+    const owed = c.heldOwed?.() ?? 0;
+    const pRoom = this.roomOf(p);
+
+    // desk work: drift at the counter's edge
+    if (!this.homebound) {
+      const step = v3(this.deskPos.x + (this.roomO.x - this.deskPos.x) * 0.08, 0, this.deskPos.z + (this.roomO.z - this.deskPos.z) * 0.08);
+      const dx = step.x - this.pos.x, dz = step.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
+    }
+
+    // the slow look — he clocks a debtor in his room over ~2.5s, then the wire
+    if (pRoom === this.spawnRoom && owed > 0 && !this.clocked && !this.homebound) {
+      this.lookT += dt;
+      if (this.lookT > 2.5) {
+        this.openRegister();
+        c.cue('chalk-mark', this.pos, '[he has your face — settle, or be known]', { severity: 'warn' });
+      }
+    } else if (pRoom !== this.spawnRoom) {
+      this.lookT = 0;
+    }
+
+    // the wire: each fresh room you enter inside reach rings ahead of you
+    if (this.warranted && owed > 0 && pRoom >= 0 && pRoom !== this.spawnRoom && pRoom !== this.lastPlayerRoom) {
+      this.lastPlayerRoom = pRoom;
+      if (Math.abs(pRoom - this.spawnRoom) <= 10) {
+        c.sound.emit({
+          x: p.x, y: 1, z: p.z, intensity: 0.55, category: 'impact',
+          caption: '[the house phone rings ahead of you — they know your face]',
+          source: 'detective',
+        });
+      }
+    }
+    // outrun the wire, or pay it off — either way the register closes
+    if (this.warranted && (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 10)) this.cool();
+
+    // the return beat — back to the desk, register shut
+    if (this.homebound) {
+      const dx = this.deskPos.x - this.pos.x, dz = this.deskPos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.3) {
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        this.rig?.play('move');
+      } else {
+        this.homebound = false;
+        this.rig?.play('idle');
+      }
+    }
+
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    this.closeRegister();
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}

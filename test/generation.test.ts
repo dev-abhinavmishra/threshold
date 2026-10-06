@@ -936,3 +936,22 @@ describe('the Auditor (sprint 277)', () => {
     }
   });
 });
+
+describe('the House Detective (sprint 278)', () => {
+  it('works desk rooms on the main route, never below', () => {
+    const DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'detective') ?? false,
+          `detective under the route ${seed}`).toBe(false);
+      }
+      const suits = route.rooms.filter((r) => r.scheduled?.some((s) => s.entity === 'detective'));
+      for (const r of suits) {
+        expect((r.spec?.props ?? []).some((p) => DESKS.has(p.kind)),
+          `detective on a desk-less room ${seed} r-${r.index}`).toBe(true);
+        expect(r.index, `detective too early ${seed}`).toBeGreaterThanOrEqual(18);
+      }
+    }
+  });
+});

@@ -1918,3 +1918,54 @@ is the only absolution; `settled()` clears everything and removes the point.
 - **`claimsOwed?: () => number` is optional in EntityCtx** — vitest ctx
   mocks skip it; entity guards `?.()` so specs that don't wire it see
   demand=false, pursuit=false.
+## Sprint 278 — the House Detective (the wire, not the walk)
+
+**What:** a plain suit desked at `counter|desk|writingDesk|filing` rooms on
+the main route (minRoom 18, plus a mid-route pin at 26–58 so every seed
+carries one). Each imprint claim drawn — porter's cage tags — accrues
+`unpaidHeld`. Walk into his room owing and he clocks your face over a 2.5s
+slow look: `Settle the account — see the register` (kind `settle`,
+priority 4, toll `min(8 + owed*2, 24)` imprints). The counter-fork isn't a
+pursuit — it's a WIRE: leave his room owing and every room you enter within
+±10 rings `[the house phone rings ahead of you]` (a loud synthetic emit at
+your position — the room's listeners are awake when you arrive). The wire
+goes quiet past reach, or when the register is paid. He never touches you —
+his weapon is that the building knows your face.
+
+**Traps:**
+- **`roomOf()` returns the ARRAY index, not `room.index`** — specs
+  testing range cutoffs must pad the rooms array so the far room sits at
+  array position >10, not just carry `index: 12`.
+- **Phone-ahead marks a room CHANGE, not presence** — `lastPlayerRoom`
+  dedupes the emit so pacing between two rooms rings on each re-entry;
+  that's the intent, but it means the emit only fires on the frame the
+  index flips.
+- **A pinned entity needs the pin to check `!rooms.some(scheduled)`** —
+  the natural scheduler can still out-roll it (wax-bell puts one at 89
+  naturally); the global-check convention holds, so a deep natural roll
+  suppresses the mid-route pin.
+- **Desk-gated main-route entities roll rare** — spawnChance×tier×mercy
+  on top of a prop gate lands ~0–1/seed; a guarantee pin is load-bearing
+  if the mechanic must exist every run.
+
+**Stream-shift casualties (e2e fixes after the detective scheduler rolls):**
+- **Any new main-route `encRng` consumption reseats the whole under layout**
+  — the 'encounter' stream is shared (memoized by name). The desk-gate bool
+  + pin int moved 's' under rooms and the commissionaire pin (26→27).
+  Specs that pin a *room index* or *template* will break: assert against the
+  live route instead (forged-ledger now verifies `coverIsRedactor` + omits
+  `Door <cover>` dynamically rather than `toBe(71)`).
+- **Door points sit at y=0 — pitch down at the +0.6 focus point**, and aim
+  from the player's ACTUAL post-frame pos: wall slide can shove the stand
+  point sideways past the 1.1 prox fallback (records-vault pushed a 0.9m
+  stand to prox 1.12 — align 0.59 at level pitch → no focus, no press).
+- **A lethal scheduled entity can't always be settled inside its room** —
+  grafter seeRange 9 + chase 2.52 m/s + killRange 1.35 beats a 4.2m spawn
+  corner inside 1.3s. `godMode` blocks the damage but NOT the `done()` —
+  a kill attempt still ends the entity. Spawn, step OUT of its room, settle,
+  then feed it noise. Also: pick the LARGEST scheduled room, never a fixed
+  size threshold — layouts shift.
+- **`flickerRoom` can't dim a lightless room** — `roomMul` averages
+  `built.lights`; no lights → mul stays 1 → device glow undimmable. Power
+  specs must pick rooms with `built.lights.length > 0`. And blink/screen
+  anims oscillate per-frame — sample emissive MAX over frames, not a point.

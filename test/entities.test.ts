@@ -1719,3 +1719,106 @@ describe('the Auditor (sprint 277)', () => {
     a.dispose();
   });
 });
+
+describe('the House Detective (sprint 278)', () => {
+  const deskRoom = {
+    index: 0, templateId: 'records-aisle', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'counter', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const hallRoom = {
+    index: 1, templateId: 'corridor', origin: { x: 0, y: 0, z: 12 }, yaw: 0,
+    width: 6, depth: 12,
+    entryPos: { x: 0, y: 0, z: 7 }, exitPos: { x: 0, y: 0, z: 17 }, navNodes: [],
+    spec: { width: 6, depth: 12, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('clocks a debtor over the slow look — the register comes out', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    // under 2.5s of shared presence — still just a suit at a desk
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'no clock yet').toBe(false);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the slow look lands').toBe(true);
+    expect(d.warranted, 'the wire is live').toBe(true);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'), 'the settle point registers').toBe(true);
+    d.dispose();
+  });
+
+  it('phones ahead — each fresh room you enter rings for you', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    emit.mockClear();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12; // slips into the next room
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'detective'),
+      'the room rings ahead of you').toBe(true);
+    d.dispose();
+  });
+
+  it('the wire only reaches so far — past its reach it goes quiet', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    // roomOf() returns the array index — the far room must sit past +10
+    const rooms = [deskRoom, hallRoom];
+    for (let i = 2; i <= 12; i++) {
+      rooms.push({ ...hallRoom, index: i, origin: { x: 0, y: 0, z: i * 12 },
+        entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 } } as unknown as RoomInstance);
+    }
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12 * 12; // inside array room 12
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted, 'the wire goes quiet past its reach').toBe(false);
+    d.dispose();
+  });
+
+  it('settled strikes your name — wire off, point down', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    d.settled();
+    expect(d.clocked).toBe(false);
+    expect(d.warranted).toBe(false);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
+    d.dispose();
+  });
+});

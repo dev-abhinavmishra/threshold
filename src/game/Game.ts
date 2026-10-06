@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Auditor, Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
+import { Auditor, Detective, Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -99,6 +99,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   hauler: { sfx: 'impact', text: '[a sledge scrape — cargo on the move]', sev: 'warn' },
   laundress: { sfx: 'puddle-splash', text: '[wash, wring — somebody works the drain]', sev: 'warn' },
   auditor: { sfx: 'chalk-mark', text: '[a ledger page turns — the clerk is in]', sev: 'warn' },
+  detective: { sfx: 'chalk-mark', text: '[a register opens — the house is checking names]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -141,6 +142,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   hauler: '[the scrape halts — it heard you]',
   laundress: '[the wringing stops — the drain is watched]',
   auditor: '[scratch of nib — the tally is open]',
+  detective: '[the house phone — a name repeated quietly]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -812,6 +814,7 @@ export class Game {
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
+      heldOwed: () => this.unpaidHeld,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
         // OLD sign still pulls a grafter (a spent-wire room is free bait).
@@ -832,6 +835,11 @@ export class Game {
    *  basket steal below is pilferage the under's clerks can read. Settled
    *  at an auditor's desk; refused, it walks. */
   private unpaidTheft = 0;
+
+  /** The Detective's register — each imprint claim drawn on the main
+   *  route is a debt the house keeps. Settled at his desk; walking out
+   *  owed puts your face on the wire. */
+  private unpaidHeld = 0;
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -870,6 +878,8 @@ export class Game {
       // The Laundress: works a flooded drain and fouls it — the crank is hers.
       case 'laundress': this.spawnEntity(new Laundress()); break;
       // The Auditor: reads the theft tally, walks his ledger after debtors.
+      // The Detective: reads the held-property register, phones ahead about debtors.
+      case 'detective': this.spawnEntity(new Detective()); break;
       case 'auditor': this.spawnEntity(new Auditor()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
@@ -1731,6 +1741,7 @@ export class Game {
         }
         if (cur) this.marginalia -= price; else this.imprints -= price;
         if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
+        else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
@@ -1794,6 +1805,7 @@ export class Game {
           singer: 'the choir of one', swamper: 'a drowned porter in the flood',
           hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
           auditor: 'a clerk auditing the claims',
+          detective: 'a house detective on the register',
         };
         const seen = new Set<string>();
         const parts: string[] = [];
@@ -1885,6 +1897,7 @@ export class Game {
           swamper: 'a drowned porter, under the water',
           hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
           auditor: 'a clerk auditing the claims',
+          detective: 'a house detective on the register',
         };
         const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
         const filings: string[] = [];
@@ -1968,6 +1981,7 @@ export class Game {
           swamper: 'hands in the water', hauler: 'a haul team on the line',
           laundress: 'a laundress at the outflow', grafter: 'a grafter in the fill',
           auditor: 'a clerk walking the ledger',
+          detective: 'a detective on the wire',
           redline: 'the red margin', stillframe: 'the paused hall',
           returner: 'a guest come back', margin: 'the handwritten edge',
         };
@@ -2034,6 +2048,24 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         this.cue('whisper', it.pos, `[paid ${toll} — the clerk turns the page]`);
         (it.data as { auditor?: { settled?: () => void } }).auditor?.settled?.();
+        return;
+      }
+      case 'settle': {
+        // The Detective's settle point — pay the register or your face
+        // goes on the wire.
+        const owed = this.unpaidHeld;
+        if (owed <= 0) { it.enabled = false; return; }
+        const toll = Math.min(8 + owed * 2, 24);
+        if (this.imprints < toll) {
+          this.cue('door-locked', it.pos, `[the register asks ${toll} imprints — ${toll - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= toll;
+        this.unpaidHeld = 0;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, `[paid ${toll} — the detective strikes your name]`);
+        (it.data as { detective?: { settled?: () => void } }).detective?.settled?.();
         return;
       }
       case 'item':

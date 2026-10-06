@@ -330,6 +330,8 @@ test("a forged ledger lies by omission — the wet-ink page conceals the forger'
     const room = g.route.rooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.forged));
     if (!room) return { stage: 'no-forged' } as const;
     const cover = ((room.sockets ?? []).find((s) => s.meta?.forged)?.meta?.forgedCover as number) ?? -1;
+    const coverIsRedactor = g.route.rooms.some((r) => r.index === cover
+      && r.scheduled?.some((sc) => sc.entity === 'redactor'));
     g.player.teleport(room.origin.x, 0, room.origin.z);
     for (let f = 0; f < 30; f++) g.frame();
     const pt = g.interaction.interactables.find((i) => i.kind === 'register');
@@ -349,17 +351,18 @@ test("a forged ledger lies by omission — the wet-ink page conceals the forger'
     const paid = (sock.meta as { taken?: boolean }).taken === true;
     const ledgerLine = caps.find((c) => /the ledger expects|pages ahead are blank/.test(c)) ?? '';
     const wetInk = caps.some((c) => /ink on one page is still wet/.test(c));
-    return { stage: 'done', cover, paid, ledgerLine, wetInk, caps: caps.slice(-10) } as const;
+    return { stage: 'done', cover, coverIsRedactor, paid, ledgerLine, wetInk, caps: caps.slice(-10) } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { cover: number; paid: boolean; ledgerLine: string; wetInk: boolean; caps: string[] };
-  expect(r.cover).toBe(71);
+  const r = result as { cover: number; coverIsRedactor: boolean; paid: boolean; ledgerLine: string; wetInk: boolean; caps: string[] };
+  expect(r.cover).toBeGreaterThan(0);
+  expect(r.coverIsRedactor).toBe(true);
   expect(r.paid, `the forged book never read — caps: ${r.caps.join(' | ')}`).toBe(true);
-  // The lie: Door 071 holds a redactor and the book says nothing about it.
+  // The lie: the covered Door holds a redactor and the book says nothing about it.
   expect(r.ledgerLine).toMatch(/the ledger expects/);
-  expect(r.ledgerLine).not.toMatch(/Door 071/);
+  expect(r.ledgerLine).not.toMatch(new RegExp(`Door ${String(r.cover).padStart(3, '0')}`));
   // The tell: legible in the moment, damning in retrospect.
   expect(r.wetInk).toBe(true);
   expect(errors).toEqual([]);

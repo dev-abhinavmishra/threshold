@@ -790,8 +790,9 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       const eyeY = g.player.pos.y + g.player.eyeHeight;
       g.player.pitch = Math.atan2((settle.pos.y + 0.6) - eyeY, 0.95);
       g.frame();
-      if (!settlePrompt && /Settle the ledger/.test(ga.interaction.focused?.prompt ?? '')) {
-        settlePrompt = ga.interaction.focused.prompt;
+      if (!settlePrompt) {
+        const fp = ga.interaction.focused?.prompt;
+        if (fp && /Settle the ledger/.test(fp)) settlePrompt = fp;
       }
       if (f === 5) ga.keys.add('KeyE');
     }

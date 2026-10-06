@@ -508,9 +508,20 @@ test('the commissionaire holds the doors — bait it, then touch the far leaf', 
       const exitDoor = [...cRoom.doors, ...g.route.rooms[cRoom.index + 1].doors].find((d) => near(ex, d.pos));
       for (let f = 0; f < 400 && ent.state !== 'done'; f++) {
         if (g.player.dead) return { stage: 'player-died-c', caps: caps.slice(-10) } as const;
-        // Hug the exit wall INSIDE the room beside the leaf, face it, press.
-        g.player.teleport(ex.x + Math.sin(yaw) * 0.9 + Math.sin(yaw + Math.PI / 2) * 0.8, 0, ex.z + Math.cos(yaw) * 0.9 + Math.cos(yaw + Math.PI / 2) * 0.8);
-        yawTo(ex);
+        // Stand room-center side of the leaf — door lanes are kept clear of
+        // colliders, so the press always focuses. (A perpendicular hug can
+        // leave a shelf between you and the point on desk-dense templates.)
+        const ox = cRoom.origin.x - ex.x, oz = cRoom.origin.z - ex.z;
+        const ol = Math.hypot(ox, oz) || 1;
+        g.player.teleport(ex.x + (ox / ol) * 0.9, 0, ex.z + (oz / ol) * 0.9);
+        // Door points sit at y=0 — pitch down at the +0.6 focus point, and
+        // aim from the player's ACTUAL pos: wall slide can shove you sideways
+        // past the 1.1 prox fallback, where only align saves the focus.
+        {
+          const hd = Math.hypot(ex.x - g.player.pos.x, ex.z - g.player.pos.z) || 1;
+          g.player.yaw = Math.atan2(ex.x - g.player.pos.x, ex.z - g.player.pos.z);
+          g.player.pitch = Math.atan2(0.6 - 1.62, hd);
+        }
         g.input.interactPressed = true;
         g.frame();
         g.input.interactPressed = false;
@@ -812,21 +823,28 @@ test("the under hears you — bell drifts the grafter, a crash catches the still
       && caps.some((c) => /alarm screams|bell screams/.test(c));
 
     // --- 2. the grafter drifts to a crash ---
-    // pick a grafter room big enough to survive the settle — the corner it
-    // spawns in must be farther than it can walk in ~1.3s or it just eats
-    // the test player before the noise phase starts.
-    const gRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter')
-      && Math.hypot((r.width ?? 0) / 2, (r.depth ?? 0) / 2) - 1.2 >= 5);
+    // Pick the LARGEST grafter room: it spawns in the corner farthest from
+    // the player and must not close killRange during the ~1.3s settle (a
+    // done() from a kill attempt ends the entity before the noise phase).
+    // No fixed threshold — layouts shift with the shared 'encounter' stream.
+    const gRoom = g.route.underRooms
+      .filter((r) => r.scheduled?.some((s) => s.entity === 'grafter'))
+      .sort((a, b) => Math.hypot((b.width ?? 0) / 2, (b.depth ?? 0) / 2) - Math.hypot((a.width ?? 0) / 2, (a.depth ?? 0) / 2))[0];
     if (!gRoom) return { stage: 'no-grafter' } as const;
     g.player.teleport(gRoom.origin.x, 0, gRoom.origin.z);
     ga.currentRoom = gRoom.index;
-    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 5; f++) g.frame();
     const grafter = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done');
     if (!grafter) return { stage: 'no-grafter-spawn', ents: ga.entities.map((e) => e.id) } as const;
-    // stand just outside — a crash INSIDE its room is noise, not a body
+    // Step OUT of its room for the settle — seeRange 9 reaches across every
+    // under template, so staying inside means a chase (and a done() kill
+    // attempt) before the noise phase. Room-boundary means not-its-room:
+    // it loses the body and hears the crash instead.
     const emitPt = { x: gRoom.origin.x + 1.5, z: gRoom.origin.z };
     const w = (gRoom.spec as { width?: number } | undefined)?.width ?? 8;
     g.player.teleport(gRoom.origin.x - w / 2 - 1.5, 0, gRoom.origin.z);
+    for (let f = 0; f < 30 && grafter.state !== 'done'; f++) g.frame();
+    if (grafter.state === 'done') return { stage: 'grafter-gone' } as const;
     (g as unknown as { sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void } })
       .sound.emit({ x: emitPt.x, y: 1, z: emitPt.z, intensity: 0.9, category: 'machine', caption: '[a machine knocks]' });
     // its target must land on the crash point — then it walks there
@@ -1210,5 +1228,103 @@ test('ghosts — stale sign still pulls the Grafter, the caption says so', async
   expect(result.staleRead, JSON.stringify(result)).toBe(true);
   expect(result.closest, JSON.stringify(result)).toBeLessThan(3.2);
   expect(result.ghostCaption, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the house detective — he phones ahead, or you settle', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      imprints: number; currentRoom: number; keys: Set<string>;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      entities: { id: string; clocked?: boolean; warranted?: boolean }[];
+    };
+    ga.imprints = 80;
+
+    // --- 1. draw a guest's held bag — the register accrues ---
+    const cageRoom = g.route.rooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim === true && s.meta?.marginalia !== true && !s.meta?.taken));
+    if (!cageRoom) return { stage: 'no-cage' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    for (let f = 0; f < 40; f++) g.frame();
+    const cage = (cageRoom.sockets ?? []).find((s) => s.meta?.claim === true && s.meta?.marginalia !== true && !s.meta?.taken);
+    if (!cage?.meta) return { stage: 'no-cage-sock' } as const;
+    const cx = cageRoom.origin.x - cage.pos.x, cz = cageRoom.origin.z - cage.pos.z;
+    const cl = Math.hypot(cx, cz) || 1;
+    for (let f = 0; f < 55 && !cage.meta.taken; f++) {
+      g.player.teleport(cage.pos.x + (cx / cl) * 0.9, 0, cage.pos.z + (cz / cl) * 0.9);
+      g.player.yaw = Math.atan2(cage.pos.x - g.player.pos.x, cage.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((cage.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
+
+    // --- 2. walk into his room — he clocks you ---
+    const dRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'detective'));
+    if (!dRoom) return { stage: 'no-detective' } as const;
+    const prev = g.route.rooms[dRoom.index - 1];
+    if (prev) { g.player.teleport(prev.origin.x, 0, prev.origin.z); for (let f = 0; f < 25; f++) g.frame(); }
+    g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
+    let det: { clocked?: boolean; warranted?: boolean } | undefined;
+    for (let f = 0; f < 200; f++) {
+      g.frame();
+      det = ga.entities.find((e) => e.id === 'detective') ?? det;
+      if (det?.clocked) break;
+    }
+    if (!det) return { stage: 'no-det-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    const clocked = caps.some((c) => /has your face|goes on the wire/.test(c));
+
+    // --- 3. slip a room without settling — the wire rings ahead ---
+    const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
+    if (!nxt) return { stage: 'no-neighbor' } as const;
+    const ringCap = caps.length;
+    g.player.teleport(nxt.origin.x, 0, nxt.origin.z);
+    for (let f = 0; f < 40; f++) g.frame();
+    const rang = caps.slice(ringCap).some((c) => /house phone rings ahead/.test(c));
+
+    // --- 4. back to his desk — settle ---
+    const settle = g.interaction.interactables.find((i) => i.kind === 'settle' && i.enabled);
+    if (!settle) return { stage: 'no-settle' } as const;
+    const i0 = ga.imprints;
+    let settlePrompt = '';
+    for (let f = 0; f < 70; f++) {
+      const sx = dRoom.origin.x - settle.pos.x, sz = dRoom.origin.z - settle.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(settle.pos.x + (sx / sl) * 0.9, 0, settle.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(settle.pos.x - g.player.pos.x, settle.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((settle.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (!settlePrompt) {
+        const fp = ga.interaction.focused?.prompt;
+        if (fp && /Settle the account/.test(fp)) settlePrompt = fp;
+      }
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
+    return { stage: 'done' as const, clocked, rang, settlePrompt, paid,
+      spent: ga.imprints < i0, warranted: det?.warranted === true };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.clocked, JSON.stringify(result)).toBe(true);
+  expect(result.rang, JSON.stringify(result)).toBe(true);
+  expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.warranted, JSON.stringify(result)).toBe(false);
   expect(errors).toEqual([]);
 });
