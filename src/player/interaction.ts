@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -182,7 +182,7 @@ export class InteractionSystem {
  *  The seam sits one step off the leaf's edge — position-disambiguated so a
  *  door's centre still reads Open (crouch+quiet-open survives) and its edge
  *  reads Listen. False doors keep their seam: listening is the counter-tell. */
-export function addCrouchedDoorInteracts(sys: InteractionSystem): void {
+export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = false, playerPos?: Vec3): void {
   for (const it of sys.interactables) {
     const d = it.data as Door | undefined;
     if (it.kind !== 'door' || !d) continue;
@@ -208,6 +208,29 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem): void {
           kind: 'brace', id: `brace-${it.id}`,
           pos: { x: it.pos.x - latX * 0.55, y: it.pos.y, z: it.pos.z - latZ * 0.55 },
           prompt: `Brace Door ${d.label}`, holdTime: 0.8,
+          data: d, enabled: true, priority: 4,
+        });
+        // The chock — brace's paid cousin: set it and walk away, but it
+        // gives before your weight does. Sits a step off the leaf on the
+        // player's side — dead-centre loses focus to the nearer seam.
+        if (hasChock) {
+          const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+          const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
+          sys.add({
+            kind: 'wedge', id: `wedge-${it.id}`,
+            pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
+            prompt: `Wedge Door ${d.label}`, holdTime: 0.9,
+            data: d, enabled: true, priority: 4,
+          });
+        }
+      } else if (!d.falseDoor && d.heldBy === 'wedge') {
+        // Yours — pull it free to reclaim it. Same side rule as the set.
+        const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+        const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
+        sys.add({
+          kind: 'unwedge', id: `unwedge-${it.id}`,
+          pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
+          prompt: 'Pull the wedge free', holdTime: 0.5,
           data: d, enabled: true, priority: 4,
         });
       }

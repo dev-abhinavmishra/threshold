@@ -1053,3 +1053,50 @@ NEXT SPRINT IDEAS (pick the biggest first)
     (it's scheduled, not guaranteed).
   - Door tolls stay flat 3 — optional loot closets, different mechanic.
   - Milestone-set hearing remains a design call.
+
+## Sprint 243 — the door chock (set it and walk away)
+
+- New purse item `doorChock` (maxCharges 2, viewmodel prism): the brace's
+  paid counterpart. Crouch at a closed leaf and the seam gains a third
+  point — `Wedge Door N` (hold 0.9) sits a step off the leaf on the
+  player's side. Setting it costs a chock and marks the whole doorway
+  cluster `heldBy='wedge'`; `Pull the wedge free` (hold 0.5) reclaims it.
+- Design position: the brace is free but tethers you within 1.7m; the
+  chock buys distance — it holds while you walk away — but it's weaker:
+  the Bellman worries a wedge loose in ~6s of rattles vs the ~14s it
+  takes to lose interest at a brace, then '[the wedge skids loose —
+  kicked under the leaf]' and knocks the freed leaf normally. Worrying
+  DESTROYS the chock (no reclaim); pulling is the only way it comes back.
+- Economy: both vend-machine arrays carry it doubled (~2/8 weight), the
+  Custodian shop stocks it at 12 imprints, the Broker at 8–14.
+- The 'door' case refuses a wedged leaf with '[the wedge holds it — pull
+  it free first]' — before the generic held check, since 'wedge' is the
+  player's own hold and has a reclaim path.
+- Bugs found: wedge/unwedge/brace cases clustered via `doorsAt(it.pos)`
+  — but the interactable pos is the OFFSET ANCHOR (±0.45–0.55 off the
+  leaf), not the leaf. Clustered on `it.data` (the Door) instead.
+- Vitest +1 (bellman worries the wedge loose ~6s then knocks through),
+  props.spec +1: rehearsal set/pull on an unscheduled BRANCH-room leaf
+  (route doors get crossed by entities mid-hold — first attempt died to
+  a wanderer opening the leaf under the hold), then a timed wedge on the
+  bellman room's in-door, walk away, 'skids loose' + the leaf swings.
+- Harness traps learned: every closed leaf in the focus window registers
+  a wedge point while you carry a chock — match interactables by `id`,
+  never prompt. The wedge anchor sits below floor level (y−0.12): a
+  level look can't win the proximity-weighted focus score against the
+  ±0.55 seam anchors (real players pitch down; pitch writes don't hold
+  across crouched frames in the harness), so the spec wraps `sys.focus`
+  to return the wedge point while it exists — and MUST also assign
+  `sys.focused`, which is set inside the real `focus()` and gates the
+  keypress check. Aim still patched via `lookDir` so the hold pipeline
+  runs the real path.
+- Gates: tsc, lint, 117 vitest, 5-seed sim, props.spec 18/18, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - The wedge is the first mid-run spend on the MAIN route — purses
+    still accrue ~5x; a route-side sink (desk-clerk vendor) could be next.
+  - Locked leaves still ghost the Bellman through walls (deliberate so
+    far — knock path skips them).
+  - Brace UX watch: bracing a door you just closed vs an already-knocking
+    bellman is a ~0.5s race — intended, but watch for feel complaints.
+  - Milestone-set hearing remains a design call.

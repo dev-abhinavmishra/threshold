@@ -39,19 +39,21 @@ const POSES: Record<string, HeldPose> = {
   palimpsest: { pos: [0.2, -0.15, 0.33], rot: [0.5, -0.05, 0], scale: 1, grip: 'palm' },
   doorKey: { pos: [0.24, -0.16, 0.33], rot: [0.15, -0.35, 0.5], scale: 1, grip: 'fist' },
   windAlarm: { pos: [0.23, -0.17, 0.34], rot: [-0.2, 0.4, 0], scale: 1.5, grip: 'palm' },
+  doorChock: { pos: [0.24, -0.17, 0.34], rot: [0.3, -0.4, 0.4], scale: 1.4, grip: 'fist' },
 };
 
 const MOTION_FOR: Record<string, HeldMotion> = {
   handLamp: 'toggle', pulseLamp: 'crank', sparkFlash: 'jab', tonic: 'drink',
   bandage: 'jab', latchpick: 'key', feltWrap: 'jab', resonanceKey: 'key',
   chalkSpool: 'jab', wardSeal: 'jab', palimpsest: 'jab', doorKey: 'key',
-  windAlarm: 'jab',
+  windAlarm: 'jab', doorChock: 'jab',
 };
 
 const gloveMat = new THREE.MeshStandardMaterial({ color: 0x3d2f22, roughness: 0.92, metalness: 0.02 });
 const sleeveMat = new THREE.MeshStandardMaterial({ color: 0x23211e, roughness: 1 });
 const leatherMat = new THREE.MeshStandardMaterial({ color: 0x54402c, roughness: 0.8, metalness: 0.05 });
 const corkMat = new THREE.MeshStandardMaterial({ color: 0x8a6f4d, roughness: 0.95 });
+const rubberMat = new THREE.MeshStandardMaterial({ color: 0x241f1c, roughness: 0.96 });
 const tonicGlassMat = new THREE.MeshStandardMaterial({ color: 0x2d3d33, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85 });
 const tonicFluidMat = new THREE.MeshStandardMaterial({ color: 0x6a4a1e, roughness: 0.5, emissive: 0x3a2a10, emissiveIntensity: 0.3 });
 const chalkMat = new THREE.MeshStandardMaterial({ color: 0xe8e4d6, roughness: 1 });
@@ -295,6 +297,16 @@ function buildItem(id: string): THREE.Group | null {
       const line2 = mesh(new THREE.BoxGeometry(0.058, 0.0022, 0.004), MAT.ink(), 0.004, 0.013, -0.005);
       const line3 = mesh(new THREE.BoxGeometry(0.04, 0.0022, 0.004), MAT.ink(), -0.006, 0.013, -0.03);
       g.add(page, line1, line2, line3);
+      return g;
+    }
+    case 'doorChock': {
+      // Triangular rubber prism + a worn wood kick-face — you hold it fat-end.
+      const prism = mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.11, 3), rubberMat, 0, 0.028, 0);
+      prism.rotation.set(Math.PI / 2, 0, 0.5);
+      const face = mesh(new THREE.BoxGeometry(0.058, 0.036, 0.006), leatherMat, 0, 0.028, 0.052);
+      const nick = mesh(new THREE.BoxGeometry(0.012, 0.006, 0.114), corkMat, 0.014, 0.036, 0);
+      nick.rotation.x = 0.25;
+      g.add(prism, face, nick);
       return g;
     }
     case 'windAlarm': {

@@ -310,6 +310,29 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('worries a wedged door loose, then comes through', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'wedge';   // a chock set under the leaf
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = step(b, ctx, 4);
+    expect(entry.opening).toBe(false);   // still held — rattles, no swing
+    expect(entry.heldBy).toBe('wedge');
+    t = step(b, ctx, 6, t);
+    expect(entry.heldBy).toBe(undefined); // the chock gave — kicked loose
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /wedge skids loose/.test(c))).toBe(true);
+    step(b, ctx, 3, t);
+    expect(entry.opening).toBe(true);    // then it knocks the freed leaf
+    b.dispose();
+  });
+
   it('releases the hold and knocks normally once the brace is gone', () => {
     const rooms = routeRooms();
     const room = rooms[20];

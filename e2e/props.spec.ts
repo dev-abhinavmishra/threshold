@@ -42,11 +42,11 @@ interface ThresholdG {
   spawned: Set<string>;
   doorTry: { id: string } | null;
   interaction: {
-    focused?: { prompt: string; holdTime?: number } | null;
-    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number } }[];
+    focused?: { prompt: string; holdTime?: number; id?: string } | null;
+    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
   };
   entities: { id: string; state: string }[];
-  route: { rooms: GRoom[] };
+  route: { rooms: GRoom[]; branchRooms?: GRoom[] };
   // interact journals (private fields — reachable at runtime)
   litTVs: Set<string>;
   woundClocks: Set<string>;
@@ -74,7 +74,7 @@ interface GRoom {
   n: { x: number; z: number };
   entryPos: { x: number; z: number };
   exitPos: { x: number; z: number };
-  doors: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean; heldBy?: string }[];
+  doors: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean; heldBy?: string; locked?: boolean }[];
   scheduled?: { entity: string; roused?: boolean; triggerRoom: number; seed: number }[];
   darkRoom?: boolean;
   spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
@@ -1473,5 +1473,141 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
   expect(r.faded, `caps: ${tail}`).toBe(true);
   expect(r.opened, 'the brace leaked — a cluster leaf swung').toBe(false);
   expect(r.bellState).toBe('done');
+  expect(errors).toEqual([]);
+});
+
+test('the door chock holds while you walk away — until something worries it loose', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': bellman @32
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const gi = g as unknown as {
+      entities: { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null }[];
+      giveItem(id: string, n?: number): void;
+      inventory: { id: string; count: number }[];
+    };
+    gi.giveItem('doorChock', 2);
+
+    const bRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bRoom) return { stage: 'no-bellman' } as const;
+    const prev = g.route.rooms[bRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+
+    // Rehearsal on a quiet closed leaf: set the wedge, then pull it free.
+    // Branch rooms are unscheduled — nothing crosses their doors mid-hold.
+    const qRoom = g.route.branchRooms?.find((r) => !(r.scheduled?.length) && r.doors.some((d) => !d.locked && !d.falseDoor && (d.openT ?? 0) <= 0.4));
+    const rehearseIn = qRoom ?? prev;
+    const pDoor = rehearseIn.doors.find((d) => !d.locked && !d.falseDoor && (d.openT ?? 0) <= 0.4);
+    if (!pDoor) return { stage: 'no-rehearsal-door' } as const;
+    g.player.teleport(rehearseIn.origin.x, 0, rehearseIn.origin.z);
+    for (let f = 0; f < 6; f++) g.frame();
+    const toP = { x: rehearseIn.origin.x - pDoor.pos.x, z: rehearseIn.origin.z - pDoor.pos.z };
+    const LP = Math.hypot(toP.x, toP.z) || 1;
+    g.player.teleport(pDoor.pos.x + (toP.x / LP) * 0.9, 0, pDoor.pos.z + (toP.z / LP) * 0.9);
+    g.keys.add('KeyC');
+    for (let f = 0; f < 4; f++) g.frame();
+    // The seam anchors all crowd the leaf; a level look can't lift the
+    // below-floor wedge point past 'Listen at Door N' on the focus score.
+    // Real players pitch down — here we hand lookDir the exact bearing.
+    // Match by id: every closed leaf in the window carries a wedge point.
+    const aimHold = (id: string, done: () => boolean, frames = 90): boolean => {
+      const lp = g.player as unknown as { lookDir(out: { x: number; y: number; z: number }): void };
+      const orig = lp.lookDir.bind(lp);
+      // Real players pitch down to the below-floor anchor; the harness can't
+      // hold a pitch, so while the point exists we hand focus() the answer.
+      // Hold+interact still run the real pipeline.
+      const sys = g.interaction as unknown as {
+        focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+        interactables: { id: string; prompt: string; kind: string; pos: { x: number; y: number; z: number }; enabled: boolean }[];
+      };
+      const origFocus = sys.focus.bind(sys);
+      let seen = false;
+      for (let f = 0; f < frames && !done(); f++) {
+        const pt = g.interaction.interactables.find((i) => i.id === id);
+        if (!pt) { g.frame(); continue; }
+        seen = true;
+        lp.lookDir = (out) => {
+          const dx = pt.pos.x - g.player.pos.x, dy = pt.pos.y + 0.6 - g.player.eyeHeight, dz = pt.pos.z - g.player.pos.z;
+          const L = Math.hypot(dx, dy, dz) || 1;
+          out.x = dx / L; out.y = dy / L; out.z = dz / L;
+        };
+        sys.focus = (eye, look, pos) => {
+          const here = sys.interactables.find((i) => i.id === id);
+          const r = here ?? origFocus(eye, look, pos);
+          (sys as { focused?: unknown }).focused = r ?? null;
+          return r;
+        };
+        if (g.interaction.focused?.id === id) g.keys.add('KeyE');
+        g.frame();
+      }
+      lp.lookDir = orig;
+      sys.focus = origFocus;
+      g.keys.delete('KeyE');
+      return seen;
+    };
+    if (!aimHold(`wedge-${pDoor.id}`, () => pDoor.heldBy === 'wedge')) return { stage: 'no-wedge-point', caps: caps.slice(-6) } as const;
+    const wedgedRehearsal = pDoor.heldBy === 'wedge';
+    const countAfterSet = gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1;
+    if (!aimHold(`unwedge-${pDoor.id}`, () => pDoor.heldBy === undefined)) return { stage: 'no-unwedge-point', caps: caps.slice(-6) } as const;
+    const unwedged = pDoor.heldBy === undefined;
+    const countAfterPull = gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1;
+    g.keys.delete('KeyC');
+
+    // The real thing: enter, race the wedge down before the knock matures.
+    g.player.teleport(bRoom.origin.x, 0, bRoom.origin.z);
+    for (let f = 0; f < 8; f++) g.frame();
+    const bell = gi.entities.find((e) => e.id === 'bellman');
+    if (!bell) return { stage: 'no-bellman-spawn', caps: caps.slice(-8) } as const;
+    const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
+    if (!door) return { stage: 'no-door' } as const;
+    const toC = { x: bRoom.origin.x - door.pos.x, z: bRoom.origin.z - door.pos.z };
+    const L = Math.hypot(toC.x, toC.z) || 1;
+    g.player.teleport(door.pos.x + (toC.x / L) * 0.9, 0, door.pos.z + (toC.z / L) * 0.9);
+    g.keys.add('KeyC');
+    for (let f = 0; f < 4; f++) g.frame();
+    aimHold(`wedge-${door.id}`, () => door.heldBy === 'wedge');
+    g.keys.delete('KeyC');
+    const wedged = door.heldBy === 'wedge';
+    if (!wedged) return { stage: 'wedge-failed', prompt: g.interaction.focused?.prompt, crouch: g.player.crouching, hasChock: gi.inventory.find((i) => i.id === 'doorChock')?.count } as const;
+
+    // Then walk away — the whole point vs the brace. The bellman rattles it,
+    // kicks the chock loose, knocks the freed leaf, and comes through.
+    g.player.teleport(door.pos.x + (toC.x / L) * 2.4, 0, door.pos.z + (toC.z / L) * 2.4);
+    const cluster = [...prev.doors, ...bRoom.doors]
+      .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
+    let loose = false, opened = false, openedAt = -1;
+    const trace: string[] = [];
+    for (let f = 0; f < 700 && !opened; f++) {
+      g.frame();
+      if (caps.some((c) => /wedge skids loose/.test(c))) loose = true;
+      if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) { opened = true; openedAt = f; }
+      if (f % 40 === 0) {
+        const tp = bell.threatPos();
+        const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
+        trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} loose=${loose}`);
+      }
+    }
+    return { stage: 'done', wedgedRehearsal, countAfterSet, unwedged, countAfterPull, loose, opened, openedAt, heldAfter: door.heldBy, dead: g.player.dead, trace, caps: caps.slice(-14) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { wedgedRehearsal: boolean; countAfterSet: number; unwedged: boolean; countAfterPull: number; loose: boolean; opened: boolean; openedAt: number; dead: boolean; trace: string[]; caps: string[] };
+  const tail = r.caps.join(' | ') + ' trace: ' + r.trace.join(' ; ');
+  expect(r.wedgedRehearsal, 'the wedge never set').toBe(true);
+  expect(r.countAfterSet).toBe(1);
+  expect(r.unwedged, 'pull the wedge free did not release the leaf').toBe(true);
+  expect(r.countAfterPull).toBe(2);   // the chock comes back to your pocket
+  expect(r.loose, `bellman never kicked the wedge — ${tail}`).toBe(true);
+  expect(r.opened, `leaf never swung after the chock gave — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });

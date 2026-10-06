@@ -78,6 +78,7 @@ export type ItemId =
   | 'palimpsest'
   | 'doorKey'
   | 'windAlarm'
+  | 'doorChock'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 
@@ -153,8 +154,9 @@ export interface Door {
   /** Swing speed multiplier — slam (sprint+E) ~2.6, creep (crouch+E) ~0.4. */
   openRate?: number;
   /** Held shut from the far side (not a lock — no key path). The
-   *  Commissionaire grips entry leaves; 'player' is a crouch-braced leaf. */
-  heldBy?: EntityId | 'player';
+   *  Commissionaire grips entry leaves; 'player' is a crouch-braced leaf;
+   *  'wedge' a placed chock — holds until pulled or worried loose. */
+  heldBy?: EntityId | 'player' | 'wedge';
 }
 
 export interface RoomInstance {

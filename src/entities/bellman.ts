@@ -244,7 +244,21 @@ export class Bellman extends Entity {
       } else if (blocking?.heldBy) {
         this.doorHoldT += dt;
         this.rattleBar(dt, blocking);
-        if (this.doorHoldT > 14) {
+        if (blocking.heldBy === 'wedge') {
+          // Rubber gives before weight: after a few seconds of worrying the
+          // chock it kicks it loose and comes through — the wedge buys you
+          // distance, not a stand.
+          if (this.doorHoldT > 6) {
+            for (const r of this.ctx.rooms) {
+              for (const d of r.doors) {
+                if (d.heldBy === 'wedge' && v3dist(d.pos, blocking.pos) < 0.7) d.heldBy = undefined;
+              }
+            }
+            c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[the wedge skids loose — kicked under the leaf]', { severity: 'warn' });
+            c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
+            this.doorHoldT = 0;
+          }
+        } else if (this.doorHoldT > 14) {
           c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[its steps fade down the hall — it lost interest]', { severity: 'info' });
           this.done();
           return;

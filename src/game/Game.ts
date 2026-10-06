@@ -696,6 +696,7 @@ export class Game {
       { id: 'feltWrap', price: rng.int(18, 28) },
       { id: 'latchpick', price: rng.int(24, 34) },
       { id: 'windAlarm', price: rng.int(28, 40) },
+      { id: 'doorChock', price: rng.int(8, 14) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -721,6 +722,7 @@ export class Game {
       { id: 'latchpick', price: 50 },
       { id: 'windAlarm', price: 55 },
       { id: 'wardSeal', price: 90 },
+      { id: 'doorChock', price: 12 },
     ];
     const rng = this.streams.roomStream('loot', room.index + 377);
     for (let i = pool.length - 1; i > 0; i--) {
@@ -1092,7 +1094,7 @@ export class Game {
     for (const it of this.dynamicInteractables) this.interaction.add(it);
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
-    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction);
+    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -1376,6 +1378,31 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.3, category: 'door', caption: '' });
         return;
       }
+      case 'wedge': {
+        // Set a chock under the leaf — holds while you walk away, but a
+        // determined rattle worries it loose. Weaker than your weight.
+        // it.pos is the anchor (offset off the leaf) — cluster on the door's.
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        if (cluster.some((d) => d.heldBy)) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        const chock = this.inventory.find((i) => i.id === 'doorChock');
+        if (!chock || chock.count <= 0) return;
+        chock.count--;
+        for (const d of cluster) d.heldBy = 'wedge';
+        this.cue('door-creak', it.pos, '[you set the wedge under the leaf]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.25, category: 'door', caption: '' });
+        return;
+      }
+      case 'unwedge': {
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        for (const d of cluster) if (d.heldBy === 'wedge') d.heldBy = undefined;
+        this.giveItem('doorChock', 1);
+        this.cue('door-creak', it.pos, '[you pull the wedge free]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'door', caption: '' });
+        return;
+      }
       case 'door': {
         const door = it.data as RoomInstance['doors'][number];
         if (door.falseDoor) {
@@ -1389,7 +1416,12 @@ export class Game {
         // are one physical doorway, so the whole cluster opens/locks together.
         const cluster = this.doorsAt(it.pos);
         // A held leaf is not a lock: the Commissionaire grips the far side.
-        // Your own brace just releases — opening it IS letting go.
+        // Your own brace just releases — opening it IS letting go. A wedge
+        // you set holds it from this side — pull it free instead.
+        if (cluster.some((d) => d.heldBy === 'wedge')) {
+          this.cue('door-locked', it.pos, '[the wedge holds it — pull it free first]', 'warn');
+          return;
+        }
         if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
           this.cue('door-locked', it.pos, '[the door is held from the far side]', 'warn');
           return;
@@ -1937,6 +1969,9 @@ export class Game {
           this.player.health = Math.min(100, this.player.health + 40);
           this.cue('heal', null, '[bandaged]');
         }
+        return;
+      case 'doorChock':
+        this.cue('ui-click', null, '[set it under a shut door — crouch at one]', 'info');
         return;
       case 'windAlarm': {
         item.count--;

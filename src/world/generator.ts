@@ -546,7 +546,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         }
       }
       // Under vending — rarer, hungrier.
-      const vendItemsU = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+      const vendItemsU = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal', 'doorChock', 'doorChock'];
       for (const room of underRooms) {
         if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.12)) continue;
         const lx = room.spec.width / 2 - 1.1;
@@ -812,7 +812,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
   // Vending machines — maintenance and records rooms sometimes carry one.
   // Filled but never lootable for free: `meta.vend` routes it to the
   // imprint-feed interaction. The vendItem is seeded so runs differ.
-  const vendItems = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+  const vendItems = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal', 'doorChock', 'doorChock'];
   for (const room of rooms) {
     if (room.authored || !room.spec || (room.biome !== 'maintenance' && room.biome !== 'records')) continue;
     if (!lootRng.bool(0.22)) continue;
