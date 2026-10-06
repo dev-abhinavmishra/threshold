@@ -44,6 +44,11 @@ const BAR_LINES = [
   '[the latch strains against your weight]',
   '[a palm flat on the far panel — it pushes]',
 ];
+const KEYS_LINES = [
+  '[a ring of keys works the lock]',
+  '[keys turning — one after another]',
+  '[metal in the keyway — patient, unhurried]',
+];
 
 export class Bellman extends Entity {
   private pos = v3();
@@ -153,7 +158,7 @@ export class Bellman extends Entity {
   private blockingDoorNear(target: Vec3): Door | null {
     for (const r of this.ctx.rooms) {
       for (const d of r.doors) {
-        if (d.opening || d.openT > 0.5 || d.locked || d.falseDoor) continue;
+        if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.2) continue;
         if (doorBetween(d, this.pos, target)) return d;
       }
@@ -240,6 +245,29 @@ export class Bellman extends Entity {
             this.done();
             return;
           }
+        }
+      } else if (blocking?.locked) {
+        // The house's own ring: a locked leaf is a pause, not a wall.
+        // The keys work for a beat, the lock turns for it, and it comes
+        // through the seam — the leaf never opens and stays locked for
+        // you. Locks save you from guests, not from the staff.
+        this.doorHoldT += dt;
+        this.rattleT -= dt;
+        if (this.rattleT <= 0) {
+          this.rattleT = 1.9;
+          c.cue('door-rattle', { x: blocking.pos.x, y: 1.2, z: blocking.pos.z },
+            KEYS_LINES[this.rng.int(0, KEYS_LINES.length - 1)], { severity: 'warn' });
+          c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.55, category: 'door', caption: '[a ring of keys works the lock]', source: this.id });
+        }
+        if (this.doorHoldT > 3.2) {
+          const to = v3(target.x - this.pos.x, 0, target.z - this.pos.z);
+          const len = v3dist(target, this.pos) || 1;
+          v3scale(to, to, 1 / len);
+          this.pos.x = blocking.pos.x + to.x * 0.8;
+          this.pos.z = blocking.pos.z + to.z * 0.8;
+          this.doorHoldT = 0;
+          c.cue('door-open', { x: blocking.pos.x, y: 1.2, z: blocking.pos.z }, '[the lock turns for it — the leaf never opens]', { severity: 'warn' });
+          c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.5, category: 'door', caption: '[the lock turns for it]', source: this.id });
         }
       } else if (blocking?.heldBy) {
         this.doorHoldT += dt;

@@ -1173,3 +1173,36 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-set hearing remains a design call.
   - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
     that LIES about one door — the book's euphemisms already hedge.
+
+## Sprint 246 — the house keys (locked leaves vs the Bellman)
+
+- The trail never crosses locked leaves, so the Bellman ghosted through
+  any it met — knock loop skipped them, blocking skipped them. Now a
+  locked leaf on the path is honest: it works the house ring
+  (KEYS_LINES, 1.9s cadence) for ~3.2s, then `[the lock turns for it —
+  the leaf never opens]` and comes through the seam (pos snaps 0.8m
+  toward target; the leaf stays locked and never swings).
+- Design pick over the alternatives: 'loses interest' would make locked
+  doors a free wall you never even pay for; 'it unlocks the leaf' would
+  open keygated rooms for free — economy break. Staff-keys-through-the-
+  seam keeps the economy and is scarier: locks stop guests, not staff.
+- blockingDoorNear no longer skips `d.locked`; the knock loop still does
+  (locked leaves are never knocked — no pending-swing on them).
+- Tests: vitest 'works the house keys through a locked leaf' (pos crosses
+  the plane; leaf stays locked + unswung; keys + slip captions fire);
+  e2e spec locks the '-in' leaf the bellman just spawned behind and
+  watches it come through — 21/21.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Gallery/records wings still run purse-rich with no sink (a records
+    "fines drawer"? gallery "coatrack"? — second ledger variant:
+    'the duty roster' on records desks tells STAFF positions (warden/
+    inspector/commissionaire only), cheaper than the full book).
+  - Warden cross-room shoulder-push vs the new keys fiction — it still
+    turns back at locked leaves (tested); decide if staff should carry
+    the ring there too, or if patrolmen don't rate keys (fiction call).
+  - Brace UX watch: bracing vs an already-knocking bellman is a ~0.5s
+    race — intended, but watch for feel complaints.
+  - Milestone-set hearing remains a design call.
+  - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
+    that LIES about one door — the book's euphemisms already hedge.

@@ -367,6 +367,32 @@ describe('Bellman (sprint 232)', () => {
     expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
     b.dispose();
   });
+
+  it('works the house keys through a locked leaf — the leaf never opens', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.locked = true;   // a leaf the game locked, still locked for you
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const nx = Math.sin(entry.yaw), nz = Math.cos(entry.yaw);
+    const side = (p: { x: number; z: number }) => (p.x - entry.pos.x) * nx + (p.z - entry.pos.z) * nz;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    // The keys work for a few seconds, then it comes through the seam.
+    while (Math.abs(side(pos)) < 0.2 && steps++ < 300) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(Math.abs(side(pos))).toBeGreaterThanOrEqual(0.2);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /keys works the lock|keys turning|keyway/.test(c))).toBe(true);
+    expect(captions.some((c) => /lock turns for it/.test(c))).toBe(true);
+    expect(entry.opening).toBeFalsy();        // the leaf never swung
+    expect(entry.locked).toBe(true);          // still locked for you
+    b.dispose();
+  });
 });
 
 describe('Porter (sprint 233)', () => {

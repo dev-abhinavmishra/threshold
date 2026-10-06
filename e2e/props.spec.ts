@@ -697,6 +697,67 @@ test('the bellman trails your steps — knock, follow, yield to a held gaze', as
   expect(errors).toEqual([]);
 });
 
+test('locked doors do not stop the bellman — the house keys turn, the leaf stays shut', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // bellman pinned @32
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const bellmanRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bellmanRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[bellmanRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(bellmanRoom.origin.x, 0, bellmanRoom.origin.z);
+    for (let f = 0; f < 40; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'bellman') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+    // The leaf the player came through stays shut (teleports never open it)
+    // — now the house locks it. It must not knock it open; its own ring works.
+    const door = bellmanRoom.doors.find((d) => d.id.endsWith('-in'));
+    if (!door) return { stage: 'no-entry-door' } as const;
+    door.locked = true;
+    const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+    const sideOf = (p: { x: number; z: number }) => (p.x - door.pos.x) * nx + (p.z - door.pos.z) * nz;
+    const roomSide = Math.sign(sideOf({ x: bellmanRoom.origin.x, z: bellmanRoom.origin.z }));
+    // It spawns on the far side (where the player just was) — run until the
+    // threat position crosses to the room side, i.e. it came through the seam.
+    let crossed = false;
+    let steps = 0;
+    while (!crossed && steps++ < 600 && ent.state !== 'done') {
+      const tp = ent.threatPos();
+      if (tp && Math.abs(sideOf(tp)) > 0.25 && Math.sign(sideOf(tp)) === roomSide) crossed = true;
+      g.player.teleport(bellmanRoom.origin.x, 0, bellmanRoom.origin.z); // stay put, far from the door
+      g.frame();
+    }
+    return {
+      stage: 'done', crossed,
+      opening: door.opening === true, stillLocked: door.locked === true,
+      keysLine: caps.some((c) => /keys works the lock|keys turning|keyway/.test(c)),
+      slipLine: caps.some((c) => /lock turns for it/.test(c)),
+      caps: caps.slice(-12),
+    } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { crossed: boolean; opening: boolean; stillLocked: boolean; keysLine: boolean; slipLine: boolean; caps: string[] };
+  expect(r.keysLine, `no keys-work cue — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.crossed, 'it never came through the locked seam').toBe(true);
+  expect(r.slipLine).toBe(true);
+  expect(r.opening, 'the locked leaf must never swing').toBe(false);
+  expect(r.stillLocked).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('the porter waits above the lintel — look up or it drops', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
