@@ -2207,3 +2207,76 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The Auditor wanted-poster stays a design call.
   - wetFloor (13 uses) is still dead dressing — a second slip family is
     probably too same-y with armed puddles; keep dormant.
+
+## Sprint 286 — the inspection sheet (watcher foresight, sixth book)
+The last info-layer hole: watchers were the only threat axis no paper
+covered. 'Read the inspection sheet — N imprints' (4–9) sits on
+records/maintenance desks (roster hosts, roll 0.4, one paper per room —
+a sheet never shares a room with a roster/complaint book). The read
+scans `route.rooms` spec.props for securityCam/searchlight in the next
+10 doors: `Door 036 — a live eye sweeps` / `the beam crosses` /
+`a dead eye — mains out` (darkRoom watchers are marked dead). Library
+map now: ledger predicts, roster locates, fault book files hazards,
+register prices claims, work order files cargo, crew board files crew —
+and the inspection sheet files eyes.
+Traps:
+- **New lootRng consumption reseats every downstream consumer** — the
+  sheet loop moved 's' under work-orders from u-22+ to u-47+. Any spec
+  pinning placement (or finding fragile geometry) breaks on reseat:
+  legs must live-compute fixtures AND aim at the interactable's real
+  focus point.
+- **The +0.1 aim idiom is the +0.6 trap's older form** — work-order leg
+  died on a reseated dense u-break kitchen because `pos.y + 0.1`
+  couldn't reach the focus point `pos.y + 0.6` (interaction.ts). All
+  `pos.y + 0.1` pitch lines in e2e were converted to +0.6 — the focus
+  point is uniform for every interactable kind.
+- A stale `vite preview` on :4173 + `reuseExistingServer` in
+  playwright.config silently serves pre-change dist — `fuser -k
+  4173/tcp` when a leg can't see brand-new code (this burned the first
+  leg run this sprint).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - The sheet could mark hunter sign too (a 'survey copy' verb?), or
+    dead mains could get their own second paper (the 'mains ledger' —
+    which rooms are dark ahead — already implicit in the sheet).
+
+## Sprint 287 — the confiscated case (e2e/hazards leg 7, generation spec, 'confiscate' stream)
+
+What:
+- `confiscated` loot sockets: lit watched rooms (a live securityCam /
+  searchlight in spec.props, mains on) can hold a seized case ~2.4m out
+  under the cone. The first lit watched room always carries one;
+  subsequent watched rooms roll 0.6. Pays an item (latchpick /
+  chalkSpool / doorChock / feltWrap / handLamp / sparkFlash) or 8–16
+  imprints.
+- 'pry' verb (priority 3 — same tier as the offset-anchor books — 2.2s
+  hold): free goods, but the dwell sits inside the sweep and the crack
+  rings as a 0.45 'machine' emit the room's listeners hear.
+- Dedicated `confiscate` RngStream — placed AFTER applyForeshadowing
+  (the witness cams are part of the watch set) on its own stream so the
+  underscript generator's 'loot' draws don't reseat.
+Traps:
+- **Wall-mount dressing is builder-side only** — biome mount tables
+  (builder.ts) add meshes, not spec.props. Watcher ingestion reads
+  spec.props, which only has authored + foreshadow cams. Anything
+  keying on watchers at GENERATION time must run after
+  applyForeshadowing, not inside fillSockets (the first draft placed
+  zero cases on 's' for exactly this reason).
+- **Post-hold focus capture** — once a one-shot interactable is taken
+  it disables and the next-best verb (a corridor phone 2.4m away)
+  takes focus; a leg asserting the prompt must latch it DURING the
+  aim loop, not read the last-seen focus after the hold.
+- Shared-RNG reseat rule restated: prefer a NEW named stream over
+  drawing an existing stream earlier (a new stream isolates its own
+  shuffle; an existing stream reseats every downstream consumer).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - The case currently guards goods — a 'sealed warrant' variant could
+    hold paper (a claims sheet for main-route ledgers: which rooms'
+    effects were drawn).

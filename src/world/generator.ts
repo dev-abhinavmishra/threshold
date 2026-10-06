@@ -12,7 +12,7 @@ import {
   aabb, aabbIntersects2D, aabbFromMinMax, v3, type Aabb, type Vec3,
 } from '../engine/math';
 import type {
-  Biome, Door, EntityId, EntityTuning, HidingSpot, NavNode, RoomInstance, ScheduledEncounter, Socket,
+  Biome, Door, EntityId, EntityTuning, HidingSpot, ItemId, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
@@ -539,6 +539,39 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   // Encounter scheduling via director rules.
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
   applyForeshadowing(mainRooms, streams.stream('scare'));
+
+  // The confiscated case — the eyes guard a prize. Watched rooms (a live
+  // securityCam / searchlight, mains on) can hold a seized case ~2.4m out
+  // under the cone: the pry is free, the cost is the exposure crossing the
+  // sweep to reach it and back. Dead-mains eyes guard nothing. Must run
+  // after applyForeshadowing — its witness cams are part of the watch set.
+  // Dedicated stream: 'loot' feeds the underscript generator next.
+  const caseRng = streams.stream('confiscate');
+  const CASE_GOODS: [ItemId, number][] = [
+    ['latchpick', 1], ['chalkSpool', 1], ['doorChock', 1],
+    ['feltWrap', 1], ['handLamp', 40], ['sparkFlash', 1],
+  ];
+  let casePlaced = false;
+  for (const room of mainRooms) {
+    if (room.authored || !room.spec || room.darkRoom) continue;
+    const eye = room.spec.props.find((p) => p.kind === 'securityCam' || p.kind === 'searchlight');
+    if (!eye) continue;
+    if (!caseRng.bool(0.6) && casePlaced) continue;
+    const ep = localToWorld(room.origin, room.yaw, eye.x, 0, eye.z);
+    const face = (eye.yaw ?? 0) + room.yaw;
+    const cx = ep.x + Math.sin(face) * 2.4;
+    const cz = ep.z + Math.cos(face) * 2.4;
+    const good = CASE_GOODS[caseRng.int(0, CASE_GOODS.length - 1)];
+    const isMarks = caseRng.bool(0.4);
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(cx, 0.9, cz),
+      yaw: 0, filled: true,
+      meta: { confiscated: true, contains: isMarks ? 'imprints' : good[0],
+        amount: isMarks ? caseRng.int(8, 16) : good[1] },
+    });
+    casePlaced = true;
+  }
 
   // The forged page — a book near a forger of doors can be rewritten. A
   // ledger within sight of a redactor's door (inside the book's own
@@ -1092,6 +1125,28 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
       pos: v3(sp.x + (toC.x / tcL) * 0.5, 0.9, sp.z + (toC.z / tcL) * 0.5),
       yaw: 0, filled: true,
       meta: { complaint: true, fault: isMaint, price: lootRng.int(3, 8) },
+    });
+  }
+
+  // The inspection sheet — the security wing's paper. Where the fault book
+  // files what BITES, this files what WATCHES: which doors ahead hold a live
+  // eye, a sweeping beam, or a dead one drowned with the mains. Records and
+  // maintenance desks keep it; one paper per room.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    if (room.biome !== 'records' && room.biome !== 'maintenance') continue;
+    const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk');
+    if (!desk) continue;
+    if (room.sockets.some((s) => s.meta.roster || s.meta.complaint)) continue;
+    if (!lootRng.bool(0.4)) continue;
+    const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+    const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { watchSheet: true, price: lootRng.int(4, 9) },
     });
   }
 

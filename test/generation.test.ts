@@ -401,6 +401,57 @@ describe('sprint mechanics coverage', () => {
     expect(books).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("inspection sheets: watcher foresight on records/maintenance desks only", () => {
+    let sheets = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const ws = r.sockets.filter((x) => x.meta.watchSheet);
+        if (!ws.length) continue;
+        sheets += ws.length;
+        expect(r.authored).toBeFalsy();
+        expect(['records', 'maintenance']).toContain(r.biome);
+        expect(r.spec?.props.some((p) => p.kind === 'desk' || p.kind === 'writingDesk')).toBe(true);
+        // one paper per room — a sheet never shares a room with another book
+        expect(r.sockets.some((x) => x.meta.roster || x.meta.complaint)).toBe(false);
+        for (const s of ws) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(4);
+          expect(s.meta.price as number).toBeLessThanOrEqual(9);
+        }
+      }
+    }
+    expect(sheets).toBeGreaterThanOrEqual(SEEDS.length);
+  });
+
+  it("confiscated cases: the prize lives only under a live eye", () => {
+    const GOODS = new Set(['latchpick', 'chalkSpool', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash']);
+    let cases = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const watchedLit = mainRooms(route).filter((r) =>
+        !r.authored && !r.darkRoom &&
+        r.spec?.props.some((p) => p.kind === 'securityCam' || p.kind === 'searchlight'));
+      const caseRooms = mainRooms(route).filter((r) => r.sockets.some((s) => s.meta.confiscated));
+      // a lit watched room always guards at least one case when one exists
+      if (watchedLit.length) expect(caseRooms.length).toBeGreaterThanOrEqual(1);
+      for (const r of caseRooms) {
+        cases += 1;
+        expect(r.authored).toBeFalsy();
+        expect(r.darkRoom).toBeFalsy();
+        expect(watchedLit).toContain(r);
+        const s = r.sockets.find((x) => x.meta.confiscated)!;
+        expect(s.filled).toBe(true);
+        if (s.meta.contains === 'imprints') {
+          expect(s.meta.amount as number).toBeGreaterThanOrEqual(8);
+          expect(s.meta.amount as number).toBeLessThanOrEqual(16);
+        } else {
+          expect(GOODS.has(s.meta.contains as string)).toBe(true);
+        }
+      }
+    }
+    expect(cases).toBeGreaterThanOrEqual(SEEDS.length);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');

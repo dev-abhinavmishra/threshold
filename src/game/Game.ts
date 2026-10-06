@@ -2065,6 +2065,59 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'watchSheet': {
+        // The inspection sheet — the security wing's paper. Where the fault
+        // book files what BITES, this files what WATCHES: which doors ahead
+        // hold a live eye, a sweeping beam, or one drowned with the mains.
+        // Read from spec.props — the sheet knows rooms before they build.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the sheet wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const entries: string[] = [];
+        for (const r of this.route?.rooms ?? []) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || entries.length >= 6) continue;
+          const cams = (r.spec?.props ?? []).filter((p) => p.kind === 'securityCam').length;
+          const beams = (r.spec?.props ?? []).filter((p) => p.kind === 'searchlight').length;
+          if (!cams && !beams) continue;
+          const mark = r.darkRoom
+            ? 'a dead eye — mains out'
+            : cams && beams ? 'an eye and a beam'
+            : cams ? 'a live eye sweeps' : 'the beam crosses';
+          entries.push(`Door ${String(r.index).padStart(3, '0')} — ${mark}`);
+        }
+        const text = entries.length
+          ? `[the inspection sheet marks: ${entries.join(' · ')}]`
+          : '[nothing watches the doors ahead — the sheet runs clean]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'pry': {
+        // The confiscated case — free goods guarded by a live eye. The pry
+        // is a 2.2s dwell inside the cone plus a ring the room hears; the
+        // paid-quiet alternative is 'tape the eye' before you reach it.
+        const sock = it.data as Socket;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.45, category: 'machine', caption: '[the case cracks]' });
+        const contains = sock.meta.contains as string | undefined;
+        const amt = (sock.meta.amount as number) ?? 1;
+        if (contains === 'imprints') {
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[the case held a purse — +${amt} imprints]`);
+        } else if (contains) {
+          this.giveItem(contains as ItemId, amt);
+          this.cue('pickup', it.pos, `[the case breaks open — confiscated goods, now yours]`);
+        }
+        return;
+      }
       case 'audit': {
         // The Auditor's settle point — pay the tally or the book walks.
         const owed = this.unpaidTheft;

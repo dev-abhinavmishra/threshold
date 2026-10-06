@@ -412,3 +412,68 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
   }
   expect(errors).toEqual([]);
 });
+
+test('the confiscated case — the eyes guard a prize', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // cam @36 lit — the corridor eye guards a case
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { watchers: { pos: { x: number; y: number; z: number }; room: number; dead: boolean }[] };
+      currentRoom: number; godMode: boolean; keys: Set<string>;
+      interaction: { focused?: { id?: string; prompt?: string };
+        interactables: { kind: string; prompt: string; enabled: boolean }[] };
+    };
+    ga.godMode = true;
+    const room = g.route.rooms.find((r) => r.sockets?.some((s) => s.meta?.confiscated));
+    const caze = room?.sockets?.find((s) => s.meta?.confiscated);
+    if (!room || !caze) return { stage: 'no-case' } as const;
+    // the guard is real: a live watcher sweeps this room
+    const watcher = ga.hazard.watchers.find((w) => w.room === room.index && !w.dead);
+    const taken0 = caze.meta!.taken === true;
+
+    // stand at the case, aim at the focus point (pos.y + 0.6), hold E 2.2s
+    const wy = caze.pos.y + 0.6;
+    const purse = g as unknown as { imprints: number; inventory: { id: string; count: number }[] };
+    const imp0 = purse.imprints;
+    const items0 = purse.inventory.reduce((a, i) => a + i.count, 0);
+    let sawPry = false;
+    for (let f = 0; f < 120; f++) {
+      g.player.teleport(caze.pos.x + 0.8, 0, caze.pos.z + 0.8);
+      ga.currentRoom = room.index;
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const hd = Math.max(0.3, Math.hypot(caze.pos.x - g.player.pos.x, caze.pos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(wy - eyeY, hd);
+      g.player.yaw = Math.atan2(caze.pos.x - g.player.pos.x, caze.pos.z - g.player.pos.z);
+      g.frame();
+      // capture before the hold finishes — once the case pops, a nearby verb
+      // (the corridor phone) takes focus and erases the prompt we're testing
+      if (/pry the confiscated case/i.test(ga.interaction.focused?.prompt ?? '')) sawPry = true;
+      if (f === 8) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 15; f++) g.frame();
+    return { stage: 'done', idx: room.index, watched: !!watcher, taken0,
+      sawPry, taken: caze.meta!.taken === true,
+      gained: (purse.imprints - imp0) + (purse.inventory.reduce((a, i) => a + i.count, 0) - items0),
+      openCaption: caps.some((c) => /case breaks open|case held a purse|case cracks/.test(c)),
+      pryGone: !ga.interaction.interactables.some((i) => i.kind === 'pry' && i.enabled) };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  expect(result.watched, 'the case must sit under a live eye').toBe(true);
+  expect(result.sawPry, 'the pry must out-focus its room').toBe(true);
+  expect(result.taken).toBe(true);
+  expect(result.gained, 'the case pays out').toBeGreaterThan(0);
+  expect(result.openCaption, 'the pry pays out + rings').toBe(true);
+  expect(result.pryGone, 'the pry is one-shot').toBe(true);
+  expect(errors).toEqual([]);
+});
