@@ -586,6 +586,24 @@ CURRENT STATE (as of sprint 223)
   E2E harness note: the seam interactable only exists while
   crouched — hold KeyC before looking it up. 81 unit tests.
 
+  Sprint 230 connector-corridor dressing: the jittered-milestone gap
+  corridors (room.connectorIn, builder.ts ~2070) were bare floor +
+  2 walls + ceiling. Now dressed in room-local space per straight
+  segment: 2.2m pilaster bays with wainscotRun/corniceRun fills on
+  both walls, alternating wallLanterns on runs >4.5m, a runnerRug
+  when len>3.2, and a doorSurround framing each segment end
+  (portal-into-corridor). Verified positions numerically: 131 wall
+  pieces sit exactly 1.16 off-axis within bounds on the 47.5m elbow
+  connector. GOTCHA for tests/probes: connTrim-* groups survive as
+  NAMED shells but their meshes are harvested by the room's second
+  static merge (builder.ts ~2240 — traverses the whole group, pulls
+  any non-animated Mesh into shared-material buckets) — so assert
+  group names + positions, not mesh counts, and Box3 over corr is
+  empty. Same reason vitest/node sees 0 meshes: GLB kinds have no
+  procedural fallback, empty until the model cache fills. Connectors
+  are rare per seed — 's'/'threshold' have ZERO connectorIn rooms;
+  'ash-vault-101' has 3 (longest ~47.5m). 82 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

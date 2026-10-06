@@ -474,3 +474,33 @@ describe('door listen seams (sprint 229)', () => {
     expect(peeks).toBe(locked);   // keyhole-peek still covers every locked leaf
   });
 });
+
+describe('connector corridor dressing (sprint 230)', () => {
+  it('gap corridors get panelling, lanterns, runners and portal surrounds', async () => {
+    const { buildRoomMesh } = await import('../src/world/builder');
+    const route = generateRoute({ seedText: 'ash-vault-101', difficulty: 'standard', includeUnderscript: false });
+    const conn = route.rooms.filter((r) => r.connectorIn && r.spec);
+    expect(conn.length).toBeGreaterThan(2);
+    // Longest connector (room 27 elbows ~47m) — the others are short stubs
+    // where surrounds + wainscot/cornice apply but bays stay bare.
+    const longest = conn.reduce((a, r) => {
+      const seg = [r.connectorIn!.a, r.connectorIn!.elbow, r.connectorIn!.b].filter(Boolean) as { x: number; z: number }[];
+      let tot = 0; for (let i = 0; i < seg.length - 1; i++) tot += Math.hypot(seg[i + 1].x - seg[i].x, seg[i + 1].z - seg[i].z);
+      return tot > a.tot ? { r, tot } : a;
+    }, { r: conn[0], tot: 0 });
+    const built = buildRoomMesh(longest.r, longest.r.spec!, 1, 'high');
+    const kinds = new Set<string>();
+    built.group.traverse((o) => {
+      const m = /^connTrim-(.*)$/.exec(o.name ?? '');
+      if (m) kinds.add(m[1]);
+    });
+    expect(kinds.has('pilaster')).toBe(true);
+    expect(kinds.has('wainscotRun')).toBe(true);
+    expect(kinds.has('corniceRun')).toBe(true);
+    expect(kinds.has('doorSurround')).toBe(true);
+    expect(kinds.has('runnerRug')).toBe(true);
+    let surrounds = 0;
+    built.group.traverse((o) => { if (o.name === 'connTrim-doorSurround') surrounds++; });
+    expect(surrounds % 2).toBe(0); // one per segment end
+  });
+});

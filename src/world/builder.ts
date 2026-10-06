@@ -2096,6 +2096,48 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         wall.position.set((la.x + lb.x) / 2 + px, 1.4, (la.z + lb.z) / 2 + pz);
         corr.add(wall);
       }
+      // Sprint 230 — dress the run: pilaster-bay panelling, cornice, a
+      // lantern, a runner, and a portal surround framing each end. Same
+      // milled vocabulary corridorTrim lays inside rooms; colliders stay
+      // out — the walls already block.
+      {
+        const nx = -uz, nz = ux;
+        const face = (dx2: number, dz2: number) => Math.atan2(dx2, dz2);
+        const trim = (kind: PropKind, t: number, side: number, y: number, yaw?: number) => {
+          const px = la.x + ux * t + nx * side * 1.16;
+          const pz = la.z + uz * t + nz * side * 1.16;
+          const b = buildProp({ kind, x: px, z: pz, y, yaw: yaw ?? face(-nx * side, -nz * side) },
+            rng.fork(si * 997 + Math.floor(t * 10) * 31 + side * 7 + (kind as string).length));
+          b.group.name = `connTrim-${kind}`;
+          corr.add(b.group);
+        };
+        const bays = Math.max(1, Math.round(len / 2.2));
+        const bay = len / bays;
+        for (const side of [-1, 1]) {
+          for (let i = 0; i <= bays; i++) {
+            const t = i * bay;
+            if (t > 0.25 && t < len - 0.25) trim('pilaster', t, side, 1.25);
+            if (i < bays) {
+              trim('wainscotRun', t + bay / 2, side, 0.55);
+              trim('corniceRun', t + bay / 2, side, 2.63);
+            }
+          }
+          if (len > 4.5 && (si + (side > 0 ? 1 : 0)) % 2 === 0) trim('wallLantern', len / 2, side, 2.1);
+        }
+        if (len > 3.2) {
+          const t = len / 2;
+          const rug = buildProp({ kind: 'runnerRug', x: la.x + ux * t, z: la.z + uz * t, y: 0.02, yaw: Math.atan2(-uz, ux) }, rng.fork(si * 613));
+          rug.group.name = 'connTrim-runnerRug';
+          corr.add(rug.group);
+        }
+        // Portal surrounds at both ends, fronts into the corridor.
+        const suA = buildProp({ kind: 'doorSurround', x: la.x + ux * 0.3, z: la.z + uz * 0.3, y: 1.25, yaw: face(ux, uz) }, rng.fork(si * 61));
+        suA.group.name = 'connTrim-doorSurround';
+        corr.add(suA.group);
+        const suB = buildProp({ kind: 'doorSurround', x: lb.x - ux * 0.3, z: lb.z - uz * 0.3, y: 1.25, yaw: face(-ux, -uz) }, rng.fork(si * 67));
+        suB.group.name = 'connTrim-doorSurround';
+        corr.add(suB.group);
+      }
     }
     group.add(corr);
   }
