@@ -240,13 +240,18 @@ function instantiate(index: number, label: string, placed: PlacedRoom, isMainRou
   for (const pr of spec.props) {
     if (pr.kind === 'snare') {
       const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
-      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'snare' } });
+      // Old sign: ~6% of wires were sprung before you arrived.
+      const spent = ((p.x * 11 + p.z * 3 + index * 17) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'snare', spent: true } : { hazard: 'snare' } });
     }
     // Steam fittings are live pressure lines — they blast on a seeded
     // cycle until somebody bleeds the line.
     if (pr.kind === 'steamVent') {
       const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
-      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'steam' } });
+      const spent = ((p.x * 11 + p.z * 3 + index * 17) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'steam', spent: true } : { hazard: 'steam' } });
     }
   }
 
@@ -851,6 +856,13 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     }
   }
 
+  // Old sign guaranteed: every route remembers somebody's earlier work —
+  // if no hazard rolled spent, the first one carries the mark.
+  {
+    const haz = rooms.flatMap((r) => r.sockets.filter((sk) => sk.meta.hazard === 'snare' || sk.meta.hazard === 'steam'));
+    if (haz.length && !haz.some((sk) => sk.meta.spent === true)) haz[0].meta.spent = true;
+  }
+
   // Hand lamp guaranteed early (dark rooms incoming).
   const early = rooms.find((r) => r.index === 6) ?? rooms[6];
   let lampSock = early.sockets.find((s) => !s.filled && s.kind !== 'key');
@@ -1264,7 +1276,9 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
         const wp = localToWorld(room.origin, room.yaw, lx, 0, lz);
         if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.6)) continue;
         room.spec?.props.push({ kind: 'snare', x: lx, z: lz, yaw: sr.float() * Math.PI * 2 });
-        room.sockets.push({ kind: 'hazard', pos: wp, yaw: room.yaw, filled: false, meta: { hazard: 'snare', submerged: true } });
+        const spentWire = ((wp.x * 11 + wp.z * 3 + room.index * 17) % 97) < 6;
+        room.sockets.push({ kind: 'hazard', pos: wp, yaw: room.yaw, filled: false,
+          meta: spentWire ? { hazard: 'snare', submerged: true, spent: true } : { hazard: 'snare', submerged: true } });
         placed++;
       }
     }

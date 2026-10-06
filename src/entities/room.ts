@@ -865,20 +865,27 @@ export class HazardField {
   /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
    *  scent a posted hunter can read — quiet work is marked work. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water'; t: number; readBy: string[] }[] = [];
+    kind: 'wire' | 'line' | 'water'; t: number; readBy: string[];
+    old?: boolean }[] = [];
   lastTick = 0;
 
   constructor() {}
 
   addFromRoom(room: RoomInstance): void {
     for (const s of room.sockets) {
-      if (s.meta.hazard === 'snare') this.snares.push({ pos: s.pos, room: room.index, armed: true });
+      if (s.meta.hazard === 'snare') {
+        const spent = s.meta.spent === true;
+        this.snares.push({ pos: s.pos, room: room.index, armed: !spent });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'wire', t: -1, readBy: [], old: true });
+      }
       if (s.meta.hazard === 'puddle') this.puddles.push({ pos: s.pos, room: room.index, radius: 1.1 });
       if (s.meta.hazard === 'steam') {
         // deterministic per-vent rhythm — same seed, same beat
         const hsh = ((s.pos.x * 7 + s.pos.z * 13 + room.index * 5) % 10) / 10;
         const cycle = 4.5 + hsh * 3.0;
-        this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: false });
+        const spent = s.meta.spent === true;
+        this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: spent });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'line', t: -1, readBy: [], old: true });
       }
     }
   }
@@ -926,6 +933,16 @@ export class HazardField {
         st.warnT = ctx.now;
         ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent; the valve bleeds it]', { severity: 'warn' });
       }
+    }
+    // Old sign the PLAYER can read: a sprung wire or a bled line from
+    // before you arrived reads as history — someone else worked here.
+    for (const ev of this.evidence) {
+      if (!ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
+      if (v3dist(p.pos, ev.pos) > 3) continue;
+      ev.readBy.push('player');
+      ctx.cue('floor-creak', ev.pos, ev.kind === 'wire'
+        ? '[a sprung wire, long dry — someone else took this step]'
+        : '[a bled line, long cold — somebody worked here]', { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {

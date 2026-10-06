@@ -327,3 +327,44 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
   expect(result.wrapSpent, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('old sign — a sprung wire from before you arrived reads as history', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // spent snare at room 2 (0.0, 22.5)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { snares: { pos: { x: number }; room: number; armed: boolean }[];
+        evidence: { old?: boolean; kind: string; readBy: string[] }[] };
+    };
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((sk) => sk.meta?.spent === true));
+    if (!room) return { stage: 'no-sign' } as const;
+    const sock = (room.sockets ?? []).find((sk) => sk.meta?.spent === true)!;
+    const snare = ga.hazard.snares.find((sn) => sn.room === room.index);
+    const oldSign = ga.hazard.evidence.some((e) => e.old === true);
+    // stand at the mark — the sign reads itself once
+    g.player.teleport(sock.pos.x, 0, sock.pos.z + 0.8);
+    ga.currentRoom = room.index;
+    for (let f = 0; f < 60; f++) g.frame();
+    const readCaps = caps.filter((c) => /sprung wire|bled line/.test(c));
+    for (let f = 0; f < 40; f++) g.frame();
+    const readCaps2 = caps.filter((c) => /sprung wire|bled line/.test(c));
+    return { stage: 'done', dead: snare ? !snare.armed : undefined, oldSign,
+      readOnce: readCaps.length === 1 && readCaps2.length === 1,
+      caps: readCaps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.dead, JSON.stringify(result)).toBe(true);
+  expect(result.oldSign, JSON.stringify(result)).toBe(true);
+  expect(result.readOnce, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

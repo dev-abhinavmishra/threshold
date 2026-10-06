@@ -1412,3 +1412,32 @@ describe('HazardField steam lines (sprint 261)', () => {
     expect(ctx.damagePlayer).not.toHaveBeenCalled();
   });
 });
+
+describe('old sign (sprint 266)', () => {
+  it('spent hazards load dead and leave readable old sign', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const room = {
+      index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+      doors: [], hidingSpots: [], scheduled: [],
+      sockets: [
+        { kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'steam', spent: true } },
+        { kind: 'hazard', pos: v3(-1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'snare', spent: true } },
+      ],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(room);
+    expect(h.steams[0].dead, 'a spent line is dead metal').toBe(true);
+    expect(h.snares[0].armed, 'a sprung wire stays sprung').toBe(false);
+    expect(h.evidence.filter((e) => e.old).length).toBe(2);
+    // walking to the mark reads it — once
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0.4;
+    h.update(ctx, 0.02);
+    expect(ctx.cue).toHaveBeenCalledWith('floor-creak', expect.anything(),
+      expect.stringContaining('bled line'), expect.anything());
+    h.update(ctx, 0.02);
+    const calls = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.filter((c) => /bled line/.test(String(c[2])));
+    expect(calls.length, 'old sign reads once').toBe(1);
+  });
+});

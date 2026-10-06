@@ -794,3 +794,15 @@ describe('wired drawers (sprint 262)', () => {
     expect(wiredSafe, 'safe rooms never wire drawers').toBe(0);
   });
 });
+
+describe('old sign (sprint 266)', () => {
+  it('every route carries spent hazard sockets — history you can read', () => {
+    for (const seed of SEEDS.slice(0, 4)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const spent = [...route.rooms, ...route.underRooms].flatMap((r) =>
+        (r.sockets ?? []).filter((sk) => sk.meta?.spent === true));
+      expect(spent.length, `seed ${seed} carries old sign`).toBeGreaterThan(0);
+      for (const sk of spent) expect(['snare', 'steam']).toContain(sk.meta.hazard);
+    }
+  });
+});

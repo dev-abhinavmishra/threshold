@@ -806,7 +806,7 @@ export class Game {
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       hazardEvidence: (key, x, z, r) => {
-        const out = this.hazard.evidence.filter((e) => !e.readBy.includes(key)
+        const out = this.hazard.evidence.filter((e) => !e.old && !e.readBy.includes(key)
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
         for (const e of out) e.readBy.push(key);
         return out;

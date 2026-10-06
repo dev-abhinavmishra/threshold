@@ -1669,3 +1669,16 @@ NEXT SPRINT IDEAS (pick the biggest first)
   radius, not just the focused record — one wrap cleans a floor.
 - Tests: contract spec gained 'scrub'; e2e 'the line sings' drives
   bleed→sign→scrub→wrap-spent. Gates all green.
+
+## Sprint 266 — old sign (player-readable evidence)
+
+- `meta.spent` (~6% position-hash roll on snare/steam hazard sockets in `instantiate`, plus the dark-flood submerged snare pass) marks a hazard that died before you arrived; `fillSockets` guarantees ≥1 spent socket per route.
+- `HazardField.addFromRoom` honors it: `armed:false`/`dead:true` + an evidence record with `old:true` (`t:-1`). The `hazardEvidence` getter filters `!e.old` — hunters only smell FRESH sign; old sign is for the player.
+- Player read: `HazardField.update` fires a one-shot proximity cue (<3m, per record, current room only): sprung wire → '[a sprung wire, long dry — someone else took this step]'; bled line → '[a bled line, long cold — somebody worked here]'. Water evidence never goes old (no pre-drained generation).
+- The sign system is now bidirectional: your kills mark rooms for hunters (264), the building's kills mark rooms for you.
+
+**Traps**
+- `instantiate()` has no rng stream in the arm loop — the position hash `(x*11 + z*3 + index*17) % 97` keeps the roll deterministic without consuming a stream. Same trick as the steam cycle hash.
+- The spent guarantee must live in `fillSockets` (post-arming), not `instantiate` — only there can you see whether ANY socket rolled spent.
+- Python string-`replace` edits: the evidence-type declaration sits under a docstring comment, so anchor on the type line itself, not a longer block.
+- 's' spends: snare @2, steam @60 (e2e drives room 2).
