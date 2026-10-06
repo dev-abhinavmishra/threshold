@@ -1337,6 +1337,7 @@ export class Game {
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isDrain = !!pr.flooded && DRAIN_PROPS.has(p.kind);
+          const isWatch = p.kind === 'securityCam' || p.kind === 'searchlight';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
@@ -1375,7 +1376,7 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && !isWatch && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
           const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : isDrain ? dn++ : (ord[p.kind] ?? 0);
           if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -1403,6 +1404,17 @@ export class Game {
               kind: 'drain', id: `drain-${key}`,
               pos: { x: wx, y: 0.9, z: wz },
               prompt: 'Open the drain', holdTime: 1.2, enabled: true, priority: 2,
+            });
+          } else if (isWatch) {
+            // Wall eyes: tape/smother blinds the eye — only while it's live
+            // (dead mains already killed it; a taped eye is furniture).
+            const wy = p.y ?? (p.kind === 'securityCam' ? 2.35 : 1.4);
+            const live = !pr.darkRoom && this.hazard.watchers.some((w) =>
+              !w.dead && w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
+            if (live) this.interaction.add({
+              kind: 'tape', id: `tape-${key}`, pos: { x: wx, y: wy, z: wz },
+              prompt: p.kind === 'securityCam' ? 'Tape the eye — felt wrap' : 'Smother the beam — felt wrap',
+              holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -2317,6 +2329,24 @@ export class Game {
         this.pulledAlarms.add(key);
         this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 1.0, category: 'machine', caption: '[the alarm screams]' });
         this.cue('door-slam', it.pos, '[the bell screams in the stairwell]', 'warn');
+        return;
+      }
+      case 'tape': {
+        // Blind the eye: felt over the lens / across the beam — the wrap's
+        // third job after scrubbing sign and forging it.
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[you need a felt wrap to blind it]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          !x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (w) w.dead = true;
+        this.cue('item', it.pos, '[the eye goes blind under the felt]');
+        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
         return;
       }
       case 'drain': {

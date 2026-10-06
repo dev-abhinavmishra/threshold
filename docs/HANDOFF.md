@@ -2142,3 +2142,37 @@ exposed two latent spec bugs the skip had hidden:
 Trap logged for future specs: **aim at it.pos.y + 0.6, not the prop**,
 and always compute pitch from live horizontal distance — collision can
 push a teleported stand point ~0.25m off.
+
+## Sprint 285 — the watched hall (the eye reads motion)
+The hazard family's sixth axis — and the first that isn't touch, time,
+or posture: `securityCam` (wall-mount dressing: lobby/records/gallery/
+corridor/maintenance/milestone rooms, ~2–6/seed) and `searchlight`
+(maint-server, corridor-checkpoint) are now live watchers. Each sweeps
+a deterministic arc (cam ±0.95rad/7–11s, light ±0.5/10–14s); MOTION
+inside the cone settles it for 0.9s → `[the eye settles on you]` +
+`emit 0.5 'machine'` AT THE PLAYER'S POSITION — the building knows
+where you are *now*, not where you were, and every existing listener
+(warden, grafter, swamper, hauler ram) answers through the noise
+system it already has. Still feet beat it mid-cone; the blind spot is
+under the mount (d<0.45). `Tape the eye`/`Smother the beam` (feltWrap,
+1.6s) blinds one permanently — the wrap's third job. `darkRoom` kills
+watchers for free: drowned mains = dead eyes.
+Traps:
+- Wall-mount cam props carry `yaw` but no `y` — default cam pos.y=2.35,
+  searchlight 1.4; world yaw = p.yaw + room.yaw (matches rotXZ).
+- The watcher registry lives on HazardField from spec.props (sockets
+  carry loot/hazards; watchers come from props).
+- 's' fixture pair: cam@18 is DARK (dead eye — no verb, no report),
+  cam@36 lit (live) — the leg asserts both sides on one seed.
+- 'tape' joins InteractKind + the hazardContract defuse list — the
+  contract now guards the eye's tell lines too.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The taped eye could leave a 'seen' record hunters read differently
+    (a warden seeing a taped cam knows the trick) — half-baked, skip
+    unless a clean fiction lands.
+  - The Auditor wanted-poster stays a design call.
+  - wetFloor (13 uses) is still dead dressing — a second slip family is
+    probably too same-y with armed puddles; keep dormant.

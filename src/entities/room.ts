@@ -868,6 +868,14 @@ export class HazardField {
     kind: 'wire' | 'line' | 'water' | 'fan'; t: number; readBy: string[];
     old?: boolean }[] = [];
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
+  /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
+   *  searchlights hold a slower beam lane. Motion inside the cone settles
+   *  the eye — a settled eye rings your position to every listener in
+   *  earshot. Dead mains kill them; a felt wrap blinds them. */
+  watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
+    arc: number; half: number; range: number; cycle: number; phase0: number;
+    dead: boolean; settle: number; lastReport: number; warnT: number }[] = [];
+  private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
   constructor() {}
@@ -893,6 +901,25 @@ export class HazardField {
         this.fans.push({ pos: s.pos, room: room.index, dead: spent, hitT: -1, warnT: -10 });
         if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'fan', t: -1, readBy: [], old: true });
       }
+    }
+    // Wall eyes come from props, not sockets — the dressing pass mounts
+    // cams; a couple of templates author searchlights.
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    for (const p of room.spec?.props ?? []) {
+      if (p.kind !== 'securityCam' && p.kind !== 'searchlight') continue;
+      const wx = room.origin.x + p.x * c + p.z * s;
+      const wz = room.origin.z - p.x * s + p.z * c;
+      const hsh = ((wx * 7 + wz * 13 + room.index * 5) % 10) / 10;
+      const cam = p.kind === 'securityCam';
+      this.watchers.push({
+        pos: v3(wx, p.y ?? (cam ? 2.35 : 1.4), wz),
+        yaw: (p.yaw ?? 0) + room.yaw,
+        room: room.index,
+        arc: cam ? 0.95 : 0.5, half: cam ? 0.42 : 0.34,
+        range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
+        phase0: hsh * 20,
+        dead: false, settle: 0, lastReport: -10, warnT: -10,
+      });
     }
   }
 
@@ -953,6 +980,34 @@ export class HazardField {
         f.hitT = ctx.now;
         ctx.damagePlayer(7, 'hazard', 'The blades take standing flesh — duck under, or chock the wheel.');
         ctx.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.55, category: 'machine', caption: '[the wheel bites]' });
+      }
+    }
+    // Wall eyes read MOTION, not presence — inside the cone you stand
+    // still and let it pan past, or you move and it settles and tells.
+    const wMoving = Number.isFinite(this.wPX)
+      && Math.hypot(p.pos.x - this.wPX, p.pos.z - this.wPZ) > 0.004;
+    this.wPX = p.pos.x; this.wPZ = p.pos.z;
+    for (const w of this.watchers) {
+      if (w.room !== ctx.currentRoomIndex) continue;
+      const rm = ctx.rooms[w.room];
+      const live = !w.dead && !rm?.darkRoom; // dead mains kill the eye
+      const dx = p.pos.x - w.pos.x, dz = p.pos.z - w.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (live && d < w.range + 1.5 && ctx.now - w.warnT > 7) {
+        w.warnT = ctx.now;
+        ctx.cue('steam-hiss', w.pos, '[the eye pans — still feet pass it]', { severity: 'info' });
+      }
+      if (!live || d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
+      const facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
+      let diff = Math.atan2(dx, dz) - facing;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) > w.half) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
+      w.settle = wMoving ? w.settle + dt : Math.max(0, w.settle - dt * 2);
+      if (w.settle > 0.9 && ctx.now - w.lastReport > 5) {
+        w.lastReport = ctx.now;
+        ctx.cue('steam-hiss', w.pos, '[the eye settles on you — it has your position]', { severity: 'warn' });
+        ctx.sound.emit({ x: p.pos.x, y: p.pos.y, z: p.pos.z, intensity: 0.5, category: 'machine', caption: '' });
       }
     }
     // Old sign the PLAYER can read: a sprung wire or a bled line from

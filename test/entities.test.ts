@@ -1876,3 +1876,58 @@ describe('the House Detective (sprint 278)', () => {
     d.dispose();
   });
 });
+
+describe('the watched hall (sprint 285)', () => {
+  const camRoom = (dark: boolean) => ({
+    index: 0, templateId: 'corr-straight', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, darkRoom: dark,
+    spec: { width: 8, depth: 8, props: [{ kind: 'securityCam', x: 0, z: -2, yaw: 0 }] },
+    doors: [], hidingSpots: [], scheduled: [], sockets: [],
+  }) as unknown as RoomInstance;
+
+  const pinCam = async (dark: boolean) => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(dark);
+    h.addFromRoom(room);
+    const w = h.watchers[0];
+    // pin the sweep to a fixed beam facing +z for the duration
+    w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    return { h, w, ctx };
+  };
+  const step = (h: InstanceType<typeof import('../src/entities/room').HazardField>,
+    ctx: EntityCtx, x: number, z: number, n = 30) => {
+    for (let i = 0; i < n; i++) { ctx.player.pos.x = x + Math.sin(i) * 0.02; ctx.player.pos.z = z; ctx.now += 0.05; h.update(ctx, 0.05); }
+  };
+
+  it('motion inside the cone settles the eye — it rings your position', async () => {
+    const { h, ctx } = await pinCam(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05); // first frame seeds the motion trace
+    step(h, ctx, 0, 2, 40); // ~2s of movement inside the beam
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('settles on you'), expect.anything());
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    const reports = emit.mock.calls.filter((c) => c[0].category === 'machine');
+    expect(reports.length, 'the report rings your feet').toBeGreaterThan(0);
+    expect(Math.hypot(reports[0][0].x - 0, reports[0][0].z - 2)).toBeLessThan(0.2);
+  });
+
+  it('still feet pass it — no settle, no report', async () => {
+    const { h, ctx } = await pinCam(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    expect(emit.mock.calls.filter((c) => c[0].category === 'machine').length).toBe(0);
+  });
+
+  it('dead mains kill the eye; a dead eye watches nothing', async () => {
+    const { h, ctx } = await pinCam(true); // drowned-mains room
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05);
+    step(h, ctx, 0, 2, 40);
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    expect(emit.mock.calls.filter((c) => c[0].category === 'machine').length).toBe(0);
+  });
+});

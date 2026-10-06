@@ -323,3 +323,92 @@ test('ghosts — stale sign still pulls the Grafter, the caption says so', async
   expect(errors).toEqual([]);
 });
 
+
+test('the watched hall — the eye reads motion, felt blinds it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // cam @36 lit (live eye); cam @18 drowned mains (dead)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { watchers: { pos: { x: number; y: number; z: number }; yaw: number;
+        room: number; dead: boolean }[] };
+      currentRoom: number; godMode: boolean; keys: Set<string>;
+      giveItem(id: string, n: number): void;
+      interaction: { focused?: { prompt?: string };
+        interactables: { kind: string; prompt: string }[] };
+      sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void };
+    };
+    ga.godMode = true;
+    const live = ga.hazard.watchers.find((w) => !w.dead && !g.route.rooms[w.room]?.darkRoom);
+    if (!live) return { stage: 'no-live-watcher' } as const;
+    const fx = Math.sin(live.yaw), fz = Math.cos(live.yaw);
+    const sx = live.pos.x + fx * 3, sz = live.pos.z + fz * 3;
+    g.player.teleport(sx, 0, sz);
+    ga.currentRoom = live.room;
+    for (let f = 0; f < 30; f++) g.frame();
+    const warns = caps.filter((t) => /eye pans/.test(t)).length;
+    // move inside the cone — the eye settles and rings your feet
+    let settled = false;
+    for (let f = 0; f < 400 && !settled; f++) {
+      g.player.teleport(sx + Math.sin(f * 0.6) * 0.05, 0, sz + Math.cos(f * 0.5) * 0.05);
+      g.frame();
+      settled = caps.some((t) => /settles on you/.test(t));
+    }
+    // still feet — it loses you
+    const stillBefore = caps.length;
+    for (let f = 0; f < 200; f++) g.frame();
+    const stillReports = caps.slice(stillBefore).filter((t) => /settles on you/.test(t)).length;
+    // tape the eye — feltWrap at the mount, aim at the focus point (pos.y + 0.6)
+    ga.giveItem('feltWrap', 1);
+    const wy = live.pos.y + 0.6;
+    let focused = '';
+    for (let f = 0; f < 80; f++) {
+      g.player.teleport(live.pos.x - fx * 1.2, 0, live.pos.z - fz * 1.2);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const hd = Math.max(0.3, Math.hypot(live.pos.x - g.player.pos.x, live.pos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(wy - eyeY, hd);
+      g.player.yaw = Math.atan2(live.pos.x - g.player.pos.x, live.pos.z - g.player.pos.z);
+      g.frame();
+      if (ga.interaction.focused?.prompt) focused = ga.interaction.focused.prompt;
+      if (f === 20) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 15; f++) g.frame();
+    // drowned mains: the dark room's cam is dead — no verb, no report
+    const darkWatcher = ga.hazard.watchers.find((w) => !w.dead && !!g.route.rooms[w.room]?.darkRoom);
+    let darkTapeVerb = true, darkReport = -1;
+    if (darkWatcher) {
+      g.player.teleport(darkWatcher.pos.x, 0, darkWatcher.pos.z + 1);
+      ga.currentRoom = darkWatcher.room;
+      for (let f = 0; f < 20; f++) g.frame();
+      darkTapeVerb = ga.interaction.interactables.some((i) => i.kind === 'tape');
+      const dc = caps.length;
+      for (let f = 0; f < 250; f++) {
+        g.player.teleport(darkWatcher.pos.x + Math.sin(f * 0.7) * 0.05, 0, darkWatcher.pos.z + 2);
+        g.frame();
+      }
+      darkReport = caps.slice(dc).filter((t) => /settles on you/.test(t)).length;
+    }
+    return { stage: 'done', warns, settled, stillReports, focused,
+      blinded: live.dead, darkFound: !!darkWatcher, darkTapeVerb, darkReport };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.warns, 'the eye must name its rule').toBeGreaterThan(0);
+  expect(result.settled, JSON.stringify(result)).toBe(true);
+  expect(result.stillReports, JSON.stringify(result)).toBe(0);
+  expect(result.focused).toMatch(/Tape the eye|Smother the beam/);
+  expect(result.blinded, 'felt blinds the eye').toBe(true);
+  if (result.darkFound) {
+    expect(result.darkTapeVerb, 'a dead eye has nothing to tape').toBe(false);
+    expect(result.darkReport, 'dead mains watch nothing').toBe(0);
+  }
+  expect(errors).toEqual([]);
+});
