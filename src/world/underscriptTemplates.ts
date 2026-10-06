@@ -329,7 +329,9 @@ const u_lobby: RoomTemplate = {
   id: 'u-lobby',
   build: (_rng) => us('u-lobby', 9, 7, 3.2, {
     props: [
-      { kind: 'counter', x: 0, z: 2.2, scale: 2.6 },
+      // counter hugging the NW wall — dead-center at scale 2.6 used to eat
+      // the north door lane and get culled everywhere (sprint-221 finding)
+      { kind: 'counter', x: -3.1, z: 2.2 },
       { kind: 'sofa', x: -3.2, z: -1.4, yaw: Math.PI / 2 },
       { kind: 'sofa', x: 3.2, z: -1.4, yaw: -Math.PI / 2 },
       { kind: 'waterCooler', x: -3.6, z: 2.6 },
@@ -338,7 +340,7 @@ const u_lobby: RoomTemplate = {
       { kind: 'streetSeat', x: -3.4, z: -0.4, yaw: Math.PI / 2 },
       { kind: 'coffeeCart', x: 3.8, z: -0.6, yaw: -Math.PI / 2 },
       { kind: 'keyCabinet', x: -4.4, z: 1.0, y: 1.55, yaw: Math.PI / 2 },
-      { kind: 'register', x: 0.6, z: 2.2, y: 1.1 },
+      { kind: 'register', x: -2.9, z: 2.2, y: 1.13 },
       { kind: 'bin', x: -4.0, z: -2.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 3.1 },
       { kind: 'exitSign', x: 0, z: 3.4, y: 2.6 },
@@ -346,7 +348,7 @@ const u_lobby: RoomTemplate = {
       { kind: 'sumpPump', x: 4.2, z: 2.8 },
     ],
     sockets: [
-      { kind: 'loot', x: 0, z: 2.2, meta: {} },
+      { kind: 'loot', x: -3.1, z: 2.2, y: 1.15, meta: {} },
       { kind: 'loot', x: -3.6, z: 2.6, meta: {} },
       { kind: 'itemPedestal', x: -0.5, z: 2.2, y: 1.15, meta: { broker: 'slot0' } },
       { kind: 'itemPedestal', x: 0.5, z: 2.2, y: 1.15, meta: { broker: 'slot1' } },

@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 221)
+CURRENT STATE (as of sprint 222)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -401,6 +401,39 @@ CURRENT STATE (as of sprint 221)
   — a press-on-match loop that re-reads each frame self-corrects across
   the 1.4s boundary (a rejected press resets routingStep, loop retries).
 
+  Sprint 222 (mechanics e2e part 4 + three dead-mechanic resurrections —
+  mechanics.spec.ts → 14/14):
+  FOUND while scoping: three shipped-but-dead interactions, all fixed.
+  (a) Index seal console — the 'puzzle' interactable was NEVER ADDED:
+  IndexEncounter.onInteract has the whole glyph-submission branch but
+  nothing creates a kind 'puzzle' interactable in the Index room, so
+  cards → catalogue ended in silence. rebuildInteractables now adds an
+  'Examine the seal console' interactable at the sealConsole prop's
+  world position (same yaw math as the prop loop). (b) The sealConsole
+  prop itself was also missing — authored dead-center at (0,-9.4),
+  inside the entry door's swing lane, lane-culled at generation; moved
+  to (3.6,-9.2). (c) puzzle-valve 'Examine mechanism' sockets pressed
+  into nothing (kind 'puzzle' only handled inside IndexEncounter) —
+  worse, fillSockets hides doorKeys INSIDE them (seed 'threshold': the
+  lock-72 key sat in a dead interactable = REAL main-route soft-lock).
+  New switch 'puzzle' case: crack the mechanism → steam mask + lure
+  (same trade as prop valves) → resolveSocketLoot releases contents.
+  (d) inDoorLane depth 2.0+r → 1.4+r: the spec-level lane was 2.55m
+  deep vs the honest 1.4m leaf-swing zone footprintInDoorLane uses —
+  it silently ate authored centerpieces ~2m inside door axes (the
+  wake's bier + 2 candles restored; same root cause as the sprint-221
+  u-lobby counter). Specs: index full chain (early catalogue refuse →
+  5 cards → glyph order → wrong-press reset → 3 matched presses →
+  'the Index releases you'), puzzle-valve crack → doorKey → lock-72
+  opens, wake coffin 1.8s hold → doc-guest-bier, lens pylons (4 × ~75
+  frames held KeyE → orrery.solved). LEARNINGS: (e) room.spec.props
+  POST-generation shows what survived lane culling — diff vs authored
+  template to find silently-dropped props; (f) playwright serves
+  dist/ via reuseExistingServer — kill :4173 + rebuild after src
+  edits or specs test a stale bundle; (g) drive() press loops must
+  gate on the FOCUSED prompt (a bare E-press fires whatever is
+  focused — card sockets near the console would eat presses).
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
     sconce) and per-device prop clones (LED/screen/button) stay — each
@@ -411,9 +444,12 @@ NEXT SPRINT IDEAS (pick the biggest first)
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
-  - e2e: remaining untested paths — Lens-hall orrery pylons (room 75,
-    hold-to-charge while beams sweep), catalogue/card sockets, puzzle
-    mechanism sockets (meta.puzzle), wake coffin long-hold.
+  - Lane-cull audit follow-up: other authored centerpieces may have been
+    silently dropped pre-222 — diff spec.props vs each template's
+    authored list across all rooms/seeds and re-place what was eaten.
+  - e2e: remaining — merchant/alarm/tv/clock/hearth prop interacts,
+    underRooms beyond lobby depth (u-room exit/backtrack path), hiding
+    spot enter/exit + trap reveal, document pickup → codex UI.
   - More mill batches if dressing still reads thin: main-route sideboard
     variants + corridor furniture; u-room kit is milled now (sprint 220) —
     next under-room depth is variants/weathering, not new kinds.

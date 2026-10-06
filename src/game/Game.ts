@@ -919,6 +919,24 @@ export class Game {
         });
       }
     }
+    // The Index's seal console — the glyph-submission interactable the
+    // IndexEncounter's 'puzzle' branch waits on (without this the whole
+    // cards → catalogue → console chain ended in silence).
+    {
+      const ir = this.activeRooms()[this.currentRoom];
+      if (ir?.spec?.special === 'index') {
+        const prop = ir.spec?.props.find((p) => p.kind === 'sealConsole');
+        if (prop) {
+          const cs = Math.cos(ir.yaw), sn = Math.sin(ir.yaw);
+          const wx = ir.origin.x + prop.x * cs + prop.z * sn;
+          const wz = ir.origin.z - prop.x * sn + prop.z * cs;
+          this.interaction.add({
+            kind: 'puzzle', id: `seal-${ir.index}`, pos: { x: wx, y: 1.25, z: wz },
+            prompt: 'Examine the seal console', holdTime: 0, enabled: true, priority: 2,
+          });
+        }
+      }
+    }
     // Pianos play — a real lure: loud distraction, hunters walk to it.
     {
       const pr = this.activeRooms()[this.currentRoom];
@@ -1242,6 +1260,21 @@ export class Game {
       case 'item':
       case 'lore':
       case 'card': {
+        this.resolveSocketLoot(it);
+        return;
+      }
+      case 'puzzle': {
+        // puzzle-valve mechanisms — crack them open: a steam burst on the
+        // way out (the same mask/lure trade as the prop valves), then the
+        // mechanism yields whatever it held. Sockets can co-carry
+        // contains/doorKey — the lock filler hides keys inside these.
+        const sock = it.data as Socket;
+        if (sock.meta.taken) return;
+        const at = { x: it.pos.x, y: 0.9, z: it.pos.z };
+        this.steamMasks.push({ pos: at, until: this.clock.time + 26 });
+        this.spawnSteamJet(at);
+        this.audio.play('steam-hiss', at, '[the mechanism cracks open — steps drowned]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[steam vents]' });
         this.resolveSocketLoot(it);
         return;
       }

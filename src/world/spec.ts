@@ -295,18 +295,22 @@ export function portOutwardDir(port: Port): { x: number; z: number } {
 }
 
 /** True when a room-local point sits inside a port's doorway lane —
- * the strip from just outside the door plane to ~2m into the room,
- * roughly leaf-wide. Kept prop-free so furniture can't pinch the
- * doorway a player must walk through. (Lateral clearance was widened
- * once; it ate beds/wardrobes sitting harmlessly beside doors — the
- * pad now covers the leaf and frame, not a walkway beside them.) */
+ * the strip from just outside the door plane to the ~1.4m leaf-swing
+ * zone into the room, roughly leaf-wide. Kept prop-free so furniture
+ * can't pinch the doorway a player must walk through. (Lateral
+ * clearance was widened once; it ate beds/wardrobes sitting harmlessly
+ * beside doors — the pad now covers the leaf and frame, not a walkway
+ * beside them.) */
 export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>, x: number, z: number, r = 0.55): boolean {
   return [spec.entry, ...spec.exits].some((port) => {
     const lp = portLocalPos(port, spec.width, spec.depth);
     const dir = portOutwardDir(port);
     const a = -((x - lp.x) * dir.x + (z - lp.z) * dir.z);       // depth into the room
     const b = Math.abs((x - lp.x) * -dir.z + (z - lp.z) * dir.x); // lateral offset
-    return a > -0.4 - r && a < 2.0 + r && b < port.width / 2 + 0.15 + r;
+    // Depth matches footprintInDoorLane's 1.4m leaf-swing zone (a 2.0m
+    // corridor was silently eating authored centerpieces ~2m inside a
+    // door's axis — the wake's bier, the u-lobby counter).
+    return a > -0.4 - r && a < 1.4 + r && b < port.width / 2 + 0.15 + r;
   });
 }
 

@@ -109,7 +109,10 @@ function indexSpec(rng: Rng): RoomSpec {
     colliders.push({ x: Math.cos(a) * 2.4, z: Math.sin(a) * 2.4, w: 0.6, d: 0.6, h: 4.6 });
   }
   shelves.push({ kind: 'catalogueDesk', x: 0, z: 0 });
-  shelves.push({ kind: 'sealConsole', x: 0, z: -9.4 });
+  // Seal console hugs the back wall OFF the door axis — dead-center at
+  // (0,-9.4) sat inside the entry door's swing lane and was lane-culled
+  // out of existence (sprint-222 find).
+  shelves.push({ kind: 'sealConsole', x: 3.6, z: -9.2 });
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14 });
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14, yaw: Math.PI / 2 });
   shelves.push({ kind: 'rollingLadder', x: 4.4, z: 2.0 });
