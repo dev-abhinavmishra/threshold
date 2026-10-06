@@ -865,8 +865,9 @@ export class HazardField {
   /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
    *  scent a posted hunter can read — quiet work is marked work. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water'; t: number; readBy: string[];
+    kind: 'wire' | 'line' | 'water' | 'fan'; t: number; readBy: string[];
     old?: boolean }[] = [];
+  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   lastTick = 0;
 
   constructor() {}
@@ -886,6 +887,11 @@ export class HazardField {
         const spent = s.meta.spent === true;
         this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: spent });
         if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'line', t: -1, readBy: [], old: true });
+      }
+      if (s.meta.hazard === 'fan') {
+        const spent = s.meta.spent === true;
+        this.fans.push({ pos: s.pos, room: room.index, dead: spent, hitT: -1, warnT: -10 });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'fan', t: -1, readBy: [], old: true });
       }
     }
   }
@@ -934,6 +940,21 @@ export class HazardField {
         ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent; the valve bleeds it]', { severity: 'warn' });
       }
     }
+    // Belt-wheels chew at shoulder height forever — the blades take
+    // standing flesh, a duck walks under them, a chock stills them.
+    for (const f of this.fans) {
+      if (f.dead || f.room !== ctx.currentRoomIndex) continue;
+      const d = v3dist(p.pos, f.pos);
+      if (d < 2.8 && ctx.now - f.warnT > 4) {
+        f.warnT = ctx.now;
+        ctx.cue('steam-hiss', f.pos, '[a belt-wheel chews the air at shoulder height — duck under, or chock the blades]', { severity: 'warn' });
+      }
+      if (d < 1.0 && !p.crouching && ctx.now - f.hitT > 0.6) {
+        f.hitT = ctx.now;
+        ctx.damagePlayer(7, 'hazard', 'The blades take standing flesh — duck under, or chock the wheel.');
+        ctx.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.55, category: 'machine', caption: '[the wheel bites]' });
+      }
+    }
     // Old sign the PLAYER can read: a sprung wire or a bled line from
     // before you arrived reads as history — someone else worked here.
     for (const ev of this.evidence) {
@@ -942,7 +963,9 @@ export class HazardField {
       ev.readBy.push('player');
       ctx.cue('floor-creak', ev.pos, ev.kind === 'wire'
         ? '[a sprung wire, long dry — someone else took this step]'
-        : '[a bled line, long cold — somebody worked here]', { severity: 'info' });
+        : ev.kind === 'line'
+          ? '[a bled line, long cold — somebody worked here]'
+          : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {

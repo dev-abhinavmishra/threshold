@@ -253,6 +253,14 @@ function instantiate(index: number, label: string, placed: PlacedRoom, isMainRou
       sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
         meta: spent ? { hazard: 'steam', spent: true } : { hazard: 'steam' } });
     }
+    // Belt-wheels spin at shoulder height — standing flesh feeds them;
+    // a chock (or a crouch) is the way through.
+    if (pr.kind === 'fan') {
+      const p = localToWorld(origin, yaw, pr.x, 0, pr.z);
+      const spent = ((p.x * 11 + p.z * 3 + index * 19) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'fan', spent: true } : { hazard: 'fan' } });
+    }
   }
 
   const safeZones = spec.safeZones.map((z) => {
@@ -859,7 +867,8 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
   // Old sign guaranteed: every route remembers somebody's earlier work —
   // if no hazard rolled spent, the first one carries the mark.
   {
-    const haz = rooms.flatMap((r) => r.sockets.filter((sk) => sk.meta.hazard === 'snare' || sk.meta.hazard === 'steam'));
+    const haz = rooms.flatMap((r) => r.sockets.filter((sk) =>
+      sk.meta.hazard === 'snare' || sk.meta.hazard === 'steam' || sk.meta.hazard === 'fan'));
     if (haz.length && !haz.some((sk) => sk.meta.spent === true)) haz[0].meta.spent = true;
   }
 

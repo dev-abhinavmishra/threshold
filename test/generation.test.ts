@@ -802,7 +802,15 @@ describe('old sign (sprint 266)', () => {
       const spent = [...route.rooms, ...route.underRooms].flatMap((r) =>
         (r.sockets ?? []).filter((sk) => sk.meta?.spent === true));
       expect(spent.length, `seed ${seed} carries old sign`).toBeGreaterThan(0);
-      for (const sk of spent) expect(['snare', 'steam']).toContain(sk.meta.hazard);
+      for (const sk of spent) expect(['snare', 'steam', 'fan']).toContain(sk.meta.hazard);
     }
+  });
+});
+
+describe('the belt-wheel (sprint 267)', () => {
+  it('mechanical rooms arm live fans', () => {
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const fans = route.rooms.flatMap((r) => (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'fan'));
+    expect(fans.length, 'the wheels spin on the main route').toBeGreaterThan(3);
   });
 });

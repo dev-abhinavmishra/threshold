@@ -43,7 +43,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const hazardSrc = readFileSync('src/entities/room.ts', 'utf8');
     // defuse verbs: snip (snare), bleed (steam), coax (wired drawer),
     // valve/drain (puddle), trap (floor trap pry)
-    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'"]) {
+    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'"]) {
       expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
       expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
     }
@@ -52,11 +52,13 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(hazardSrc).toContain('about to vent');
     expect(hazardSrc).toContain('hums amber');
     expect(hazardSrc).toContain('wire underfoot');
+    expect(hazardSrc).toContain('belt-wheel chews');
     // damage paths: all four hazards reach damagePlayer
     expect(hazardSrc).toContain('Paper seals root and rustle');
     expect(hazardSrc).toContain('Steam blasts off the line');
     expect(hazardSrc).toContain('Electrified water hums amber');
     expect(gameSrc).toContain('latch bites');
+    expect(hazardSrc).toContain('blades take standing flesh');
     // the drain kills the arc — the puddle's paid quiet
     expect(hazardSrc).toContain('isRoomDrained');
     // sign erasure: the felt-wrap cover-up clears hazard evidence

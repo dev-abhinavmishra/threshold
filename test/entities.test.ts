@@ -1441,3 +1441,28 @@ describe('old sign (sprint 266)', () => {
     expect(calls.length, 'old sign reads once').toBe(1);
   });
 });
+
+describe('the belt-wheel (sprint 267)', () => {
+  const fanRoom = {
+    index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+    doors: [], hidingSpots: [], scheduled: [],
+    sockets: [{ kind: 'hazard', pos: v3(0, 0, 0), yaw: 0, filled: false, meta: { hazard: 'fan' } }],
+  } as unknown as RoomInstance;
+
+  it('the blades take standing flesh; a duck walks under them', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const ctx = makeCtx([fanRoom], { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(fanRoom);
+    ctx.player.pos.x = 0.4; ctx.player.pos.z = 0.3;
+    (ctx.player as unknown as { crouching: boolean }).crouching = false;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer, 'a stander feeds the wheel').toHaveBeenCalledWith(
+      7, 'hazard', expect.stringContaining('duck under'));
+    (ctx.damagePlayer as ReturnType<typeof vi.fn>).mockClear();
+    (ctx.player as unknown as { crouching: boolean }).crouching = true;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer, 'a duck clears the blades').not.toHaveBeenCalled();
+  });
+});

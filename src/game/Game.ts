@@ -1184,6 +1184,22 @@ export class Game {
     }
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
+    // Standing at a live belt-wheel: 'Chock the blades' — a door chock
+    // dropped in the wheel stills it quiet (and leaves readable sign).
+    for (const f of this.hazard.fans) {
+      if (f.dead || !this.streamer.builtIndices.includes(f.room)) continue;
+      const dx = f.pos.x - this.player.pos.x, dz = f.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+      this.interaction.add({
+        kind: 'chock', id: `chock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+        pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
+        prompt: this.inventory.some((i) => i.id === 'doorChock' && i.count > 0)
+          ? 'Chock the blades — door chock'
+          : 'Chock the blades (needs a door chock)',
+        holdTime: 1.2, enabled: true, priority: 4,
+        data: f,
+      });
+    }
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
@@ -1986,6 +2002,21 @@ export class Game {
           Math.hypot(e.pos.x - ev.pos.x, e.pos.z - ev.pos.z) > 2.6);
         this.cue('item', it.pos, '[the sign rubs out under the felt — nothing left to read]');
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt on stone]' });
+        return;
+      }
+      case 'chock': {
+        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        const chock = this.inventory.find((i) => i.id === 'doorChock' && i.count > 0);
+        if (!chock) {
+          this.cue('drawer', it.pos, '[a door chock would jam the wheel]', 'warn');
+          return;
+        }
+        chock.count--;
+        it.enabled = false;
+        f.dead = true;
+        this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
+        this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
+        this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
         return;
       }
       case 'alarm': {

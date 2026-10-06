@@ -1682,3 +1682,16 @@ NEXT SPRINT IDEAS (pick the biggest first)
 - The spent guarantee must live in `fillSockets` (post-arming), not `instantiate` — only there can you see whether ANY socket rolled spent.
 - Python string-`replace` edits: the evidence-type declaration sits under a docstring comment, so anchor on the type line itself, not a longer block.
 - 's' spends: snare @2, steam @60 (e2e drives room 2).
+
+## Sprint 267 — the belt-wheel (fan hazard armed)
+
+- The `fan` prop existed but no template placed it — the last dead member of the HazardField docstring. Fan props added to maint-pipes/maint-boiler/laundry-hall/boiler-tank-room at y1.15 near walls; `instantiate` arms `pr.kind === 'fan'` → `meta:{hazard:'fan'}` with the same ~6% `spent` roll (salt 19).
+- `HazardField.fans` {pos, room, dead, hitT, warnT}: warn cue at d<2.8 throttled 4s ('[a belt-wheel chews the air at shoulder height — duck under, or chock the blades]'), bite at d<1.0 && !crouching → 7dmg 0.6s throttle + loud 'machine' emit. **The crouch is the free path** — duck under standing-height blades.
+- `chock` verb: standing defuse at ≤2.6m (priority 4 — outranks adjacent hide spots), spends a `doorChock`, 1.2s hold → dead + `kind:'fan'` evidence. The chock's second job (after door wedges); refusal '[a door chock would jam the wheel]'. Evidence union gained 'fan'; old-sign caption '[a chocked wheel, long still — somebody stopped the blades]'.
+- The fan completes the family: snare (step), puddle (contact), steam (timed), drawer (loot), **fan (posture)** — the only hazard your crouch dodges while a stander bleeds.
+
+**Traps**
+- `builtIndices` is a `number[]` — `.includes`, not `.has` (the coax loop already knew; I guessed `.has`).
+- e2e focus: a hazard point near a hiding spot loses focus ties — defuse verbs want priority ≥3 (chock 4). Same prox<1.1 fallback family as the coax anchor.
+- Sprint-266's generation spec pinned spent kinds to ['snare','steam'] — extending the hazard family means updating the allowlist (its own guard caught the new kind).
+- 's' live fans: 39,48,60,67,71,88,92.

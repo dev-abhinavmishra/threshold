@@ -555,3 +555,68 @@ test('wired drawers — the latch reads forced, the open bites, the coax is free
   expect(result.noBite, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the wheel chews — fan warns, bites a stander, and dies on the chock', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // live fans at 39/48/60/...
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { fans: { pos: { x: number; z: number }; room: number; dead: boolean }[];
+        evidence: { kind: string; room: number }[] };
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+    };
+    const fan = ga.hazard.fans.find((f) => !f.dead);
+    if (!fan) return { stage: 'no-fan' } as const;
+    const froom = g.route.rooms[fan.room];
+    // hover at the warn ring, from the room interior — the wheel names itself
+    const inX = froom.origin.x - fan.pos.x, inZ = froom.origin.z - fan.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    const hx = fan.pos.x + (inX / inL) * 1.7, hz = fan.pos.z + (inZ / inL) * 1.7;
+    g.player.teleport(hx, 0, hz);
+    ga.currentRoom = fan.room;
+    for (let f = 0; f < 40; f++) g.frame();
+    const warned = caps.some((c) => /belt-wheel chews/.test(c));
+    // stand in the blades — the wheel bites
+    const hp0 = ga.player.health;
+    g.player.teleport(fan.pos.x + (inX / inL) * 0.5, 0, fan.pos.z + (inZ / inL) * 0.5);
+    ga.currentRoom = fan.room;
+    for (let f = 0; f < 30; f++) g.frame();
+    const bitten = ga.player.health < hp0;
+    // back off, feed the chock — the blades stand still
+    g.player.teleport(fan.pos.x + (inX / inL) * 1.8, 0, fan.pos.z + (inZ / inL) * 1.8);
+    ga.currentRoom = fan.room;
+    ga.inventory.push({ id: 'doorChock', count: 1 });
+    const eyeY2 = g.player.pos.y + g.player.eyeHeight;
+    g.player.pitch = Math.atan2(1.15 - eyeY2, 1.8);
+    g.player.yaw = Math.atan2(fan.pos.x - g.player.pos.x, fan.pos.z - g.player.pos.z);
+    for (let f = 0; f < 12; f++) g.frame();
+    const chockPrompt = g.interaction.focused?.prompt ?? '';
+    const chocks0 = (ga.inventory.find((i) => i.id === 'doorChock')?.count) ?? 0;
+    g.keys.add('KeyE');
+    for (let f = 0; f < 60 && !fan.dead; f++) g.frame();
+    g.keys.delete('KeyE');
+    for (let f = 0; f < 8; f++) g.frame();
+    const spent = (ga.inventory.find((i) => i.id === 'doorChock')?.count ?? 0) < chocks0;
+    const signLeft = ga.hazard.evidence.some((e) => e.kind === 'fan' && e.room === fan.room);
+    return { stage: 'done', warned, bitten, dead: fan.dead, spent, signLeft, chockPrompt, caps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.warned, JSON.stringify(result)).toBe(true);
+  expect(result.chockPrompt, JSON.stringify(result)).toMatch(/Chock the blades/);
+  expect(result.bitten, JSON.stringify(result)).toBe(true);
+  expect(result.dead, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.signLeft, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
