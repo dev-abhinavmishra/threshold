@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos, footprintInDoorLane } from './spec';
+import { portLocalPos, footprintInDoorLane, footprintInDoorLeaf } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -1604,9 +1604,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'statue' || p.kind === 'marbleBust') built.group.name = `stat-${room.index}`;
       if (p.kind === 'rug') built.group.name = `rug-${room.index}`;
       if (p.kind === 'chandelier') built.group.name = `chan-${room.index}`;
-      // A wide prop beside a door can still reach into the doorway — drop
-      // any whose solid collider footprint overlaps the door rectangle.
-      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
+      // A wide prop centered beside a door can still reach into its lane —
+      // drop any whose solid collider footprint overlaps the approach strip.
+      // meta.laneBlock exempts authored gate pieces (portcullis, stairGate,
+      // hatch) that are meant to sit inside a doorway — but a collider that
+      // parks in the door throat still seals it, so shed those colliders.
+      if (p.meta?.laneBlock) {
+        built.colliders = built.colliders.filter(
+          (c) => c.losOnly || c.walkable || (c.y ?? 0) >= 1.9 ||
+            !footprintInDoorLeaf(laneSpec, c.x, c.z, c.w / 2, c.d / 2),
+        );
+      } else if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
       group.add(built.group);
       if (isUnder) {
         // Fixture decay — dead tubes go dark, dying ones flicker off their
