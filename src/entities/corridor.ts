@@ -445,6 +445,15 @@ export class Warden extends Entity {
     if (this.state !== 'engage' || this.charging || this.investigate) return;
     if (e.source || !noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    // Noise through walls reaches it, but it can only check what's in its
+    // own room — a point beyond the plaster would have it walk through it.
+    const room = c.rooms[this.hostRoom];
+    if (room?.spec) {
+      const dx = e.x - room.origin.x, dz = e.z - room.origin.z;
+      const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
+      if (Math.abs(dx * cs - dz * sn) > room.spec.width / 2 + 0.25
+        || Math.abs(dx * sn + dz * cs) > room.spec.depth / 2 + 0.25) return;
+    }
     this.investigate = v3(e.x, 0, e.z);
     this.investigateScan = 0;
     c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });

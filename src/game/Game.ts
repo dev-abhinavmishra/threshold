@@ -865,6 +865,8 @@ export class Game {
    *  and safe landings read differently, and walls with nothing behind them
    *  (false doors, dead plaster) report dead air. */
   private listenedDoors = new Set<string>();
+  /** Door leaves the player is crouch-bracing — held while they stay close. */
+  private bracedDoors: RoomInstance['doors'] = [];
   private listenThrough(door: Door): { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } {
     if (door.openT > 0.4) return { sfx: 'floor-creak', text: '[the door hangs open — you can just look]' };
     if (door.falseDoor) return { sfx: 'floor-creak', text: '[dead air — plaster, and nothing behind it]', sev: 'warn' };
@@ -1359,6 +1361,20 @@ export class Game {
         this.cue(c.sfx, it.pos, c.text, c.sev);
         return;
       }
+      case 'brace': {
+        // Brace the whole doorway cluster: your weight on this leaf holds
+        // both sides. Released by stepping away, or by opening it yourself.
+        const cluster = this.doorsAt(it.pos);
+        if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        for (const d of cluster) d.heldBy = 'player';
+        this.bracedDoors.push(...cluster);
+        this.cue('door-creak', it.pos, '[you put your weight into the door]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.3, category: 'door', caption: '' });
+        return;
+      }
       case 'door': {
         const door = it.data as RoomInstance['doors'][number];
         if (door.falseDoor) {
@@ -1372,7 +1388,8 @@ export class Game {
         // are one physical doorway, so the whole cluster opens/locks together.
         const cluster = this.doorsAt(it.pos);
         // A held leaf is not a lock: the Commissionaire grips the far side.
-        if (cluster.some((d) => d.heldBy)) {
+        // Your own brace just releases — opening it IS letting go.
+        if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
           this.cue('door-locked', it.pos, '[the door is held from the far side]', 'warn');
           return;
         }
@@ -2505,6 +2522,23 @@ export class Game {
     } else {
       p.panic = Math.max(0, p.panic - dt * 0.15);
     }
+  }
+
+  /** Braced leaves stay held only while the player's weight is on them —
+   *  stepping away or the leaf swinging open releases the brace. */
+  private updateBraces(): void {
+    let letGo = false;
+    this.bracedDoors = this.bracedDoors.filter((d) => {
+      if (d.heldBy !== 'player') return false;
+      const p = this.player.pos;
+      if (d.openT > 0.05 || Math.hypot(p.x - d.pos.x, p.z - d.pos.z) > 1.7) {
+        d.heldBy = undefined;
+        letGo = true;
+        return false;
+      }
+      return true;
+    });
+    if (letGo) this.cue('door-breath', null, '[you let go]');
   }
 
   private updateDoors(dt: number): void {
@@ -4991,6 +5025,7 @@ export class Game {
     }
 
     this.updatePanic(dt);
+    this.updateBraces();
     this.updateDoors(dt);
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);

@@ -1238,3 +1238,92 @@ test('the cast hears you — pebble pulls the bellman, a lure pulls the warden, 
   expect(r.allCaps.some((c) => /boards stir under the noise/.test(c))).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('brace the door: the bellman tests the bar and loses interest', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': bellman @32
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const gi = g as unknown as { entities: Ent[] };
+
+    const bRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bRoom) return { stage: 'no-bellman' } as const;
+    // Enter for real (the spawn hook needs a position change), but settle
+    // only ~1s — the bellman warns 1.5s before it walks, and the brace has
+    // to land before its knock matures into the swing.
+    const prev = g.route.rooms[bRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(bRoom.origin.x, 0, bRoom.origin.z);
+    for (let f = 0; f < 8; f++) g.frame();
+    const bell = gi.entities.find((e) => e.id === 'bellman');
+    if (!bell) return { stage: 'no-bellman-spawn', caps: caps.slice(-8) } as const;
+
+    const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
+    if (!door) return { stage: 'no-door' } as const;
+    // The brace point sits a half-step off the leaf on the mirror side of
+    // the listen seam — stand there, nudged ~0.9m into the room (outside
+    // its 1.05 touch reach, inside the 1.7m brace radius), and crouch.
+    // This is a race: the brace has to land before its knock matures (~2.4s).
+    const latX = Math.cos(door.yaw), latZ = -Math.sin(door.yaw);
+    const bx = door.pos.x - latX * 0.55, bz = door.pos.z - latZ * 0.55;
+    const toC = { x: bRoom.origin.x - bx, z: bRoom.origin.z - bz };
+    const L = Math.hypot(toC.x, toC.z) || 1;
+    g.player.teleport(bx + (toC.x / L) * 0.9, 0, bz + (toC.z / L) * 0.9);
+    g.keys.add('KeyC');
+    for (let f = 0; f < 4; f++) g.frame();
+    const brace = g.interaction.interactables.find((i) => i.kind === 'brace' && i.id === `brace-${door.id}`);
+    if (!brace) return { stage: 'no-brace-point' } as const;
+
+    // Hold E on the brace point until the leaf is held.
+    let braced = false;
+    for (let f = 0; f < 90 && !braced; f++) {
+      const ax = brace.pos.x - g.player.pos.x, az = brace.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(brace.pos.y + 0.2 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (/brace door/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+      braced = door.heldBy === 'player';
+    }
+    g.keys.delete('KeyE');
+    if (!braced) return { stage: 'brace-failed', prompt: g.interaction.focused?.prompt } as const;
+
+    // Stay on the bar (release is >1.7m or opening it). The bellman warns,
+    // walks to the leaf, rattles on a cadence, holds ~14s, then fades.
+    let faded = false, opened = false;
+    const cluster = [...g.route.rooms[bRoom.index - 1].doors, ...bRoom.doors]
+      .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
+    const trace: string[] = [];
+    for (let f = 0; f < 700 && !faded; f++) {
+      g.frame();
+      if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) opened = true;
+      if (caps.some((c) => /steps fade down the hall/.test(c))) faded = true;
+      if (f % 30 === 0) {
+        const tp = bell.threatPos();
+        const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
+        trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy}`);
+      }
+    }
+    g.keys.delete('KeyC');
+    return { stage: 'done', faded, opened, bellState: bell.state, dead: g.player.dead, trace, caps: caps.slice(-14), allCaps: caps } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { faded: boolean; opened: boolean; bellState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[] };
+  const tail = r.allCaps.join(' | ');
+  expect(r.caps.some((c) => /tests the bar|strains|palm flat/.test(c)), `caps: ${tail} trace: ${r.trace.join(' ; ')}`).toBe(true);
+  expect(r.faded, `caps: ${tail}`).toBe(true);
+  expect(r.opened, 'the brace leaked — a cluster leaf swung').toBe(false);
+  expect(r.bellState).toBe('done');
+  expect(errors).toEqual([]);
+});

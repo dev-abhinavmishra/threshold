@@ -20,7 +20,7 @@
 import * as THREE from 'three';
 import { Entity, playerExposed } from './base';
 import { v3, v3dist, v3norm, v3scale, hasLineOfSight, type Vec3 } from '../engine/math';
-import type { RoomInstance } from '../game/types';
+import type { Door, RoomInstance } from '../game/types';
 import { ENTITY_TUNING, SAFE_ROOM_TEMPLATES } from '../game/config';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
@@ -38,6 +38,11 @@ const GAZE_LINES = [
   '[it goes still under your gaze]',
   '[it waits — hands folded]',
 ];
+const BAR_LINES = [
+  '[it tests the bar]',
+  '[the latch strains against your weight]',
+  '[a palm flat on the far panel — it pushes]',
+];
 
 export class Bellman extends Entity {
   private pos = v3();
@@ -47,10 +52,11 @@ export class Bellman extends Entity {
   private crumb = 0;             // index into ctx.playerTrail
   private watchT = 0;            // cumulative seconds under direct gaze
   private starveT = 0;           // seconds with no fresh crumb
-  private doorHoldT = 0;         // seconds blocked at a safe-room threshold
+  private doorHoldT = 0;         // seconds blocked at a safe-room threshold or a braced door
+  private rattleT = 0;           // cadence for testing a braced leaf
   private stepT = 0.4;
   private gazeCueAt = -10;
-  private pendingDoors: { d: { opening: boolean; pos: Vec3 }; at: number }[] = [];
+  private pendingDoors: { d: Door; at: number }[] = [];
   private knocked = new Set<object>();
   private noiseCrumb: Vec3 | null = null;  // a loud sound it detours to sniff
   private noiseUnsub: (() => void) | null = null;
@@ -123,12 +129,13 @@ export class Bellman extends Entity {
     const ready = this.pendingDoors.filter((p) => c.now >= p.at);
     this.pendingDoors = this.pendingDoors.filter((p) => c.now < p.at);
     for (const pending of ready) {
+      if (pending.d.heldBy) continue;  // braced in the 0.85s since the knock
       pending.d.opening = true;
       c.cue('door-open', { x: pending.d.pos.x, y: 1.2, z: pending.d.pos.z }, '[the door swings for it]', { severity: 'warn' });
     }
     for (const r of c.rooms) {
       for (const d of r.doors) {
-        if (d.opening || d.openT > 0.15 || d.locked || d.falseDoor || this.knocked.has(d)) continue;
+        if (d.opening || d.openT > 0.15 || d.locked || d.falseDoor || d.heldBy || this.knocked.has(d)) continue;
         if (v3dist(this.pos, d.pos) > 1.25) continue;
         this.knocked.add(d);
         this.pendingDoors.push({ d, at: c.now + 0.85 });
@@ -137,6 +144,43 @@ export class Bellman extends Entity {
         return;
       }
     }
+  }
+
+  /** The door's leaf runs along (cos yaw, −sin yaw); its through-direction is
+   *  the wall normal (sin yaw, cos yaw). Clearly off the leaf plane, only a
+   *  target on the opposite side is blocked; standing in the doorway itself
+   *  (it spawns there), anything meaningfully through the door is blocked. */
+  private doorBetween(d: Door, target: Vec3): boolean {
+    const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
+    const pSide = (this.pos.x - d.pos.x) * nx + (this.pos.z - d.pos.z) * nz;
+    const tSide = (target.x - d.pos.x) * nx + (target.z - d.pos.z) * nz;
+    if (Math.abs(pSide) > 0.45) return pSide * tSide < 0;
+    return Math.abs(tSide) > 0.45;
+  }
+
+  /** A closed leaf on the path to the target — it waits for the swing it
+   *  knocked for, or holds (and eventually quits) at a braced one. Radius
+   *  sits inside the 1.25 knock reach so a head-on approach knocks first. */
+  private blockingDoorNear(target: Vec3): Door | null {
+    for (const r of this.ctx.rooms) {
+      for (const d of r.doors) {
+        if (d.opening || d.openT > 0.5 || d.locked || d.falseDoor) continue;
+        if (v3dist(this.pos, d.pos) > 1.2) continue;
+        if (this.doorBetween(d, target)) return d;
+      }
+    }
+    return null;
+  }
+
+  /** Rattle against a brace, on a cadence — felt through the leaf. */
+  private rattleBar(dt: number, held: Door): void {
+    const c = this.ctx;
+    this.rattleT -= dt;
+    if (this.rattleT > 0) return;
+    this.rattleT = 1.6;
+    c.cue('door-rattle', { x: held.pos.x, y: 1.2, z: held.pos.z },
+      BAR_LINES[this.rng.int(0, BAR_LINES.length - 1)], { severity: 'warn' });
+    c.sound.emit({ x: held.pos.x, y: 1.2, z: held.pos.z, intensity: 0.55, category: 'door', caption: '[rattle]', source: this.id });
   }
 
   protected onUpdate(dt: number): void {
@@ -152,7 +196,7 @@ export class Bellman extends Entity {
     const trail = c.playerTrail ?? [];
     const d = v3dist(this.pos, p.pos);
 
-    // Open doors it reaches.
+    // Open doors it reaches. Braced leaves it can only rattle.
     this.knockDoor();
 
     // Observation freeze — the counterplay. Being watched yields after 2.6s.
@@ -193,6 +237,10 @@ export class Bellman extends Entity {
       // Won't cross into resting rooms — hold at the boundary. Sound it
       // heard in a resting room it simply refuses to chase.
       const room = this.roomAt(target);
+      // Doors it can't pass hold it at the threshold: a knocked closed leaf
+      // it waits out (the swing is a beat behind the rattle); a braced leaf
+      // it tests, then loses interest and drifts off.
+      const blocking = this.blockingDoorNear(target);
       if (room && SAFE_ROOM_TEMPLATES.has(room.templateId)) {
         if (this.noiseCrumb && target === this.noiseCrumb) {
           this.noiseCrumb = null;
@@ -204,6 +252,17 @@ export class Bellman extends Entity {
             return;
           }
         }
+      } else if (blocking?.heldBy) {
+        this.doorHoldT += dt;
+        this.rattleBar(dt, blocking);
+        if (this.doorHoldT > 14) {
+          c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[its steps fade down the hall — it lost interest]', { severity: 'info' });
+          this.done();
+          return;
+        }
+      } else if (blocking) {
+        // Waiting for a knocked leaf to swing — a pause, not a stall.
+        this.doorHoldT = 0;
       } else {
         this.doorHoldT = 0;
         const to = v3(target.x - this.pos.x, 0, target.z - this.pos.z);
@@ -264,6 +323,14 @@ export class Bellman extends Entity {
     if (this.underGaze()) return;
     if (!noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    // Can't ghost a wall for a sound — noise in another room is reachable
+    // only while it stands at one of that room's doors (it lives at
+    // thresholds); the rest is still answered by your trail itself.
+    const crumbRoom = this.roomAt(v3(e.x, 0, e.z));
+    if (crumbRoom && crumbRoom !== this.roomAt(this.pos)) {
+      const atItsDoor = crumbRoom.doors.some((d) => v3dist(this.pos, d.pos) < 1.6);
+      if (!atItsDoor) return;
+    }
     if (this.noiseCrumb && v3dist(this.noiseCrumb, e) < 0.6) return;
     this.noiseCrumb = v3(e.x, 0, e.z);
     c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it stoops to the sound]', { severity: 'warn' });

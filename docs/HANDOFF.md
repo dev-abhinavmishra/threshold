@@ -940,3 +940,49 @@ NEXT SPRINT IDEAS (pick the biggest first)
     tool now — watch whether free lures on an 8s cd trivialize the
     commissionaire/bellman rooms in playtests.
   - Economy still ~5x; mill batches still open on main-route furniture.
+
+## Sprint 240 — brace the door (player counterplay at thresholds)
+
+- Crouch at a closed door and the seam gains a mirror point: `Brace Door N`
+  (0.55m off the leaf opposite the listen seam, holdTime 0.8, priority 4).
+  Completing sets `heldBy='player'` on the whole doorway cluster — the same
+  field the Commissionaire uses against you. Widened `Door.heldBy` to
+  `EntityId | 'player'`.
+- The brace is your body weight: it holds only while you stay within 1.7m
+  and the leaf stays shut — `updateBraces` releases on distance ('[you let
+  go]') or the leaf swinging. Opening your own braced door just releases
+  the brace (opening IS letting go); other heldBy kinds still refuse.
+- Bellman honest doors (the load-bearing change): its walk never waited
+  for a knocked leaf — it ghosted through closed doors a beat after the
+  rattle, so a brace could never have caught it. `blockingDoorNear` now
+  pauses it at a closed leaf ON the path to its crumb (radius 1.2m, inside
+  the 1.25 knock reach so head-on approaches knock first) until the swing.
+  A braced leaf on the path holds it 14s with 'test-the-bar' rattles, then
+  '[its steps fade down the hall — it lost interest]'. Braces BEAT it, at
+  the cost of standing on the door while it works the latch.
+- `doorBetween` is a leaf-plane side test (normal = (sin yaw, cos yaw)):
+  off-plane positions block only opposite-side targets; standing IN the
+  doorway (it spawns there) blocks anything meaningfully through.
+- Knock pending re-checks heldBy at swing time — a brace laid inside the
+  0.85s window still beats the swing.
+- Also closed the wall-ghost loophole in sprint-238 hearing: warden and
+  bellman noise detours now require the sound to be reachable — same room,
+  or (bellman only) a room whose door the bellman is standing at. It lives
+  at thresholds; roomAt resolves its door pos to EITHER adjacent room's
+  fuzzy bounds, so the reachable-room check is door-proximity, not
+  room-equality.
+- Vitest +2 (braced hold→fade, release→knock), props.spec +1 (real brace
+  loop: enter → crouch-brace → cadence rattles → fade, leaf never swung).
+- Gates: tsc, lint, 110 vitest, 5-seed sim, props.spec 15/15, build.
+- Harness traps learned: the brace-vs-knock race is ~0.5s — spec settles
+  must stay under ~1s after room-enter or the swing beats the brace.
+  killPlayer bypasses godMode AGAIN — stand >1.05m (killRange) off the leaf
+  but <1.7m (brace radius) — a 0.9m-in nudge threads it.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX worth watching: bracing a door you just closed vs an already
+    knocking bellman is a lost race by design — check playtest feel.
+  - Locked doors still ghost for the bellman (deliberate: it goes where it
+    wills) — if a run ever trails into a keyed door it walks through.
+  - Economy still ~5x; milestone-set hearing remains a design call
+    (Pursuer is a scripted chase — hearing doesn't fit its shape anyway).

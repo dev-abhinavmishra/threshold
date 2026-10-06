@@ -288,6 +288,46 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('a braced door holds it at the threshold until it loses interest', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';   // the player braced the leaf they came through
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 400) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /tests the bar|strains|palm flat/.test(c))).toBe(true);
+    expect(captions.some((c) => /steps fade down the hall/.test(c))).toBe(true);
+    expect(entry.opening).toBe(false);  // the brace held — it never swung
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
+  });
+
+  it('releases the hold and knocks normally once the brace is gone', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    const t = step(b, ctx, 4);   // braced — it holds and rattles
+    expect(entry.opening).toBe(false);
+    entry.heldBy = undefined;  // the player stepped away
+    step(b, ctx, 3, t);
+    expect(entry.opening).toBe(true);  // knocked, then it swings for it
+    b.dispose();
+  });
+
   it('starves out when the trail goes cold', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });

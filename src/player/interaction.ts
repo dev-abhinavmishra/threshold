@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -201,6 +201,16 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem): void {
         prompt: `Listen at Door ${d.label}`, holdTime: 1.1,
         data: d, enabled: true, priority: 4,
       });
+      // The mirror seam: brace the leaf shut. Held things can't be braced,
+      // false doors have nothing behind them worth bracing against.
+      if (!d.falseDoor && !d.heldBy) {
+        sys.add({
+          kind: 'brace', id: `brace-${it.id}`,
+          pos: { x: it.pos.x - latX * 0.55, y: it.pos.y, z: it.pos.z - latZ * 0.55 },
+          prompt: `Brace Door ${d.label}`, holdTime: 0.8,
+          data: d, enabled: true, priority: 4,
+        });
+      }
     }
   }
 }
