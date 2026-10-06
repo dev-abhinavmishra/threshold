@@ -1239,6 +1239,96 @@ test('the cast hears you — pebble pulls the bellman, a lure pulls the warden, 
   expect(errors).toEqual([]);
 });
 
+test('noise draws the patrol: the warden shoulders into the next room', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await seededRun(page); // seed 's': warden @33 (records-office), so room 34 is its door neighbour
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const gi = g as unknown as { entities: Ent[] };
+
+    const wRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wRoom) return { stage: 'no-warden' } as const;
+    const next = g.route.rooms[wRoom.index + 1];
+    const door = next?.doors.find((d) => d.id.endsWith('-in')) ?? next?.doors[0];
+    if (!next || !door) return { stage: 'no-door' } as const;
+    // Out of sight from frame one — teleport into the hiding spot itself.
+    // An exposed enterRoom settle is a whistle + charge + strike (killPlayer
+    // bypasses godMode), and a dead player sends the run back to the Meridian
+    // — which is also the warden's expiry.
+    const prev = g.route.rooms[wRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    const spot = wRoom.hidingSpots.find((s) => !s.trappedBy) ?? wRoom.hidingSpots[0];
+    if (!spot) return { stage: 'no-spot' } as const;
+    g.player.hiddenSpot = spot as never;
+    g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+    for (let f = 0; f < 70; f++) g.frame();
+    const warden = gi.entities.find((e) => e.id === 'warden') as (Ent & { state: string }) | undefined;
+    if (!warden) return { stage: 'no-warden-spawn', caps: caps.slice(-8) } as const;
+
+    // A loud crash just inside the next room, by their shared door — staged
+    // the moment the patrol reaches that end of its line.
+    const wpos = () => warden.threatPos();
+    let fired = false;
+    for (let i = 0; i < 3000 && !fired; i++) {
+      g.frame();
+      const wp = wpos();
+      if (!wp) return { stage: 'warden-gone' } as const;
+      if (warden.state === 'engage' && Math.hypot(wp.x - door.pos.x, wp.z - door.pos.z) < 1.8) {
+        const len = Math.hypot(next.origin.x - door.pos.x, next.origin.z - door.pos.z) || 1;
+        g.sound.emit({
+          x: door.pos.x + ((next.origin.x - door.pos.x) / len) * 0.8,
+          y: 1.2,
+          z: door.pos.z + ((next.origin.z - door.pos.z) / len) * 0.8,
+          intensity: 1.4, category: 'impact', caption: '[a crash beyond the wall]',
+        });
+        fired = true;
+      }
+    }
+    if (!fired) return { stage: 'never-at-door', caps: caps.slice(-10) } as const;
+
+    // It should shoulder through the leaf and check the noise point.
+    const nl = Math.hypot(next.origin.x - door.pos.x, next.origin.z - door.pos.z) || 1;
+    const nx = (next.origin.x - door.pos.x) / nl, nz = (next.origin.z - door.pos.z) / nl;
+    const cluster = [...wRoom.doors, ...next.doors]
+      .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
+    let crossed = false, opened = false;
+    const trace: string[] = [];
+    const wAny = warden as unknown as { investigate: unknown; pos: { x: number; z: number } };
+    for (let i = 0; i < 600 && !crossed; i++) {
+      g.frame();
+      if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) opened = true;
+      const wp = wpos();
+      if (!wp) break;
+      const through = (wp.x - door.pos.x) * nx + (wp.z - door.pos.z) * nz;
+      crossed = through > 0.3;   // it stops ~0.4m short of the point itself
+      if (i % 15 === 0) {
+        trace.push(`f${i} t=${through.toFixed(2)} st=${warden.state} inv=${wAny.investigate ? 'y' : 'n'} openT=${cluster.map((d) => (d.openT ?? 0).toFixed(1)).join('/')}`);
+      }
+    }
+    return { stage: 'done', crossed, opened, wardenState: warden.state, dead: g.player.dead, trace, caps: caps.slice(-12), allCaps: caps } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { crossed: boolean; opened: boolean; wardenState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[] };
+  const tail = r.allCaps.join(' | ');
+  expect(r.crossed, `the warden never crossed into the noise room. caps: ${tail} trace: ${r.trace.join(' ; ')}`).toBe(true);
+  expect(r.opened, 'the shared leaf never opened for it').toBe(true);
+  expect(r.allCaps.some((c) => /shoulder through the door/.test(c)), `caps: ${tail}`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('brace the door: the bellman tests the bar and loses interest', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));

@@ -27,6 +27,7 @@ import { tallFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import { doorBetween, atRoomDoor } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 
 const KNOCK_LINES = [
@@ -146,18 +147,6 @@ export class Bellman extends Entity {
     }
   }
 
-  /** The door's leaf runs along (cos yaw, −sin yaw); its through-direction is
-   *  the wall normal (sin yaw, cos yaw). Clearly off the leaf plane, only a
-   *  target on the opposite side is blocked; standing in the doorway itself
-   *  (it spawns there), anything meaningfully through the door is blocked. */
-  private doorBetween(d: Door, target: Vec3): boolean {
-    const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
-    const pSide = (this.pos.x - d.pos.x) * nx + (this.pos.z - d.pos.z) * nz;
-    const tSide = (target.x - d.pos.x) * nx + (target.z - d.pos.z) * nz;
-    if (Math.abs(pSide) > 0.45) return pSide * tSide < 0;
-    return Math.abs(tSide) > 0.45;
-  }
-
   /** A closed leaf on the path to the target — it waits for the swing it
    *  knocked for, or holds (and eventually quits) at a braced one. Radius
    *  sits inside the 1.25 knock reach so a head-on approach knocks first. */
@@ -166,7 +155,7 @@ export class Bellman extends Entity {
       for (const d of r.doors) {
         if (d.opening || d.openT > 0.5 || d.locked || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.2) continue;
-        if (this.doorBetween(d, target)) return d;
+        if (doorBetween(d, this.pos, target)) return d;
       }
     }
     return null;
@@ -328,8 +317,7 @@ export class Bellman extends Entity {
     // thresholds); the rest is still answered by your trail itself.
     const crumbRoom = this.roomAt(v3(e.x, 0, e.z));
     if (crumbRoom && crumbRoom !== this.roomAt(this.pos)) {
-      const atItsDoor = crumbRoom.doors.some((d) => v3dist(this.pos, d.pos) < 1.6);
-      if (!atItsDoor) return;
+      if (!atRoomDoor(crumbRoom, this.pos)) return;
     }
     if (this.noiseCrumb && v3dist(this.noiseCrumb, e) < 0.6) return;
     this.noiseCrumb = v3(e.x, 0, e.z);

@@ -986,3 +986,40 @@ NEXT SPRINT IDEAS (pick the biggest first)
     wills) — if a run ever trails into a keyed door it walks through.
   - Economy still ~5x; milestone-set hearing remains a design call
     (Pursuer is a scripted chase — hearing doesn't fit its shape anyway).
+
+## Sprint 241 — noise draws the patrol (the Warden leaves its room)
+
+- Sprint-240's reachability guard made adjacent-room noise FREE — loud
+  sounds next door reached nothing. The Warden's whole archetype is
+  corridor patrol, so now it answers: a hearable noise in another room is
+  reachable when its patrol has brought it to that room's door
+  (`atRoomDoor`, 2.2m — its a–b endpoints ARE the doors, so it hears
+  cross-room noise exactly at its turnaround pauses).
+- New `src/engine/doorGeo.ts`: `doorBetween` (lifted from bellman),
+  `atRoomDoor`, `pointInRoom` — the shared leaf-plane/room-geometry the
+  hearing layer now needs in two places.
+- Crossing is physical: `doorOnPath` on the investigate walk — a braced or
+  locked leaf turns it back ('[it turns from the held door]' — your brace
+  beats the Warden too, consistent with the Bellman); anything else it
+  shoves the whole doorway cluster open ('[the Warden puts a shoulder
+  through the door]' + a slammed-door noise emit). It walks in, scans the
+  point, and returns to its a–b line.
+- Vitest +3 (at-door → shoulder-through, held leaf → gives up, mid-patrol
+  unreachable → stays on line), props.spec +1 (live drive: stage a crash
+  inside room 34 the moment the patrol reaches the shared door; it
+  shoulders through, checks, and resumes its walk).
+- Gates: tsc, lint, 113 vitest, 5-seed sim, props.spec 16/16, build.
+- Harness traps learned: an exposed enterRoom settle in a warden room is
+  a whistle + charge + STRIKE (the strike hits even a spot you hide in
+  after it's seen you) — teleport directly into the hiding spot BEFORE the
+  settle, `hiddenSpot = spot` + exitPos. '[The Meridian...]' is the intro
+  caption, not a death — don't read it as killPlayer. And the investigate
+  walk stops ~0.4m short of the noise point — assert crossing depth with
+  slack, not the emit distance.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Same reachability now guards bellman crumbs and warden checks — the
+    commissionaire's lantern-pin is still strictly in-room by design.
+  - The warden's own footstep emits are entity-sourced (inert) — a real
+    player's sprint in the next room is now the dangerous version.
+  - Economy still ~5x; milestone-set hearing remains a design call.

@@ -14,6 +14,7 @@ import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import { doorBetween, atRoomDoor, pointInRoom } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
@@ -445,19 +446,43 @@ export class Warden extends Entity {
     if (this.state !== 'engage' || this.charging || this.investigate) return;
     if (e.source || !noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
-    // Noise through walls reaches it, but it can only check what's in its
-    // own room — a point beyond the plaster would have it walk through it.
+    // In-room noise it checks directly. Noise in the NEXT room reaches it
+    // too — but only when its patrol has brought it to that room's door,
+    // so it can shoulder through instead of walking the plaster.
     const room = c.rooms[this.hostRoom];
-    if (room?.spec) {
-      const dx = e.x - room.origin.x, dz = e.z - room.origin.z;
-      const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
-      if (Math.abs(dx * cs - dz * sn) > room.spec.width / 2 + 0.25
-        || Math.abs(dx * sn + dz * cs) > room.spec.depth / 2 + 0.25) return;
+    if (room?.spec && !pointInRoom(room, e.x, e.z)) {
+      const noiseRoom = c.rooms.find((r) => r !== room && pointInRoom(r, e.x, e.z));
+      if (!noiseRoom || !atRoomDoor(noiseRoom, this.pos, 2.2)) return;
     }
     this.investigate = v3(e.x, 0, e.z);
     this.investigateScan = 0;
     c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });
     this.rig?.play('move', 0.1);
+  }
+
+  /** Doors on the way to a heard noise: braced or locked leaves turn it
+   *  back; everything else it puts a shoulder through and keeps walking. */
+  private doorOnPath(): 'blocked' | null {
+    if (!this.investigate) return null;
+    for (const r of this.ctx.rooms) {
+      for (const d of r.doors) {
+        if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
+        if (v3dist(this.pos, d.pos) > 1.1 || !doorBetween(d, this.pos, this.investigate)) continue;
+        if (d.heldBy || d.locked) return 'blocked';
+        // The doorway is one physical leaf whatever the stack — shove the
+        // whole cluster so both side leaves swing together.
+        const c = this.ctx;
+        for (const r2 of c.rooms) {
+          for (const d2 of r2.doors) {
+            if (Math.hypot(d2.pos.x - d.pos.x, d2.pos.z - d.pos.z) < 0.7) d2.opening = true;
+          }
+        }
+        c.cue('door-slam', { x: d.pos.x, y: 1.2, z: d.pos.z }, '[the Warden puts a shoulder through the door]', { severity: 'warn' });
+        c.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 1.1, category: 'impact', caption: '[door slammed]', source: this.id });
+        return null;
+      }
+    }
+    return null;
   }
 
   /** In-view test: same room, in range, unhidden, LOS clear, and in front of
@@ -540,6 +565,12 @@ export class Warden extends Entity {
 
     // Off the line, checking a noise it heard — its eyes still work.
     if (this.investigate) {
+      if (this.doorOnPath() === 'blocked') {
+        // A held or locked leaf answers the shoulder — it gives the check up.
+        this.investigate = null;
+        this.ctx.cue('door-locked', this.pos, '[it turns from the held door]', { severity: 'info' });
+        return;
+      }
       const dx = this.investigate.x - this.pos.x, dz = this.investigate.z - this.pos.z;
       const len = Math.hypot(dx, dz);
       if (len > 0.4) {

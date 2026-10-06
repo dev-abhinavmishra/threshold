@@ -841,6 +841,61 @@ describe('Hearing the cast (sprint 238)', () => {
     w.dispose();
   });
 
+  it('warden shoulders through a door into the next room for a loud noise', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Park it beside room 21's entry door — at patrol range of the shared leaf.
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    // Noise inside room 21, off the wall: reachable — it investigates, then
+    // on the walk it puts a shoulder through the leaf and opens it.
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && !door.opening; i++) { ctxMut.now = t; w.update(0.05); t += 0.05; }
+    expect(door.opening).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shoulder through the door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('a braced or locked leaf turns the warden from a cross-room check', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    door.heldBy = 'player';
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && (w as unknown as { investigate: unknown }).investigate; i++) {
+      ctxMut.now = t; w.update(0.05); t += 0.05;
+    }
+    expect(door.opening).toBe(false);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns from the held door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('cross-room noise it cannot reach leaves the warden on its line', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Mid-room — far from room 21's doors — a noise there is out of reach.
+    emit(rooms[21].origin.x, rooms[21].origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    w.dispose();
+  });
+
   it('inspector glances up — a noise cuts the lid test short', () => {
     const rooms = routeRooms();
     const idx = rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);
