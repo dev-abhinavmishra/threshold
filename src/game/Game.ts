@@ -1248,17 +1248,31 @@ export class Game {
     // Beside a hauler's sledge: 'Pick the sledge' — pilfer the moving load.
     for (const ent of this.entities) {
       if (ent.id !== 'hauler' || ent.state === 'done') continue;
-      const h = ent as unknown as { sledgePos: Vec3; stock: number; roomIdx: number };
-      if (h.stock <= 0 || !this.streamer.builtIndices.includes(h.roomIdx)) continue;
+      const h = ent as unknown as { sledgePos: Vec3; lampPos: Vec3; lampLit: boolean; stock: number; roomIdx: number };
+      if (!this.streamer.builtIndices.includes(h.roomIdx)) continue;
       const dx = h.sledgePos.x - this.player.pos.x, dz = h.sledgePos.z - this.player.pos.z;
-      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
-      this.interaction.add({
-        kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
-        pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
-        prompt: 'Pick the sledge',
-        holdTime: 0.9, enabled: true, priority: 3,
-        data: ent as unknown as Record<string, unknown>,
-      });
+      if (h.stock > 0 && dx * dx + dz * dz <= 1.9 * 1.9) {
+        this.interaction.add({
+          kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
+          pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
+          prompt: 'Pick the sledge',
+          holdTime: 0.9, enabled: true, priority: 3,
+          data: ent as unknown as Record<string, unknown>,
+        });
+      }
+      // its work-lamp is a separate lift — the drag goes dark for it
+      if (h.lampLit) {
+        const lx = h.lampPos.x - this.player.pos.x, lz = h.lampPos.z - this.player.pos.z;
+        if (lx * lx + lz * lz <= 1.9 * 1.9) {
+          this.interaction.add({
+            kind: 'strip', id: `strip-${this.space}:${h.roomIdx}`,
+            pos: { x: h.lampPos.x, y: 0.75, z: h.lampPos.z },
+            prompt: 'Strip the lamp',
+            holdTime: 1.1, enabled: true, priority: 3,
+            data: ent as unknown as Record<string, unknown>,
+          });
+        }
+      }
     }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
@@ -1323,6 +1337,7 @@ export class Game {
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isDrain = !!pr.flooded && DRAIN_PROPS.has(p.kind);
+          const isWatch = p.kind === 'securityCam' || p.kind === 'searchlight';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
@@ -1361,7 +1376,7 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && !isWatch && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
           const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : isDrain ? dn++ : (ord[p.kind] ?? 0);
           if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
@@ -1389,6 +1404,17 @@ export class Game {
               kind: 'drain', id: `drain-${key}`,
               pos: { x: wx, y: 0.9, z: wz },
               prompt: 'Open the drain', holdTime: 1.2, enabled: true, priority: 2,
+            });
+          } else if (isWatch) {
+            // Wall eyes: tape/smother blinds the eye — only while it's live
+            // (dead mains already killed it; a taped eye is furniture).
+            const wy = p.y ?? (p.kind === 'securityCam' ? 2.35 : 1.4);
+            const live = !pr.darkRoom && this.hazard.watchers.some((w) =>
+              !w.dead && w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
+            if (live) this.interaction.add({
+              kind: 'tape', id: `tape-${key}`, pos: { x: wx, y: wy, z: wz },
+              prompt: p.kind === 'securityCam' ? 'Tape the eye — felt wrap' : 'Smother the beam — felt wrap',
+              holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -1503,14 +1529,20 @@ export class Game {
         if (sock.meta.sold) return;
         const item = sock.meta.brokerItem as ItemId;
         const price = (sock.meta.brokerPrice as number) ?? 20;
-        if (this.marginalia >= price) {
-          this.marginalia -= price;
+        // the clerks' score is on your hands — an unpaid tally trades at
+        // the marked rate, the same reading the Auditor's desk makes
+        const marked = this.unpaidTheft > 0;
+        const effPrice = marked ? price + Math.min(4 + this.unpaidTheft * 2, 14) : price;
+        if (this.marginalia >= effPrice) {
+          this.marginalia -= effPrice;
           sock.meta.sold = true;
           it.enabled = false;
           this.giveItem(item, 1);
-          this.cue('purchase', it.pos, `[traded — ${price} marginalia]`, 'info');
+          this.cue('purchase', it.pos,
+            marked ? `[traded at the marked rate — ${effPrice} marginalia]` : `[traded — ${effPrice} marginalia]`, 'info');
         } else {
-          this.cue('door-locked', it.pos, `[${price} marginalia required]`, 'warn');
+          this.cue('door-locked', it.pos,
+            marked ? `[the marked rate is ${effPrice} marginalia — settle the tally or pay the crew]` : `[${effPrice} marginalia required]`, 'warn');
         }
         return;
       }
@@ -2256,6 +2288,22 @@ export class Game {
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
       }
+      case 'strip': {
+        const h = it.data as unknown as { lampLit: boolean; relit: boolean; stripLamp(): void };
+        if (!h.lampLit) { it.enabled = false; return; }
+        const scavenged = h.relit;
+        h.stripLamp();
+        this.unpaidTheft += 1; // off the sledge, into the tally
+        it.enabled = false;
+        // the lamp IS the loot — a hooded hand lamp at half battery, or a
+        // top-up for the one you carry (count is charge). A scavenged bulb
+        // is second-hand: less charge, and the strip point re-registers
+        // the moment the team wires a replacement on.
+        this.giveItem('handLamp', scavenged ? 30 : 55);
+        this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        return;
+      }
       case 'forge': {
         const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
         if (!wrap) {
@@ -2281,6 +2329,24 @@ export class Game {
         this.pulledAlarms.add(key);
         this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 1.0, category: 'machine', caption: '[the alarm screams]' });
         this.cue('door-slam', it.pos, '[the bell screams in the stairwell]', 'warn');
+        return;
+      }
+      case 'tape': {
+        // Blind the eye: felt over the lens / across the beam — the wrap's
+        // third job after scrubbing sign and forging it.
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[you need a felt wrap to blind it]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          !x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (w) w.dead = true;
+        this.cue('item', it.pos, '[the eye goes blind under the felt]');
+        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
         return;
       }
       case 'drain': {

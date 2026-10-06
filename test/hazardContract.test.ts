@@ -43,7 +43,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const hazardSrc = readFileSync('src/entities/room.ts', 'utf8');
     // defuse verbs: snip (snare), bleed (steam), coax (wired drawer),
     // valve/drain (puddle), trap (floor trap pry)
-    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'"]) {
+    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'", "'tape'"]) {
       expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
       expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
     }
@@ -53,6 +53,9 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(hazardSrc).toContain('hums amber');
     expect(hazardSrc).toContain('wire underfoot');
     expect(hazardSrc).toContain('belt-wheel chews');
+    // the watched hall: the eye names its rule before it reports you
+    expect(hazardSrc).toContain('the eye pans');
+    expect(hazardSrc).toContain('settles on you');
     // damage paths: all four hazards reach damagePlayer
     expect(hazardSrc).toContain('Paper seals root and rustle');
     expect(hazardSrc).toContain('Steam blasts off the line');

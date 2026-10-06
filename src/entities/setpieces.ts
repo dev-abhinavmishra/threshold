@@ -670,11 +670,24 @@ export class Hauler extends Entity {
   private sledge: THREE.Group | null = null;
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
+  private lampBulb: THREE.Mesh | null = null;
+  private lampLight: THREE.PointLight | null = null;
 
   /** The drag's world position — the interactable anchors here per frame. */
   sledgePos = v3();
+  /** World pos of the work-lamp on the sledge's tail — the strip point anchors here. */
+  lampPos = v3();
   /** Picks left on the sledge — a sledge picked clean stops registering. */
   stock = 4;
+  /** The hooded work-lamp rides the tail — a moving pool of light in dark
+   *  rooms. Strip it and the drag goes dark — unless the fixtures are
+   *  live here: in a lit room the team scavenges a bulb off the walls and
+   *  the lamp fights on, dimmer. One scavenge per haul; the second strip
+   *  pays less and the dark is permanent. */
+  lampLit = true;
+  /** True once the team has scavenged a replacement bulb (lit room only). */
+  relit = false;
+  private relightT = 0;
 
   constructor() { super('hauler', ENTITY_TUNING.hauler); }
 
@@ -722,6 +735,24 @@ export class Hauler extends Entity {
       sack.position.set(sx, sy, sz);
       s.add(sack);
     }
+    // a hooded work-lamp on the tail — a moving pool of light in the dark
+    const lp = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.02, 0.62, 6), MAT.steelDark());
+    pole.position.y = 0.45;
+    lp.add(pole);
+    const hood = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.12, 8, 1, true), MAT.steelDark());
+    hood.position.y = 0.8;
+    lp.add(hood);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), MAT.amber());
+    bulb.position.y = 0.74;
+    lp.add(bulb);
+    this.lampBulb = bulb;
+    const light = new THREE.PointLight(0xffa95e, 0.85, 5.5, 1.8);
+    light.position.y = 0.74;
+    lp.add(light);
+    this.lampLight = light;
+    lp.position.set(0, 0, -0.62);
+    s.add(lp);
     s.position.copy(this.sledgePos);
     this.sledge = s;
     c.addEntityMesh(s);
@@ -790,12 +821,47 @@ export class Hauler extends Entity {
       this.sledge.position.copy(this.sledgePos);
       this.sledge.rotation.y = Math.atan2(this.heading.x, this.heading.z);
     }
+    this.lampPos.x = this.sledgePos.x - this.heading.x * 0.62;
+    this.lampPos.y = 0.75;
+    this.lampPos.z = this.sledgePos.z - this.heading.z * 0.62;
+    // a stripped lamp only stays dark where the mains are dead — under a
+    // lit ceiling the team pulls a bulb off the wall fixtures and wires it
+    // back on, weaker than the works lamp was
+    if (!this.lampLit && !this.relit) {
+      const room = c.rooms[this.spawnRoom];
+      if (room && !room.darkRoom) {
+        this.relightT += dt;
+        if (this.relightT > 3.5) {
+          this.relit = true;
+          this.lampLit = true;
+          if (this.lampLight) { this.lampLight.visible = true; this.lampLight.distance = 4; }
+          if (this.lampBulb) this.lampBulb.material = MAT.amber();
+          c.cue('drawer', this.lampPos, '[the team scavenges a bulb — the lamp fights on, dimmer]', { severity: 'info' });
+        }
+      }
+    }
+    if (this.lampLit && this.lampLight) {
+      this.lampLight.intensity = (this.relit ? 0.5 : 0.85) + Math.sin(this.lifeT * 7.3) * 0.1;
+    }
     this.rig?.update(dt);
+  }
+
+  /** 'Strip the lamp' reaches him — the drag goes dark, the light is yours.
+   *  A scavenged bulb is a smaller prize, and it can't be scavenged twice. */
+  stripLamp(): void {
+    this.lampLit = false;
+    if (this.lampLight) this.lampLight.visible = false;
+    if (this.lampBulb) this.lampBulb.material = MAT.screenDark();
+    this.ctx.cue('drawer', this.lampPos,
+      this.relit ? '[the scavenged bulb comes free — this drag stays dark]' : '[the drag goes dark — the team works blind]',
+      { severity: 'info' });
   }
 
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     if (this.sledge) { this.ctx.removeEntityMesh(this.sledge); this.sledge = null; }
+    this.lampBulb = null;
+    this.lampLight = null;
     this.rig = null;
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }

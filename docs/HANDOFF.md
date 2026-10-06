@@ -1998,3 +1998,212 @@ Sprint 279 — tidy wall dressing (this branch):
 - Test: 'wall dressing keeps breathing room' asserts >=0.6m same-side
   gap (diff families) across all templates x3 seeds. Route probe:
   wall-hung density 1.34 -> 1.29 props/room — tidier, not starved.
+
+
+
+## Sprint 279 — the sledge lamp (light you can lift off the haul)
+
+**What:** the hauler's drag now carries a hooded work-lamp on its tail —
+a real PointLight pool (amber, r≈5.5, flickers at ~7Hz) swinging with
+the haul through the under's dark rooms. It's a second lift beside
+'Pick the sledge': `'Strip the lamp'` (1.1s hold, registered on the
+lamp's own trailing pos at 1.9m, priority 3) frees it as
+`giveItem('handLamp', 55)` — a hooded hand lamp at half battery for
+new carriers, a +55 top-up for owners (count IS charge). The drag goes
+dark permanently: `stripLamp()` kills the light and swaps the bulb to
+screenDark. Pilfer-level quiet (0.35 emit), `unpaidTheft += 1` — the
+Auditor counts the lamp too.
+
+**The fork:** leave it = a free moving reveal while the team works your
+flooded hall (its pool shows wires, arcs, the laundress's basin); strip
+it = pocket light, the room loses the beacon for good. Same counterweight
+as the sledge itself — loud noise near it still rams you.
+
+**Traps:**
+- **The two sledge verbs need separate anchor points** — 'pick' on
+  sledgePos (y 0.4) vs 'strip' on lampPos (y 0.75), ~0.62m apart; the
+  same 1.9m gate admits both but the aim separates them in focus
+  scoring. Priority stays equal (3) — let proximity decide, don't
+  outrank the cheaper verb.
+- **`lampPos` trails the drag's heading** — sledge rotation is
+  atan2(heading) so the tail lamp's world pos is sledgePos − heading·0.62,
+  computed per frame like sledgePos itself.
+- **Vec3 is a plain object** — `v3set`/direct fields, not `.set()`.
+- **Shared cached materials** — never mutate MAT.amber() to dim a bulb
+  (every amber fixture in the scene dims); swap `bulb.material` to
+  MAT.screenDark() instead.
+- e2e: the haul leg now drives BOTH lifts — pick (stock--) then strip
+  (lampLit→false, +55 handLamp charge delta). Aim at lampPos directly:
+  standing on the point with atan2 → yaw 0, pitch at the 0.75 point.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - A dark sledge's return trip could 're-light' if you strip near a
+    lit room — the team scavenges a bulb? (economy of darkness)
+  - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
+
+## Sprint 280 — the scavenged bulb (economy of darkness)
+Strip sprint 279's work-lamp in a LIT under room and it doesn't stay dark:
+after ~3.5s the team pulls a bulb off the wall fixtures and wires it back
+on — `[the team scavenges a bulb — the lamp fights on, dimmer]` (intensity
+0.5 vs 0.85, distance 4 vs 5.5). In a drowned-mains room the strip is
+permanent — nothing to scavenge. The scavenged lamp re-registers 'Strip
+the lamp' (`h.lampLit` gates it per frame); the second strip pays 30
+charge instead of 55 (`h.relit` at press time) and the dark holds for
+good — one scavenge per haul. `room.darkRoom` is the lit/dead flag.
+Traps:
+- **The hauler never leaves its spawn room** — 'if you strip near a lit
+  room' collapses to 'if the haul room is lit'. `c.rooms[h.spawnRoom]
+  .darkRoom` is the whole check.
+- **`relightT` accumulates only while unlit and unrelit** — a strip in a
+  dark room just idles the timer (condition `room && !room.darkRoom`).
+- e2e prefers a lit hauler (`find(!darkRoom && scheduled.hauler)` falls
+  back to any) so the re-light branch runs deterministically on 's';
+  `litRoom` flag lets the asserts branch when a seed has none.
+- e2e timing: relight needs >3.5s of frames at dt=1/30 — 150 frames is
+  the margin. Assert `relit && lampLit`, then re-approach for strip two.
+- **`.vite/` needs ignoring twice**: `.gitignore` covers git but eslint
+  scans it — `eslint.config.js` ignores now lists `.vite` too (the dev
+  server's deps cache was linted as 293 errors).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav (standing
+    dead-on the lamp admits pick AND strip via prox<1.1).
+  - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
+  - The scavenged bulb could be *plantable*: a peeled handLamp bulb
+    donated to a dark sledge re-lights it YOUR way? (probably gimmick)
+
+## Sprint 281 — the spec split (feedback time)
+`entities.spec.ts` (1330 lines, ~1.4m) and `mechanics.spec.ts` (1283)
+split by theme so a sprint runs only what it touches:
+- `entities.spec.ts` — the stalker cast + hearing (10: bellman, porter,
+  warden, groundswell, inspector, commissionaire, hears×2).
+- `hazards.spec.ts` — flood + sign ecology (5: swamper, dark water, cut
+  the seal, scent, ghosts). Harness `ThresholdG`.
+- `economy.spec.ts` — pay-or-refuse + the claim register (5: toll, vend,
+  custodian, broker, house detective). Mixed types: shop tests keep the
+  local interface block; the detective test casts `HarnessG` (see trap).
+- `setpieces.spec.ts` — authored puzzle legs (7: gate, engine, draft,
+  index, valve, wake, lens). Local interface block.
+- `mechanics.spec.ts` — core verbs (3: witness, maelstrom, keyed door).
+Traps:
+- **`mechanics.spec.ts` had its own type layer** — mid-file `interface
+  GSock/GDoor/GRoom/GMilestone/ThresholdG` (orig. 329–382), richer than
+  the harness types (keyPairs, milestones, giveItem, underReturn...).
+  Moved tests need the block copied in; files authored against the
+  harness types need `import type { ThresholdG as HarnessG }` for their
+  casts, not a second local ThresholdG (TS2440).
+- **`seededRun(page)` in mechanics meant 'threshold'** — the local
+  bootstrap defaulted there; the harness default is 's'. Moved legs that
+  relied on the default must pass 'threshold' explicitly.
+- **Latent skip unmasked by the move**: 'cut the seal' found the FIRST
+  room with a snare socket — room 2's is `spent` (sprint-266 old sign,
+  dead), so the leg silently skipped since 266 landed. Socket finds now
+  filter `!sk.meta?.spent` (same fix in the dark-water leg).
+- File headers carry the theme comment; per-test seed comments keep the
+  original wording so `// 's': ...` greps still work.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav (standing
+    dead-on the lamp admits pick AND strip via prox<1.1).
+  - `under.spec.ts` (873 lines / ~1.1m) is now the biggest file — could
+    split under-traversal vs the under-economy legs if it keeps growing.
+  - The scavenged bulb could be *plantable*: donate a bulb to a dark
+    sledge, re-light it your way? (probably gimmick)
+
+## Sprint 282 — the marked rate (the tally reaches the counter)
+The under's clerks' score now prices the one staffed trade: carrying
+`unpaidTheft > 0` to a Broker pedestal charges the same reading the
+Auditor's desk makes — `effPrice = price + min(4 + owed*2, 14)`. Cues:
+`[traded at the marked rate — N marginalia]` on pay, `[the marked rate
+is N marginalia — settle the tally or pay the crew]` on short. Theft now
+has an invisible surcharge running under the whole floor; the Auditor's
+desk is the only way back to clean prices. Custodian/main-route shops
+are untouched (different ledger — `unpaidHeld` is the Detective's book;
+vends are imprints-only so the marked rate has no other recipient).
+Traps:
+- **'shop' kind covers broker AND custodian prompts** but the custodian
+  never reaches the case — `CustodianEncounter.onInteract` eats it first;
+  the case's `meta.broker === undefined` early-return keeps it broker-only.
+- e2e: u-lobby carries TWO broker pedestals — buy clean, then set
+  `(g as { unpaidTheft }).unpaidTheft = 3` (private is runtime-writable)
+  and buy the second at the marked rate; assert the exact fee
+  `price + min(4+owed*2, 14)` not just 'more'.
+- The marked rate only applies where a CREW MEMBER reads you — cages are
+  unattended claims and stay flat-priced; they accrue the mark, they
+  don't price it.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - `under.spec.ts` (873 lines) is now the biggest spec — could split
+    traversal vs under-economy legs.
+  - The Detective has a warrant escalation (phones ahead); the Auditor's
+    equivalent could be a wanted poster — a marked face the under cast
+    reads? (design call — how does a clerk share your face?)
+
+## Sprint 283 — the under split (under.spec.ts → under + undercast)
+Under followed the sprint-281 split: `under.spec.ts` keeps the spine
+(way-back traversal, electrified flood, steam line, old sign — 4 legs);
+new `undercast.spec.ts` takes the crew and its paper (haul, wash, lost
+property, crew board, claim register, audit — 6 legs). Both files are
+harness-typed — no local interface block this time (the legacy layer
+only exists in the mechanics lineage). 'the wash' keeps its known
+seed-gated skip (no laundress on 's').
+
+## Sprint 284 — the wash un-skipped (and its aim fixed for real)
+The wash leg's seed-gated skip since sprint 272 ended: 's' drifted the
+laundress off schedule; gilt-spine-777 (already a sim seed) schedules
+TWO — u-15 (lit flood) + u-105 (drowned mains). The leg is fully dynamic
+(`find(r.scheduled laundress)`) so only the seed swapped. But un-skipping
+exposed two latent spec bugs the skip had hidden:
+- **Floor-aim never reached the drain**: drain interactable pos.y=0.9 →
+  focus point is 1.5 (pos.y+0.6), nearly eye level. Aiming pitch at 0.5
+  gave align≈0.68 <0.86 and prox 1.23 >1.1 — focus could NEVER land.
+  The wash socket (y=0.5, prox-covered) is why the basket phases always
+  looked fine. All aim loops now pitch at the interactable's own focus
+  point (drain 1.5, wash 1.1) against live horizontal distance.
+- **The sniff window makes the drain unreachable at close stand**:
+  while she's in 'engage', 'Search the wash' (priority 3) out-scores the
+  drain (priority 2) at any stand where its prox <1.1 admits it — the
+  crank is structurally unfocusable under ~1m. Phase-3 stand moved to
+  1.05m: wash prox >1.1 AND align <0.86 → ineligible → drain alone.
+Trap logged for future specs: **aim at it.pos.y + 0.6, not the prop**,
+and always compute pitch from live horizontal distance — collision can
+push a teleported stand point ~0.25m off.
+
+## Sprint 285 — the watched hall (the eye reads motion)
+The hazard family's sixth axis — and the first that isn't touch, time,
+or posture: `securityCam` (wall-mount dressing: lobby/records/gallery/
+corridor/maintenance/milestone rooms, ~2–6/seed) and `searchlight`
+(maint-server, corridor-checkpoint) are now live watchers. Each sweeps
+a deterministic arc (cam ±0.95rad/7–11s, light ±0.5/10–14s); MOTION
+inside the cone settles it for 0.9s → `[the eye settles on you]` +
+`emit 0.5 'machine'` AT THE PLAYER'S POSITION — the building knows
+where you are *now*, not where you were, and every existing listener
+(warden, grafter, swamper, hauler ram) answers through the noise
+system it already has. Still feet beat it mid-cone; the blind spot is
+under the mount (d<0.45). `Tape the eye`/`Smother the beam` (feltWrap,
+1.6s) blinds one permanently — the wrap's third job. `darkRoom` kills
+watchers for free: drowned mains = dead eyes.
+Traps:
+- Wall-mount cam props carry `yaw` but no `y` — default cam pos.y=2.35,
+  searchlight 1.4; world yaw = p.yaw + room.yaw (matches rotXZ).
+- The watcher registry lives on HazardField from spec.props (sockets
+  carry loot/hazards; watchers come from props).
+- 's' fixture pair: cam@18 is DARK (dead eye — no verb, no report),
+  cam@36 lit (live) — the leg asserts both sides on one seed.
+- 'tape' joins InteractKind + the hazardContract defuse list — the
+  contract now guards the eye's tell lines too.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The taped eye could leave a 'seen' record hunters read differently
+    (a warden seeing a taped cam knows the trick) — half-baked, skip
+    unless a clean fiction lands.
+  - The Auditor wanted-poster stays a design call.
+  - wetFloor (13 uses) is still dead dressing — a second slip family is
+    probably too same-y with armed puddles; keep dormant.

@@ -1536,6 +1536,60 @@ describe('the Hauler (sprint 271)', () => {
     expect(hits.length, 'one ram per rouse').toBe(1);
     h.dispose();
   });
+
+  it('the work-lamp rides the tail — stripping it darks the drag for good', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h = new Hauler();
+    h.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; h.update(0.05); }
+    // the lamp hangs off the sledge's tail, ~0.62m behind the drag point
+    const s1 = (h as unknown as { sledgePos: { x: number; z: number } }).sledgePos;
+    const l1 = (h as unknown as { lampPos: { x: number; z: number } }).lampPos;
+    expect(Math.hypot(l1.x - s1.x, l1.z - s1.z)).toBeGreaterThan(0.4);
+    expect(Math.hypot(l1.x - s1.x, l1.z - s1.z)).toBeLessThan(0.9);
+    expect(h.lampLit).toBe(true);
+    h.stripLamp();
+    expect(h.lampLit).toBe(false);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((c) => c.includes('goes dark'))).toBe(true);
+    h.dispose();
+  });
+
+  it('a lit room scavenges the lamp back on; dead mains keep the dark', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    // lit room (no darkRoom flag): strip → wait >3.5s → the team wires a bulb on
+    const ctxLit = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h1 = new Hauler();
+    h1.spawn(ctxLit);
+    for (let i = 0; i < 30; i++) { ctxLit.now += 0.05; h1.update(0.05); }
+    h1.stripLamp();
+    expect(h1.lampLit).toBe(false);
+    for (let i = 0; i < 90; i++) { ctxLit.now += 0.05; h1.update(0.05); } // 4.5s
+    expect(h1.relit, 'the scavenge happens once, under light').toBe(true);
+    expect(h1.lampLit, 'the lamp fights on').toBe(true);
+    const cues1 = (ctxLit.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues1.some((c) => c.includes('scavenges a bulb'))).toBe(true);
+    // the second strip is the last — the scavenged bulb pays and the dark holds
+    h1.stripLamp();
+    expect(h1.lampLit).toBe(false);
+    for (let i = 0; i < 90; i++) { ctxLit.now += 0.05; h1.update(0.05); }
+    expect(h1.lampLit, 'no second scavenge').toBe(false);
+    const cues2 = (ctxLit.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues2.some((c) => c.includes('scavenged bulb comes free'))).toBe(true);
+    h1.dispose();
+    // dead mains: the drag stays dark
+    const darkRoom = { ...haulRoom, darkRoom: true } as unknown as RoomInstance;
+    const ctxDark = makeCtx([darkRoom], { currentRoomIndex: 0 });
+    const h2 = new Hauler();
+    h2.spawn(ctxDark);
+    for (let i = 0; i < 30; i++) { ctxDark.now += 0.05; h2.update(0.05); }
+    h2.stripLamp();
+    for (let i = 0; i < 90; i++) { ctxDark.now += 0.05; h2.update(0.05); }
+    expect(h2.lampLit, 'nothing to scavenge where the mains are dead').toBe(false);
+    expect(h2.relit).toBe(false);
+    h2.dispose();
+  });
 });
 
 describe('the Laundress (sprint 272)', () => {
@@ -1820,5 +1874,60 @@ describe('the House Detective (sprint 278)', () => {
     const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
     expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
     d.dispose();
+  });
+});
+
+describe('the watched hall (sprint 285)', () => {
+  const camRoom = (dark: boolean) => ({
+    index: 0, templateId: 'corr-straight', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, darkRoom: dark,
+    spec: { width: 8, depth: 8, props: [{ kind: 'securityCam', x: 0, z: -2, yaw: 0 }] },
+    doors: [], hidingSpots: [], scheduled: [], sockets: [],
+  }) as unknown as RoomInstance;
+
+  const pinCam = async (dark: boolean) => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(dark);
+    h.addFromRoom(room);
+    const w = h.watchers[0];
+    // pin the sweep to a fixed beam facing +z for the duration
+    w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    return { h, w, ctx };
+  };
+  const step = (h: InstanceType<typeof import('../src/entities/room').HazardField>,
+    ctx: EntityCtx, x: number, z: number, n = 30) => {
+    for (let i = 0; i < n; i++) { ctx.player.pos.x = x + Math.sin(i) * 0.02; ctx.player.pos.z = z; ctx.now += 0.05; h.update(ctx, 0.05); }
+  };
+
+  it('motion inside the cone settles the eye — it rings your position', async () => {
+    const { h, ctx } = await pinCam(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05); // first frame seeds the motion trace
+    step(h, ctx, 0, 2, 40); // ~2s of movement inside the beam
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('settles on you'), expect.anything());
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    const reports = emit.mock.calls.filter((c) => c[0].category === 'machine');
+    expect(reports.length, 'the report rings your feet').toBeGreaterThan(0);
+    expect(Math.hypot(reports[0][0].x - 0, reports[0][0].z - 2)).toBeLessThan(0.2);
+  });
+
+  it('still feet pass it — no settle, no report', async () => {
+    const { h, ctx } = await pinCam(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    expect(emit.mock.calls.filter((c) => c[0].category === 'machine').length).toBe(0);
+  });
+
+  it('dead mains kill the eye; a dead eye watches nothing', async () => {
+    const { h, ctx } = await pinCam(true); // drowned-mains room
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05);
+    step(h, ctx, 0, 2, 40);
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    expect(emit.mock.calls.filter((c) => c[0].category === 'machine').length).toBe(0);
   });
 });
