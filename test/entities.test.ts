@@ -688,3 +688,123 @@ describe('Commissionaire (sprint 237)', () => {
     comm.dispose();
   });
 });
+
+describe('Hearing the cast (sprint 238)', () => {
+  const hearingCtx = (rooms: RoomInstance[], idx: number, overrides: Partial<EntityCtx> = {}) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: idx,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+      ...overrides,
+    });
+    const emit = (x: number, z: number, intensity = 1, category = 'distraction') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    return { ctx, emit };
+  };
+  const stepTo = (fn: () => boolean, ctx: EntityCtx, e: { update(dt: number): void }, max = 800) => {
+    const ctxMut = ctx as { now: number };
+    let t = ctxMut.now || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+
+  it('warden leaves its post to check a loud noise', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(pos.x + 2.5, 0, pos.z + 2.5);
+    emit(np.x, np.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    const arrived = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, w, 600);
+    expect(arrived).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns toward the noise/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('commissionaire pins its lantern on a heard noise', () => {
+    const rooms = routeRooms();
+    const idx = rooms.findIndex((r) => r.index >= 20 && r.doors.length >= 2);
+    const { ctx, emit } = hearingCtx(rooms, idx);
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const pos = (comm as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(pos.x + 3, 0, pos.z - 2);
+    emit(np.x, np.z);
+    stepTo(() => Math.abs(
+      (comm as unknown as { gazeYaw: number }).gazeYaw - Math.atan2(np.x - pos.x, np.z - pos.z)
+    ) < 0.01, ctx, comm, 40);
+    const gy = (comm as unknown as { gazeYaw: number }).gazeYaw;
+    expect(gy).toBeCloseTo(Math.atan2(np.x - pos.x, np.z - pos.z), 2);
+    comm.dispose();
+  });
+
+  it('bellman detours to a loud sound off the trail', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    // Trail runs entry → far corner; the noise sits off-line.
+    const trail = Array.from({ length: 8 }, (_, i) =>
+      v3(entry.x + (room.origin.x - entry.x) * i / 7, 0, entry.z + (room.origin.z - entry.z) * i / 7));
+    const { ctx, emit } = hearingCtx(rooms, 20, { playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x + 30, 0, room.origin.z); // far away — no gaze freeze
+    player.yaw = 0;
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(entry.x + 2.5, 0, entry.z + 3.5);
+    emit(np.x, np.z);
+    const sniffed = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, b, 800);
+    expect(sniffed).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /stoops to the sound/.test(c))).toBe(true);
+    b.dispose();
+  });
+
+  it('groundswell waves arrive early when the room is loud', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 28);
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999);
+    const waveAt = (gs as unknown as { waveAt: number }).waveAt;
+    expect(waveAt).toBeGreaterThan(0.7 + 0.05);
+    const room = rooms[28];
+    emit(room.origin.x, room.origin.z);
+    // Noise should have dragged the next wave to ~0.7s out.
+    const launched = stepTo(() => (gs as unknown as { front: number }).front >= 0, ctx, gs, 40);
+    expect(launched).toBe(true);
+    gs.dispose();
+  });
+
+  it('inspector glances up — a noise cuts the lid test short', () => {
+    const rooms = routeRooms();
+    const idx = rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);
+    const { ctx, emit } = hearingCtx(rooms, idx);
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999);
+    const testing = stepTo(() => (insp as unknown as { testing: unknown }).testing !== null, ctx, insp, 900);
+    expect(testing).toBe(true);
+    // Fresh test starts at 2.6s; noise should pull it down to 1.2.
+    while ((insp as unknown as { testT: number }).testT <= 1.5) {
+      stepTo(() => (insp as unknown as { testT: number }).testT > 1.5 || (insp as unknown as { testing: unknown }).testing === null, ctx, insp, 400);
+      if ((insp as unknown as { testing: unknown }).testing === null) break;
+    }
+    expect((insp as unknown as { testing: unknown }).testing).not.toBeNull();
+    const pos = (insp as unknown as { pos: { x: number; z: number } }).pos;
+    emit(pos.x + 1, pos.z + 1);
+    expect((insp as unknown as { testT: number }).testT).toBeLessThanOrEqual(1.2);
+    insp.dispose();
+  });
+});

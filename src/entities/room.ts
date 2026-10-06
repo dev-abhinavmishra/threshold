@@ -13,6 +13,8 @@ import { plateMaterial } from '../world/builder';
 import { tallFigure, statueFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
+import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import type { SoundEvent } from '../engine/events';
 
 /* ============================ WITNESS ============================ */
 /** Gaze hazard in rooms with windows/mirrors/portraits. Pulls the camera;
@@ -1035,6 +1037,8 @@ export class Groundswell extends Entity {
   private pPos: Float32Array | null = null;
   private pLife: Float32Array | null = null;
   private pIdx = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private provokeCd = 0;
 
   constructor() { super('groundswell', ENTITY_TUNING.groundswell); }
 
@@ -1074,8 +1078,25 @@ export class Groundswell extends Entity {
     this.pts.frustumCulled = false;
     c.addEntityMesh(this.pts);
     this.state = 'engage';
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     c.cue('floor-creak', this.start, '[the floor holds its breath]', { severity: 'warn' });
     c.sound.emit({ x: this.center.x, y: 0.2, z: this.center.z, intensity: 0.5, category: 'ambient', caption: '', source: this.id });
+  }
+
+  /** Heavy noise in the room provokes it: while a wave is idle, a loud
+   *  sound drags the next swell forward. Sprint through and the floor
+   *  answers sooner — walk soft, or don't walk at all. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.front >= 0) return;
+    if (e.source || !noiseCanRouse(e)) return;
+    if (!withinRouseRadius(e, this.center.x, this.center.z)) return;
+    if (this.waveAt <= c.now + 0.7) return;
+    this.waveAt = c.now + 0.7;
+    if (this.provokeCd <= c.now) {
+      this.provokeCd = c.now + 6;
+      c.cue('floor-creak', this.center, '[the boards stir under the noise]', { severity: 'warn' });
+    }
   }
 
   private frontPos(out: Vec3, f: number): Vec3 {
@@ -1174,6 +1195,7 @@ export class Groundswell extends Entity {
   }
 
   protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.swell) { this.ctx.removeEntityMesh(this.swell); this.swell = null; }
     if (this.pts) { this.ctx.removeEntityMesh(this.pts); this.pts = null; }
   }
@@ -1204,6 +1226,8 @@ export class Inspector extends Entity {
   private rig: RiggedFigure | null = null;
   private figGroup: import('three').Group | null = null;
   private baseTiltX = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private glanceCd = 0;
 
   constructor() { super('inspector', ENTITY_TUNING.inspector); }
 
@@ -1244,7 +1268,24 @@ export class Inspector extends Entity {
     this.spotCount = room.hidingSpots.filter((s) => !s.trappedBy).length;
     c.cue('collector-rattle', this.pos, '[a ring of keys — it is checking the rooms]', { severity: 'warn' });
     c.sound.emit({ x: this.pos.x, y: 1.2, z: this.pos.z, intensity: 0.6, category: 'entity-cue', caption: '[keys]', source: this.id });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** A loud noise makes it cut the current lid test short — it glances up
+   *  and moves to the next spot. Noise buys you seconds at the lid it is
+   *  on, at the price of hurrying it toward yours. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || !this.testing || e.source) return;
+    if (!noiseCanRouse(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    if (this.testT <= 1.2) return;
+    this.testT = 1.2;
+    if (this.glanceCd <= c.now) {
+      this.glanceCd = c.now + 8;
+      c.cue('collector-rattle', this.pos, '[it glances up — then back to the lid]', { severity: 'warn' });
+    }
   }
 
   /** Interact presses while it has your lid — route from Game's exitHide. */
@@ -1376,6 +1417,7 @@ export class Inspector extends Entity {
   }
 
   protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.testing && this.testing.trappedBy === 'inspector') this.testing.trappedBy = undefined;
     if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
     this.rig = null;
@@ -1410,6 +1452,10 @@ export class Commissionaire extends Entity {
   private rig: RiggedFigure | null = null;
   private figGroup: import('three').Group | null = null;
   private lampSwing: import('three').Group | null = null;
+  private pinYaw: number | null = null;   // heard noise — the light holds there
+  private pinUntil = 0;
+  private pinCd = 0;
+  private noiseUnsub: (() => void) | null = null;
 
   constructor() { super('commissionaire', ENTITY_TUNING.commissionaire); }
 
@@ -1474,7 +1520,30 @@ export class Commissionaire extends Entity {
     c.cue('door-locked', this.pos, '[a gloved hand on the frame — the way back is shut]', { severity: 'warn' });
     this.rig = rig ?? null;
     this.rig?.play('idle', 0.1);
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** It never leaves its post for a noise — but the light turns to look,
+   *  which pins the sweep and blinds the other side of the room. A thrown
+   *  lure to one side opens the far arc for the crossing. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.chasing || this.returning) return;
+    if (e.source || !noiseCanRouse(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    this.pinYaw = Math.atan2(e.x - this.pos.x, e.z - this.pos.z);
+    this.pinUntil = c.now + 3.5;
+    if (this.pinCd <= 0) {
+      this.pinCd = 6;
+      c.cue('floor-creak', this.pos, '[it holds the light on the noise]', { severity: 'warn' });
+    }
+  }
+
+  private aimYaw(): number {
+    if (this.pinYaw !== null && this.ctx.now < this.pinUntil) return this.pinYaw;
+    this.pinYaw = null;
+    return this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
   }
 
   /** Player inside the sweep: exposed, in range, inside the arc, in LOS. */
@@ -1587,9 +1656,11 @@ export class Commissionaire extends Entity {
         this.gazeYaw = Math.atan2(dx, dz);
       }
     } else {
-      // On post: sweep the room on a slow blind arc. Touching it is being seen.
+      // On post: sweep the room on a slow blind arc — unless a heard noise
+      // has pinned the light. Touching it is being seen.
       this.sweepT += dt;
-      this.gazeYaw = this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
+      this.pinCd -= dt;
+      this.gazeYaw = this.aimYaw();
       if (this.inGaze() || (d < 1.3 && !p.hiddenSpot && !p.dead)) {
         this.spotT += dt;
         if (this.spotT > 0.45) {
@@ -1612,7 +1683,7 @@ export class Commissionaire extends Entity {
       this.figGroup.position.set(this.pos.x, 0, this.pos.z);
       this.figGroup.rotation.y = this.chasing
         ? this.gazeYaw
-        : this.returning ? this.gazeYaw : this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
+        : this.returning ? this.gazeYaw : this.aimYaw();
       // The lantern arm swings gently while it sweeps, sharp when it runs.
       if (this.lampSwing) this.lampSwing.rotation.x = Math.sin(c.now * (this.chasing ? 9 : 1.8)) * (this.chasing ? 0.3 : 0.12);
     }
@@ -1624,6 +1695,7 @@ export class Commissionaire extends Entity {
   }
 
   protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     for (const d of this.sealedDoors) d.heldBy = undefined;
     this.sealedDoors = [];
     if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }

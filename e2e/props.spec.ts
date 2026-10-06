@@ -1074,7 +1074,7 @@ test('the commissionaire holds the doors — bait it, then touch the far leaf', 
         g.input.interactPressed = true;
         g.frame();
         g.input.interactPressed = false;
-        if (exitDoor && (exitDoor.opening || exitDoor.openT > 0.05)) { opened = true; }
+        if (exitDoor && (exitDoor.opening || (exitDoor.openT ?? 0) > 0.05)) { opened = true; }
         if (opened && ent.state === 'done') break;
         if (ent.state === 'done') break;
       }

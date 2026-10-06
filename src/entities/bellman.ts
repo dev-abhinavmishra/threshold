@@ -26,6 +26,8 @@ import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
+import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import type { SoundEvent } from '../engine/events';
 
 const KNOCK_LINES = [
   '[the latch rattles — three slow turns]',
@@ -50,6 +52,8 @@ export class Bellman extends Entity {
   private gazeCueAt = -10;
   private pendingDoors: { d: { opening: boolean; pos: Vec3 }; at: number }[] = [];
   private knocked = new Set<object>();
+  private noiseCrumb: Vec3 | null = null;  // a loud sound it detours to sniff
+  private noiseUnsub: (() => void) | null = null;
 
   constructor() { super('bellman', ENTITY_TUNING.bellman); }
 
@@ -59,6 +63,7 @@ export class Bellman extends Entity {
     // Start at the live head of the trail — it picks up where the player is
     // now, not where the run began.
     this.crumb = Math.max(0, (c.playerTrail?.length ?? 0) - 1);
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     // Start on the outside of the door the player just closed — the room's
     // entry door, owned by this room.
     const room = c.rooms[c.currentRoomIndex];
@@ -179,19 +184,25 @@ export class Bellman extends Entity {
       return;
     }
 
-    // Follow the trail.
+    // Follow the trail — or the crumb a loud noise just dropped for it.
     let moved = false;
     while (this.crumb < trail.length && v3dist(this.pos, trail[this.crumb]) < 0.4) this.crumb++;
-    const target = trail[this.crumb] as Vec3 | undefined;
+    const target = this.noiseCrumb ?? (trail[this.crumb] as Vec3 | undefined);
+    if (this.noiseCrumb && v3dist(this.pos, this.noiseCrumb) < 0.45) this.noiseCrumb = null;
     if (target) {
-      // Won't cross into resting rooms — hold at the boundary.
+      // Won't cross into resting rooms — hold at the boundary. Sound it
+      // heard in a resting room it simply refuses to chase.
       const room = this.roomAt(target);
       if (room && SAFE_ROOM_TEMPLATES.has(room.templateId)) {
-        this.doorHoldT += dt;
-        if (this.doorHoldT > 5.5) {
-          c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it stops at the threshold — it will not follow]', { severity: 'info' });
-          this.done();
-          return;
+        if (this.noiseCrumb && target === this.noiseCrumb) {
+          this.noiseCrumb = null;
+        } else {
+          this.doorHoldT += dt;
+          if (this.doorHoldT > 5.5) {
+            c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it stops at the threshold — it will not follow]', { severity: 'info' });
+            this.done();
+            return;
+          }
         }
       } else {
         this.doorHoldT = 0;
@@ -241,12 +252,30 @@ export class Bellman extends Entity {
     this.rig?.update(dt);
   }
 
+  /** A loud noise drops a virtual crumb — it stoops to sniff the sound,
+   *  then resumes the trail. Sprint strides and slams feed it too: noise
+   *  you make becomes part of the path it walks. Frozen under your gaze it
+   *  hears nothing.
+   */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    // 'warn' counts — a crumb dropped while it approaches still lands once it engages.
+    if ((this.state !== 'engage' && this.state !== 'warn') || e.source) return;
+    if (this.underGaze()) return;
+    if (!noiseCanRouse(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    if (this.noiseCrumb && v3dist(this.noiseCrumb, e) < 0.6) return;
+    this.noiseCrumb = v3(e.x, 0, e.z);
+    c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it stoops to the sound]', { severity: 'warn' });
+  }
+
   /** The trail array dropped its oldest crumb — keep our cursor aligned. */
   override trailShifted(): void { this.crumb = Math.max(0, this.crumb - 1); }
 
   override threatPos(): Vec3 | null { return this.state === 'engage' ? this.pos : null; }
 
   protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.group) { this.ctx.removeEntityMesh(this.group); this.group = null; }
     this.rig = null;
   }

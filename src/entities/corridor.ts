@@ -13,6 +13,8 @@ import { Entity, playerExposed, corridorPath, followPath, pathLength } from './b
 import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
+import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import type { SoundEvent } from '../engine/events';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
 import { riggedFigure, RIGGED, type RiggedFigure } from './rigged';
@@ -403,6 +405,9 @@ export class Warden extends Entity {
   private lastSeen = v3();    // where it last saw you — it charges THAT, not your live pos
   private stepT = 0;
   private expireT = 120;
+  private investigate: Vec3 | null = null;   // a heard noise it walks to check
+  private investigateScan = 0;
+  private noiseUnsub: (() => void) | null = null;
 
   constructor() { super('warden', ENTITY_TUNING.warden); }
 
@@ -428,7 +433,22 @@ export class Warden extends Entity {
     c.addEntityMesh(g);
     rig?.play('move');
     this.state = 'engage';
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     c.cue('husk-foot', this.pos, '[measured pacing — a walk, not a hunt]', { severity: 'warn' });
+  }
+
+  /** Loud noise pulls it off the a–b line: it walks to the sound and scans.
+   *  Sprint strides, slams, machine knocks, wind-up lures — the windAlarm
+   *  is a real lure here, not just flavour. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.charging || this.investigate) return;
+    if (e.source || !noiseCanRouse(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    this.investigate = v3(e.x, 0, e.z);
+    this.investigateScan = 0;
+    c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });
+    this.rig?.play('move', 0.1);
   }
 
   /** In-view test: same room, in range, unhidden, LOS clear, and in front of
@@ -509,6 +529,26 @@ export class Warden extends Entity {
       this.seenT = Math.max(this.seenT > 0 ? 0 : this.seenT, this.seenT - dt * 2);
     }
 
+    // Off the line, checking a noise it heard — its eyes still work.
+    if (this.investigate) {
+      const dx = this.investigate.x - this.pos.x, dz = this.investigate.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len > 0.4) {
+        const step = Math.min(len, this.tuning.speed * 1.4 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        if (this.mesh) {
+          this.mesh.position.set(this.pos.x, 0, this.pos.z);
+          this.mesh.rotation.y = Math.atan2(dx, dz);
+        }
+      } else {
+        this.investigateScan += dt;
+        if (this.mesh) this.mesh.rotation.y += dt * 2.4;
+        if (this.investigateScan > 1.8) this.investigate = null;
+      }
+      return;
+    }
+
     // Patrol between the doors; at each end it turns and scans.
     if (this.pauseT > 0) {
       this.pauseT -= dt;
@@ -540,6 +580,7 @@ export class Warden extends Entity {
   override threatPos(): Vec3 | null { return this.state === 'engage' ? this.pos : null; }
 
   protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }
