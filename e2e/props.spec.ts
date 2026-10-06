@@ -72,8 +72,9 @@ interface GRoom {
   origin: { x: number; z: number };
   yaw: number;
   n: { x: number; z: number };
+  entryPos: { x: number; z: number };
   exitPos: { x: number; z: number };
-  doors?: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean }[];
+  doors: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean; heldBy?: string }[];
   scheduled?: { entity: string; roused?: boolean; triggerRoom: number; seed: number }[];
   darkRoom?: boolean;
   spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
@@ -945,7 +946,7 @@ test('the inspector tests every lid — hold it shut or it pulls you out', async
     if (!ent) return { stage: 'not-spawned' } as const;
 
     const spots = (iRoom.hidingSpots as Spot[]).filter((s) => !s.trappedBy);
-    const ep = iRoom.n;
+    const ep = iRoom.entryPos;
     const dist = (s: Spot) => Math.hypot(s.exitPos.x - ep.x, s.exitPos.z - ep.z);
     const nearest = [...spots].sort((a, b) => dist(a) - dist(b))[0];
 
@@ -1005,5 +1006,102 @@ test('the inspector tests every lid — hold it shut or it pulls you out', async
   expect(r.pulledOut).toBe(true);
   expect(r.outCue).toBe(true);
   expect(r.held, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the commissionaire holds the doors — bait it, then touch the far leaf', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's' → commissionaire @26 (suite-split)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string };
+    const cRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'commissionaire'));
+    if (!cRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[cRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(cRoom.origin.x, 0, cRoom.origin.z);
+    for (let f = 0; f < 20; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'commissionaire') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+
+    const en = cRoom.entryPos, ex = cRoom.exitPos;
+    const near = (p: { x: number; z: number }, pos: { x: number; z: number }) => Math.hypot(pos.x - p.x, pos.z - p.z) < 0.9;
+    const entryDoors = [...cRoom.doors, ...prev.doors].filter((d) => near(en, d.pos));
+    const sealedNow = entryDoors.every((d) => d.heldBy === 'commissionaire');
+
+    // Phase A — try to retreat through the held leaf: refused with its tell.
+    const yawTo = (p: { x: number; z: number }) => { g.player.yaw = Math.atan2(p.x - g.player.pos.x, p.z - g.player.pos.z); };
+    g.player.teleport(en.x + (cRoom.origin.x - en.x) * 0.08, 0, en.z + (cRoom.origin.z - en.z) * 0.08);
+    let refused = false;
+    for (let f = 0; f < 240 && !refused; f++) {
+      yawTo(en);
+      g.input.interactPressed = true;
+      g.frame();
+      g.input.interactPressed = false;
+      if (caps.some((c) => /held from the far side/.test(c))) refused = true;
+    }
+
+    // Phase B — bait it: stand exposed in the sweep's visible pocket
+    // (dead-axis at distance is behind suite-split's divider wall).
+    const yaw = Math.atan2(en.x - ex.x, en.z - ex.z);
+    const bait = { x: ex.x + Math.sin(yaw) * 4.0 + Math.sin(yaw + Math.PI / 2) * 1.6, z: ex.z + Math.cos(yaw) * 4.0 + Math.cos(yaw + Math.PI / 2) * 1.6 };
+    let lit = false;
+    for (let f = 0; f < 900 && ent.state !== 'done'; f++) {
+      if (g.player.dead) return { stage: 'player-died', caps: caps.slice(-10) } as const;
+      if (!lit) g.player.teleport(bait.x, 0, bait.z);
+      g.frame();
+      if (caps.some((c) => /lantern finds you/.test(c))) { lit = true; break; }
+    }
+
+    // Phase C — while it chases, sprint to the far leaf and touch it.
+    let opened = false;
+    if (lit) {
+      const exitDoor = [...cRoom.doors, ...g.route.rooms[cRoom.index + 1].doors].find((d) => near(ex, d.pos));
+      for (let f = 0; f < 400 && ent.state !== 'done'; f++) {
+        if (g.player.dead) return { stage: 'player-died-c', caps: caps.slice(-10) } as const;
+        // Hug the exit wall INSIDE the room beside the leaf, face it, press.
+        g.player.teleport(ex.x + Math.sin(yaw) * 0.9 + Math.sin(yaw + Math.PI / 2) * 0.8, 0, ex.z + Math.cos(yaw) * 0.9 + Math.cos(yaw + Math.PI / 2) * 0.8);
+        yawTo(ex);
+        g.input.interactPressed = true;
+        g.frame();
+        g.input.interactPressed = false;
+        if (exitDoor && (exitDoor.opening || exitDoor.openT > 0.05)) { opened = true; }
+        if (opened && ent.state === 'done') break;
+        if (ent.state === 'done') break;
+      }
+      // give it a few frames to notice the leaf swinging
+      for (let f = 0; f < 60 && ent.state !== 'done'; f++) g.frame();
+    }
+
+    const unsealed = entryDoors.every((d) => d.heldBy === undefined);
+    return {
+      stage: 'done', sealedNow, refused, lit, opened,
+      yielded: caps.some((c) => /stands aside/.test(c)),
+      shutCue: caps.some((c) => /way back is shut/.test(c)),
+      entState: ent.state, unsealed,
+      caps: caps.slice(-12),
+    } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { sealedNow: boolean; refused: boolean; lit: boolean; opened: boolean; yielded: boolean; shutCue: boolean; entState: string; unsealed: boolean; caps: string[] };
+  expect(r.sealedNow).toBe(true);
+  expect(r.shutCue).toBe(true);
+  expect(r.refused, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.lit, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.opened).toBe(true);
+  expect(r.yielded).toBe(true);
+  expect(r.entState).toBe('done');
+  expect(r.unsealed).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
-import { v3, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
+import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -1378,6 +1378,256 @@ export class Inspector extends Entity {
   protected override onDone(): void {
     if (this.testing && this.testing.trappedBy === 'inspector') this.testing.trappedBy = undefined;
     if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
+    this.rig = null;
+  }
+}
+
+/**
+ * The Commissionaire (sprint 237) — a livery doorman that plants itself at
+ * the room's far door and holds the way back: the moment you step in, the
+ * door behind you is shut. It sweeps the room with a lantern gaze on a slow
+ * arc; caught in the light it marches at you and throws you back toward the
+ * entry. The only way through is to cross on its blind arc — or bait it off
+ * its post and touch the exit leaf before it returns. It never leaves the
+ * room, and it never unlocks what it holds.
+ */
+export class Commissionaire extends Entity {
+  private hostRoom = -1;
+  private pos = v3();            // live position
+  private post = v3();           // the post it returns to
+  private baseYaw = 0;           // post facing — exit toward entry
+  private gazeYaw = 0;
+  private sweepT = 0;
+  private spotT = 0;
+  private chasing = false;
+  private lastSeen = v3();
+  private chaseLose = 0;
+  private shoveCd = 0;
+  private rapT = 0;
+  private expireT = 0;
+  private returning = false;
+  private sealedDoors: RoomInstance['doors'] = [];
+  private rig: RiggedFigure | null = null;
+  private figGroup: import('three').Group | null = null;
+  private lampSwing: import('three').Group | null = null;
+
+  constructor() { super('commissionaire', ENTITY_TUNING.commissionaire); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = room.index;
+    this.expireT = c.now + 150;
+
+    const en = room.entryPos, ex = room.exitPos;
+    this.baseYaw = Math.atan2(en.x - ex.x, en.z - ex.z);
+    this.gazeYaw = this.baseYaw;
+    // Post: just inside the exit leaf — you must pass IT to pass the door.
+    this.post = v3(ex.x + Math.sin(this.baseYaw) * 1.0, 0, ex.z + Math.cos(this.baseYaw) * 1.0);
+    this.pos = v3(this.post.x, 0, this.post.z);
+
+    const rig = riggedFigure('monkroose');
+    const brass = MAT.brass();
+    const g = rig?.group ?? tallFigure({
+      height: 1.95, face: 'mask', body: MAT.darkOak(), eyes: 'white',
+      band: brass, bandY: 1.5,
+    });
+    this.figGroup = g as import('three').Group;
+    // The lantern arm — a swinging group so the beam tracks its gaze.
+    const swing = new THREE.Group();
+    const cage = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.15, 0.11), brass);
+    const glow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.075, 0.1, 0.075),
+      new THREE.MeshStandardMaterial({ color: 0xffb35c, emissive: 0xff9a33, emissiveIntensity: 1.7 }),
+    );
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.01, 6, 12), brass);
+    handle.position.y = 0.11;
+    swing.add(cage, glow, handle);
+    swing.position.set(0.26, 1.02, 0.16);
+    g.add(swing);
+    this.lampSwing = swing;
+    // The visible sweep — an additive wedge from the lantern along its gaze.
+    const coneGeo = new THREE.ConeGeometry(2.1, 6.0, 18, 1, true);
+    coneGeo.translate(0, -3.0, 0);       // apex at lantern, base 6m down
+    coneGeo.rotateX(-Math.PI / 2);       // beam extends +Z
+    const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({
+      color: 0xffc36b, transparent: true, opacity: 0.09,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    }));
+    cone.position.set(0.26, 1.02, 0.16);
+    g.add(cone);
+    g.position.copy(this.pos);
+    g.rotation.y = this.baseYaw;
+    c.addEntityMesh(g);
+
+    // Shut the way back: hold the entry leaf on both sides of the doorway.
+    const prev = c.rooms[c.currentRoomIndex - 1];
+    for (const r of [room, prev]) {
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (Math.hypot(d.pos.x - en.x, d.pos.z - en.z) < 0.9) {
+          d.heldBy = 'commissionaire';
+          this.sealedDoors.push(d);
+        }
+      }
+    }
+    c.cue('door-locked', this.pos, '[a gloved hand on the frame — the way back is shut]', { severity: 'warn' });
+    this.rig = rig ?? null;
+    this.rig?.play('idle', 0.1);
+    this.state = 'engage';
+  }
+
+  /** Player inside the sweep: exposed, in range, inside the arc, in LOS. */
+  private inGaze(): boolean {
+    const c = this.ctx;
+    const p = c.player;
+    if (p.dead || p.hiddenSpot) return false;
+    const d = v3dist(this.pos, p.pos);
+    if (d > 8.5) return false;
+    const toP = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    let dyaw = toP - this.gazeYaw;
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+    if (Math.abs(dyaw) > 0.62) return false;
+    const room = c.rooms[this.hostRoom];
+    const eye = v3(this.pos.x, 1.62, this.pos.z);
+    const pe = v3();
+    p.eyePos(pe);
+    return hasLineOfSight(eye, pe, room ? room.losBlockers : []);
+  }
+
+  /** Thrown back toward the sealed door — the price of the light. */
+  private throwBack(): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[this.hostRoom];
+    const en = room.entryPos;
+    const dx = en.x - p.pos.x, dz = en.z - p.pos.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const shove = Math.min(2.6, len - 1.2); // stop short of the leaf itself
+    if (shove > 0.1) {
+      p.teleport(p.pos.x + (dx / len) * shove, 0, p.pos.z + (dz / len) * shove);
+    }
+    c.damagePlayer(this.tuning.damage, 'commissionaire',
+      'It holds the doors — cross on the blind arc, or bait it off its post and run.');
+    c.cue('husk-foot', this.pos, '[it throws you back to the door]', { severity: 'danger' });
+    c.sound.emit({ x: p.pos.x, y: 1, z: p.pos.z, intensity: 0.9, category: 'impact', caption: '[thrown]', source: this.id });
+    this.chasing = false;
+    this.returning = true;
+    this.spotT = 0;
+    this.rig?.play('idle', 0.2);
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+    this.expireT -= dt;
+    if (c.currentRoomIndex !== this.hostRoom || this.expireT <= 0 || p.dead) { this.done(); return; }
+
+    const room = c.rooms[this.hostRoom];
+    // Yield: the instant the exit leaf starts opening, the room is won.
+    const next = c.rooms[this.hostRoom + 1];
+    for (const r of [room, next]) {
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (d.opening && Math.hypot(d.pos.x - room.exitPos.x, d.pos.z - room.exitPos.z) < 0.9) {
+          c.cue('sweep-return', this.pos, '[it stands aside — this once]', { severity: 'info' });
+          this.done();
+          return;
+        }
+      }
+    }
+
+    this.rapT -= dt;
+    if (this.rapT <= 0) {
+      this.rapT = 4.2;
+      c.sound.emit({ x: this.pos.x, y: 1.4, z: this.pos.z, intensity: 0.45, category: 'entity-cue', caption: '[a gloved hand raps the frame]', source: this.id });
+    }
+    this.shoveCd -= dt;
+
+    const d = v3dist(this.pos, p.pos);
+    if (this.chasing) {
+      // Track live while it still sees you; else run the last-seen and turn back.
+      if (!p.dead && !p.hiddenSpot) {
+        const room2 = c.rooms[this.hostRoom];
+        const eye = v3(this.pos.x, 1.62, this.pos.z);
+        const pe = v3();
+        p.eyePos(pe);
+        if (hasLineOfSight(eye, pe, room2 ? room2.losBlockers : [])) {
+          v3copy(this.lastSeen, p.pos);
+          this.chaseLose = 0;
+        } else this.chaseLose += dt;
+      } else this.chaseLose += dt;
+      const dx = this.lastSeen.x - this.pos.x, dz = this.lastSeen.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len > 0.02) {
+        const step = Math.min(len, 2.7 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        this.gazeYaw = Math.atan2(dx, dz);
+      }
+      if (d < 1.15 && !p.dead) { this.throwBack(); }
+      else if (this.chaseLose > 1.8 || (len < 0.2 && this.chaseLose > 0.5)) {
+        this.chasing = false;
+        this.returning = true;
+        this.rig?.play('move', 0.2);
+      }
+    } else if (this.returning) {
+      const dx = this.post.x - this.pos.x, dz = this.post.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.12) {
+        this.returning = false;
+        this.gazeYaw = this.baseYaw;
+        this.rig?.play('idle', 0.2);
+      } else {
+        const step = Math.min(len, 1.9 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        this.gazeYaw = Math.atan2(dx, dz);
+      }
+    } else {
+      // On post: sweep the room on a slow blind arc. Touching it is being seen.
+      this.sweepT += dt;
+      this.gazeYaw = this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
+      if (this.inGaze() || (d < 1.3 && !p.hiddenSpot && !p.dead)) {
+        this.spotT += dt;
+        if (this.spotT > 0.45) {
+          this.chasing = true;
+          this.chaseLose = 0;
+          v3copy(this.lastSeen, p.pos);
+          c.cue('alarm-ring', this.pos, '[the lantern finds you]', { severity: 'danger' });
+          c.sound.emit({ x: this.pos.x, y: 1.6, z: this.pos.z, intensity: 0.9, category: 'entity-cue', caption: '[lantern cry]', source: this.id });
+          this.rig?.play('move', 0.05);
+        }
+      } else this.spotT = Math.max(0, this.spotT - dt * 1.6);
+      if (d < 1.0 && this.shoveCd <= 0) {
+        this.shoveCd = 4;
+        c.damagePlayer(8, 'commissionaire', 'It holds the doors — cross on the blind arc, or bait it off its post and run.');
+        c.cue('husk-foot', this.pos, '[it elbows you away from the post]', { severity: 'warn' });
+      }
+    }
+
+    if (this.figGroup) {
+      this.figGroup.position.set(this.pos.x, 0, this.pos.z);
+      this.figGroup.rotation.y = this.chasing
+        ? this.gazeYaw
+        : this.returning ? this.gazeYaw : this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
+      // The lantern arm swings gently while it sweeps, sharp when it runs.
+      if (this.lampSwing) this.lampSwing.rotation.x = Math.sin(c.now * (this.chasing ? 9 : 1.8)) * (this.chasing ? 0.3 : 0.12);
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage') return null;
+    return this.chasing ? this.lastSeen : this.pos;
+  }
+
+  protected override onDone(): void {
+    for (const d of this.sealedDoors) d.heldBy = undefined;
+    this.sealedDoors = [];
+    if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
+    this.lampSwing = null;
     this.rig = null;
   }
 }

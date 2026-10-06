@@ -956,6 +956,13 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       && r.scheduled.length === 0 && hasSurvivalOption(rooms, r.index) && windowCompatible(rooms, r, 'bellman'));
     if (room) room.scheduled.push({ entity: 'bellman', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
   }
+  // The Commissionaire gates the forward path — pin one early-mid so every
+  // run teaches the bait-and-cross before the deep schedule can skip it.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'commissionaire'))) {
+    const room = rooms.find((r) => r.index >= 24 && r.index <= 46 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && windowCompatible(rooms, r, 'commissionaire'));
+    if (room) room.scheduled.push({ entity: 'commissionaire', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
 
   // Density floor: no stretch of 11+ eligible rooms stays unscheduled — seed a
   // low-tier presence at each void's midpoint so valleys never become voids.

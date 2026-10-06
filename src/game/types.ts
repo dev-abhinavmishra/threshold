@@ -46,6 +46,7 @@ export type EntityId =
   | 'warden'
   | 'groundswell'
   | 'inspector'
+  | 'commissionaire'
   // Underscript
   | 'redline'
   | 'stillframe'
@@ -151,6 +152,8 @@ export interface Door {
   opening: boolean;
   /** Swing speed multiplier — slam (sprint+E) ~2.6, creep (crouch+E) ~0.4. */
   openRate?: number;
+  /** An entity holds this leaf shut from the far side (not a lock — no key path). */
+  heldBy?: EntityId;
 }
 
 export interface RoomInstance {

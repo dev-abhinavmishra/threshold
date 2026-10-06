@@ -795,6 +795,40 @@ line of sight mid-charge.*
 - Vitest fakePlayer grew `dead` + `exitHiding` (clears hiddenSpot).
 - Gates: tsc, lint, 99 vitest (+3), 5-seed sim, props.spec 12/12, build.
 
+## Sprint 237 — the Commissionaire (forward-blocker: it holds the doors)
+
+- The first encounter that gates your forward path: a livery doorman
+  (monkroose + brass lantern arm) plants ~1m inside the exit leaf, and on
+  room entry HOLDS the way back — `Door.heldBy` (new Door field, separate
+  from `locked`: no key path) seals the entry leaf cluster on both sides of
+  the doorway; the door case refuses it with '[the door is held from the
+  far side]'.
+- The sweep is a VISIBLE mechanic: an additive amber cone from the lantern
+  tracks `gazeYaw = baseYaw + sin(t*0.9)*1.15` (±66°, ~7s cycle); caught in
+  the wedge for 0.45s → '[the lantern finds you]' → chase at 2.7 tracking
+  live position while LOS holds (lastSeen when it breaks) → contact throws
+  you ~2.5m toward the sealed entry + 20dmg ('[it throws you back to the
+  door]'), then it walks back to post at 1.9. Touching the post is an 8dmg
+  elbow (4s cd). Hiding spots are safe from the gaze (hiddenSpot short-
+  circuits inGaze).
+- Win condition: the instant any exit-cluster leaf's `opening` is set it
+  yields — '[it stands aside — this once]' → done → all held doors
+  released (onDone always clears heldBy, so death/expire/leave also unseal).
+  Intended plays: cross on the blind arc, or bait it off-post (chase gives
+  ~3-5s) then touch the leaf before it returns. Non-lethal-ish → not
+  survival-gated; expire 150s prevents soft-locks.
+- Scheduling: corridor/gallery/guest 14-70, spawnChance 0.5, tier 2,
+  FORBIDDEN; same ordered-roll trap as inspector — pinned first free room
+  24-46 windowCompatible → 8/8 seeds (ash-vault-101 gets 3).
+- e2e spec drives the whole loop: sealed assert → real interact refusal on
+  the held leaf → bait in the visible pocket → 'lantern finds you' → touch
+  the exit leaf mid-chase → yield + unseal. Geometry note: in suite-split
+  the dead-axis at ~5m is behind the divider wall — the gaze covers the
+  room obliquely; probe `ent.inGaze()` (private is reachable) on a grid to
+  find a visible pocket when writing specs for other rooms.
+- Vitest +3 (seal/release, arc-catch+throwback, exit-open yield): 102 total.
+- Gates: tsc, lint, 102 vitest, 5-seed sim, props.spec 13/13, build.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

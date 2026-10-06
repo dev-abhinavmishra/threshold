@@ -32,7 +32,7 @@ import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner, Warden } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell, Inspector } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell, Inspector, Commissionaire } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -93,6 +93,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   warden: { sfx: 'footstep', text: '[measured pacing — something walks its post]', sev: 'warn' },
   groundswell: { sfx: 'floor-creak', text: '[the boards groan — a swell in the floor]', sev: 'warn' },
   inspector: { sfx: 'collector-rattle', text: '[a latch being tried — one after another]', sev: 'warn' },
+  commissionaire: { sfx: 'collector-rattle', text: '[a gloved hand raps the frame — a door held shut]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -127,6 +128,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   warden: '[the whistle again — it is still on station]',
   groundswell: '[the floor rolls again]',
   inspector: '[the keys again — it is still checking]',
+  commissionaire: '[the rap again — it is still holding the doors]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -841,6 +843,8 @@ export class Game {
       case 'groundswell': this.spawnEntity(new Groundswell()); break;
       // The Inspector: walks the room testing every hiding spot.
       case 'inspector': this.spawnEntity(new Inspector()); break;
+      // The Commissionaire: holds the doors — cross its blind arc or bait it.
+      case 'commissionaire': this.spawnEntity(new Commissionaire()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;
@@ -1367,6 +1371,11 @@ export class Game {
         // the same position (prev room's out leaf + next room's in leaf); they
         // are one physical doorway, so the whole cluster opens/locks together.
         const cluster = this.doorsAt(it.pos);
+        // A held leaf is not a lock: the Commissionaire grips the far side.
+        if (cluster.some((d) => d.heldBy)) {
+          this.cue('door-locked', it.pos, '[the door is held from the far side]', 'warn');
+          return;
+        }
         if (cluster.some((d) => d.locked)) {
           const lockId = cluster.find((d) => d.locked)?.lockId ?? '';
           if (lockId === 'toll') {

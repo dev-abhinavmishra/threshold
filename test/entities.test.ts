@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner, Warden } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
-import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector } from '../src/entities/room';
+import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector, Commissionaire } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -16,6 +16,7 @@ function fakePlayer() {
     hiddenSpot: null as null | { kind: string },
     dead: false,
     exitHiding(_now: number) { self.hiddenSpot = null; },
+    teleport(x: number, _y: number, z: number) { self.pos.x = x; self.pos.y = 0; self.pos.z = z; },
     protection: 'exposed',
     crouching: false,
     sprinting: false,
@@ -608,5 +609,82 @@ describe('determinism', () => {
       return poses.join('|');
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('Commissionaire (sprint 237)', () => {
+  const stepUntil = (fn: () => boolean, ctx: EntityCtx, e: Commissionaire, max = 1200) => {
+    const ctxMut = ctx as { now: number };
+    let t = (ctxMut.now as number) || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+  const commRoomIdx = (rooms: RoomInstance[]) =>
+    rooms.findIndex((r, i) => r.index >= 14 && r.index <= 70 && i < rooms.length - 1 && !r.authored && r.biome !== 'safe');
+  const entryCluster = (rooms: RoomInstance[], idx: number) => {
+    const en = rooms[idx].entryPos;
+    return [...rooms[idx].doors, ...rooms[idx - 1].doors]
+      .filter((d) => Math.hypot(d.pos.x - en.x, d.pos.z - en.z) < 0.9);
+  };
+
+  it('seals the entry leaf and releases it when done', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    expect(idx).toBeGreaterThan(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const held = entryCluster(rooms, idx);
+    expect(held.length).toBeGreaterThan(0);
+    expect(held.every((d) => d.heldBy === 'commissionaire')).toBe(true);
+    // Room change retires it — the doors it held must open again.
+    (ctx as { currentRoomIndex: number }).currentRoomIndex = idx + 1;
+    comm.update(0.05);
+    expect(comm.state).toBe('done');
+    expect(held.every((d) => d.heldBy === undefined)).toBe(true);
+    comm.dispose();
+  });
+
+  it('finds you in the lantern arc and throws you back to the entry', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const room = rooms[idx];
+    const en = room.entryPos, ex = room.exitPos;
+    // Stand on the entry→exit axis inside the sweep's centre.
+    const yaw = Math.atan2(en.x - ex.x, en.z - ex.z);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: unknown };
+    player.pos = v3(ex.x + Math.sin(yaw) * 4.5, 0, ex.z + Math.cos(yaw) * 4.5);
+    const hit = stepUntil(
+      () => (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length > 0,
+      ctx, comm, 900,
+    );
+    expect(hit).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.some((c) => c[1] === 'commissionaire')).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lantern finds you|throws you back/.test(c))).toBe(true);
+    comm.dispose();
+  });
+
+  it('stands aside the moment the exit leaf opens', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const room = rooms[idx];
+    const ex = room.exitPos;
+    const exitDoor = [...room.doors, ...rooms[idx + 1].doors]
+      .find((d) => Math.hypot(d.pos.x - ex.x, d.pos.z - ex.z) < 0.9);
+    expect(exitDoor).toBeTruthy();
+    exitDoor!.opening = true;
+    comm.update(0.05);
+    expect(comm.state).toBe('done');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /stands aside/.test(c))).toBe(true);
+    comm.dispose();
   });
 });
