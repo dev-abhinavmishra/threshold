@@ -2207,3 +2207,38 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The Auditor wanted-poster stays a design call.
   - wetFloor (13 uses) is still dead dressing — a second slip family is
     probably too same-y with armed puddles; keep dormant.
+
+## Sprint 286 — the inspection sheet (watcher foresight, sixth book)
+The last info-layer hole: watchers were the only threat axis no paper
+covered. 'Read the inspection sheet — N imprints' (4–9) sits on
+records/maintenance desks (roster hosts, roll 0.4, one paper per room —
+a sheet never shares a room with a roster/complaint book). The read
+scans `route.rooms` spec.props for securityCam/searchlight in the next
+10 doors: `Door 036 — a live eye sweeps` / `the beam crosses` /
+`a dead eye — mains out` (darkRoom watchers are marked dead). Library
+map now: ledger predicts, roster locates, fault book files hazards,
+register prices claims, work order files cargo, crew board files crew —
+and the inspection sheet files eyes.
+Traps:
+- **New lootRng consumption reseats every downstream consumer** — the
+  sheet loop moved 's' under work-orders from u-22+ to u-47+. Any spec
+  pinning placement (or finding fragile geometry) breaks on reseat:
+  legs must live-compute fixtures AND aim at the interactable's real
+  focus point.
+- **The +0.1 aim idiom is the +0.6 trap's older form** — work-order leg
+  died on a reseated dense u-break kitchen because `pos.y + 0.1`
+  couldn't reach the focus point `pos.y + 0.6` (interaction.ts). All
+  `pos.y + 0.1` pitch lines in e2e were converted to +0.6 — the focus
+  point is uniform for every interactable kind.
+- A stale `vite preview` on :4173 + `reuseExistingServer` in
+  playwright.config silently serves pre-change dist — `fuser -k
+  4173/tcp` when a leg can't see brand-new code (this burned the first
+  leg run this sprint).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - The sheet could mark hunter sign too (a 'survey copy' verb?), or
+    dead mains could get their own second paper (the 'mains ledger' —
+    which rooms are dark ahead — already implicit in the sheet).

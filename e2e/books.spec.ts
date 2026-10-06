@@ -44,7 +44,7 @@ test('the collector counts your purse — the toll scales with what you carry', 
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(toll.pos.x - (ax / al) * 1.2, 0, toll.pos.z - (az / al) * 1.2);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(toll.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(toll.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (/pay the toll/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
       g.frame();
       paid = purse.imprints < 150;
@@ -97,7 +97,7 @@ test("the porter's cage sells held bags — the tag is priced, the contents are 
     for (let f = 0; f < 100; f++) {
       const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
       if (caps.some((c) => /short\]/.test(c))) break;
@@ -112,7 +112,7 @@ test("the porter's cage sells held bags — the tag is priced, the contents are 
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
       paid = meta.taken === true;
@@ -167,7 +167,7 @@ test("the guest ledger sells foresight — the hotel's own book knows who is exp
         const al = Math.hypot(ax, az) || 1;
         if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
         g.player.yaw = Math.atan2(ax, az);
-        g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+        g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
         if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
         g.frame();
       }
@@ -239,7 +239,7 @@ test("the duty roster marks who is working — the records desk knows where the 
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
     }
@@ -290,7 +290,7 @@ test("the fault book files hazards by door — the cheapest paper knows what bit
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
     }
@@ -343,7 +343,7 @@ test("a forged ledger lies by omission — the wet-ink page conceals the forger'
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
     }
@@ -371,7 +371,7 @@ test("a forged ledger lies by omission — the wet-ink page conceals the forger'
 test("the work order files open tickets — the under's own paper answers cargo", async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seededRun(page); // 's': work orders at u-22,26,39,67,79,112,113,119
+  await seededRun(page); // 's': work orders live-computed (placement drifts with the loot stream)
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
@@ -399,7 +399,7 @@ test("the work order files open tickets — the under's own paper answers cargo"
       const al = Math.hypot(ax, az) || 1;
       if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
       g.player.yaw = Math.atan2(ax, az);
-      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
       if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
       g.frame();
     }
@@ -418,5 +418,69 @@ test("the work order files open tickets — the under's own paper answers cargo"
   expect(r.tickets).toMatch(/open tickets: Door \d{3} —/);
   // The last under-room's stamp always reads Door 120.
   expect(r.egress).toMatch(/egress stamp is filed at Door 120/);
+  expect(errors).toEqual([]);
+});
+
+test("the inspection sheet marks which doors the house watches", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': sheets @18/28/33/72/82/93; live cam @36, dead cam @18
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+    const watched = (r: { spec?: { props?: { kind: string }[] } }) =>
+      (r.spec?.props ?? []).some((p) => p.kind === 'securityCam' || p.kind === 'searchlight');
+    const sheets = g.route.rooms.filter((r) => (r.sockets ?? []).some((s) => s.meta?.watchSheet));
+    const marked = sheets.find((r) => g.route.rooms.some(
+      (x) => x.index > r.index && x.index <= r.index + 10 && watched(x)));
+    const clean = sheets.find((r) => !g.route.rooms.some(
+      (x) => x.index > r.index && x.index <= r.index + 10 && watched(x)));
+    if (!marked || !clean) return { stage: 'missing-fixture' } as const;
+
+    const read = (room: typeof marked): { prompt: string; line: string } => {
+      g.player.teleport(room.origin.x, 0, room.origin.z);
+      for (let f = 0; f < 30; f++) g.frame();
+      const pt = g.interaction.interactables.find((i) => i.kind === 'watchSheet');
+      if (!pt) return { prompt: '', line: '' };
+      purse.imprints = 60;
+      const sock = pt.data!;
+      const before = caps.length;
+      for (let f = 0; f < 160 && !(sock.meta as { taken?: boolean }).taken; f++) {
+        const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+        const al = Math.hypot(ax, az) || 1;
+        if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+        g.player.yaw = Math.atan2(ax, az);
+        g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+        if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+        g.frame();
+      }
+      g.keys.delete('KeyE');
+      return { prompt: pt.prompt, line: caps.slice(before).find((c) => /inspection sheet marks|nothing watches/.test(c)) ?? '' };
+    };
+
+    const markedRead = read(marked);
+    const cleanRead = read(clean);
+    // expected marking for the marked sheet — computed live from spec.props
+    const watchedRoom = g.route.rooms.find(
+      (x) => x.index > marked.index && x.index <= marked.index + 10 && watched(x))!;
+    const expectMark = watchedRoom.darkRoom ? 'a dead eye' : /live eye|beam crosses|eye and a beam/;
+    return { stage: 'done', markedPrompt: markedRead.prompt, markedLine: markedRead.line,
+      cleanLine: cleanRead.line, watchedIdx: watchedRoom.index,
+      expectMark, markedIdx: marked.index, cleanIdx: clean.index } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.markedPrompt).toMatch(/read the inspection sheet — \d+ imprints/i);
+  expect(result.markedLine, `sheet@${result.markedIdx} must mark watched@${result.watchedIdx}`).toMatch(/the inspection sheet marks:/);
+  expect(result.markedLine).toContain(`Door ${String(result.watchedIdx).padStart(3, '0')}`);
+  expect(result.markedLine).toMatch(result.expectMark);
+  expect(result.cleanLine, `sheet@${result.cleanIdx} should read clean`).toMatch(/nothing watches the doors ahead/);
   expect(errors).toEqual([]);
 });

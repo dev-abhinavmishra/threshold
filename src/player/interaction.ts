@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'audit' | 'settle'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape';
@@ -153,6 +153,10 @@ export class InteractionSystem {
           kind = 'workOrder';
           prompt = `File the work order — ${sock.meta.price as number} marginalia`;
         }
+        if (sock.meta.watchSheet !== undefined) {
+          kind = 'watchSheet';
+          prompt = `Read the inspection sheet — ${sock.meta.price as number} imprints`;
+        }
         if (sock.kind === 'clue' && !sock.meta.catalogue) { kind = 'card'; prompt = 'Take catalog card'; }
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
@@ -160,8 +164,8 @@ export class InteractionSystem {
           data: sock, enabled: !sock.meta.taken,
           // crewBoard/claimRegister sit ~0.5 off their host, which often
           // carries its own loot socket — outrank it or the book never focuses
-          priority: kind === 'crewBoard' || kind === 'claimRegister' ? 3 : kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' || kind === 'claimRegister' ? 1.2 : 0,
+          priority: kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' ? 3 : kind === 'shop' ? 1 : 2,
+          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' ? 1.2 : 0,
         });
       }
     }

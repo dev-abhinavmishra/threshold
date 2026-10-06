@@ -1095,6 +1095,28 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     });
   }
 
+  // The inspection sheet — the security wing's paper. Where the fault book
+  // files what BITES, this files what WATCHES: which doors ahead hold a live
+  // eye, a sweeping beam, or a dead one drowned with the mains. Records and
+  // maintenance desks keep it; one paper per room.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    if (room.biome !== 'records' && room.biome !== 'maintenance') continue;
+    const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk');
+    if (!desk) continue;
+    if (room.sockets.some((s) => s.meta.roster || s.meta.complaint)) continue;
+    if (!lootRng.bool(0.4)) continue;
+    const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+    const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { watchSheet: true, price: lootRng.int(4, 9) },
+    });
+  }
+
   void branches;
   return keyPairs;
 }
