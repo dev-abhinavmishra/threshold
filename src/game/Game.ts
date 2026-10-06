@@ -16,6 +16,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { GameClock } from '../engine/clock';
 import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { pointInRoom } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
@@ -1592,6 +1593,44 @@ export class Game {
         const text = parts.length
           ? `[the ledger expects: ${parts.join(' · ')}]`
           : "[the ledger's pages ahead are blank — nothing is expected]";
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'roster': {
+        // The duty roster — cheaper paper, narrower knowledge: which of the
+        // house's staff are marked working right now, and where they stand.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the roster costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const STAFF: Record<string, string> = {
+          bellman: 'a valet walking the halls', warden: 'a watchman on his rounds',
+          inspector: 'a clerk trying the lids', commissionaire: 'a doorman holding his post',
+          porter: 'a porter above the lintels', custodian: 'the custodian behind his counter',
+          collector: 'a toll-taker, off the books',
+        };
+        const marks: string[] = [];
+        for (const e of this.entities) {
+          if (e.state === 'done' || marks.length >= 4) continue;
+          const noun = STAFF[e.id];
+          if (!noun) continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          let at = 'between the doors';
+          for (const r of this.route?.rooms ?? []) {
+            if (pointInRoom(r, tp.x, tp.z)) { at = `at Door ${String(r.index).padStart(3, '0')}`; break; }
+          }
+          marks.push(`${noun} ${at}`);
+        }
+        const text = marks.length
+          ? `[the duty roster marks: ${marks.join(' · ')}]`
+          : '[the roster is all signatures — no one is marked working]';
         this.cue('whisper', it.pos, text);
         return;
       }

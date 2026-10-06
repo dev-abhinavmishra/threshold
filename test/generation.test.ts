@@ -313,6 +313,27 @@ describe('sprint mechanics coverage', () => {
     expect(ledgers).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("duty rosters: cheap staff-location reads on records desks only", () => {
+    let rosters = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const ros = r.sockets.filter((x) => x.meta.roster);
+        if (!ros.length) continue;
+        rosters += ros.length;
+        expect(r.authored).toBeFalsy();
+        expect(['records', 'maintenance']).toContain(r.biome);
+        // every roster sits on a real desk
+        expect(r.spec?.props.some((p) => p.kind === 'desk' || p.kind === 'writingDesk')).toBe(true);
+        for (const s of ros) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(4);
+          expect(s.meta.price as number).toBeLessThanOrEqual(9);
+        }
+      }
+    }
+    expect(rosters).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');

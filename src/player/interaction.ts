@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -126,12 +126,16 @@ export class InteractionSystem {
           kind = 'register';
           prompt = `Read the guest ledger — ${sock.meta.price as number} imprints`;
         }
+        if (sock.meta.roster !== undefined) {
+          kind = 'roster';
+          prompt = `Consult the duty roster — ${sock.meta.price as number} imprints`;
+        }
         if (sock.kind === 'clue' && !sock.meta.catalogue) { kind = 'card'; prompt = 'Take catalog card'; }
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
           data: sock, enabled: !sock.meta.taken, priority: kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' ? 1.2 : 0,
+          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' ? 1.2 : 0,
         });
       }
     }

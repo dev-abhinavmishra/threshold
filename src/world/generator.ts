@@ -893,6 +893,26 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     });
   }
 
+  // The duty roster — the records wing's counterpart to the guest ledger.
+  // Where the ledger predicts, the roster LOCATES: which staff are marked
+  // working right now, and where. Cheaper paper, narrower knowledge.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    if (room.biome !== 'records' && room.biome !== 'maintenance') continue;
+    const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk');
+    if (!desk) continue;
+    if (!lootRng.bool(0.5)) continue;
+    const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+    const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { roster: true, price: lootRng.int(4, 9) },
+    });
+  }
+
   void branches;
   return keyPairs;
 }

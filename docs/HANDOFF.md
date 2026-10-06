@@ -1206,3 +1206,33 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-set hearing remains a design call.
   - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
     that LIES about one door — the book's euphemisms already hedge.
+
+## Sprint 247 — the duty roster (records-wing staff locator)
+
+- The records wing's counterpart to the guest ledger: 'Consult the duty
+  roster — N imprints' on desk/writingDesk props in records/maintenance
+  rooms (~50% roll, 4–9 imprints — cheaper paper, narrower knowledge).
+  Where the ledger predicts, the roster LOCATES: `[the duty roster
+  marks: a watchman on his rounds at Door 046]` reads live entity
+  positions (threatPos → pointInRoom → door number) for the staff cast —
+  bellman/warden/inspector/commissionaire/porter/custodian/collector —
+  'between the doors' when mid-corridor. All signatures when no one is
+  marked working.
+- One read per book (taken + disabled), same interaction idiom as the
+  ledger: 1.2s hold, short-purse warn.
+- e2e: warden spawned live @33 → read roster desk @35 → the line names
+  'a watchman on his rounds'. Gen spec pins biome+desk+price.
+- Entity→roster nouns reuse ledger register-euphemism register (valet,
+  watchman, clerk, doorman, porter, custodian, toll-taker) — STAFF map
+  lives in the Game case.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Both books exist now — the natural third: 'the complaint drawer'
+    (gallery/maintenance) reporting HAZARD marks — groundswell floors,
+    trapped lids, redactor doors — the non-staff threats the books don't
+    cover. Completes the information economy triad.
+  - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
+    that LIES about one door — the book's euphemisms already hedge.
+  - Warden cross-room keys question remains open (staff ring vs patrol
+    doesn't rate keys) — fiction call.
+  - Brace UX watch; milestone-set hearing remains a design call.

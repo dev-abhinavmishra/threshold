@@ -1810,3 +1810,62 @@ test("the guest ledger sells foresight — the hotel's own book knows who is exp
   expect(r.disabledAfter, 'the ink dries — one read per book').toBe(true);
   expect(errors).toEqual([]);
 });
+
+test("the duty roster marks who is working — the records desk knows where the staff stand", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': rosters at 16/21/31/35/41/55/81/82/93; warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+
+    // First get someone live: entering room 33 spawns its warden.
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden-room' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    for (let f = 0; f < 50; f++) g.frame();
+    if (!g.entities.find((e) => e.id === 'warden' && e.state !== 'done')) return { stage: 'no-warden-live' } as const;
+
+    // Now to the nearest roster desk.
+    const room = g.route.rooms.find((r) => r.index > wardenRoom.index && (r.sockets ?? []).some((s) => s.meta?.roster));
+    if (!room) return { stage: 'no-roster' } as const;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    const pt = g.interaction.interactables.find((i) => i.kind === 'roster');
+    if (!pt) return { stage: 'no-roster-point' } as const;
+    const prompt = pt.prompt;
+    const sock = pt.data!;
+    const price = (sock.meta as { price?: number }).price ?? 0;
+    purse.imprints = 60;
+    for (let f = 0; f < 160 && !(sock.meta as { taken?: boolean }).taken; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    const paid = (sock.meta as { taken?: boolean }).taken === true;
+    const rosterLine = caps.find((c) => /the duty roster marks|all signatures/.test(c)) ?? '';
+    return { stage: 'done', prompt, price, paid, purseAfter: purse.imprints, rosterLine, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; price: number; paid: boolean; purseAfter: number; rosterLine: string; caps: string[] };
+  expect(r.prompt).toMatch(/consult the duty roster — \d+ imprints/i);
+  expect(r.paid, `the roster never read — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.purseAfter).toBe(60 - r.price);
+  // The warden we spawned is live — the roster must mark him.
+  expect(r.rosterLine).toMatch(/a watchman on his rounds/);
+  expect(errors).toEqual([]);
+});
