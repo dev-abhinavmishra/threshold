@@ -1869,3 +1869,55 @@ test("the duty roster marks who is working — the records desk knows where the 
   expect(r.rosterLine).toMatch(/a watchman on his rounds/);
   expect(errors).toEqual([]);
 });
+
+test("the fault book files hazards by door — the cheapest paper knows what bites", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': fault book @39 — files 041/042/043 ahead
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.complaint && s.meta?.fault));
+    if (!room) return { stage: 'no-book' } as const;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    const pt = g.interaction.interactables.find((i) => i.kind === 'complaint');
+    if (!pt) return { stage: 'no-complaint-point' } as const;
+    const prompt = pt.prompt;
+    const sock = pt.data!;
+    const price = (sock.meta as { price?: number }).price ?? 0;
+    purse.imprints = 40;
+    for (let f = 0; f < 160 && !(sock.meta as { taken?: boolean }).taken; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    const paid = (sock.meta as { taken?: boolean }).taken === true;
+    const bookLine = caps.find((c) => /the fault book lists|complaint book lists|clear ahead|no complaints/.test(c)) ?? '';
+    return { stage: 'done', prompt, price, paid, purseAfter: purse.imprints, bookLine, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; price: number; paid: boolean; purseAfter: number; bookLine: string; caps: string[] };
+  expect(r.prompt).toMatch(/read the fault book — \d+ imprints/i);
+  expect(r.paid, `the book never read — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.purseAfter).toBe(40 - r.price);
+  // Room 39's window files the sweep@41, groundswell@42, hollow@43.
+  expect(r.bookLine).toMatch(/the fault book lists: Door \d{3} —/);
+  expect(r.bookLine).toMatch(/floor heaves|pass too fast|nests in the lids|lid that bites|door that isn't/);
+  expect(errors).toEqual([]);
+});

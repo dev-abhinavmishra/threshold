@@ -1634,6 +1634,56 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'complaint': {
+        // The complaint/fault book — cheapest paper. Files HAZARDS by door
+        // the other books don't cover: biting lids, doors that aren't
+        // doors, heaving floors, dimming lamps — everything but staff.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        const fault = sock.meta.fault === true;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the book costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const NOUNS: Record<string, string> = {
+          groundswell: 'the floor heaves', hollow: 'something nests in the lids',
+          redactor: 'the doors move', lurker: 'the lamps dim for no reason',
+          maelstrom: 'the room turns', margin: 'the margins write',
+          whisper: 'voices inside the wall', witness: 'a guest who stares',
+          husk: 'a guest long emptied', echoskin: 'steps that are not yours',
+          grafter: 'a guest wearing the walls', singer: 'the choir of one',
+          stillframe: 'a hall that will not move', editor: 'the revising hand',
+          inkling: 'an inkstain walking', returner: 'a guest come back',
+          sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
+        };
+        const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
+        const filings: string[] = [];
+        const rooms = this.route?.rooms ?? [];
+        for (const r of rooms) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || filings.length >= 5) continue;
+          const complaints = new Set<string>();
+          for (const s of r.scheduled ?? []) {
+            if (STAFF.has(s.entity)) continue;
+            complaints.add(NOUNS[s.entity] ?? 'a guest unlisted');
+          }
+          if (r.hidingSpots.some((s) => s.trappedBy === 'hollow')) complaints.add('a lid that bites');
+          if (r.doors.some((d) => d.falseDoor)) complaints.add("a door that isn't");
+          if (r.doors.some((d) => d.deep)) complaints.add('a door deeper than the wall');
+          for (const c of complaints) {
+            if (filings.length >= 5) break;
+            filings.push(`Door ${String(r.index).padStart(3, '0')} — ${c}`);
+          }
+        }
+        const text = filings.length
+          ? `[${fault ? 'the fault book' : 'the complaint book'} lists: ${filings.join(' · ')}]`
+          : fault ? '[the fault book is clear ahead — nothing logged]' : '[no complaints filed ahead — suspicious in itself]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {

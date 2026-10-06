@@ -1236,3 +1236,31 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Warden cross-room keys question remains open (staff ring vs patrol
     doesn't rate keys) — fiction call.
   - Brace UX watch; milestone-set hearing remains a design call.
+
+## Sprint 248 — the complaint book (information triad complete)
+
+- Third book: 'the fault book' on maintenance work surfaces
+  (table/toolChest/toolbox) and 'the complaint book' on gallery
+  sideboards/desks/console tables — ~50% roll, 3–8 imprints (cheapest
+  paper). One kind 'complaint', `meta.fault` splits the naming.
+- Files HAZARDS by door for the next 8 rooms — the other two books'
+  blind spot: non-staff scheduled entities (18-kind noun map; STAFF set
+  excluded — roster's job) plus physical marks: hollow-trapped lids
+  ('a lid that bites'), false doors ('a door that isn't'), deep doors
+  ('a door deeper than the wall'). Empty → '[the fault book is clear
+  ahead]' / '[no complaints filed ahead — suspicious in itself]'.
+- The triad is now complete: the ledger predicts (guest book), the
+  roster locates (staff desk), the complaint book files (hazards).
+  Same idiom everywhere: 1.2s hold, short-purse warn, one read per book.
+- e2e: fault book @39 on 's' files the sweep@41, groundswell@42,
+  hollow@43 — 'Door 04N — the floor heaves' lines. props.spec 23/23.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
+    that LIES about one door — the books' honesty covenant has never
+    been tested; the first lie has to be visible in retrospect.
+  - The underscript has no books — a fourth in u-maintenance (work
+    orders/fault sheets, marginalia-priced?) extends the triad below.
+  - Warden cross-room keys question remains open (staff ring vs patrol
+    doesn't rate keys) — fiction call.
+  - Brace UX watch; milestone-set hearing remains a design call.

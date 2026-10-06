@@ -334,6 +334,27 @@ describe('sprint mechanics coverage', () => {
     expect(rosters).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("complaint books: cheap hazard filings in maintenance + gallery", () => {
+    let books = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const cb = r.sockets.filter((x) => x.meta.complaint);
+        if (!cb.length) continue;
+        books += cb.length;
+        expect(r.authored).toBeFalsy();
+        expect(['maintenance', 'gallery']).toContain(r.biome);
+        for (const s of cb) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(3);
+          expect(s.meta.price as number).toBeLessThanOrEqual(8);
+          // fault books only live in maintenance
+          expect(s.meta.fault !== true || r.biome === 'maintenance').toBe(true);
+        }
+      }
+    }
+    expect(books).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');

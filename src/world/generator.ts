@@ -913,6 +913,31 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     });
   }
 
+  // The complaint book — cheapest paper of the three. Maintenance work-
+  // tables keep 'the fault book', gallery sideboards 'the complaint
+  // book'; either way it files HAZARDS by door: what the other two books
+  // don't cover — heaving floors, biting lids, doors that aren't doors.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    const isMaint = room.biome === 'maintenance';
+    const isGallery = room.biome === 'gallery';
+    if (!isMaint && !isGallery) continue;
+    const surf = room.spec.props.find((p) =>
+      isMaint ? (p.kind === 'table' || p.kind === 'toolChest' || p.kind === 'toolbox')
+              : (p.kind === 'sideboard' || p.kind === 'desk' || p.kind === 'consoleTable'));
+    if (!surf) continue;
+    if (!lootRng.bool(0.5)) continue;
+    const sp = localToWorld(room.origin, room.yaw, surf.x, 0, surf.z);
+    const toC = { x: room.origin.x - sp.x, z: room.origin.z - sp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(sp.x + (toC.x / tcL) * 0.5, 0.9, sp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { complaint: true, fault: isMaint, price: lootRng.int(3, 8) },
+    });
+  }
+
   void branches;
   return keyPairs;
 }
