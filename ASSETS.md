@@ -721,3 +721,18 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `coalScuttle/` | Tilted coal hod with brass handle, coal lumps, shovel | kitchen-service |
 
 New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.
+
+## Sprint 215 — dressing mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `curtainSwag/` | Brass rod + finials, sagging 3-lobe cloth swag, tied tails (wall-mount) | guest rooms, suite-split, corr-junction, gallery-portraits |
+| `drapePanel/` | Floor-length pleated drape with sash + tassel (wall-mount) | guest rooms, suite-split |
+| `linenPress/` | Tall press — cornice, linen shelves, drawers w/ brass knobs | scullery, staff-dining |
+| `candelabra/` | Tripod floor candelabra — 3 swept arms, drip pans, wax | staff-dining, gallery-portraits |
+| `valveWheel/` | Gate-valve handwheel on wall pipe stub — flange, 5 spokes, hub | kitchen-service, maint-pipes, maint-boiler, maint-flooded |
+| `dumbWaiterDoor/` | Service hatch — recessed frame, open flap door, brass pull, sill | scullery, staff-dining |
+| `apothecaryCabinet/` | 5×4 card-drawer cabinet, brass bin pulls + label frames | records-office |
+| `meatHook/` | Chain + gape hook + hanging carcass slab w/ ribs (ceiling) | kitchen-service ×2 |
+| `wineRack/` | Wall lattice wine rack, 6 bottles | staff-dining |
+| `grateDrain/` | Floor drain — rim ring, iron slats, dark pit | kitchen-service, scullery, maint-pipes, maint-boiler, maint-flooded |

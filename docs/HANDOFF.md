@@ -279,7 +279,14 @@ CURRENT STATE (as of sprint 213)
 
   WORKFLOW CHANGE: PR #1 merged. Post-merge sprints each get a fresh
   branch off main + their own PR (sprint 213 = PR #2, branch
-  devin/1791165821-sprint-213).
+  devin/1791165821-sprint-213; sprint 215 branched off the 213 tip
+  before it merged — stacked PRs are fine).
+  Sprint 215 dressing mill batch: curtainSwag, drapePanel, linenPress,
+  candelabra, valveWheel, dumbWaiterDoor, apothecaryCabinet, meatHook,
+  wineRack, grateDrain — 10 pieces in prefab_kit PIECES + MILL_DIRS.
+  Wall mounts live in WALL_MOUNT_Y (also makes them WALL_THIN insets);
+  anything mounted >=1.95y is door-lane-immune. Hanging props
+  (meatHook y2.35) survive lanes via the y>1.9 rule.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material
@@ -296,8 +303,10 @@ NEXT SPRINT IDEAS (pick the biggest first)
     restricting SSAO to 'high' only when fps allows, or half-res.
   - e2e: remaining untested paths — maelstrom stabilize minigame, witness
     drain, underscript seep/clamor, toll-door purchase.
-  - More mill batches if dressing still reads thin: curtain variants,
-    upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
+  - More mill batches if dressing still reads thin: curtain variants +
+    headboards done (215/213); still open — plated foods (roast,
+    pie), grand staircase kit, ceiling rose/cove molding, pew rows,
+    arched window tracery kit.
 ```
 
 ---
