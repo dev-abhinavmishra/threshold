@@ -14,7 +14,7 @@ import {
 import type {
   Biome, Door, EntityId, EntityTuning, HidingSpot, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
-import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR } from '../game/config';
+import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
 import { portLocalPos, portOutwardDir, clearDoorLanes, inDoorLane } from './spec';
 import { modelCollider } from './modelLibrary';
@@ -570,6 +570,9 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-u${room.index}` };
           else s.meta = { contains: roll };
           if (s.kind === 'drawer' && lootRng.bool(0.25)) s.meta.drawerLocked = true;
+          // Wired drawers — the latch bites the unwary. Unlocked ones only;
+          // the tell rides the prompt ('the latch looks forced').
+          if (s.kind === 'drawer' && !s.meta.drawerLocked && lootRng.bool(0.1)) s.meta.wired = true;
         }
       }
       // Under vending — rarer, hungrier.
@@ -834,6 +837,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-${room.index}` };
           else s.meta = { contains: roll };
           if (locked) s.meta.drawerLocked = true;
+          else if (!SAFE_ROOM_TEMPLATES.has(room.templateId) && lootRng.bool(0.09)) s.meta.wired = true;
         }
       } else if (s.kind === 'loot') {
         if (lootRng.bool(0.5 * resourceMul)) {

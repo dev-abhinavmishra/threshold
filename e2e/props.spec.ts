@@ -473,3 +473,85 @@ test('flooded halls: wading carries, crouch is quiet, the drain pays', async ({ 
   expect(result.drainlessHaveDrain).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('wired drawers — the latch reads forced, the open bites, the coax is free', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // ~9% of unlocked drawers are wired
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number; keys: Set<string>;
+      godMode: boolean;
+    };
+    ga.godMode = false; // the bite must reach real health
+    // find two wired drawers
+    type Sock = { kind: string; pos: { x: number; y: number; z: number };
+      yaw: number; meta: Record<string, unknown> };
+    const wired = g.route.rooms.flatMap((r) => ((r.sockets ?? []) as Sock[])
+      .filter((sk) => sk.kind === 'drawer' && sk.meta?.wired === true)
+      .map((sk) => ({ room: r, sock: sk })));
+    if (wired.length < 2) return { stage: 'too-few', n: wired.length } as const;
+    const aim = (x: number, z: number, y = 0.7) => {
+      g.player.yaw = Math.atan2(x - g.player.pos.x, z - g.player.pos.z);
+      const eyeY = g.player.pos.y + (g.player.crouching ? 0.95 : g.player.eyeHeight);
+      g.player.pitch = Math.atan2(y - eyeY, Math.hypot(x - g.player.pos.x, z - g.player.pos.z) || 1);
+    };
+    const drive = (want: RegExp, hold = false) => {
+      let prompt = '';
+      for (let f = 0; f < 130; f++) {
+        prompt = g.interaction.focused?.prompt ?? '';
+        if (want.test(prompt) && hold) ga.keys.add('KeyE');
+        g.frame();
+        if (hold && /coax|drawer/i.test(prompt) === false) break;
+      }
+      ga.keys.delete('KeyE');
+      return prompt;
+    };
+
+    // Drawer A: read the tell, then pay the teeth.
+    const a = wired[0];
+    g.player.teleport(a.sock.pos.x, 0, a.sock.pos.z + 1.1);
+    ga.currentRoom = a.room.index;
+    aim(a.sock.pos.x, a.sock.pos.z);
+    const tellPrompt = drive(/forced/, false);
+    const hp0 = g.player.health;
+    drive(/Search drawer/, true);
+    const bit = g.player.health < hp0;
+    const snapped = caps.some((c) => /latch snaps/.test(c));
+
+    // Drawer B: coax the latch — free, no teeth.
+    const b = wired[1];
+    g.player.teleport(b.sock.pos.x, 0, b.sock.pos.z + 0.85);
+    ga.currentRoom = b.room.index;
+    const capsBefore = caps.length;
+    ga.keys.add('KeyC'); // kneel to coax — crouch-gated like the wire
+    const seen: string[] = [];
+    for (let f = 0; f < 6; f++) g.frame(); // let the crouch settle before aiming
+    aim(b.sock.pos.x, b.sock.pos.z, 0.4);
+    for (let f = 0; f < 40; f++) { g.frame(); if (f % 20 === 19) seen.push(g.interaction.focused?.prompt ?? '-'); }
+    drive(/Coax the latch/, true);
+    ga.keys.delete('KeyC');
+    const coaxed = b.sock.meta.opened === true && b.sock.meta.wired === false;
+    // The coax path is quiet: no snap, and the eased-latch line fires.
+    const coaxCaps = caps.slice(capsBefore);
+    const noBite = !coaxCaps.some((c) => /latch snaps|latch bites/.test(c))
+      && coaxCaps.some((c) => /coaxes open|latch eases/.test(c));
+    return { stage: 'done', n: wired.length, tellPrompt, bit, snapped, coaxed, noBite,
+      seen: seen.slice(-14), caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage === 'too-few') test.skip();
+  expect(result.tellPrompt, JSON.stringify(result)).toMatch(/latch looks forced/);
+  expect(result.bit, JSON.stringify(result)).toBe(true);
+  expect(result.snapped, JSON.stringify(result)).toBe(true);
+  expect(result.coaxed, JSON.stringify(result)).toBe(true);
+  expect(result.noBite, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

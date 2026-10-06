@@ -11,7 +11,7 @@ export type InteractKind =
   | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
 
 export interface Interactable {
   kind: InteractKind;
@@ -84,13 +84,16 @@ export class InteractionSystem {
       const contains = sock.meta.contains as string | undefined;
       if (sock.kind === 'drawer') {
         const locked = sock.meta.drawerLocked === true;
+        const wired = sock.meta.wired === true;
         this.add({
           kind: 'drawer', id: `drawer-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}`,
           pos: sock.pos,
-          prompt: locked ? 'Drawer (locked)' : 'Search drawer',
+          prompt: locked ? 'Drawer (locked)' : wired ? 'Search drawer — the latch looks forced' : 'Search drawer',
           holdTime: locked ? 1.6 : 0.5,
           data: sock, enabled: !sock.meta.opened, priority: 1,
         });
+        // 'Coax the latch' lives in Game.rebuildInteractables — crouch-gated
+        // like the submerged wire: you kneel to work a bitten latch.
       } else if (sock.kind === 'loot' || sock.kind === 'itemPedestal' || sock.kind === 'key' || sock.kind === 'clue') {
         const underE = sock.meta.underEntrance === true;
         const underX = sock.meta.underExit === true;

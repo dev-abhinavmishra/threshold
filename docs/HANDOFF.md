@@ -1601,3 +1601,20 @@ NEXT SPRINT IDEAS (pick the biggest first)
   blast window→health ticks, bleed→dead→quiet. Cycle watching: poll
   `hazard.steams[i].phase` — don't guess timing.
 - Tests: 142 vitest (+3), sim, build.
+
+## Sprint 262 — 'the drawer hums' (wired drawers + coax defuse)
+
+- ~9%/10% (main/under) of unlocked loot drawers carry `meta.wired` —
+  never in safe rooms, never stacked with drawerLocked. The tell rides
+  the standing prompt: 'Search drawer — the latch looks forced'.
+- Open unprimed: 7dmg + loud 'impact' snap, one-shot (wired clears).
+  Crouched at the drawer: 'Coax the latch' (1.4s hold) — the free, slow
+  path, cleared quiet ('[a latch coaxes open]'), loot pays either way.
+- Two real traps worth keeping: (1) proximity fallback (`prox < 1.1`)
+  in focus() makes an offset coax anchor un-aimable — crouch-gate the
+  verb instead, like the submerged wire; (2) per-frame defuse points
+  must scan `streamer.builtIndices` rooms, not `rooms[currentRoom]` —
+  a socket near the room boundary can be focused while standing in the
+  NEXT room; also aim pitches must use the live crouch eye (~0.95m),
+  not the standing `eyeHeight`.
+- Tests: 143 vitest (+1 generation spec), sim, e2e leg 'wired drawers'.

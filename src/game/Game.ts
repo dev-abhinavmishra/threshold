@@ -1135,6 +1135,30 @@ export class Game {
         data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
       });
     }
+    // Crouched at a wired drawer: 'Coax the latch' — kneel to work the
+    // bitten latch slow and free (the standing prompt shows the tell).
+    if (this.player.crouching) {
+      const roomIdxs = new Set<number>();
+      const allBuilt = this.streamer.builtIndices
+        .map((i) => this.activeRooms().find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i))
+        .filter((r): r is NonNullable<typeof r> => !!r);
+      for (const room of allBuilt) {
+        if (roomIdxs.has(room.index)) continue;
+        roomIdxs.add(room.index);
+      for (const sock of room?.sockets ?? []) {
+        if (sock.kind !== 'drawer' || sock.meta.wired !== true || sock.meta.opened === true) continue;
+        const dx = sock.pos.x - this.player.pos.x, dz = sock.pos.z - this.player.pos.z;
+        if (dx * dx + dz * dz > 2.4 * 2.4) continue;
+        this.interaction.add({
+          kind: 'coax', id: `coax-${this.space}:${room.index}-${Math.round(sock.pos.x * 7)}x${Math.round(sock.pos.z * 7)}`,
+          pos: { x: sock.pos.x, y: 0.4, z: sock.pos.z },
+          prompt: 'Coax the latch',
+          holdTime: 1.4, enabled: true, priority: 3,
+          data: sock,
+        });
+      }
+      }
+    }
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
@@ -1540,6 +1564,12 @@ export class Game {
             return;
           }
         }
+        if (sock.meta.wired) {
+          // The latch bites once — a toll, not a lock. Loud enough to carry.
+          sock.meta.wired = false;
+          this.damagePlayer(7, 'hazard', 'The latch bites — a wired drawer. Coax them, or pay the teeth.');
+          this.sound.emit({ x: it.pos.x, y: 0.8, z: it.pos.z, intensity: 0.45, category: 'impact', caption: '[a latch snaps]' });
+        }
         sock.meta.opened = true;
         it.enabled = false;
         this.cue('drawer', it.pos, '');
@@ -1547,6 +1577,22 @@ export class Game {
         const built = this.streamer.get(this.currentRoom);
         built?.group.traverse((o) => {
           if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${it.pos.x.toFixed(1)}|${it.pos.z.toFixed(1)}`) {
+            o.userData.open = true;
+          }
+        });
+        this.resolveSocketLoot(it);
+        return;
+      }
+      case 'coax': {
+        const sock = it.data as { meta: Record<string, unknown>; pos: Vec3 };
+        sock.meta.wired = false;
+        sock.meta.opened = true;
+        it.enabled = false;
+        this.cue('drawer', it.pos, '[the latch eases — bitten, not sprung]');
+        this.sound.emit({ x: it.pos.x, y: 0.8, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[a latch coaxes open]' });
+        const builtC = this.streamer.get(this.currentRoom);
+        builtC?.group.traverse((o) => {
+          if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${sock.pos.x.toFixed(1)}|${sock.pos.z.toFixed(1)}`) {
             o.userData.open = true;
           }
         });

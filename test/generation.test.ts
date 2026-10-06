@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateRoute } from '../src/world/generator';
+import { SAFE_ROOM_TEMPLATES } from '../src/game/config';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
@@ -771,5 +772,25 @@ describe('steam lines (sprint 261)', () => {
     }
     expect(socks, 'every authored steamVent must arm a hazard socket').toBe(vents);
     expect(vents).toBeGreaterThan(0);
+  });
+});
+
+describe('wired drawers (sprint 262)', () => {
+  it('some unlocked drawers carry wired latches — never in safe rooms', () => {
+    let wired = 0, wiredLocked = 0, wiredSafe = 0;
+    for (const seed of SEEDS.slice(0, 4)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        for (const s of r.sockets ?? []) {
+          if (s.kind !== 'drawer' || s.meta?.wired !== true) continue;
+          wired += 1;
+          if (s.meta.drawerLocked) wiredLocked += 1;
+          if (SAFE_ROOM_TEMPLATES.has(r.templateId)) wiredSafe += 1;
+        }
+      }
+    }
+    expect(wired, 'wired drawers should exist across seeds').toBeGreaterThan(0);
+    expect(wiredLocked, 'wired latches only on unlocked drawers').toBe(0);
+    expect(wiredSafe, 'safe rooms never wire drawers').toBe(0);
   });
 });
