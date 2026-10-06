@@ -1987,6 +1987,19 @@ Sprint 217 re-merge note (this branch, after main raced to 278):
   out — nothing to preserve today). Tag a prop laneBlock only when it
   genuinely belongs inside a doorway (portcullis, archway decor).
 
+Sprint 279 — tidy wall dressing (this branch):
+- wallProps() now enforces curated walls: no same-kind repeats on one
+  wall (reroll x4), and a min along-wall gap between different dressing
+  families — WALL_GAP 1.1m at emission, 0.77m tolerated through clash
+  shifts. Curtain pieces (curtain/curtainRod/curtainLong/curtainSwag/
+  drapePanel) share one family so layered windows still cluster.
+- Wall props carry meta.side (0/1/2 = west/east/exit) — resolveWallClashes
+  uses it to keep shifted props gapped on the same wall.
+- Test: 'wall dressing keeps breathing room' asserts >=0.6m same-side
+  gap (diff families) across all templates x3 seeds. Route probe:
+  wall-hung density 1.34 -> 1.29 props/room — tidier, not starved.
+
+
 
 ## Sprint 279 — the sledge lamp (light you can lift off the haul)
 
@@ -2194,4 +2207,3 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The Auditor wanted-poster stays a design call.
   - wetFloor (13 uses) is still dead dressing — a second slip family is
     probably too same-y with armed puddles; keep dormant.
-

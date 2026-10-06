@@ -604,6 +604,32 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('wall dressing on one wall keeps breathing room (curated, not cluttered)', () => {
+    // sprint 279: different-kind wall filler must sit >=0.6m apart on the
+    // same wall post-resolution — tighter reads as a junk pile. Curtain
+    // pieces (rod/panel/swag/long) cluster by design: same family, exempt.
+    const FAM = new Set(['curtain', 'curtainRod', 'curtainLong', 'curtainSwag', 'drapePanel']);
+    const fam = (k: string) => (FAM.has(k as never) ? 'curtain' : k);
+    for (const t of MAIN_TEMPLATES) {
+      for (const seed of ['a', 'b', 'c']) {
+        const spec = t.build(new SeedStreams(seed).roomStream('test', 1));
+        const hung = spec.props.filter((p) => p.meta?.wall);
+        for (let i = 0; i < hung.length; i++) {
+          for (let j = i + 1; j < hung.length; j++) {
+            const a = hung[i], b = hung[j];
+            if (a.meta?.side !== b.meta?.side || a.meta?.side === undefined) continue;
+            if (fam(a.kind) === fam(b.kind)) continue;
+            const gap = Math.hypot(a.x - b.x, a.z - b.z);
+            expect(
+              gap,
+              `${t.id} seed=${seed}: ${a.kind}(${a.x.toFixed(1)},${a.z.toFixed(1)}) vs ${b.kind}(${b.x.toFixed(1)},${b.z.toFixed(1)}) same-wall gap ${gap.toFixed(2)}`,
+            ).toBeGreaterThanOrEqual(0.6);
+          }
+        }
+      }
+    }
+  });
+
   it('authored collider footprints stay clear of door lanes (builder drop rule)', () => {
     // builder.ts culls any prop whose solid collider footprint overlaps a
     // lane — a fixed prop violating that is silently never rendered.
