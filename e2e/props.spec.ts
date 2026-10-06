@@ -43,7 +43,7 @@ interface ThresholdG {
   doorTry: { id: string } | null;
   interaction: {
     focused?: { prompt: string; holdTime?: number; id?: string } | null;
-    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; data?: { meta?: Record<string, number | string | boolean> } }[];
+    interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } }[];
   };
   entities: { id: string; state: string }[];
   route: { rooms: GRoom[]; branchRooms?: GRoom[] };
@@ -1681,5 +1681,71 @@ test("the porter's cage sells held bags — the tag is priced, the contents are 
   expect(r.paid, `claim never resolved — caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(r.purseAfter, 'the price should come out of the purse').toBeLessThanOrEqual(80 - r.price + (r.contains === 'imprints' ? 26 : 0));
   expect(r.gained, `nothing gained from the bag (${r.contains}) — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("the guest ledger sells foresight — the hotel's own book knows who is expected", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': ledgers at 12, 45, 54
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.register));
+    if (!room) return { stage: 'no-ledger' } as const;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+
+    const pt = g.interaction.interactables.find((i) => i.kind === 'register');
+    if (!pt) return { stage: 'no-register-point' } as const;
+    const prompt = pt.prompt;
+    const sock = pt.data!;
+    const price = (sock.meta as { price?: number }).price ?? 0;
+
+    const aimAndHold = (until: () => boolean, frames = 140) => {
+      for (let f = 0; f < frames && !until(); f++) {
+        const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+        const al = Math.hypot(ax, az) || 1;
+        if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+        g.player.yaw = Math.atan2(ax, az);
+        g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+        if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+        g.frame();
+      }
+      g.keys.delete('KeyE');
+    };
+
+    // Refuse phase — a short purse is warned, not read.
+    purse.imprints = price - 1;
+    aimAndHold(() => caps.some((c) => /short\]/.test(c)));
+    const refusedShort = caps.some((c) => /costs \d+ imprints — \d+ short/.test(c));
+
+    // Pay phase — the book turns its own pages.
+    purse.imprints = 80;
+    aimAndHold(() => (sock.meta as { taken?: boolean }).taken === true);
+    const paid = (sock.meta as { taken?: boolean }).taken === true;
+    const purseAfter = purse.imprints;
+    const ledgerLine = caps.find((c) => /the ledger expects|pages ahead are blank/.test(c)) ?? '';
+    const disabledAfter = !(g.interaction.interactables.find((i) => i.id === pt.id)?.enabled ?? true);
+    return { stage: 'done', prompt, price, paid, purseAfter, ledgerLine, refusedShort, disabledAfter, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; price: number; paid: boolean; purseAfter: number; ledgerLine: string; refusedShort: boolean; disabledAfter: boolean; caps: string[] };
+  expect(r.prompt).toMatch(/read the guest ledger — \d+ imprints/i);
+  expect(r.refusedShort, 'a short purse should be warned, not read').toBe(true);
+  expect(r.paid, `the ledger never read — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.purseAfter, 'the price should come out of the purse').toBe(80 - r.price);
+  expect(r.ledgerLine).toMatch(/the ledger expects: .+ at Door \d{3}/);
+  expect(r.disabledAfter, 'the ink dries — one read per book').toBe(true);
   expect(errors).toEqual([]);
 });

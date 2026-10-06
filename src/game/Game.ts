@@ -1547,6 +1547,54 @@ export class Game {
         }
         return;
       }
+      case 'register': {
+        // The guest ledger — the hotel's own book of who is expected. A
+        // priced foresight read: the next few doors' waiting things, told
+        // in the ledger's euphemisms. One read per book — the ink dries.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 10;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the ledger costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const NOUNS: Record<string, string> = {
+          sweep: 'the passing steps', reprise: 'the returning steps', witness: 'the unblinking guest',
+          collector: 'the toll-taker and his tin', whisper: 'a voice inside the wall',
+          commissionaire: 'a doorman who will not step aside', porter: 'a porter above the lintels',
+          redactor: 'the forger of doors', hollow: 'what the cupboards bred',
+          bellman: 'a valet who follows', warden: 'a watchman on his rounds',
+          groundswell: 'the floor, restless', lurker: 'what dims the lamps',
+          maelstrom: 'the turning stair', inspector: 'a clerk who tries the lids',
+          echoskin: 'your own step, late', grafter: 'a guest wearing the walls',
+          curator: 'the archivist at his desk', returner: 'a guest come back',
+          margin: 'the handwritten edge', redline: 'the red margin',
+          stillframe: 'the paused hall', editor: 'the revising hand',
+          inkling: 'an inkstain walking', husk: 'a guest long emptied',
+          singer: 'the choir of one',
+        };
+        const seen = new Set<string>();
+        const parts: string[] = [];
+        const rooms = this.route?.rooms ?? [];
+        for (const r of rooms) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || parts.length >= 4) continue;
+          for (const s of r.scheduled ?? []) {
+            const noun = NOUNS[s.entity] ?? 'a guest unlisted';
+            const key = `${noun}|${r.index}`;
+            if (seen.has(key) || parts.length >= 4) continue;
+            seen.add(key);
+            parts.push(`${noun} at Door ${String(r.index).padStart(3, '0')}`);
+          }
+        }
+        const text = parts.length
+          ? `[the ledger expects: ${parts.join(' · ')}]`
+          : "[the ledger's pages ahead are blank — nothing is expected]";
+        this.cue('whisper', it.pos, text);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {

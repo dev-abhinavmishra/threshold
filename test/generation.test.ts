@@ -292,6 +292,27 @@ describe('sprint mechanics coverage', () => {
     expect(tags).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("guest ledgers: priced register sockets on counter rooms only", () => {
+    let ledgers = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const reg = r.sockets.filter((x) => x.meta.register);
+        if (!reg.length) continue;
+        ledgers += reg.length;
+        expect(r.authored).toBeFalsy();
+        // every ledger sits beside a real reception counter
+        expect(r.spec?.props.some((p) => p.kind === 'counter')).toBe(true);
+        for (const s of reg) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(9);
+          expect(s.meta.price as number).toBeLessThanOrEqual(16);
+        }
+      }
+    }
+    // counters exist on every seed; 0.6 roll gives several ledgers each
+    expect(ledgers).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');

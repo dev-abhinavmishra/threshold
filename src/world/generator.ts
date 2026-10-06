@@ -874,6 +874,25 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     }
   }
 
+  // The guest ledger — a priced foresight read on real reception counters.
+  // The hotel's own book says who is expected: the next few doors' waiting
+  // things, in its own euphemisms. Information is the second economy.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    const counter = room.spec.props.find((p) => p.kind === 'counter');
+    if (!counter) continue;
+    if (!lootRng.bool(0.6)) continue;
+    const cp = localToWorld(room.origin, room.yaw, counter.x, 0, counter.z);
+    const toC = { x: room.origin.x - cp.x, z: room.origin.z - cp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(cp.x + (toC.x / tcL) * 0.55, 1.0, cp.z + (toC.z / tcL) * 0.55),
+      yaw: 0, filled: true,
+      meta: { register: true, price: lootRng.int(9, 16) },
+    });
+  }
+
   void branches;
   return keyPairs;
 }

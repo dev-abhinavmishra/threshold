@@ -1139,3 +1139,37 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Brace UX watch: bracing vs an already-knocking bellman is a ~0.5s
     race — intended, but watch for feel complaints.
   - Milestone-set hearing remains a design call.
+
+## Sprint 245 — the guest ledger (paid foresight)
+
+- The purse needed a second economy: claims sell blind *things*; ledgers
+  sell honest *information*. A 'Read the guest ledger' point sits beside
+  real `counter` props on ~60% of counter rooms (seeded 9–16 imprints;
+  counters exist on every seed — checked).
+- Hold 1.2s → pay → the book answers with `[the ledger expects: a valet
+  who follows at Door 032 · the floor, restless at Door 034]`: the next
+  10 rooms' `room.scheduled`, deduped, capped at 4, each entity named in
+  hotel-euphemism (`NOUNS` map covering all 25 schedule types; unknown
+  kinds read 'a guest unlisted'). Nothing ahead → `[the ledger's pages
+  ahead are blank — nothing is expected]` — still an answer worth buying.
+- One read per book: `meta.taken` + disabled socket. The register sits
+  at the counter's room-facing edge (origin-ward offset 0.55m, y 1.0),
+  not beside a wall like the cage tags.
+- e2e (props.spec +1 → 20): seed 's' ledgers at 12/45/54; spec drives
+  room 12's book — refuses a 14-imprint purse against the 15-ask, pays
+  at 80, asserts purse == 65, the expects-line names a Door, and the
+  socket disables after the read.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Gallery/records wings still run purse-rich with no sink (a records
+    "fines drawer"? gallery "coatrack"? — second ledger variant:
+    'the duty roster' on records desks tells STAFF positions (warden/
+    inspector/commissionaire only), cheaper than the full book).
+  - Locked leaves still ghost the Bellman (deliberate so far — knock
+    path skips them; now that ledgers name what waits where, the ghost
+    is easier to notice).
+  - Brace UX watch: bracing vs an already-knocking bellman is a ~0.5s
+    race — intended, but watch for feel complaints.
+  - Milestone-set hearing remains a design call.
+  - Ledger honesty lever: a rare seeded 'forged page' (redactor rooms)
+    that LIES about one door — the book's euphemisms already hedge.
