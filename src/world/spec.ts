@@ -41,6 +41,16 @@ export type PropKind =
   | 'plinth' | 'displayCase' | 'ropeBarrier' | 'exhibitLabel' | 'libraryLadder'
   | 'cageLocker' | 'bellCart' | 'teaTrolley' | 'bedBench' | 'radiatorTall'
   | 'linenHamper' | 'basinSink' | 'pegRail' | 'towelRail' | 'ceilingHook'
+  | 'curtainRod' | 'curtainLong' | 'headboard' | 'stoveRange' | 'potRack'
+  | 'dishDrainer' | 'linenShelf' | 'choppingBlock' | 'copperSet'
+  | 'manglePress'
+  | 'chapelPew' | 'prayerKneeler' | 'chapelAltar' | 'votiveStand'
+  | 'candelabrum' | 'settee' | 'dressingScreen' | 'vanityTable'
+  | 'sideboard' | 'writingDesk' | 'globeStand'
+  | 'cubicle' | 'recordsCage' | 'printerRow' | 'printer' | 'typewriter'
+  | 'waterCooler' | 'breakTable' | 'counter' | 'machineBox'
+  | 'paperStack' | 'partition' | 'fluoroTube' | 'exitSign'
+  | 'vendingUnit' | 'keyCabinet'
   | 'wardrobe' | 'dresser' | 'nightstand'
   | 'barrel' | 'wineBarrel' | 'pipeManifold' | 'extinguisher' | 'television'
   | 'wetFloor' | 'wallClock2' | 'mantelClock' | 'stool' | 'ladder'
@@ -122,6 +132,12 @@ export type PropKind =
   | 'wineRack' | 'grateDrain'
   // sprint 216 — chapel / dining dressing batch
   | 'platedRoast' | 'platedPie' | 'ceilingRose' | 'pewRow' | 'chapelAltar'
+  // sprint 224 — corridor architecture batch
+  | 'pilaster' | 'wainscotRun' | 'corniceRun' | 'wallPanel' | 'beamRun'
+  | 'runnerRug' | 'grandfatherClock' | 'consoleTable' | 'wallLantern'
+  | 'doorSurround' | 'pierMirror' | 'newelPost'
+  // sprint 225 — staircase + tracery batch
+  | 'grandStair' | 'traceryWindow' | 'roseWindow'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript
@@ -293,23 +309,58 @@ export function portOutwardDir(port: Port): { x: number; z: number } {
   }
 }
 
-/** True when a room-local point sits inside a port's approach lane —
- * the strip from just outside the door plane to ~2m into the room,
- * as wide as the leaf plus clearance. Kept prop-free so furniture
- * can't pinch the doorway a player must walk through. */
+/** True when a room-local point sits inside a port's doorway lane —
+ * the strip from just outside the door plane to the ~1.4m leaf-swing
+ * zone into the room, roughly leaf-wide. Kept prop-free so furniture
+ * can't pinch the doorway a player must walk through. (Lateral
+ * clearance was widened once; it ate beds/wardrobes sitting harmlessly
+ * beside doors — the pad now covers the leaf and frame, not a walkway
+ * beside them.) */
 export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>, x: number, z: number, r = 0.55): boolean {
   return [spec.entry, ...spec.exits].some((port) => {
     const lp = portLocalPos(port, spec.width, spec.depth);
     const dir = portOutwardDir(port);
     const a = -((x - lp.x) * dir.x + (z - lp.z) * dir.z);       // depth into the room
     const b = Math.abs((x - lp.x) * -dir.z + (z - lp.z) * dir.x); // lateral offset
-    return a > -0.4 - r && a < 2.0 + r && b < port.width / 2 + 0.6 + r;
+    // Depth matches footprintInDoorLane's 1.4m leaf-swing zone (a 2.0m
+    // corridor was silently eating authored centerpieces ~2m inside a
+    // door's axis — the wake's bier, the u-lobby counter).
+    return a > -0.4 - r && a < 1.4 + r && b < port.width / 2 + 0.15 + r;
   });
 }
 
-/** Drop props and hiding spots whose centers land inside a door lane. */
-export function clearDoorLanes(spec: RoomSpec): void {
-  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !inDoorLane(spec, p.x, p.z));
+/** Footprint-aware variant for built colliders (axis-aligned room-space
+ * boxes): a collider is in-lane only when its box actually reaches the
+ * doorway rectangle — the leaf swing zone ~1.4m deep, leaf-wide laterally.
+ * Lets beds/wardrobes sit beside a door while still catching props whose
+ * bulk covers the door itself. */
+export function footprintInDoorLane(
+  spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>,
+  cx: number, cz: number, hw: number, hd: number,
+): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    // reach along the port's depth/lateral axes = the half-extent on each
+    const reachD = Math.abs(dir.x) > 0.5 ? hw : hd;
+    const reachL = Math.abs(dir.x) > 0.5 ? hd : hw;
+    const a = -((cx - lp.x) * dir.x + (cz - lp.z) * dir.z);
+    const b = Math.abs((cx - lp.x) * -dir.z + (cz - lp.z) * dir.x);
+    return a > -0.4 - reachD && a < 1.4 + reachD && b < port.width / 2 + reachL;
+  });
+}
+
+/** Drop hiding spots inside a door lane. Props are only culled when
+ * their CENTER sits inside the door rectangle itself — anything wider
+ * defers to the builder's footprintInDoorLane, which judges real
+ * collider dims (the center-based corridor used to eat authored
+ * centerpieces and flat wall dressing whose colliders never touch the
+ * doorway: the wake's bier, counters, altars, paintings — sprint-223
+ * audit). `isGhost` marks kinds with no solid collider (archways, wall
+ * dressing, transoms) — they can never reach the door rect and are
+ * never culled. */
+export function clearDoorLanes(spec: RoomSpec, isGhost?: (kind: string) => boolean): void {
+  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || isGhost?.(p.kind) || !inDoorLane(spec, p.x, p.z, 0));
   spec.hiding = spec.hiding.filter((h) => !inDoorLane(spec, h.x, h.z));
 }
 

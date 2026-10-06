@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CorridorRunner } from '../src/entities/corridor';
-import { Witness, Hollow, Lurker, Margin, Husk } from '../src/entities/room';
+import { CorridorRunner, Warden } from '../src/entities/corridor';
+import { Bellman } from '../src/entities/bellman';
+import { Collector } from '../src/entities/collector';
+import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector, Commissionaire } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -13,7 +15,11 @@ function fakePlayer() {
     yaw: 0,
     pitch: 0,
     hiddenSpot: null as null | { kind: string },
+    dead: false,
+    exitHiding(_now: number) { self.hiddenSpot = null; },
+    teleport(x: number, _y: number, z: number) { self.pos.x = x; self.pos.y = 0; self.pos.z = z; },
     protection: 'exposed',
+    rootedUntil: 0,
     crouching: false,
     sprinting: false,
     lampOn: true,
@@ -23,7 +29,7 @@ function fakePlayer() {
     health: 100,
     inputs: { interactHeld: false, lampToggle: false },
     eyePos(out: { x: number; y: number; z: number }) { out.x = self.pos.x; out.y = self.pos.y + 1.62; out.z = self.pos.z; return out; },
-    lookDir(out: { x: number; y: number; z: number }) { out.x = Math.sin(self.yaw); out.y = 0; out.z = Math.cos(self.yaw); return out; },
+    lookDir(out: { x: number; y: number; z: number }) { const cp = Math.cos(self.pitch); out.x = Math.sin(self.yaw) * cp; out.y = Math.sin(self.pitch); out.z = Math.cos(self.yaw) * cp; return out; },
   };
   return self;
 }
@@ -220,6 +226,500 @@ describe('Hollow trap', () => {
   });
 });
 
+describe('Bellman (sprint 232)', () => {
+  const step = (b: Bellman, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    const frames = Math.ceil(seconds / 0.05);
+    for (let i = 0; i < frames; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('spawns at the entry door and knocks it open a beat later', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const b = new Bellman();
+    b.spawn(ctx);
+    step(b, ctx, 3);
+    const door = rooms[20].doors[0];
+    expect(door.opening).toBe(true);
+    const names = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(names).toContain('door-rattle');
+    b.dispose();
+  });
+
+  it('follows the trail and kills an exposed lingerer', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    // Crumbs from the entry door to the room centre where the player stands.
+    const px = room.origin.x, pz = room.origin.z;
+    const trail = Array.from({ length: 9 }, (_, i) =>
+      v3(entry.x + ((px - entry.x) * i) / 8, 0, entry.z + ((pz - entry.z) * i) / 8));
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(px, 0, pz);
+    player.yaw = Math.atan2(entry.x - px, entry.z - pz); // facing the door —
+    // but the gaze frees only while watched long: it crosses ~7m in ~4s,
+    // inside kill reach before watch accumulates. Kill still fires first
+    // because exposure is checked before the trail step.
+    player.yaw = Math.PI + player.yaw; // face AWAY to isolate the kill path
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    b.dispose();
+  });
+
+  it('yields to sustained direct gaze without ever reaching you', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x, 0, room.origin.z);
+    player.yaw = Math.atan2(entry.x - room.origin.x, entry.z - room.origin.z); // face it
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /folds back/.test(c))).toBe(true);
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
+  });
+
+  it('a braced door holds it at the threshold until it loses interest', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';   // the player braced the leaf they came through
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 400) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /tests the bar|strains|palm flat/.test(c))).toBe(true);
+    expect(captions.some((c) => /steps fade down the hall/.test(c))).toBe(true);
+    expect(entry.opening).toBe(false);  // the brace held — it never swung
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
+  });
+
+  it('worries a wedged door loose, then comes through', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'wedge';   // a chock set under the leaf
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = step(b, ctx, 4);
+    expect(entry.opening).toBe(false);   // still held — rattles, no swing
+    expect(entry.heldBy).toBe('wedge');
+    t = step(b, ctx, 6, t);
+    expect(entry.heldBy).toBe(undefined); // the chock gave — kicked loose
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /wedge skids loose/.test(c))).toBe(true);
+    step(b, ctx, 3, t);
+    expect(entry.opening).toBe(true);    // then it knocks the freed leaf
+    b.dispose();
+  });
+
+  it('releases the hold and knocks normally once the brace is gone', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    const t = step(b, ctx, 4);   // braced — it holds and rattles
+    expect(entry.opening).toBe(false);
+    entry.heldBy = undefined;  // the player stepped away
+    step(b, ctx, 3, t);
+    expect(entry.opening).toBe(true);  // knocked, then it swings for it
+    b.dispose();
+  });
+
+  it('starves out when the trail goes cold', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    player.yaw = Math.PI;
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /falls away/.test(c))).toBe(true);
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
+  });
+
+  it('works the house keys through a locked leaf — the leaf never opens', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.locked = true;   // a leaf the game locked, still locked for you
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const nx = Math.sin(entry.yaw), nz = Math.cos(entry.yaw);
+    const side = (p: { x: number; z: number }) => (p.x - entry.pos.x) * nx + (p.z - entry.pos.z) * nz;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    // The keys work for a few seconds, then it comes through the seam.
+    while (Math.abs(side(pos)) < 0.2 && steps++ < 300) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(Math.abs(side(pos))).toBeGreaterThanOrEqual(0.2);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /keys works the lock|keys turning|keyway/.test(c))).toBe(true);
+    expect(captions.some((c) => /lock turns for it/.test(c))).toBe(true);
+    expect(entry.opening).toBeFalsy();        // the leaf never swung
+    expect(entry.locked).toBe(true);          // still locked for you
+    b.dispose();
+  });
+});
+
+describe('Porter (sprint 233)', () => {
+  const step = (p: Porter, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    for (let i = 0; i < Math.ceil(seconds / 0.05); i++) { ctxMut.now = t; p.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('drops on a player who lingers under the lintel unlooked', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    // Stand under the exit door's header, gazing level — never look up.
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; pitch: number };
+    player.pos = v3(door.pos.x, 0, door.pos.z);
+    player.pitch = 0;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (porter.state !== 'done' && steps++ < 1000) { ctxMut.now = t; porter.update(0.05); t += 0.05; }
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBeGreaterThan(0);
+    expect(dmg[0][1]).toBe('porter');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /drops — from above/.test(c))).toBe(true);
+    porter.dispose();
+  });
+
+  it('withdraws when the player pitches the gaze up and holds it', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number; pitch: number };
+    // Stand 3.5m back from the door, gaze up at the header.
+    player.pos = v3(door.pos.x, 0, door.pos.z - 3.5);
+    const hdr = { x: door.pos.x, y: 2.3, z: door.pos.z };
+    const dx = hdr.x - player.pos.x, dz = hdr.z - player.pos.z;
+    const dh = Math.hypot(dx, dz);
+    player.yaw = Math.atan2(dx, dz);
+    player.pitch = Math.atan2(hdr.y - 1.62, dh);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (porter.state !== 'done' && steps++ < 1000) { ctxMut.now = t; porter.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /withdraws above the frame/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    porter.dispose();
+  });
+
+  it('sifts dust tells while it waits, without dropping early', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const porter = new Porter();
+    porter.spawn(ctx);
+    const door = rooms[21].doors.find((d) => d.id.endsWith('-in'))!;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(door.pos.x, 0, door.pos.z - 6); // in the room, out of the drop arc
+    step(porter, ctx, 12);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /dust sifts down/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(porter.state).toBe('engage');
+    porter.dispose();
+  });
+});
+
+describe('Warden (sprint 234)', () => {
+  const step = (w: Warden, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    for (let i = 0; i < Math.ceil(seconds / 0.05); i++) { ctxMut.now = t; w.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('paces the corridor spine between its doors', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const room = rooms[28];
+    const span = Math.hypot(room.exitPos.x - room.entryPos.x, room.exitPos.z - room.entryPos.z);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    // Player hides in a cabinet far away — the patrol never sees them.
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const p0 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const start = { x: p0.x, z: p0.z };
+    step(warden, ctx, 10);
+    const p1 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const moved = Math.hypot(p1.x - start.x, p1.z - start.z);
+    expect(moved).toBeGreaterThan(1);
+    expect(span).toBeGreaterThan(2);
+    expect(warden.state).toBe('engage');
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    warden.dispose();
+  });
+
+  it('reads the sign — a killed hazard pulls it off the line to investigate', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const evidence = { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] };
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = !evidence.readBy.includes(key)
+          && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    let closest = Infinity, invSeen = false;
+    for (let i = 0; i < 160; i++) {
+      step(warden, ctx, 0.05);
+      const p = (warden as unknown as { pos: { x: number; z: number } }).pos;
+      closest = Math.min(closest, Math.hypot(p.x - evidence.pos.x, p.z - evidence.pos.z));
+      if ((warden as unknown as { investigate: unknown }).investigate) invSeen = true;
+    }
+    // it left the line and walked the sign, once
+    expect(invSeen, 'the warden should investigate the sign').toBe(true);
+    expect(closest, 'it walks all the way to the sign').toBeLessThan(0.8);
+    expect(evidence.readBy).toContain('warden:28');
+    expect(warden.state, 'then it resumes the patrol').toBe('engage');
+    warden.dispose();
+  });
+
+  it('whistles and charges a player caught in the open', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    // Stand 2m in front of the patrol line, in the open, in view.
+    const p0 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(p0.x, 0, p0.z - 2);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (steps++ < 1200 && (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length === 0) {
+      ctxMut.now = t; warden.update(0.05); t += 0.05;
+    }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /whistle — the Warden has you/.test(c))).toBe(true);
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBeGreaterThan(0);
+    expect(dmg[0][1]).toBe('warden');
+    warden.dispose();
+  });
+
+  it('loses the scent when line of sight breaks', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const p0 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | { id: string } };
+    player.pos = v3(p0.x, 0, p0.z - 2);
+    // Get spotted, then dive into a cabinet — the whistle gives up.
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (steps++ < 200 && !(warden as unknown as { charging: boolean }).charging) {
+      ctxMut.now = t; warden.update(0.05); t += 0.05;
+    }
+    expect((warden as unknown as { charging: boolean }).charging).toBe(true);
+    player.hiddenSpot = { id: 'cab' };
+    player.pos = v3(p0.x, 0, p0.z - 20); // out of sight, in a spot
+    t = step(warden, ctx, 6, t);
+    expect((warden as unknown as { charging: boolean }).charging).toBe(false);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /whistle dies/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    warden.dispose();
+  });
+});
+
+describe('Groundswell (sprint 235)', () => {
+  const step = (e: Groundswell, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    for (let i = 0; i < Math.ceil(seconds / 0.05); i++) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('heaves a player standing in the wave path', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const room = rooms[28];
+    // Stand mid-room on the wave's travel line.
+    const mid = { x: (room.entryPos.x + room.exitPos.x) / 2, z: (room.entryPos.z + room.exitPos.z) / 2 };
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; rootedUntil: number };
+    player.pos = v3(mid.x, 0, mid.z);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (steps++ < 1000 && (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length === 0) {
+      ctxMut.now = t; gs.update(0.05); t += 0.05;
+    }
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBeGreaterThan(0);
+    expect(dmg[0][1]).toBe('groundswell');
+    expect(player.rootedUntil).toBeGreaterThan(0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /boards heave under you/.test(c))).toBe(true);
+    gs.dispose();
+  });
+
+  it('leaves the wall strips calm', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const room = rooms[28];
+    const ax = room.exitPos.x - room.entryPos.x, az = room.exitPos.z - room.entryPos.z;
+    const len = Math.hypot(ax, az);
+    const nx = ax / len, nz = az / len;
+    const px = -nz, pz = nx; // lateral
+    const crossHalf = Math.min(room.spec?.width ?? 10, room.spec?.depth ?? 10) / 2;
+    // Hug the wall — inside the calm strip the wave can't reach.
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(room.origin.x + px * (crossHalf - 0.4), 0, room.origin.z + pz * (crossHalf - 0.4));
+    step(gs, ctx, 30);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(gs.state).toBe('engage');
+    gs.dispose();
+  });
+
+  it('settles after its waves pass', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999); // out of the room — never in the band
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (gs.state !== 'done' && steps++ < 1200) { ctxMut.now = t; gs.update(0.05); t += 0.05; }
+    expect(gs.state).toBe('done');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /floor settles/.test(c))).toBe(true);
+    gs.dispose();
+  });
+});
+
+describe('Inspector (sprint 236)', () => {
+  const stepUntil = (fn: () => boolean, ctx: EntityCtx, e: Inspector, max = 1200) => {
+    const ctxMut = ctx as { now: number };
+    let t = (ctxMut.now as number) || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+  const inspRoomIdx = (rooms: RoomInstance[]) =>
+    rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);
+
+  it('walks the room and tries every lid, then moves on', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    expect(idx).toBeGreaterThan(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999); // watch from afar
+    stepUntil(() => insp.state === 'done', ctx, insp, 1600);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(insp.state).toBe('done');
+    expect(captions.filter((c) => /it tries the lid/.test(c)).length).toBeGreaterThanOrEqual(2);
+    expect(captions.some((c) => /moves on to the next room/.test(c))).toBe(true);
+    insp.dispose();
+  });
+
+  it('lets go when the lid is held through the rattle', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const room = rooms[idx];
+    // Hide in the spot closest to its spawn — it will be tested first.
+    const ep = room.entryPos;
+    const spot = room.hidingSpots.reduce((a, b) =>
+      (Math.hypot(a.exitPos.x - ep.x, a.exitPos.z - ep.z) < Math.hypot(b.exitPos.x - ep.x, b.exitPos.z - ep.z) ? a : b));
+    const player = ctx.player as unknown as { hiddenSpot: unknown; pos: { x: number; y: number; z: number } };
+    player.hiddenSpot = spot;
+    player.pos = v3(spot.exitPos.x, 0, spot.exitPos.z);
+    const gotLid = stepUntil(() => spot.trappedBy === 'inspector', ctx, insp, 900);
+    expect(gotLid).toBe(true);
+    // Hold it shut — four presses inside the window.
+    for (let i = 0; i < 4; i++) insp.struggle();
+    stepUntil(() => spot.trappedBy !== 'inspector', ctx, insp, 200);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lets go — moves on/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(player.hiddenSpot).toBe(spot); // still hidden — won the grapple
+    insp.dispose();
+  });
+
+  it('pulls the player out when the grapple goes unanswered', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const room = rooms[idx];
+    const ep = room.entryPos;
+    const spot = room.hidingSpots.reduce((a, b) =>
+      (Math.hypot(a.exitPos.x - ep.x, a.exitPos.z - ep.z) < Math.hypot(b.exitPos.x - ep.x, b.exitPos.z - ep.z) ? a : b));
+    const player = ctx.player as unknown as { hiddenSpot: unknown; pos: { x: number; y: number; z: number } };
+    player.hiddenSpot = spot;
+    player.pos = v3(spot.exitPos.x, 0, spot.exitPos.z);
+    const gotLid = stepUntil(() => spot.trappedBy === 'inspector', ctx, insp, 900);
+    expect(gotLid).toBe(true);
+    stepUntil(() => spot.trappedBy !== 'inspector', ctx, insp, 200); // no presses — it wins
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBe(1);
+    expect(dmg[0][1]).toBe('inspector');
+    expect(player.hiddenSpot).toBeNull(); // dragged into the open
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /pulls you out/.test(c))).toBe(true);
+    insp.dispose();
+  });
+});
+
 describe('determinism', () => {
   it('same seed → identical entity timeline', () => {
     const rooms = routeRooms();
@@ -233,5 +733,1092 @@ describe('determinism', () => {
       return poses.join('|');
     };
     expect(run()).toBe(run());
+  });
+});
+
+describe('Commissionaire (sprint 237)', () => {
+  const stepUntil = (fn: () => boolean, ctx: EntityCtx, e: Commissionaire, max = 1200) => {
+    const ctxMut = ctx as { now: number };
+    let t = (ctxMut.now as number) || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+  const commRoomIdx = (rooms: RoomInstance[]) =>
+    rooms.findIndex((r, i) => r.index >= 14 && r.index <= 70 && i < rooms.length - 1 && !r.authored && r.biome !== 'safe');
+  const entryCluster = (rooms: RoomInstance[], idx: number) => {
+    const en = rooms[idx].entryPos;
+    return [...rooms[idx].doors, ...rooms[idx - 1].doors]
+      .filter((d) => Math.hypot(d.pos.x - en.x, d.pos.z - en.z) < 0.9);
+  };
+
+  it('seals the entry leaf and releases it when done', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    expect(idx).toBeGreaterThan(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const held = entryCluster(rooms, idx);
+    expect(held.length).toBeGreaterThan(0);
+    expect(held.every((d) => d.heldBy === 'commissionaire')).toBe(true);
+    // Room change retires it — the doors it held must open again.
+    (ctx as { currentRoomIndex: number }).currentRoomIndex = idx + 1;
+    comm.update(0.05);
+    expect(comm.state).toBe('done');
+    expect(held.every((d) => d.heldBy === undefined)).toBe(true);
+    comm.dispose();
+  });
+
+  it('finds you in the lantern arc and throws you back to the entry', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const room = rooms[idx];
+    const en = room.entryPos, ex = room.exitPos;
+    // Stand on the entry→exit axis inside the sweep's centre.
+    const yaw = Math.atan2(en.x - ex.x, en.z - ex.z);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: unknown };
+    player.pos = v3(ex.x + Math.sin(yaw) * 4.5, 0, ex.z + Math.cos(yaw) * 4.5);
+    const hit = stepUntil(
+      () => (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length > 0,
+      ctx, comm, 900,
+    );
+    expect(hit).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.some((c) => c[1] === 'commissionaire')).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lantern finds you|throws you back/.test(c))).toBe(true);
+    comm.dispose();
+  });
+
+  it('stands aside the moment the exit leaf opens', () => {
+    const rooms = routeRooms();
+    const idx = commRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const room = rooms[idx];
+    const ex = room.exitPos;
+    const exitDoor = [...room.doors, ...rooms[idx + 1].doors]
+      .find((d) => Math.hypot(d.pos.x - ex.x, d.pos.z - ex.z) < 0.9);
+    expect(exitDoor).toBeTruthy();
+    exitDoor!.opening = true;
+    comm.update(0.05);
+    expect(comm.state).toBe('done');
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /stands aside/.test(c))).toBe(true);
+    comm.dispose();
+  });
+});
+
+describe('Hearing the cast (sprint 238)', () => {
+  const hearingCtx = (rooms: RoomInstance[], idx: number, overrides: Partial<EntityCtx> = {}) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: idx,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+      ...overrides,
+    });
+    const emit = (x: number, z: number, intensity = 1, category = 'distraction') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    return { ctx, emit };
+  };
+  const stepTo = (fn: () => boolean, ctx: EntityCtx, e: { update(dt: number): void }, max = 800) => {
+    const ctxMut = ctx as { now: number };
+    let t = ctxMut.now || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+
+  it('warden leaves its post to check a loud noise', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(pos.x + 2.5, 0, pos.z + 2.5);
+    emit(np.x, np.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    const arrived = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, w, 600);
+    expect(arrived).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns toward the noise/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('commissionaire pins its lantern on a heard noise', () => {
+    const rooms = routeRooms();
+    const idx = rooms.findIndex((r) => r.index >= 20 && r.doors.length >= 2);
+    const { ctx, emit } = hearingCtx(rooms, idx);
+    const comm = new Commissionaire();
+    comm.spawn(ctx);
+    const pos = (comm as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(pos.x + 3, 0, pos.z - 2);
+    emit(np.x, np.z);
+    stepTo(() => Math.abs(
+      (comm as unknown as { gazeYaw: number }).gazeYaw - Math.atan2(np.x - pos.x, np.z - pos.z)
+    ) < 0.01, ctx, comm, 40);
+    const gy = (comm as unknown as { gazeYaw: number }).gazeYaw;
+    expect(gy).toBeCloseTo(Math.atan2(np.x - pos.x, np.z - pos.z), 2);
+    comm.dispose();
+  });
+
+  it('bellman detours to a loud sound off the trail', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    // Trail runs entry → far corner; the noise sits off-line.
+    const trail = Array.from({ length: 8 }, (_, i) =>
+      v3(entry.x + (room.origin.x - entry.x) * i / 7, 0, entry.z + (room.origin.z - entry.z) * i / 7));
+    const { ctx, emit } = hearingCtx(rooms, 20, { playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x + 30, 0, room.origin.z); // far away — no gaze freeze
+    player.yaw = 0;
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const np = v3(entry.x + 2.5, 0, entry.z + 3.5);
+    emit(np.x, np.z);
+    const sniffed = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, b, 800);
+    expect(sniffed).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /stoops to the sound/.test(c))).toBe(true);
+    b.dispose();
+  });
+
+  it('groundswell waves arrive early when the room is loud', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 28);
+    const gs = new Groundswell();
+    gs.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999);
+    const waveAt = (gs as unknown as { waveAt: number }).waveAt;
+    expect(waveAt).toBeGreaterThan(0.7 + 0.05);
+    const room = rooms[28];
+    emit(room.origin.x, room.origin.z);
+    // Noise should have dragged the next wave to ~0.7s out.
+    const launched = stepTo(() => (gs as unknown as { front: number }).front >= 0, ctx, gs, 40);
+    expect(launched).toBe(true);
+    gs.dispose();
+  });
+
+  it('pebbles are heard in-room but too soft to rouse through walls', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    // Breath-quiet (0.3 < 0.42 floor): ignored.
+    emit(pos.x + 2, pos.z + 2, 0.3, 'distraction');
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    // Pebble loudness (0.45): below the door-rouse floor but inside hearing.
+    emit(pos.x + 2, pos.z + 2, 0.45, 'distraction');
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    w.dispose();
+  });
+
+  it('warden shoulders through a door into the next room for a loud noise', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Park it beside room 21's entry door — at patrol range of the shared leaf.
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    // Noise inside room 21, off the wall: reachable — it investigates, then
+    // on the walk it puts a shoulder through the leaf and opens it.
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && !door.opening; i++) { ctxMut.now = t; w.update(0.05); t += 0.05; }
+    expect(door.opening).toBe(true);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shoulder through the door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('a braced or locked leaf turns the warden from a cross-room check', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    door.heldBy = 'player';
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && (w as unknown as { investigate: unknown }).investigate; i++) {
+      ctxMut.now = t; w.update(0.05); t += 0.05;
+    }
+    expect(door.opening).toBe(false);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns from the held door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('cross-room noise it cannot reach leaves the warden on its line', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Mid-room — far from room 21's doors — a noise there is out of reach.
+    emit(rooms[21].origin.x, rooms[21].origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    w.dispose();
+  });
+
+  it('inspector glances up — a noise cuts the lid test short', () => {
+    const rooms = routeRooms();
+    const idx = rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);
+    const { ctx, emit } = hearingCtx(rooms, idx);
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999);
+    const testing = stepTo(() => (insp as unknown as { testing: unknown }).testing !== null, ctx, insp, 900);
+    expect(testing).toBe(true);
+    // Fresh test starts at 2.6s; noise should pull it down to 1.2.
+    while ((insp as unknown as { testT: number }).testT <= 1.5) {
+      stepTo(() => (insp as unknown as { testT: number }).testT > 1.5 || (insp as unknown as { testing: unknown }).testing === null, ctx, insp, 400);
+      if ((insp as unknown as { testing: unknown }).testing === null) break;
+    }
+    expect((insp as unknown as { testing: unknown }).testing).not.toBeNull();
+    const pos = (insp as unknown as { pos: { x: number; z: number } }).pos;
+    emit(pos.x + 1, pos.z + 1);
+    expect((insp as unknown as { testT: number }).testT).toBeLessThanOrEqual(1.2);
+    insp.dispose();
+  });
+});
+
+
+describe('Collector (sprint 242)', () => {
+  const collectorCtx = (rooms: RoomInstance[], purse: number) => {
+    const interactions: { kind: string; prompt: string; data: unknown }[] = [];
+    const ctx = makeCtx(rooms, {
+      purse: () => purse,
+      addInteractable: vi.fn((it) => { interactions.push(it as { kind: string; prompt: string; data: unknown }); }),
+      removeInteractable: vi.fn(),
+      nearestThreat: () => null,
+    });
+    return { ctx, interactions };
+  };
+  const untilDemand = (col: Collector, ctx: EntityCtx, max = 600) => {
+    const ctxMut = ctx as { now: number };
+    let t = ctxMut.now || 0, steps = 0;
+    while (steps++ < max && (col as unknown as { phase: string }).phase !== 'demand') {
+      ctxMut.now = t; col.update(0.05); t += 0.05;
+    }
+    return (col as unknown as { phase: string }).phase === 'demand';
+  };
+
+  it('the tin counts what you carry — the ask scales with the purse', () => {
+    for (const [purse, want] of [[5, 2], [50, 6], [150, 18], [400, 24]] as const) {
+      const rooms = routeRooms();
+      const { ctx, interactions } = collectorCtx(rooms, purse);
+      const col = new Collector();
+      col.spawn(ctx);
+      expect(untilDemand(col, ctx)).toBe(true);
+      const toll = interactions.find((i) => i.kind === 'toll');
+      expect(toll).toBeTruthy();
+      expect((toll!.data as { price: number }).price).toBe(want);
+      expect(toll!.prompt).toContain(`${want} imprints`);
+      col.dispose();
+    }
+  });
+
+  it('paying the scaled toll buys the whisper and sends it off', () => {
+    const rooms = routeRooms();
+    const { ctx, interactions } = collectorCtx(rooms, 150);
+    const col = new Collector();
+    col.spawn(ctx);
+    expect(untilDemand(col, ctx)).toBe(true);
+    const toll = interactions.find((i) => i.kind === 'toll');
+    expect(toll).toBeTruthy();
+    (toll!.data as { pay: () => void }).pay();
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /tin accepts/.test(c))).toBe(true);
+    expect((col as unknown as { phase: string }).phase).toBe('leave');
+    col.dispose();
+  });
+
+  it('a rich purse is announced — the rattle says it is counting', () => {
+    const rooms = routeRooms();
+    const { ctx } = collectorCtx(rooms, 300);
+    const col = new Collector();
+    col.spawn(ctx);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /counting what you carry/.test(c))).toBe(true);
+    col.dispose();
+  });
+});
+
+describe('Returner answers the bell (sprint 253)', () => {
+  const hearingCtx = (rooms: RoomInstance[], idx: number) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: idx,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+    });
+    const emit = (x: number, z: number, intensity = 1, category = 'machine') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    return { ctx, emit, heard: () => hear !== null };
+  };
+
+  it('a crash within earshot of the latching end shortens the warning, once', () => {
+    const rooms = routeRooms();
+    const { ctx, emit, heard } = hearingCtx(rooms, 20);
+    const rt = new CorridorRunner('returner', { fromAhead: true });
+    rt.spawn(ctx);
+    expect(heard()).toBe(true); // only the returner subscribes
+    expect(rt.state).toBe('warn');
+    const warnT = () => (rt as unknown as { warnT: number }).warnT;
+    expect(warnT()).toBeGreaterThan(2);
+    const at = (rt as unknown as { path: { x: number; z: number }[] }).path[0];
+    // a far crash does not reach the latching
+    emit(at.x + 400, at.z + 400);
+    expect(warnT()).toBeGreaterThan(2);
+    // a crash at its door answers once
+    emit(at.x, at.z);
+    expect(warnT()).toBeLessThanOrEqual(1.0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /quickens toward the sound/.test(c))).toBe(true);
+    rt.update(0.05);
+    emit(at.x, at.z);
+    expect(warnT()).toBeLessThanOrEqual(1.0);
+    rt.dispose();
+  });
+
+  it('a quiet scuff or an engaged pass does not answer', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const rt = new CorridorRunner('returner', { fromAhead: true });
+    rt.spawn(ctx);
+    const at = (rt as unknown as { path: { x: number; z: number }[] }).path[0];
+    const warnT = () => (rt as unknown as { warnT: number }).warnT;
+    emit(at.x, at.z, 0.3); // below the in-room floor
+    expect(warnT()).toBeGreaterThan(2);
+    rt.dispose();
+    // a sweep never subscribes — the verb belongs to the returner alone
+    const { emit: emit2, heard: heard2 } = hearingCtx(rooms, 20);
+    void emit2;
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(makeCtx(rooms, { currentRoomIndex: 20 }));
+    expect(heard2()).toBe(false);
+    sw.dispose();
+    void ctx;
+  });
+});
+
+describe('Swamper (sprint 255)', () => {
+  const floodRoom = (): RoomInstance => ({
+    index: 5, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 20, depth: 20, spec: { width: 20, depth: 20, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [], flooded: true,
+  } as unknown as RoomInstance);
+
+  const hearingCtx = (rooms: RoomInstance[], drained = false) => {
+    let hear: ((e: import('../src/engine/events').SoundEvent) => void) | null = null;
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      isRoomDrained: () => drained,
+      sound: {
+        emit: vi.fn(),
+        on: vi.fn((fn: (e: import('../src/engine/events').SoundEvent) => void) => { hear = fn; return () => { }; }),
+        intensityAt: vi.fn(() => 0),
+      } as unknown as EntityCtx['sound'],
+    });
+    const emit = (x: number, z: number, intensity = 0.55, category = 'impact') =>
+      hear?.({ x, y: 0, z, intensity, category, caption: '' });
+    const step = (sw: { update(dt: number): void }, n: number) => {
+      for (let i = 0; i < n; i++) { ctx.now += 0.05; sw.update(0.05); }
+    };
+    return { ctx, emit, step, heard: () => hear !== null };
+  };
+
+  it('lies under the flood, glides to a splash, and strikes a stirred wader', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step, heard } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    expect(heard()).toBe(true);
+    expect(sw.state).toBe('engage');
+    const pos = () => (sw as unknown as { pos: { x: number; z: number } }).pos;
+    const start = { x: pos().x, z: pos().z };
+    // a splash inside its room pulls it toward the point
+    emit(0, 6);
+    step(sw, 20);
+    expect(Math.hypot(pos().x - start.x, pos().z - start.z)).toBeGreaterThan(1);
+    // a wader stirring the flood at contact gets the strike
+    ctx.player.vel.x = 1.4;
+    step(sw, 140);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /the water stands up/.test(c))).toBe(true);
+    sw.dispose();
+  });
+
+  it('a crouched wader stirs nothing — contact without a splash is safe', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    ctx.player.crouching = true;
+    ctx.player.vel.x = 1.0;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    // a pebble splash pulls it straight onto the quiet wader
+    emit(0, 6);
+    step(sw, 120);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    sw.dispose();
+  });
+
+  it('the rise is the warning — contact during its first beat is still safe', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, step } = hearingCtx(rooms);
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    const pos = (sw as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = pos.x; ctx.player.pos.z = pos.z;
+    ctx.player.vel.x = 1.4;
+    step(sw, 20); // 1.0s — still rising, even on contact
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    step(sw, 40); // past the rise — the stirred wader gets it
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
+    sw.dispose();
+  });
+
+  it('noise beyond the flood never reaches it; an open drain empties the room of it', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    const pos = () => (sw as unknown as { pos: { x: number; z: number } }).pos;
+    const start = { x: pos().x, z: pos().z };
+    emit(200, 200); // far outside the room
+    step(sw, 10);
+    expect(Math.hypot(pos().x - start.x, pos().z - start.z)).toBeLessThan(1);
+    sw.dispose();
+    // drained — it leaves with the water
+    const { ctx: ctx2, step: step2 } = hearingCtx(rooms, true);
+    const sw2 = new Swamper();
+    sw2.spawn(ctx2);
+    step2(sw2, 3);
+    expect(sw2.state).toBe('done');
+    const captions = (ctx2.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /slips down the drain/.test(c))).toBe(true);
+    sw2.dispose();
+  });
+});
+
+
+describe('Grafter (sprint 256)', () => {
+  it('the rise is the warning — a grafter risen at your feet cannot strike yet', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    // the u-lobby ambush from sprint 255: a closet where the far corner is
+    // already inside kill range — without the grace this killed on frame 1.
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 4, depth: 4, spec: { width: 4, depth: 4, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; g.update(0.05); } // 1.0s
+    expect(ctx.killPlayer).not.toHaveBeenCalled();
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); } // past the rise
+    expect(ctx.killPlayer).toHaveBeenCalledWith('grafter', expect.any(String));
+    g.dispose();
+  });
+
+  it('reads the sign — killed hazards drag the rubble to the mark', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    // the player hides in the far corner — the grafter never sees them
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    const evidence = { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] };
+    ctx.hazardEvidence = (key, x, z, r) => {
+      const out = !evidence.readBy.includes(key)
+        && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    let closest = Infinity;
+    for (let i = 0; i < 300; i++) {
+      ctx.now += 0.05; g.update(0.05);
+      const gp = (g as unknown as { pos: { x: number; z: number } }).pos;
+      closest = Math.min(closest, Math.hypot(gp.x - evidence.pos.x, gp.z - evidence.pos.z));
+    }
+    expect(closest, 'the rubble drags to the killed hazard').toBeLessThan(0.6);
+    expect(evidence.readBy).toContain('grafter:0');
+    g.dispose();
+  });
+
+  it('chases ghosts — stale sign names itself in the drag (sprint 270)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    const evidence = { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: -1, readBy: [] as string[], old: true };
+    ctx.hazardEvidence = (key, x, z, r) => {
+      const out = !evidence.readBy.includes(key)
+        && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; g.update(0.05); }
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /old mark/.test(t)), 'stale sign smells like stale sign').toBe(true);
+    g.dispose();
+  });
+});
+
+
+describe('HazardField snares (sprint 257)', () => {
+  const snareRoom = (flooded: boolean): RoomInstance => ({
+    index: 0, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 6, depth: 12, spec: { width: 6, depth: 12, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded,
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'snare', submerged: true } }],
+  } as unknown as RoomInstance);
+
+  it('an upright stride trips the paper seal — root, blood, and a loud carry', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [snareRoom(false)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(8, 'hazard', expect.any(String));
+    expect(ctx.player.rootedUntil).toBeGreaterThan(ctx.now);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(emits.some((e) => e.intensity >= 0.7 && e.category === 'impact')).toBe(true);
+  });
+
+  it('a crouched wader feels submerged wire and steps over — the snare stays armed', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [snareRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => false });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    ctx.player.crouching = true;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect((h.snares[0] as { armed: boolean }).armed).toBe(true);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(emits.some((e) => e.intensity <= 0.3 && /wire underfoot/.test(String(e.caption)))).toBe(true);
+    // but an upright wade over the same wire trips it
+    ctx.player.crouching = false;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(8, 'hazard', expect.any(String));
+  });
+});
+
+describe('HazardField electrified water (sprint 260)', () => {
+  const arcRoom = (flooded: boolean): RoomInstance => ({
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 10, spec: { width: 8, depth: 10, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded, darkRoom: false,
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'puddle', electrified: true } }],
+  } as unknown as RoomInstance);
+
+  it('live water ticks blood and hums before it bites', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [arcRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => false });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    // just outside the arc's reach — it warns, doesn't hurt
+    ctx.player.pos.x = 3.0; ctx.player.pos.z = 0;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), '[the water ahead hums amber]', expect.anything());
+    // inside — it ticks
+    ctx.player.pos.x = 1.5;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(4, 'hazard', expect.stringContaining('Electrified'));
+  });
+
+  it('the drain takes the arc with the water', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [arcRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => true });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    h.update(ctx, 1);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).not.toHaveBeenCalled();
+  });
+});
+
+describe('HazardField steam lines (sprint 261)', () => {
+  const steamRoom = (): RoomInstance => ({
+    index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+    doors: [], hidingSpots: [], scheduled: [],
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'steam' } }],
+  } as unknown as RoomInstance);
+
+  it('the line hums before it vents, and the vent ticks blood', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [steamRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    const st = h.steams[0];
+    ctx.player.pos.x = 3.5; ctx.player.pos.z = 0; // in the warn ring
+    st.phase = st.cycle - 1.0; // last 1.2s of the cycle — the hum
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), expect.stringContaining('about to vent'), expect.anything());
+    // the vent opens — step inside and it ticks
+    ctx.player.pos.x = 1.5;
+    st.phase = 0.2;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(6, 'hazard', expect.stringContaining('Steam'));
+  });
+
+  it('idle phases are safe — and a bled line is dead metal', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [steamRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    const st = h.steams[0];
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    st.phase = st.cycle * 0.6; // mid-idle
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    st.dead = true;
+    st.phase = 0.2; // back in blast — dead lines don't fire
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+  });
+});
+
+describe('old sign (sprint 266)', () => {
+  it('spent hazards load dead and leave readable old sign', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const room = {
+      index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+      doors: [], hidingSpots: [], scheduled: [],
+      sockets: [
+        { kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'steam', spent: true } },
+        { kind: 'hazard', pos: v3(-1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'snare', spent: true } },
+      ],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(room);
+    expect(h.steams[0].dead, 'a spent line is dead metal').toBe(true);
+    expect(h.snares[0].armed, 'a sprung wire stays sprung').toBe(false);
+    expect(h.evidence.filter((e) => e.old).length).toBe(2);
+    // walking to the mark reads it — once
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0.4;
+    h.update(ctx, 0.02);
+    expect(ctx.cue).toHaveBeenCalledWith('floor-creak', expect.anything(),
+      expect.stringContaining('bled line'), expect.anything());
+    h.update(ctx, 0.02);
+    const calls = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.filter((c) => /bled line/.test(String(c[2])));
+    expect(calls.length, 'old sign reads once').toBe(1);
+  });
+});
+
+describe('the belt-wheel (sprint 267)', () => {
+  const fanRoom = {
+    index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+    doors: [], hidingSpots: [], scheduled: [],
+    sockets: [{ kind: 'hazard', pos: v3(0, 0, 0), yaw: 0, filled: false, meta: { hazard: 'fan' } }],
+  } as unknown as RoomInstance;
+
+  it('the blades take standing flesh; a duck walks under them', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const ctx = makeCtx([fanRoom], { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(fanRoom);
+    ctx.player.pos.x = 0.4; ctx.player.pos.z = 0.3;
+    (ctx.player as unknown as { crouching: boolean }).crouching = false;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer, 'a stander feeds the wheel').toHaveBeenCalledWith(
+      7, 'hazard', expect.stringContaining('duck under'));
+    (ctx.damagePlayer as ReturnType<typeof vi.fn>).mockClear();
+    (ctx.player as unknown as { crouching: boolean }).crouching = true;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer, 'a duck clears the blades').not.toHaveBeenCalled();
+  });
+});
+
+describe('the Hauler (sprint 271)', () => {
+  const haulRoom = {
+    index: 0, templateId: 'u-long-hall', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 14, spec: { width: 8, depth: 14, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('hauls a–b down the long axis, the sledge trailing the line', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h = new Hauler();
+    h.spawn(ctx);
+    const z0 = (h as unknown as { pos: { x: number; z: number } }).pos.z;
+    for (let i = 0; i < 120; i++) { ctx.now += 0.05; h.update(0.05); }
+    const p1 = (h as unknown as { pos: { x: number; z: number } }).pos;
+    const s1 = (h as unknown as { sledgePos: { x: number; z: number } }).sledgePos;
+    expect(Math.abs(p1.z - z0), 'the haul advances').toBeGreaterThan(1);
+    // the drag trails the heading by ~1.25m
+    const behind = Math.hypot(s1.x - p1.x, s1.z - p1.z);
+    expect(behind).toBeGreaterThan(1.0);
+    expect(behind).toBeLessThan(1.6);
+    h.dispose();
+  });
+
+  it('a crash near the sledge pulls the ram — once', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    // wire the bus by hand — the ctx spy only records emits
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const h = new Hauler();
+    h.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; h.update(0.05); } // past the rise
+    // stand on the haul line, bang the boards beside the sledge
+    const hp = (h as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = hp.x; ctx.player.pos.z = hp.z + 1.0;
+    for (const fn of listeners) fn({ x: hp.x, y: 0.3, z: hp.z, intensity: 0.7, category: 'impact', caption: '[slam]' });
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; h.update(0.05); }
+    expect(ctx.damagePlayer, 'the sledge team rams the sound').toHaveBeenCalledWith(
+      25, 'hauler', expect.any(String));
+    const hits = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.filter((c) => c[1] === 'hauler');
+    expect(hits.length, 'one ram per rouse').toBe(1);
+    h.dispose();
+  });
+});
+
+describe('the Laundress (sprint 272)', () => {
+  const laundryRoom = {
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 11, flooded: true,
+    spec: { width: 9, depth: 11, props: [{ kind: 'pipeManifold', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('keeps her basin — a hand on the crank is answered', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); } // past the rise
+    expect(w.guarding, 'she holds the drain').toBe(true);
+    const dp = (w as unknown as { drainPos: { x: number; z: number } }).drainPos;
+    w.aggravate(v3(dp.x + 0.4, 0, dp.z)); // a hand on the crank, within reach
+    expect(ctx.damagePlayer, 'she takes the hand').toHaveBeenCalledWith(
+      15, 'laundress', expect.any(String));
+    w.aggravate(v3(dp.x + 0.4, 0, dp.z)); // still biting cooldown — once
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    w.dispose();
+  });
+
+  it('a splash pulls her off the basin, then she returns to it', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const w = new Laundress();
+    w.spawn(ctx);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    // a splash across the room — close enough to worry her (aim inside the 9-wide room)
+    for (const fn of listeners) fn({ x: wp.x - 3, y: 0.3, z: wp.z, intensity: 0.6, category: 'impact', caption: '[slam]' });
+    expect(w.guarding, 'the basin is unwatched').toBe(false);
+    for (let i = 0; i < 150; i++) { ctx.now += 0.05; w.update(0.05); } // ~7.5s: out, sniff, return
+    expect(w.guarding, 'nothing at the splash — back to work').toBe(true);
+    w.dispose();
+  });
+
+  it('rides the water out when the room drains', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    let drained = false;
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => drained });
+    const w = new Laundress();
+    w.spawn(ctx);
+    drained = true;
+    ctx.now += 0.05; w.update(0.05);
+    expect(w.state, 'the wash went down the drain').toBe('done');
+  });
+
+  it('hands on her basin while she works are bitten', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); }
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = wp.x + 0.4; ctx.player.pos.z = wp.z; // at the basin
+    ctx.now += 0.05; w.update(0.05);
+    expect(ctx.damagePlayer, 'she guards the wash').toHaveBeenCalledWith(
+      15, 'laundress', expect.any(String));
+    w.dispose();
+  });
+
+  it('a pilfered basket keens on her return — loud enough to feed hunters', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const w = new Laundress();
+    w.spawn(ctx);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    for (const fn of listeners) fn({ x: wp.x - 3, y: 0.3, z: wp.z, intensity: 0.6, category: 'impact', caption: '[slam]' });
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; w.update(0.05); } // she's out sniffing
+    expect(w.guarding).toBe(false);
+    w.basketFull = false; // pilfered mid-window
+    for (let i = 0; i < 140; i++) { ctx.now += 0.05; w.update(0.05); } // she returns
+    expect(w.guarding, 'back to the basin').toBe(true);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as { caption: string; intensity: number });
+    const keen = emits.find((e) => /wail at the basin/.test(e.caption));
+    expect(keen, 'the wash is lighter').toBeTruthy();
+    expect(keen!.intensity, 'the keen carries').toBeGreaterThanOrEqual(0.55);
+    w.dispose();
+  });
+});
+
+describe('the Auditor (sprint 277)', () => {
+  const deskRoom = {
+    index: 0, templateId: 'u-records-cage', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'filing', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const hallRoom = {
+    index: 1, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 12 }, yaw: 0,
+    width: 6, depth: 12,
+    entryPos: { x: 0, y: 0, z: 7 }, exitPos: { x: 0, y: 0, z: 17 }, navNodes: [],
+    spec: { width: 6, depth: 12, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('notes unpaid hands in his room — the ledger comes out', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0; // in his room
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded, 'the ledger opens').toBe(true);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'audit'), 'the settle point registers').toBe(true);
+    a.dispose();
+  });
+
+  it('walks the book after a debtor who leaves', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded).toBe(true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12; // slips into the next room, still owing
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.pursuing, 'the ledger walks').toBe(true);
+    a.dispose();
+  });
+
+  it('his touch is a beating — the debt still stands', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); } // past the rise
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.pursuing).toBe(true);
+    // stand on his path — within the touch
+    const wp = (a as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = wp.x + 0.5; ctx.player.pos.z = wp.z;
+    for (let i = 0; i < 20 && !ctx.damagePlayer.mock.calls.length; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(ctx.damagePlayer, 'the clerk collects in kind').toHaveBeenCalledWith(
+      10, 'auditor', expect.any(String));
+    a.dispose();
+  });
+
+  it('settled stamps square — ledger shut, pursuit off', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded).toBe(true);
+    a.settled();
+    expect(a.demanded).toBe(false);
+    expect(a.pursuing).toBe(false);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
+    a.dispose();
+  });
+});
+
+describe('the House Detective (sprint 278)', () => {
+  const deskRoom = {
+    index: 0, templateId: 'records-aisle', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'counter', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const hallRoom = {
+    index: 1, templateId: 'corridor', origin: { x: 0, y: 0, z: 12 }, yaw: 0,
+    width: 6, depth: 12,
+    entryPos: { x: 0, y: 0, z: 7 }, exitPos: { x: 0, y: 0, z: 17 }, navNodes: [],
+    spec: { width: 6, depth: 12, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('clocks a debtor over the slow look — the register comes out', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    // under 2.5s of shared presence — still just a suit at a desk
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'no clock yet').toBe(false);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the slow look lands').toBe(true);
+    expect(d.warranted, 'the wire is live').toBe(true);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'), 'the settle point registers').toBe(true);
+    d.dispose();
+  });
+
+  it('phones ahead — each fresh room you enter rings for you', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    emit.mockClear();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12; // slips into the next room
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'detective'),
+      'the room rings ahead of you').toBe(true);
+    d.dispose();
+  });
+
+  it('the wire only reaches so far — past its reach it goes quiet', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    // roomOf() returns the array index — the far room must sit past +10
+    const rooms = [deskRoom, hallRoom];
+    for (let i = 2; i <= 12; i++) {
+      rooms.push({ ...hallRoom, index: i, origin: { x: 0, y: 0, z: i * 12 },
+        entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 } } as unknown as RoomInstance);
+    }
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12 * 12; // inside array room 12
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted, 'the wire goes quiet past its reach').toBe(false);
+    d.dispose();
+  });
+
+  it('settled strikes your name — wire off, point down', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    d.settled();
+    expect(d.clocked).toBe(false);
+    expect(d.warranted).toBe(false);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
+    d.dispose();
   });
 });

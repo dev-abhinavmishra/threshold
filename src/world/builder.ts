@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos, inDoorLane } from './spec';
+import { portLocalPos, footprintInDoorLane } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -36,6 +36,17 @@ export interface BuiltRoom {
 }
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
+
+// Underscript weathering — ~121 rooms reuse a small set of milled pieces, so
+// per-instance decay is what keeps the repetition from reading flat. Dead
+// fixtures share one dark material so they still merge per room; dying ones
+// carry a cloned emissive + the 'flicker' anim (coupled to the nearest room
+// light through lsRef, resolved lazily by the game loop).
+const DEAD_TUBE_MAT = new THREE.MeshStandardMaterial({ color: 0x22251f, roughness: 0.8, metalness: 0.15 });
+const U_JITTER: Record<string, number> = {
+  paperStack: 0.5, typewriter: 0.5, waterCooler: 0.25,
+  printer: 0.08, breakTable: 0.08, dishDrainer: 0.3,
+};
 
 // Signature of everything mergeGeometries() requires to match across
 // geometries: attribute names, index-ness, morph attribute names and
@@ -314,6 +325,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const floor = new THREE.Mesh(texBox(w, 0.1, d), floorMat);
   floor.position.y = -0.05;
   group.add(floor);
+  // Flooded halls — a dark sheet lying on the floor. It stays a live named
+  // mesh (never merged) so the game can sink it when the drain opens.
+  if (room.flooded) {
+    const sheet = new THREE.Mesh(texBox(w * 0.97, 0.02, d * 0.97), MAT.waterDark());
+    sheet.position.y = 0.05;
+    sheet.name = `flood-${room.index}`;
+    sheet.userData.anim = 'flood';
+    group.add(sheet);
+  }
   const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
   // Corridor carpet runner — a worn strip down the length of the passage,
@@ -1562,7 +1582,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const laneSpec = { width: w, depth: d, entry: spec.entry, exits: spec.exits };
   for (const p of passthrough) {
     try {
-      const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
+      // Underscript furniture loosening — desk items and coolers sit askew.
+      const jit = isUnder ? U_JITTER[p.kind] : 0;
+      const ps = jit ? { ...p, yaw: (p.yaw ?? 0) + (rng.float() - 0.5) * jit } : p;
+      const built = buildProp({ ...ps }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       if (p.kind === 'deadTenant') built.group.name = `tenant-${room.index}`;
       if (p.kind === 'coffin') built.group.name = `coffin-${room.index}`;
       if (p.kind === 'pianoUpright') built.group.name = `piano-${room.index}`;
@@ -1581,10 +1604,47 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'statue' || p.kind === 'marbleBust') built.group.name = `stat-${room.index}`;
       if (p.kind === 'rug') built.group.name = `rug-${room.index}`;
       if (p.kind === 'chandelier') built.group.name = `chan-${room.index}`;
-      // A wide prop centered beside a door can still reach into its lane —
-      // drop any whose solid collider footprint touches the approach strip.
-      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && inDoorLane(laneSpec, c.x, c.z, Math.hypot(c.w, c.d) / 2))) continue;
+      // A wide prop beside a door can still reach into the doorway — drop
+      // any whose solid collider footprint overlaps the door rectangle.
+      if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
       group.add(built.group);
+      if (isUnder) {
+        // Fixture decay — dead tubes go dark, dying ones flicker off their
+        // nearest room light, a few hang snapped at an angle.
+        if (p.kind === 'fluoroTube' || p.kind === 'exitSign') {
+          const sign = p.kind === 'exitSign';
+          const dead = rng.float() < (sign ? 0.08 : 0.12);
+          const dying = !dead && rng.float() < (sign ? 0.18 : 0.3);
+          if (dead || dying) {
+            built.group.traverse((o) => {
+              const m = o as THREE.Mesh;
+              if (!m.isMesh || Array.isArray(m.material)) return;
+              const sm = m.material as THREE.MeshStandardMaterial;
+              // Milled fixtures carry no emissive — the lit face is the
+              // 'wax' bucket (tubes / legend strokes); procedural fallbacks
+              // use a real emissive material.
+              if ((sm.emissiveIntensity ?? 0) < 0.05 && sm.name !== 'wax') return;
+              if (dead) { m.material = DEAD_TUBE_MAT; return; }
+              const cm = sm.clone();
+              if ((cm.emissiveIntensity ?? 0) < 0.05) {
+                cm.emissive.setHex(sign ? 0xd82618 : 0xccd4b8);
+                cm.emissiveIntensity = 1.2;
+              }
+              m.material = cm;
+              m.userData.anim = 'flicker';
+              m.userData.animSeed = rng.float() * 100;
+              const ls = spec.lights?.find((l) => Math.hypot(l.x - p.x, l.z - p.z) < 2.4);
+              if (ls) m.userData.lsRef = ls;
+            });
+          }
+          if (!sign && !dead && rng.float() < 0.12) {
+            built.group.rotation.z += (rng.float() < 0.5 ? -1 : 1) * (0.08 + rng.float() * 0.2);
+          }
+        } else if (p.kind === 'paperStack' && rng.float() < 0.15) {
+          // spilling stack — slight lean, reads disturbed
+          built.group.rotation.z = (rng.float() < 0.5 ? -1 : 1) * (0.06 + rng.float() * 0.1);
+        }
+      }
       let animated = false;
       built.group.traverse((o) => { if (o.userData.anim) animated = true; });
       if (!built.group.name && !animated) bakeable.push(built.group);
@@ -1611,6 +1671,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     } catch {
       // skip broken prop rather than fail room
+    }
+  }
+
+  // Underscript floor weathering — paper litter drift and grime stains, all
+  // on shared materials so the bake keeps them cheap.
+  if (isUnder) {
+    const litterGeos: THREE.BufferGeometry[] = [];
+    const nSpots = 1 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < nSpots; i++) {
+      const sx = (rng.float() - 0.5) * (w - 1.4), sz = (rng.float() - 0.5) * (d - 1.4);
+      if (footprintInDoorLane(laneSpec, sx, sz, 0.3, 0.3)) continue;
+      const n = 3 + Math.floor(rng.float() * 4);
+      for (let j = 0; j < n; j++) {
+        const g = texBox(0.24 + rng.float() * 0.1, 0.004, 0.32 + rng.float() * 0.08);
+        g.applyMatrix4(new THREE.Matrix4()
+          .makeRotationY(rng.float() * Math.PI * 2)
+          .setPosition(sx + (rng.float() - 0.5) * 0.55, 0.006 + j * 0.0035, sz + (rng.float() - 0.5) * 0.55));
+        litterGeos.push(g);
+      }
+    }
+    if (litterGeos.length) {
+      const litter = mergeGeometries(litterGeos, false);
+      if (litter) {
+        const lm = new THREE.Mesh(litter, MAT.paperOld());
+        lm.receiveShadow = true;
+        group.add(lm);
+      }
     }
   }
 
@@ -1863,8 +1950,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   }
   // Pair each built light to its authored fixture mesh (lampMeshes are
   // pushed one-per-spec-light in spec order; lights[] is a re-sorted
-  // slice). Glow meshes get per-light material clones so the ambient loop
-  // can dip them with dim/break without touching shared cache materials.
+  // slice). Each paired mesh takes its own material clone — per-light
+  // writes are live: baseIntensity jitter (Game.ts range(0.88,1.14)) and
+  // alternating sweep flicker differentiate paired lights, so a shared
+  // clone would collapse fixtures to whichever light wrote last.
+  // Flicker/anim meshes skip pairing entirely (their own lightRef
+  // coupling handles glow).
   if (!room.darkRoom) {
     const lampByLs = new Map<unknown, THREE.Mesh>();
     spec.lights.forEach((ls, i) => { const m = lampMeshes[i]; if (m) lampByLs.set(ls, m); });
@@ -2013,6 +2104,48 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const wall = new THREE.Mesh(texBox(Math.abs(ux) > 0.5 ? len + 2.6 : 0.24, 2.8, Math.abs(ux) > 0.5 ? 0.24 : len + 2.6), wallMat);
         wall.position.set((la.x + lb.x) / 2 + px, 1.4, (la.z + lb.z) / 2 + pz);
         corr.add(wall);
+      }
+      // Sprint 230 — dress the run: pilaster-bay panelling, cornice, a
+      // lantern, a runner, and a portal surround framing each end. Same
+      // milled vocabulary corridorTrim lays inside rooms; colliders stay
+      // out — the walls already block.
+      {
+        const nx = -uz, nz = ux;
+        const face = (dx2: number, dz2: number) => Math.atan2(dx2, dz2);
+        const trim = (kind: PropKind, t: number, side: number, y: number, yaw?: number) => {
+          const px = la.x + ux * t + nx * side * 1.16;
+          const pz = la.z + uz * t + nz * side * 1.16;
+          const b = buildProp({ kind, x: px, z: pz, y, yaw: yaw ?? face(-nx * side, -nz * side) },
+            rng.fork(si * 997 + Math.floor(t * 10) * 31 + side * 7 + (kind as string).length));
+          b.group.name = `connTrim-${kind}`;
+          corr.add(b.group);
+        };
+        const bays = Math.max(1, Math.round(len / 2.2));
+        const bay = len / bays;
+        for (const side of [-1, 1]) {
+          for (let i = 0; i <= bays; i++) {
+            const t = i * bay;
+            if (t > 0.25 && t < len - 0.25) trim('pilaster', t, side, 1.25);
+            if (i < bays) {
+              trim('wainscotRun', t + bay / 2, side, 0.55);
+              trim('corniceRun', t + bay / 2, side, 2.63);
+            }
+          }
+          if (len > 4.5 && (si + (side > 0 ? 1 : 0)) % 2 === 0) trim('wallLantern', len / 2, side, 2.1);
+        }
+        if (len > 3.2) {
+          const t = len / 2;
+          const rug = buildProp({ kind: 'runnerRug', x: la.x + ux * t, z: la.z + uz * t, y: 0.02, yaw: Math.atan2(-uz, ux) }, rng.fork(si * 613));
+          rug.group.name = 'connTrim-runnerRug';
+          corr.add(rug.group);
+        }
+        // Portal surrounds at both ends, fronts into the corridor.
+        const suA = buildProp({ kind: 'doorSurround', x: la.x + ux * 0.3, z: la.z + uz * 0.3, y: 1.25, yaw: face(ux, uz) }, rng.fork(si * 61));
+        suA.group.name = 'connTrim-doorSurround';
+        corr.add(suA.group);
+        const suB = buildProp({ kind: 'doorSurround', x: lb.x - ux * 0.3, z: lb.z - uz * 0.3, y: 1.25, yaw: face(-ux, -uz) }, rng.fork(si * 67));
+        suB.group.name = 'connTrim-doorSurround';
+        corr.add(suB.group);
       }
     }
     group.add(corr);

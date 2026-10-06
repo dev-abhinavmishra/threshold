@@ -10,12 +10,15 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
+import { PostGovernor } from './postGovernor';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { GameClock } from '../engine/clock';
-import { SoundEventBus } from '../engine/events';
+import { SoundEventBus, type SoundEvent } from '../engine/events';
+import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { pointInRoom } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
-import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
+import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { buildProp } from '../world/props';
@@ -24,22 +27,24 @@ import { preloadModels, modelInstance } from '../world/modelLibrary';
 import { preloadFigures, riggedFigure, type RiggedFigure } from '../entities/rigged';
 import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
+import { HeldView } from './viewmodel';
 import { PlayerController, type MoveInput } from '../player/controller';
-import { InteractionSystem, type Interactable } from '../player/interaction';
+import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
-import { CorridorRunner } from '../entities/corridor';
+import { CorridorRunner, Warden } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell, Inspector, Commissionaire } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor, Grafter } from '../entities/setpieces';
+import { Auditor, Detective, Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
-import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
+import { Bellman } from '../entities/bellman';
+import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
@@ -55,7 +60,90 @@ export interface StartOptions {
 
 const KEY_DEFAULT = (s: SettingsData, name: string) => s.keybinds[name] ?? '';
 
-const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+// SAFE_ROOM_TEMPLATES lives in config.ts — shared with entities (bellman).
+
+/** Ear-to-the-seam tells: entity scheduled beyond the door → what leaks
+ *  through the crack. Each borrows that entity's own audio vocabulary. */
+const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' }> = {
+  sweep: { sfx: 'floor-creak', text: '[floor-creaks crawling — it is coming]', sev: 'danger' },
+  reprise: { sfx: 'floor-creak', text: '[floor-creaks crawling — again]', sev: 'danger' },
+  witness: { sfx: 'witness-drone', text: '[a held breath — it waits to be seen]', sev: 'warn' },
+  whisper: { sfx: 'whisper-voice', text: '[whispering — your name, or near enough]', sev: 'warn' },
+  inkling: { sfx: 'inkling-hiss', text: '[small feet — too many of them]', sev: 'warn' },
+  redactor: { sfx: 'redactor-sense', text: '[a page turning itself]', sev: 'warn' },
+  echoskin: { sfx: 'echoskin-steps', text: '[your own footsteps, answering late]', sev: 'danger' },
+  maelstrom: { sfx: 'steam-hiss', text: '[a held chord, straining]', sev: 'danger' },
+  pursuer: { sfx: 'husk-foot', text: '[heavy steps — pacing]', sev: 'danger' },
+  curator: { sfx: 'curator-search', text: '[ticking — it is hunting]', sev: 'danger' },
+  hollow: { sfx: 'hollow-wake', text: '[a hum, pitched wrong]', sev: 'danger' },
+  husk: { sfx: 'husk-stir', text: '[a low rattle — something remembers being people]', sev: 'warn' },
+  redline: { sfx: 'printer-jam', text: '[a machine trying to start]', sev: 'warn' },
+  stillframe: { sfx: 'stillframe-snap', text: '[the air held stiff]', sev: 'warn' },
+  returner: { sfx: 'echoskin-step', text: '[steps that know the way back]', sev: 'danger' },
+  margin: { sfx: 'margin-rustle', text: '[a rustle along the far wall]', sev: 'warn' },
+  editor: { sfx: 'editor-delete', text: '[paper being unwritten]', sev: 'warn' },
+  grafter: { sfx: 'grafter-grind', text: '[something grafting itself together]', sev: 'warn' },
+  hazard: { sfx: 'steam-hiss', text: '[a hiss, steady]', sev: 'warn' },
+  orrery: { sfx: 'orrery-wake', text: '[gears — a slow count]', sev: 'warn' },
+  lurker: { sfx: 'lurker-stalk', text: '[cloth dragged over boards]', sev: 'danger' },
+  behemoth: { sfx: 'behemoth-thud', text: '[something vast shifting]', sev: 'danger' },
+  collector: { sfx: 'collector-rattle', text: '[a rattle — counting]', sev: 'warn' },
+  singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
+  bellman: { sfx: 'knock', text: '[a knock — courteous, in no hurry]', sev: 'warn' },
+  porter: { sfx: 'hide-creak', text: '[drips of dust — something clings overhead]', sev: 'warn' },
+  warden: { sfx: 'footstep', text: '[measured pacing — something walks its post]', sev: 'warn' },
+  groundswell: { sfx: 'floor-creak', text: '[the boards groan — a swell in the floor]', sev: 'warn' },
+  inspector: { sfx: 'collector-rattle', text: '[a latch being tried — one after another]', sev: 'warn' },
+  commissionaire: { sfx: 'collector-rattle', text: '[a gloved hand raps the frame — a door held shut]', sev: 'warn' },
+  swamper: { sfx: 'puddle-splash', text: '[water, and something in it — slow]', sev: 'warn' },
+  hauler: { sfx: 'impact', text: '[a sledge scrape — cargo on the move]', sev: 'warn' },
+  laundress: { sfx: 'puddle-splash', text: '[wash, wring — somebody works the drain]', sev: 'warn' },
+  auditor: { sfx: 'chalk-mark', text: '[a ledger page turns — the clerk is in]', sev: 'warn' },
+  detective: { sfx: 'chalk-mark', text: '[a register opens — the house is checking names]', sev: 'warn' },
+};
+
+/** Agitated variants once a scheduled encounter has been roused by noise —
+ *  used by the rouse tell and by ear-to-the-seam listens. */
+/** Pipe-family props a flooded room's water can be drained through. */
+const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+
+const ROUSED_LINES: Record<EntityId, string> = {
+  sweep: '[floor-creaks racing the boards — it heard you]',
+  reprise: '[the creaking doubles back — it heard you]',
+  witness: '[the held breath sharpens — it knows]',
+  whisper: '[the whispering quickens — your name, faster]',
+  inkling: '[small feet scatter, then gather — alert]',
+  redactor: '[pages riffling — it marked the noise]',
+  echoskin: '[your footsteps, answering at a run]',
+  maelstrom: '[the held chord snaps taut]',
+  pursuer: '[heavy steps — already at the door]',
+  curator: '[ticking, quick — it has your measure]',
+  hollow: '[the hum swells to meet you]',
+  husk: '[the rattle quickens — it remembers hunger]',
+  redline: '[the machine catches — running now]',
+  stillframe: '[the stiff air tightens — posed]',
+  returner: '[steps — turned toward you]',
+  margin: '[the rustle skitters to the seam]',
+  editor: '[paper tearing — it found your page]',
+  grafter: '[grinding faster — assembling]',
+  hazard: '[the hiss steadies — breathing]',
+  orrery: '[gears spin up — counting faster]',
+  lurker: '[cloth drag, quick — crossing the room]',
+  behemoth: '[the vast thing shifts — floor settling]',
+  collector: '[the rattle rattles — counting louder]',
+  singer: '[the lullaby lifts — it heard you coming]',
+  bellman: '[the knocking quickens — it knows you are there]',
+  porter: '[the dust pours — it is already above the door]',
+  warden: '[the whistle again — it is still on station]',
+  groundswell: '[the floor rolls again]',
+  inspector: '[the keys again — it is still checking]',
+  commissionaire: '[the rap again — it is still holding the doors]',
+  swamper: '[the flood stirs — it is still in the water]',
+  hauler: '[the scrape halts — it heard you]',
+  laundress: '[the wringing stops — the drain is watched]',
+  auditor: '[scratch of nib — the tally is open]',
+  detective: '[the house phone — a name repeated quietly]',
+};
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
 const wallWordTextures = new Map<string, THREE.Texture>();
@@ -200,6 +288,11 @@ export class Game {
   private peekEye: THREE.Group | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
+  private ssaoPass: SSAOPass | null = null;
+  private bloomPass: UnrealBloomPass | null = null;
+  private postGov: PostGovernor | null = null;
+  private basePixelRatio = 1;
+  private lastFrameNow = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -209,6 +302,7 @@ export class Game {
     preloadFigures();
     this.bindInput();
     bindSoundBus(this.sound, this.audio);
+    this.sound.on((ev) => this.onRouseNoise(ev));
     this.audio.applySettings(this.settings);
     this.audio.onCaption((c) => {
       const st = useGameStore.getState();
@@ -223,7 +317,8 @@ export class Game {
   private initThree(): void {
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
     const q = QUALITY[this.settings.quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatioCap));
+    this.basePixelRatio = Math.min(window.devicePixelRatio, q.pixelRatioCap);
+    this.renderer.setPixelRatio(this.basePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -265,11 +360,24 @@ export class Game {
       ssao.minDistance = 0.002;
       ssao.maxDistance = 0.12;
       composer.addPass(ssao);
+      this.ssaoPass = ssao;
     }
     if (q !== 'low') {
       const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.2, 0.42, 0.93);
       composer.addPass(bloom);
+      this.bloomPass = bloom;
     }
+    // Adaptive post budget — the governor sheds SSAO → bloom → render
+    // scale under sustained low fps and restores with hysteresis.
+    this.postGov = new PostGovernor({
+      setSsao: (on) => { if (this.ssaoPass) this.ssaoPass.enabled = on; },
+      setBloom: (on) => { if (this.bloomPass) this.bloomPass.enabled = on; },
+      setScale: (mul) => {
+        this.renderer.setPixelRatio(this.basePixelRatio * mul);
+        this.composer?.setPixelRatio(this.renderer.getPixelRatio());
+        this.composer?.setSize(window.innerWidth, window.innerHeight);
+      },
+    }, { hasSsao: !!this.ssaoPass, hasBloom: !!this.bloomPass });
     this.grainUniforms = {
       tDiffuse: { value: null },
       uTime: { value: 0 },
@@ -405,6 +513,7 @@ export class Game {
     this.milestones.clear();
     this.doorStates.clear();
     this.hazard = new HazardField();
+    for (const r of [...this.route.rooms, ...this.route.underRooms]) this.hazard.addFromRoom(r);
     this.roomBounds.clear();
     // the prop layer holds no memory across runs — every one-time
     // arm/fire decision resets so a retry or reseed replays honestly
@@ -431,6 +540,10 @@ export class Game {
     this.crackedVents.clear();
     this.litHearths.clear();
     this.answeredPhones.clear();
+    this.listenedDoors.clear();
+    this.rousedSpawned.clear();
+    this.playerTrail.length = 0;
+    this.lastCrumbSet = false;
     this.armedTraps.clear();
     this.snappedTraps.clear();
     this.priedTraps.clear();
@@ -598,6 +711,7 @@ export class Game {
       { id: 'feltWrap', price: rng.int(18, 28) },
       { id: 'latchpick', price: rng.int(24, 34) },
       { id: 'windAlarm', price: rng.int(28, 40) },
+      { id: 'doorChock', price: rng.int(8, 14) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -623,6 +737,7 @@ export class Game {
       { id: 'latchpick', price: 50 },
       { id: 'windAlarm', price: 55 },
       { id: 'wardSeal', price: 90 },
+      { id: 'doorChock', price: 12 },
     ];
     const rng = this.streams.roomStream('loot', room.index + 377);
     for (let i = pool.length - 1; i > 0; i--) {
@@ -668,6 +783,7 @@ export class Game {
         const r = this.activeRooms()[i];
         return r ? v3(r.origin.x, 0, r.origin.z) : v3();
       },
+      playerTrail: this.playerTrail,
       difficulty: useGameStore.getState().difficulty,
       accessibility: {
         reducedMotion: this.settings.reducedMotion,
@@ -695,12 +811,35 @@ export class Game {
         }
         return best;
       },
+      purse: () => this.imprints,
+      isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
+      claimsOwed: () => this.unpaidTheft,
+      heldOwed: () => this.unpaidHeld,
+      hazardEvidence: (key, x, z, r) => {
+        // The Warden smells fresh kills; the dumber rubble chases ghosts —
+        // OLD sign still pulls a grafter (a spent-wire room is free bait).
+        const staleOk = key.startsWith('grafter:');
+        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && !e.readBy.includes(key)
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
+        for (const e of out) e.readBy.push(key);
+        return out;
+      },
     };
   }
 
   /** Interactable points registered by living entities (e.g. the
    *  Collector's toll) — re-applied after every stream rebuild. */
   private dynamicInteractables: import('../player/interaction').Interactable[] = [];
+
+  /** The Auditor's tally — each marginalia claim drawn, sledge pick, and
+   *  basket steal below is pilferage the under's clerks can read. Settled
+   *  at an auditor's desk; refused, it walks. */
+  private unpaidTheft = 0;
+
+  /** The Detective's register — each imprint claim drawn on the main
+   *  route is a debt the house keeps. Settled at his desk; walking out
+   *  owed puts your face on the wire. */
+  private unpaidHeld = 0;
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -732,8 +871,30 @@ export class Game {
       case 'behemoth': this.spawnEntity(new CorridorRunner('behemoth', { behemoth: true, passes: 2 })); break;
       case 'editor': this.spawnEntity(new Editor()); break;
       case 'grafter': this.spawnEntity(new Grafter()); break;
+      // The Swamper: drowned thing that lies in flooded halls and hears splashes.
+      case 'swamper': this.spawnEntity(new Swamper()); break;
+      // The Hauler: a salvage-drag drudge — the sledge is a moving loot source.
+      case 'hauler': this.spawnEntity(new Hauler()); break;
+      // The Laundress: works a flooded drain and fouls it — the crank is hers.
+      case 'laundress': this.spawnEntity(new Laundress()); break;
+      // The Auditor: reads the theft tally, walks his ledger after debtors.
+      // The Detective: reads the held-property register, phones ahead about debtors.
+      case 'detective': this.spawnEntity(new Detective()); break;
+      case 'auditor': this.spawnEntity(new Auditor()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
+      // The Bellman: a stalker that follows your own trail through the hotel.
+      case 'bellman': this.spawnEntity(new Bellman()); break;
+      // The Porter: lintel ambusher — the counterplay is looking UP.
+      case 'porter': this.spawnEntity(new Porter()); break;
+      // The Warden: corridor patrol — whistle + charge on sight.
+      case 'warden': this.spawnEntity(new Warden()); break;
+      // The Groundswell: the room itself heaves — sidestep the travelling hump.
+      case 'groundswell': this.spawnEntity(new Groundswell()); break;
+      // The Inspector: walks the room testing every hiding spot.
+      case 'inspector': this.spawnEntity(new Inspector()); break;
+      // The Commissionaire: holds the doors — cross its blind arc or bait it.
+      case 'commissionaire': this.spawnEntity(new Commissionaire()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;
@@ -749,6 +910,109 @@ export class Game {
     this.audio.play(name, at, caption, severity);
   }
 
+  /** Ear-to-the-seam: probe through the leaf for an honest report on the
+   *  room beyond — scheduled entities get their own audible tell, darkness
+   *  and safe landings read differently, and walls with nothing behind them
+   *  (false doors, dead plaster) report dead air. */
+  private listenedDoors = new Set<string>();
+  /** Door leaves the player is crouch-bracing — held while they stay close. */
+  private bracedDoors: RoomInstance['doors'] = [];
+  private listenThrough(door: Door): { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } {
+    if (door.openT > 0.4) return { sfx: 'floor-creak', text: '[the door hangs open — you can just look]' };
+    if (door.falseDoor) return { sfx: 'floor-creak', text: '[dead air — plaster, and nothing behind it]', sev: 'warn' };
+    if (door.deep) return { sfx: 'margin-edge', text: '[a draught, far too cold — a breath held]', sev: 'warn' };
+    const target = this.roomBeyondDoor(door);
+    if (!target) return { sfx: 'floor-creak', text: '[dead air — nothing behind it]' };
+    const sched = target.scheduled[0];
+    if (sched) {
+      const base = LISTEN_CUES[sched.entity] ?? { sfx: 'floor-creak', text: '[something moves beyond]', sev: 'warn' as const };
+      return sched.roused
+        ? { sfx: base.sfx, text: ROUSED_LINES[sched.entity] ?? '[pacing — it heard you]', sev: 'danger' as const }
+        : base;
+    }
+    if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
+    if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
+    return { sfx: 'floor-creak', text: '[nothing moves]' };
+  }
+
+  /** Doors that already pre-spawned their roused encounters (one-shot). */
+  private rousedSpawned = new Set<string>();
+  /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
+   *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
+  private playerTrail: Vec3[] = [];
+  private lastCrumb = v3();
+  private lastCrumbSet = false;
+
+  /** Loud-noise rouse: a loud enough player-side event near a closed door
+   *  wakes whatever is scheduled beyond it. The door shudders, the thing
+   *  inside answers with its own tell, listens thereafter report agitation,
+   *  and the encounter pre-spawns the moment the leaf opens. */
+  private onRouseNoise(ev: SoundEvent): void {
+    if (!noiseCanRouse(ev) || this.space !== 'main') return;
+    const cur = this.activeRooms()[this.currentRoom];
+    if (!cur) return;
+    const rooms = this.activeRooms();
+    // Check every built room's doors — the door to the next room is owned
+    // by *that* room (door-i-in), not the one the player stands in.
+    for (const i of this.streamer.builtIndices) {
+      const r = rooms.find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i);
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (d.openT > 0.4 || d.opening || d.falseDoor || d.deep) continue;
+        if (!withinRouseRadius(ev, d.pos.x, d.pos.z)) continue;
+        const beyond = this.roomBeyondDoor(d);
+        if (!beyond || beyond === cur) continue;
+        let fired = false;
+        for (const sch of beyond.scheduled) {
+          if (sch.roused) continue;
+          sch.roused = true;
+          fired = true;
+        }
+        if (!fired) continue;
+        const ent = beyond.scheduled[0].entity;
+        const pos = { x: d.pos.x, y: 1.2, z: d.pos.z };
+        this.cue(LISTEN_CUES[ent]?.sfx ?? 'floor-creak', pos,
+          ROUSED_LINES[ent] ?? '[something stirs beyond]', 'warn');
+        // The leaf rattles in its frame — visible tell while it runs.
+        this.doorTry = { id: d.id, pos: d.pos, at: this.clock.time, until: this.clock.time + 1.1, rung: true };
+        // Other listeners (the Curator) hear it stir too.
+        this.sound.emit({ ...pos, intensity: 0.3, category: 'entity-cue', caption: '', source: ent });
+      }
+    }
+  }
+
+  /** Pre-spawn scheduled encounters through a roused door as it opens —
+   *  the entity is already live before the player crosses the threshold. */
+  private spawnRousedThrough(d: Door): void {
+    const beyond = this.roomBeyondDoor(d);
+    if (!beyond) return;
+    for (const sch of beyond.scheduled) {
+      if (!sch.roused) continue;
+      const key = `${this.space}-${sch.entity}-${sch.triggerRoom}-${sch.seed}`;
+      if (this.spawned.has(key)) continue;
+      this.spawned.add(key);
+      this.spawnById(sch.entity, sch.passes);
+    }
+  }
+
+  /** The room on the far side of a door: probe both directions along the
+   *  leaf normal and take the room that contains the far point. */
+  private roomBeyondDoor(door: Door): RoomInstance | null {
+    const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+    const cur = this.activeRooms()[this.currentRoom];
+    for (const s of [1, -1]) {
+      const x = door.pos.x + nx * 1.7 * s, z = door.pos.z + nz * 1.7 * s;
+      for (const room of this.activeRooms()) {
+        if (room === cur || !room.spec) continue;
+        const dx = x - room.origin.x, dz = z - room.origin.z;
+        const c = Math.cos(room.yaw), sy = Math.sin(room.yaw);
+        const lx = dx * c - dz * sy, lz = dx * sy + dz * c;
+        if (Math.abs(lx) <= room.spec.width / 2 + 0.8 && Math.abs(lz) <= room.spec.depth / 2 + 0.8) return room;
+      }
+    }
+    return null;
+  }
+
   private flickerRoom(roomIndex: number, mode: 'sweep' | 'reprise' | 'dim' | 'break'): void {
     const built = this.streamer.get(roomIndex);
     if (!built) return;
@@ -757,11 +1021,8 @@ export class Game {
         l.userData.flicker = false;
         l.userData.baseIntensity = 0;
         l.intensity = 0;
-        const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-        if (lamp) {
-          lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-          (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.04;
-        }
+        // No lampMesh write needed: the ambient loop's dead branch drops
+        // every paired fixture's emissive next frame.
       } else {
         // Flicker/dim writes ride on baseIntensity — the per-frame ambient
         // loop recomputes l.intensity from it every frame, so writing
@@ -878,18 +1139,143 @@ export class Game {
     }
     // Entity-registered points (the Collector's toll) survive rebuilds.
     for (const it of this.dynamicInteractables) this.interaction.add(it);
-    // Crouched at a locked door: a keyhole-peek target outranks the lock.
+    // Cut the seal — an armed paper wire is a quiet thing you can cut;
+    // under live floodwater the wire only shows itself to a wader
+    // crouched low enough to feel for it.
+    for (const hz of this.hazard.snares) {
+      if (!hz.armed) continue;
+      const rm = rooms.find((r) => r.index === hz.room) ?? this.route?.branchRooms.find((r) => r.index === hz.room);
+      if (!rm) continue;
+      const submerged = !!rm.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
+      if (submerged && !this.player.crouching) continue;
+      const dx = hz.pos.x - this.player.pos.x, dz = hz.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 4.6 * 4.6) continue;
+      this.interaction.add({
+        kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
+        pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
+        prompt: submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
+        holdTime: 1.4, enabled: true, priority: 2,
+        data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
+      });
+    }
+    // Bleed the line — a live steam fitting can be bled quiet at the
+    // valve; the blast stops, the corridor calms.
+    for (const st of this.hazard.steams) {
+      if (st.dead) continue;
+      const dx = st.pos.x - this.player.pos.x, dz = st.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 4.4 * 4.4) continue;
+      this.interaction.add({
+        kind: 'bleed', id: `bleed-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+        pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+        prompt: 'Bleed the line',
+        holdTime: 1.6, enabled: true, priority: 2,
+        data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+      });
+    }
+    // Crouched at a wired drawer: 'Coax the latch' — kneel to work the
+    // bitten latch slow and free (the standing prompt shows the tell).
     if (this.player.crouching) {
-      for (const it of this.interaction.interactables) {
-        const d = it.data as Door | undefined;
-        if (it.kind !== 'door' || !d?.locked || d.falseDoor) continue;
+      const roomIdxs = new Set<number>();
+      const allBuilt = this.streamer.builtIndices
+        .map((i) => this.activeRooms().find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i))
+        .filter((r): r is NonNullable<typeof r> => !!r);
+      for (const room of allBuilt) {
+        if (roomIdxs.has(room.index)) continue;
+        roomIdxs.add(room.index);
+      for (const sock of room?.sockets ?? []) {
+        if (sock.kind !== 'drawer' || sock.meta.wired !== true || sock.meta.opened === true) continue;
+        const dx = sock.pos.x - this.player.pos.x, dz = sock.pos.z - this.player.pos.z;
+        if (dx * dx + dz * dz > 2.4 * 2.4) continue;
         this.interaction.add({
-          kind: 'peek', id: `peek-${it.id}`, pos: it.pos,
-          prompt: `Peek Door ${d.label}`, holdTime: 0.9,
-          data: d, enabled: true, priority: 4,
+          kind: 'coax', id: `coax-${this.space}:${room.index}-${Math.round(sock.pos.x * 7)}x${Math.round(sock.pos.z * 7)}`,
+          pos: { x: sock.pos.x, y: 0.4, z: sock.pos.z },
+          prompt: 'Coax the latch',
+          holdTime: 1.4, enabled: true, priority: 3,
+          data: sock,
+        });
+      }
+      }
+    }
+    // Crouched on bare floor with a wrap: 'Forge the sign' — rub a scuff
+    // that smells like fresh work to anything that reads the boards.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+      && !this.hazard.evidence.some((e) => e.room === this.currentRoom
+        && Math.hypot(e.pos.x - this.player.pos.x, e.pos.z - this.player.pos.z) < 1.4)) {
+      this.interaction.add({
+        kind: 'forge', id: `forge-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x, y: 0.3, z: this.player.pos.z },
+        prompt: 'Forge the sign — felt wrap',
+        holdTime: 1.6, enabled: true, priority: 1,
+        data: { room: this.currentRoom },
+      });
+    }
+    // Crouched at fresh sign: 'Scrub the sign' — a felt wrap rubbed over
+    // the mark erases what a hunter could read. Quiet AND clean.
+    if (this.player.crouching) {
+      for (const ev of this.hazard.evidence) {
+        const dx = ev.pos.x - this.player.pos.x, dz = ev.pos.z - this.player.pos.z;
+        if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+        this.interaction.add({
+          kind: 'scrub', id: `scrub-${this.space}:${ev.room}:${Math.round(ev.pos.x * 7)}x${Math.round(ev.pos.z * 7)}`,
+          pos: { x: ev.pos.x, y: 0.4, z: ev.pos.z },
+          prompt: this.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+            ? 'Scrub the sign — felt wrap'
+            : 'Scrub the sign (needs a felt wrap)',
+          holdTime: 1.8, enabled: true, priority: 3,
+          data: ev,
         });
       }
     }
+    // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
+    // beside any closed one (see addCrouchedDoorInteracts).
+    // Standing at a live belt-wheel: 'Chock the blades' — a door chock
+    // dropped in the wheel stills it quiet (and leaves readable sign).
+    for (const f of this.hazard.fans) {
+      if (f.dead || !this.streamer.builtIndices.includes(f.room)) continue;
+      const dx = f.pos.x - this.player.pos.x, dz = f.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+      this.interaction.add({
+        kind: 'chock', id: `chock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+        pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
+        prompt: this.inventory.some((i) => i.id === 'doorChock' && i.count > 0)
+          ? 'Chock the blades — door chock'
+          : 'Chock the blades (needs a door chock)',
+        holdTime: 1.2, enabled: true, priority: 4,
+        data: f,
+      });
+    }
+    // Beside a hauler's sledge: 'Pick the sledge' — pilfer the moving load.
+    for (const ent of this.entities) {
+      if (ent.id !== 'hauler' || ent.state === 'done') continue;
+      const h = ent as unknown as { sledgePos: Vec3; stock: number; roomIdx: number };
+      if (h.stock <= 0 || !this.streamer.builtIndices.includes(h.roomIdx)) continue;
+      const dx = h.sledgePos.x - this.player.pos.x, dz = h.sledgePos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
+        pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
+        prompt: 'Pick the sledge',
+        holdTime: 0.9, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
+    // While the laundress sniffs a splash: 'Search the wash' on her basin.
+    for (const ent of this.entities) {
+      if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
+      const w = ent as unknown as { drainPos: Vec3; guarding: boolean; basketFull: boolean; spawnRoomIdx?: number };
+      if (w.guarding || !w.basketFull) continue;
+      const dx = w.drainPos.x - this.player.pos.x, dz = w.drainPos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'basket', id: `basket-${this.space}:${this.currentRoom}`,
+        pos: { x: w.drainPos.x, y: 0.5, z: w.drainPos.z },
+        prompt: 'Search the wash',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
+    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -899,6 +1285,24 @@ export class Game {
           kind: 'coffin', id: 'wake-coffin', pos: { x: cp.x, y: cp.y + 0.15, z: cp.z },
           prompt: 'Lift the coffin lid', holdTime: 1.8, enabled: true, priority: 2,
         });
+      }
+    }
+    // The Index's seal console — the glyph-submission interactable the
+    // IndexEncounter's 'puzzle' branch waits on (without this the whole
+    // cards → catalogue → console chain ended in silence).
+    {
+      const ir = this.activeRooms()[this.currentRoom];
+      if (ir?.spec?.special === 'index') {
+        const prop = ir.spec?.props.find((p) => p.kind === 'sealConsole');
+        if (prop) {
+          const cs = Math.cos(ir.yaw), sn = Math.sin(ir.yaw);
+          const wx = ir.origin.x + prop.x * cs + prop.z * sn;
+          const wz = ir.origin.z - prop.x * sn + prop.z * cs;
+          this.interaction.add({
+            kind: 'puzzle', id: `seal-${ir.index}`, pos: { x: wx, y: 1.25, z: wz },
+            prompt: 'Examine the seal console', holdTime: 0, enabled: true, priority: 2,
+          });
+        }
       }
     }
     // Pianos play — a real lure: loud distraction, hunters walk to it.
@@ -914,9 +1318,11 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0, al = 0, dn = 0;
+        let drainDone = false;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
+          const isDrain = !!pr.flooded && DRAIN_PROPS.has(p.kind);
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
@@ -926,6 +1332,7 @@ export class Game {
           const isWin = p.kind === 'window';
           const isCool = p.kind === 'waterCooler';
           const isSeat = p.kind === 'bench' || p.kind === 'plasticChair' || p.kind === 'armchair' || p.kind === 'diningChair';
+          const isAlarm = p.kind === 'fireAlarm';
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           // ticking ironwork: proximity tells that answer the house's pulse
@@ -954,9 +1361,9 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat) ord[p.kind] = n + 1;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : isDrain ? dn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
           if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
             this.interaction.add({
@@ -975,6 +1382,13 @@ export class Game {
               kind: 'clock', id: `clock-${key}`,
               pos: { x: wx, y: 1.3, z: wz },
               prompt: 'Wind the clock', holdTime: 1.4, enabled: true, priority: 2,
+            });
+          } else if (isDrain && !drainDone && !this.drainedRooms.has(`${this.space}:${pr.index}`)) {
+            drainDone = true;
+            this.interaction.add({
+              kind: 'drain', id: `drain-${key}`,
+              pos: { x: wx, y: 0.9, z: wz },
+              prompt: 'Open the drain', holdTime: 1.2, enabled: true, priority: 2,
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -1007,6 +1421,12 @@ export class Game {
                 prompt: 'Pry the trap', holdTime: 0.7, enabled: true, priority: 2,
               });
             }
+          } else if (isAlarm && !this.pulledAlarms.has(key)) {
+            this.interaction.add({
+              kind: 'alarm', id: `alarm-${key}`,
+              pos: { x: wx, y: 1.2, z: wz },
+              prompt: 'Pull the alarm', holdTime: 0.7, enabled: true, priority: 2,
+            });
           } else if (isWash && !this.ranWashers.has(key)) {
             this.interaction.add({
               kind: 'washer', id: `wash-${key}`,
@@ -1071,7 +1491,7 @@ export class Game {
   private tryInteract(): void {
     const it = this.interaction.focused;
     if (!it) return;
-    this.vmThrustT = this.clock.time;
+    this.heldView?.thrust();
     // milestones first
     const ms = this.milestones.get(this.currentRoom);
     if (ms?.onInteract(it)) return;
@@ -1095,6 +1515,14 @@ export class Game {
         return;
       }
       case 'exitHide': {
+        if (this.player.hiddenSpot?.trappedBy === 'inspector') {
+          // Hold-the-lid grapple — presses feed the Inspector's struggle(),
+          // never exit; it clears trappedBy itself when the rattle resolves.
+          const insp = this.entities.find((e) => e instanceof Inspector);
+          if (insp) (insp as Inspector).struggle();
+          this.cue('stabilize-tick', null, '[hold it shut!]', 'danger');
+          return;
+        }
         if (this.player.hiddenSpot?.trappedBy === 'hollow') {
           // struggle minigame
           const hollow = this.entities.find((e) => e instanceof Hollow);
@@ -1126,6 +1554,52 @@ export class Game {
         this.cue('door-locked', it.pos, '[locked — hold to peek]', 'warn');
         return;
       }
+      case 'listen': {
+        const door = it.data as Door;
+        this.listenedDoors.add(door.id);
+        const c = this.listenThrough(door);
+        this.cue(c.sfx, it.pos, c.text, c.sev);
+        return;
+      }
+      case 'brace': {
+        // Brace the whole doorway cluster: your weight on this leaf holds
+        // both sides. Released by stepping away, or by opening it yourself.
+        const cluster = this.doorsAt(it.pos);
+        if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        for (const d of cluster) d.heldBy = 'player';
+        this.bracedDoors.push(...cluster);
+        this.cue('door-creak', it.pos, '[you put your weight into the door]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.3, category: 'door', caption: '' });
+        return;
+      }
+      case 'wedge': {
+        // Set a chock under the leaf — holds while you walk away, but a
+        // determined rattle worries it loose. Weaker than your weight.
+        // it.pos is the anchor (offset off the leaf) — cluster on the door's.
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        if (cluster.some((d) => d.heldBy)) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        const chock = this.inventory.find((i) => i.id === 'doorChock');
+        if (!chock || chock.count <= 0) return;
+        chock.count--;
+        for (const d of cluster) d.heldBy = 'wedge';
+        this.cue('door-creak', it.pos, '[you set the wedge under the leaf]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.25, category: 'door', caption: '' });
+        return;
+      }
+      case 'unwedge': {
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        for (const d of cluster) if (d.heldBy === 'wedge') d.heldBy = undefined;
+        this.giveItem('doorChock', 1);
+        this.cue('door-creak', it.pos, '[you pull the wedge free]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'door', caption: '' });
+        return;
+      }
       case 'door': {
         const door = it.data as RoomInstance['doors'][number];
         if (door.falseDoor) {
@@ -1138,6 +1612,17 @@ export class Game {
         // the same position (prev room's out leaf + next room's in leaf); they
         // are one physical doorway, so the whole cluster opens/locks together.
         const cluster = this.doorsAt(it.pos);
+        // A held leaf is not a lock: the Commissionaire grips the far side.
+        // Your own brace just releases — opening it IS letting go. A wedge
+        // you set holds it from this side — pull it free instead.
+        if (cluster.some((d) => d.heldBy === 'wedge')) {
+          this.cue('door-locked', it.pos, '[the wedge holds it — pull it free first]', 'warn');
+          return;
+        }
+        if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
+          this.cue('door-locked', it.pos, '[the door is held from the far side]', 'warn');
+          return;
+        }
         if (cluster.some((d) => d.locked)) {
           const lockId = cluster.find((d) => d.locked)?.lockId ?? '';
           if (lockId === 'toll') {
@@ -1193,6 +1678,12 @@ export class Game {
             return;
           }
         }
+        if (sock.meta.wired) {
+          // The latch bites once — a toll, not a lock. Loud enough to carry.
+          sock.meta.wired = false;
+          this.damagePlayer(7, 'hazard', 'The latch bites — a wired drawer. Coax them, or pay the teeth.');
+          this.sound.emit({ x: it.pos.x, y: 0.8, z: it.pos.z, intensity: 0.45, category: 'impact', caption: '[a latch snaps]' });
+        }
         sock.meta.opened = true;
         it.enabled = false;
         this.cue('drawer', it.pos, '');
@@ -1200,6 +1691,22 @@ export class Game {
         const built = this.streamer.get(this.currentRoom);
         built?.group.traverse((o) => {
           if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${it.pos.x.toFixed(1)}|${it.pos.z.toFixed(1)}`) {
+            o.userData.open = true;
+          }
+        });
+        this.resolveSocketLoot(it);
+        return;
+      }
+      case 'coax': {
+        const sock = it.data as { meta: Record<string, unknown>; pos: Vec3 };
+        sock.meta.wired = false;
+        sock.meta.opened = true;
+        it.enabled = false;
+        this.cue('drawer', it.pos, '[the latch eases — bitten, not sprung]');
+        this.sound.emit({ x: it.pos.x, y: 0.8, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[a latch coaxes open]' });
+        const builtC = this.streamer.get(this.currentRoom);
+        builtC?.group.traverse((o) => {
+          if (o.userData.anim === 'drawerFront' && o.userData.sockKey === `${sock.pos.x.toFixed(1)}|${sock.pos.z.toFixed(1)}`) {
             o.userData.open = true;
           }
         });
@@ -1221,17 +1728,374 @@ export class Game {
         this.giveItem(sock.meta.vendItem as ItemId, 1);
         return;
       }
+      case 'claim': {
+        // The porter's cage — a priced claim tag; the bag's contents are
+        // semi-blind until you pay. Contains resolves like loot sockets.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 8;
+        const cur = sock.meta.marginalia === true;
+        if ((cur ? this.marginalia : this.imprints) < price) {
+          this.cue('door-locked', it.pos,
+            `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
+          return;
+        }
+        if (cur) this.marginalia -= price; else this.imprints -= price;
+        if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
+        else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
+        const contains = sock.meta.contains as string | undefined;
+        if (contains === 'marginalia') {
+          const amt = (sock.meta.amount as number) ?? 8;
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[the effects held a purse — +${amt} marginalia]`);
+        } else if (contains === 'imprints') {
+          const amt = (sock.meta.amount as number) ?? 10;
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[the bag held a purse — +${amt} imprints]`);
+        } else if (contains === 'lore') {
+          const doc = DOCUMENTS[Math.abs(this.streams.stream('loot').int(0, DOCUMENTS.length - 1)) % DOCUMENTS.length];
+          if (doc && !this.documents.some((d) => d.id === doc.id)) {
+            this.documents.push({ ...doc, unlockedAt: Date.now() });
+            this.meta.documents.push(doc.id);
+            saveMeta(this.meta);
+            useGameStore.setState({ documents: this.loadDocs() });
+            this.cue('pickup', it.pos, `[the bag held someone's papers — ${doc.title}]`);
+          } else {
+            this.imprints += 6;
+            this.cue('pickup', it.pos, '[the bag held old papers — worth 6 imprints]');
+          }
+        } else if (contains) {
+          this.giveItem(contains as ItemId, 1);
+          const name = ITEM_DEFS[contains as ItemId]?.name.toLowerCase() ?? contains;
+          this.cue('pickup', it.pos, `[inside the bag — ${name}]`);
+        }
+        return;
+      }
+      case 'register': {
+        // The guest ledger — the hotel's own book of who is expected. A
+        // priced foresight read: the next few doors' waiting things, told
+        // in the ledger's euphemisms. One read per book — the ink dries.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 10;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the ledger costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const NOUNS: Record<string, string> = {
+          sweep: 'the passing steps', reprise: 'the returning steps', witness: 'the unblinking guest',
+          collector: 'the toll-taker and his tin', whisper: 'a voice inside the wall',
+          commissionaire: 'a doorman who will not step aside', porter: 'a porter above the lintels',
+          redactor: 'the forger of doors', hollow: 'what the cupboards bred',
+          bellman: 'a valet who follows', warden: 'a watchman on his rounds',
+          groundswell: 'the floor, restless', lurker: 'what dims the lamps',
+          maelstrom: 'the turning stair', inspector: 'a clerk who tries the lids',
+          echoskin: 'your own step, late', grafter: 'a guest wearing the walls',
+          curator: 'the archivist at his desk', returner: 'a guest come back',
+          margin: 'the handwritten edge', redline: 'the red margin',
+          stillframe: 'the paused hall', editor: 'the revising hand',
+          inkling: 'an inkstain walking', husk: 'a guest long emptied',
+          singer: 'the choir of one', swamper: 'a drowned porter in the flood',
+          hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
+          auditor: 'a clerk auditing the claims',
+          detective: 'a house detective on the register',
+        };
+        const seen = new Set<string>();
+        const parts: string[] = [];
+        const cover = sock.meta.forgedCover as number | undefined;
+        const rooms = this.route?.rooms ?? [];
+        for (const r of rooms) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || parts.length >= 4) continue;
+          if (r.index === cover) continue;   // the forged page — a lie by omission
+          for (const s of r.scheduled ?? []) {
+            const noun = NOUNS[s.entity] ?? 'a guest unlisted';
+            const key = `${noun}|${r.index}`;
+            if (seen.has(key) || parts.length >= 4) continue;
+            seen.add(key);
+            parts.push(`${noun} at Door ${String(r.index).padStart(3, '0')}`);
+          }
+        }
+        const text = parts.length
+          ? `[the ledger expects: ${parts.join(' · ')}]`
+          : cover !== undefined
+            ? `[the ledger expects: still air until Door ${String(cover).padStart(3, '0')}]`
+            : "[the ledger's pages ahead are blank — nothing is expected]";
+        this.cue('whisper', it.pos, text);
+        if (cover !== undefined) this.cue('whisper', it.pos, '[the ink on one page is still wet]');
+        return;
+      }
+      case 'roster': {
+        // The duty roster — cheaper paper, narrower knowledge: which of the
+        // house's staff are marked working right now, and where they stand.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the roster costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const STAFF: Record<string, string> = {
+          bellman: 'a valet walking the halls', warden: 'a watchman on his rounds',
+          inspector: 'a clerk trying the lids', commissionaire: 'a doorman holding his post',
+          porter: 'a porter above the lintels', custodian: 'the custodian behind his counter',
+          collector: 'a toll-taker, off the books',
+        };
+        const marks: string[] = [];
+        for (const e of this.entities) {
+          if (e.state === 'done' || marks.length >= 4) continue;
+          const noun = STAFF[e.id];
+          if (!noun) continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          let at = 'between the doors';
+          for (const r of this.route?.rooms ?? []) {
+            if (pointInRoom(r, tp.x, tp.z)) { at = `at Door ${String(r.index).padStart(3, '0')}`; break; }
+          }
+          marks.push(`${noun} ${at}`);
+        }
+        const text = marks.length
+          ? `[the duty roster marks: ${marks.join(' · ')}]`
+          : '[the roster is all signatures — no one is marked working]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'complaint': {
+        // The complaint/fault book — cheapest paper. Files HAZARDS by door
+        // the other books don't cover: biting lids, doors that aren't
+        // doors, heaving floors, dimming lamps — everything but staff.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        const fault = sock.meta.fault === true;
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the book costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const NOUNS: Record<string, string> = {
+          groundswell: 'the floor heaves', hollow: 'something nests in the lids',
+          redactor: 'the doors move', lurker: 'the lamps dim for no reason',
+          maelstrom: 'the room turns', margin: 'the margins write',
+          whisper: 'voices inside the wall', witness: 'a guest who stares',
+          husk: 'a guest long emptied', echoskin: 'steps that are not yours',
+          grafter: 'a guest wearing the walls', singer: 'the choir of one',
+          stillframe: 'a hall that will not move', editor: 'the revising hand',
+          inkling: 'an inkstain walking', returner: 'a guest come back',
+          sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
+          swamper: 'a drowned porter, under the water',
+          hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
+          auditor: 'a clerk auditing the claims',
+          detective: 'a house detective on the register',
+        };
+        const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
+        const filings: string[] = [];
+        const rooms = this.route?.rooms ?? [];
+        for (const r of rooms) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || filings.length >= 5) continue;
+          const complaints = new Set<string>();
+          for (const s of r.scheduled ?? []) {
+            if (STAFF.has(s.entity)) continue;
+            complaints.add(NOUNS[s.entity] ?? 'a guest unlisted');
+          }
+          if (r.hidingSpots.some((s) => s.trappedBy === 'hollow')) complaints.add('a lid that bites');
+          if (r.doors.some((d) => d.falseDoor)) complaints.add("a door that isn't");
+          if (r.doors.some((d) => d.deep)) complaints.add('a door deeper than the wall');
+          for (const c of complaints) {
+            if (filings.length >= 5) break;
+            filings.push(`Door ${String(r.index).padStart(3, '0')} — ${c}`);
+          }
+        }
+        const text = filings.length
+          ? `[${fault ? 'the fault book' : 'the complaint book'} lists: ${filings.join(' · ')}]`
+          : fault ? '[the fault book is clear ahead — nothing logged]' : '[no complaints filed ahead — suspicious in itself]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'workOrder': {
+        // The work-order book — the under's own paper, priced in marginalia.
+        // Where the books above answer threats and staff, the order sheet
+        // answers CARGO: which rooms still hold unclaimed stock, and where
+        // the egress is stamped.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const TASKS: Record<string, string> = {
+          imprints: 'imprints for the tin', marginalia: 'marginalia for the margins',
+          lore: 'papers unsigned',
+        };
+        const tickets: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 12 || tickets.length >= 4) continue;
+          for (const s of r.sockets ?? []) {
+            if (tickets.length >= 4) break;
+            if (s.meta.taken || s.meta.workOrder) continue;
+            if (s.meta.vend) tickets.push(`Door ${String(r.index).padStart(3, '0')} — the machine still stocks`);
+            else if (s.meta.contains) {
+              const t = TASKS[s.meta.contains as string] ?? 'a tool unclaimed';
+              tickets.push(`Door ${String(r.index).padStart(3, '0')} — ${t}`);
+            }
+          }
+        }
+        const egress = under[under.length - 1];
+        const text = tickets.length
+          ? `[open tickets: ${tickets.join(' · ')}]`
+          : "[the sheet is stamped closed ahead — the crew's been through]";
+        this.cue('whisper', it.pos, text);
+        if (egress) this.cue('whisper', it.pos, `[the egress stamp is filed at Door ${String(egress.index).padStart(3, '0')}]`);
+        return;
+      }
+      case 'crewBoard': {
+        // The crew board — who is signed on down the line: the under's
+        // entity foresight, told in crew euphemisms. One read per board.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const CREW: Record<string, string> = {
+          swamper: 'hands in the water', hauler: 'a haul team on the line',
+          laundress: 'a laundress at the outflow', grafter: 'a grafter in the fill',
+          auditor: 'a clerk walking the ledger',
+          detective: 'a detective on the wire',
+          redline: 'the red margin', stillframe: 'the paused hall',
+          returner: 'a guest come back', margin: 'the handwritten edge',
+        };
+        const parts: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 12 || parts.length >= 5) continue;
+          for (const s of r.scheduled ?? []) {
+            const crew = CREW[s.entity] ?? 'a hand unlisted';
+            if (parts.length >= 5) break;
+            parts.push(`Door ${String(r.index).padStart(3, '0')} — ${crew}`);
+          }
+        }
+        const text = parts.length
+          ? `[the shift sheet marks: ${parts.join(' · ')}]`
+          : '[the sheet runs clean ahead — nobody signed on]';
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'claimRegister': {
+        // The claim register — the library's cross-reference. Where the
+        // board answers crew and the order sheet answers cargo, this files
+        // CLAIMS: which tagged effects in the next stretch are still held
+        // and which the crew already drew.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 4;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const entries: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || entries.length >= 6) continue;
+          for (const s of r.sockets ?? []) {
+            if (entries.length >= 6) break;
+            if (!s.meta.claim || s.meta.marginalia !== true) continue;
+            const tag = (s.meta.claimTag as string) ?? 'unsigned';
+            entries.push(`Door ${String(r.index).padStart(3, '0')} — '${tag}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+          }
+        }
+        const text = entries.length
+          ? `[the claim register shows: ${entries.join(' · ')}]`
+          : "[the register's claim columns run blank ahead]";
+        this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'audit': {
+        // The Auditor's settle point — pay the tally or the book walks.
+        const owed = this.unpaidTheft;
+        if (owed <= 0) { it.enabled = false; return; }
+        const toll = Math.min(4 + owed * 2, 14);
+        if (this.marginalia < toll) {
+          this.cue('door-locked', it.pos, `[the ledger asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= toll;
+        this.unpaidTheft = 0;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, `[paid ${toll} — the clerk turns the page]`);
+        (it.data as { auditor?: { settled?: () => void } }).auditor?.settled?.();
+        return;
+      }
+      case 'settle': {
+        // The Detective's settle point — pay the register or your face
+        // goes on the wire.
+        const owed = this.unpaidHeld;
+        if (owed <= 0) { it.enabled = false; return; }
+        const toll = Math.min(8 + owed * 2, 24);
+        if (this.imprints < toll) {
+          this.cue('door-locked', it.pos, `[the register asks ${toll} imprints — ${toll - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= toll;
+        this.unpaidHeld = 0;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, `[paid ${toll} — the detective strikes your name]`);
+        (it.data as { detective?: { settled?: () => void } }).detective?.settled?.();
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {
         this.resolveSocketLoot(it);
         return;
       }
+      case 'puzzle': {
+        // puzzle-valve mechanisms — crack them open: a steam burst on the
+        // way out (the same mask/lure trade as the prop valves), then the
+        // mechanism yields whatever it held. Sockets can co-carry
+        // contains/doorKey — the lock filler hides keys inside these.
+        const sock = it.data as Socket;
+        if (sock.meta.taken) return;
+        const at = { x: it.pos.x, y: 0.9, z: it.pos.z };
+        this.steamMasks.push({ pos: at, until: this.clock.time + 26 });
+        this.spawnSteamJet(at);
+        this.audio.play('steam-hiss', at, '[the mechanism cracks open — steps drowned]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[steam vents]' });
+        this.resolveSocketLoot(it);
+        return;
+      }
       case 'toll': {
-        // The Collector's price — imprints first, a marginalia if you're poor.
-        const d = it.data as { pay?: () => void } | undefined;
+        // The Collector's price — scales with the purse it counted on you;
+        // imprints first, a marginalia if you're poor.
+        const d = it.data as { pay?: () => void; price?: number } | undefined;
+        const price = d?.price ?? 2;
         let paid = false;
-        if (this.imprints >= 2) { this.imprints -= 2; paid = true; }
+        if (this.imprints >= price) { this.imprints -= price; paid = true; }
         else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;
@@ -1287,6 +2151,157 @@ export class Game {
         const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
         this.audio.play('trap-click', at, '[the spring slackens]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'snip': {
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const hsn = this.hazard.snares.find((hz) => hz.room === d.room
+          && Math.hypot(hz.pos.x - d.sx, hz.pos.z - d.sz) < 0.45);
+        if (hsn) {
+          hsn.armed = false;
+          this.hazard.evidence.push({ pos: v3(hsn.pos.x, 0, hsn.pos.z), room: hsn.room, kind: 'wire', t: this.clock.time, readBy: [] });
+        }
+        const rm = this.activeRooms()[this.currentRoom];
+        const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
+        this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
+          sub ? '[the wire comes loose under the water]' : '[the seal parts — the wire goes slack]');
+        this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
+        return;
+      }
+      case 'bleed': {
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const st = this.hazard.steams.find((v) => v.room === d.room
+          && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
+        if (st) {
+          st.dead = true;
+          this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room, kind: 'line', t: this.clock.time, readBy: [] });
+        }
+        this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz }, '[the pressure falls — the line goes quiet]');
+        this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
+        return;
+      }
+      case 'scrub': {
+        const ev = it.data as { pos: Vec3; room: number; kind: string; readBy: string[] };
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[a felt wrap would rub this out]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        // Every sign within the rub's reach goes — one wrap, one clean floor.
+        this.hazard.evidence = this.hazard.evidence.filter((e) =>
+          Math.hypot(e.pos.x - ev.pos.x, e.pos.z - ev.pos.z) > 2.6);
+        this.cue('item', it.pos, '[the sign rubs out under the felt — nothing left to read]');
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt on stone]' });
+        return;
+      }
+      case 'chock': {
+        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        const chock = this.inventory.find((i) => i.id === 'doorChock' && i.count > 0);
+        if (!chock) {
+          this.cue('drawer', it.pos, '[a door chock would jam the wheel]', 'warn');
+          return;
+        }
+        chock.count--;
+        it.enabled = false;
+        f.dead = true;
+        this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
+        this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
+        this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
+        return;
+      }
+      case 'basket': {
+        const w = it.data as unknown as { basketFull: boolean };
+        if (!w.basketFull) { it.enabled = false; return; }
+        w.basketFull = false;
+        this.unpaidTheft += 1; // her wash, your pockets — the clerks mark it
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const pool = ['feltWrap', 'bandage', 'tonic', 'chalkSpool'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — clean linen, still warm]`);
+        } else {
+          const amt = this.streams.stream('loot').int(8, 14);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — pins in the hem]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[linen lifted]' });
+        return;
+      }
+      case 'pick': {
+        const h = it.data as unknown as { stock: number; sledgePos: Vec3 };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidTheft += 1; // off the sledge, into the tally
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the sledge]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the sledge]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
+        return;
+      }
+      case 'forge': {
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[a felt wrap holds the ash]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        this.hazard.evidence.push({
+          pos: v3(this.player.pos.x, 0, this.player.pos.z), room: this.currentRoom,
+          kind: 'wire', t: this.clock.time, readBy: [],
+        });
+        this.cue('item', it.pos, '[you rub a scuff into the boards — a lie in wire]');
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[felt on the boards]' });
+        return;
+      }
+      case 'alarm': {
+        // A pulled bell is the under's own lure — loud, fixed, free, and
+        // it rings exactly where you stand. The crew's bells were wired
+        // for someone else's safety; now they only announce you.
+        it.enabled = false;
+        const key = it.id.replace(/^alarm-/, '');
+        this.pulledAlarms.add(key);
+        this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 1.0, category: 'machine', caption: '[the alarm screams]' });
+        this.cue('door-slam', it.pos, '[the bell screams in the stairwell]', 'warn');
+        return;
+      }
+      case 'drain': {
+        // The Laundress fouls her basin — the crank answers to her while she works.
+        for (const ent of this.entities) {
+          if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
+          const w = ent as unknown as { drainPos: Vec3; guarding: boolean; aggravate: (p: Vec3) => void };
+          if (!w.guarding || v3dist(it.pos, w.drainPos) > 0.9) continue;
+          this.cue('puddle-splash', it.pos, "[the drain is choked with somebody's wash]", 'warn');
+          w.aggravate(this.player.pos);
+          return;
+        }
+        // The crank is loud once — then the water goes and the hall is quiet.
+        it.enabled = false;
+        const parts = it.id.split(':');
+        const rIdx = Number(parts[1]);
+        this.drainedRooms.add(`${this.space}:${rIdx}`);
+        this.draining.set(rIdx, 0);
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: rIdx, kind: 'water', t: this.clock.time, readBy: [] });
+        this.sound.emit({ x: it.pos.x, y: 0.9, z: it.pos.z, intensity: 0.55, category: 'machine', caption: '[the crank screams once]' });
+        this.cue('puddle-splash', it.pos, '[the water finds the drain]', 'info');
         return;
       }
       case 'washer': {
@@ -1507,6 +2522,10 @@ export class Game {
       });
       return;
     }
+    if (sock.meta.bare === true) {
+      this.cue('drawer', it.pos, '[the drawer is bare — someone else was through it first]');
+      return;
+    }
     if (contains === 'imprints' || contains === 'imprints-few' || contains === 'imprints-many') {
       const amt = (sock.meta.amount as number) ?? 12;
       this.imprints += amt;
@@ -1594,6 +2613,7 @@ export class Game {
         return;
       }
       this.pulseLampOn = !this.pulseLampOn;
+      this.heldView?.use('pulseLamp');
       this.cue('ui-click', null, this.pulseLampOn ? '[pulse lamp humming]' : '');
       return;
     }
@@ -1604,6 +2624,7 @@ export class Game {
         return;
       }
       this.lampOn = !this.lampOn;
+      this.heldView?.use('handLamp');
       this.cue('ui-click', null, this.lampOn ? '[lamp on]' : '[lamp off]');
     }
   }
@@ -1613,6 +2634,7 @@ export class Game {
     const item = slotItems[this.activeSlot];
     // lamps pass through at 0 charge so their case can report the dead battery
     if (!item || (item.count <= 0 && item.id !== 'handLamp' && item.id !== 'pulseLamp')) return;
+    this.heldView?.use(item.id);
     switch (item.id) {
       case 'handLamp':
         if (!this.lampOn && item.count <= 0) {
@@ -1661,6 +2683,9 @@ export class Game {
           this.player.health = Math.min(100, this.player.health + 40);
           this.cue('heal', null, '[bandaged]');
         }
+        return;
+      case 'doorChock':
+        this.cue('ui-click', null, '[set it under a shut door — crouch at one]', 'info');
         return;
       case 'windAlarm': {
         item.count--;
@@ -2087,7 +3112,9 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.streamer.setQuality(s.quality);
     const q = QUALITY[s.quality];
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q.pixelRatioCap));
+    this.basePixelRatio = Math.min(window.devicePixelRatio, q.pixelRatioCap);
+    this.renderer.setPixelRatio(this.basePixelRatio);
+    this.postGov?.hardReset();
     this.scene.fog = new THREE.FogExp2(0x050505, q.fogDensity);
     useGameStore.setState({ settings: s });
   }
@@ -2249,6 +3276,23 @@ export class Game {
     }
   }
 
+  /** Braced leaves stay held only while the player's weight is on them —
+   *  stepping away or the leaf swinging open releases the brace. */
+  private updateBraces(): void {
+    let letGo = false;
+    this.bracedDoors = this.bracedDoors.filter((d) => {
+      if (d.heldBy !== 'player') return false;
+      const p = this.player.pos;
+      if (d.openT > 0.05 || Math.hypot(p.x - d.pos.x, p.z - d.pos.z) > 1.7) {
+        d.heldBy = undefined;
+        letGo = true;
+        return false;
+      }
+      return true;
+    });
+    if (letGo) this.cue('door-breath', null, '[you let go]');
+  }
+
   private updateDoors(dt: number): void {
     const rooms = this.activeRooms();
     for (const i of this.streamer.builtIndices) {
@@ -2257,6 +3301,12 @@ export class Game {
       for (const d of r.doors) {
         if (d.opening && d.openT < 1) {
           d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1));
+          // Roused encounters pre-spawn as soon as the leaf has swung —
+          // the thing beyond is live before the player crosses in.
+          if (d.openT >= 0.6 && !this.rousedSpawned.has(d.id)) {
+            this.rousedSpawned.add(d.id);
+            this.spawnRousedThrough(d);
+          }
         } else if (!d.opening && d.openT > 0) {
           d.openT = Math.max(0, d.openT - dt * 2.2);
         }
@@ -3016,6 +4066,11 @@ export class Game {
   private livePuddles: { x: number; z: number; key: string }[] = [];
   private armedPuddles = new Map<string, boolean>();
   private slippedPuddles = new Set<string>();
+  private drainedRooms = new Set<string>();
+  private drainNoted = new Set<string>();
+  private draining = new Map<number, number>();
+  private wadeAcc = 0;
+  private wadeMul = false;
   /* — the glass falls: armed chandeliers creak when you stand under
      them; a loud enough noise there brings the whole thing down — */
   private liveChandeliers: { x: number; z: number; key: string }[] = [];
@@ -3024,6 +4079,7 @@ export class Game {
   private warnedChandeliers = new Set<string>();
   private pendingChanDrop: { key: string; x: number; z: number; t: number } | null = null;
   private chanHooked = false;
+  private pulledAlarms = new Set<string>();
   /* — the house watches: armed cameras pan to track you and, once
      their glass settles on you for a breath, they report you — */
   private camObjs = new Map<string, { o: THREE.Object3D; i: number; expo: number; fired: boolean }>();
@@ -3528,11 +4584,7 @@ export class Game {
       l.userData.flicker = false;
       l.userData.baseIntensity = 0;
       l.intensity = 0;
-      const lamp = l.userData.lampMesh as THREE.Mesh | undefined;
-      if (lamp) {
-        lamp.material = (lamp.material as THREE.MeshStandardMaterial).clone();
-        (lamp.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.05;
-      }
+      // Paired lamp meshes die via the ambient loop's dead branch.
     }
   }
 
@@ -3992,9 +5044,13 @@ export class Game {
 
   private frame = (): void => {
     this.raf = requestAnimationFrame(this.frame);
+    const now = performance.now();
+    const realDt = this.lastFrameNow ? (now - this.lastFrameNow) / 1000 : 0;
+    this.lastFrameNow = now;
     const st = useGameStore.getState();
     const running = st.phase === 'PLAYING' || st.phase === 'MINIGAME';
-    if (!running || !this.clock.tick(performance.now())) {
+    this.postGov?.update(realDt, this.settings.adaptiveQuality && running);
+    if (!running || !this.clock.tick(now)) {
       this.renderFrame();
       return;
     }
@@ -4005,6 +5061,18 @@ export class Game {
     const blockers = this.collectBlockers();
     this.player.update(dt, moveIn, blockers, this.settings, this.sound, this.activeRooms()[this.currentRoom] ?? null, this.clock.time);
     this.player.refreshProtection(this.activeRooms()[this.currentRoom]?.safeZones ?? []);
+
+    // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
+    // The Bellman (and anything else that trails you) reads these.
+    if (!this.lastCrumbSet || v3dist(this.lastCrumb, this.player.pos) >= 1.15) {
+      this.playerTrail.push(v3(this.player.pos.x, 0, this.player.pos.z));
+      v3copy(this.lastCrumb, this.player.pos);
+      this.lastCrumbSet = true;
+      if (this.playerTrail.length > 160) {
+        this.playerTrail.shift();
+        for (const e of this.entities) e.trailShifted?.();
+      }
+    }
 
     // room tracking
     const prev = this.currentRoom;
@@ -4536,6 +5604,42 @@ export class Game {
       }
     }
 
+    // Flooded halls — standing water carries every upright stride; the
+    // crouch-wade is quiet but slow, and the drain is the paid quiet.
+    {
+      const cur = this.activeRooms()[this.currentRoom];
+      const floodKey = `${this.space}:${this.currentRoom}`;
+      const wading = !!cur?.flooded && !this.drainedRooms.has(floodKey)
+        && pointInRoom(cur, this.player.pos.x, this.player.pos.z);
+      if (wading) {
+        if (!this.drainNoted.has(floodKey)) {
+          this.drainNoted.add(floodKey);
+          this.cue('puddle-splash', this.player.pos, '[water covers the floor here — every step carries]', 'warn');
+        }
+        const spd = Math.hypot(this.player.vel.x, this.player.vel.z);
+        if (!this.player.crouching) {
+          this.player.speedMul = Math.min(this.player.speedMul, 0.7);
+          this.wadeMul = true;
+          this.wadeAcc += spd * dt;
+          if (spd > 1.2 && this.wadeAcc > 1.7) {
+            this.wadeAcc = 0;
+            this.sound.emit({ x: this.player.pos.x, y: 0.1, z: this.player.pos.z, intensity: 0.55, category: 'impact', caption: '[water takes every step]' });
+          }
+        }
+      } else if (this.wadeMul) {
+        this.wadeMul = false;
+        if (this.player.speedMul === 0.7) this.player.speedMul = 1;
+        this.wadeAcc = 0;
+      }
+      // Opened drains sink their sheets over a few seconds.
+      for (const [idx, el] of this.draining) {
+        const t2 = el + dt;
+        const sheet = this.streamer.get(idx)?.group.getObjectByName(`flood-${idx}`);
+        if (sheet) sheet.position.y = Math.max(-0.06, 0.05 - t2 * 0.02);
+        if (t2 > 6) this.draining.delete(idx); else this.draining.set(idx, t2);
+      }
+    }
+
     // The pages whisper — linger over written things and they answer, once
     {
       let near: { x: number; z: number; key: string } | null = null;
@@ -4715,6 +5819,7 @@ export class Game {
     }
 
     this.updatePanic(dt);
+    this.updateBraces();
     this.updateDoors(dt);
     this.updateAtmosphere(dt);
     this.updateMaelstrom(dt);
@@ -4775,77 +5880,32 @@ export class Game {
     } else if (this.lampLight) {
       this.lampLight.visible = false;
     }
-    // Handheld torch — flashlight + gloved hand held low-right in frame.
-    // The viewmodel raises in on toggle, lags behind look, bobs with gait,
-    // and lunges toward whatever you reach for.
-    if (this.lampOn || this.pulseLampOn) {
-      if (!this.heldGroup) {
-        this.heldGroup = new THREE.Group();
-        const m = modelInstance('flashlight', 0.35);
-        if (m) {
-          this.fitHeldModel(m);
-          this.heldTorch = m;
-        } else {
-          const fallback = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, 0.22, 10), MAT.steel());
-          fallback.rotation.x = Math.PI / 2;
-          this.heldTorch = fallback;
-          this.heldTorchFallback = true;
-        }
-        this.heldGroup.add(this.heldTorch);
-        this.heldGroup.add(this.buildTorchHand());
-        this.scene.add(this.heldGroup);
-        this.vmLagQ.copy(this.camera.quaternion);
-      }
-      // The GLTF queue drip-feeds at boot — upgrade the fallback cylinder to
-      // the real flashlight model once it arrives.
-      if (this.heldTorchFallback) {
-        const m = modelInstance('flashlight', 0.35);
-        if (m) {
-          this.fitHeldModel(m);
-          this.heldGroup!.remove(this.heldTorch!);
-          this.heldGroup!.add(m);
-          this.heldTorch = m;
-          this.heldTorchFallback = false;
-        }
-      }
-      const heldGroup = this.heldGroup;
-      const heldTorch = this.heldTorch;
-      if (!heldGroup || !heldTorch) return;
-      heldGroup.visible = true;
-      heldTorch.visible = true;
-      this.camera.getWorldDirection(Game.torchFwd);
-      Game.torchRight.set(1, 0, 0).applyQuaternion(this.camera.quaternion);
-      Game.torchUp.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
-      this.vmRaise = Math.min(1, this.vmRaise + dt * 3.2);
-      const speed = Math.hypot(this.player.vel.x, this.player.vel.z);
-      const thrust = Math.sin(Math.min(1, (this.clock.time - this.vmThrustT) / 0.32) * Math.PI) * 0.07;
-      heldGroup.position.set(eye.x, eye.y, eye.z)
-        .addScaledVector(Game.torchRight, 0.24)
-        .addScaledVector(Game.torchUp, -0.19 - (1 - this.vmRaise) * 0.24)
-        .addScaledVector(Game.torchFwd, 0.38 + thrust);
-      heldGroup.quaternion.copy(this.camera.quaternion);
-      heldGroup.rotateY(-0.06);
-      heldGroup.rotateX(0.05 + (1 - this.vmRaise) * 0.7);
-      if (!this.settings.reducedMotion) {
-        // Look-lag: the model trails a smoothed camera quaternion, so quick
-        // turns swing it off-axis before it catches up.
-        this.vmLagQ.slerp(this.camera.quaternion, 1 - Math.exp(-dt * 11));
-        const dq = this.camera.quaternion.clone().multiply(this.vmLagQ.clone().invert());
-        const e = new THREE.Euler().setFromQuaternion(dq, 'YXZ');
-        heldGroup.position
-          .addScaledVector(Game.torchRight, -e.y * 0.05)
-          .addScaledVector(Game.torchUp, e.x * 0.045);
-        heldGroup.rotateZ(-e.y * 0.3);
-        heldGroup.rotateX(e.x * 0.15);
-        // Gait bob driven by ground speed — settles to a breath when still.
-        this.vmBobPhase += dt * (0.9 + speed * 2.6);
-        const amp = 0.003 + Math.min(1, speed / 3) * 0.009;
-        heldGroup.position
-          .addScaledVector(Game.torchRight, Math.sin(this.vmBobPhase) * amp)
-          .addScaledVector(Game.torchUp, Math.sin(this.vmBobPhase * 2) * amp * 0.6);
-        const sway = Math.sin(this.clock.time * 5.2) * 0.012 + Math.sin(this.clock.time * 1.7) * 0.008;
-        heldGroup.rotateZ(sway);
-      }
+    // Held-item viewmodel — the active slot's item carried low-right in
+    // frame, gripped by a gloved hand. While a lamp beam is lit the lamp is
+    // the in-hand item (the light needs a source); otherwise whatever the
+    // player selected shows. Sway trails look, bob follows stride, and a
+    // reach for a door/threshold lunges the item toward it.
+    if (!this.heldView) this.heldView = new HeldView(this.scene);
+    const slotItems = this.inventory.filter((i) => ITEM_DEFS[i.id]?.slotItem);
+    // HUD hides count-0 entries — the hand should too, or a drained tonic
+    // stays visibly held. Lamps stay equippable at 0 (their case reports
+    // the dead battery).
+    const slotEntry = slotItems[this.activeSlot];
+    const equipped = slotEntry && (slotEntry.count > 0 || slotEntry.id === 'handLamp' || slotEntry.id === 'pulseLamp')
+      ? slotEntry.id : null;
+    const beamOn = this.lampOn || this.pulseLampOn;
+    this.heldView.update(dt, this.camera, eye, {
+      itemId: equipped,
+      lampOn: this.lampOn,
+      pulseLampOn: this.pulseLampOn,
+      speed: Math.hypot(this.player.vel.x, this.player.vel.z),
+      crouching: this.player.crouching,
+      reducedMotion: this.settings.reducedMotion,
+      hidden: this.peek !== null,
+      yaw: this.player.yaw,
+      pitch: this.player.pitch,
+    });
+    if (beamOn) {
       // Fake-volumetric beam — two nested additive cones from the torch
       // head, alpha-ramped so the air carries light without a floor hit.
       if (!this.beamGroup) {
@@ -4892,11 +5952,12 @@ export class Game {
         this.scene.add(this.beamGroup);
       }
       this.beamGroup.visible = true;
-      heldTorch.getWorldPosition(this.tmpV3);
-      this.beamGroup.position.copy(this.tmpV3).addScaledVector(Game.torchFwd, 0.12);
+      // beam pours from the held lamp's tip, not the eye
+      const tip = this.heldView.tipWorld(Game.beamTip);
+      this.beamGroup.position.set(tip.x, tip.y, tip.z).addScaledVector(Game.torchFwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion), 0.12);
       // During look-lag swings the cone can cross the near plane and smear
       // across the whole screen — fade it by its distance from the eye.
-      const beamFade = Math.min(1, Math.max(0, (this.tmpV3.distanceTo(eye) - 0.12) / 0.25));
+      const beamFade = Math.min(1, Math.max(0, (Math.hypot(tip.x - eye.x, tip.y - eye.y, tip.z - eye.z) - 0.12) / 0.25));
       this.beamGroup.quaternion.copy(this.camera.quaternion);
       for (const { mat, base } of this.beamMats) mat.opacity = base * this.lampFade * beamFade;
       // motes orbit the beam axis slowly and fall toward the viewer
@@ -4913,10 +5974,8 @@ export class Game {
         arr.needsUpdate = true;
         this.motesMat.opacity = 0.4 * this.lampFade * beamFade;
       }
-    } else if (this.heldGroup) {
-      this.heldGroup.visible = false;
-      this.vmRaise = 0;
-      if (this.beamGroup) this.beamGroup.visible = false;
+    } else if (this.beamGroup) {
+      this.beamGroup.visible = false;
     }
     // Lamp batteries — hand lamp sips (~180s), pulse lamp gulps (~90s) and
     // cranks back loudly. HUD reads count as charge %.
@@ -4999,61 +6058,10 @@ export class Game {
 
   private lampLight: THREE.SpotLight | null = null;
   private fillLight: THREE.PointLight | null = null;
-  private heldTorch: THREE.Object3D | null = null;
-  private heldTorchFallback = false;
-  private heldGroup: THREE.Group | null = null;
-  private vmLagQ = new THREE.Quaternion();
-  private vmBobPhase = 0;
-  private vmThrustT = -10;
-  private vmRaise = 0;
+  private heldView: HeldView | null = null;
   private static watchPos = new THREE.Vector3();
   private static torchFwd = new THREE.Vector3();
-  private static torchRight = new THREE.Vector3();
-  private static torchUp = new THREE.Vector3();
-
-  /** Scale/orient/center a vendored model for the low-right held pose. */
-  private fitHeldModel(m: THREE.Object3D): void {
-    // spec.height scales by Y, which over-inflates props authored lying
-    // flat — rescale by longest axis (~0.26 m) and point it forward.
-    const bb0 = new THREE.Box3().setFromObject(m);
-    const s0 = bb0.getSize(new THREE.Vector3());
-    if (s0.x >= s0.y && s0.x >= s0.z) m.rotation.y = Math.PI / 2;
-    else if (s0.y >= s0.z) m.rotation.x = Math.PI / 2;
-    const bb = new THREE.Box3().setFromObject(m);
-    const size = bb.getSize(new THREE.Vector3());
-    m.scale.multiplyScalar(0.26 / (Math.max(size.x, size.y, size.z) || 1));
-    bb.setFromObject(m);
-    m.position.sub(bb.getCenter(new THREE.Vector3()));
-  }
-
-  /** Forearm + gloved hand curled around the held torch — built once. */
-  private buildTorchHand(): THREE.Group {
-    const g = new THREE.Group();
-    const skin = new THREE.MeshStandardMaterial({ color: 0x6e5f4f, roughness: 0.9 });
-    const glove = new THREE.MeshStandardMaterial({ color: 0x2c2620, roughness: 0.95 });
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.34, 8), MAT.charcoal());
-    arm.position.set(0.06, -0.13, 0.17);
-    arm.rotation.set(-0.9, 0.15, -0.55);
-    g.add(arm);
-    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.045, 0.075), glove);
-    palm.position.set(0.015, -0.045, 0.015);
-    palm.rotation.set(0.15, 0, -0.2);
-    g.add(palm);
-    const finger = (x: number, y: number, z: number, ry: number) => {
-      const f = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.011, 0.05, 6), skin);
-      f.position.set(x, y, z);
-      f.rotation.set(Math.PI / 2 - 0.35, ry, 0);
-      g.add(f);
-    };
-    finger(-0.028, -0.01, -0.01, 0.1);
-    finger(-0.01, -0.004, -0.012, 0.05);
-    finger(0.008, -0.004, -0.01, -0.05);
-    const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.05, 6), skin);
-    thumb.position.set(0.032, -0.028, 0.03);
-    thumb.rotation.set(0.5, 0, -0.7);
-    g.add(thumb);
-    return g;
-  }
+  private static beamTip: Vec3 = v3();
 
   private publishHud(): void {
     const st = useGameStore.getState();

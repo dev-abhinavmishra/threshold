@@ -101,6 +101,7 @@ const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
   keyRack: 1.5, exitSign: 2.35, wallVent: 2.25, extinguisher: 1.15, fireAlarm: 1.9,
   sculleryRack: 1.75, potRack: 2.0,
   pegRail: 1.75, towelRail: 1.35,
+  curtainRod: 1.1, curtainLong: 1.18,
   curtainSwag: 2.35, drapePanel: 1.2, valveWheel: 1.35, dumbWaiterDoor: 1.15,
   wineRack: 1.7,
 };
@@ -129,6 +130,56 @@ function wallProps(w: number, d: number, rng: Rng, kinds: PropKind[], n: number,
       for (let t = 0; t < 8 && !free(x, laneX); t++) x = -w / 2 + 1 + rng.float() * (w - 2);
       if (!free(x, laneX)) continue; // no wall segment clear of the exit lane
       out.push({ kind, x, z: d / 2 - inZ, y, yaw: Math.PI, meta: { wall: true } });
+    }
+  }
+  return out;
+}
+
+/* ---- corridor architectural trim (sprint 224) ----
+ * Rhythmic wall dressing for corridor runs: pilaster/wallPanel bays with
+ * continuous wainscot + cornice lines, ceiling cross-beams, bracket
+ * lanterns. Every piece is a wall/ceiling-mounted ghost (collider
+ * [0,0,0]) so door-lane culling never drops them; bays falling inside a
+ * side-wall port's lateral range (skipW/skipE, port center ±1.35m) are
+ * skipped so a leaf can never clip a pilaster on its wall. */
+function corridorTrim(
+  w: number, d: number, h: number,
+  opts: { skipW?: number[]; skipE?: number[]; beams?: boolean; lanterns?: number; panels?: boolean } = {},
+): PropSpec[] {
+  const out: PropSpec[] = [];
+  const xw = w / 2 - 0.05;
+  const bayW = 1.9;
+  const bays = Math.max(2, Math.round((d - 1.2) / bayW));
+  const span = bays * bayW;
+  const z0 = -span / 2;
+  const panels = opts.panels !== false;
+  for (const side of [-1, 1]) {
+    const yaw = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    const skip = side < 0 ? (opts.skipW ?? []) : (opts.skipE ?? []);
+    const clear = (z: number) => skip.every((s) => Math.abs(z - s) > 1.35);
+    for (let i = 0; i <= bays; i++) {
+      const z = z0 + i * bayW;
+      if (clear(z)) out.push({ kind: 'pilaster', x: side * xw, z, y: 1.25, yaw });
+      if (i < bays && clear(z + bayW / 2)) {
+        const zc = z + bayW / 2;
+        out.push({ kind: 'wainscotRun', x: side * xw, z: zc, y: 0.55, yaw });
+        out.push({ kind: 'corniceRun', x: side * xw, z: zc, y: h - 0.11, yaw });
+        if (panels) out.push({ kind: 'wallPanel', x: side * xw, z: zc, y: 1.78, yaw });
+      }
+    }
+  }
+  if (opts.beams) {
+    for (let i = 1; i < bays; i += 2) {
+      out.push({ kind: 'beamRun', x: 0, z: z0 + i * bayW, y: h - 0.34, scale: Math.max(1, w / 3.4) });
+    }
+  }
+  const nl = opts.lanterns ?? 0;
+  for (let i = 0; i < nl; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const z = z0 + ((i + 1) * span) / (nl + 1);
+    const skip = side < 0 ? (opts.skipW ?? []) : (opts.skipE ?? []);
+    if (skip.every((s) => Math.abs(z - s) > 1.35)) {
+      out.push({ kind: 'wallLantern', x: side * xw, z, y: 2.1, yaw: side < 0 ? Math.PI / 2 : -Math.PI / 2 });
     }
   }
   return out;
@@ -182,6 +233,7 @@ export const CLASH_OK: ReadonlyArray<readonly [PropKind, PropKind]> = [
   ['stove', 'handsaw'],           // tools leaned on the stove
   ['bookCart', 'desk'],
   ['payphone', 'stairGate'],
+  ['toppledColumn', 'paperStack'], // papers scattered by the fallen column
   ['stackShelf', 'toppledColumn'],// column fallen against the shelf
   ['bookshelf', 'libraryLadder'],// ladder leans on the shelf
   ['hatch', 'portcullis'],        // gate beside the service hatch endcap
@@ -189,11 +241,22 @@ export const CLASH_OK: ReadonlyArray<readonly [PropKind, PropKind]> = [
   ['bust', 'wallNiche'],          // bust standing in the niche
 ];
 
+/** Wall/ceiling-skin trim kinds (sprint 224 batch): pilasters, panelling,
+ *  cornice, surrounds, lanterns. These ARE the wall's face — furniture or
+ *  wall decor overlapping them reads as the intended layered look (a
+ *  radiator in front of wainscot, a painting on a panelled wall), never a
+ *  collision, so clash checks exempt any pair that touches one. */
+export const TRIM_KINDS: ReadonlySet<PropKind> = new Set([
+  'pilaster', 'wainscotRun', 'corniceRun', 'wallPanel', 'doorSurround',
+  'pierMirror', 'beamRun', 'wallLantern', 'traceryWindow', 'roseWindow',
+]);
+
 /** True when two props materially share the same floor space. */
 export function propsClash(a: PropSpec, b: PropSpec): boolean {
   // Two elevated props are tabletop clutter — authored position is the
   // design; footprint rules only exist to catch furniture-scale embeds.
   if ((a.y ?? 0) > 0.5 && (b.y ?? 0) > 0.5) return false;
+  if (TRIM_KINDS.has(a.kind) || TRIM_KINDS.has(b.kind)) return false;
   const [ax, az] = propFootprint(a);
   const [bx, bz] = propFootprint(b);
   const dx = Math.abs(a.x - b.x), dz = Math.abs(a.z - b.z);
@@ -247,8 +310,9 @@ const corridorStraight: RoomTemplate = {
     return spec('corr-straight', 'corridor', 3.2, d, 2.9, {
     entryOff: 0,
     props: [
+      ...corridorTrim(3.2, d, 2.9, { beams: true, lanterns: 2 }),
       ...wallProps(3.2, d, rng, ['painting', 'wallSconce', 'sign', 'wallClock', 'keyRack', 'exitSign', 'pegRail'], rng.int(2, 4)),
-      { kind: 'rug', x: 0, z: 0 },
+      { kind: 'runnerRug', x: 0, z: -d / 4, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: d / 4, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'payphone', x: 1.3, z: -1.2, yaw: -Math.PI / 2 },
@@ -277,6 +341,11 @@ const corridorWide: RoomTemplate = {
   build: (rng) => spec('corr-wide', 'corridor', 6, 9, 3.2, {
     props: [
       { kind: 'archway', x: 0, z: -0.2, scale: 0.88 },
+      ...corridorTrim(6, 9, 3.2, { lanterns: 2 }),
+      { kind: 'grandfatherClock', x: 2.62, z: -1.4, yaw: -Math.PI / 2 },
+      { kind: 'consoleTable', x: -1.5, z: 4.05, yaw: Math.PI },
+      { kind: 'vase', x: -1.5, z: 4.05, y: 0.88 },
+      { kind: 'pierMirror', x: -2.9, z: -0.4, y: 1.05, yaw: Math.PI / 2 },
       { kind: 'transomWindow', x: 0, z: -4.42, y: 2.3 },
       { kind: 'transomWindow', x: 0, z: 4.42, y: 2.3, yaw: Math.PI },
       { kind: 'radiatorFin', x: -2.82, z: 1.2, yaw: Math.PI / 2 },
@@ -316,6 +385,7 @@ const corridorL: RoomTemplate = {
   build: (rng) => spec('corr-l-turn', 'corridor', 4, 8, 2.9, {
     exits: [P(1.2, 'e'), P(0, 'n', 1.4)], // exit east; north retained only if branch
     props: [
+      ...corridorTrim(4, 8, 2.9, { skipE: [1.2] }),
       ...wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain', 'wallClock', 'keyRack', 'pegRail'], 3, { zs: [1.2] }),
       { kind: 'conduitRun', x: 0, z: 0, y: 2.68 },
       { kind: 'radiatorFin', x: -1.82, z: -0.6, yaw: Math.PI / 2 },
@@ -340,6 +410,7 @@ const corridorZig: RoomTemplate = {
     entryOff: -1.4,
     exits: [P(1.4, 'n')],
     props: [
+      ...corridorTrim(5, 10, 2.9, { panels: false }),
       { kind: 'partition', x: -0.6, z: -1.4, scale: 2.4 },
       { kind: 'partition', x: 0.9, z: 1.6, scale: 2.6 },
       { kind: 'drawerUnit', x: 1.9, z: -3, yaw: -Math.PI / 2 },
@@ -370,10 +441,12 @@ const corridorJunction: RoomTemplate = {
     exits: [P(0, 'n'), P(-1.8, 'w'), P(1.8, 'e')],
     props: [
       { kind: 'pillar', x: 0, z: 0, meta: { height: 3 } },
+      ...corridorTrim(7, 7, 3.0, { skipW: [-1.8], skipE: [1.8], lanterns: 2 }),
+      { kind: 'grandfatherClock', x: -3.0, z: 2.95, yaw: Math.PI / 2 },
       ...wallProps(7, 7, rng, ['painting', 'wallSconce', 'wallClock', 'pegRail', 'curtainSwag'], 4, { zs: [-1.8, 1.8] }),
       { kind: 'cabinet', x: 2.6, z: -2.4, yaw: -Math.PI / 2 },
-      { kind: 'clock', x: -2.8, z: -2.8 },
-      { kind: 'statue', x: 0, z: 2.9, yaw: Math.PI },
+      { kind: 'clock', x: -2.8, z: -3.2 },
+      { kind: 'statue', x: 0, z: 1.4, yaw: Math.PI },
       { kind: 'payphone', x: 3.0, z: -1.9, yaw: -Math.PI / 2 },
       { kind: 'bin', x: 3.0, z: -1.1 },
       { kind: 'bench', x: -3.0, z: 0.6, yaw: Math.PI / 2 },
@@ -423,6 +496,9 @@ const guestRoom: RoomTemplate = {
       { kind: 'nightstand', x: -2.75, z: 1.6 },
       { kind: 'dresser', x: 2.6, z: -0.3, yaw: -Math.PI / 2 },
       { kind: 'papers', x: 2.2, z: -1.85, y: 0.8 },
+      // rod + swag dresses the doorway transom — mounted above the 1.9
+      // door-lane exemption (it's over the leaf, not in the walkway)
+      { kind: 'curtainRod', x: 0, z: -2.88, y: 2.15, yaw: 0 },
       { kind: 'ottoman', x: -2.4, z: 0.1, yaw: 0.3 },
       { kind: 'pillows', x: -2.4, z: 2.15, y: 0.58 },
       { kind: 'upholsteredHeadboard', x: -2.4, z: 2.62, yaw: Math.PI },
@@ -460,6 +536,8 @@ const guestTwin: RoomTemplate = {
       { kind: 'cigs', x: -2.9, z: -1.95, y: 0.72 }, { kind: 'lighter', x: -2.9, z: -1.75, y: 0.72 },
       { kind: 'mousetrap', x: -3.1, z: -0.8 },
       { kind: 'bedBench', x: -1.95, z: -0.15 }, { kind: 'bedBench', x: 1.95, z: -0.15 },
+      { kind: 'curtainLong', x: 3.36, z: -1.0, y: 1.18, yaw: -Math.PI / 2 },
+      { kind: 'dressingScreen', x: 2.95, z: -2.65, yaw: 0.5 },
       ...wallProps(7, 6.5, rng, ['painting', 'wallSconce', 'wallClock', 'pegRail', 'curtainSwag', 'drapePanel'], 4),
     ],
     sockets: [...drawerSockets([[-3.05, -1.9]]), ...lootSockets([[2.6, -1.8], [-2.8, -2]])],
@@ -503,7 +581,10 @@ const suiteSplit: RoomTemplate = {
       { kind: 'teaTrolley', x: 0.9, z: -1.7, yaw: 0.2 },
       { kind: 'wardrobe', x: -4.0, z: -0.7, yaw: Math.PI / 2 },
       { kind: 'ceilingRose', x: -2.2, z: 0, y: 2.95 },
-      ...wallProps(9, 7, rng, ['painting', 'lamp', 'wallClock', 'pegRail', 'curtainSwag', 'drapePanel'], 5, { xs: [2] }),
+      { kind: 'curtainLong', x: -4.35, z: -1.6, y: 1.18, yaw: Math.PI / 2 },
+      { kind: 'vanityTable', x: 1.3, z: -3.05, yaw: 0 },
+      { kind: 'dressingScreen', x: -2.6, z: -3.05, yaw: -0.5 },
+      ...wallProps(9, 7, rng, ['painting', 'lamp', 'wallClock', 'pegRail', 'curtainSwag', 'drapePanel', 'curtainRod'], 5, { xs: [2] }),
     ],
     sockets: [...drawerSockets([[3, -2]]), ...lootSockets([[-2.4, -1.4], [-3.6, 2.4]])],
     hiding: [
@@ -527,7 +608,7 @@ const bathAnte: RoomTemplate = {
   id: 'guest-bath-ante',
   build: (rng) => spec('guest-bath-ante', 'guest', 5, 7.5, 2.8, {
     props: [
-      { kind: 'counter', x: -1.8, z: 2.6, scale: 1.6 },
+      { kind: 'counter', x: -1.8, z: 1.5, scale: 1.6 },
       { kind: 'mirror', x: -1.8, z: 2.95, y: 1.6 },
       { kind: 'machineBox', x: 2.0, z: 2.6, scale: 0.8 },
       { kind: 'puddle', x: 0.3, z: 0.6 },
@@ -595,7 +676,7 @@ const recordsOffice: RoomTemplate = {
   build: (rng) => spec('records-office', 'records', 7, 6.5, 2.9, {
     props: [
       { kind: 'desk', x: -1.8, z: 0.6 }, { kind: 'desk', x: 1.8, z: 0.6 },
-      { kind: 'desk', x: -1.8, z: -1.4 }, { kind: 'desk', x: 1.8, z: -1.4 },
+      { kind: 'writingDesk', x: -1.8, z: -1.4 }, { kind: 'desk', x: 1.8, z: -1.4 },
       { kind: 'filing', x: -3, z: 2.4 }, { kind: 'filing', x: -2.4, z: 2.4 },
       { kind: 'filing', x: 3, z: 2.4 },
       { kind: 'printer', x: 3, z: 1.5 },
@@ -711,6 +792,7 @@ const maintPipes: RoomTemplate = {
       { kind: 'machineBox', x: 1.5, z: 2.4, scale: 0.9 },
       { kind: 'steamVent', x: 0.9, z: -1.2 },
       { kind: 'breakerPanel', x: 1.55, z: 0.4, y: 0.7, yaw: -Math.PI / 2 },
+      { kind: 'fan', x: 1.9, z: -1.6, y: 1.15, yaw: -Math.PI / 2 },
       { kind: 'wallVent', x: -1.8, z: -2.2, y: 1.6, yaw: Math.PI / 2 },
       { kind: 'puddle', x: -0.4, z: 1.6 },
       { kind: 'weldingCart', x: 1.4, z: -2.6, yaw: Math.PI },
@@ -741,7 +823,7 @@ const maintBoiler: RoomTemplate = {
     props: [
       { kind: 'machineBox', x: -2.4, z: 0, scale: 1.6 },
       { kind: 'machineBox', x: 2.4, z: -1.6, scale: 1.2 },
-      { kind: 'pipe', x: 0, z: -3.2, y: 1.8, scale: 7 },
+      { kind: 'pipe', x: 1.3, z: -3.2, y: 1.8, scale: 7 },
       { kind: 'steamVent', x: 0.6, z: 1.8 },
       { kind: 'steamVent', x: -1.4, z: 2.6 },
       { kind: 'rubble', x: 1.8, z: 2.8 },
@@ -750,8 +832,8 @@ const maintBoiler: RoomTemplate = {
       { kind: 'pipeManifold', x: 3.55, z: 0.4, y: 0, yaw: -Math.PI / 2 },
       { kind: 'locker', x: 3.2, z: 1.2, yaw: -Math.PI / 2 },
       { kind: 'stove', x: -3.2, z: -2.8 },
-      { kind: 'trolley', x: -1.2, z: 3.2 },
-      { kind: 'generator', x: 0.6, z: -3.0 },
+      { kind: 'trolley', x: -1.2, z: 2.0 },
+      { kind: 'generator', x: 0.6, z: -1.8 },
       { kind: 'weldingCart', x: 3.0, z: 0.3, yaw: -Math.PI / 2 },
       { kind: 'bin', x: -3.3, z: 0.6 },
       { kind: 'ductCirc', x: 0, z: -3.9, y: 3.0 },
@@ -847,7 +929,7 @@ const galleryPortraits: RoomTemplate = {
       { kind: 'painting', x: 3.2, z: 1.8, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'pillar', x: -1.4, z: -0.4, meta: { height: 3.6 } },
       { kind: 'pillar', x: 1.4, z: 0.8, meta: { height: 3.6 } },
-      { kind: 'statue', x: 0, z: -3.6 },
+      { kind: 'statue', x: 0, z: -2.9 },
       { kind: 'cannon', x: -2.6, z: -3.6, yaw: 0.5 },
       { kind: 'bust', x: -1.4, z: -0.4, y: 1.6 },
       { kind: 'bust', x: 1.4, z: 0.8, y: 1.6 },
@@ -901,12 +983,16 @@ const galleryAtrium: RoomTemplate = {
       { kind: 'archway', x: 0, z: 4.3, yaw: Math.PI },
       { kind: 'medallion', x: 2.6, z: -2.6, y: 4.9 },
       { kind: 'windowArch', x: -5.35, z: -3.3, y: 0.9, yaw: Math.PI / 2 },
-      { kind: 'displayCase', x: 0, z: -3.8 },
+      { kind: 'grandStair', x: 4.55, z: 0, yaw: 0 },
+      { kind: 'roseWindow', x: -2.8, z: -4.45, y: 3.9 },
+      { kind: 'roseWindow', x: 2.8, z: -4.45, y: 3.9 },
+      { kind: 'displayCase', x: 1.6, z: -3.8 },
       { kind: 'displayCase', x: -3.9, z: 3.4, yaw: 0.5 },
       { kind: 'ropeBarrier', x: -4.4, z: -0.4, yaw: Math.PI / 2 },
-      { kind: 'ropeBarrier', x: 4.4, z: -0.4, yaw: -Math.PI / 2 },
+      { kind: 'ropeBarrier', x: 2.6, z: 4.0, yaw: Math.PI },
       { kind: 'plinth', x: 4.2, z: -3.4 },
       { kind: 'bust', x: 4.2, z: -3.4, y: 1.1 },
+      { kind: 'globeStand', x: 3.4, z: -3.9, yaw: -0.5 },
     ],
     sockets: lootSockets([[0, 0], [-4.6, 3.6], [4.6, -3.6]]),
     hiding: [
@@ -933,9 +1019,10 @@ const galleryMezzanine: RoomTemplate = {
   build: (_rng) => spec('gallery-mezzanine', 'gallery', 8, 9, 4.6, {
     props: [
       { kind: 'stairs', x: -2.6, z: 1.2, meta: { height: 1.8, length: 4 } },
-      { kind: 'railing', x: 0, z: 3.2, scale: 7 },
+      { kind: 'railing', x: 0, z: 2.6, scale: 7 },
       { kind: 'balustrade', x: -0.4, z: 2.75 },
       { kind: 'balustrade', x: 2.6, z: 2.75 },
+      { kind: 'newelPost', x: -3.45, z: 0.55 }, { kind: 'newelPost', x: -1.72, z: 0.55 },
       { kind: 'window', x: 3.6, z: 0.4, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'painting', x: 3.6, z: -2.4, y: 1.8, yaw: -Math.PI / 2 },
       { kind: 'bookshelf', x: -2.5, z: -2.75 },
@@ -990,13 +1077,14 @@ const roomDorm: RoomTemplate = {
   build: (rng) => spec('guest-dormitory', 'guest', 9, 8, 3.0, {
     props: [
       { kind: 'bed', x: -2.8, z: -1.6 }, { kind: 'bed', x: -2.8, z: 1.2 },
-      { kind: 'bed', x: 0, z: -1.6 }, { kind: 'bed', x: 0, z: 1.2 },
+      { kind: 'bed', x: 0, z: -0.9 }, { kind: 'bed', x: 0, z: 1.2 },
       { kind: 'bed', x: 2.8, z: -1.6 }, { kind: 'bed', x: 2.8, z: 1.2 },
       { kind: 'suitcase', x: -2.0, z: 0.0, yaw: 0.3 },
       { kind: 'suitcase', x: 1.4, z: 2.6, yaw: -0.8 },
       { kind: 'cageLocker', x: -4.2, z: -3.2, yaw: Math.PI / 2 },
       { kind: 'cageLocker', x: -4.2, z: -1.9, yaw: Math.PI / 2 },
       { kind: 'cageLocker', x: -4.2, z: -0.6, yaw: Math.PI / 2 },
+      { kind: 'linenShelf', x: 4.2, z: -2.4, yaw: -Math.PI / 2 },
       ...wallProps(9, 8, rng, ['sign', 'wallSconce', 'wallClock', 'pegRail'], 3),
     ],
     sockets: lootSockets([[-2.8, 3.2], [0, 3.2], [2.8, 3.2]]),
@@ -1014,7 +1102,7 @@ const roomLobbySmall: RoomTemplate = {
   id: 'guest-reception',
   build: (rng) => spec('guest-reception', 'guest', 8, 7, 3.4, {
     props: [
-      { kind: 'counter', x: 0, z: 1.8, scale: 3 },
+      { kind: 'counter', x: 0, z: 0.7, scale: 3 },
       { kind: 'till', x: 0.6, z: 1.8, y: 1.1 },
       { kind: 'sofa', x: -2.8, z: -1.4, yaw: Math.PI / 2 },
       { kind: 'table', x: -2.8, z: -0.2 },
@@ -1028,6 +1116,8 @@ const roomLobbySmall: RoomTemplate = {
       { kind: 'bin', x: 2.4, z: -2.7 },
       { kind: 'board', x: 1.6, z: 3.05, yaw: Math.PI },
       { kind: 'bellCart', x: -1.45, z: -2.95, yaw: 0.3 },
+      { kind: 'curtainLong', x: 3.85, z: -0.3, y: 1.18, yaw: -Math.PI / 2 },
+      { kind: 'settee', x: -3.55, z: 0.7, yaw: Math.PI / 2 },
       ...wallProps(8, 7, rng, ['painting', 'sign', 'wallClock'], 3),
     ],
     sockets: [...lootSockets([[0.6, 1.8], [3.2, 2.8]]), ...drawerSockets([[0, 1.8]])],
@@ -1048,6 +1138,7 @@ const roomDarkHall: RoomTemplate = {
       { kind: 'paperStack', x: -1.6, z: -1.4 },
       { kind: 'paperStack', x: 1.4, z: 0.6 },
       { kind: 'paperStack', x: -0.8, z: 2.6 },
+      ...corridorTrim(5, 9, 2.8, { panels: false }),
       { kind: 'shelf', x: 2.0, z: -2.8, yaw: -Math.PI / 2 },
       { kind: 'snare', x: 0, z: 1.2 },
       { kind: 'carton', x: -2.0, z: -3.0, yaw: 0.7 },
@@ -1194,10 +1285,10 @@ const roomClinic: RoomTemplate = {
   id: 'special-clinic',
   build: (_rng) => spec('special-clinic', 'safe', 7, 6, 2.9, {
     props: [
-      { kind: 'bed', x: -2.2, z: 1.2 }, { kind: 'bed', x: -0.4, z: 1.2 },
-      { kind: 'trolley', x: 1.4, z: 1.0 },
-      { kind: 'counter', x: 2.8, z: -1.8, scale: 1.8 },
-      { kind: 'sign', x: 0, z: 2.9, y: 1.9 },
+      { kind: 'bed', x: -2.2, z: 1.2 }, { kind: 'bed', x: 1.8, z: 1.2 },
+      { kind: 'trolley', x: 2.8, z: 2.3 },
+      { kind: 'counter', x: 1.0, z: -0.8, scale: 1.8 },
+      { kind: 'sign', x: 0, z: 2.9, y: 2.05 },
       { kind: 'curtain', x: -1.3, z: 1.2, yaw: Math.PI / 2 },
     ],
     sockets: lootSockets([[2.8, -1.8], [1.4, 1.0]]),
@@ -1222,7 +1313,7 @@ const roomConservatory: RoomTemplate = {
       { kind: 'window', x: 4.8, z: 0, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'table', x: 0, z: 0.4, scale: 1.3 },
       { kind: 'chandelier', x: 0, z: 0, y: 4.0 },
-      { kind: 'statue', x: 0, z: -3.8 },
+      { kind: 'statue', x: -1.8, z: -3.8 },
       { kind: 'vase', x: 0.4, z: 0.4, y: 1.05 },
       { kind: 'plant', x: -1.6, z: -2.6 }, { kind: 'plant', x: 1.6, z: -2.6 },
       { kind: 'seedTray', x: -0.5, z: 0.3, y: 1.05 },
@@ -1245,7 +1336,7 @@ const roomPuzzleValve: RoomTemplate = {
   id: 'puzzle-valve',
   build: (_rng) => spec('puzzle-valve', 'maintenance', 6, 7, 2.9, {
     props: [
-      { kind: 'machineBox', x: 0, z: 2.6, scale: 1.4 },
+      { kind: 'machineBox', x: 1.6, z: 2.6, scale: 1.4 },
       { kind: 'keypad', x: 1.2, z: 2.6, y: 1.2 },
       { kind: 'pipe', x: -1.8, z: 2.8, y: 1.4, scale: 5 },
       { kind: 'pipe', x: -1.5, z: 2.8, y: 1.1, scale: 5 },
@@ -1305,7 +1396,7 @@ const roomGalleryBroken: RoomTemplate = {
       { kind: 'curtain', x: -1.4, z: 3.8 },
       { kind: 'curtain', x: 1.4, z: 3.8 },
       { kind: 'displayCase', x: 3.6, z: 2.4, yaw: -0.4 },
-      { kind: 'ropeBarrier', x: 0.4, z: -2.6 },
+      { kind: 'ropeBarrier', x: 2.2, z: -2.6 },
     ],
     sockets: lootSockets([[3.6, -3.0]]),
     hiding: [
@@ -1330,13 +1421,16 @@ const roomLongHall: RoomTemplate = {
       { kind: 'pillar', x: 1.8, z: 0, meta: { height: 3.4 } },
       { kind: 'pillar', x: -1.8, z: 4, meta: { height: 3.4 } },
       { kind: 'pillar', x: 1.8, z: 4, meta: { height: 3.4 } },
-      { kind: 'rug', x: 0, z: 0 },
+      ...corridorTrim(5.5, 14, 3.4, { beams: true, lanterns: 4 }),
+      { kind: 'runnerRug', x: 0, z: -3.5, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 0, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 3.5, yaw: Math.PI / 2 },
+      { kind: 'grandfatherClock', x: -2.5, z: -4.9, yaw: Math.PI / 2 },
+      { kind: 'pierMirror', x: -2.7, z: 3.6, y: 1.05, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'planter', x: -2.2, z: -5.9, yaw: Math.PI / 2 },
       { kind: 'planter', x: 2.2, z: 5.9, yaw: Math.PI / 2 },
       { kind: 'bin', x: 2.3, z: -5.9 },
-      { kind: 'horseStatue', x: 0, z: -6.2 },
+      { kind: 'horseStatue', x: 1.5, z: -6.2 },
       { kind: 'transomWindow', x: 0, z: -6.92, y: 2.42 },
       { kind: 'transomWindow', x: 0, z: 6.92, y: 2.42, yaw: Math.PI },
       { kind: 'wallNiche', x: -2.68, z: -1.8, y: 0, yaw: Math.PI / 2 },
@@ -1368,7 +1462,8 @@ const roomBranchCloset: RoomTemplate = {
   build: (rng) => spec('corr-closet-branch', 'corridor', 5, 8, 2.9, {
     exits: [P(0, 'n'), P(1.4, 'e', 1.1)],
     props: [
-      { kind: 'cabinet', x: 2.1, z: 1.4, yaw: -Math.PI / 2 },
+      ...corridorTrim(5, 8, 2.9, { skipE: [1.4], panels: false }),
+      { kind: 'cabinet', x: 2.1, z: -0.4, yaw: -Math.PI / 2 },
       { kind: 'drawerUnit', x: -2.0, z: 1.8, yaw: Math.PI / 2 },
       { kind: 'bin', x: -2.2, z: -2.6 },
       { kind: 'radiatorFin', x: -2.32, z: -0.4, yaw: Math.PI / 2 },
@@ -1392,16 +1487,16 @@ const roomStorage: RoomTemplate = {
   id: 'guest-storage',
   build: (_rng) => spec('guest-storage', 'guest', 6, 6.5, 2.8, {
     props: [
-      { kind: 'crate', x: -1.8, z: -1.8 }, { kind: 'crate', x: -1.1, z: -1.9, scale: 0.7 },
+      { kind: 'crate', x: -1.8, z: -1.8 }, { kind: 'crate', x: -1.45, z: -2.3, scale: 0.7 },
       { kind: 'crate', x: 1.8, z: 1.6 }, { kind: 'crate', x: 2.2, z: 0.8, scale: 0.8 },
-      { kind: 'trolley', x: 0.2, z: -2.2 },
+      { kind: 'trolley', x: 1.6, z: -2.2 },
       { kind: 'shelf', x: -2.4, z: 2.2 },
       { kind: 'paperStack', x: 1.0, z: 0.2 },
-      { kind: 'carton', x: -0.4, z: 1.8, yaw: 0.5 },
+      { kind: 'carton', x: -1.3, z: 1.8, yaw: 0.5 },
       { kind: 'carton', x: 2.55, z: 2.4, yaw: -0.4 },
       { kind: 'spinningWheel', x: -0.6, z: 0.4, yaw: 0.5 },
       { kind: 'chest', x: 1.4, z: -1.6, yaw: -0.4 },
-      { kind: 'basket', x: 0.6, z: 1.9 },
+      { kind: 'basket', x: 1.3, z: 1.9 },
       { kind: 'suitcase', x: -2.6, z: 0.6, yaw: 0.9 },
       { kind: 'mousetrap', x: 2.0, z: -0.4 },
       { kind: 'football', x: -1.2, z: 2.5 },
@@ -1409,6 +1504,7 @@ const roomStorage: RoomTemplate = {
       { kind: 'carvedPlate', x: 0.9, z: 1.1 },
       { kind: 'cageLocker', x: 2.65, z: -0.4, yaw: -Math.PI / 2 },
       { kind: 'linenHamper', x: -2.65, z: -1.0 },
+      { kind: 'linenShelf', x: -2.85, z: 0.5, yaw: Math.PI / 2 },
     ],
     sockets: lootSockets([[-1.8, -1.8], [1.8, 1.6], [-2.4, 2.2], [0.2, -2.2]]),
     hiding: [
@@ -1431,8 +1527,8 @@ const roomNarrowService: RoomTemplate = {
       { kind: 'machineBox', x: 0.8, z: 3.2, scale: 0.6 },
       { kind: 'mousetrap', x: -0.9, z: -3.4 },
       { kind: 'snare', x: 0, z: -1.5 },
-      { kind: 'hatch', x: 0, z: 4.7, yaw: Math.PI },
-      { kind: 'portcullis', x: 1.1, z: 4.75, yaw: Math.PI },
+      { kind: 'hatch', x: 0, z: 2.9, yaw: Math.PI },
+      { kind: 'portcullis', x: 1.1, z: 2.4, yaw: Math.PI },
       { kind: 'conduitRun', x: 1.15, z: -3.5, y: 1.6, yaw: -Math.PI / 2 },
       { kind: 'hangingCable', x: 0, z: -4.2, y: 2.15 },
     ],
@@ -1456,7 +1552,7 @@ const roomElevatorLobby: RoomTemplate = {
       { kind: 'sign', x: 0, z: 3.4, y: 2.6 },
       { kind: 'plant', x: 3.0, z: -1.8 },
       { kind: 'chandelier', x: 0, z: 0, y: 3.2 },
-      { kind: 'streetSeat', x: 0, z: -2.8 },
+      { kind: 'streetSeat', x: 1.9, z: -2.8 },
       { kind: 'sideTable', x: 3.0, z: -0.6 },
       { kind: 'mousetrap', x: -2.0, z: -2.4 },
       { kind: 'displayCase', x: 0, z: 0.9 },
@@ -1477,8 +1573,8 @@ const roomRecordsCage: RoomTemplate = {
   build: (rng) => spec('records-cage-room', 'records', 7, 7.5, 3.0, {
     props: [
       { kind: 'recordsCage', x: -1.4, z: -0.8 },
-      { kind: 'recordsCage', x: 1.4, z: -0.8 },
-      { kind: 'recordsCage', x: 0, z: 2.2 },
+      { kind: 'recordsCage', x: 2.3, z: -1.7 },
+      { kind: 'recordsCage', x: 0, z: 1.3 },
       { kind: 'desk', x: -2.6, z: 2.6 },
       { kind: 'libraryLadder', x: 1.45, z: -0.35, yaw: 0 },
       { kind: 'bookCart', x: 2.8, z: 1.4, yaw: 0.4 },
@@ -1504,7 +1600,7 @@ const roomObsGallery: RoomTemplate = {
       { kind: 'hangingPanels', x: 0, z: 1.4, y: 2.8 },
       { kind: 'serverRack', x: -2.0, z: 3.9, yaw: Math.PI },
       { kind: 'serverRack', x: -1.2, z: 3.9, yaw: Math.PI },
-      { kind: 'serverRack', x: -0.4, z: 3.9, yaw: Math.PI },
+      { kind: 'serverRack', x: -1.5, z: 3.9, yaw: Math.PI },
       { kind: 'monitor', x: 2.55, z: -0.1, y: 0.78, yaw: -Math.PI / 2 },
     ],
     sockets: [...drawerSockets([[2.6, 0.2]]), ...lootSockets([[-3.2, -3.6]])],
@@ -1572,11 +1668,16 @@ const roomMotelCorridor: RoomTemplate = {
   id: 'corr-doors-row',
   build: (rng) => spec('corr-doors-row', 'corridor', 6, 9, 3.0, {
     props: [
+      ...corridorTrim(6, 9, 3.0, { lanterns: 2 }),
+      { kind: 'doorSurround', x: -2.92, z: -2.85, y: 1.25, yaw: Math.PI / 2 },
+      { kind: 'doorSurround', x: -2.92, z: 0.95, y: 1.25, yaw: Math.PI / 2 },
+      { kind: 'doorSurround', x: 2.92, z: -0.95, y: 1.25, yaw: -Math.PI / 2 },
+      { kind: 'doorSurround', x: 2.92, z: 2.85, y: 1.25, yaw: -Math.PI / 2 },
       { kind: 'painting', x: -2.8, z: -2.4, y: 1.7, yaw: Math.PI / 2 },
       { kind: 'painting', x: 2.8, z: -0.8, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'painting', x: -2.8, z: 1.2, y: 1.7, yaw: Math.PI / 2 },
       { kind: 'cabinet', x: 2.4, z: 3.2, yaw: -Math.PI / 2 },
-      { kind: 'rug', x: 0, z: 0 },
+      { kind: 'runnerRug', x: 0, z: -1.8, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 1.8, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'payphone', x: 2.55, z: -3.4, yaw: -Math.PI / 2 },
@@ -1601,7 +1702,7 @@ const roomOfficeBullpen: RoomTemplate = {
   id: 'records-bullpen',
   build: (_rng) => spec('records-bullpen', 'records', 9, 8, 3.0, {
     props: [
-      { kind: 'desk', x: -2.6, z: -1.4 }, { kind: 'desk', x: 0, z: -1.4 }, { kind: 'desk', x: 2.6, z: -1.4 },
+      { kind: 'desk', x: -2.6, z: -1.4 }, { kind: 'writingDesk', x: 0, z: -1.4 }, { kind: 'desk', x: 2.6, z: -1.4 },
       { kind: 'desk', x: -2.6, z: 1.0 }, { kind: 'desk', x: 0, z: 1.0 }, { kind: 'desk', x: 2.6, z: 1.0 },
       { kind: 'filing', x: -3.8, z: 3.0 }, { kind: 'filing', x: -3.1, z: 3.0 },
       { kind: 'waterCooler', x: 3.8, z: 3.0 },
@@ -1621,7 +1722,7 @@ const roomOfficeBullpen: RoomTemplate = {
       { kind: 'papers', x: 0.2, z: 1.2, y: 0.8 },
       { kind: 'books', x: 2.8, z: -1.5, y: 0.8 },
       { kind: 'glassWall', x: -3.6, z: -0.4, scale: 3.2, yaw: Math.PI / 2 },
-      { kind: 'board', x: -0.8, z: 3.2, yaw: Math.PI },
+      { kind: 'board', x: -0.8, z: 2.1, yaw: Math.PI },
       { kind: 'bin', x: 3.9, z: 2.2 },
     ],
     sockets: [...drawerSockets([[-2.6, -1.4], [0, -1.4], [2.6, -1.4], [-2.6, 1.0], [0, 1.0], [2.6, 1.0]]), ...lootSockets([[3.8, -3.2]])],
@@ -1693,7 +1794,7 @@ const roomGreenRecords: RoomTemplate = {
       { kind: 'deskLamp', x: 0.3, z: 1.75, y: 0.78 },
       { kind: 'monitor', x: -0.35, z: 1.7, y: 0.78, yaw: Math.PI },
       { kind: 'papers', x: 0.55, z: 1.95, y: 0.8 },
-      { kind: 'plant', x: 0, z: -3.2 },
+      { kind: 'plant', x: 1.4, z: -3.2 },
       { kind: 'rug', x: 0, z: 0 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
@@ -1716,19 +1817,23 @@ const roomDuel: RoomTemplate = {
     props: [
       { kind: 'partition', x: 0.6, z: 0, scale: 6, yaw: Math.PI / 2 },
       { kind: 'bed', x: -2.6, z: 1.6 },
-      { kind: 'bed', x: 2.9, z: 1.6 },
+      // right bed shifted east — its footboard corner clipped the exit
+      // door rectangle at x1.5 (see clearDoorLanes)
+      { kind: 'bed', x: 3.25, z: 1.6 },
       { kind: 'drawerUnit', x: -3.6, z: -2.2 },
       { kind: 'drawerUnit', x: 3.7, z: -2.2 },
       { kind: 'lamp', x: -2.6, z: -0.8 },
       { kind: 'bin', x: 1.6, z: -3.0 },
       { kind: 'basinSink', x: -0.4, z: -3.2, yaw: 0 }, { kind: 'basinSink', x: 2.6, z: -3.2, yaw: 0 },
       { kind: 'towelRail', x: -0.4, z: -3.35, y: 1.35, yaw: 0 }, { kind: 'towelRail', x: 2.6, z: -3.35, y: 1.35, yaw: 0 },
-      { kind: 'bedBench', x: -2.6, z: 0.3 }, { kind: 'bedBench', x: 2.9, z: 0.3 },
+      { kind: 'bedBench', x: -2.6, z: 0.3 }, { kind: 'bedBench', x: 3.25, z: 0.3 },
+      { kind: 'headboard', x: -2.6, z: 3.0, yaw: Math.PI }, { kind: 'headboard', x: 3.15, z: 3.0, yaw: Math.PI },
+      { kind: 'vanityTable', x: 3.95, z: -0.9, yaw: -Math.PI / 2 },
     ],
     sockets: [...drawerSockets([[-3.6, -2.2], [3.7, -2.2]]), ...lootSockets([[0.4, 2.8]])],
     hiding: [
       { kind: 'underFurniture', x: -2.6, z: 1.6, yaw: Math.PI, propKind: 'bed' },
-      { kind: 'underFurniture', x: 2.9, z: 1.6, yaw: Math.PI, propKind: 'bed' },
+      { kind: 'underFurniture', x: 3.25, z: 1.6, yaw: Math.PI, propKind: 'bed' },
       { kind: 'cabinet', x: 0.6, z: -2.6, yaw: 0, propKind: 'cabinet' },
     ],
     nav: [
@@ -1800,7 +1905,7 @@ const roomVaulted: RoomTemplate = {
       { kind: 'painting', x: -4.8, z: 0, y: 2.4, yaw: Math.PI / 2 },
       { kind: 'painting', x: 4.8, z: 0, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'statue', x: -4.3, z: -4.3 },
-      { kind: 'cannon', x: 0, z: -4.3, yaw: 0.3 },
+      { kind: 'cannon', x: 0, z: -2.4, yaw: 0.3 },
       { kind: 'vault', x: 0, z: 0, y: 5.65 },
       { kind: 'archway', x: 0, z: 4.8, yaw: Math.PI },
       { kind: 'statue', x: 4.3, z: 4.3, yaw: Math.PI },
@@ -1855,7 +1960,7 @@ const roomFinalAnte: RoomTemplate = {
       { kind: 'sign', x: 0, z: 2.9, y: 2.0 },
       { kind: 'wallSconce', x: -2.2, z: 0, y: 2.0 },
       { kind: 'wallSconce', x: 2.2, z: 0, y: 2.0 },
-      { kind: 'counter', x: -1.9, z: 1.8, scale: 1.4 },
+      { kind: 'counter', x: -1.9, z: 0.8, scale: 1.4 },
     ],
     sockets: lootSockets([[-1.9, 1.8]]),
     hiding: [{ kind: 'cabinet', x: 1.9, z: 1.8, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -1876,7 +1981,7 @@ const roomMorgue: RoomTemplate = {
       { kind: 'morgueDrawer', x: 3.55, z: 1.0, yaw: -Math.PI / 2 },
       { kind: 'gurney', x: -0.8, z: -1.1, yaw: 0.12 },
       { kind: 'gurney', x: 1.0, z: 1.5, yaw: -0.2 },
-      { kind: 'counter', x: -2.0, z: 4.0, yaw: Math.PI },
+      { kind: 'counter', x: -2.7, z: 4.0, yaw: Math.PI },
       { kind: 'medBox', x: 1.9, z: 4.35, y: 1.4, yaw: Math.PI },
       { kind: 'wetFloor', x: 1.3, z: -2.2 },
       { kind: 'bucket', x: -1.7, z: 3.5 },
@@ -1915,6 +2020,7 @@ const roomLaundry: RoomTemplate = {
   id: 'laundry-hall',
   build: (_rng) => spec('laundry-hall', 'maintenance', 7, 10, 3.0, {
     props: [
+      ...corridorTrim(7, 10, 3.0, { panels: false }),
       { kind: 'washer', x: -2.9, z: -3.4, yaw: Math.PI / 2 },
       { kind: 'washer', x: -2.9, z: -2.4, yaw: Math.PI / 2 },
       { kind: 'washer', x: -2.9, z: -1.4, yaw: Math.PI / 2 },
@@ -1932,6 +2038,7 @@ const roomLaundry: RoomTemplate = {
       { kind: 'puddle', x: 0.8, z: -1.8 },
       { kind: 'puddle', x: -1.9, z: -0.6 },
       { kind: 'steamVent', x: -2.1, z: 4.4 },
+      { kind: 'fan', x: -3.4, z: -2.0, y: 1.15, yaw: Math.PI / 2 },
       { kind: 'extinguisher', x: 2.9, z: 4.4, y: 1.4, yaw: Math.PI },
       { kind: 'toolCart', x: -2.5, z: 4.0, yaw: 0.3 },
       { kind: 'wallHose', x: 2.0, z: 4.85, y: 1.1, yaw: Math.PI },
@@ -1977,6 +2084,7 @@ const roomBoilerDetail: RoomTemplate = {
       { kind: 'multimeter', x: -2.6, z: -3.4, y: 0.95 },
       { kind: 'wetFloor', x: 1.6, z: -2.0 },
       { kind: 'steamVent', x: 2.4, z: 1.8 },
+      { kind: 'fan', x: -3.6, z: 1.2, y: 1.15, yaw: Math.PI / 2 },
       { kind: 'extinguisher', x: -2.0, z: -4.3, y: 1.4 },
       { kind: 'stove', x: 2.8, z: 3.4 },
       { kind: 'jerrycan', x: -3.4, z: -3.0 },
@@ -2033,7 +2141,7 @@ const roomCubicleOffice: RoomTemplate = {
       { kind: 'rug', x: 0, z: 0.2 },
       { kind: 'wallClock2', x: 4.4, z: -3.6, y: 2.1, yaw: -Math.PI / 2 },
       { kind: 'paperScatter', x: -1.0, z: -1.4 },
-      { kind: 'projScreen', x: 0, z: 4.5, yaw: Math.PI },
+      { kind: 'projScreen', x: 2.5, z: 4.5, yaw: Math.PI },
       { kind: 'projector', x: 0, z: 0.6, y: 0.75 },
       { kind: 'mousetrap', x: 4.0, z: -1.8 },
     ],
@@ -2084,7 +2192,7 @@ const roomLibraryStacks: RoomTemplate = {
       { kind: 'bookshelf', x: 3.4, z: 2.8, yaw: -Math.PI / 2 },
       { kind: 'rollingLadder', x: -3.4, z: -3.9, yaw: Math.PI / 2 },
       { kind: 'stool', x: 2.4, z: 0.0 },
-      { kind: 'desk', x: 0, z: -4.6 },
+      { kind: 'desk', x: 0, z: -3.4 },
       { kind: 'deskLamp', x: 0.3, z: -4.6, y: 0.78 },
       { kind: 'papers', x: -0.4, z: -4.55, y: 0.8 },
       { kind: 'magnifier', x: 0.15, z: -4.5, y: 0.8 },
@@ -2094,6 +2202,7 @@ const roomLibraryStacks: RoomTemplate = {
       { kind: 'paperScatter', x: 2.4, z: -0.6 },
       { kind: 'rug', x: 0, z: -3.6 },
       { kind: 'clock', x: 4.0, z: -4.6, yaw: Math.PI },
+      { kind: 'globeStand', x: 4.1, z: 3.9, yaw: -Math.PI / 4 },
     ],
     sockets: [...drawerSockets([[0, -4.6]]), ...lootSockets([[-2.4, 0.0], [2.4, 3.6], [0.0, 4.5]])],
     hiding: [
@@ -2129,13 +2238,13 @@ const roomProjection: RoomTemplate = {
   id: 'records-projection',
   build: (_rng) => spec('records-projection', 'records', 8, 10, 3.2, {
     props: [
-      { kind: 'projScreen', x: 0, z: 4.6, yaw: Math.PI },
+      { kind: 'projScreen', x: 2.5, z: 4.6, yaw: Math.PI },
       { kind: 'table', x: 0, z: -1.4 },
       { kind: 'projector', x: 0, z: -1.4, y: 0.78 },
       { kind: 'cassettePlayer', x: 0.6, z: -1.35, y: 0.78 },
       { kind: 'schoolChair', x: -1.4, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: -0.4, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: 0.6, z: 1.2, yaw: Math.PI }, { kind: 'schoolChair', x: 1.5, z: 1.3, yaw: Math.PI },
       { kind: 'schoolChair', x: -1.3, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: -0.3, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: 0.7, z: 2.5, yaw: Math.PI }, { kind: 'schoolChair', x: 1.6, z: 2.4, yaw: Math.PI },
-      { kind: 'schoolChair', x: -1.2, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 0.4, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 1.4, z: 3.7, yaw: Math.PI },
+      { kind: 'schoolChair', x: -1.2, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 2.2, z: 3.7, yaw: Math.PI }, { kind: 'schoolChair', x: 1.4, z: 3.7, yaw: Math.PI },
       { kind: 'postcards', x: -3.4, z: 0.2, y: 0.78 },
       { kind: 'sideTable', x: -3.4, z: 0.2 },
       { kind: 'books', x: -3.4, z: -1.1, y: 0.78 },
@@ -2159,8 +2268,8 @@ const roomGrandSuite: RoomTemplate = {
   build: (_rng) => spec('guest-suite-grand', 'guest', 9, 8, 3.4, {
     props: [
       { kind: 'daybed', x: -2.6, z: 1.8 },
-      { kind: 'modernCabinet', x: 0.4, z: 3.4, yaw: Math.PI },
-      { kind: 'television', x: 0.4, z: 3.35, y: 1.42, yaw: Math.PI },
+      { kind: 'modernCabinet', x: 0.4, z: 2.2, yaw: Math.PI },
+      { kind: 'television', x: 0.4, z: 2.15, y: 1.42, yaw: Math.PI },
       { kind: 'armchair', x: 2.2, z: 0.6, yaw: -0.6 }, { kind: 'armchair', x: -0.6, z: -1.2, yaw: 0.4 },
       { kind: 'roundTable', x: 1.0, z: -0.2 },
       { kind: 'teaSet', x: 1.0, z: -0.2, y: 0.76 },
@@ -2174,7 +2283,13 @@ const roomGrandSuite: RoomTemplate = {
       { kind: 'ottoman', x: -2.0, z: -0.4, yaw: 0.3 },
       { kind: 'suitcase', x: 3.9, z: 2.6, yaw: 0.9 },
       { kind: 'frameStand', x: 3.9, z: -2.6, yaw: -Math.PI / 2 },
-      ...wallProps(9, 8, _rng, ['painting', 'curtain', 'wallSconce', 'mirror', 'pegRail'], 4),
+      { kind: 'curtainLong', x: -1.9, z: 3.85, y: 1.18, yaw: Math.PI },
+      { kind: 'settee', x: -1.6, z: -3.3, yaw: 0 },
+      { kind: 'vanityTable', x: 3.3, z: 3.55, yaw: Math.PI },
+      { kind: 'writingDesk', x: -4.0, z: 0.1, yaw: Math.PI / 2 },
+      { kind: 'globeStand', x: -3.9, z: -3.3, yaw: 0 },
+      { kind: 'dressingScreen', x: 2.9, z: -3.2, yaw: 0.6 },
+      ...wallProps(9, 8, _rng, ['painting', 'curtain', 'curtainRod', 'wallSconce', 'mirror', 'pegRail'], 4),
     ],
     sockets: lootSockets([[3.9, 2.6], [-3.8, -1.4]]),
     hiding: [{ kind: 'cabinet', x: -3.9, z: 3.1, yaw: Math.PI / 2, propKind: 'cabinet' }],
@@ -2187,7 +2302,7 @@ const roomFabShop: RoomTemplate = {
   id: 'maint-fabshop',
   build: (_rng) => spec('maint-fabshop', 'maintenance', 9, 8, 3.1, {
     props: [
-      { kind: 'table', x: -2.4, z: -3.0 }, { kind: 'table', x: -0.4, z: -3.0 },
+      { kind: 'table', x: -2.4, z: -3.0 }, { kind: 'table', x: -0.4, z: -2.0 },
       { kind: 'benchVice', x: -2.4, z: -3.0, y: 0.78 },
       { kind: 'multimeter', x: -0.4, z: -3.0, y: 0.78 },
       { kind: 'handsaw', x: -1.4, z: -3.0, y: 0.78 },
@@ -2262,7 +2377,7 @@ const roomWaiting: RoomTemplate = {
       { kind: 'stairGate', x: -3.8, z: -2.4, yaw: Math.PI / 2 },
       { kind: 'radiatorFin', x: 4.4, z: -2.0, yaw: -Math.PI / 2 },
       { kind: 'screenPanels', x: 2.4, z: -2.9 },
-      { kind: 'counter', x: 0.4, z: 3.1, yaw: Math.PI },
+      { kind: 'counter', x: 2.4, z: 3.1, yaw: Math.PI },
       { kind: 'trolley', x: -3.4, z: 1.8, yaw: 0.4 },
       { kind: 'wetFloor', x: -2.4, z: 0.3 },
       { kind: 'bin', x: -2.4, z: -3.15 },
@@ -2270,6 +2385,7 @@ const roomWaiting: RoomTemplate = {
       { kind: 'papers', x: 0.2, z: 3.0, y: 0.95 },
       { kind: 'wallSconce', x: -4.35, z: 1.4, y: 2.05, yaw: Math.PI / 2 },
       { kind: 'radiatorTall', x: -3.2, z: 3.35, yaw: Math.PI },
+      { kind: 'settee', x: 2.4, z: 1.9, yaw: Math.PI },
       ...wallProps(9, 7, _rng, ['painting', 'curtain'], 2),
     ],
     sockets: lootSockets([[0.4, 3.1], [-3.4, 1.8]]),
@@ -2309,6 +2425,12 @@ const roomCathedral: RoomTemplate = {
       { kind: 'pewRow', x: -1.9, z: -1.6 }, { kind: 'pewRow', x: 1.9, z: -1.6 },
       { kind: 'pewRow', x: -1.9, z: 0.6 }, { kind: 'pewRow', x: 1.9, z: 0.6 },
       { kind: 'rug', x: 0, z: 0, scale: 1.6 },
+      { kind: 'roseWindow', x: 0, z: -4.95, y: 5.4 },
+      { kind: 'roseWindow', x: 0, z: 4.95, y: 5.4, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3.5, z: -4.95, y: 2.4 },
+      { kind: 'traceryWindow', x: 3.5, z: -4.95, y: 2.4 },
+      { kind: 'traceryWindow', x: -3.5, z: 4.95, y: 2.4, yaw: Math.PI },
+      { kind: 'traceryWindow', x: 3.5, z: 4.95, y: 2.4, yaw: Math.PI },
     ],
     sockets: lootSockets([[-5.4, -1.8], [5.4, 1.8]]),
     hiding: [
@@ -2329,6 +2451,80 @@ const roomCathedral: RoomTemplate = {
   }),
 };
 
+// The Chapel — twin pew blocks on a centre aisle, stone altar under a
+// cold rose light, votive racks burning low in the chancel. Mill kit
+// pieces only — every furnishing is real geometry.
+const roomChapel: RoomTemplate = {
+  id: 'gallery-chapel',
+  build: (_rng) => spec('gallery-chapel', 'gallery', 11, 14, 5, {
+    props: [
+      // pew blocks face the altar (+Z); centre aisle stays clear
+      { kind: 'chapelPew', x: -2.4, z: -1.0, yaw: 0 }, { kind: 'chapelPew', x: 2.4, z: -1.0, yaw: 0 },
+      { kind: 'chapelPew', x: -2.4, z: 0.9, yaw: 0 }, { kind: 'chapelPew', x: 2.4, z: 0.9, yaw: 0 },
+      { kind: 'chapelPew', x: -2.4, z: 2.8, yaw: 0 }, { kind: 'chapelPew', x: 2.4, z: 2.8, yaw: 0 },
+      // hymnal + leavings on seats
+      { kind: 'books', x: -2.2, z: -1.0, y: 0.5 },
+      { kind: 'papers', x: 2.5, z: 0.9, y: 0.5 },
+      // chancel rail: kneelers before the altar step
+      { kind: 'prayerKneeler', x: -1.1, z: 4.35, yaw: 0 },
+      { kind: 'prayerKneeler', x: 0, z: 4.35, yaw: 0 },
+      { kind: 'prayerKneeler', x: 1.1, z: 4.35, yaw: 0 },
+      // altar frontal faces the congregation (-Z)
+      { kind: 'chapelAltar', x: 0, z: 5.0, yaw: Math.PI },
+      { kind: 'candelabrum', x: -1.7, z: 5.2 }, { kind: 'candelabrum', x: 1.7, z: 5.2 },
+      { kind: 'votiveStand', x: -4.2, z: 4.0, yaw: Math.PI / 2 + 0.4 },
+      { kind: 'votiveStand', x: 4.2, z: 4.0, yaw: -Math.PI / 2 - 0.4 },
+      { kind: 'sideboard', x: -4.9, z: 5.4, yaw: Math.PI / 2 },
+      { kind: 'books', x: -4.9, z: 5.2, y: 1.02 },
+      { kind: 'wallNiche', x: 5.35, z: 1.0, y: 0, yaw: -Math.PI / 2 },
+      { kind: 'bust', x: 5.35, z: 1.0, y: 0.62, yaw: -Math.PI / 2 },
+      { kind: 'windowArch', x: -5.4, z: -3.5, y: 3.0, yaw: Math.PI / 2 },
+      { kind: 'windowArch', x: -5.4, z: 0.5, y: 3.0, yaw: Math.PI / 2 },
+      { kind: 'windowArch', x: -5.4, z: 3.5, y: 3.0, yaw: Math.PI / 2 },
+      { kind: 'roseWindow', x: 0, z: 6.95, y: 3.55, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3, z: 6.95, y: 2.2, yaw: Math.PI },
+      { kind: 'traceryWindow', x: 3, z: 6.95, y: 2.2, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3, z: -6.95, y: 2.2 },
+      { kind: 'traceryWindow', x: 3, z: -6.95, y: 2.2 },
+      { kind: 'windowArch', x: 5.4, z: -3.5, y: 3.0, yaw: -Math.PI / 2 },
+      { kind: 'windowArch', x: 5.4, z: 0.5, y: 3.0, yaw: -Math.PI / 2 },
+      { kind: 'windowArch', x: 5.4, z: 3.5, y: 3.0, yaw: -Math.PI / 2 },
+      { kind: 'medallion', x: 0, z: 4.5, y: 4.9 },
+      { kind: 'chandelier', x: 0, z: 0.9, y: 4.3 },
+      { kind: 'archway', x: 0, z: 6.8 },
+      { kind: 'archway', x: 0, z: -6.8, yaw: Math.PI },
+      { kind: 'statue', x: -4.6, z: -4.8, yaw: Math.PI / 4 },
+      { kind: 'statue', x: 4.6, z: -4.8, yaw: -Math.PI / 4 },
+      { kind: 'rug', x: 0, z: 0.9, scale: 1.4 },
+      { kind: 'candle', x: -0.55, z: 5.4, y: 1.14 }, { kind: 'candle', x: 0.55, z: 5.4, y: 1.14 },
+      { kind: 'rootGrowth', x: 5.0, z: -5.5 },
+    ],
+    sockets: [...lootSockets([[-4.9, 5.4], [-2.2, -1.0], [2.5, 0.9], [5.0, -5.5]]), ...drawerSockets([[-4.9, 5.4]])],
+    hiding: [
+      { kind: 'losAlcove', x: -4.8, z: -3.9, yaw: Math.PI / 2, propKind: 'partition' },
+      { kind: 'cabinet', x: -4.8, z: -5.8, yaw: Math.PI / 2, propKind: 'cabinet' },
+      { kind: 'losAlcove', x: 4.8, z: -5.8, yaw: -Math.PI / 2, propKind: 'partition' },
+    ],
+    safeZones: [{ x: -4.8, z: -5.8, w: 1.4, d: 1.4 }],
+    nav: [
+      { id: 'entry', x: 0, z: -6.0, links: ['aisle'], tags: ['door', 'entry'] },
+      { id: 'aisle', x: 0, z: 0.9, links: ['entry', 'chancel'], tags: [] },
+      { id: 'chancel', x: 0, z: 4.2, links: ['aisle', 'exit'], tags: [] },
+      { id: 'exit', x: 0, z: 6.2, links: ['chancel'], tags: ['door', 'exit'] },
+    ],
+    lights: [
+      { x: 0, y: 4.4, z: 5.2, color: 0xffe6b8, intensity: 0.7, range: 8, group: 'main', breakable: true },
+      { x: -4.0, y: 1.4, z: 4.0, color: 0xff9a3c, intensity: 0.5, range: 3.5, group: 'dim', breakable: true },
+      { x: 4.0, y: 1.4, z: 4.0, color: 0xff9a3c, intensity: 0.5, range: 3.5, group: 'dim', breakable: true },
+      { x: -5.0, y: 4.2, z: 0.5, color: 0x9fb6ff, intensity: 0.45, range: 7, group: 'dim', breakable: true },
+    ],
+    weight: 5,
+    minRoom: 28,
+    perf: 5,
+    wall: 'travertine',
+  }),
+};
+
 // Banquet — a long table still dressed for dinner in the dark.
 const roomBanquet: RoomTemplate = {
   id: 'gallery-banquet',
@@ -2340,6 +2536,7 @@ const roomBanquet: RoomTemplate = {
       { kind: 'goblets', x: -1.7, z: -0.4, y: 0.8 }, { kind: 'goblets', x: 1.5, z: 0.6, y: 0.8 },
       { kind: 'wineBottles', x: -1.5, z: 0.5, y: 0.8 }, { kind: 'wineBottles', x: 1.7, z: -0.6, y: 0.8 },
       { kind: 'candle', x: -1.6, z: 0.1, y: 0.8 }, { kind: 'candle', x: 1.6, z: -0.1, y: 0.8 },
+      { kind: 'sideboard', x: 4.9, z: 0.6, yaw: -Math.PI / 2 },
       { kind: 'pastry', x: -1.5, z: -0.9, y: 0.8 }, { kind: 'fruit', x: 1.5, z: 0.9, y: 0.8 },
       { kind: 'platedRoast', x: -1.6, z: -0.2, y: 0.8 }, { kind: 'platedPie', x: 1.6, z: 0.35, y: 0.8 },
       { kind: 'chandelier', x: -1.6, z: 0, y: 3.6 }, { kind: 'chandelier', x: 1.6, z: 0, y: 3.6 },
@@ -2363,19 +2560,19 @@ const roomBunker: RoomTemplate = {
       { kind: 'bedOld', x: -1.9, z: 1.3 },
       { kind: 'generator', x: 2.2, z: -1.9 },
       { kind: 'rations', x: 0.6, z: 2.2, y: 0.78 }, { kind: 'rations', x: 0.2, z: 2.25, y: 0.78 }, { kind: 'rations', x: 0.4, z: 1.9, y: 0.78 },
-      { kind: 'table', x: 0.4, z: 2.2 },
-      { kind: 'television', x: 0.4, z: 2.15, y: 0.78, yaw: Math.PI },
+      { kind: 'table', x: 1.8, z: 2.2 },
+      { kind: 'television', x: 1.8, z: 2.15, y: 0.78, yaw: Math.PI },
       { kind: 'ottoman', x: -0.4, z: -0.6, yaw: 0.4 },
       { kind: 'medBox', x: -2.55, z: -0.8, y: 1.3, yaw: Math.PI / 2 },
       { kind: 'lantern', x: -2.5, z: 2.0 },
       { kind: 'lantern', x: 1.3, z: -0.4, y: 0.78 },
       { kind: 'plasticBin', x: 2.4, z: 0.8 },
       { kind: 'thermos', x: 0.9, z: 2.1, y: 0.78 },
-      { kind: 'plasticChair', x: -0.9, z: 1.9, yaw: 0.6 },
+      { kind: 'plasticChair', x: -0.9, z: 1.0, yaw: 0.6 },
       { kind: 'boombox', x: -2.55, z: -1.9 },
       { kind: 'rifle', x: 2.5, z: 1.8, yaw: -0.5 },
       { kind: 'plasticCrate', x: -2.55, z: 0.4 },
-      { kind: 'clock', x: -0.2, z: -2.4 },
+      { kind: 'clock', x: -1.4, z: -2.4 },
       { kind: 'rug', x: -0.4, z: 0.2 },
     ],
     sockets: lootSockets([[2.4, 0.8]]),
@@ -2394,7 +2591,7 @@ const roomLobbyFoyer: RoomTemplate = {
   id: 'lobby-foyer',
   build: (_rng) => spec('lobby-foyer', 'lobby', 11, 8, 4.2, {
     props: [
-      { kind: 'stairGate', x: 0, z: 3.4, yaw: Math.PI },
+      { kind: 'stairGate', x: 0, z: 1.2, yaw: Math.PI },
       { kind: 'balustrade', x: -2.2, z: 3.4 }, { kind: 'balustrade', x: 2.2, z: 3.4 },
       { kind: 'counter', x: -3.6, z: 0.6, yaw: Math.PI / 2, scale: 2.2 },
       { kind: 'wallNiche', x: -5.32, z: -1.0, y: 0.4, yaw: Math.PI / 2 },
@@ -2404,7 +2601,7 @@ const roomLobbyFoyer: RoomTemplate = {
       { kind: 'trolley', x: 2.8, z: -0.8, yaw: -0.35 },
       { kind: 'suitcase', x: 3.3, z: -0.2, yaw: 0.5 },
       { kind: 'suitcase', x: 3.05, z: 0.45, yaw: -0.2 },
-      { kind: 'sofa', x: 1.6, z: -2.6, yaw: Math.PI },
+      { kind: 'sofa', x: 1.6, z: -1.9, yaw: Math.PI },
       { kind: 'coffeeTable', x: 1.6, z: -1.5 },
       { kind: 'vase', x: 1.6, z: -1.5, y: 0.5 },
       { kind: 'planter', x: -4.6, z: -2.8 }, { kind: 'planter', x: 4.6, z: -2.8 },
@@ -2439,18 +2636,21 @@ const roomSanctuary: RoomTemplate = {
   id: 'safe-sanctuary',
   build: (_rng) => spec('safe-sanctuary', 'safe', 7, 8, 3.6, {
     props: [
-      { kind: 'bench', x: -1.6, z: -0.6, yaw: 0 }, { kind: 'bench', x: 1.6, z: -0.6, yaw: 0 },
-      { kind: 'bench', x: -1.6, z: 0.8, yaw: 0 }, { kind: 'bench', x: 1.6, z: 0.8, yaw: 0 },
-      { kind: 'bench', x: -1.6, z: 2.2, yaw: 0 }, { kind: 'bench', x: 1.6, z: 2.2, yaw: 0 },
-      { kind: 'table', x: 0, z: -2.9 },
-      { kind: 'candle', x: -0.4, z: -2.9, y: 0.78 }, { kind: 'candle', x: 0.4, z: -2.9, y: 0.78 },
-      { kind: 'candle', x: 0, z: -2.7, y: 0.78 },
+      { kind: 'chapelPew', x: -1.6, z: -0.6, yaw: Math.PI }, { kind: 'chapelPew', x: 1.6, z: -0.6, yaw: Math.PI },
+      { kind: 'chapelPew', x: -1.6, z: 0.8, yaw: Math.PI }, { kind: 'chapelPew', x: 1.6, z: 0.8, yaw: Math.PI },
+      { kind: 'chapelPew', x: -1.6, z: 2.2, yaw: Math.PI }, { kind: 'chapelPew', x: 1.6, z: 2.2, yaw: Math.PI },
+      { kind: 'chapelAltar', x: 0, z: -2.0, yaw: 0 },
+      { kind: 'candle', x: -0.4, z: -2.9, y: 1.12 }, { kind: 'candle', x: 0.4, z: -2.9, y: 1.12 },
+      { kind: 'candle', x: 0, z: -2.7, y: 1.12 },
+      { kind: 'prayerKneeler', x: 1.55, z: -2.0, yaw: Math.PI },
+      { kind: 'votiveStand', x: -2.85, z: -3.0, yaw: Math.PI / 4 },
+      { kind: 'candelabrum', x: -1.35, z: -2.75 }, { kind: 'candelabrum', x: 1.35, z: -2.75 },
       { kind: 'wallNiche', x: 0, z: -3.82, y: 0.5, yaw: 0 },
-      { kind: 'bust', x: 0, z: -3.5, y: 0.62, yaw: 0 },
+      { kind: 'bust', x: 1.5, z: -3.4, y: 0.62, yaw: 0 },
       { kind: 'rug', x: 0, z: -0.4, scale: 1.2 },
       { kind: 'rootGrowth', x: -3.2, z: -3.4 },
       { kind: 'candle', x: -2.9, z: 3.4, y: 0.02 }, { kind: 'candle', x: -3.1, z: 3.2, y: 0.02 },
-      { kind: 'books', x: 0.2, z: -2.75, y: 0.78 },
+      { kind: 'books', x: 0.2, z: -2.75, y: 1.12 },
       { kind: 'ottoman', x: 0, z: -1.6, yaw: Math.PI },
       { kind: 'chapelAltar', x: 1.9, z: 3.45, yaw: Math.PI },
       { kind: 'wallVent', x: 3.32, z: 1.8, y: 2.4, yaw: -Math.PI / 2 },
@@ -2612,6 +2812,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
   roomKitchen, roomScullery, roomStaffDining,
   roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker, roomLobbyFoyer, roomSanctuary, roomCathedral,
+  roomChapel,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];

@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
-import { v3, v3dist, clamp, type Vec3 } from '../engine/math';
+import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -13,6 +13,8 @@ import { plateMaterial } from '../world/builder';
 import { tallFigure, statueFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import type { SoundEvent } from '../engine/events';
 
 /* ============================ WITNESS ============================ */
 /** Gaze hazard in rooms with windows/mirrors/portraits. Pulls the camera;
@@ -492,6 +494,8 @@ export class Redactor extends Entity {
 export class Stillframe extends Entity {
   private mesh: THREE.Mesh | null = null;
   private window: { start: number; end: number } | null = null;
+  private noiseUnsub: (() => void) | null = null;
+  private provoked = false;
   grace = 1.2; // accessibility can extend
 
   constructor() { super('stillframe', ENTITY_TUNING.stillframe); }
@@ -508,7 +512,24 @@ export class Stillframe extends Entity {
     this.mesh = new THREE.Mesh(geo, MAT.paperOld());
     this.mesh.position.set(0, 1.4, 0);
     c.addEntityMesh(this.mesh);
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** It photographs movement — and a crash IS movement. A loud noise in
+   *  its earshot while the shutter is open exposes the film: slammed
+   *  doors, sprinted steps, your own ringing lure all count the same. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    const w = this.window;
+    if (this.state !== 'engage' || !w || this.provoked) return;
+    if (c.now <= w.start || c.now > w.end) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, c.player.pos.x, c.player.pos.z)) return;
+    this.provoked = true;
+    c.cue('stillframe-snap', null, '[the shutter catches the noise]', { severity: 'danger' });
+    c.damagePlayer(this.tuning.damage, 'stillframe', 'Stillframe photographs movement — a crash in the open shutter is motion enough.');
+    this.done();
   }
 
   /** Called by input layer each frame with "any input held". */
@@ -535,6 +556,7 @@ export class Stillframe extends Entity {
 
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }
 }
 
@@ -836,16 +858,41 @@ export class Husk extends Entity {
 /* ============================ HAZARDS ============================ */
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {
-  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean }[] = [];
-  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number }[] = [];
+  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
+  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number }[] = [];
+  steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
+    cycle: number; dead: boolean; hitT?: number; warnT?: number }[] = [];
+  /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
+   *  scent a posted hunter can read — quiet work is marked work. */
+  evidence: { pos: import('../engine/math').Vec3; room: number;
+    kind: 'wire' | 'line' | 'water' | 'fan'; t: number; readBy: string[];
+    old?: boolean }[] = [];
+  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   lastTick = 0;
 
   constructor() {}
 
   addFromRoom(room: RoomInstance): void {
     for (const s of room.sockets) {
-      if (s.meta.hazard === 'snare') this.snares.push({ pos: s.pos, room: room.index, armed: true });
+      if (s.meta.hazard === 'snare') {
+        const spent = s.meta.spent === true;
+        this.snares.push({ pos: s.pos, room: room.index, armed: !spent });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'wire', t: -1, readBy: [], old: true });
+      }
       if (s.meta.hazard === 'puddle') this.puddles.push({ pos: s.pos, room: room.index, radius: 1.1 });
+      if (s.meta.hazard === 'steam') {
+        // deterministic per-vent rhythm — same seed, same beat
+        const hsh = ((s.pos.x * 7 + s.pos.z * 13 + room.index * 5) % 10) / 10;
+        const cycle = 4.5 + hsh * 3.0;
+        const spent = s.meta.spent === true;
+        this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: spent });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'line', t: -1, readBy: [], old: true });
+      }
+      if (s.meta.hazard === 'fan') {
+        const spent = s.meta.spent === true;
+        this.fans.push({ pos: s.pos, room: room.index, dead: spent, hitT: -1, warnT: -10 });
+        if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'fan', t: -1, readBy: [], old: true });
+      }
     }
   }
 
@@ -853,22 +900,920 @@ export class HazardField {
     const p = ctx.player;
     for (const s of this.snares) {
       if (!s.armed) continue;
+      // a snare under live floodwater can't be seen — but a slow
+      // crouch-wader feels the wire and steps over it; only an upright
+      // stride trips what the dark water hides.
+      const sr = ctx.rooms[s.room];
+      const submerged = !!sr?.flooded && !(ctx.isRoomDrained?.(s.room) ?? false);
       if (v3dist(p.pos, s.pos) < 0.7) {
+        if (submerged && p.crouching) {
+          if (ctx.now >= (s.scuffT ?? 0)) {
+            s.scuffT = ctx.now + 3;
+            ctx.sound.emit({ x: s.pos.x, y: 0.2, z: s.pos.z, intensity: 0.25, category: 'footstep', caption: '[wire underfoot]' });
+          }
+          continue;
+        }
         s.armed = false;
+        this.evidence.push({ pos: v3(s.pos.x, 0, s.pos.z), room: s.room, kind: 'wire', t: ctx.now, readBy: [] });
         p.rootedUntil = ctx.now + 1.6;
         ctx.damagePlayer(8, 'hazard', 'Paper seals root and rustle. Step around them — everything heard that.');
         ctx.sound.emit({ x: s.pos.x, y: 0.4, z: s.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
       }
+    }
+    // Live pressure lines — a seeded warn → blast → idle rhythm. The
+    // blast ticks blood and carries; a bled line is dead metal.
+    for (const st of this.steams) {
+      if (st.dead || st.room !== ctx.currentRoomIndex) continue;
+      const prev = st.phase;
+      st.phase = (st.phase + dt) % st.cycle;
+      const d = v3dist(p.pos, st.pos);
+      if (st.phase < prev && d < 6) {
+        ctx.sound.emit({ x: st.pos.x, y: 0.5, z: st.pos.z, intensity: 0.5, category: 'machine', caption: '[a line vents]' });
+        ctx.cue('steam-hiss', st.pos, '', {});
+      }
+      if (st.phase < 1.8 && d < 1.3 && ctx.now - (st.hitT ?? -1) > 0.5) {
+        st.hitT = ctx.now;
+        ctx.damagePlayer(6, 'hazard', 'Steam blasts off the line. Time it, or bleed it.');
+      }
+      if (st.phase > st.cycle - 1.2 && d < 3.2 && ctx.now - (st.warnT ?? -10) > 3) {
+        st.warnT = ctx.now;
+        ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent; the valve bleeds it]', { severity: 'warn' });
+      }
+    }
+    // Belt-wheels chew at shoulder height forever — the blades take
+    // standing flesh, a duck walks under them, a chock stills them.
+    for (const f of this.fans) {
+      if (f.dead || f.room !== ctx.currentRoomIndex) continue;
+      const d = v3dist(p.pos, f.pos);
+      if (d < 2.8 && ctx.now - f.warnT > 4) {
+        f.warnT = ctx.now;
+        ctx.cue('steam-hiss', f.pos, '[a belt-wheel chews the air at shoulder height — duck under, or chock the blades]', { severity: 'warn' });
+      }
+      if (d < 1.0 && !p.crouching && ctx.now - f.hitT > 0.6) {
+        f.hitT = ctx.now;
+        ctx.damagePlayer(7, 'hazard', 'The blades take standing flesh — duck under, or chock the wheel.');
+        ctx.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.55, category: 'machine', caption: '[the wheel bites]' });
+      }
+    }
+    // Old sign the PLAYER can read: a sprung wire or a bled line from
+    // before you arrived reads as history — someone else worked here.
+    for (const ev of this.evidence) {
+      if (!ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
+      if (v3dist(p.pos, ev.pos) > 3) continue;
+      ev.readBy.push('player');
+      ctx.cue('floor-creak', ev.pos, ev.kind === 'wire'
+        ? '[a sprung wire, long dry — someone else took this step]'
+        : ev.kind === 'line'
+          ? '[a bled line, long cold — somebody worked here]'
+          : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {
       this.lastTick = 0;
       for (const pu of this.puddles) {
         if (pu.room !== ctx.currentRoomIndex) continue;
-        if (v3dist(p.pos, pu.pos) < pu.radius) {
+        // the arc needs its medium — a drained hall is just a wet floor
+        const rm = ctx.rooms[pu.room];
+        const live = !!rm?.flooded && !(ctx.isRoomDrained?.(pu.room) ?? false);
+        if (!live) continue;
+        const d = v3dist(p.pos, pu.pos);
+        if (d < pu.radius) {
           ctx.damagePlayer(4, 'hazard', 'Electrified water hums amber. Give it the wide step.');
+        } else if (d < pu.radius + 2.2 && ctx.now - (pu.humT ?? -10) > 4) {
+          // audible before it hurts — the fitting crackles as you close in
+          pu.humT = ctx.now;
+          ctx.cue('steam-hiss', pu.pos, '[the water ahead hums amber]', { severity: 'warn' });
         }
       }
     }
+  }
+}
+
+/* ============================ PORTER ============================ */
+/** Lintel ambusher — clings in the header space above the room's exit door.
+ *  Crossing under it unlooked drops it on you; the counterplay is a verb
+ *  nothing else in the hotel teaches: look UP. Hold the lintel in your gaze
+ *  ~0.9s and it withdraws into the structure. Dust tells sift down while it
+ *  waits. It climbs off when you leave the room. */
+export class Porter extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private header = v3();        // lintel point (door pos raised ~2.7m)
+  private doorPos = v3();       // the 2D crossing point it guards
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private siftT = 2.5;
+  private gazeT = 0;            // cumulative seconds under player gaze
+  private gazeCueAt = -10;
+  private underT = 0;           // seconds the player has lingered below
+  private expireT = 70;
+
+  constructor() { super('porter', ENTITY_TUNING.porter); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    this.rng = new Rng(c.seed);
+    this.hostRoom = c.currentRoomIndex;
+    const next = c.rooms[this.hostRoom + 1];
+    // The door the player will most likely walk under next — the next
+    // room's entry. Fall back to any honest door in this room.
+    const door = next?.doors.find((d) => d.id.endsWith('-in'))
+      ?? c.rooms[this.hostRoom]?.doors.find((d) => !d.falseDoor && !d.locked)
+      ?? c.rooms[this.hostRoom]?.doors[0];
+    const host = c.rooms[this.hostRoom];
+    // The lintel blocker spans y 2.15–2.9 in the wall plane — nothing inside
+    // it is ever visible. Cling just inside the room's airspace instead:
+    // ~0.5m in from the door, atop the surround at y 2.3.
+    if (door && host) {
+      const inX = host.origin.x - door.pos.x, inZ = host.origin.z - door.pos.z;
+      const inLen = Math.hypot(inX, inZ) || 1;
+      this.doorPos = v3(door.pos.x, 0, door.pos.z);
+      this.header = v3(door.pos.x + (inX / inLen) * 0.5, 2.3, door.pos.z + (inZ / inLen) * 0.5);
+    } else {
+      const ex = host?.exitPos ?? c.player.pos;
+      this.doorPos = v3(ex.x, 0, ex.z);
+      this.header = v3(ex.x, 2.3, ex.z);
+    }
+    const rig = riggedFigure('ninja');
+    this.rig = rig;
+    const g = rig?.group ?? tallFigure({
+      height: 1.0, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber', hood: true, tattered: true,
+    });
+    g.position.set(this.header.x, this.header.y, this.header.z);
+    g.rotation.x = 0.55;          // head-down clinging pose on the header
+    g.scale.setScalar(0.8);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    rig?.play('idle');
+    this.state = 'engage';
+    c.cue('hide-creak', this.header, '[dust sifts down — something clings above]', { severity: 'warn' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+
+    // Gone once the player leaves — it climbs down empty.
+    this.expireT -= dt;
+    if (c.currentRoomIndex !== this.hostRoom || this.expireT <= 0) {
+      c.cue('floor-creak', this.header, '[boards settle overhead]', { severity: 'info' });
+      this.done();
+      return;
+    }
+
+    // Dust tells — the only warning it gives.
+    this.siftT -= dt;
+    if (this.siftT <= 0) {
+      this.siftT = 4 + this.rng.float() * 4;
+      const drop = v3(this.header.x + this.rng.range(-0.4, 0.4), 1.4, this.header.z + this.rng.range(-0.4, 0.4));
+      c.cue(this.rng.bool(0.6) ? 'moth-flutter' : 'hide-creak', drop, '[dust sifts down]', { severity: 'info' });
+      c.sound.emit({ x: drop.x, y: 1.2, z: drop.z, intensity: 0.22, category: 'critter', caption: '', source: this.id });
+    }
+
+    // Spotted? Requires pitching the gaze UP at the header — the only threat
+    // in the hotel that checks the third axis of your look direction.
+    const dir = v3();
+    p.lookDir(dir);
+    const eye = v3();
+    p.eyePos(eye);
+    const to = v3(this.header.x - eye.x, this.header.y - eye.y, this.header.z - eye.z);
+    const len = Math.sqrt(to.x * to.x + to.y * to.y + to.z * to.z);
+    let gazing = false;
+    if (len > 1e-3) {
+      const dot = (dir.x * to.x + dir.y * to.y + dir.z * to.z) / len;
+      // dot alone isn't enough — at distance a level gaze covers the header
+      // (~7° above eye line) and would spot it for free. Require a genuinely
+      // upward pitch so the counterplay is always a deliberate look-up.
+      if (dot > 0.62 && dir.y > 0.1) {
+        const room = c.rooms[c.currentRoomIndex];
+        gazing = hasLineOfSight(eye, this.header, room ? room.losBlockers : []);
+      }
+    }
+    if (gazing) {
+      this.gazeT += dt;
+      if (c.now - this.gazeCueAt > 6) {
+        this.gazeCueAt = c.now;
+        c.cue('hide-creak', this.header, '[it pulls still above the frame]', { severity: 'warn' });
+      }
+      if (this.gazeT >= 0.9) {
+        c.cue('hide-creak', this.header, '[something withdraws above the frame]', { severity: 'info' });
+        this.done();
+        return;
+      }
+    } else {
+      this.gazeT = Math.max(0, this.gazeT - dt * 0.8);
+    }
+
+    // The drop — linger under the lintel unlooked.
+    const under = Math.hypot(p.pos.x - this.doorPos.x, p.pos.z - this.doorPos.z) < 0.95;
+    if (under && !gazing) this.underT += dt;
+    else this.underT = Math.max(0, this.underT - dt);
+    if (this.underT > 0.5) {
+      this.rig?.play('attack', 0.05);
+      c.damagePlayer(this.tuning.damage, 'porter', 'It waited above the lintel — look up before crossing.');
+      c.cue('impact', { x: this.header.x, y: 1.4, z: this.header.z }, '[it drops — from above]', { severity: 'danger' });
+      c.sound.emit({ x: this.header.x, y: 1, z: this.header.z, intensity: 0.9, category: 'impact', caption: '[drop]', source: this.id });
+      this.done();
+    }
+  }
+
+  override threatPos(): Vec3 | null { return this.state === 'engage' ? this.header : null; }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}
+
+/* ============================ GROUNDSWELL ============================ */
+/** The room itself fighting back: every few seconds a swell line travels the
+ *  floor from the entry door toward the exit — a raised hump of boards you
+ *  can see coming as a dark strip + a dust lift. Inside the band when it
+ *  passes → stumble (rooted) + damage. The counterplay is spatial: sidestep
+ *  into the calm strips along the walls, or stand still nowhere. */
+export class Groundswell extends Entity {
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private axis = v3();        // unit vector, entry→exit
+  private perp = v3();        // lateral unit vector
+  private start = v3();       // wave origin (entry door)
+  private center = v3();
+  private span = 0;           // corridor length the wave travels
+  private crossHalf = 0;      // room half-width across the axis
+  private front = -1;         // metres along axis reached; -1 = idle
+  private waveAt = 0;
+  private waves = 0;
+  private struck = false;
+  private rumbleT = 0;
+  private swell: THREE.Mesh | null = null;
+  private pts: THREE.Points | null = null;
+  private pPos: Float32Array | null = null;
+  private pLife: Float32Array | null = null;
+  private pIdx = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private provokeCd = 0;
+
+  constructor() { super('groundswell', ENTITY_TUNING.groundswell); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    this.rng = new Rng(c.seed);
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = c.currentRoomIndex;
+    const ex = room.exitPos, en = room.entryPos;
+    const ax = ex.x - en.x, az = ex.z - en.z;
+    const len = Math.hypot(ax, az);
+    if (len < 6) { this.done(); return; }   // too short to wave through
+    this.axis = v3(ax / len, 0, az / len);
+    this.perp = v3(-this.axis.z, 0, this.axis.x);
+    this.start = v3(en.x, 0, en.z);
+    this.center = v3(room.origin.x, 0, room.origin.z);
+    this.span = len;
+    this.crossHalf = Math.min(room.spec?.width ?? 10, room.spec?.depth ?? 10) / 2;
+    this.waveAt = c.now + this.tuning.warningTime;
+    // The swell strip: a dark hump spanning the calm-bounded middle of the
+    // room; its scale.y pulses as it passes.
+    const stripLen = Math.max(1.5, (this.crossHalf - 1.0) * 2);
+    const geo = new THREE.BoxGeometry(stripLen, 1, 1.35);
+    geo.translate(0, 0.5, 0);
+    this.swell = new THREE.Mesh(geo, MAT.darkOak());
+    this.swell.scale.y = 0.001;
+    this.swell.visible = false;
+    this.swell.rotation.y = Math.atan2(this.perp.x, this.perp.z) + Math.PI / 2;
+    c.addEntityMesh(this.swell);
+    // Dust lift along the front.
+    this.pPos = new Float32Array(36 * 3);
+    this.pLife = new Float32Array(36);
+    const pg = new THREE.BufferGeometry();
+    pg.setAttribute('position', new THREE.BufferAttribute(this.pPos, 3));
+    const pm = new THREE.PointsMaterial({ color: 0x9a8a6d, size: 0.05, transparent: true, opacity: 0.55, depthWrite: false });
+    this.pts = new THREE.Points(pg, pm);
+    this.pts.frustumCulled = false;
+    c.addEntityMesh(this.pts);
+    this.state = 'engage';
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    c.cue('floor-creak', this.start, '[the floor holds its breath]', { severity: 'warn' });
+    c.sound.emit({ x: this.center.x, y: 0.2, z: this.center.z, intensity: 0.5, category: 'ambient', caption: '', source: this.id });
+  }
+
+  /** Heavy noise in the room provokes it: while a wave is idle, a loud
+   *  sound drags the next swell forward. Sprint through and the floor
+   *  answers sooner — walk soft, or don't walk at all. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.front >= 0) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.center.x, this.center.z)) return;
+    if (this.waveAt <= c.now + 0.7) return;
+    this.waveAt = c.now + 0.7;
+    if (this.provokeCd <= c.now) {
+      this.provokeCd = c.now + 6;
+      c.cue('floor-creak', this.center, '[the boards stir under the noise]', { severity: 'warn' });
+    }
+  }
+
+  private frontPos(out: Vec3, f: number): Vec3 {
+    out.x = this.start.x + this.axis.x * f;
+    out.z = this.start.z + this.axis.z * f;
+    out.y = 0;
+    return out;
+  }
+
+  private spawnDust(f: number): void {
+    if (!this.pPos || !this.pLife) return;
+    for (let k = 0; k < 2; k++) {
+      const i = this.pIdx = (this.pIdx + 1) % 36;
+      const lat = this.rng.range(-(this.crossHalf - 1.1), this.crossHalf - 1.1);
+      this.pPos[i * 3] = this.start.x + this.axis.x * f + this.perp.x * lat;
+      this.pPos[i * 3 + 1] = 0.05 + this.rng.float() * 0.25;
+      this.pPos[i * 3 + 2] = this.start.z + this.axis.z * f + this.perp.z * lat;
+      this.pLife[i] = 0.55;
+    }
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    if (c.currentRoomIndex !== this.hostRoom || (this.waves >= 4 && this.front < 0)) {
+      c.cue('floor-creak', this.center, '[the floor settles]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    // Dust drift
+    if (this.pPos && this.pLife) {
+      for (let i = 0; i < 36; i++) {
+        if (this.pLife[i] <= 0) continue;
+        this.pLife[i] -= dt;
+        this.pPos[i * 3 + 1] += dt * 0.5;
+        if (this.pLife[i] <= 0) this.pPos[i * 3 + 1] = -99;
+      }
+      const attr = this.pts!.geometry.getAttribute('position') as THREE.BufferAttribute;
+      attr.needsUpdate = true;
+    }
+
+    if (this.front < 0) {
+      if (c.now >= this.waveAt) {
+        this.front = 0;
+        this.struck = false;
+        this.waves++;
+        this.rumbleT = 0;
+        c.cue('rug-slide', this.start, this.waves === 1
+          ? '[the boards lift — a swell running the length of the room]'
+          : '[another swell — sidestep it]', { severity: 'warn' });
+      }
+      return;
+    }
+
+    // Wave front advances
+    this.front += 3.2 * dt;
+    const f = this.front;
+    this.rumbleT -= dt;
+    if (this.rumbleT <= 0) {
+      this.rumbleT = 0.35;
+      const fp = this.frontPos(v3(), f);
+      c.sound.emit({ x: fp.x, y: 0.2, z: fp.z, intensity: 0.45, category: 'ambient', caption: '', source: this.id });
+    }
+    if (this.swell) {
+      const fp = this.frontPos(v3(), f);
+      this.swell.visible = true;
+      this.swell.position.set(fp.x, 0, fp.z);
+      this.swell.scale.y = 0.05 + Math.sin(Math.min(1, f / 0.8) * Math.PI * 0.5) * 0.1;
+    }
+    this.spawnDust(f);
+
+    // Hit test — inside the moving band, outside the calm wall strips.
+    if (!this.struck && !p.dead && !p.hiddenSpot) {
+      const relX = p.pos.x - this.start.x, relZ = p.pos.z - this.start.z;
+      const along = relX * this.axis.x + relZ * this.axis.z;
+      const roomLat = Math.abs((p.pos.x - this.center.x) * this.perp.x + (p.pos.z - this.center.z) * this.perp.z);
+      if (Math.abs(along - f) < 0.7 && roomLat < this.crossHalf - 1.0) {
+        this.struck = true;
+        p.rootedUntil = c.now + 0.7;
+        c.damagePlayer(this.tuning.damage, 'groundswell', 'The floor lifts in waves — read the dust and sidestep the hump before it reaches you.');
+        c.cue('luggage-thud', { x: p.pos.x, y: 0.3, z: p.pos.z }, '[the boards heave under you]', { severity: 'danger' });
+        c.sound.emit({ x: p.pos.x, y: 0.4, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[heaved]', source: this.id });
+      }
+    }
+
+    if (f >= this.span) {
+      this.front = -1;
+      this.waveAt = c.now + 4.6 + this.rng.float() * 1.4;
+      if (this.swell) this.swell.visible = false;
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage' || this.front < 0) return null;
+    return this.frontPos(v3(), this.front);
+  }
+
+  protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+    if (this.swell) { this.ctx.removeEntityMesh(this.swell); this.swell = null; }
+    if (this.pts) { this.ctx.removeEntityMesh(this.pts); this.pts = null; }
+  }
+}
+
+/**
+ * The Inspector (sprint 236) — a livery figure that methodically walks a
+ * room testing every hiding spot: it tries each lid in turn. If yours is
+ * next, bail out early or hold it shut through the grapple; it never
+ * re-checks a spot, so the meta is to stay one spot behind it.
+ */
+export class Inspector extends Entity {
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private checked = new Set<string>();
+  private spotCount = 0;
+  private pos = v3();
+  private target: { exitPos: Vec3; id: string; spot: RoomInstance['hidingSpots'][number] } | null = null;
+  private testing: RoomInstance['hidingSpots'][number] | null = null;
+  private testT = 0;
+  private grappling = false;
+  private heldShut = 0;
+  private required = 4;
+  private jingleT = 0;
+  private rattleT = 0;
+  private shoveCd = 0;
+  private expireT = 0;
+  private rig: RiggedFigure | null = null;
+  private figGroup: import('three').Group | null = null;
+  private baseTiltX = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private glanceCd = 0;
+
+  constructor() { super('inspector', ENTITY_TUNING.inspector); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = room.index;
+    this.rng = new Rng(c.seed + 31);
+    this.expireT = c.now + 110;
+
+    // Stand just inside the entry door.
+    this.pos = v3(room.entryPos.x, 0, room.entryPos.z);
+    const rig = riggedFigure('monkroose');
+    const brass = MAT.brass();
+    const g = rig?.group ?? tallFigure({
+      height: 2.0, face: 'plate', body: MAT.darkOak(), eyes: 'amber',
+      band: brass, bandY: 1.15,
+    });
+    this.figGroup = g as import('three').Group;
+    // A ring of keys at its hip — its whole job.
+    const ring = new THREE.Group();
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 6, 14), brass);
+    ring.add(hoop);
+    for (let i = 0; i < 4; i++) {
+      const key = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.09, 0.026), brass);
+      const a = -0.9 + i * 0.6;
+      key.position.set(Math.sin(a) * 0.07, -0.055 - (i % 2) * 0.02, Math.cos(a) * 0.07);
+      key.rotation.z = (i - 1.5) * 0.12;
+      ring.add(key);
+    }
+    ring.position.set(0.22, 1.05, 0.14);
+    g.add(ring);
+    g.position.copy(this.pos);
+    c.addEntityMesh(g);
+    if (rig) { this.rig = rig; rig.play('idle', 0); }
+    this.baseTiltX = g.rotation.x;
+
+    this.spotCount = room.hidingSpots.filter((s) => !s.trappedBy).length;
+    c.cue('collector-rattle', this.pos, '[a ring of keys — it is checking the rooms]', { severity: 'warn' });
+    c.sound.emit({ x: this.pos.x, y: 1.2, z: this.pos.z, intensity: 0.6, category: 'entity-cue', caption: '[keys]', source: this.id });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** A loud noise makes it cut the current lid test short — it glances up
+   *  and moves to the next spot. Noise buys you seconds at the lid it is
+   *  on, at the price of hurrying it toward yours. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || !this.testing || e.source) return;
+    if (!noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    if (this.testT <= 1.2) return;
+    this.testT = 1.2;
+    if (this.glanceCd <= c.now) {
+      this.glanceCd = c.now + 8;
+      c.cue('collector-rattle', this.pos, '[it glances up — then back to the lid]', { severity: 'warn' });
+    }
+  }
+
+  /** Interact presses while it has your lid — route from Game's exitHide. */
+  struggle(): void {
+    if (!this.grappling) return;
+    this.heldShut++;
+    this.rig?.play('attack', 0.05);
+  }
+
+  private nextSpot(room: RoomInstance): void {
+    let best: RoomInstance['hidingSpots'][number] | null = null;
+    let bestD = Infinity;
+    for (const s of room.hidingSpots) {
+      if (this.checked.has(s.id) || s.trappedBy) continue;
+      const d = v3dist(this.pos, s.exitPos);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    this.target = best ? { exitPos: best.exitPos, id: best.id, spot: best } : null;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[c.currentRoomIndex];
+    if (!room || room.index !== this.hostRoom) {
+      c.cue('collector-rattle', this.pos, '[the keys fade down the corridor]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    if (c.now > this.expireT) { this.done(); return; }
+    if (this.shoveCd > 0) this.shoveCd -= dt;
+
+    if (this.testing) {
+      // Working the lid — rattle + shake; join grapple if the player is inside.
+      this.testT -= dt;
+      this.rattleT -= dt;
+      if (this.rattleT <= 0) {
+        this.rattleT = 0.42;
+        c.sound.emit({ x: this.testing.exitPos.x, y: 1.1, z: this.testing.exitPos.z, intensity: 0.4, category: 'impact', caption: '', source: this.id });
+      }
+      if (this.figGroup) this.figGroup.rotation.x = this.baseTiltX + Math.sin(c.now * 26) * 0.03;
+      if (!this.grappling && p.hiddenSpot === this.testing) {
+        this.grappling = true;
+        this.heldShut = 0;
+        this.testing.trappedBy = 'inspector';
+        c.cue('hide-creak', this.testing.exitPos, '[it has the lid — HOLD IT SHUT]', { severity: 'danger' });
+      }
+      if (this.testT <= 0) {
+        const spot = this.testing;
+        if (this.grappling && spot.trappedBy === 'inspector') {
+          spot.trappedBy = undefined;
+          if (this.heldShut >= this.required) {
+            c.cue('hide-creak', spot.exitPos, '[it lets go — moves on]', { severity: 'info' });
+          } else {
+            p.exitHiding(c.now);
+            c.damagePlayer(this.tuning.damage, 'inspector', 'It tests every lid — bail out before it reaches your spot, or hold it shut through the rattle.');
+            c.cue('door-rattle', spot.exitPos, '[it pulls you out]', { severity: 'danger' });
+          }
+        }
+        this.checked.add(spot.id);
+        this.grappling = false;
+        this.testing = null;
+        this.target = null;
+        if (this.figGroup) this.figGroup.rotation.x = this.baseTiltX;
+        this.rig?.play('move');
+        return;
+      }
+      return;
+    }
+
+    // All spots checked → it moves on.
+    if (this.target === null) this.nextSpot(room);
+    if (this.target === null) {
+      if (this.checked.size >= this.spotCount) {
+        c.cue('collector-rattle', this.pos, '[it moves on to the next room]', { severity: 'info' });
+        this.done();
+      } else {
+        // Remaining spots are all trapped — nothing left to try.
+        this.done();
+      }
+      return;
+    }
+
+    // Walk to the next unchecked spot.
+    const tgt = this.target.exitPos;
+    const dx = tgt.x - this.pos.x, dz = tgt.z - this.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.42) {
+      this.testing = this.target.spot;
+      this.testT = 2.6;
+      this.grappling = false;
+      this.rig?.play('idle');
+      c.cue('hide-creak', tgt, '[it tries the lid]', { severity: 'warn' });
+      c.sound.emit({ x: tgt.x, y: 1.1, z: tgt.z, intensity: 0.5, category: 'impact', caption: '[rattle]', source: this.id });
+      // Player already inside → grapple starts now.
+      if (p.hiddenSpot === this.testing) {
+        this.grappling = true;
+        this.heldShut = 0;
+        this.testing.trappedBy = 'inspector';
+        c.cue('hide-creak', tgt, '[it has the lid — HOLD IT SHUT]', { severity: 'danger' });
+      }
+      return;
+    }
+    const speed = this.tuning.speed;
+    this.pos.x += (dx / d) * speed * dt;
+    this.pos.z += (dz / d) * speed * dt;
+    if (this.figGroup) {
+      this.figGroup.position.copy(this.pos);
+      this.figGroup.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.play('move');
+    this.rig?.update(dt);
+    this.jingleT -= dt;
+    if (this.jingleT <= 0) {
+      this.jingleT = 1.15 + this.rng.float() * 0.5;
+      c.sound.emit({ x: this.pos.x, y: 1.0, z: this.pos.z, intensity: 0.3, category: 'entity-cue', caption: '', source: this.id });
+    }
+    // Shoulder-check: standing in its path is answered with a shove.
+    if (!p.dead && !p.hiddenSpot && v3dist(this.pos, p.pos) < 1.0 && this.shoveCd <= 0) {
+      this.shoveCd = 4;
+      c.damagePlayer(8, 'inspector', 'It will not be slowed — stay out of its way or stay out of sight.');
+      c.cue('luggage-thud', this.pos, '[it shoulders past]', { severity: 'warn' });
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage') return null;
+    return this.testing ? this.testing.exitPos : (this.target ? this.target.exitPos : this.pos);
+  }
+
+  protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+    if (this.testing && this.testing.trappedBy === 'inspector') this.testing.trappedBy = undefined;
+    if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
+    this.rig = null;
+  }
+}
+
+/**
+ * The Commissionaire (sprint 237) — a livery doorman that plants itself at
+ * the room's far door and holds the way back: the moment you step in, the
+ * door behind you is shut. It sweeps the room with a lantern gaze on a slow
+ * arc; caught in the light it marches at you and throws you back toward the
+ * entry. The only way through is to cross on its blind arc — or bait it off
+ * its post and touch the exit leaf before it returns. It never leaves the
+ * room, and it never unlocks what it holds.
+ */
+export class Commissionaire extends Entity {
+  private hostRoom = -1;
+  private pos = v3();            // live position
+  private post = v3();           // the post it returns to
+  private baseYaw = 0;           // post facing — exit toward entry
+  private gazeYaw = 0;
+  private sweepT = 0;
+  private spotT = 0;
+  private chasing = false;
+  private lastSeen = v3();
+  private chaseLose = 0;
+  private shoveCd = 0;
+  private rapT = 0;
+  private expireT = 0;
+  private returning = false;
+  private sealedDoors: RoomInstance['doors'] = [];
+  private rig: RiggedFigure | null = null;
+  private figGroup: import('three').Group | null = null;
+  private lampSwing: import('three').Group | null = null;
+  private pinYaw: number | null = null;   // heard noise — the light holds there
+  private pinUntil = 0;
+  private pinCd = 0;
+  private noiseUnsub: (() => void) | null = null;
+
+  constructor() { super('commissionaire', ENTITY_TUNING.commissionaire); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = room.index;
+    this.expireT = c.now + 150;
+
+    const en = room.entryPos, ex = room.exitPos;
+    this.baseYaw = Math.atan2(en.x - ex.x, en.z - ex.z);
+    this.gazeYaw = this.baseYaw;
+    // Post: just inside the exit leaf — you must pass IT to pass the door.
+    this.post = v3(ex.x + Math.sin(this.baseYaw) * 1.0, 0, ex.z + Math.cos(this.baseYaw) * 1.0);
+    this.pos = v3(this.post.x, 0, this.post.z);
+
+    const rig = riggedFigure('monkroose');
+    const brass = MAT.brass();
+    const g = rig?.group ?? tallFigure({
+      height: 1.95, face: 'mask', body: MAT.darkOak(), eyes: 'white',
+      band: brass, bandY: 1.5,
+    });
+    this.figGroup = g as import('three').Group;
+    // The lantern arm — a swinging group so the beam tracks its gaze.
+    const swing = new THREE.Group();
+    const cage = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.15, 0.11), brass);
+    const glow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.075, 0.1, 0.075),
+      new THREE.MeshStandardMaterial({ color: 0xffb35c, emissive: 0xff9a33, emissiveIntensity: 1.7 }),
+    );
+    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.01, 6, 12), brass);
+    handle.position.y = 0.11;
+    swing.add(cage, glow, handle);
+    swing.position.set(0.26, 1.02, 0.16);
+    g.add(swing);
+    this.lampSwing = swing;
+    // The visible sweep — an additive wedge from the lantern along its gaze.
+    const coneGeo = new THREE.ConeGeometry(2.1, 6.0, 18, 1, true);
+    coneGeo.translate(0, -3.0, 0);       // apex at lantern, base 6m down
+    coneGeo.rotateX(-Math.PI / 2);       // beam extends +Z
+    const cone = new THREE.Mesh(coneGeo, new THREE.MeshBasicMaterial({
+      color: 0xffc36b, transparent: true, opacity: 0.09,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    }));
+    cone.position.set(0.26, 1.02, 0.16);
+    g.add(cone);
+    g.position.copy(this.pos);
+    g.rotation.y = this.baseYaw;
+    c.addEntityMesh(g);
+
+    // Shut the way back: hold the entry leaf on both sides of the doorway.
+    const prev = c.rooms[c.currentRoomIndex - 1];
+    for (const r of [room, prev]) {
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (Math.hypot(d.pos.x - en.x, d.pos.z - en.z) < 0.9) {
+          d.heldBy = 'commissionaire';
+          this.sealedDoors.push(d);
+        }
+      }
+    }
+    c.cue('door-locked', this.pos, '[a gloved hand on the frame — the way back is shut]', { severity: 'warn' });
+    this.rig = rig ?? null;
+    this.rig?.play('idle', 0.1);
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** It never leaves its post for a noise — but the light turns to look,
+   *  which pins the sweep and blinds the other side of the room. A thrown
+   *  lure to one side opens the far arc for the crossing. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.chasing || this.returning) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    this.pinYaw = Math.atan2(e.x - this.pos.x, e.z - this.pos.z);
+    this.pinUntil = c.now + 3.5;
+    if (this.pinCd <= 0) {
+      this.pinCd = 6;
+      c.cue('floor-creak', this.pos, '[it holds the light on the noise]', { severity: 'warn' });
+    }
+  }
+
+  private aimYaw(): number {
+    if (this.pinYaw !== null && this.ctx.now < this.pinUntil) return this.pinYaw;
+    this.pinYaw = null;
+    return this.baseYaw + Math.sin(this.sweepT * 0.9) * 1.15;
+  }
+
+  /** Player inside the sweep: exposed, in range, inside the arc, in LOS. */
+  private inGaze(): boolean {
+    const c = this.ctx;
+    const p = c.player;
+    if (p.dead || p.hiddenSpot) return false;
+    const d = v3dist(this.pos, p.pos);
+    if (d > 8.5) return false;
+    const toP = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    let dyaw = toP - this.gazeYaw;
+    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+    if (Math.abs(dyaw) > 0.62) return false;
+    const room = c.rooms[this.hostRoom];
+    const eye = v3(this.pos.x, 1.62, this.pos.z);
+    const pe = v3();
+    p.eyePos(pe);
+    return hasLineOfSight(eye, pe, room ? room.losBlockers : []);
+  }
+
+  /** Thrown back toward the sealed door — the price of the light. */
+  private throwBack(): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[this.hostRoom];
+    const en = room.entryPos;
+    const dx = en.x - p.pos.x, dz = en.z - p.pos.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const shove = Math.min(2.6, len - 1.2); // stop short of the leaf itself
+    if (shove > 0.1) {
+      p.teleport(p.pos.x + (dx / len) * shove, 0, p.pos.z + (dz / len) * shove);
+    }
+    c.damagePlayer(this.tuning.damage, 'commissionaire',
+      'It holds the doors — cross on the blind arc, or bait it off its post and run.');
+    c.cue('husk-foot', this.pos, '[it throws you back to the door]', { severity: 'danger' });
+    c.sound.emit({ x: p.pos.x, y: 1, z: p.pos.z, intensity: 0.9, category: 'impact', caption: '[thrown]', source: this.id });
+    this.chasing = false;
+    this.returning = true;
+    this.spotT = 0;
+    this.rig?.play('idle', 0.2);
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+    this.expireT -= dt;
+    if (c.currentRoomIndex !== this.hostRoom || this.expireT <= 0 || p.dead) { this.done(); return; }
+
+    const room = c.rooms[this.hostRoom];
+    // Yield: the instant the exit leaf starts opening, the room is won.
+    const next = c.rooms[this.hostRoom + 1];
+    for (const r of [room, next]) {
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (d.opening && Math.hypot(d.pos.x - room.exitPos.x, d.pos.z - room.exitPos.z) < 0.9) {
+          c.cue('sweep-return', this.pos, '[it stands aside — this once]', { severity: 'info' });
+          this.done();
+          return;
+        }
+      }
+    }
+
+    this.rapT -= dt;
+    if (this.rapT <= 0) {
+      this.rapT = 4.2;
+      c.sound.emit({ x: this.pos.x, y: 1.4, z: this.pos.z, intensity: 0.45, category: 'entity-cue', caption: '[a gloved hand raps the frame]', source: this.id });
+    }
+    this.shoveCd -= dt;
+
+    const d = v3dist(this.pos, p.pos);
+    if (this.chasing) {
+      // Track live while it still sees you; else run the last-seen and turn back.
+      if (!p.dead && !p.hiddenSpot) {
+        const room2 = c.rooms[this.hostRoom];
+        const eye = v3(this.pos.x, 1.62, this.pos.z);
+        const pe = v3();
+        p.eyePos(pe);
+        if (hasLineOfSight(eye, pe, room2 ? room2.losBlockers : [])) {
+          v3copy(this.lastSeen, p.pos);
+          this.chaseLose = 0;
+        } else this.chaseLose += dt;
+      } else this.chaseLose += dt;
+      const dx = this.lastSeen.x - this.pos.x, dz = this.lastSeen.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len > 0.02) {
+        const step = Math.min(len, 2.7 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        this.gazeYaw = Math.atan2(dx, dz);
+      }
+      if (d < 1.15 && !p.dead) { this.throwBack(); }
+      else if (this.chaseLose > 1.8 || (len < 0.2 && this.chaseLose > 0.5)) {
+        this.chasing = false;
+        this.returning = true;
+        this.rig?.play('move', 0.2);
+      }
+    } else if (this.returning) {
+      const dx = this.post.x - this.pos.x, dz = this.post.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.12) {
+        this.returning = false;
+        this.gazeYaw = this.baseYaw;
+        this.rig?.play('idle', 0.2);
+      } else {
+        const step = Math.min(len, 1.9 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        this.gazeYaw = Math.atan2(dx, dz);
+      }
+    } else {
+      // On post: sweep the room on a slow blind arc — unless a heard noise
+      // has pinned the light. Touching it is being seen.
+      this.sweepT += dt;
+      this.pinCd -= dt;
+      this.gazeYaw = this.aimYaw();
+      if (this.inGaze() || (d < 1.3 && !p.hiddenSpot && !p.dead)) {
+        this.spotT += dt;
+        if (this.spotT > 0.45) {
+          this.chasing = true;
+          this.chaseLose = 0;
+          v3copy(this.lastSeen, p.pos);
+          c.cue('alarm-ring', this.pos, '[the lantern finds you]', { severity: 'danger' });
+          c.sound.emit({ x: this.pos.x, y: 1.6, z: this.pos.z, intensity: 0.9, category: 'entity-cue', caption: '[lantern cry]', source: this.id });
+          this.rig?.play('move', 0.05);
+        }
+      } else this.spotT = Math.max(0, this.spotT - dt * 1.6);
+      if (d < 1.0 && this.shoveCd <= 0) {
+        this.shoveCd = 4;
+        c.damagePlayer(8, 'commissionaire', 'It holds the doors — cross on the blind arc, or bait it off its post and run.');
+        c.cue('husk-foot', this.pos, '[it elbows you away from the post]', { severity: 'warn' });
+      }
+    }
+
+    if (this.figGroup) {
+      this.figGroup.position.set(this.pos.x, 0, this.pos.z);
+      this.figGroup.rotation.y = this.chasing
+        ? this.gazeYaw
+        : this.returning ? this.gazeYaw : this.aimYaw();
+      // The lantern arm swings gently while it sweeps, sharp when it runs.
+      if (this.lampSwing) this.lampSwing.rotation.x = Math.sin(c.now * (this.chasing ? 9 : 1.8)) * (this.chasing ? 0.3 : 0.12);
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage') return null;
+    return this.chasing ? this.lastSeen : this.pos;
+  }
+
+  protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+    for (const d of this.sealedDoors) d.heldBy = undefined;
+    this.sealedDoors = [];
+    if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
+    this.lampSwing = null;
+    this.rig = null;
   }
 }

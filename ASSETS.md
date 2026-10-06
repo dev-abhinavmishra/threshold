@@ -708,6 +708,47 @@ Sprint 85 — Underscript dressing: mill pieces placed across u-corridor, u-reco
 | `ceilingHook/` | Chain-hung meat/hoist hook (plate + links + hook) | morgue-drawers, maint-fabshop, u-corridor |
 | `ovalMirror/` | Ribbon-crest oval mirror (variant of `mirror`) | guest/gallery walls |
 
+## Blender prefab mill additions — sprint 215 (original, ours)
+
+| File | Piece | Used in |
+| --- | --- | --- |
+| `curtainRod/` | Brass rod + short swag panels (fold-rib) | guest-standard, suite-split, guest-suite-grand walls |
+| `curtainLong/` | Full drop curtain, pelmet + tie-backs | guest-twin, suite-split, guest-suite-grand, guest-reception |
+| `headboard/` | Upholstered headboard (posts, brass finials, tuft buttons) | guest-standard, guest-twin, suite-split, guest-two-baths |
+| `stoveRange/` | Cast-iron range (hob rings, fire door, flue) | u-break (replaces `stove`) |
+| `potRack/` | Ceiling-hung pan rack (rail + hooks + pans) | u-break |
+| `dishDrainer/` | Wire dish rack | u-break |
+| `linenShelf/` | Tall shelf with stacked folded linen | guest-dormitory, laundry-hall, guest-storage |
+| `choppingBlock/` | Butcher's chopping block (knife) | u-break |
+| `copperSet/` | Wall-hung copper pan set | u-break |
+| `manglePress/` | Laundry mangle (twin rollers, crank, tray) | u-break, laundry-hall |
+| `chapelPew/` | Oak pew (reclined back, hymnal ledge, panelled ends) | gallery-chapel, safe-sanctuary |
+| `prayerKneeler/` | Prie-dieu (kneel pad, sloped shelf, rest panel) | gallery-chapel, safe-sanctuary |
+| `chapelAltar/` | Stone altar (mensa slab, velvet frontal, candle sockets, missal) | gallery-chapel, safe-sanctuary |
+| `votiveStand/` | Tiered votive rack (3 raked trays, 18 cups, sand tray) | gallery-chapel, safe-sanctuary, gallery-cathedral |
+| `candelabrum/` | Five-arm floor candelabrum (brass, drip pans, wax) | gallery-chapel, safe-sanctuary, gallery-cathedral |
+| `settee/` | Upholstered two-seat (rolled arms, bun feet) | suite-split, guest-suite-grand, guest-reception, lobby-waiting |
+| `dressingScreen/` | Three-panel folding screen (linen panels, zigzag fold) | guest-twin, suite-split, guest-suite-grand |
+| `vanityTable/` | Dressing vanity (drawers, tilted mirror, stool) | guest-standard, suite-split, guest-two-baths, guest-suite-grand |
+| `sideboard/` | Serving sideboard (paneled doors, drawers, backsplash) | lobby-waiting, gallery-banquet, gallery-chapel |
+| `writingDesk/` | Pedestal desk (leather top, twin pedestals, inkstand) | records-office, records-bullpen, guest-suite-grand |
+| `globeStand/` | Tilted globe in brass meridian on tripod stand | library-stacks, records-office, gallery-atrium, guest-suite-grand |
+| `cubicle/` | Three-wall office pod (cloth panels, desk, shelf, pinboard) | u-office-row, u-double-cubicle, u-open-office |
+| `recordsCage/` | Wire-mesh storage cage (frame, bar grid, padlocked door, shelf) | u-records-cage |
+| `printerRow/` | Credenza with three printers + paper sheets | u-print-shop, u-open-office |
+| `printer/` | Desktop printer (feed tray, output slot, paper) | u-corridor, u-long-hall, u-break |
+| `typewriter/` | Vintage typewriter (platen, carriage lever, stepped keys) | u-office-row |
+| `waterCooler/` | Bottle-top water cooler (twin taps, drip tray) | u-break, u-open-office, u-lobby |
+| `breakTable/` | Formica-top table on splayed tube legs | u-break, u-double-cubicle |
+| `counter/` | Reception counter (paneled front, toe kick, counter top) | u-lobby |
+| `machineBox/` | Server cabinet (vent slats, LED strip, cable loom, casters) | u-server, ms-under-entrance, corridors |
+| `paperStack/` | Stacked reams of paper | u-print-shop |
+| `partition/` | Free-standing office partition on disc feet | u-partition-maze, losAlcove hiding (all rooms) |
+| `fluoroTube/` | Hanging twin-tube fluorescent fixture | all u-rooms, corridors |
+| `exitSign/` | Lit exit sign box (legend plate, hanging bracket) | u-long-hall, u-stair-landing, u-lobby |
+| `vendingUnit/` | Glass-front vending machine (coil racks, keypad, pickup flap) | vend sockets (generator-placed) |
+| `keyCabinet/` | Wall key cabinet (open door, hook rows, brass keys) | u-corridor, u-server, u-lobby |
+
 ## Blender prefab mill additions — sprint 213 (original, ours)
 
 | File | Piece | Used in |
@@ -746,3 +787,28 @@ New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.
 | `ceilingRose/` | Ornamental ceiling rose — disc, twin plaster rings, 12 petals, hanging boss (ceiling-mount) | guest-standard, suite-split, staff-dining, records-office |
 | `pewRow/` | Chapel pew — tall panel back, bench seat, closed cheeks, kneeler shelf | gallery-cathedral ×4 |
 | `chapelAltar/` | Draped stone altar — slab, block legs, cloth front, brass candle prickets | safe-sanctuary |
+
+## Sprint 224 — corridor architecture mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `pilaster/` | Flat wall pilaster — plinth, recessed-panel shaft, capital (wall-mount ghost) | corr-straight, corr-wide, corr-l-turn, corr-zigzag, corr-junction, corr-grand-hall, corr-closet-branch, corr-doors-row, unlit-hall, laundry-hall |
+| `wainscotRun/` | Dado wainscot section — baseboard, three raised panels, chair rail | all corridor templates above |
+| `corniceRun/` | Crown moulding — stepped cove/fillet/corona profile + dentil course | all corridor templates above |
+| `wallPanel/` | Upper-wall raised panel — moulded frame + recessed field + inner bead | corr-straight, corr-wide, corr-junction, corr-grand-hall, corr-doors-row |
+| `beamRun/` | Ceiling cross-beam — moulded timber, stepped corbels, iron strap | corr-straight, corr-zigzag, corr-grand-hall, corr-doors-row |
+| `runnerRug/` | Long carpet runner — bordered velvet field, center lozenge, corner guls, fringe | corr-straight, corr-grand-hall, corr-doors-row |
+| `grandfatherClock/` | Longcase clock — arched pediment hood, brass dial + hands, glazed waist with pendulum | corr-wide, corr-junction, corr-grand-hall |
+| `consoleTable/` | Demi-lune console — serpentine top, drawer front, tapered legs, low shelf | corr-wide |
+| `wallLantern/` | Carriage lantern on scrolled iron bracket — cage + candle (wall-mount) | corr-straight, corr-wide, corr-junction, corr-grand-hall, corr-doors-row |
+| `doorSurround/` | Architrave door frame — moulded jambs, lintel, pediment crest (wall-mount) | corr-doors-row ×4 |
+| `pierMirror/` | Tall pier-glass — brass frame, scroll crest, mirror plate (wall-mount) | corr-wide, corr-grand-hall |
+| `newelPost/` | Stair newel — stepped base, bead-and-reel turned shaft, ball finial | milled for the upcoming staircase kit |
+
+## Sprint 225 — staircase + tracery mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `grandStair/` | Show flight — closed stringer fascia, tread nosings, velvet stair carpet, turned balusters, swept handrail, bottom newel | corr-grand-hall, gallery-atrium |
+| `traceryWindow/` | Gothic lancet window — surround + sill, twin mullions, intersecting arch head, trefoil cluster (wall-mount) | gallery-cathedral x4, gallery-chapel x4 |
+| `roseWindow/` | Circular rose — outer/inner stone rings, 8 radial spokes, centre boss (wall-mount) | gallery-cathedral x2, gallery-chapel, corr-grand-hall, gallery-atrium x2 |

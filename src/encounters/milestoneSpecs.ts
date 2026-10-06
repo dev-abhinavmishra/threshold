@@ -33,11 +33,11 @@ function lobbySpec(): RoomSpec {
     floorMaterial: 'carpet',
     props: [
       // The front desk: counter, register, bell, the ledger — arrival theater.
-      { kind: 'counter', x: 0, z: 2.6, scale: 3.4 },
-      { kind: 'register', x: 0.8, z: 2.6, y: 1.15 },
-      { kind: 'counterBell', x: 1.55, z: 2.5, y: 1.12 },
-      { kind: 'paperStack', x: -0.9, z: 2.6, y: 1.1 },
-      { kind: 'vase', x: -1.8, z: 2.6, y: 1.05 },
+      { kind: 'counter', x: 0, z: 1.5, scale: 3.4 },
+      { kind: 'register', x: 0.8, z: 1.5, y: 1.15 },
+      { kind: 'counterBell', x: 1.55, z: 1.4, y: 1.12 },
+      { kind: 'paperStack', x: -0.9, z: 1.5, y: 1.1 },
+      { kind: 'vase', x: -1.8, z: 1.5, y: 1.05 },
       // Pigeonhole key/mail racks flanking the lift behind the desk.
       { kind: 'keyRack', x: -3.15, z: 4.36, y: 1.35, yaw: Math.PI },
       { kind: 'keyRack', x: 3.15, z: 4.36, y: 1.35, yaw: Math.PI },
@@ -109,7 +109,10 @@ function indexSpec(rng: Rng): RoomSpec {
     colliders.push({ x: Math.cos(a) * 2.4, z: Math.sin(a) * 2.4, w: 0.6, d: 0.6, h: 4.6 });
   }
   shelves.push({ kind: 'catalogueDesk', x: 0, z: 0 });
-  shelves.push({ kind: 'sealConsole', x: 0, z: -9.4 });
+  // Seal console hugs the back wall OFF the door axis — dead-center at
+  // (0,-9.4) sat inside the entry door's swing lane and was lane-culled
+  // out of existence (sprint-222 find).
+  shelves.push({ kind: 'sealConsole', x: 3.6, z: -9.2 });
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14 });
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14, yaw: Math.PI / 2 });
   shelves.push({ kind: 'rollingLadder', x: 4.4, z: 2.0 });
@@ -162,21 +165,21 @@ function custodianSpec(): RoomSpec {
     special: 'custodian',
     floorMaterial: 'wood',
     props: [
-      { kind: 'merchantCounter', x: 0, z: 2.2 },
-      { kind: 'speakingTube', x: -0.8, z: 2.2, y: 0 },
-      { kind: 'till', x: 0.7, z: 1.9, y: 1.15 },
+      { kind: 'merchantCounter', x: 0, z: 1.6 },
+      { kind: 'speakingTube', x: -0.8, z: 1.6, y: 0 },
+      { kind: 'till', x: 0.7, z: 1.3, y: 1.15 },
       { kind: 'trolley', x: -3.2, z: -1.8 },
       { kind: 'lamp', x: 3.2, z: -1.6 },
       { kind: 'sign', x: 0, z: -3.4, y: 2.2 },
-      { kind: 'paperStack', x: -1.5, z: 1.8, y: 1.1 },
-      { kind: 'register', x: 0.7, z: 2.05, y: 1.15 },
-      { kind: 'basket', x: 1.6, z: 1.9 },
+      { kind: 'paperStack', x: -1.5, z: 1.2, y: 1.1 },
+      { kind: 'register', x: 0.7, z: 1.45, y: 1.15 },
+      { kind: 'basket', x: 1.6, z: 1.3 },
     ],
     sockets: [
-      { kind: 'itemPedestal', x: -1.0, z: 1.6, y: 1.15, meta: { shop: 'slot0' } },
-      { kind: 'itemPedestal', x: -0.35, z: 1.6, y: 1.15, meta: { shop: 'slot1' } },
-      { kind: 'itemPedestal', x: 0.35, z: 1.6, y: 1.15, meta: { shop: 'slot2' } },
-      { kind: 'itemPedestal', x: 1.0, z: 1.6, y: 1.15, meta: { shop: 'slot3' } },
+      { kind: 'itemPedestal', x: -1.0, z: 1.0, y: 1.15, meta: { shop: 'slot0' } },
+      { kind: 'itemPedestal', x: -0.35, z: 1.0, y: 1.15, meta: { shop: 'slot1' } },
+      { kind: 'itemPedestal', x: 0.35, z: 1.0, y: 1.15, meta: { shop: 'slot2' } },
+      { kind: 'itemPedestal', x: 1.0, z: 1.0, y: 1.15, meta: { shop: 'slot3' } },
       { kind: 'loot', x: -3.2, z: 3.2, meta: {} },
     ],
     hiding: [],
@@ -347,8 +350,8 @@ function engineSpec(): RoomSpec {
     { kind: 'instrPanel', x: -8.2, z: -4, yaw: Math.PI / 2 },
     { kind: 'instrPanel', x: 8.2, z: -4, yaw: -Math.PI / 2 },
     { kind: 'instrPanel', x: -8.2, z: 3, yaw: Math.PI / 2 },
-    { kind: 'ironGate', x: -1.4, z: -10.6, yaw: 0 },
-    { kind: 'ironGate', x: 1.4, z: -10.6, yaw: 0 },
+    { kind: 'ironGate', x: -1.9, z: -10.6, yaw: 0 },
+    { kind: 'ironGate', x: 1.9, z: -10.6, yaw: 0 },
     { kind: 'barrel', x: -7.6, z: -7.4 },
     { kind: 'propaneTank', x: 7.6, z: -7.2 },
     { kind: 'toolChest', x: -6.8, z: -7.2 },
@@ -419,7 +422,7 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
           { kind: 'sign', x: 0, z: 2.9, y: 2.0 },
           { kind: 'wallSconce', x: -2.2, z: 0, y: 2.0 },
           { kind: 'wallSconce', x: 2.2, z: 0, y: 2.0 },
-          { kind: 'counter', x: -1.9, z: 1.8, scale: 1.4 },
+          { kind: 'counter', x: -1.9, z: 0.8, scale: 1.4 },
         ],
         sockets: [{ kind: 'loot', x: -1.9, z: 1.8, meta: {} }],
         hiding: [{ kind: 'cabinet', x: 1.9, z: 1.8, yaw: -Math.PI / 2, propKind: 'cabinet' }],
@@ -481,7 +484,7 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
       return base('ms-wake', 12, 11, 3.6, {
         special: 'wake', floorMaterial: 'carpet',
         props: [
-          { kind: 'coffin', x: 0, z: 3.4 },
+          { kind: 'coffin', x: 0, z: 2.0 },
           { kind: 'screenPanels', x: 0, z: 4.8, yaw: 0 },
           { kind: 'statue', x: -2.8, z: 4.3, yaw: Math.PI },
           { kind: 'statue', x: 2.8, z: 4.3, yaw: Math.PI },

@@ -41,6 +41,13 @@ export type EntityId =
   | 'curator'
   | 'hollow'
   | 'husk'
+  | 'bellman'
+  | 'porter'
+  | 'warden'
+  | 'groundswell'
+  | 'inspector'
+  | 'commissionaire'
+  | 'detective'
   // Underscript
   | 'redline'
   | 'stillframe'
@@ -48,6 +55,7 @@ export type EntityId =
   | 'margin'
   | 'editor'
   | 'grafter'
+  | 'swamper' | 'hauler' | 'laundress' | 'auditor'
   // Environmental
   | 'hazard'
   // Set-piece systems
@@ -72,6 +80,7 @@ export type ItemId =
   | 'palimpsest'
   | 'doorKey'
   | 'windAlarm'
+  | 'doorChock'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 
@@ -146,6 +155,10 @@ export interface Door {
   opening: boolean;
   /** Swing speed multiplier — slam (sprint+E) ~2.6, creep (crouch+E) ~0.4. */
   openRate?: number;
+  /** Held shut from the far side (not a lock — no key path). The
+   *  Commissionaire grips entry leaves; 'player' is a crouch-braced leaf;
+   *  'wedge' a placed chock — holds until pulled or worried loose. */
+  heldBy?: EntityId | 'player' | 'wedge';
 }
 
 export interface RoomInstance {
@@ -179,6 +192,8 @@ export interface RoomInstance {
   /** Diegetic light groups for warnings/flicker. */
   lightGroup: 'main' | 'dim' | 'none';
   darkRoom: boolean;
+  /** Underscript: standing water — wading is slow and every step is loud. */
+  flooded?: boolean;
   authored: boolean;
   /** LOS-safe alcove volumes that count as physical safe spots. */
   safeZones: Aabb[];
@@ -205,6 +220,10 @@ export interface ScheduledEncounter {
   seed: number;
   /** For rebound entities. */
   passes?: number;
+  /** Set when loud player noise through the door woke it: the encounter
+   *  telegraphs (stir + shudder) and pre-spawns the moment the leaf opens,
+   *  instead of waiting for room entry. */
+  roused?: boolean;
 }
 
 export interface RunStats {
@@ -244,6 +263,7 @@ export interface SettingsData {
   hintFrequency: 'minimal' | 'standard' | 'frequent';
   minigameAssist: number; // 0..1 eases QTE/stabilization difficulty
   quality: 'low' | 'medium' | 'high';
+  adaptiveQuality: boolean; // auto-shed post effects (SSAO→bloom→scale) at low fps
   keybinds: Record<string, string>;
   reducePanicFx: boolean;
 }

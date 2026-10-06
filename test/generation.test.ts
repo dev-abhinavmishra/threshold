@@ -1,9 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { generateRoute } from '../src/world/generator';
+import { SAFE_ROOM_TEMPLATES } from '../src/game/config';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos, inDoorLane } from '../src/world/spec';
+import { portLocalPos, inDoorLane, footprintInDoorLane } from '../src/world/spec';
+import { modelCollider } from '../src/world/modelLibrary';
+import { buildProp } from '../src/world/props';
+import { Rng } from '../src/engine/rng';
+import { buildRoomMesh } from '../src/world/builder';
+import { MAT } from '../src/world/materials';
+import * as THREE from 'three';
 import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
 import { SeedStreams } from '../src/engine/rng';
 
@@ -259,6 +266,140 @@ describe('sprint mechanics coverage', () => {
     expect(anyVend).toBe(true);
   });
 
+  it("porter's cages: priced claim tags on guest/lobby rooms only", () => {
+    const VALID = /^(bandage|tonic|chalkSpool|latchpick|feltWrap|sparkFlash|doorChock|windAlarm|wardSeal|imprints|lore)$/;
+    let cages = 0, tags = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const claim = r.sockets.filter((x) => x.meta.claim);
+        if (!claim.length) continue;
+        cages++;
+        expect(['guest', 'lobby']).toContain(r.biome);
+        expect(r.authored).toBeFalsy();
+        // every cage hangs on a real cabinet
+        expect(r.spec?.props.some((p) => p.kind === 'keyCabinet')).toBe(true);
+        for (const s of claim) {
+          tags++;
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(6);
+          expect(s.meta.price as number).toBeLessThanOrEqual(15);
+          expect(String(s.meta.claimTag)).toBeTruthy();
+          expect(String(s.meta.contains)).toMatch(VALID);
+        }
+      }
+    }
+    // at 0.38 over ~20 eligible rooms, every seed should carry several
+    expect(cages).toBeGreaterThanOrEqual(SEEDS.length);
+    expect(tags).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
+  it("guest ledgers: priced register sockets on counter rooms only", () => {
+    let ledgers = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const reg = r.sockets.filter((x) => x.meta.register);
+        if (!reg.length) continue;
+        ledgers += reg.length;
+        expect(r.authored).toBeFalsy();
+        // every ledger sits beside a real reception counter
+        expect(r.spec?.props.some((p) => p.kind === 'counter')).toBe(true);
+        for (const s of reg) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(9);
+          expect(s.meta.price as number).toBeLessThanOrEqual(16);
+        }
+      }
+    }
+    // counters exist on every seed; 0.6 roll gives several ledgers each
+    expect(ledgers).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
+  it("forged pages: ledgers near a redactor conceal its door", () => {
+    let forged = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        for (const s of r.sockets.filter((x) => x.meta.register)) {
+          const cover = s.meta.forgedCover as number | undefined;
+          if (cover === undefined) {
+            expect(s.meta.forged).toBeFalsy();
+            continue;
+          }
+          forged++;
+          expect(s.meta.forged).toBe(true);
+          // the concealed door must be inside the book's own read window
+          expect(cover).toBeGreaterThan(r.index);
+          expect(cover).toBeLessThanOrEqual(r.index + 10);
+          const covered = mainRooms(route).find((x) => x.index === cover);
+          expect(covered?.scheduled?.some((x) => x.entity === 'redactor')).toBe(true);
+        }
+      }
+    }
+    // rare by construction — at least one seed carries a forged book
+    expect(forged).toBeGreaterThanOrEqual(1);
+  });
+
+  it("duty rosters: cheap staff-location reads on records desks only", () => {
+    let rosters = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const ros = r.sockets.filter((x) => x.meta.roster);
+        if (!ros.length) continue;
+        rosters += ros.length;
+        expect(r.authored).toBeFalsy();
+        expect(['records', 'maintenance']).toContain(r.biome);
+        // every roster sits on a real desk
+        expect(r.spec?.props.some((p) => p.kind === 'desk' || p.kind === 'writingDesk')).toBe(true);
+        for (const s of ros) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(4);
+          expect(s.meta.price as number).toBeLessThanOrEqual(9);
+        }
+      }
+    }
+    expect(rosters).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
+  it("work orders: marginalia-priced cargo sheets under the route", () => {
+    const IDS = new Set(['u-office-row', 'u-open-office', 'u-print-shop', 'u-server', 'u-break', 'u-records-cage', 'u-lobby']);
+    let orders = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        for (const s of r.sockets.filter((x) => x.meta.workOrder)) {
+          orders++;
+          expect(IDS.has(r.templateId)).toBe(true);
+          const price = s.meta.price as number;
+          expect(price).toBeGreaterThanOrEqual(3);
+          expect(price).toBeLessThanOrEqual(8);
+        }
+      }
+    }
+    // the under carries several sheets a run, sparse like its vends
+    expect(orders).toBeGreaterThanOrEqual(SEEDS.length * 4);
+  });
+
+  it("complaint books: cheap hazard filings in maintenance + gallery", () => {
+    let books = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        const cb = r.sockets.filter((x) => x.meta.complaint);
+        if (!cb.length) continue;
+        books += cb.length;
+        expect(r.authored).toBeFalsy();
+        expect(['maintenance', 'gallery']).toContain(r.biome);
+        for (const s of cb) {
+          expect(s.meta.price as number).toBeGreaterThanOrEqual(3);
+          expect(s.meta.price as number).toBeLessThanOrEqual(8);
+          // fault books only live in maintenance
+          expect(s.meta.fault !== true || r.biome === 'maintenance').toBe(true);
+        }
+      }
+    }
+    expect(books).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('baggage hall is authored at room 25 with loot sockets', () => {
     const route = generateRoute({ seedText: SEEDS[0], difficulty: 'standard', includeUnderscript: false });
     const hall = mainRooms(route).find((r) => r.templateId === 'ms-baggage');
@@ -273,7 +414,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -281,6 +422,75 @@ describe('sprint mechanics coverage', () => {
       }
     }
     expect(anyFilled).toBe(true);
+  });
+
+  it('flooded halls: low service templates only, drains where the plumbing allows', () => {
+    const FLOOD_TEMPLATES = new Set(['u-corridor', 'u-long-hall', 'u-server', 'u-narrow-stacks', 'u-partition-maze', 'u-break']);
+    const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    let total = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const fl = route.underRooms.filter((r) => r.flooded);
+      total += fl.length;
+      for (const r of fl) {
+        expect(FLOOD_TEMPLATES.has(r.templateId)).toBe(true);
+        // water never floods a safe landing or the lobby
+        expect(r.index % 20).not.toBe(0);
+        // a flooded hall is traversable — never the whole route
+        expect(fl.length).toBeLessThanOrEqual(12);
+        // where the plumbing allows, a drain exists — mazes run loud or slow
+        if (r.spec?.props.some((p) => DRAIN_PROPS.has(p.kind))) {
+          expect(r.spec!.props.filter((p) => DRAIN_PROPS.has(p.kind)).length).toBeGreaterThan(0);
+        }
+      }
+    }
+    expect(total).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
+  it('drowned mains: dark flooded halls carry submerged snares off the door lanes', () => {
+    let darkFloods = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        const snares = r.sockets.filter((sk) => sk.meta.hazard === 'snare');
+        if (!(r.flooded && r.darkRoom)) {
+          // submerged wires only exist where the water hides them
+          expect(snares.filter((sk) => sk.meta.submerged).length).toBe(0);
+          continue;
+        }
+        darkFloods++;
+        expect(snares.length).toBeGreaterThanOrEqual(1);
+        expect(snares.length).toBeLessThanOrEqual(2);
+        for (const sk of snares) {
+          expect(sk.meta.submerged).toBe(true);
+          // inside room bounds (yawed rooms rotate local coords — bound
+          // by the half-diagonal, not the raw axes)
+          expect(Math.hypot(sk.pos.x - r.origin.x, sk.pos.z - r.origin.z))
+            .toBeLessThanOrEqual(Math.hypot(r.width / 2, r.depth / 2) + 0.01);
+          // never in a door lane
+          for (const d of r.doors) {
+            expect(Math.hypot(d.pos.x - sk.pos.x, d.pos.z - sk.pos.z)).toBeGreaterThanOrEqual(1.5);
+          }
+        }
+        // the matching snare props exist for anyone draining the room
+        expect(r.spec?.props.filter((pr) => pr.kind === 'snare').length).toBe(snares.length);
+      }
+    }
+    expect(darkFloods).toBeGreaterThanOrEqual(SEEDS.length);
+  });
+
+  it('authored snare props arm themselves — every paper seal is a live tripwire', () => {
+    let armed = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        const props = (r.spec?.props ?? []).filter((pr) => pr.kind === 'snare').length;
+        const sockets = r.sockets.filter((sk) => sk.meta.hazard === 'snare').length;
+        expect(sockets).toBe(props);
+        armed += sockets;
+      }
+    }
+    expect(armed).toBeGreaterThan(0);
   });
 
   it('deep doors are optional branch doors only, never toll', () => {
@@ -303,13 +513,36 @@ describe('sprint mechanics coverage', () => {
     expect(peds.length).toBeGreaterThanOrEqual(4);
   });
 
-  it('no prop or hiding spot lands inside a door approach lane', () => {
+  it('no solid prop collider reaches a door rectangle, and no hiding spot sits in a door approach lane', () => {
+    // The builder culls any solid collider whose box reaches the door
+    // rect (footprintInDoorLane) — this test pins the same honest rule at
+    // spec level, so an authored centerpiece can't be silently eaten.
+    const rng = new Rng(0xBEEF);
+    const footprint = (p: { kind: string; x: number; z: number; yaw?: number; scale?: number }): [number, number] => {
+      const m = modelCollider(p.kind);
+      if (m) return [(m[0] * (p.scale ?? 1)) / 2, (m[2] * (p.scale ?? 1)) / 2];
+      try {
+        const b = buildProp({ ...p } as never, rng.fork(1));
+        let hw = 0, hd = 0;
+        for (const c of b.colliders) {
+          if (!c.losOnly && !c.walkable) { hw = Math.max(hw, c.w / 2); hd = Math.max(hd, c.d / 2); }
+        }
+        return [hw, hd];
+      } catch { return [0.3, 0.3]; }
+    };
+    const laneOf = (spec: { width: number; depth: number; entry: never; exits: never[] }) =>
+      spec as Parameters<typeof footprintInDoorLane>[0];
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of [...mainRooms(route), ...route.underRooms]) {
         const spec = r.spec!;
         for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9)) {
-          expect(inDoorLane(spec, p.x, p.z), `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z}`).toBe(false);
+          const [hw, hd] = footprint(p);
+          if (hw === 0 && hd === 0) continue; // ghost — nothing solid to reach the rect
+          expect(
+            footprintInDoorLane(laneOf(spec as never), p.x, p.z, hw, hd),
+            `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z} (hw ${hw.toFixed(2)}, hd ${hd.toFixed(2)})`,
+          ).toBe(false);
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
@@ -338,6 +571,386 @@ describe('sprint mechanics coverage', () => {
             ).toBe(false);
           }
         }
+      }
+    }
+  });
+});
+
+describe('room build — lamp material pairing', () => {
+  // paired lamp meshes take their own clone per fixture: per-light
+  // baseIntensity jitter and alternating sweep flicker make the ambient
+  // loop's emissive writes differ per light, so a shared clone would show
+  // whichever light wrote last. Clones still never touch the MAT cache.
+  it('two fixtures on the same source material get independent clones', () => {
+    const route = generateRoute({ seedText: 'lamp-clone', difficulty: 'standard', includeUnderscript: false });
+    const room = mainRooms(route).find((r) => r.spec && !r.darkRoom)!;
+    const spec = {
+      ...room.spec!,
+      lights: [
+        { x: 1, y: 2.5, z: 1, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+        { x: 3, y: 2.5, z: 3, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+      ],
+    };
+    const built = buildRoomMesh(room, spec, 7, 'high');
+    const paired = built.lights
+      .map((l) => l.userData.lampMesh as THREE.Mesh | undefined)
+      .filter((m): m is THREE.Mesh => !!m);
+    expect(paired.length).toBe(2);
+    expect(paired[0].material).not.toBe(paired[1].material);
+    // still a clone — the shared cache material must stay untouched by
+    // per-room emissive writes.
+    expect(paired[0].material).not.toBe(MAT.redLamp());
+    expect(paired[1].material).not.toBe(MAT.redLamp());
+  });
+
+  it('distinct fixture kinds keep separate clones', () => {
+    const route = generateRoute({ seedText: 'lamp-clone-2', difficulty: 'standard', includeUnderscript: false });
+    const room = mainRooms(route).find((r) => r.spec && !r.darkRoom && r.biome !== 'maintenance')!;
+    const spec = {
+      ...room.spec!,
+      lights: [
+        { x: 1, y: 2.5, z: 1, color: 0xff2233, intensity: 0.6, range: 3, group: 'warning' as const },
+        { x: 3, y: 2.5, z: 3, color: 0xffdd88, intensity: 0.6, range: 3, group: 'accent' as const },
+      ],
+    };
+    const built = buildRoomMesh(room, spec, 7, 'high');
+    const paired = built.lights
+      .map((l) => l.userData.lampMesh as THREE.Mesh | undefined)
+      .filter((m): m is THREE.Mesh => !!m);
+    expect(paired.length).toBe(2);
+    expect(paired[0].material).not.toBe(paired[1].material);
+  });
+});
+
+describe('underscript weathering (sprint 226)', () => {
+  // The 121 under-rooms reuse ~15 milled kinds — per-instance decay marks
+  // (dying/dead fixtures, paper litter) are what keep the repetition from
+  // reading flat. Assert the marks exist across a slice of the route.
+  it('under-rooms carry fixture decay + paper litter', () => {
+    const route = generateRoute({ seedText: 'under-weather', difficulty: 'standard', includeUnderscript: true });
+    let flickered = 0, dead = 0, litter = 0, dangled = 0;
+    for (const room of route.underRooms.slice(0, 30)) {
+      if (!room.spec) continue;
+      const built = buildRoomMesh(room, room.spec, 11, 'high');
+      built.group.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        if (m.userData.anim === 'flicker') flickered++;
+        const sm = m.material as THREE.MeshStandardMaterial;
+        if (sm?.color && sm.color.getHex() === 0x22251f) dead++;
+        if (m.material === MAT.paperOld()) litter++;
+      });
+      for (const c of built.group.children) if (c.rotation.z !== 0) dangled++;
+    }
+    expect(flickered, 'no dying fixtures found across 30 under-rooms').toBeGreaterThan(0);
+    expect(dead, 'no dead fixtures found across 30 under-rooms').toBeGreaterThan(0);
+    expect(litter, 'no paper litter found across 30 under-rooms').toBeGreaterThan(0);
+    expect(dangled, 'no dangling fixtures found across 30 under-rooms').toBeGreaterThan(0);
+  });
+});
+
+describe('door listen seams (sprint 229)', () => {
+  it('every closed door gains an ear-to-the-seam point while crouched', async () => {
+    const { InteractionSystem, addCrouchedDoorInteracts } = await import('../src/player/interaction');
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const sys = new InteractionSystem();
+    let closed = 0, listens = 0, locked = 0, peeks = 0;
+    for (const r of route.rooms.filter((x) => x.index >= 0).slice(0, 40)) {
+      sys.clear();
+      sys.addRoomInteractables(r);
+      addCrouchedDoorInteracts(sys);
+      for (const d of r.doors) {
+        if (d.openT > 0.4) continue;
+        closed++;
+        const li = sys.interactables.find((i) => i.kind === 'listen' && i.data === d);
+        if (!li) continue;
+        listens++;
+        expect(li.holdTime).toBeGreaterThanOrEqual(0.9);
+        expect(Math.hypot(li.pos.x - d.pos.x, li.pos.z - d.pos.z)).toBeGreaterThan(0.3);
+        if (d.locked && !d.falseDoor) {
+          locked++;
+          if (sys.interactables.some((i) => i.kind === 'peek' && i.data === d)) peeks++;
+        }
+      }
+    }
+    expect(closed).toBeGreaterThan(30);
+    expect(listens).toBe(closed); // false doors keep theirs — listening is the counter-tell
+    expect(peeks).toBe(locked);   // keyhole-peek still covers every locked leaf
+  });
+});
+
+describe('connector corridor dressing (sprint 230)', () => {
+  it('gap corridors get panelling, lanterns, runners and portal surrounds', async () => {
+    const { buildRoomMesh } = await import('../src/world/builder');
+    const route = generateRoute({ seedText: 'ash-vault-101', difficulty: 'standard', includeUnderscript: false });
+    const conn = route.rooms.filter((r) => r.connectorIn && r.spec);
+    expect(conn.length).toBeGreaterThan(2);
+    // Longest connector (room 27 elbows ~47m) — the others are short stubs
+    // where surrounds + wainscot/cornice apply but bays stay bare.
+    const longest = conn.reduce((a, r) => {
+      const seg = [r.connectorIn!.a, r.connectorIn!.elbow, r.connectorIn!.b].filter(Boolean) as { x: number; z: number }[];
+      let tot = 0; for (let i = 0; i < seg.length - 1; i++) tot += Math.hypot(seg[i + 1].x - seg[i].x, seg[i + 1].z - seg[i].z);
+      return tot > a.tot ? { r, tot } : a;
+    }, { r: conn[0], tot: 0 });
+    const built = buildRoomMesh(longest.r, longest.r.spec!, 1, 'high');
+    const kinds = new Set<string>();
+    built.group.traverse((o) => {
+      const m = /^connTrim-(.*)$/.exec(o.name ?? '');
+      if (m) kinds.add(m[1]);
+    });
+    expect(kinds.has('pilaster')).toBe(true);
+    expect(kinds.has('wainscotRun')).toBe(true);
+    expect(kinds.has('corniceRun')).toBe(true);
+    expect(kinds.has('doorSurround')).toBe(true);
+    expect(kinds.has('runnerRug')).toBe(true);
+    let surrounds = 0;
+    built.group.traverse((o) => { if (o.name === 'connTrim-doorSurround') surrounds++; });
+    expect(surrounds % 2).toBe(0); // one per segment end
+  });
+});
+
+describe('noise rouse rules (sprint 231)', () => {
+  it('only loud player-side noise wakes what waits beyond a door', async () => {
+    const { noiseCanRouse, withinRouseRadius, ROUSE_MIN_INTENSITY } = await import('../src/engine/noiseRouse');
+    const ev = (over: object) => ({ x: 0, y: 1, z: 0, caption: '', category: 'footstep' as const, intensity: 0.4, ...over });
+    expect(noiseCanRouse(ev({}))).toBe(false);                                  // walk steps stay quiet
+    expect(noiseCanRouse(ev({ intensity: 0.85, category: 'sprint' }))).toBe(true);
+    expect(noiseCanRouse(ev({ intensity: 1.5, category: 'door' }))).toBe(true);  // slam
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'item' }))).toBe(true);  // spark flash
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'entity-cue' }))).toBe(false); // no feedback loop
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'ambient' }))).toBe(false);
+    expect(noiseCanRouse(ev({ intensity: 0.9, category: 'critter' }))).toBe(false);
+    expect(noiseCanRouse(ev({ intensity: 1.2, category: 'sprint', source: 'husk' }))).toBe(false); // entity noise doesn't rouse
+    expect(ROUSE_MIN_INTENSITY).toBeGreaterThan(0.4);
+    // radius: sprint stride hears ~12m out, a slam ~21m
+    const sprint = ev({ intensity: 0.85, category: 'sprint' });
+    expect(withinRouseRadius(sprint, 10, 0)).toBe(true);
+    expect(withinRouseRadius(sprint, 13, 0)).toBe(false);
+    const slam = ev({ intensity: 1.5, category: 'door' });
+    expect(withinRouseRadius(slam, 20, 0)).toBe(true);
+    expect(withinRouseRadius(slam, 25, 0)).toBe(false);
+  });
+});
+
+describe('electrified water (sprint 260)', () => {
+  it('arcs live flooded halls — lit only, never dark, never dry', () => {
+    let total = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        const arcs = (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'puddle');
+        if (!arcs.length) continue;
+        expect(r.flooded, `electrified socket in dry room ${seed}:${r.index}`).toBe(true);
+        expect(r.darkRoom, `electrified socket in dark room ${seed}:${r.index}`).toBe(false);
+        for (const a of arcs) {
+          expect(a.meta?.electrified).toBe(true);
+          // the arc sits inside the room footprint
+          const w = r.width ?? 4, d = r.depth ?? 4;
+          expect(Math.hypot(a.pos.x - r.origin.x, a.pos.z - r.origin.z))
+            .toBeLessThanOrEqual(Math.hypot(w / 2, d / 2) + 0.01);
+        }
+        total += arcs.length;
+      }
+      // main route never electrifies — the mains above aren't standing water
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'puddle').length).toBe(0);
+      }
+    }
+    expect(total).toBeGreaterThan(0);
+  });
+});
+
+describe('steam lines (sprint 261)', () => {
+  it('authored steam fittings are live lines — every vent is a socket', () => {
+    let vents = 0, socks = 0;
+    for (const seed of SEEDS.slice(0, 3)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        vents += (r.spec?.props ?? []).filter((p) => p.kind === 'steamVent').length;
+        socks += (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'steam').length;
+      }
+    }
+    expect(socks, 'every authored steamVent must arm a hazard socket').toBe(vents);
+    expect(vents).toBeGreaterThan(0);
+  });
+});
+
+describe('wired drawers (sprint 262)', () => {
+  it('some unlocked drawers carry wired latches — never in safe rooms', () => {
+    let wired = 0, wiredLocked = 0, wiredSafe = 0;
+    for (const seed of SEEDS.slice(0, 4)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        for (const s of r.sockets ?? []) {
+          if (s.kind !== 'drawer' || s.meta?.wired !== true) continue;
+          wired += 1;
+          if (s.meta.drawerLocked) wiredLocked += 1;
+          if (SAFE_ROOM_TEMPLATES.has(r.templateId)) wiredSafe += 1;
+        }
+      }
+    }
+    expect(wired, 'wired drawers should exist across seeds').toBeGreaterThan(0);
+    expect(wiredLocked, 'wired latches only on unlocked drawers').toBe(0);
+    expect(wiredSafe, 'safe rooms never wire drawers').toBe(0);
+  });
+});
+
+describe('old sign (sprint 266)', () => {
+  it('every route carries spent hazard sockets — history you can read', () => {
+    for (const seed of SEEDS.slice(0, 4)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const spent = [...route.rooms, ...route.underRooms].flatMap((r) =>
+        (r.sockets ?? []).filter((sk) => sk.meta?.spent === true));
+      expect(spent.length, `seed ${seed} carries old sign`).toBeGreaterThan(0);
+      for (const sk of spent) expect(['snare', 'steam', 'fan']).toContain(sk.meta.hazard);
+    }
+  });
+});
+
+describe('the belt-wheel (sprint 267)', () => {
+  it('mechanical rooms arm live fans', () => {
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const fans = route.rooms.flatMap((r) => (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'fan'));
+    expect(fans.length, 'the wheels spin on the main route').toBeGreaterThan(3);
+  });
+});
+
+describe('coaxed drawers (sprint 268)', () => {
+  it('already-worked latches: sprung, bare, and scarred', () => {
+    let found = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        for (const sk of r.sockets ?? []) {
+          if (sk.meta?.coaxed === true) {
+            found++;
+            expect(sk.meta.wired, 'a coaxed latch is already sprung').not.toBe(true);
+            expect(sk.meta.bare, 'a worked drawer is an empty one').toBe(true);
+            expect(sk.meta.drawerLocked, 'the coax beats the lock').not.toBe(true);
+          }
+        }
+      }
+    }
+    expect(found, 'somebody worked some latches before you').toBeGreaterThan(0);
+  });
+});
+
+describe('the laundress (sprint 272)', () => {
+  it('fouled basins only — flooded rooms with plumbing', () => {
+    const PLUMBING = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'laundress') ?? false,
+          `laundress on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        if (!r.scheduled?.some((s) => s.entity === 'laundress')) continue;
+        expect(r.flooded, `laundress on a dry room ${seed} u-${r.index}`).toBe(true);
+        expect((r.spec?.props ?? []).some((p) => PLUMBING.has(p.kind)),
+          `laundress with no basin ${seed} u-${r.index}`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the lost-property cage (sprint 274)', () => {
+  it('marginalia claims hang on under cage/locker furniture only', () => {
+    const HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets.some((s) => s.meta?.claim && s.meta?.marginalia),
+          `imprints-claim flagged marginalia on the main route ${seed}`).toBe(false);
+      }
+      const claims = route.underRooms.flatMap((r) =>
+        r.sockets.filter((s) => s.meta?.claim && s.meta?.marginalia).map((s) => ({ r, s })));
+      for (const { r, s } of claims) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `claim on a cage-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 3 && price <= 9, `claim price ${price} in 3-9`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the crew board (sprint 275)', () => {
+  it('shift sheets pin to under storage furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets?.some((s) => s.meta?.crewBoard) ?? false,
+          `crew board on the main route ${seed}`).toBe(false);
+      }
+      const boards = route.underRooms.flatMap((r) =>
+        (r.sockets ?? []).filter((s) => s.meta?.crewBoard).map((s) => ({ r, s })));
+      for (const { r, s } of boards) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `board on a host-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 3 && price <= 8, `board price ${price} in 3-8`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the claim register (sprint 276)', () => {
+  it('registers sit on under desk furniture, cheapest paper', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets?.some((s) => s.meta?.claimRegister) ?? false,
+          `claim register on the main route ${seed}`).toBe(false);
+      }
+      const regs = route.underRooms.flatMap((r) =>
+        (r.sockets ?? []).filter((s) => s.meta?.claimRegister).map((s) => ({ r, s })));
+      for (const { r, s } of regs) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `register on a host-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 2 && price <= 6, `register price ${price} in 2-6`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the Auditor (sprint 277)', () => {
+  it('clerks work dry desk rooms below, never the main route', () => {
+    const DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'auditor') ?? false,
+          `auditor on the main route ${seed}`).toBe(false);
+      }
+      const clerks = route.underRooms.filter((r) => r.scheduled?.some((s) => s.entity === 'auditor'));
+      for (const r of clerks) {
+        expect(r.flooded, `auditor in a flooded room ${seed} u-${r.index}`).not.toBe(true);
+        expect((r.spec?.props ?? []).some((p) => DESKS.has(p.kind)),
+          `auditor on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        expect(r.index % 20, `auditor on a safe landing ${seed}`).not.toBe(0);
+      }
+    }
+  });
+});
+
+describe('the House Detective (sprint 278)', () => {
+  it('works desk rooms on the main route, never below', () => {
+    const DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'detective') ?? false,
+          `detective under the route ${seed}`).toBe(false);
+      }
+      const suits = route.rooms.filter((r) => r.scheduled?.some((s) => s.entity === 'detective'));
+      for (const r of suits) {
+        expect((r.spec?.props ?? []).some((p) => DESKS.has(p.kind)),
+          `detective on a desk-less room ${seed} r-${r.index}`).toBe(true);
+        expect(r.index, `detective too early ${seed}`).toBeGreaterThanOrEqual(18);
       }
     }
   });

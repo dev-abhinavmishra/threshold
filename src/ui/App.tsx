@@ -295,6 +295,7 @@ function SettingsPage() {
                 ))}
               </div>
             </div>
+            {toggle('Adaptive quality', 'adaptiveQuality')}
           </div>
           <div>
             <h3>Keybinds</h3>

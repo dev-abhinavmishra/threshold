@@ -536,7 +536,7 @@ test('powered emissives die with room power: break and dim scale device glow', a
         currentRoom: number;
         player: { pos: { x: number; y: number; z: number }; teleport(x: number, y: number, z: number): void };
         route: { rooms: { index: number; origin: { x: number; y: number; z: number } }[] };
-        streamer: { get(i: number): { animated: Dev[] } | undefined };
+        streamer: { get(i: number): { animated: Dev[]; lights: unknown[] } | undefined };
       };
     }).__thresholdGame;
     g.renderFrame = () => {};
@@ -554,23 +554,26 @@ test('powered emissives die with room power: break and dim scale device glow', a
       g.player.teleport(room.origin.x, room.origin.y, room.origin.z);
       for (let f = 0; f < 30 && g.streamer.get(room.index) === undefined; f++) g.frame();
       const built = g.streamer.get(room.index);
+      // The room must HAVE mains — roomMul is averaged over built.lights,
+      // and a lightless room's devices can never dim (mul stays 1).
+      if (!built || built.lights.length === 0) continue;
       const dev = built?.animated.find((o) => o.userData.anim === 'device' || o.userData.anim === 'screen' || o.userData.anim === 'blink');
-      if (dev && dev.material.emissiveIntensity > 0.5) {
-        roomIndex = room.index;
-        before = dev.material.emissiveIntensity;
-        break;
-      }
+      if (dev) { roomIndex = room.index; break; }
     }
     if (roomIndex < 0) return { stage: 'no-device-room', roomIndex: -1, before: 0, afterDim: 0, afterBreak: 0 };
+
+    const dev = g.streamer.get(roomIndex)!.animated
+      .find((o) => o.userData.anim === 'device' || o.userData.anim === 'screen' || o.userData.anim === 'blink')!;
+    // blink/screen glow oscillates on its own rhythm — sample the MAX over
+    // frames, else a mid-cycle read races the assertion.
+    for (let f = 0; f < 25; f++) { g.frame(); before = Math.max(before, dev.material.emissiveIntensity); }
 
     // 'dim' halves powered glow; 'break' kills it. The flicker interval is
     // wall-clock — give it real time to settle at half, then sim-drive again.
     g.flickerRoom(roomIndex, 'dim');
     await new Promise((r) => setTimeout(r, 900));
-    for (let f = 0; f < 30; f++) g.frame();
-    const built = g.streamer.get(roomIndex)!;
-    const dev = built.animated.find((o) => o.userData.anim === 'device' || o.userData.anim === 'screen' || o.userData.anim === 'blink')!;
-    const afterDim = dev.material.emissiveIntensity;
+    let afterDim = 0;
+    for (let f = 0; f < 30; f++) { g.frame(); afterDim = Math.max(afterDim, dev.material.emissiveIntensity); }
     g.flickerRoom(roomIndex, 'break');
     for (let f = 0; f < 30; f++) g.frame();
     const afterBreak = dev.material.emissiveIntensity;

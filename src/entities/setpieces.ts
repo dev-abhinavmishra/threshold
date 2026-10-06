@@ -4,12 +4,15 @@
  * free-roamers — they exist only inside their milestone controllers.
  */
 import * as THREE from 'three';
-import { Entity } from './base';
+import { Entity, corridorPath, followPath, pathLength } from './base';
 import { v3, v3copy, v3dist, clamp } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import { pointInRoom } from '../engine/doorGeo';
+import type { SoundEvent } from '../engine/events';
 import type { Vec3 } from '../engine/math';
 
 /* ============================ PURSUER ============================ */
@@ -327,6 +330,9 @@ export class Grafter extends Entity {
   private grindT = 0;
   private roamT = 0;
   private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private noiseDriftCd = 0;
+  private scentT = 0;
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
 
@@ -363,7 +369,28 @@ export class Grafter extends Entity {
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('grafter-wake', this.pos, '[the rubble folds into a shape]', { severity: 'danger' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** Loose masonry drags toward a crash — a pulled bell or a slammed
+   *  door bends its amble to the sound point, so a lure genuinely
+   *  walks it across the room. A real body in sight outranks noise. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage') return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    if (this.roomOf(v3(e.x, 0, e.z)) !== this.spawnRoom) return;
+    const p = c.player;
+    const d = v3dist(this.pos, p.pos);
+    if (d < this.tuning.seeRange && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom) return;
+    this.target = v3(e.x, 0, e.z);
+    this.roamT = 0;
+    if (this.noiseDriftCd <= c.now) {
+      this.noiseDriftCd = c.now + 7;
+      c.cue('grafter-grind', this.pos, '[the rubble drags toward the sound]', { severity: 'warn' });
+    }
   }
 
   private pickRoam(): void {
@@ -403,13 +430,27 @@ export class Grafter extends Entity {
     if (this.mesh) this.mesh.position.copy(this.pos);
     if (this.rig) this.rig.group.position.y = 0.12 + Math.sin(this.lifeT * 1.7) * 0.1;
 
+    // Scent: a killed hazard in its room reads as fresh footprints —
+    // the rubble drags itself over the sign.
+    this.scentT -= dt;
+    if (this.scentT <= 0) {
+      this.scentT = 1.6;
+      const evs = c.hazardEvidence?.(`grafter:${this.spawnRoom}`, this.pos.x, this.pos.z, 40) ?? [];
+      for (const ev of evs) {
+        if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
+        this.target = v3(ev.pos.x, 0, ev.pos.z);
+        this.roamT = 0;
+        c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]' : '[stone drags to the fresh sign]', { severity: 'warn' });
+        break;
+      }
+    }
     this.grindT += dt;
     if (this.grindT > 4.5) {
       this.grindT = 0;
       c.cue('grafter-grind', this.pos, '[stone drags on stone]', { severity: 'warn' });
     }
 
-    if (d < this.tuning.killRange && p.protection !== 'hidden') {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising()) {
       this.rig?.play('attack', 0.05);
       c.cue('grafter-strike', this.pos, '', { severity: 'danger' });
       c.killPlayer('grafter', 'The Grafter is slow. Walk around it — never let it close the gap.');
@@ -431,6 +472,877 @@ export class Grafter extends Entity {
   }
 
   protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/* ============================ SWAMPER ============================ */
+/** The drowned crewman of the flooded halls. It lies under the standing
+ *  water and answers what the water carries — an upright wader stirs the
+ *  flood, and every splash it makes pulls the shape toward it. Crouch-
+ *  wading stirs nothing, and an opened drain takes its medium with it. */
+export class Swamper extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private target = v3();
+  private spawnRoom = 0;
+  private room: { origin: { x: number; z: number }; yaw: number; spec?: { width: number; depth: number } | null } | null = null;
+  private roomO = v3();
+  private roomW = 0;
+  private roomD = 0;
+  private huntUntil = 0;
+  private strikeCd = 0;
+  private surfT = 0;
+  private driftT = 0;
+  private rippleT = 0;
+  private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+
+  constructor() { super('swamper', ENTITY_TUNING.swamper); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.room = room;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    this.roomW = room.width;
+    this.roomD = room.depth;
+    // lie mid-room, on the far corner from where the player wades in
+    const p = c.player.pos;
+    let bx = this.roomO.x, bz = this.roomO.z, best = -1;
+    for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const px = this.roomO.x + cx * (this.roomW / 2 - 1.4);
+      const pz = this.roomO.z + cz * (this.roomD / 2 - 1.4);
+      const d = Math.hypot(px - p.x, pz - p.z);
+      if (d > best) { best = d; bx = px; bz = pz; }
+    }
+    this.pos = v3(bx, 0, bz);
+    this.target = v3(bx, 0, bz);
+    const g = new THREE.Group();
+    const rig = riggedFigure('inkGhost');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), MAT.ink());
+      body.position.y = 0.9;
+      g.add(body);
+    }
+    // the displacement it makes — a dark patch on the sheet
+    const patch = new THREE.Mesh(new THREE.CircleGeometry(0.8, 18), MAT.ink());
+    patch.rotation.x = -Math.PI / 2;
+    patch.position.y = 1.4; // local; group sits low so this skims the flood
+    g.add(patch);
+    g.position.set(this.pos.x, -1.35, this.pos.z);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('puddle-splash', this.pos, '[the water is not empty]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** Everything the flood carries reaches it — wading splashes, thrown
+   *  pebbles, the drain crank. It glides to the point and listens; if the
+   *  sound is still there, it takes it. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || !this.room) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!pointInRoom(this.room, e.x, e.z, 0.4)) return;
+    this.target = v3(e.x, 0, e.z);
+    this.huntUntil = c.now + 5;
+  }
+
+  private pickDrift(): void {
+    const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 131));
+    this.target = v3(
+      this.roomO.x + rng.range(-this.roomW / 2 + 1.4, this.roomW / 2 - 1.4),
+      0,
+      this.roomO.z + rng.range(-this.roomD / 2 + 1.4, this.roomD / 2 - 1.4),
+    );
+    this.driftT = this.ctx.now + 6;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.lifeT += dt;
+    // the flood is its medium — drain the room and it leaves with the water
+    if (c.isRoomDrained?.(this.spawnRoom)) {
+      c.cue('puddle-splash', this.pos, '[something slips down the drain]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2) { this.done(); return; }
+
+    const dP = v3dist(this.pos, p.pos);
+    // Strike: it knows you only by the water you move. An upright wader
+    // stirs; a crouched one is a stone.
+    const stirred = !p.crouching && Math.hypot(p.vel.x, p.vel.z) > 0.45 && p.protection !== 'hidden';
+    if (dP < this.tuning.killRange && stirred && !this.rising() && c.now >= this.strikeCd) {
+      this.strikeCd = c.now + 8;
+      this.surfT = 0.9;
+      this.huntUntil = 0;
+      this.rig?.play('attack', 0.05);
+      c.cue('puddle-splash', this.pos, '[the water stands up]', { severity: 'danger' });
+      c.sound.emit({ x: p.pos.x, y: 0.3, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[the flood breaks]', source: 'swamper' });
+      c.damagePlayer(this.tuning.damage, 'swamper', 'The Swamper finds you by the water you move. Crouch-wade — or open the drain first.');
+      // slip back to the far corner and lie again
+      let bx = this.roomO.x, bz = this.roomO.z, best = -1;
+      for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+        const px = this.roomO.x + cx * (this.roomW / 2 - 1.4);
+        const pz = this.roomO.z + cz * (this.roomD / 2 - 1.4);
+        const d = Math.hypot(px - p.pos.x, pz - p.pos.z);
+        if (d > best) { best = d; bx = px; bz = pz; }
+      }
+      this.target = v3(bx, 0, bz);
+    }
+
+    const hunting = c.now < this.huntUntil;
+    const speed = hunting ? this.tuning.speed : 0.5;
+    const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.3) {
+      this.pos.x += (dx / dd) * speed * dt;
+      this.pos.z += (dz / dd) * speed * dt;
+      this.rig?.play('move');
+    } else if (hunting) {
+      // arrived at the sound and found it gone — it circles once, then lies
+      this.huntUntil = 0;
+      c.cue('puddle-splash', this.pos, '[the water moves where the sound was]', { severity: 'info' });
+    } else if (c.now > this.driftT) {
+      this.pickDrift();
+    } else {
+      this.rig?.play('idle');
+    }
+
+    // A quiet wader gets the tell instead of the teeth: a patch of moving
+    // water beside them is the only warning the flood gives.
+    if (!hunting && dP < 7 && c.now > this.rippleT) {
+      this.rippleT = c.now + 6;
+      c.cue('puddle-splash', this.pos, '[the water moves, close]', { severity: 'warn' });
+    }
+
+    if (this.mesh) {
+      this.surfT = Math.max(0, this.surfT - dt);
+      const rise = this.surfT > 0 ? 1.1 * Math.min(1, this.surfT / 0.45) : 0;
+      this.mesh.position.set(this.pos.x, -1.35 + rise, this.pos.z);
+      if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/* ============================ HAULER ============================ */
+/** The under's working drudge: it drags a salvage sledge on a slow a–b
+ *  haul through its room, scraping loud enough to hear two doors off.
+ *  The sledge is a moving loot source — crouch beside it and pick it
+ *  while it hauls. Loud noise near it makes it drop the haul and ram
+ *  the point; quiet picking is free. */
+export class Hauler extends Entity {
+  private pos = v3();
+  private target = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private roomW = 0;
+  private roomD = 0;
+  private endA = v3();
+  private endB = v3();
+  private heading = v3(0, 0, 1);
+  private alerted: Vec3 | null = null;
+  private struck = false;
+  private scrapeT = 0;
+  private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private sledge: THREE.Group | null = null;
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+
+  /** The drag's world position — the interactable anchors here per frame. */
+  sledgePos = v3();
+  /** Picks left on the sledge — a sledge picked clean stops registering. */
+  stock = 4;
+
+  constructor() { super('hauler', ENTITY_TUNING.hauler); }
+
+  override threatPos(): Vec3 { return this.pos; }
+  get roomIdx(): number { return this.spawnRoom; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    this.roomW = room.width;
+    this.roomD = room.depth;
+    // the haul runs the room's long axis, clear of the walls
+    const span = Math.max(this.roomW, this.roomD) / 2 - 1.3;
+    const long = this.roomW >= this.roomD ? v3(1, 0, 0) : v3(0, 0, 1);
+    this.endA = v3(this.roomO.x - long.x * span, 0, this.roomO.z - long.z * span);
+    this.endB = v3(this.roomO.x + long.x * span, 0, this.roomO.z + long.z * span);
+    this.pos = v3copy(v3(), this.endA);
+    this.target = v3copy(v3(), this.endB);
+    this.sledgePos = v3copy(v3(), this.pos);
+
+    const g = new THREE.Group();
+    const rig = riggedFigure('yeti');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.3, 6), MAT.steelDark());
+      body.position.y = 0.65;
+      g.add(body);
+    }
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    // the sledge itself — a drag behind the haul line
+    const s = new THREE.Group();
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 1.1), MAT.darkOak());
+    bed.position.y = 0.16;
+    s.add(bed);
+    for (const [sx, sz, sy] of [[-0.18, -0.2, 0.38], [0.16, 0.22, 0.34]] as const) {
+      const sack = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 5), MAT.figureCloth());
+      sack.scale.y = 0.7;
+      sack.position.set(sx, sy, sz);
+      s.add(sack);
+    }
+    s.position.copy(this.sledgePos);
+    this.sledge = s;
+    c.addEntityMesh(s);
+    c.cue('grafter-grind', this.pos, '[something hauls salvage down the hall]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** It can't see — but the sledge hears enough. A crash near the haul
+   *  pulls the whole team onto the sound point, and it rams what it finds. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage') return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    const room = c.rooms[this.spawnRoom];
+    if (!room || !pointInRoom(room, e.x, e.z, 0.4)) return;
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 7) return;
+    this.alerted = v3(e.x, 0, e.z);
+    this.struck = false;
+    c.cue('grafter-grind', this.pos, '[the scrape halts — it sets the sledge down]', { severity: 'warn' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    this.lifeT += dt;
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2) { this.done(); return; }
+    const p = c.player;
+
+    // the ram: the whole team hits the sound point — once per rouse
+    if (this.alerted && !this.struck && !this.rising() && v3dist(this.pos, p.pos) < this.tuning.killRange) {
+      this.struck = true;
+      this.rig?.play('attack', 0.05);
+      c.cue('grafter-grind', this.pos, '[the sledge team rams through]', { severity: 'danger' });
+      c.sound.emit({ x: this.pos.x, y: 0.5, z: this.pos.z, intensity: 0.6, category: 'impact', caption: '[the sledge slams]', source: 'hauler' });
+      c.damagePlayer(this.tuning.damage, 'hauler', 'The Hauler rams what it hears near the sledge — crash noise by the haul line is the mistake. Pick it quiet, or stay loud and gone.');
+    }
+    const goal = this.alerted ?? this.target;
+    const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.35) {
+      const sp = this.alerted ? this.tuning.speed * 2.6 : this.tuning.speed;
+      this.pos.x += (dx / dd) * sp * dt;
+      this.pos.z += (dz / dd) * sp * dt;
+      this.heading = v3(dx / dd, 0, dz / dd);
+      this.rig?.play('move');
+      if (!this.alerted && c.now > this.scrapeT) {
+        this.scrapeT = c.now + 2.4;
+        c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.3, category: 'impact', caption: '[the sledge scrapes]', source: 'hauler' });
+      }
+    } else if (this.alerted) {
+      this.alerted = null;
+      c.cue('grafter-grind', this.pos, '[it finds nothing — the haul resumes]', { severity: 'info' });
+    } else {
+      // turn at the end of the haul line
+      this.target = this.target === this.endA ? this.endB : this.endA;
+      this.rig?.play('idle');
+    }
+
+    // the drag trails the haul line
+    this.sledgePos = v3(this.pos.x - this.heading.x * 1.25, 0, this.pos.z - this.heading.z * 1.25);
+    if (this.mesh) {
+      this.mesh.position.copy(this.pos);
+      if (dd > 0.35) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    if (this.sledge) {
+      this.sledge.position.copy(this.sledgePos);
+      this.sledge.rotation.y = Math.atan2(this.heading.x, this.heading.z);
+    }
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.sledge) { this.ctx.removeEntityMesh(this.sledge); this.sledge = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/* ============================ LAUNDRESS ============================ */
+/** A drowned laundress works a flooded room's drain basin — her wash chokes
+ *  the crank. While she keeps the basin the drain verb fails; loud noise
+ *  pulls her off it to inspect the splash, which is the window. Touch the
+ *  crank while she watches and she takes your hand. When the water goes
+ *  she rides it out. */
+export class Laundress extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private sniffUntil = 0;
+  private scrubT = 0;
+  private hissT = 0;
+  private struckCd = 0;
+  private noiseUnsub: (() => void) | null = null;
+  /** The basin she guards — public so the drain verb can ask her. */
+  drainPos = v3();
+  /** Her claimed load — 'Search the wash' skims it while she's off the basin. */
+  basketFull = true;
+  private keened = false;
+  /** The point she left the basin to inspect. */
+  private alerted: Vec3 | null = null;
+  get guarding(): boolean { return !this.alerted; }
+
+  constructor() { super('laundress', ENTITY_TUNING.laundress); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    // her basin: the room's plumbing prop the drain verb sits on
+    const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    const basin = (room.spec?.props ?? []).find((pp) => DRAIN_PROPS.has(pp.kind));
+    const lx = basin ? basin.x : 0, lz = basin ? basin.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.drainPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // she stands a half-metre off the fitting, facing it
+    const ox = this.roomO.x - this.drainPos.x, oz = this.roomO.z - this.drainPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.drainPos.x + (ox / ol) * 0.55, 0, this.drainPos.z + (oz / ol) * 0.55);
+    const g = new THREE.Group();
+    const rig = riggedFigure('hooded');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.0, 4, 8), MAT.ink());
+      body.position.y = 1.0;
+      g.add(body);
+    }
+    // the bundle she works — pale cloth over the basin
+    const bundle = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), MAT.figureCloth());
+    bundle.position.set(this.drainPos.x - this.pos.x, 0.55, this.drainPos.z - this.pos.z);
+    g.add(bundle);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('puddle-splash', this.pos, '[wash, wring — somebody works the drain]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  private hear(e: SoundEvent): void {
+    if (this.state !== 'engage' || e.source || !noiseCanBeHeard(e)) return;
+    const room = this.ctx.rooms[this.spawnRoom];
+    if (!pointInRoom(room, e.x, e.z, 0.4)) return;
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 6) return;
+    this.alerted = v3(e.x, 0, e.z);
+    this.sniffUntil = this.ctx.now + 5;
+  }
+
+  /** The drain press reaches her — she takes the hand on the crank. */
+  aggravate(p: Vec3): void {
+    const c = this.ctx;
+    if (this.struckCd > 0 || this.rising()) return;
+    c.cue('puddle-splash', this.pos, '[she wrings her hands]', { severity: 'warn' });
+    c.sound.emit({ x: this.pos.x, y: 0.5, z: this.pos.z, intensity: 0.5, category: 'impact', caption: '[a hiss through wet cloth]', source: 'laundress' });
+    if (v3dist(this.pos, p) < this.tuning.killRange + 0.8) {
+      this.struckCd = 2.5;
+      this.rig?.play('attack', 0.05);
+      c.damagePlayer(this.tuning.damage, 'laundress', 'The Laundress keeps her basin — pull her off the drain with a thrown sound before you touch the crank.');
+    }
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.hissT -= dt; this.struckCd -= dt; this.scrubT -= dt;
+    // when her medium goes she goes with it
+    if (c.isRoomDrained?.(this.spawnRoom)) {
+      c.cue('puddle-splash', this.pos, '[the wash goes down the drain]', { severity: 'info' });
+      this.state = 'done';
+      return;
+    }
+    // work-song at the basin — ambient, below the hearing floor
+    if (this.guarding && this.scrubT <= 0) {
+      this.scrubT = 3.2;
+      c.sound.emit({ x: this.pos.x, y: 0.4, z: this.pos.z, intensity: 0.25, category: 'item', caption: '[wash, wring]', source: 'laundress' });
+    }
+    // standing too close to a watched basin is its own tell
+    if (this.guarding && this.hissT <= 0 && v3dist(this.pos, p) < 1.6) {
+      this.hissT = 3;
+      c.cue('puddle-splash', this.pos, '[she wrings her hands — the drain is watched]', { severity: 'warn' });
+    }
+    const goal = this.alerted ?? this.drainPos;
+    const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.3) {
+      const sp = this.alerted ? this.tuning.speed * 1.6 : this.tuning.speed;
+      this.pos.x += (dx / dd) * sp * dt;
+      this.pos.z += (dz / dd) * sp * dt;
+    } else if (this.alerted && c.now > this.sniffUntil) {
+      this.alerted = null; // nothing at the splash — back to the basin
+      // she counts her load — a pilfered basket keens, loud enough to feed hunters
+      if (!this.basketFull && !this.keened) {
+        this.keened = true;
+        c.cue('puddle-splash', this.pos, '[a keen — the wash is lighter]', { severity: 'warn' });
+        c.sound.emit({ x: this.pos.x, y: 0.6, z: this.pos.z, intensity: 0.55, category: 'item', caption: '[a wail at the basin]', source: 'laundress' });
+      }
+    }
+    // hands on her basin while she works are bitten
+    if (this.guarding && !this.rising() && this.struckCd <= 0 && v3dist(this.pos, p) < 0.8) {
+      this.aggravate(p);
+    }
+    if (this.mesh) {
+      this.mesh.position.copy(this.pos);
+      if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/** The Auditor — a desk clerk who knows your hands are in his book. Every
+ *  claim tag drawn, sledge picked, and basket stolen below accrues to a
+ *  tally the Game counts (`claimsOwed`). He doesn't hunt noise or sight —
+ *  he hunts THEFT: enter his room carrying unpaid claims and he holds out
+ *  the ledger. Settle at his desk and you're square; walk out owing and he
+ *  walks the book after you, room to room, at a clerk's patient pace. His
+ *  touch is a beating, not a bargain — the debt still stands. */
+export class Auditor extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private lifeT = 0;
+  private repathT = 0;
+  private struckCd = 0;
+  private path: Vec3[] = [];
+  private traveled = 0;
+  private homebound = false;
+  private interactId: string | null = null;
+  /** His desk — the settle point anchors here. */
+  deskPos = v3();
+  /** He has noted your hands and holds out the tally. */
+  demanded = false;
+  /** He has left his desk to collect in person. */
+  pursuing = false;
+
+  constructor() { super('auditor', ENTITY_TUNING.auditor); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    const DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+    const desk = (room.spec?.props ?? []).find((pp) => DESKS.has(pp.kind));
+    const lx = desk ? desk.x : 0, lz = desk ? desk.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.deskPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // he works the room-center side of the desk
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.deskPos.x + (ox / ol) * 0.7, 0, this.deskPos.z + (oz / ol) * 0.7);
+    const g = new THREE.Group();
+    const rig = riggedFigure('hooded');
+    if (rig) { this.rig = rig; rig.play('idle', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 1.05, 4, 8), MAT.ink());
+      body.position.y = 1.0;
+      g.add(body);
+    }
+    // the book itself — a flat dark slab carried before him
+    const book = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 0.26), MAT.darkOak());
+    book.position.set(0, 1.05, 0.3);
+    book.rotation.x = -0.35;
+    g.add(book);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('chalk-mark', this.pos, '[a ledger opens — somebody tallies what you owe]', { severity: 'warn' });
+    this.state = 'engage';
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  private settleId(): string { return `audit-${this.spawnRoom}`; }
+
+  private openLedger(): void {
+    const c = this.ctx;
+    this.demanded = true;
+    this.interactId = this.settleId();
+    // the point sits a step off his desk toward the room center — settle
+    // means walking up to him, not skimming past the furniture
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    c.addInteractable({
+      kind: 'audit', id: this.interactId,
+      pos: v3(this.deskPos.x + (ox / ol) * 1.15, 0.9, this.deskPos.z + (oz / ol) * 1.15),
+      prompt: 'Settle the ledger — see the tally', holdTime: 1.0,
+      data: { auditor: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 4,
+    });
+    c.cue('chalk-mark', this.pos, '[the clerk licks a thumb — your hands are in his book]', { severity: 'warn' });
+  }
+
+  private closeLedger(): void {
+    if (this.interactId) { this.ctx.removeInteractable(this.interactId); this.interactId = null; }
+  }
+
+  /** The settle press reaches him — the Game has already taken the toll. */
+  settled(): void {
+    this.demanded = false;
+    this.pursuing = false;
+    this.homebound = true;
+    this.traveled = 0;
+    this.path = [];
+    this.closeLedger();
+    this.ctx.cue('checkpoint', this.pos, '[the clerk stamps you square]', { severity: 'info' });
+  }
+
+  private collect(): void {
+    const c = this.ctx;
+    this.struckCd = 3;
+    this.rig?.play('attack', 0.05);
+    c.sound.emit({ x: this.pos.x, y: 1, z: this.pos.z, intensity: 0.45, category: 'impact', caption: '[the book slaps shut]', source: 'auditor' });
+    c.damagePlayer(this.tuning.damage, 'auditor', 'The Auditor collects in kind — settle his ledger at the desk, or carry your hands past a friendlier door.');
+    c.cue('chalk-mark', this.pos, '[the clerk marks your refusal — the tally stands]', { severity: 'warn' });
+    // a beaten debtor walks home; the debt still stands for the next clerk
+    this.pursuing = false;
+    this.demanded = false;
+    this.homebound = true;
+    this.traveled = 0;
+    this.path = [];
+  }
+
+  private repath(targetRoom: number): void {
+    const c = this.ctx;
+    const from = this.roomOf(this.pos);
+    const a = from >= 0 ? from : this.spawnRoom;
+    this.path = corridorPath(c.rooms, a, targetRoom);
+    // walking a→b: if the path runs backward through the chain, follow it
+    // from the near end — corridorPath is ordered low→high
+    this.traveled = a <= targetRoom ? 0 : Math.max(0, pathLength(this.path));
+    // keep our own offset — start slightly ahead/behind the room entry
+    this.repathT = 1.5;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.lifeT += dt;
+    this.struckCd -= dt;
+    const owed = c.claimsOwed?.() ?? 0;
+    const pRoom = this.roomOf(p);
+    const myRoom = this.roomOf(this.pos);
+
+    // desk work: notice unpaid hands in his room
+    if (!this.pursuing && !this.homebound) {
+      const step = v3(this.deskPos.x + (this.roomO.x - this.deskPos.x) * 0.08, 0, this.deskPos.z + (this.roomO.z - this.deskPos.z) * 0.08);
+      const dx = step.x - this.pos.x, dz = step.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
+      if (pRoom === this.spawnRoom && owed > 0 && !this.demanded) this.openLedger();
+      // a debtor who slips his room while owed gets the walk-after
+      if (this.demanded && owed > 0 && pRoom !== this.spawnRoom && pRoom >= 0) {
+        this.pursuing = true;
+        this.closeLedger();
+        c.cue('chalk-mark', this.pos, '[the clerk walks his ledger after you]', { severity: 'warn' });
+        this.repath(pRoom);
+      }
+    }
+
+    // the walk-after — a clerk's patience, room to room
+    if (this.pursuing) {
+      this.repathT -= dt;
+      if (pRoom >= 0) {
+        if (this.repathT <= 0 || this.path.length === 0) this.repath(pRoom);
+        const forward = myRoom <= pRoom;
+        this.traveled += (forward ? 1 : -1) * this.tuning.speed * dt;
+        this.traveled = Math.max(0, Math.min(pathLength(this.path), this.traveled));
+        const f = followPath(this.path, this.traveled);
+        const ox = f.pos.x - this.pos.x, oz = f.pos.z - this.pos.z;
+        this.pos.x += ox * 0.5; this.pos.z += oz * 0.5;
+        if (Math.hypot(ox, oz) > 0.1 && this.mesh) this.mesh.rotation.y = Math.atan2(ox, oz);
+      } else {
+        // lost the room — drift toward the last seen point
+        const dx = p.x - this.pos.x, dz = p.z - this.pos.z;
+        const dd = Math.hypot(dx, dz) || 1;
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+      }
+      this.rig?.play('move');
+      // settled or evaded — the book closes
+      if (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 8) {
+        this.pursuing = false;
+        this.demanded = false;
+        this.homebound = true;
+        this.traveled = 0;
+        this.path = [];
+      } else if (!this.rising() && this.struckCd <= 0 && v3dist(this.pos, p) < this.tuning.killRange) {
+        this.collect();
+      }
+    }
+
+    // the return leg — back to the desk, ledger shut
+    if (this.homebound) {
+      const dx = this.deskPos.x - this.pos.x, dz = this.deskPos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.3) {
+        // walk the door lines home — repath if the straight line stalls on walls
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        this.rig?.play('move');
+      } else {
+        this.homebound = false;
+        this.rig?.play('idle');
+      }
+    }
+
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    this.closeLedger();
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}
+
+/** The House Detective — a plain suit behind a desk or counter on the main
+ *  route, keeping the register of whose held property went out the door.
+ *  Every imprint claim drawn accrues to `heldOwed`. Walk into his room
+ *  owing and he clocks your face over a slow look — then he doesn't walk
+ *  after you. He lifts the house phone: for a stretch of route either way,
+ *  every room you enter rings ahead of you, and the room's listeners are
+ *  already awake when you arrive. Settle at his desk — pay the register,
+ *  he strikes your name — or outrun the wire. He never touches you; his
+ *  weapon is that the building now knows your face. */
+export class Detective extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private lifeT = 0;
+  private lookT = 0;
+  private lastPlayerRoom = -1;
+  private homebound = false;
+  private interactId: string | null = null;
+  /** His desk — the settle point anchors here. */
+  deskPos = v3();
+  /** He has looked up from the register and knows your face. */
+  clocked = false;
+  /** Your face is on the wire — rooms ahead ring for you. */
+  warranted = false;
+
+  constructor() { super('detective', ENTITY_TUNING.detective); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    const DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+    const desk = (room.spec?.props ?? []).find((pp) => DESKS.has(pp.kind));
+    const lx = desk ? desk.x : 0, lz = desk ? desk.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.deskPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // he stands the room-center side of the desk
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.deskPos.x + (ox / ol) * 0.7, 0, this.deskPos.z + (oz / ol) * 0.7);
+    const g = new THREE.Group();
+    // plain dark suit — the smallest figure in the library reads as a houseman
+    const rig = riggedFigure('ninja');
+    if (rig) { this.rig = rig; rig.play('idle', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.95, 4, 8), MAT.figureCloth());
+      body.position.y = 0.95;
+      g.add(body);
+    }
+    // the register — a thicker slab than the clerk's ledger
+    const reg = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.09, 0.32), MAT.darkOak());
+    reg.position.set(0, 1.0, 0.32);
+    reg.rotation.x = -0.3;
+    g.add(reg);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('chalk-mark', this.pos, '[a register opens — the house is checking names]', { severity: 'warn' });
+    this.state = 'engage';
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  private settleId(): string { return `settle-${this.spawnRoom}`; }
+
+  private openRegister(): void {
+    const c = this.ctx;
+    this.clocked = true;
+    this.warranted = true;
+    this.interactId = this.settleId();
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    c.addInteractable({
+      kind: 'settle', id: this.interactId,
+      pos: v3(this.deskPos.x + (ox / ol) * 1.15, 0.9, this.deskPos.z + (oz / ol) * 1.15),
+      prompt: 'Settle the account — see the register', holdTime: 1.0,
+      data: { detective: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 4,
+    });
+    c.cue('chalk-mark', this.pos, '[a plain suit lifts the house phone — your face goes on the wire]', { severity: 'warn' });
+  }
+
+  private closeRegister(): void {
+    if (this.interactId) { this.ctx.removeInteractable(this.interactId); this.interactId = null; }
+  }
+
+  /** The settle press reaches him — the Game has already taken the toll. */
+  settled(): void {
+    this.clocked = false;
+    this.warranted = false;
+    this.homebound = true;
+    this.closeRegister();
+    this.ctx.cue('checkpoint', this.pos, '[the detective strikes your name]', { severity: 'info' });
+  }
+
+  private cool(): void {
+    // the wire only reaches so far down the route
+    this.warranted = false;
+    this.clocked = false;
+    this.homebound = true;
+    this.closeRegister();
+    this.ctx.cue('chalk-mark', this.pos, '[the wire ahead of you goes quiet]', { severity: 'info' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.lifeT += dt;
+    const owed = c.heldOwed?.() ?? 0;
+    const pRoom = this.roomOf(p);
+
+    // desk work: drift at the counter's edge
+    if (!this.homebound) {
+      const step = v3(this.deskPos.x + (this.roomO.x - this.deskPos.x) * 0.08, 0, this.deskPos.z + (this.roomO.z - this.deskPos.z) * 0.08);
+      const dx = step.x - this.pos.x, dz = step.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
+    }
+
+    // the slow look — he clocks a debtor in his room over ~2.5s, then the wire
+    if (pRoom === this.spawnRoom && owed > 0 && !this.clocked && !this.homebound) {
+      this.lookT += dt;
+      if (this.lookT > 2.5) {
+        this.openRegister();
+        c.cue('chalk-mark', this.pos, '[he has your face — settle, or be known]', { severity: 'warn' });
+      }
+    } else if (pRoom !== this.spawnRoom) {
+      this.lookT = 0;
+    }
+
+    // the wire: each fresh room you enter inside reach rings ahead of you
+    if (this.warranted && owed > 0 && pRoom >= 0 && pRoom !== this.spawnRoom && pRoom !== this.lastPlayerRoom) {
+      this.lastPlayerRoom = pRoom;
+      if (Math.abs(pRoom - this.spawnRoom) <= 10) {
+        c.sound.emit({
+          x: p.x, y: 1, z: p.z, intensity: 0.55, category: 'impact',
+          caption: '[the house phone rings ahead of you — they know your face]',
+          source: 'detective',
+        });
+      }
+    }
+    // outrun the wire, or pay it off — either way the register closes
+    if (this.warranted && (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 10)) this.cool();
+
+    // the return beat — back to the desk, register shut
+    if (this.homebound) {
+      const dx = this.deskPos.x - this.pos.x, dz = this.deskPos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.3) {
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        this.rig?.play('move');
+      } else {
+        this.homebound = false;
+        this.rig?.play('idle');
+      }
+    }
+
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    this.closeRegister();
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }

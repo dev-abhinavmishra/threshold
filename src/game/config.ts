@@ -58,6 +58,16 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 3.6, speed: 18, damage: 100, killRange: 1.6, seeRange: 9,
     cooldown: 8, spawnChance: 0.35, minRoom: 31,
   },
+  warden: {
+    warningTime: 0.5, speed: 1.4, damage: 40, killRange: 0, seeRange: 9,
+    cooldown: 8, spawnChance: 0.3, minRoom: 22, maxRoom: 74,
+    biomes: ['corridor', 'gallery', 'records'],
+  },
+  groundswell: {
+    warningTime: 2.5, speed: 0, damage: 15, killRange: 0, seeRange: 0,
+    cooldown: 8, spawnChance: 0.3, minRoom: 30, maxRoom: 80,
+    biomes: ['corridor', 'gallery', 'records', 'maintenance'],
+  },
   witness: {
     warningTime: 0.8, speed: 0, damage: 14, killRange: 0, seeRange: 14,
     cooldown: 7, spawnChance: 0.4, minRoom: 20, biomes: ['gallery', 'records', 'guest'],
@@ -73,6 +83,16 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
   lurker: {
     warningTime: 1.0, speed: 1.6, damage: 28, killRange: 1.4, seeRange: 9,
     cooldown: 7, spawnChance: 0.4, minRoom: 28, biomes: ['maintenance', 'unlit', 'guest'],
+  },
+  inspector: {
+    warningTime: 0, speed: 1.7, damage: 30, killRange: 0, seeRange: 0,
+    cooldown: 9, spawnChance: 0.44, minRoom: 16, maxRoom: 82,
+    biomes: ['guest', 'records', 'gallery'],
+  },
+  commissionaire: {
+    warningTime: 0, speed: 2.7, damage: 20, killRange: 0, seeRange: 0,
+    cooldown: 10, spawnChance: 0.5, minRoom: 14, maxRoom: 70,
+    biomes: ['corridor', 'gallery', 'guest'],
   },
   behemoth: {
     warningTime: 3.4, speed: 0.85, damage: 60, killRange: 1.7, seeRange: 12,
@@ -126,9 +146,39 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 1.2, speed: 1.8, damage: 100, killRange: 1.35, seeRange: 9,
     cooldown: 14, spawnChance: 0.5, minRoom: 22,
   },
+  swamper: {
+    warningTime: 0, speed: 3.6, damage: 25, killRange: 0.9, seeRange: 0,
+    cooldown: 10, spawnChance: 0.85, minRoom: 1,
+  },
+  hauler: {
+    warningTime: 0, speed: 0.85, damage: 25, killRange: 1.4, seeRange: 0,
+    cooldown: 26, spawnChance: 0.5, minRoom: 1,
+  },
+  laundress: {
+    warningTime: 0, speed: 1.6, damage: 15, killRange: 1.5, seeRange: 0,
+    cooldown: 30, spawnChance: 0.55, minRoom: 1,
+  },
+  auditor: {
+    warningTime: 0, speed: 0.75, damage: 10, killRange: 1.3, seeRange: 0,
+    cooldown: 22, spawnChance: 0.45, minRoom: 1,
+  },
+  detective: {
+    warningTime: 0, speed: 0.8, damage: 0, killRange: 0, seeRange: 0,
+    cooldown: 20, spawnChance: 0.35, minRoom: 18,
+  },
   husk: {
     warningTime: 0.8, speed: 4.0, damage: 100, killRange: 1.35, seeRange: 9,
     cooldown: 16, spawnChance: 0.38, minRoom: 34,
+  },
+  bellman: {
+    warningTime: 1.5, speed: 2.1, damage: 100, killRange: 1.05, seeRange: 0,
+    cooldown: 9, spawnChance: 0.28, minRoom: 16, maxRoom: 74,
+    biomes: ['corridor', 'guest', 'records', 'gallery', 'maintenance', 'unlit'],
+  },
+  porter: {
+    warningTime: 0.8, speed: 0, damage: 60, killRange: 0, seeRange: 9,
+    cooldown: 8, spawnChance: 0.3, minRoom: 20, maxRoom: 74,
+    biomes: ['corridor', 'guest', 'records', 'gallery', 'maintenance', 'unlit'],
   },
   hazard: {
     warningTime: 0, speed: 0, damage: 20, killRange: 0.7, seeRange: 0,
@@ -201,6 +251,7 @@ export function defaultSettings(): SettingsData {
     hintFrequency: 'standard',
     minigameAssist: 0,
     quality: 'medium',
+    adaptiveQuality: true,
     keybinds: { ...DEFAULT_KEYBINDS },
     reducePanicFx: false,
   };
@@ -212,15 +263,20 @@ export const QUALITY = {
   high: { pixelRatioCap: 2.0, shadowMap: true, fogDensity: 0.035, maxLights: 4, particleMul: 1.0 },
 } as const;
 
+/** Templates where entities do not intrude — resting rooms on the route. */
+export const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+
 /** Entities that must never be scheduled in milestone or safe rooms. */
 export const FORBIDDEN_IN_MILESTONE: EntityId[] = [
   'sweep', 'reprise', 'witness', 'whisper', 'inkling', 'redactor',
-  'echoskin', 'maelstrom', 'hollow',
+  'echoskin', 'maelstrom', 'hollow', 'bellman', 'porter', 'warden', 'groundswell', 'inspector', 'commissionaire',
 ];
 
 /** Entities incompatible to overlap in one room-window. */
 export const INCOMPATIBLE: [EntityId, EntityId][] = [
   ['whisper', 'inkling'],     // taught separately; never co-scheduled
+  ['bellman', 'sweep'],       // trail-stalker vs sprint-pressure — competing pressure
+  ['bellman', 'reprise'],
   ['witness', 'maelstrom'],   // camera pull vs precision stabilization
   ['stillframe', 'pursuer'],  // freeze input vs chase — unfair
   ['stillframe', 'maelstrom'],
@@ -228,6 +284,8 @@ export const INCOMPATIBLE: [EntityId, EntityId][] = [
   ['stillframe', 'redline'],
   ['margin', 'stillframe'],
   ['redline', 'returner'],
+  ['warden', 'sweep'],        // patrol sightlines vs sprint-pressure — competing corridor control
+  ['warden', 'reprise'],
 ];
 
 export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges: number; slotItem: boolean }> = {
@@ -244,9 +302,11 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   palimpsest: { name: 'Palimpsest', desc: 'The overwritten page. One true line shows through.', maxCharges: 1, slotItem: true },
   doorKey: { name: 'Brass Key', desc: 'Numbered for a door in this wing.', maxCharges: 1, slotItem: true },
   windAlarm: { name: 'Wind-up Alarm', desc: 'Wind it, set it down, walk away. It rings where you are not.', maxCharges: 1, slotItem: true },
+  doorChock: { name: 'Door Chock', desc: 'A rubber wedge. Set it under a shut door — it holds until you take it back, or something worries it loose.', maxCharges: 2, slotItem: true },
 };
 
 export const SHOP_PRICES: Record<string, number> = {
   handLamp: 45, sparkFlash: 60, tonic: 30, bandage: 25,
   latchpick: 50, feltWrap: 40, chalkSpool: 20, wardSeal: 90, windAlarm: 55,
+  doorChock: 12,
 };
