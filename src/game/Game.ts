@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
+import { Auditor, Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -98,6 +98,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   swamper: { sfx: 'puddle-splash', text: '[water, and something in it — slow]', sev: 'warn' },
   hauler: { sfx: 'impact', text: '[a sledge scrape — cargo on the move]', sev: 'warn' },
   laundress: { sfx: 'puddle-splash', text: '[wash, wring — somebody works the drain]', sev: 'warn' },
+  auditor: { sfx: 'chalk-mark', text: '[a ledger page turns — the clerk is in]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -139,6 +140,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   swamper: '[the flood stirs — it is still in the water]',
   hauler: '[the scrape halts — it heard you]',
   laundress: '[the wringing stops — the drain is watched]',
+  auditor: '[scratch of nib — the tally is open]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -809,6 +811,7 @@ export class Game {
       },
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
+      claimsOwed: () => this.unpaidTheft,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
         // OLD sign still pulls a grafter (a spent-wire room is free bait).
@@ -824,6 +827,11 @@ export class Game {
   /** Interactable points registered by living entities (e.g. the
    *  Collector's toll) — re-applied after every stream rebuild. */
   private dynamicInteractables: import('../player/interaction').Interactable[] = [];
+
+  /** The Auditor's tally — each marginalia claim drawn, sledge pick, and
+   *  basket steal below is pilferage the under's clerks can read. Settled
+   *  at an auditor's desk; refused, it walks. */
+  private unpaidTheft = 0;
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -861,6 +869,8 @@ export class Game {
       case 'hauler': this.spawnEntity(new Hauler()); break;
       // The Laundress: works a flooded drain and fouls it — the crank is hers.
       case 'laundress': this.spawnEntity(new Laundress()); break;
+      // The Auditor: reads the theft tally, walks his ledger after debtors.
+      case 'auditor': this.spawnEntity(new Auditor()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
@@ -1720,6 +1730,7 @@ export class Game {
           return;
         }
         if (cur) this.marginalia -= price; else this.imprints -= price;
+        if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
@@ -1782,6 +1793,7 @@ export class Game {
           inkling: 'an inkstain walking', husk: 'a guest long emptied',
           singer: 'the choir of one', swamper: 'a drowned porter in the flood',
           hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
+          auditor: 'a clerk auditing the claims',
         };
         const seen = new Set<string>();
         const parts: string[] = [];
@@ -1872,6 +1884,7 @@ export class Game {
           sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
           swamper: 'a drowned porter, under the water',
           hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
+          auditor: 'a clerk auditing the claims',
         };
         const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
         const filings: string[] = [];
@@ -1954,6 +1967,7 @@ export class Game {
         const CREW: Record<string, string> = {
           swamper: 'hands in the water', hauler: 'a haul team on the line',
           laundress: 'a laundress at the outflow', grafter: 'a grafter in the fill',
+          auditor: 'a clerk walking the ledger',
           redline: 'the red margin', stillframe: 'the paused hall',
           returner: 'a guest come back', margin: 'the handwritten edge',
         };
@@ -2003,6 +2017,23 @@ export class Game {
           ? `[the claim register shows: ${entries.join(' · ')}]`
           : "[the register's claim columns run blank ahead]";
         this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'audit': {
+        // The Auditor's settle point — pay the tally or the book walks.
+        const owed = this.unpaidTheft;
+        if (owed <= 0) { it.enabled = false; return; }
+        const toll = Math.min(4 + owed * 2, 14);
+        if (this.marginalia < toll) {
+          this.cue('door-locked', it.pos, `[the ledger asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= toll;
+        this.unpaidTheft = 0;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, `[paid ${toll} — the clerk turns the page]`);
+        (it.data as { auditor?: { settled?: () => void } }).auditor?.settled?.();
         return;
       }
       case 'item':
@@ -2154,6 +2185,7 @@ export class Game {
         const w = it.data as unknown as { basketFull: boolean };
         if (!w.basketFull) { it.enabled = false; return; }
         w.basketFull = false;
+        this.unpaidTheft += 1; // her wash, your pockets — the clerks mark it
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
@@ -2174,6 +2206,7 @@ export class Game {
         const h = it.data as unknown as { stock: number; sledgePos: Vec3 };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
+        this.unpaidTheft += 1; // off the sledge, into the tally
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {

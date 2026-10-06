@@ -716,3 +716,96 @@ test('the claim register — which tags still pay and which are drawn', async ({
   expect(result.taken, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the audit — the clerk totals your hands, the ledger walks', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>; unpaidTheft: number;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      entities: { id: string; demanded?: boolean; pursuing?: boolean }[];
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 40;
+
+    // --- 1. draw somebody else's tag — the tally accrues ---
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia === true && !s.meta?.taken));
+    if (!cageRoom) return { stage: 'no-cage' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const cage = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia === true && !s.meta?.taken);
+    if (!cage?.meta) return { stage: 'no-cage-sock' } as const;
+    const cx = cageRoom.origin.x - cage.pos.x, cz = cageRoom.origin.z - cage.pos.z;
+    const cl = Math.hypot(cx, cz) || 1;
+    for (let f = 0; f < 55 && !cage.meta.taken; f++) {
+      g.player.teleport(cage.pos.x + (cx / cl) * 0.9, 0, cage.pos.z + (cz / cl) * 0.9);
+      g.player.yaw = Math.atan2(cage.pos.x - g.player.pos.x, cage.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((cage.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
+
+    // --- 2. walk into his room — the ledger opens ---
+    const aRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'auditor')
+      && r.index !== cageRoom.index);
+    if (!aRoom) return { stage: 'no-clerk' } as const;
+    g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
+    ga.currentRoom = aRoom.index;
+    const demandCap = caps.length;
+    let clerk: { demanded?: boolean; pursuing?: boolean } | undefined;
+    for (let f = 0; f < 80; f++) {
+      g.frame();
+      clerk = ga.entities.find((e) => e.id === 'auditor') ?? clerk;
+      if (clerk?.demanded) break;
+    }
+    if (!clerk) return { stage: 'no-clerk-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    const demanded = caps.slice(demandCap).some((c) => /hands are in his book/.test(c));
+
+    // --- 3. settle at his desk ---
+    const settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled);
+    if (!settle) return { stage: 'no-settle' } as const;
+    const m0 = ga.marginalia;
+    let settlePrompt = '';
+    for (let f = 0; f < 60; f++) {
+      const sx = aRoom.origin.x - settle.pos.x, sz = aRoom.origin.z - settle.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(settle.pos.x + (sx / sl) * 0.9, 0, settle.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(settle.pos.x - g.player.pos.x, settle.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((settle.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (!settlePrompt && /Settle the ledger/.test(ga.interaction.focused?.prompt ?? '')) {
+        settlePrompt = ga.interaction.focused.prompt;
+      }
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
+    return { stage: 'done' as const, demanded, settlePrompt, paid,
+      spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.demanded, JSON.stringify(result)).toBe(true);
+  expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.pursuing, JSON.stringify(result)).toBe(false);
+  expect(errors).toEqual([]);
+});

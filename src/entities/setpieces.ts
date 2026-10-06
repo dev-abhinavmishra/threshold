@@ -4,7 +4,7 @@
  * free-roamers — they exist only inside their milestone controllers.
  */
 import * as THREE from 'three';
-import { Entity } from './base';
+import { Entity, corridorPath, followPath, pathLength } from './base';
 import { v3, v3copy, v3dist, clamp } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -943,5 +943,225 @@ export class Laundress extends Entity {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
+
+/** The Auditor — a desk clerk who knows your hands are in his book. Every
+ *  claim tag drawn, sledge picked, and basket stolen below accrues to a
+ *  tally the Game counts (`claimsOwed`). He doesn't hunt noise or sight —
+ *  he hunts THEFT: enter his room carrying unpaid claims and he holds out
+ *  the ledger. Settle at his desk and you're square; walk out owing and he
+ *  walks the book after you, room to room, at a clerk's patient pace. His
+ *  touch is a beating, not a bargain — the debt still stands. */
+export class Auditor extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private lifeT = 0;
+  private repathT = 0;
+  private struckCd = 0;
+  private path: Vec3[] = [];
+  private traveled = 0;
+  private homebound = false;
+  private interactId: string | null = null;
+  /** His desk — the settle point anchors here. */
+  deskPos = v3();
+  /** He has noted your hands and holds out the tally. */
+  demanded = false;
+  /** He has left his desk to collect in person. */
+  pursuing = false;
+
+  constructor() { super('auditor', ENTITY_TUNING.auditor); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    const DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+    const desk = (room.spec?.props ?? []).find((pp) => DESKS.has(pp.kind));
+    const lx = desk ? desk.x : 0, lz = desk ? desk.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.deskPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // he works the room-center side of the desk
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.deskPos.x + (ox / ol) * 0.7, 0, this.deskPos.z + (oz / ol) * 0.7);
+    const g = new THREE.Group();
+    const rig = riggedFigure('hooded');
+    if (rig) { this.rig = rig; rig.play('idle', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 1.05, 4, 8), MAT.ink());
+      body.position.y = 1.0;
+      g.add(body);
+    }
+    // the book itself — a flat dark slab carried before him
+    const book = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 0.26), MAT.darkOak());
+    book.position.set(0, 1.05, 0.3);
+    book.rotation.x = -0.35;
+    g.add(book);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('chalk-mark', this.pos, '[a ledger opens — somebody tallies what you owe]', { severity: 'warn' });
+    this.state = 'engage';
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  private settleId(): string { return `audit-${this.spawnRoom}`; }
+
+  private openLedger(): void {
+    const c = this.ctx;
+    this.demanded = true;
+    this.interactId = this.settleId();
+    // the point sits a step off his desk toward the room center — settle
+    // means walking up to him, not skimming past the furniture
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    c.addInteractable({
+      kind: 'audit', id: this.interactId,
+      pos: v3(this.deskPos.x + (ox / ol) * 1.15, 0.9, this.deskPos.z + (oz / ol) * 1.15),
+      prompt: 'Settle the ledger — see the tally', holdTime: 1.0,
+      data: { auditor: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 4,
+    });
+    c.cue('chalk-mark', this.pos, '[the clerk licks a thumb — your hands are in his book]', { severity: 'warn' });
+  }
+
+  private closeLedger(): void {
+    if (this.interactId) { this.ctx.removeInteractable(this.interactId); this.interactId = null; }
+  }
+
+  /** The settle press reaches him — the Game has already taken the toll. */
+  settled(): void {
+    this.demanded = false;
+    this.pursuing = false;
+    this.homebound = true;
+    this.traveled = 0;
+    this.path = [];
+    this.closeLedger();
+    this.ctx.cue('checkpoint', this.pos, '[the clerk stamps you square]', { severity: 'info' });
+  }
+
+  private collect(): void {
+    const c = this.ctx;
+    this.struckCd = 3;
+    this.rig?.play('attack', 0.05);
+    c.sound.emit({ x: this.pos.x, y: 1, z: this.pos.z, intensity: 0.45, category: 'impact', caption: '[the book slaps shut]', source: 'auditor' });
+    c.damagePlayer(this.tuning.damage, 'auditor', 'The Auditor collects in kind — settle his ledger at the desk, or carry your hands past a friendlier door.');
+    c.cue('chalk-mark', this.pos, '[the clerk marks your refusal — the tally stands]', { severity: 'warn' });
+    // a beaten debtor walks home; the debt still stands for the next clerk
+    this.pursuing = false;
+    this.demanded = false;
+    this.homebound = true;
+    this.traveled = 0;
+    this.path = [];
+  }
+
+  private repath(targetRoom: number): void {
+    const c = this.ctx;
+    const from = this.roomOf(this.pos);
+    const a = from >= 0 ? from : this.spawnRoom;
+    this.path = corridorPath(c.rooms, a, targetRoom);
+    // walking a→b: if the path runs backward through the chain, follow it
+    // from the near end — corridorPath is ordered low→high
+    this.traveled = a <= targetRoom ? 0 : Math.max(0, pathLength(this.path));
+    // keep our own offset — start slightly ahead/behind the room entry
+    this.repathT = 1.5;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.lifeT += dt;
+    this.struckCd -= dt;
+    const owed = c.claimsOwed?.() ?? 0;
+    const pRoom = this.roomOf(p);
+    const myRoom = this.roomOf(this.pos);
+
+    // desk work: notice unpaid hands in his room
+    if (!this.pursuing && !this.homebound) {
+      const step = v3(this.deskPos.x + (this.roomO.x - this.deskPos.x) * 0.08, 0, this.deskPos.z + (this.roomO.z - this.deskPos.z) * 0.08);
+      const dx = step.x - this.pos.x, dz = step.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
+      if (pRoom === this.spawnRoom && owed > 0 && !this.demanded) this.openLedger();
+      // a debtor who slips his room while owed gets the walk-after
+      if (this.demanded && owed > 0 && pRoom !== this.spawnRoom && pRoom >= 0) {
+        this.pursuing = true;
+        this.closeLedger();
+        c.cue('chalk-mark', this.pos, '[the clerk walks his ledger after you]', { severity: 'warn' });
+        this.repath(pRoom);
+      }
+    }
+
+    // the walk-after — a clerk's patience, room to room
+    if (this.pursuing) {
+      this.repathT -= dt;
+      if (pRoom >= 0) {
+        if (this.repathT <= 0 || this.path.length === 0) this.repath(pRoom);
+        const forward = myRoom <= pRoom;
+        this.traveled += (forward ? 1 : -1) * this.tuning.speed * dt;
+        this.traveled = Math.max(0, Math.min(pathLength(this.path), this.traveled));
+        const f = followPath(this.path, this.traveled);
+        const ox = f.pos.x - this.pos.x, oz = f.pos.z - this.pos.z;
+        this.pos.x += ox * 0.5; this.pos.z += oz * 0.5;
+        if (Math.hypot(ox, oz) > 0.1 && this.mesh) this.mesh.rotation.y = Math.atan2(ox, oz);
+      } else {
+        // lost the room — drift toward the last seen point
+        const dx = p.x - this.pos.x, dz = p.z - this.pos.z;
+        const dd = Math.hypot(dx, dz) || 1;
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+      }
+      this.rig?.play('move');
+      // settled or evaded — the book closes
+      if (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 8) {
+        this.pursuing = false;
+        this.demanded = false;
+        this.homebound = true;
+        this.traveled = 0;
+        this.path = [];
+      } else if (!this.rising() && this.struckCd <= 0 && v3dist(this.pos, p) < this.tuning.killRange) {
+        this.collect();
+      }
+    }
+
+    // the return leg — back to the desk, ledger shut
+    if (this.homebound) {
+      const dx = this.deskPos.x - this.pos.x, dz = this.deskPos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.3) {
+        // walk the door lines home — repath if the straight line stalls on walls
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        this.rig?.play('move');
+      } else {
+        this.homebound = false;
+        this.rig?.play('idle');
+      }
+    }
+
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    this.closeLedger();
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
   }
 }

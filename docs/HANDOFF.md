@@ -1888,3 +1888,33 @@ a triad: board files crew, order files cargo, register files claims.
 - **`s.meta.marginalia === true` narrows claims** — the register must not
   file main-route claim sockets if the schema ever reuses `meta.claim`
   up there; the flag is the currency guard again.
+## Sprint 277 — the Auditor (the theft tally walks)
+
+**What:** a desk clerk scheduled on dry under-rooms carrying desk furniture
+(`filing|cubicle|schoolDesk|recordsCage|keyCabinet`, `!flooded`, rolls after
+laundress in the candidate line). The Game counts pilferage in `unpaidTheft`
+— every marginalia claim, sledge pick, and basket steal increments it. Walk
+in owing >0 and he holds out the ledger: `Settle the ledger — see the tally`
+(a self-registered `audit` interactable, priority 4, at deskPos+1.15 toward
+center). Paying `min(4 + owed*2, 14)` marginalia zeroes the tally and he
+stamps you square. Walk out owing and he repaths along corridorPath at 0.75
+and follows, room to room; touch is a 10dmg beating, then homebound. Setting
+is the only absolution; `settled()` clears everything and removes the point.
+
+**Traps:**
+- **The interactable the entity registers must outrank its room** —
+  priority 4 for the settle point; anything lower loses to host loot
+  sockets the same way board/register paper did at priority 2.
+- **`corridorPath` needs a full `traveled` for repaths** — repathing
+  FORWARD from the spawn room seeds traveled=0; repathing BACK (player
+  retreated) seeds `pathLength` so followPath resumes at the far end.
+- **Demand fires on `pRoom === spawnRoom`, pursuit on `!=='`** — the two
+  windows are exclusive across the same boundary check; a spec that only
+  watches one room sees demand but never pursuit.
+- **The capture-what-it-paid idiom** — the settle point disables itself
+  on payment, so a last-frame `focused.prompt` reads whatever inherits
+  focus (here: `Take spark Flash` from the room's pedestal). Capture the
+  prompt while it still matches, not after.
+- **`claimsOwed?: () => number` is optional in EntityCtx** — vitest ctx
+  mocks skip it; entity guards `?.()` so specs that don't wire it see
+  demand=false, pursuit=false.

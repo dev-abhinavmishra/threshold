@@ -916,3 +916,23 @@ describe('the claim register (sprint 276)', () => {
     }
   });
 });
+
+describe('the Auditor (sprint 277)', () => {
+  it('clerks work dry desk rooms below, never the main route', () => {
+    const DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'auditor') ?? false,
+          `auditor on the main route ${seed}`).toBe(false);
+      }
+      const clerks = route.underRooms.filter((r) => r.scheduled?.some((s) => s.entity === 'auditor'));
+      for (const r of clerks) {
+        expect(r.flooded, `auditor in a flooded room ${seed} u-${r.index}`).not.toBe(true);
+        expect((r.spec?.props ?? []).some((p) => DESKS.has(p.kind)),
+          `auditor on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        expect(r.index % 20, `auditor on a safe landing ${seed}`).not.toBe(0);
+      }
+    }
+  });
+});

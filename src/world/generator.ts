@@ -1161,7 +1161,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
     if (tier === 0 && !encRng.bool(0.15)) continue;
 
     for (const [id, t] of Object.entries(ENTITY_TUNING) as [EntityId, EntityTuning][]) {
-      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin', 'swamper', 'hauler', 'laundress'].includes(id)) continue;
+      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin', 'swamper', 'hauler', 'laundress', 'auditor'].includes(id)) continue;
       if (t.spawnChance <= 0) continue;
       if (room.index < t.minRoom || (t.maxRoom !== undefined && room.index > t.maxRoom)) continue;
       if ((cooldowns.get(id) ?? -999) + t.cooldown > room.index) continue;
@@ -1395,7 +1395,7 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   const cooldowns = new Map<EntityId, number>();
   for (const room of rooms) {
     if (room.index === 0 || room.index % 20 === 0) continue; // safe landings
-    const candidates: EntityId[] = ['swamper', 'hauler', 'laundress', 'redline', 'stillframe', 'returner', 'margin', 'grafter'];
+    const candidates: EntityId[] = ['swamper', 'hauler', 'laundress', 'redline', 'stillframe', 'returner', 'margin', 'auditor', 'grafter'];
     for (const id of candidates) {
       const t = ENTITY_TUNING[id];
       if ((cooldowns.get(id) ?? -99) + t.cooldown > room.index) continue;
@@ -1404,6 +1404,9 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
       // whose plumbing the drain verb could otherwise free.
       const LAUNDRY_PLUMBING = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
       if (id === 'laundress' && !(room.flooded && (room.spec?.props ?? []).some((pp) => LAUNDRY_PLUMBING.has(pp.kind)))) continue;
+      // The Auditor works a desk — dry rooms with paper furniture only.
+      const AUDIT_DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+      if (id === 'auditor' && (room.flooded || !(room.spec?.props ?? []).some((pp) => AUDIT_DESKS.has(pp.kind)))) continue;
       if (id === 'redline' || id === 'returner') {
         if (!hasSurvivalOption(rooms, room.index)) continue;
       }

@@ -1624,3 +1624,98 @@ describe('the Laundress (sprint 272)', () => {
     w.dispose();
   });
 });
+
+describe('the Auditor (sprint 277)', () => {
+  const deskRoom = {
+    index: 0, templateId: 'u-records-cage', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'filing', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const hallRoom = {
+    index: 1, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 12 }, yaw: 0,
+    width: 6, depth: 12,
+    entryPos: { x: 0, y: 0, z: 7 }, exitPos: { x: 0, y: 0, z: 17 }, navNodes: [],
+    spec: { width: 6, depth: 12, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('notes unpaid hands in his room — the ledger comes out', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0; // in his room
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded, 'the ledger opens').toBe(true);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'audit'), 'the settle point registers').toBe(true);
+    a.dispose();
+  });
+
+  it('walks the book after a debtor who leaves', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded).toBe(true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12; // slips into the next room, still owing
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.pursuing, 'the ledger walks').toBe(true);
+    a.dispose();
+  });
+
+  it('his touch is a beating — the debt still stands', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); } // past the rise
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.pursuing).toBe(true);
+    // stand on his path — within the touch
+    const wp = (a as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = wp.x + 0.5; ctx.player.pos.z = wp.z;
+    for (let i = 0; i < 20 && !ctx.damagePlayer.mock.calls.length; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(ctx.damagePlayer, 'the clerk collects in kind').toHaveBeenCalledWith(
+      10, 'auditor', expect.any(String));
+    a.dispose();
+  });
+
+  it('settled stamps square — ledger shut, pursuit off', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded).toBe(true);
+    a.settled();
+    expect(a.demanded).toBe(false);
+    expect(a.pursuing).toBe(false);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
+    a.dispose();
+  });
+});

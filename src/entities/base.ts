@@ -54,6 +54,9 @@ export interface EntityCtx {
   /** Flooded-hall drains: true once a room's water has been let out.
    *  Optional: headless test ctxs may omit it. */
   isRoomDrained?: (index: number) => boolean;
+  /** The audit tally — marginalia claims / sledge picks / basket steals
+   *  the player hasn't settled for. Optional: headless ctxs may omit it. */
+  claimsOwed?: () => number;
   /** Scent: killed hazards leave sign a hunter can read. Callers pass a
    *  reader key (e.g. 'warden:33'); returned marks are recorded as read
    *  so each hunter reads each sign once. Optional for headless ctxs. */
