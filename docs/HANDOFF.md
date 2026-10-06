@@ -1349,3 +1349,17 @@ NEXT SPRINT IDEAS (pick the biggest first)
     entities) would halve per-spec feedback time.
   - Under-cast depth: the Returner (u-exit guard) is the only scheduled
     under entity with no noise verb — alarm pulls could wake it.
+
+## Sprint 252 — props.spec split by theme
+
+- The 2,127-line props.spec is now four themed files sharing a new
+  `e2e/harness.ts` (seededRun + ThresholdG/GRoom debug-handle types):
+  props.spec (ambient layer, 5), doors.spec (seam/brace/chock, 4),
+  entities.spec (the cast + hearing, 10), books.spec (priced paper, 7).
+- Same 26 specs, same bodies — worst file now 49s vs the old 2.2min
+  single file. `npx playwright test e2e/entities.spec.ts` for the cast.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - Under-cast depth: the Returner (u-exit guard) is the only scheduled
+    under entity with no noise verb — alarm pulls could wake it.
