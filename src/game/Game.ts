@@ -30,7 +30,7 @@ import { HeldView } from './viewmodel';
 import { PlayerController, type MoveInput } from '../player/controller';
 import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
-import { CorridorRunner } from '../entities/corridor';
+import { CorridorRunner, Warden } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
 import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
@@ -90,6 +90,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
   bellman: { sfx: 'knock', text: '[a knock — courteous, in no hurry]', sev: 'warn' },
   porter: { sfx: 'hide-creak', text: '[drips of dust — something clings overhead]', sev: 'warn' },
+  warden: { sfx: 'footstep', text: '[measured pacing — something walks its post]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -121,6 +122,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   singer: '[the lullaby lifts — it heard you coming]',
   bellman: '[the knocking quickens — it knows you are there]',
   porter: '[the dust pours — it is already above the door]',
+  warden: '[the whistle again — it is still on station]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -829,6 +831,8 @@ export class Game {
       case 'bellman': this.spawnEntity(new Bellman()); break;
       // The Porter: lintel ambusher — the counterplay is looking UP.
       case 'porter': this.spawnEntity(new Porter()); break;
+      // The Warden: corridor patrol — whistle + charge on sight.
+      case 'warden': this.spawnEntity(new Warden()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;

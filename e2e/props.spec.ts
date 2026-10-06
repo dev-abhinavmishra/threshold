@@ -771,3 +771,68 @@ test('the porter waits above the lintel — look up or it drops', async ({ page 
   expect(r.caps.some((c) => /withdraws above the frame/.test(c))).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the warden paces its post — whistle, charge, loses the scent', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33 (records-office)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[wardenRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    for (let f = 0; f < 10; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'warden') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+    // Phase A: keep a 5.5m exposed gap — the instant the whistle lands, dive
+    // into a real hiding spot (a bare object crashes frame(): spots carry
+    // pos/exitPos). The charge runs to where it lost you and dies out there.
+    const spot = wardenRoom.hidingSpots[0];
+    let resumed = false;
+    for (let f = 0; f < 1600 && ent.state !== 'done'; f++) {
+      const tp = ent.threatPos();
+      if (tp && !g.player.hiddenSpot) g.player.teleport(tp.x, 0, tp.z - 5.5);
+      g.frame();
+      if (!g.player.hiddenSpot && caps.some((c) => /Warden has you/.test(c))) {
+        if (spot) {
+          g.player.hiddenSpot = spot;
+          g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+        }
+      }
+      if (caps.some((c) => /whistle dies/.test(c))) { resumed = true; break; }
+    }
+    // Phase B: come back out into the open — it must spot again, charge,
+    // and this time the strike lands.
+    let struck = false;
+    if (resumed) {
+      g.player.hiddenSpot = null;
+      for (let f = 0; f < 1400 && ent.state !== 'done'; f++) {
+        const tp = ent.threatPos();
+        if (tp) g.player.teleport(tp.x, 0, tp.z - 1.4);
+        g.frame();
+        if (caps.some((c) => /Warden strikes/.test(c))) { struck = true; break; }
+      }
+    }
+    return { stage: 'done', struck, resumed, paced: caps.some((c) => /measured pacing/.test(c)), caps: caps.slice(-12) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { struck: boolean; resumed: boolean; paced: boolean; caps: string[] };
+  expect(r.struck, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.resumed, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.caps.some((c) => /whistle — the Warden has you/.test(c))).toBe(true);
+  expect(r.paced).toBe(true);
+  expect(errors).toEqual([]);
+});

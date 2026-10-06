@@ -58,6 +58,11 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 3.6, speed: 18, damage: 100, killRange: 1.6, seeRange: 9,
     cooldown: 8, spawnChance: 0.35, minRoom: 31,
   },
+  warden: {
+    warningTime: 0.5, speed: 1.4, damage: 40, killRange: 0, seeRange: 9,
+    cooldown: 8, spawnChance: 0.3, minRoom: 22, maxRoom: 74,
+    biomes: ['corridor', 'gallery', 'records'],
+  },
   witness: {
     warningTime: 0.8, speed: 0, damage: 14, killRange: 0, seeRange: 14,
     cooldown: 7, spawnChance: 0.4, minRoom: 20, biomes: ['gallery', 'records', 'guest'],
@@ -229,7 +234,7 @@ export const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-ind
 /** Entities that must never be scheduled in milestone or safe rooms. */
 export const FORBIDDEN_IN_MILESTONE: EntityId[] = [
   'sweep', 'reprise', 'witness', 'whisper', 'inkling', 'redactor',
-  'echoskin', 'maelstrom', 'hollow', 'bellman', 'porter',
+  'echoskin', 'maelstrom', 'hollow', 'bellman', 'porter', 'warden',
 ];
 
 /** Entities incompatible to overlap in one room-window. */
@@ -244,6 +249,8 @@ export const INCOMPATIBLE: [EntityId, EntityId][] = [
   ['stillframe', 'redline'],
   ['margin', 'stillframe'],
   ['redline', 'returner'],
+  ['warden', 'sweep'],        // patrol sightlines vs sprint-pressure — competing corridor control
+  ['warden', 'reprise'],
 ];
 
 export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges: number; slotItem: boolean }> = {

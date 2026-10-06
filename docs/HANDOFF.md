@@ -678,6 +678,40 @@ the player's two blind spots — behind and above.*
   assert on captions/state not health.
 - Gates: tsc, lint, 90 vitest (+3), 5-seed sim, playwright porter spec, build.
 
+## Sprint 234 — the Warden (corridor patrol; whistle + last-seen charge)
+*The missing patrol archetype: runners pass through and are gone, the Warden
+STAYS — pacing a corridor/gallery/records room's spine between its doors at
+1.4m/s, pausing 1.6s at each end to scan. Crossing the room openly gets you
+whistled and charged; the counterplay is timing the back-turn or breaking
+line of sight mid-charge.*
+
+- `src/entities/corridor.ts` `Warden` — patrol endpoints = host room's
+  entryPos/exitPos; sees you when same room + d<9 + unhidden + LOS clear +
+  inside its walk-facing cone (dot>0.3, skipped under 1.6m). 0.35s in view →
+  'alarm-ring' whistle (entity-cue emit intensity 1.0 — rouses the floor)
+  → charge at 3.5 → strike at <1m: damagePlayer(40) + back to patrol.
+- REAL BUG the e2e caught: the blind charge chased the player's LIVE pos —
+  hiding didn't help, it struck players at their hiding-spot exit. It now
+  tracks `lastSeen` (v3copy'd only while canSee true): break LOS → it runs
+  to where it lost you → 2.2s blind → '[the whistle dies — it resumes its
+  walk]' + 1.4s re-spot grace. Hide genuinely works now.
+- TRAP: ENTITY_TUNING map order IS scheduling priority — the scheduler rolls
+  each entity per room in declaration order with first-success break. Warden
+  appended at slot 21 got ZERO rolls on 7/8 seeds (every earlier entity ate
+  the rooms first). Moved to just after `reprise` — now rolls 1–2 wardens on
+  7/8 seeds ('s': @33 records-office, @66 gallery-vaulted). Any future entity
+  should be placed by how much competition its biomes tolerate.
+- TRAP 2: fake `hiddenSpot = {id}` crashes frame() — real spots carry
+  pos/exitPos; use `room.hidingSpots[0]` in e2e.
+- Fast encounters: spot→whistle→strike lands in ~2s total — e2e must react
+  per-frame from spawn, not settle 60f first.
+- Plumbing: EntityId 'warden'; tuning warningTime 0.5, speed 1.4, damage 40,
+  seeRange 9, cooldown 8, spawnChance 0.3, minRoom 22, maxRoom 74, biomes
+  corridor/gallery/records; ENTITY_TIER 2; FORBIDDEN_IN_MILESTONE;
+  INCOMPATIBLE vs sweep/reprise; LISTEN_CUES + ROUSED_LINES entries.
+  Mesh: orc rig + brass whistle cone (fallback tallFigure plate/white-eyes).
+- Gates: tsc, lint, 93 vitest (+3), 5-seed sim, props.spec 10/10, build.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

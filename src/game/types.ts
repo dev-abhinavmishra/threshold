@@ -43,6 +43,7 @@ export type EntityId =
   | 'husk'
   | 'bellman'
   | 'porter'
+  | 'warden'
   // Underscript
   | 'redline'
   | 'stillframe'
