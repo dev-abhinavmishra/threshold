@@ -1583,3 +1583,21 @@ NEXT SPRINT IDEAS (pick the biggest first)
   step-in ticks health, drainedRooms makes the same spot safe.
 - Tests: 139 vitest (+3: two HazardField specs + generation gate that
   arcs are flooded-lit-only and never on the main route), sim, build.
+
+## Sprint 261 — 'the line sings' (steam hazard resurrection)
+
+- Third unwired HazardField type: steam. Authored `steamVent` props
+  (boiler/laundry/maint-pipe rooms, main route + some under) now emit
+  `hazard:'steam'` sockets — ~15 vents on 's', all live.
+- Runtime: each vent gets a deterministic cycle from its position hash
+  (4.5–7.5s): last 1.2s of the cycle hums a warn ('[the line hums —
+  it is about to vent]'), then `phase < 1.8` is the blast — 6dmg ticks
+  inside radius 1.3 + a loud 'machine' emit that in-room hunters hear.
+  Off-cycle is safe.
+- 'Bleed the line' — the third defuse verb (snip/drain/bleed): 1.6s
+  hold at the fitting, `st.dead = true`, quiet 0.3 emit '[a valve
+  eases]'. Dead vents skip every phase.
+- e2e 'the line sings' (under.spec): hover→warn, stand through a real
+  blast window→health ticks, bleed→dead→quiet. Cycle watching: poll
+  `hazard.steams[i].phase` — don't guess timing.
+- Tests: 142 vitest (+3), sim, build.

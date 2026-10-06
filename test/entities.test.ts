@@ -1303,3 +1303,48 @@ describe('HazardField electrified water (sprint 260)', () => {
     expect(ctx.cue).not.toHaveBeenCalled();
   });
 });
+
+describe('HazardField steam lines (sprint 261)', () => {
+  const steamRoom = (): RoomInstance => ({
+    index: 0, templateId: 'maint-boiler', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, spec: { width: 8, depth: 8, props: [] },
+    doors: [], hidingSpots: [], scheduled: [],
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'steam' } }],
+  } as unknown as RoomInstance);
+
+  it('the line hums before it vents, and the vent ticks blood', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [steamRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    const st = h.steams[0];
+    ctx.player.pos.x = 3.5; ctx.player.pos.z = 0; // in the warn ring
+    st.phase = st.cycle - 1.0; // last 1.2s of the cycle — the hum
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(), '[the line hums — it is about to vent]', expect.anything());
+    // the vent opens — step inside and it ticks
+    ctx.player.pos.x = 1.5;
+    st.phase = 0.2;
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(6, 'hazard', expect.stringContaining('Steam'));
+  });
+
+  it('idle phases are safe — and a bled line is dead metal', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [steamRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    const st = h.steams[0];
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    st.phase = st.cycle * 0.6; // mid-idle
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    st.dead = true;
+    st.phase = 0.2; // back in blast — dead lines don't fire
+    h.update(ctx, 0.02);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+  });
+});

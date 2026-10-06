@@ -238,9 +238,16 @@ function instantiate(index: number, label: string, placed: PlacedRoom, isMainRou
   // Authored snare props arm themselves — the paper seal on the floor is a
   // live tripwire, not set dressing (the hazard field reads these sockets).
   for (const pr of spec.props) {
-    if (pr.kind !== 'snare') continue;
-    const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
-    sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'snare' } });
+    if (pr.kind === 'snare') {
+      const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'snare' } });
+    }
+    // Steam fittings are live pressure lines — they blast on a seeded
+    // cycle until somebody bleeds the line.
+    if (pr.kind === 'steamVent') {
+      const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'steam' } });
+    }
   }
 
   const safeZones = spec.safeZones.map((z) => {

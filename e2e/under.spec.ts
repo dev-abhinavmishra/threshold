@@ -229,3 +229,72 @@ test('the water hums amber — electrified live flood, the drain kills the arc',
   expect(result.deadArc, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the line sings — steam warns, vents blood, and dies on the bleed', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // boiler/laundry rooms carry live steam fittings
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number; keys: Set<string>;
+      hazard: { steams: { pos: { x: number; y: number; z: number }; room: number;
+        phase: number; cycle: number; dead: boolean }[] };
+    };
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((sk) => sk.meta?.hazard === 'steam'));
+    if (!room) return { stage: 'no-vent' } as const;
+    const st = ga.hazard.steams.find((v) => v.room === room.index)!;
+
+    // hover at the hum's edge until the warn fires (cycle ≤7.5s)
+    const hx = room.origin.x - st.pos.x, hz = room.origin.z - st.pos.z;
+    const L = Math.hypot(hx, hz) || 1;
+    g.player.teleport(st.pos.x + (hx / L) * 2.6, 0, st.pos.z + (hz / L) * 2.6);
+    ga.currentRoom = room.index;
+    const hp0 = g.player.health;
+    let warned = false;
+    for (let f = 0; f < 260 && !warned; f++) { g.frame(); warned = caps.some((c) => /line hums/.test(c)); }
+
+    // stand on the fitting through a whole blast window — blood ticks
+    g.player.teleport(st.pos.x + 0.3, 0, st.pos.z + 0.3);
+    let bitten = false, sawBlast = false;
+    for (let f = 0; f < 300 && !(sawBlast && bitten); f++) {
+      if (st.phase < 1.8) sawBlast = true;
+      g.frame();
+      bitten = g.player.health < hp0 - 3;
+    }
+
+    // bleed the line — the fitting goes quiet
+    let bled = false;
+    for (let f = 0; f < 140 && !bled; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'bleed' && i.enabled);
+      if (!it) break;
+      g.player.yaw = Math.atan2(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(it.pos.y - eyeY, Math.hypot(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z) || 1);
+      if (/bleed the line/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      g.frame();
+      bled = st.dead;
+    }
+    ga.keys.delete('KeyE');
+    const hpAfter = g.player.health;
+    g.player.teleport(st.pos.x + 0.2, 0, st.pos.z + 0.2);
+    for (let f = 0; f < 200; f++) g.frame();
+    return { stage: 'done', room: room.index, warned, sawBlast, bitten, bled,
+      quietAfter: g.player.health >= hpAfter - 0.01,
+      caps: caps.slice(-12) } as const;
+  });
+
+  if (result.stage === 'no-vent') test.skip();
+  expect(result.warned, JSON.stringify(result)).toBe(true);
+  expect(result.sawBlast, JSON.stringify(result)).toBe(true);
+  expect(result.bitten, JSON.stringify(result)).toBe(true);
+  expect(result.bled, JSON.stringify(result)).toBe(true);
+  expect(result.quietAfter, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

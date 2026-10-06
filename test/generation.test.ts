@@ -758,3 +758,18 @@ describe('electrified water (sprint 260)', () => {
     expect(total).toBeGreaterThan(0);
   });
 });
+
+describe('steam lines (sprint 261)', () => {
+  it('authored steam fittings are live lines — every vent is a socket', () => {
+    let vents = 0, socks = 0;
+    for (const seed of SEEDS.slice(0, 3)) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        vents += (r.spec?.props ?? []).filter((p) => p.kind === 'steamVent').length;
+        socks += (r.sockets ?? []).filter((sk) => sk.meta?.hazard === 'steam').length;
+      }
+    }
+    expect(socks, 'every authored steamVent must arm a hazard socket').toBe(vents);
+    expect(vents).toBeGreaterThan(0);
+  });
+});

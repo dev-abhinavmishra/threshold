@@ -860,6 +860,8 @@ export class Husk extends Entity {
 export class HazardField {
   snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number }[] = [];
+  steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
+    cycle: number; dead: boolean; hitT?: number; warnT?: number }[] = [];
   lastTick = 0;
 
   constructor() {}
@@ -868,6 +870,12 @@ export class HazardField {
     for (const s of room.sockets) {
       if (s.meta.hazard === 'snare') this.snares.push({ pos: s.pos, room: room.index, armed: true });
       if (s.meta.hazard === 'puddle') this.puddles.push({ pos: s.pos, room: room.index, radius: 1.1 });
+      if (s.meta.hazard === 'steam') {
+        // deterministic per-vent rhythm — same seed, same beat
+        const hsh = ((s.pos.x * 7 + s.pos.z * 13 + room.index * 5) % 10) / 10;
+        const cycle = 4.5 + hsh * 3.0;
+        this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: false });
+      }
     }
   }
 
@@ -892,6 +900,26 @@ export class HazardField {
         p.rootedUntil = ctx.now + 1.6;
         ctx.damagePlayer(8, 'hazard', 'Paper seals root and rustle. Step around them — everything heard that.');
         ctx.sound.emit({ x: s.pos.x, y: 0.4, z: s.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
+      }
+    }
+    // Live pressure lines — a seeded warn → blast → idle rhythm. The
+    // blast ticks blood and carries; a bled line is dead metal.
+    for (const st of this.steams) {
+      if (st.dead || st.room !== ctx.currentRoomIndex) continue;
+      const prev = st.phase;
+      st.phase = (st.phase + dt) % st.cycle;
+      const d = v3dist(p.pos, st.pos);
+      if (st.phase < prev && d < 6) {
+        ctx.sound.emit({ x: st.pos.x, y: 0.5, z: st.pos.z, intensity: 0.5, category: 'machine', caption: '[a line vents]' });
+        ctx.cue('steam-hiss', st.pos, '', {});
+      }
+      if (st.phase < 1.8 && d < 1.3 && ctx.now - (st.hitT ?? -1) > 0.5) {
+        st.hitT = ctx.now;
+        ctx.damagePlayer(6, 'hazard', 'Steam blasts off the line. Time it, or bleed it.');
+      }
+      if (st.phase > st.cycle - 1.2 && d < 3.2 && ctx.now - (st.warnT ?? -10) > 3) {
+        st.warnT = ctx.now;
+        ctx.cue('steam-hiss', st.pos, '[the line hums — it is about to vent]', { severity: 'warn' });
       }
     }
     this.lastTick += dt;

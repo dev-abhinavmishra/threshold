@@ -1121,6 +1121,20 @@ export class Game {
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });
     }
+    // Bleed the line — a live steam fitting can be bled quiet at the
+    // valve; the blast stops, the corridor calms.
+    for (const st of this.hazard.steams) {
+      if (st.dead) continue;
+      const dx = st.pos.x - this.player.pos.x, dz = st.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 4.4 * 4.4) continue;
+      this.interaction.add({
+        kind: 'bleed', id: `bleed-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+        pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+        prompt: 'Bleed the line',
+        holdTime: 1.6, enabled: true, priority: 2,
+        data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+      });
+    }
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
@@ -1871,6 +1885,16 @@ export class Game {
         this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
           sub ? '[the wire comes loose under the water]' : '[the seal parts — the wire goes slack]');
         this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
+        return;
+      }
+      case 'bleed': {
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const st = this.hazard.steams.find((v) => v.room === d.room
+          && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
+        if (st) st.dead = true;
+        this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz }, '[the pressure falls — the line goes quiet]');
+        this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
         return;
       }
       case 'alarm': {
