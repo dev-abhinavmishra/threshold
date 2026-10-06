@@ -477,10 +477,12 @@ test("the inspection sheet marks which doors the house watches", async ({ page }
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
-  expect(result.markedPrompt).toMatch(/read the inspection sheet — \d+ imprints/i);
-  expect(result.markedLine, `sheet@${result.markedIdx} must mark watched@${result.watchedIdx}`).toMatch(/the inspection sheet marks:/);
-  expect(result.markedLine).toContain(`Door ${String(result.watchedIdx).padStart(3, '0')}`);
-  expect(result.markedLine).toMatch(result.expectMark);
-  expect(result.cleanLine, `sheet@${result.cleanIdx} should read clean`).toMatch(/nothing watches the doors ahead/);
+  if (result.stage !== 'done') return;
+  const r = result as { markedPrompt: string; markedLine: string; cleanLine: string; watchedIdx: number; expectMark: string | RegExp; markedIdx: number; cleanIdx: number };
+  expect(r.markedPrompt).toMatch(/read the inspection sheet — \d+ imprints/i);
+  expect(r.markedLine, `sheet@${r.markedIdx} must mark watched@${r.watchedIdx}`).toMatch(/the inspection sheet marks:/);
+  expect(r.markedLine).toContain(`Door ${String(r.watchedIdx).padStart(3, '0')}`);
+  expect(r.markedLine).toMatch(r.expectMark);
+  expect(r.cleanLine, `sheet@${r.cleanIdx} should read clean`).toMatch(/nothing watches the doors ahead/);
   expect(errors).toEqual([]);
 });

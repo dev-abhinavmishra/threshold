@@ -2242,3 +2242,41 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The sheet could mark hunter sign too (a 'survey copy' verb?), or
     dead mains could get their own second paper (the 'mains ledger' —
     which rooms are dark ahead — already implicit in the sheet).
+
+## Sprint 287 — the confiscated case (e2e/hazards leg 7, generation spec, 'confiscate' stream)
+
+What:
+- `confiscated` loot sockets: lit watched rooms (a live securityCam /
+  searchlight in spec.props, mains on) can hold a seized case ~2.4m out
+  under the cone. The first lit watched room always carries one;
+  subsequent watched rooms roll 0.6. Pays an item (latchpick /
+  chalkSpool / doorChock / feltWrap / handLamp / sparkFlash) or 8–16
+  imprints.
+- 'pry' verb (priority 3 — same tier as the offset-anchor books — 2.2s
+  hold): free goods, but the dwell sits inside the sweep and the crack
+  rings as a 0.45 'machine' emit the room's listeners hear.
+- Dedicated `confiscate` RngStream — placed AFTER applyForeshadowing
+  (the witness cams are part of the watch set) on its own stream so the
+  underscript generator's 'loot' draws don't reseat.
+Traps:
+- **Wall-mount dressing is builder-side only** — biome mount tables
+  (builder.ts) add meshes, not spec.props. Watcher ingestion reads
+  spec.props, which only has authored + foreshadow cams. Anything
+  keying on watchers at GENERATION time must run after
+  applyForeshadowing, not inside fillSockets (the first draft placed
+  zero cases on 's' for exactly this reason).
+- **Post-hold focus capture** — once a one-shot interactable is taken
+  it disables and the next-best verb (a corridor phone 2.4m away)
+  takes focus; a leg asserting the prompt must latch it DURING the
+  aim loop, not read the last-seen focus after the hold.
+- Shared-RNG reseat rule restated: prefer a NEW named stream over
+  drawing an existing stream earlier (a new stream isolates its own
+  shuffle; an existing stream reseats every downstream consumer).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - The case currently guards goods — a 'sealed warrant' variant could
+    hold paper (a claims sheet for main-route ledgers: which rooms'
+    effects were drawn).

@@ -2098,6 +2098,26 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'pry': {
+        // The confiscated case — free goods guarded by a live eye. The pry
+        // is a 2.2s dwell inside the cone plus a ring the room hears; the
+        // paid-quiet alternative is 'tape the eye' before you reach it.
+        const sock = it.data as Socket;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.45, category: 'machine', caption: '[the case cracks]' });
+        const contains = sock.meta.contains as string | undefined;
+        const amt = (sock.meta.amount as number) ?? 1;
+        if (contains === 'imprints') {
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[the case held a purse — +${amt} imprints]`);
+        } else if (contains) {
+          this.giveItem(contains as ItemId, amt);
+          this.cue('pickup', it.pos, `[the case breaks open — confiscated goods, now yours]`);
+        }
+        return;
+      }
       case 'audit': {
         // The Auditor's settle point — pay the tally or the book walks.
         const owed = this.unpaidTheft;

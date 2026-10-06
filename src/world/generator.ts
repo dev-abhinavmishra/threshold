@@ -12,7 +12,7 @@ import {
   aabb, aabbIntersects2D, aabbFromMinMax, v3, type Aabb, type Vec3,
 } from '../engine/math';
 import type {
-  Biome, Door, EntityId, EntityTuning, HidingSpot, NavNode, RoomInstance, ScheduledEncounter, Socket,
+  Biome, Door, EntityId, EntityTuning, HidingSpot, ItemId, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
@@ -539,6 +539,39 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   // Encounter scheduling via director rules.
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
   applyForeshadowing(mainRooms, streams.stream('scare'));
+
+  // The confiscated case — the eyes guard a prize. Watched rooms (a live
+  // securityCam / searchlight, mains on) can hold a seized case ~2.4m out
+  // under the cone: the pry is free, the cost is the exposure crossing the
+  // sweep to reach it and back. Dead-mains eyes guard nothing. Must run
+  // after applyForeshadowing — its witness cams are part of the watch set.
+  // Dedicated stream: 'loot' feeds the underscript generator next.
+  const caseRng = streams.stream('confiscate');
+  const CASE_GOODS: [ItemId, number][] = [
+    ['latchpick', 1], ['chalkSpool', 1], ['doorChock', 1],
+    ['feltWrap', 1], ['handLamp', 40], ['sparkFlash', 1],
+  ];
+  let casePlaced = false;
+  for (const room of mainRooms) {
+    if (room.authored || !room.spec || room.darkRoom) continue;
+    const eye = room.spec.props.find((p) => p.kind === 'securityCam' || p.kind === 'searchlight');
+    if (!eye) continue;
+    if (!caseRng.bool(0.6) && casePlaced) continue;
+    const ep = localToWorld(room.origin, room.yaw, eye.x, 0, eye.z);
+    const face = (eye.yaw ?? 0) + room.yaw;
+    const cx = ep.x + Math.sin(face) * 2.4;
+    const cz = ep.z + Math.cos(face) * 2.4;
+    const good = CASE_GOODS[caseRng.int(0, CASE_GOODS.length - 1)];
+    const isMarks = caseRng.bool(0.4);
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(cx, 0.9, cz),
+      yaw: 0, filled: true,
+      meta: { confiscated: true, contains: isMarks ? 'imprints' : good[0],
+        amount: isMarks ? caseRng.int(8, 16) : good[1] },
+    });
+    casePlaced = true;
+  }
 
   // The forged page — a book near a forger of doors can be rewritten. A
   // ledger within sight of a redactor's door (inside the book's own
