@@ -1024,12 +1024,83 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
       const down = wadeOnto(snares[1].pos, true);
       felt = !down.rooted && caps.some((c) => /wire underfoot/.test(c));
     }
+    // and the wire can be cut — but only a crouched wader can find it
+    const last = snares[snares.length - 1].pos;
+    g.player.teleport(last.x + 0.6, 0, last.z + 0.6);
+    for (let f = 0; f < 20; f++) g.frame();
+    const blindNoPrompt = !g.interaction.interactables.some((i) => i.kind === 'snip');
+    g.keys.add('KeyC');
+    for (let f = 0; f < 30; f++) g.frame();
+    let cut = false;
+    for (let f = 0; f < 160 && !cut; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!it) break;
+      const ax = it.pos.x - g.player.pos.x, az = it.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = -0.7;
+      if (/cut/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+      cut = caps.some((c) => /wire comes loose/.test(c));
+    }
+    g.keys.delete('KeyE');
+    g.keys.delete('KeyC');
     return { stage: 'done', room: room.index, nSnares: snares.length, tripped, felt,
-      upAt: up.at, s0: snares[0].pos, caps: caps.slice(-14) } as const;
+      blindNoPrompt, cut, caps: caps.slice(-16) } as const;
   });
 
   if (result.stage === 'no-dark-flood') test.skip();
   expect(result.tripped, JSON.stringify(result)).toBe(true);
   if ((result.nSnares ?? 0) > 1) expect(result.felt, JSON.stringify(result)).toBe(true);
+  expect(result.blindNoPrompt, JSON.stringify(result)).toBe(true);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('cut the seal — an upright player can disarm a dry wire', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // armed snares @ maint-service-narrow + unlit rooms
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      godMode: boolean; hazard: { snares: { room: number; armed: boolean; pos: { x: number; y: number; z: number } }[] };
+      currentRoom: number; keys: Set<string>;
+    };
+    ga.godMode = true;
+    const room = g.route.rooms.find((r) => !r.flooded
+      && r.sockets?.some((sk) => sk.meta?.hazard === 'snare'));
+    if (!room) return { stage: 'no-snare' } as const;
+    if (!ga.hazard.snares.some((h) => h.room === room.index && h.armed)) return { stage: 'no-snare' } as const;
+    const hz0 = ga.hazard.snares.find((h) => h.room === room.index)!.pos;
+    g.player.teleport(hz0.x + 0.7, 0, hz0.z + 0.7);
+    ga.currentRoom = room.index;
+    for (let f = 0; f < 25; f++) g.frame();
+    const sawPrompt = g.interaction.interactables.some((i) => i.kind === 'snip');
+    let cut = false;
+    for (let f = 0; f < 160 && !cut; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!it) break;
+      g.player.yaw = Math.atan2(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z);
+      g.player.pitch = -0.7;
+      if (/cut the seal/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      g.frame();
+      cut = caps.some((c) => /seal parts/.test(c));
+    }
+    ga.keys.delete('KeyE');
+    return { stage: 'done', room: room.index, sawPrompt, cut,
+      disarmed: !ga.hazard.snares.find((h) => h.room === room.index)?.armed,
+      caps: caps.slice(-12) } as const;
+  });
+
+  if (result.stage === 'no-snare') test.skip();
+  expect(result.sawPrompt, JSON.stringify(result)).toBe(true);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(result.disarmed, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

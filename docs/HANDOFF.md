@@ -1514,3 +1514,30 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Snare armability in dry rooms: pry-defuse exists for trap lids but
     not floor snares — 'Cut the seal' interactable with a pebble?
   - Milestone-set hearing remains a design call.
+
+## Sprint 258 — 'Cut the seal' (snare defuse)
+
+- New `InteractKind` 'snip' + registration inside `rebuildInteractables`
+  (Game.ts, per-frame loop over `hazard.snares`): an armed wire within 4.6m
+  gets a 1.4s hold point — 'Cut the seal' on dry floors, 'Feel for the wire —
+  cut it' while the snare sits under live floodwater (`flooded && !drained`).
+  Submerged wires only register the point while the player is crouched — a
+  wader standing up cannot see or reach them.
+- Press: `hsn.armed = false` + 'trap-click' sfx + a QUIET 0.3 'item' emit
+  ('[a quiet snip]') — deliberately under the rouse floor; defusing is the
+  sneaky option vs the loud trip. Captions: '[the seal parts — the wire goes
+  slack]' / '[the wire comes loose under the water]'.
+- **Trap:** the prop-spec loop in `addRoomInteractables` runs ONCE at room
+  build — crouch-gating there means a submerged wire's point can never
+  appear (player is never crouched at build). Any crouch/input-gated point
+  must live in `rebuildInteractables`, which runs every frame and sees the
+  live input state.
+- **Trap:** `vite preview` reuseExistingServer serves the last `dist/` —
+  e2e/probes against src edits need `npm run build` first. Burned a whole
+  debugging loop on this; the feature worked, the bundle was stale.
+- **Harness trap:** Game has no `captions` field — read them via
+  `g.audio.onCaption(cb)` + `captionsEnabled = true` (the dark-water spec's
+  pattern), not `ga.captions`.
+- e2e: dark-water spec gained the cut phase (upright = no prompt; crouched =
+  prompt → hold → '[wire comes loose]'), plus a dry-seal spec on the
+  maint-service snares ('Cut the seal' → armed=false).

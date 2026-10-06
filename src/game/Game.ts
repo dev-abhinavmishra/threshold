@@ -1102,6 +1102,25 @@ export class Game {
     }
     // Entity-registered points (the Collector's toll) survive rebuilds.
     for (const it of this.dynamicInteractables) this.interaction.add(it);
+    // Cut the seal — an armed paper wire is a quiet thing you can cut;
+    // under live floodwater the wire only shows itself to a wader
+    // crouched low enough to feel for it.
+    for (const hz of this.hazard.snares) {
+      if (!hz.armed) continue;
+      const rm = rooms.find((r) => r.index === hz.room) ?? this.route?.branchRooms.find((r) => r.index === hz.room);
+      if (!rm) continue;
+      const submerged = !!rm.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
+      if (submerged && !this.player.crouching) continue;
+      const dx = hz.pos.x - this.player.pos.x, dz = hz.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 4.6 * 4.6) continue;
+      this.interaction.add({
+        kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
+        pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
+        prompt: submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
+        holdTime: 1.4, enabled: true, priority: 2,
+        data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
+      });
+    }
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
@@ -1839,6 +1858,19 @@ export class Game {
         const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
         this.audio.play('trap-click', at, '[the spring slackens]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'snip': {
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const hsn = this.hazard.snares.find((hz) => hz.room === d.room
+          && Math.hypot(hz.pos.x - d.sx, hz.pos.z - d.sz) < 0.45);
+        if (hsn) hsn.armed = false;
+        const rm = this.activeRooms()[this.currentRoom];
+        const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
+        this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
+          sub ? '[the wire comes loose under the water]' : '[the seal parts — the wire goes slack]');
+        this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
         return;
       }
       case 'alarm': {
