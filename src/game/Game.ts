@@ -817,9 +817,10 @@ export class Game {
       heldOwed: () => this.unpaidHeld,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
-        // OLD sign still pulls a grafter (a spent-wire room is free bait).
+        // OLD sign still pulls a grafter (a spent-wire room is free bait),
+        // and only it bothers with weak sign (the ash a rubbed wrap leaves).
         const staleOk = key.startsWith('grafter:');
-        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && !e.readBy.includes(key)
+        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && (staleOk || !e.weak) && !e.readBy.includes(key)
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
         for (const e of out) e.readBy.push(key);
         return out;
@@ -2386,7 +2387,14 @@ export class Game {
           pos: v3(this.player.pos.x, 0, this.player.pos.z), room: this.currentRoom,
           kind: 'wire', t: this.clock.time, readBy: [],
         });
-        this.cue('item', it.pos, '[you rub a scuff into the boards — a lie in wire]');
+        // The wrap's ash is a second, weaker mark — rubbed felt leaves a
+        // real trace even where the wire lie is fake. Only the grafter's
+        // duller nose bothers with it; the warden reads through.
+        this.hazard.evidence.push({
+          pos: v3(this.player.pos.x + 0.4, 0, this.player.pos.z + 0.4), room: this.currentRoom,
+          kind: 'water', t: this.clock.time, readBy: [], weak: true,
+        });
+        this.cue('item', it.pos, '[you rub a scuff into the boards — a lie in wire; the ash keeps]');
         this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[felt on the boards]' });
         return;
       }

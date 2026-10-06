@@ -66,6 +66,9 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(hazardSrc).toContain('isRoomDrained');
     // sign erasure: the felt-wrap cover-up clears hazard evidence
     expect(gameSrc).toContain('hazard.evidence');
+    // the wrap's ash is weak sign — only the grafter's duller nose reads it
+    expect(gameSrc).toContain('weak: true');
+    expect(gameSrc).toMatch(/staleOk \|\| !e\.weak/);
   });
 });
 
