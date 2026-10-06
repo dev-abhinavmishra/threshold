@@ -660,6 +660,27 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         });
       }
 
+      // The claim register — the under library's third book. Where the
+      // crew board answers crew and the order sheet answers cargo, the
+      // register answers CLAIMS: which tagged effects in the next stretch
+      // are still held and which the crew already drew. Cheapest paper —
+      // a cross-reference, not a decision.
+      const REGISTER_HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { claimRegister: true, price: lootRng.int(2, 6) },
+        });
+      }
+
       // The work-order book — the under's fourth paper. Where the books
       // above answer threats and staff, the order sheet answers CARGO:
       // which rooms still hold unclaimed stock (and where the egress is

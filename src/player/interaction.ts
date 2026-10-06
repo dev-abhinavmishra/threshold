@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -145,6 +145,10 @@ export class InteractionSystem {
           kind = 'crewBoard';
           prompt = `Check the crew board — ${sock.meta.price as number} marginalia`;
         }
+        if (sock.meta.claimRegister !== undefined) {
+          kind = 'claimRegister';
+          prompt = `Consult the claim register — ${sock.meta.price as number} marginalia`;
+        }
         if (sock.meta.workOrder !== undefined) {
           kind = 'workOrder';
           prompt = `File the work order — ${sock.meta.price as number} marginalia`;
@@ -154,10 +158,10 @@ export class InteractionSystem {
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
           data: sock, enabled: !sock.meta.taken,
-          // crewBoard sits 0.45 off its host, which often carries its own
-          // loot socket — outrank it or the board never focuses
-          priority: kind === 'crewBoard' ? 3 : kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' ? 1.2 : 0,
+          // crewBoard/claimRegister sit ~0.5 off their host, which often
+          // carries its own loot socket — outrank it or the book never focuses
+          priority: kind === 'crewBoard' || kind === 'claimRegister' ? 3 : kind === 'shop' ? 1 : 2,
+          holdTime: kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' || kind === 'claimRegister' ? 1.2 : 0,
         });
       }
     }

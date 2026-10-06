@@ -414,7 +414,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -891,6 +891,27 @@ describe('the crew board (sprint 275)', () => {
           `board on a host-less room ${seed} u-${r.index}`).toBe(true);
         const price = s.meta.price as number;
         expect(price >= 3 && price <= 8, `board price ${price} in 3-8`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the claim register (sprint 276)', () => {
+  it('registers sit on under desk furniture, cheapest paper', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.sockets?.some((s) => s.meta?.claimRegister) ?? false,
+          `claim register on the main route ${seed}`).toBe(false);
+      }
+      const regs = route.underRooms.flatMap((r) =>
+        (r.sockets ?? []).filter((s) => s.meta?.claimRegister).map((s) => ({ r, s })));
+      for (const { r, s } of regs) {
+        expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+          `register on a host-less room ${seed} u-${r.index}`).toBe(true);
+        const price = s.meta.price as number;
+        expect(price >= 2 && price <= 6, `register price ${price} in 2-6`).toBe(true);
       }
     }
   });

@@ -1866,3 +1866,25 @@ per board (`meta.taken`).
 - **Paper-read sockets stay `filled:true` with no `contains`** — the
   cache spec's loot filter must exclude each paper kind (workOrder,
   crewBoard, …) alongside `meta.vend`.
+
+## Sprint 276 — the claim register (the library's third book)
+
+**What:** `Consult the claim register — N marginalia` (2–6, cheapest paper)
+on under desk furniture (`filing|cubicle|schoolDesk|keyCabinet|recordsCage`,
+roll 0.08). A read cross-references the next 10 rooms' lost-property claim
+sockets — `Door NNN — 'Briggs' still held` vs `'Briggs' drawn` — so cages
+worth the walk are named, and dead ones are marked. Blank window →
+`[the register's claim columns run blank ahead]`. The under library is now
+a triad: board files crew, order files cargo, register files claims.
+
+**Traps:**
+- **New socket passes consume the shared stream** — insert position
+  decides whose downstream rolls shift. Register sits between crewBoard
+  and workOrder; e2e legs all find-by-meta so order doesn't break them,
+  but any spec hardcoding seeded positions would.
+- **The desk-side socket wants the same treatment as the board** —
+  priority 3 (host loot socket shares the prox window), `pos.y+0.6` aim,
+  center-side stand. The three rules travel together for elevated paper.
+- **`s.meta.marginalia === true` narrows claims** — the register must not
+  file main-route claim sockets if the schema ever reuses `meta.claim`
+  up there; the flag is the currency guard again.

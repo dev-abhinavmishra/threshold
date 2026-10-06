@@ -1973,6 +1973,38 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'claimRegister': {
+        // The claim register — the library's cross-reference. Where the
+        // board answers crew and the order sheet answers cargo, this files
+        // CLAIMS: which tagged effects in the next stretch are still held
+        // and which the crew already drew.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 4;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const entries: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || entries.length >= 6) continue;
+          for (const s of r.sockets ?? []) {
+            if (entries.length >= 6) break;
+            if (!s.meta.claim || s.meta.marginalia !== true) continue;
+            const tag = (s.meta.claimTag as string) ?? 'unsigned';
+            entries.push(`Door ${String(r.index).padStart(3, '0')} — '${tag}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+          }
+        }
+        const text = entries.length
+          ? `[the claim register shows: ${entries.join(' · ')}]`
+          : "[the register's claim columns run blank ahead]";
+        this.cue('whisper', it.pos, text);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {
