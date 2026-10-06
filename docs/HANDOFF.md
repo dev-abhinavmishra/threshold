@@ -342,6 +342,23 @@ CURRENT STATE (as of sprint 217)
   door lanes' mirrors the builder rule on every template's default
   ports; 'thin wall mounts survive clash resolution' guards
   resolveWallClashes bound check on the shifted axis only.
+  FOLLOW-UP (E2E physics caught it): laneBlock kept the MESH but also
+  kept the collider — shutterDoor/bust/railing pieces sitting ON the
+  door plane sealed 2 confirmed doors (u-lobby exit, sanctuary
+  entry). Fourth layer added: footprintInDoorLeaf (spec.ts) = the
+  ~0.9m-deep throat band × the leaf's ±0.35m central walk channel.
+  Builder now sheds colliders that overlap it for laneBlock props
+  only — mesh stays (gate/dressing still renders), seal is gone.
+  laneBlock rule-of-thumb: it means "keep the mesh at a doorway",
+  never "keep the collider". Pieces authored to READ as blocking
+  (portcullis, ironGate, balustrade, screenPanels, railing,
+  recordsCage) keep colliders everywhere EXCEPT where they'd cover
+  a leaf. Also moved: sanctuary bust (0,-3.5)->(1.05,-3.5) and the
+  lobby-waiting counter cluster x 0.4->2.3 so the desk keeps its
+  collider beside the door instead of walk-through in it;
+  shutterDoor collider ->[0,0,0] (pure door-plane dressing; the
+  leaf itself does the blocking). Route test asserts every
+  collider in a leaf is laneBlock'd (conscious door dressing).
   propFootprint is now EXPORTED from templates.ts (MODEL_FOR
   collider halves + quarter-turn yaw swap; fallback [0.25,0.25]).
   GOTCHA: generated rooms get GENERATED ports (placement rotates/

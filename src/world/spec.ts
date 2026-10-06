@@ -327,6 +327,26 @@ export function footprintInDoorLane(
   });
 }
 
+/** True when an axis-aligned collider footprint parks inside the door
+ * throat itself — reaches within ~0.9m of the wall plane AND covers the
+ * leaf's central walk channel (the ±0.35m corridor a player needs).
+ * laneBlock props keep their meshes but shed colliders like this, since
+ * a collider here seals the doorway shut. */
+export function footprintInDoorLeaf(
+  spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>,
+  cx: number, cz: number, hx: number, hz: number,
+): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    const a = -((cx - lp.x) * dir.x + (cz - lp.z) * dir.z);
+    const b = Math.abs((cx - lp.x) * -dir.z + (cz - lp.z) * dir.x);
+    const aH = hx * Math.abs(dir.x) + hz * Math.abs(dir.z);
+    const bH = hx * Math.abs(dir.z) + hz * Math.abs(dir.x);
+    return a + aH > -0.2 && a - aH < 0.9 && b - bH < 0.35;
+  });
+}
+
 /** Drop filler props and hiding spots whose centers land inside a door
  * lane. Authored fixed props are skipped — the builder's footprint rule
  * culls them only when the collider truly overlaps the doorway apron. */

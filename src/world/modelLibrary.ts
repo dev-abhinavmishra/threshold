@@ -375,7 +375,7 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   fireAlarm: { dir: 'fire_alarm', height: 0.3, collider: [0, 0, 0], anchor: 'center' },
   cableTray: { dir: 'modular_electric_cables', height: 0.4, collider: [0, 0, 0], anchor: 'center' },
   chainFence: { dir: 'modular_chainlink_fence', height: 2.2, collider: [2.4, 2.2, 0.15] },
-  shutterDoor: { dir: 'rollershutter_door', height: 2.4, collider: [1.6, 2.4, 0.2] },
+  shutterDoor: { dir: 'rollershutter_door', height: 2.4, collider: [0, 0, 0] },
   roadBarrier: {
     dir: 'concrete_road_barrier_02', height: 0.8, collider: [1.6, 0.8, 0.4],
     variants: [{ dir: 'concrete_road_barrier', height: 0.85, collider: [1.7, 0.85, 0.45] }],

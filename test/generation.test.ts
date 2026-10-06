@@ -3,7 +3,7 @@ import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos, inDoorLane, footprintInDoorLane } from '../src/world/spec';
+import { portLocalPos, inDoorLane, footprintInDoorLane, footprintInDoorLeaf } from '../src/world/spec';
 import { MAIN_TEMPLATES, propsClash, CLASH_OK, propFootprint } from '../src/world/templates';
 import { MODEL_FOR } from '../src/world/modelLibrary';
 import { SeedStreams } from '../src/engine/rng';
@@ -318,6 +318,33 @@ describe('sprint mechanics coverage', () => {
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('no laneBlock prop leaves a collider sealing a door leaf', () => {
+    // laneBlock keeps the mesh, but the builder sheds colliders that park
+    // in the door throat — assert that shedding always happens where it
+    // must, i.e. no surviving collider covers a leaf's walk channel.
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...mainRooms(route), ...route.underRooms]) {
+        const spec = r.spec!;
+        const lanes = { width: spec.width, depth: spec.depth, entry: spec.entry, exits: spec.exits };
+        for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9)) {
+          const m = MODEL_FOR[p.kind as keyof typeof MODEL_FOR];
+          const cw = m?.collider?.[0] ?? 0, cd = m?.collider?.[2] ?? 0;
+          if (!cw && !cd) continue; // no collider — can't seal
+          const swap = Math.abs(Math.round((p.yaw ?? 0) / (Math.PI / 2))) % 2 === 1;
+          const [hx, hz] = swap ? [cd / 2, cw / 2] : [cw / 2, cd / 2];
+          if (!footprintInDoorLeaf(lanes, p.x, p.z, hx, hz)) continue;
+          // Collider in the leaf throat is only tolerated as door dressing
+          // (laneBlock) — the builder sheds it. Anything else is a seal.
+          expect(
+            p.meta?.laneBlock === true,
+            `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z} collider seals a door leaf`,
+          ).toBe(true);
         }
       }
     }

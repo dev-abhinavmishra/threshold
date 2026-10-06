@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos, footprintInDoorLane } from './spec';
+import { portLocalPos, footprintInDoorLane, footprintInDoorLeaf } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -1584,8 +1584,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       // A wide prop centered beside a door can still reach into its lane —
       // drop any whose solid collider footprint overlaps the approach strip.
       // meta.laneBlock exempts authored gate pieces (portcullis, stairGate,
-      // hatch) that are meant to sit inside a doorway.
-      if (!p.meta?.laneBlock && built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
+      // hatch) that are meant to sit inside a doorway — but a collider that
+      // parks in the door throat still seals it, so shed those colliders.
+      if (p.meta?.laneBlock) {
+        built.colliders = built.colliders.filter(
+          (c) => c.losOnly || c.walkable || (c.y ?? 0) >= 1.9 ||
+            !footprintInDoorLeaf(laneSpec, c.x, c.z, c.w / 2, c.d / 2),
+        );
+      } else if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
       group.add(built.group);
       let animated = false;
       built.group.traverse((o) => { if (o.userData.anim) animated = true; });
