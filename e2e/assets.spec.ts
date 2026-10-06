@@ -36,6 +36,7 @@ const MILL_DIRS = [
   'pilaster', 'wainscotRun', 'corniceRun', 'wallPanel', 'beamRun',
   'runnerRug', 'grandfatherClock', 'consoleTable', 'wallLantern',
   'doorSurround', 'pierMirror', 'newelPost',
+  'grandStair', 'traceryWindow', 'roseWindow',
 ];
 
 const FIGURES = [

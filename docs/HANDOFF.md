@@ -502,6 +502,25 @@ CURRENT STATE (as of sprint 223)
   piece renders (contact sheet) or the testing agent's pipeline;
   don't bisect in-room renders expecting a bad mesh.
 
+  Sprint 225 staircase kit + gothic tracery: 3 new milled kinds —
+  grandStair (10 treads w/ nosings, closed stringer fascia, velvet
+  carpet, turned balusters, swept handrail, bottom newel — a 3.0m
+  show flight), traceryWindow (twin lancets + mullions + interlaced
+  arch head + trefoil cluster, wall-mount), roseWindow (ring + 8
+  spokes + centre boss, wall-mount). Both window kinds joined
+  TRIM_KINDS (wall-skins). Placed: corr-grand-hall stair + rose
+  terminus; gallery-atrium stair + 2 roses (ropeBarrier + globeStand
+  relocated — the stair's 1.79x4.81 footprint is the biggest prop in
+  the game); gallery-cathedral 2 roses + 4 tracery; gallery-chapel
+  rose + 4 tracery; gallery-mezzanine 2 newels at the stair foot
+  (balustrade is 3.0m wide — newels can't sit on the rail line).
+  'stairs' prop rebuilt: nosing lips, stringer skirts, brass handrail
+  (collider unchanged). Mill traps learned: ring_seg/from_pydata
+  objects keep origin at world 0 — euler-rotating the OBJECT swings
+  geometry on a huge arc (don't rotate ring_seg outputs); slope-
+  rotated boards use rotation_euler[0]=-atan(rise/run) for low-front/
+  high-back. 78 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
     sconce) and per-device prop clones (LED/screen/button) stay — each

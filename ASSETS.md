@@ -804,3 +804,11 @@ New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.
 | `doorSurround/` | Architrave door frame — moulded jambs, lintel, pediment crest (wall-mount) | corr-doors-row ×4 |
 | `pierMirror/` | Tall pier-glass — brass frame, scroll crest, mirror plate (wall-mount) | corr-wide, corr-grand-hall |
 | `newelPost/` | Stair newel — stepped base, bead-and-reel turned shaft, ball finial | milled for the upcoming staircase kit |
+
+## Sprint 225 — staircase + tracery mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `grandStair/` | Show flight — closed stringer fascia, tread nosings, velvet stair carpet, turned balusters, swept handrail, bottom newel | corr-grand-hall, gallery-atrium |
+| `traceryWindow/` | Gothic lancet window — surround + sill, twin mullions, intersecting arch head, trefoil cluster (wall-mount) | gallery-cathedral x4, gallery-chapel x4 |
+| `roseWindow/` | Circular rose — outer/inner stone rings, 8 radial spokes, centre boss (wall-mount) | gallery-cathedral x2, gallery-chapel, corr-grand-hall, gallery-atrium x2 |

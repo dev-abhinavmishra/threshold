@@ -248,7 +248,7 @@ export const CLASH_OK: ReadonlyArray<readonly [PropKind, PropKind]> = [
  *  collision, so clash checks exempt any pair that touches one. */
 export const TRIM_KINDS: ReadonlySet<PropKind> = new Set([
   'pilaster', 'wainscotRun', 'corniceRun', 'wallPanel', 'doorSurround',
-  'pierMirror', 'beamRun', 'wallLantern',
+  'pierMirror', 'beamRun', 'wallLantern', 'traceryWindow', 'roseWindow',
 ]);
 
 /** True when two props materially share the same floor space. */
@@ -982,13 +982,16 @@ const galleryAtrium: RoomTemplate = {
       { kind: 'archway', x: 0, z: 4.3, yaw: Math.PI },
       { kind: 'medallion', x: 2.6, z: -2.6, y: 4.9 },
       { kind: 'windowArch', x: -5.35, z: -3.3, y: 0.9, yaw: Math.PI / 2 },
+      { kind: 'grandStair', x: 4.55, z: 0, yaw: 0 },
+      { kind: 'roseWindow', x: -2.8, z: -4.45, y: 3.9 },
+      { kind: 'roseWindow', x: 2.8, z: -4.45, y: 3.9 },
       { kind: 'displayCase', x: 1.6, z: -3.8 },
       { kind: 'displayCase', x: -3.9, z: 3.4, yaw: 0.5 },
       { kind: 'ropeBarrier', x: -4.4, z: -0.4, yaw: Math.PI / 2 },
-      { kind: 'ropeBarrier', x: 4.4, z: -0.4, yaw: -Math.PI / 2 },
+      { kind: 'ropeBarrier', x: 2.6, z: 4.0, yaw: Math.PI },
       { kind: 'plinth', x: 4.2, z: -3.4 },
       { kind: 'bust', x: 4.2, z: -3.4, y: 1.1 },
-      { kind: 'globeStand', x: 4.6, z: -2.2, yaw: -0.5 },
+      { kind: 'globeStand', x: 3.4, z: -3.9, yaw: -0.5 },
     ],
     sockets: lootSockets([[0, 0], [-4.6, 3.6], [4.6, -3.6]]),
     hiding: [
@@ -1018,6 +1021,7 @@ const galleryMezzanine: RoomTemplate = {
       { kind: 'railing', x: 0, z: 2.6, scale: 7 },
       { kind: 'balustrade', x: -0.4, z: 2.75 },
       { kind: 'balustrade', x: 2.6, z: 2.75 },
+      { kind: 'newelPost', x: -3.45, z: 0.55 }, { kind: 'newelPost', x: -1.72, z: 0.55 },
       { kind: 'window', x: 3.6, z: 0.4, y: 2.4, yaw: -Math.PI / 2 },
       { kind: 'painting', x: 3.6, z: -2.4, y: 1.8, yaw: -Math.PI / 2 },
       { kind: 'bookshelf', x: -2.5, z: -2.75 },
@@ -2418,6 +2422,12 @@ const roomCathedral: RoomTemplate = {
       { kind: 'pewRow', x: -1.9, z: -1.6 }, { kind: 'pewRow', x: 1.9, z: -1.6 },
       { kind: 'pewRow', x: -1.9, z: 0.6 }, { kind: 'pewRow', x: 1.9, z: 0.6 },
       { kind: 'rug', x: 0, z: 0, scale: 1.6 },
+      { kind: 'roseWindow', x: 0, z: -4.95, y: 5.4 },
+      { kind: 'roseWindow', x: 0, z: 4.95, y: 5.4, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3.5, z: -4.95, y: 2.4 },
+      { kind: 'traceryWindow', x: 3.5, z: -4.95, y: 2.4 },
+      { kind: 'traceryWindow', x: -3.5, z: 4.95, y: 2.4, yaw: Math.PI },
+      { kind: 'traceryWindow', x: 3.5, z: 4.95, y: 2.4, yaw: Math.PI },
     ],
     sockets: lootSockets([[-5.4, -1.8], [5.4, 1.8]]),
     hiding: [
@@ -2468,6 +2478,11 @@ const roomChapel: RoomTemplate = {
       { kind: 'windowArch', x: -5.4, z: -3.5, y: 3.0, yaw: Math.PI / 2 },
       { kind: 'windowArch', x: -5.4, z: 0.5, y: 3.0, yaw: Math.PI / 2 },
       { kind: 'windowArch', x: -5.4, z: 3.5, y: 3.0, yaw: Math.PI / 2 },
+      { kind: 'roseWindow', x: 0, z: 6.95, y: 3.55, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3, z: 6.95, y: 2.2, yaw: Math.PI },
+      { kind: 'traceryWindow', x: 3, z: 6.95, y: 2.2, yaw: Math.PI },
+      { kind: 'traceryWindow', x: -3, z: -6.95, y: 2.2 },
+      { kind: 'traceryWindow', x: 3, z: -6.95, y: 2.2 },
       { kind: 'windowArch', x: 5.4, z: -3.5, y: 3.0, yaw: -Math.PI / 2 },
       { kind: 'windowArch', x: 5.4, z: 0.5, y: 3.0, yaw: -Math.PI / 2 },
       { kind: 'windowArch', x: 5.4, z: 3.5, y: 3.0, yaw: -Math.PI / 2 },

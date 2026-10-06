@@ -2644,6 +2644,102 @@ def chapelAltar():
 
 # ---------- corridor architecture batch (sprint 224) ----------
 
+
+def grandStair():
+    """Show staircase flight — closed stringers, nosings, velvet stair
+    carpet, turned balusters on the LEFT cheek (local -x), swept handrail,
+    big bottom newel. 1.8w x 4.0d x 1.8h; ascends toward -y (Blender),
+    i.e. +z in glTF at yaw 0. Floor piece."""
+    steps, rise, run = 10, 0.18, 0.4
+    w = 1.4
+    y0 = 1.9           # front edge of bottom tread (Blender y)
+    for i in range(steps):
+        zt = (i + 1) * rise            # tread top height
+        yt = y0 - i * run              # tread front edge y
+        cube(f'tread{i}', (0, yt - run / 2, zt - 0.03), (w, run + 0.03, 0.06), WOOD, 0.008)
+        cube(f'riser{i}', (0, yt - 0.01, zt - rise / 2), (w, 0.04, rise), DARK, 0.005)
+        cube(f'carpet{i}', (0, yt - run / 2, zt + 0.005), (0.66, run + 0.02, 0.012), VELVET, 0.004)
+        cube(f'carpetR{i}', (0, yt - 0.005, zt - rise / 2), (0.66, 0.012, rise - 0.02), VELVET, 0.004)
+    # stringer fascia boards — sloped, both cheeks
+    slope = math.atan((steps * rise) / (steps * run))
+    L = math.hypot(steps * run, steps * rise)
+    for side in (-1, 1):
+        o = cube(f'stringer{side}', (side * (w / 2 + 0.03), y0 - steps * run / 2,
+                 (steps * rise) / 2 - 0.06), (0.08, L, 0.42), DARK, 0.01)
+        o.rotation_euler[0] = -slope
+    # bottom newel on the baluster cheek (local -x side)
+    nx, ny = -(w / 2 + 0.1), y0 + 0.05
+    cube('newelBase', (nx, ny, 0.1), (0.28, 0.28, 0.2), DARK, 0.015)
+    cyl('newelShaft', (nx, ny, 0.62), 0.085, 0.86, WOOD, 14)
+    cyl('newelCollar', (nx, ny, 1.02), 0.11, 0.06, DARK, 14)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=14, ring_count=10, radius=0.11,
+        location=(nx, ny, 1.2))
+    bpy.context.object.data.materials.append(WOOD)
+    # balusters on the -x cheek: two per tread on alternating treads
+    rail_z = lambda y: (y0 - y) / (steps * run) * (steps * rise) + 0.98
+    for i in range(steps):
+        yt = y0 - i * run - run / 2
+        zt = (i + 1) * rise
+        h = rail_z(yt) - zt - 0.04
+        bx = -(w / 2 + 0.03)
+        cyl(f'bal{i}a', (bx, yt - 0.1, zt + h / 2), 0.028, h, WOOD, 10)
+        cyl(f'bal{i}b', (bx, yt + 0.1, zt + h / 2), 0.028, h, WOOD, 10)
+        # bead swell mid-height
+        cyl(f'bal{i}aB', (bx, yt - 0.1, zt + h * 0.62), 0.045, 0.08, DARK, 10)
+    # swept handrail along baluster tops
+    ro = cube('handrail', (-(w / 2 + 0.03), y0 - steps * run / 2 - 0.05,
+              rail_z(y0 - steps * run / 2) + 0.03), (0.09, L, 0.08), DARK, 0.015)
+    ro.rotation_euler[0] = -slope
+    # top landing stub rail across the flight
+    cube('topRail', (0, y0 - steps * run - 0.02, steps * rise + 0.5), (w + 0.3, 0.07, 0.08), DARK, 0.01)
+    join_all('grandStair')
+
+
+def traceryWindow():
+    """Gothic lancet window — stone surround, sill, twin centre mullions
+    splitting three lights, pointed-arch head built from two arch bands,
+    trefoil tracery cluster. 1.6w x 2.6h, wall-mount (back plane y=0,
+    protrudes -y)."""
+    # recessed dark glass back
+    cube('glass', (0, -0.02, 1.35), (1.24, 0.03, 2.3), DARK, 0)
+    # surround: sill, jambs, arch shoulders
+    cube('sill', (0, -0.1, 0.06), (1.6, 0.22, 0.12), STONE, 0.015)
+    cube('jambL', (-0.73, -0.05, 1.2), (0.14, 0.12, 2.28), STONE, 0.012)
+    cube('jambR', (0.73, -0.05, 1.2), (0.14, 0.12, 2.28), STONE, 0.012)
+    # pointed arch: two half-ring bands leaning into a centre apex
+    for side in (-1, 1):
+        ring_seg(f'arch{side}', (side * 0.36, -0.05, 2.06), 0.44, 0.34, 0.12, STONE, 14)
+    # springing capitals
+    cube('capL', (-0.62, -0.05, 2.1), (0.2, 0.12, 0.1), STONE, 0.01)
+    cube('capR', (0.62, -0.05, 2.1), (0.2, 0.12, 0.1), STONE, 0.01)
+    # mullions — two bars splitting three lancet lights
+    for mx in (-0.21, 0.21):
+        cube(f'mullion{mx}', (mx, -0.04, 1.18), (0.05, 0.07, 1.95), STONE, 0.008)
+    # trefoil tracery: three small rings clustered in the arch head
+    for i, (tx, tz) in enumerate([(0, 2.32), (-0.24, 2.14), (0.24, 2.14)]):
+        torus(f'trefoil{i}', (tx, -0.04, tz), 0.13, 0.025, STONE,
+              rot=(math.pi / 2, 0, 0), seg=18)
+    join_all('traceryWindow')
+
+
+def roseWindow():
+    """Rose / oculus window — outer stone ring, inner ring, eight radial
+    spokes, centre boss, recessed dark glass. r=0.78, wall-mount."""
+    torus('outerRing', (0, -0.06, 0), 0.78, 0.07, STONE, rot=(math.pi / 2, 0, 0), seg=32)
+    torus('innerRing', (0, -0.06, 0), 0.42, 0.045, STONE, rot=(math.pi / 2, 0, 0), seg=24)
+    cyl('glass', (0, 0.0, 0), 0.72, 0.02, DARK, 32)
+    # rotate glass disc to stand in the XZ plane
+    bpy.context.view_layer.objects.active = bpy.context.object
+    bpy.context.object.rotation_euler[0] = math.pi / 2
+    for i in range(8):
+        a = i * math.pi / 4
+        x, z = math.cos(a) * 0.3, math.sin(a) * 0.3
+        o = cyl(f'spoke{i}', (x, -0.06, z), 0.028, 0.62, STONE, 8)
+        o.rotation_euler[1] = math.pi / 2 - a
+    torus('boss', (0, -0.06, 0), 0.12, 0.04, STONE, rot=(math.pi / 2, 0, 0), seg=16)
+    sphere('bossC', (0, -0.06, 0), 0.06, STONE, seg=14, ring=10)
+    join_all('roseWindow')
+
 def pilaster():
     """Flat wall pilaster — plinth, recessed-panel shaft, capital.
     Center-anchored wall mount, back at y=0."""
@@ -2953,6 +3049,9 @@ PIECES = {
     'grandfatherClock': grandfatherClock, 'consoleTable': consoleTable,
     'wallLantern': wallLantern, 'doorSurround': doorSurround,
     'pierMirror': pierMirror, 'newelPost': newelPost,
+    # staircase + tracery batch (sprint 225)
+    'grandStair': grandStair, 'traceryWindow': traceryWindow,
+    'roseWindow': roseWindow,
 }
 
 def main():

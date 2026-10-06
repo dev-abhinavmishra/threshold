@@ -136,6 +136,8 @@ export type PropKind =
   | 'pilaster' | 'wainscotRun' | 'corniceRun' | 'wallPanel' | 'beamRun'
   | 'runnerRug' | 'grandfatherClock' | 'consoleTable' | 'wallLantern'
   | 'doorSurround' | 'pierMirror' | 'newelPost'
+  // sprint 225 — staircase + tracery batch
+  | 'grandStair' | 'traceryWindow' | 'roseWindow'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript

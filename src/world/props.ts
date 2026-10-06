@@ -386,8 +386,30 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     const steps = 6;
     const rise = ((s.meta?.height as number) || 1.4) / steps;
     const run = ((s.meta?.length as number) || 2.4) / steps;
-    for (let i = 0; i < steps; i++)
-      g.add(mesh(box(1.2, rise, run), MAT.plasterDark(), 0, rise * (i + 0.5), -((steps - i - 0.5) * run)));
+    const tread = MAT.darkOak(), skirt = MAT.plasterDark(), railM = MAT.brass();
+    for (let i = 0; i < steps; i++) {
+      const zt = rise * (i + 0.5), zy = -((steps - i - 0.5) * run);
+      g.add(mesh(box(1.2, rise, run), skirt, 0, zt, zy));
+      // tread nosing — proud lip on each step front
+      g.add(mesh(box(1.24, 0.04, 0.06), tread, 0, rise * (i + 1) - 0.02, zy - run / 2 - 0.02));
+      // worn tread cap
+      g.add(mesh(box(1.2, 0.02, run), tread, 0, rise * (i + 1) - 0.005, zy));
+    }
+    // stringer skirts along both cheeks
+    const len = steps * run, hgt = steps * rise;
+    const slope = Math.atan2(hgt, len);
+    for (const side of [-1, 1]) {
+      const b = mesh(box(0.06, 0.28, Math.hypot(len, hgt)), skirt, side * 0.62, hgt / 2 - 0.1, -len / 2 + run / 2);
+      b.rotation.x = slope;
+      g.add(b);
+    }
+    // handrail on the +x cheek: sloped rail + posts at both ends
+    const rail = mesh(box(0.05, 0.07, Math.hypot(len, hgt) + 0.2), railM, 0.6, hgt / 2 + 0.75, -len / 2 + run / 2 - 0.05);
+    rail.rotation.x = slope;
+    g.add(rail);
+    for (const [pz, ph] of [[-0.1, rise], [-len + 0.1, hgt]]) {
+      g.add(mesh(cyl(0.03, 0.03, 0.78), railM, 0.6, ph + 0.36, pz + run / 2 - 0.05));
+    }
     return { group: g, colliders: [{ x: 0, z: 0, w: 1.2, d: steps * run, h: 0.3, walkable: true }] };
   },
   partition: (s) => {
