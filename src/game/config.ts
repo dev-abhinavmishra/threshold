@@ -84,6 +84,11 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 1.0, speed: 1.6, damage: 28, killRange: 1.4, seeRange: 9,
     cooldown: 7, spawnChance: 0.4, minRoom: 28, biomes: ['maintenance', 'unlit', 'guest'],
   },
+  inspector: {
+    warningTime: 0, speed: 1.7, damage: 30, killRange: 0, seeRange: 0,
+    cooldown: 9, spawnChance: 0.44, minRoom: 16, maxRoom: 82,
+    biomes: ['guest', 'records', 'gallery'],
+  },
   behemoth: {
     warningTime: 3.4, speed: 0.85, damage: 60, killRange: 1.7, seeRange: 12,
     cooldown: 14, spawnChance: 0.22, minRoom: 55, biomes: ['corridor', 'maintenance'],
@@ -239,7 +244,7 @@ export const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-ind
 /** Entities that must never be scheduled in milestone or safe rooms. */
 export const FORBIDDEN_IN_MILESTONE: EntityId[] = [
   'sweep', 'reprise', 'witness', 'whisper', 'inkling', 'redactor',
-  'echoskin', 'maelstrom', 'hollow', 'bellman', 'porter', 'warden', 'groundswell',
+  'echoskin', 'maelstrom', 'hollow', 'bellman', 'porter', 'warden', 'groundswell', 'inspector',
 ];
 
 /** Entities incompatible to overlap in one room-window. */

@@ -71,6 +71,8 @@ interface GRoom {
   templateId?: string;
   origin: { x: number; z: number };
   yaw: number;
+  n: { x: number; z: number };
+  exitPos: { x: number; z: number };
   doors?: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean }[];
   scheduled?: { entity: string; roused?: boolean; triggerRoom: number; seed: number }[];
   darkRoom?: boolean;
@@ -626,7 +628,7 @@ test('noise through the door rouses what waits beyond', async ({ page }) => {
 test('the bellman trails your steps — knock, follow, yield to a held gaze', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seededRun(page, 'threshold');
+  await seededRun(page, 's'); // bellman pinned @32
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
@@ -808,14 +810,21 @@ test('the warden paces its post — whistle, charge, loses the scent', async ({ 
     for (let f = 0; f < 10; f++) g.frame();
     const ent = g.entities.find((e) => e.id === 'warden') as Ent | undefined;
     if (!ent) return { stage: 'not-spawned' } as const;
-    // Phase A: keep a 5.5m exposed gap — the instant the whistle lands, dive
-    // into a real hiding spot (a bare object crashes frame(): spots carry
-    // pos/exitPos). The charge runs to where it lost you and dies out there.
-    const spot = wardenRoom.hidingSpots[0];
+    // Phase A: the instant the whistle lands, dive into a real hiding spot
+    // (a bare object crashes frame(): spots carry pos/exitPos). The charge
+    // runs to where it lost you and dies out there.
+    // The bellman trails into the room behind you (pinned @32); killPlayer
+    // bypasses godMode and an exposed stand-still is its whole trigger, so
+    // retire it for this spec — it is tested on its own terms elsewhere.
+    const bell = g.entities.find((e) => e.id === 'bellman') as { state: string } | undefined;
+    if (bell) bell.state = 'done';
+    const spot = wardenRoom.hidingSpots.find((s) => !s.trappedBy) ?? wardenRoom.hidingSpots[0];
     let resumed = false;
     for (let f = 0; f < 1600 && ent.state !== 'done'; f++) {
+      if (g.player.dead) return { stage: 'player-died', caps: caps.slice(-12) } as const;
       const tp = ent.threatPos();
-      if (tp && !g.player.hiddenSpot) g.player.teleport(tp.x, 0, tp.z - 5.5);
+      // Stand in the 1.6m proximity exemption — the whistle is deterministic.
+      if (tp && !g.player.hiddenSpot) g.player.teleport(tp.x, 0, tp.z - 1.4);
       g.frame();
       if (!g.player.hiddenSpot && caps.some((c) => /Warden has you/.test(c))) {
         if (spot) {
@@ -823,18 +832,23 @@ test('the warden paces its post — whistle, charge, loses the scent', async ({ 
           g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
         }
       }
-      if (caps.some((c) => /whistle dies/.test(c))) { resumed = true; break; }
+      // Two legal endings to the blind charge: it gives up ('whistle
+      // dies') or it reaches your last-seen spot within a metre and the
+      // strike connects even into the hiding volume ('Warden strikes').
+      if (caps.some((c) => /whistle dies|Warden strikes/.test(c))) { resumed = true; break; }
     }
     // Phase B: come back out into the open — it must spot again, charge,
     // and this time the strike lands.
     let struck = false;
     if (resumed) {
+      const preB = caps.length;
       g.player.hiddenSpot = null;
       for (let f = 0; f < 1400 && ent.state !== 'done'; f++) {
+        if (g.player.dead) return { stage: 'player-died-b', caps: caps.slice(-12) } as const;
         const tp = ent.threatPos();
         if (tp) g.player.teleport(tp.x, 0, tp.z - 1.4);
         g.frame();
-        if (caps.some((c) => /Warden strikes/.test(c))) { struck = true; break; }
+        if (caps.slice(preB).some((c) => /Warden strikes/.test(c))) { struck = true; break; }
       }
     }
     return { stage: 'done', struck, resumed, paced: caps.some((c) => /measured pacing/.test(c)), caps: caps.slice(-12) } as const;
@@ -902,5 +916,94 @@ test('the groundswell heaves the floor — sidestep or stumble', async ({ page }
   expect(r.breath).toBe(true);
   expect(r.heaved, `caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(r.settled, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the inspector tests every lid — hold it shut or it pulls you out', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // inspector @77 records-bullpen — 2 untrapped lids at runtime
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Spot = { id: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string };
+    type Ent = { id: string; state: string };
+    const iRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'inspector'));
+    if (!iRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[iRoom.index - 1];
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(iRoom.origin.x, 0, iRoom.origin.z);
+    for (let f = 0; f < 20; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'inspector') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+
+    const spots = (iRoom.hidingSpots as Spot[]).filter((s) => !s.trappedBy);
+    const ep = iRoom.n;
+    const dist = (s: Spot) => Math.hypot(s.exitPos.x - ep.x, s.exitPos.z - ep.z);
+    const nearest = [...spots].sort((a, b) => dist(a) - dist(b))[0];
+
+    // Slip into a spot directly — the grapple cares about which lid, not
+    // how we got in; presses below still ride the real exitHide route.
+    // Stand INSIDE the spot volume: exitPos is exposed, and watchers in
+    // the room report a standing player.
+    const hideIn = (spot: Spot) => {
+      const v = (spot as unknown as { volume?: { minX: number; maxX: number; minZ: number; maxZ: number } }).volume;
+      g.player.teleport(v ? (v.minX + v.maxX) / 2 : spot.exitPos.x, 0, v ? (v.minZ + v.maxZ) / 2 : spot.exitPos.z);
+      g.player.hiddenSpot = spot as never;
+      for (let f = 0; f < 10; f++) g.frame();
+      return g.player.hiddenSpot !== null;
+    };
+    const press = () => { g.input.interactPressed = true; g.frame(); g.input.interactPressed = false; };
+    const focused = () => g.interaction.focused?.prompt ?? '';
+
+    // Phase A — hide in the nearest lid; HOLD it through the rattle.
+    if (!hideIn(nearest)) return { stage: 'no-hide-a' } as const;
+    let f = 0;
+    while (f++ < 1600 && nearest.trappedBy !== 'inspector' && ent.state !== 'done') g.frame();
+    if (nearest.trappedBy !== 'inspector') return { stage: 'no-grapple-a', caps: caps.slice(-8) } as const;
+    const holdPrompt = focused(); // 'Leave hiding' while it rattles the lid
+    while (f++ < 1600 && nearest.trappedBy === 'inspector' && ent.state !== 'done') { press(); g.frame(); }
+    const held = caps.some((c) => /lets go — moves on/.test(c));
+
+    // Phase B — the remaining lid goes unanswered: it wins the rattle.
+    let pulledOut = false;
+    const remaining = spots.filter((s) => s.id !== nearest.id && !s.trappedBy);
+    if (remaining.length && ent.state !== 'done') {
+      const next = remaining[0];
+      g.player.teleport(next.exitPos.x, 0, next.exitPos.z);
+      if (hideIn(next)) {
+        let g2 = 0;
+        while (g2++ < 1600 && next.trappedBy !== 'inspector' && ent.state !== 'done') g.frame();
+        if (next.trappedBy === 'inspector') {
+          while (g2++ < 1600 && next.trappedBy === 'inspector' && ent.state !== 'done') g.frame();
+        }
+        pulledOut = g.player.hiddenSpot === null;
+      }
+    }
+    return {
+      stage: 'done', pulledOut, held, holdPrompt,
+      triedLid: caps.some((c) => /it tries the lid/.test(c)),
+      holdCue: caps.some((c) => /hold it shut/i.test(c)),
+      outCue: caps.some((c) => /pulls you out/.test(c)),
+      caps: caps.slice(-10),
+    } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { pulledOut: boolean; held: boolean; holdPrompt: string; triedLid: boolean; holdCue: boolean; outCue: boolean; caps: string[] };
+  expect(r.triedLid).toBe(true);
+  expect(r.holdPrompt).toMatch(/leave hiding/i);
+  expect(r.holdCue, `caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.pulledOut).toBe(true);
+  expect(r.outCue).toBe(true);
+  expect(r.held, `caps: ${r.caps.join(' | ')}`).toBe(true);
   expect(errors).toEqual([]);
 });

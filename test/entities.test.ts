@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner, Warden } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
-import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell } from '../src/entities/room';
+import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
 import { v3 } from '../src/engine/math';
@@ -14,6 +14,8 @@ function fakePlayer() {
     yaw: 0,
     pitch: 0,
     hiddenSpot: null as null | { kind: string },
+    dead: false,
+    exitHiding(_now: number) { self.hiddenSpot = null; },
     protection: 'exposed',
     crouching: false,
     sprinting: false,
@@ -510,6 +512,86 @@ describe('Groundswell (sprint 235)', () => {
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /floor settles/.test(c))).toBe(true);
     gs.dispose();
+  });
+});
+
+describe('Inspector (sprint 236)', () => {
+  const stepUntil = (fn: () => boolean, ctx: EntityCtx, e: Inspector, max = 1200) => {
+    const ctxMut = ctx as { now: number };
+    let t = (ctxMut.now as number) || 0, steps = 0;
+    while (steps++ < max && !fn()) { ctxMut.now = t; e.update(0.05); t += 0.05; }
+    ctxMut.now = t;
+    return fn();
+  };
+  const inspRoomIdx = (rooms: RoomInstance[]) =>
+    rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);
+
+  it('walks the room and tries every lid, then moves on', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    expect(idx).toBeGreaterThan(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(0, 0, -999); // watch from afar
+    stepUntil(() => insp.state === 'done', ctx, insp, 1600);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(insp.state).toBe('done');
+    expect(captions.filter((c) => /it tries the lid/.test(c)).length).toBeGreaterThanOrEqual(2);
+    expect(captions.some((c) => /moves on to the next room/.test(c))).toBe(true);
+    insp.dispose();
+  });
+
+  it('lets go when the lid is held through the rattle', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const room = rooms[idx];
+    // Hide in the spot closest to its spawn — it will be tested first.
+    const ep = room.entryPos;
+    const spot = room.hidingSpots.reduce((a, b) =>
+      (Math.hypot(a.exitPos.x - ep.x, a.exitPos.z - ep.z) < Math.hypot(b.exitPos.x - ep.x, b.exitPos.z - ep.z) ? a : b));
+    const player = ctx.player as unknown as { hiddenSpot: unknown; pos: { x: number; y: number; z: number } };
+    player.hiddenSpot = spot;
+    player.pos = v3(spot.exitPos.x, 0, spot.exitPos.z);
+    const gotLid = stepUntil(() => spot.trappedBy === 'inspector', ctx, insp, 900);
+    expect(gotLid).toBe(true);
+    // Hold it shut — four presses inside the window.
+    for (let i = 0; i < 4; i++) insp.struggle();
+    stepUntil(() => spot.trappedBy !== 'inspector', ctx, insp, 200);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lets go — moves on/.test(c))).toBe(true);
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    expect(player.hiddenSpot).toBe(spot); // still hidden — won the grapple
+    insp.dispose();
+  });
+
+  it('pulls the player out when the grapple goes unanswered', () => {
+    const rooms = routeRooms();
+    const idx = inspRoomIdx(rooms);
+    const ctx = makeCtx(rooms, { currentRoomIndex: idx });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const room = rooms[idx];
+    const ep = room.entryPos;
+    const spot = room.hidingSpots.reduce((a, b) =>
+      (Math.hypot(a.exitPos.x - ep.x, a.exitPos.z - ep.z) < Math.hypot(b.exitPos.x - ep.x, b.exitPos.z - ep.z) ? a : b));
+    const player = ctx.player as unknown as { hiddenSpot: unknown; pos: { x: number; y: number; z: number } };
+    player.hiddenSpot = spot;
+    player.pos = v3(spot.exitPos.x, 0, spot.exitPos.z);
+    const gotLid = stepUntil(() => spot.trappedBy === 'inspector', ctx, insp, 900);
+    expect(gotLid).toBe(true);
+    stepUntil(() => spot.trappedBy !== 'inspector', ctx, insp, 200); // no presses — it wins
+    const dmg = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls;
+    expect(dmg.length).toBe(1);
+    expect(dmg[0][1]).toBe('inspector');
+    expect(player.hiddenSpot).toBeNull(); // dragged into the open
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /pulls you out/.test(c))).toBe(true);
+    insp.dispose();
   });
 });
 

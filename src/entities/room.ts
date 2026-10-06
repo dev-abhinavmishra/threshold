@@ -1151,7 +1151,6 @@ export class Groundswell extends Entity {
     if (!this.struck && !p.dead && !p.hiddenSpot) {
       const relX = p.pos.x - this.start.x, relZ = p.pos.z - this.start.z;
       const along = relX * this.axis.x + relZ * this.axis.z;
-      const lateral = Math.abs(relX * this.perp.x + relZ * this.perp.z);
       const roomLat = Math.abs((p.pos.x - this.center.x) * this.perp.x + (p.pos.z - this.center.z) * this.perp.z);
       if (Math.abs(along - f) < 0.7 && roomLat < this.crossHalf - 1.0) {
         this.struck = true;
@@ -1160,7 +1159,6 @@ export class Groundswell extends Entity {
         c.cue('luggage-thud', { x: p.pos.x, y: 0.3, z: p.pos.z }, '[the boards heave under you]', { severity: 'danger' });
         c.sound.emit({ x: p.pos.x, y: 0.4, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[heaved]', source: this.id });
       }
-      void lateral;
     }
 
     if (f >= this.span) {
@@ -1178,5 +1176,208 @@ export class Groundswell extends Entity {
   protected override onDone(): void {
     if (this.swell) { this.ctx.removeEntityMesh(this.swell); this.swell = null; }
     if (this.pts) { this.ctx.removeEntityMesh(this.pts); this.pts = null; }
+  }
+}
+
+/**
+ * The Inspector (sprint 236) — a livery figure that methodically walks a
+ * room testing every hiding spot: it tries each lid in turn. If yours is
+ * next, bail out early or hold it shut through the grapple; it never
+ * re-checks a spot, so the meta is to stay one spot behind it.
+ */
+export class Inspector extends Entity {
+  private hostRoom = -1;
+  private rng = new Rng(0);
+  private checked = new Set<string>();
+  private spotCount = 0;
+  private pos = v3();
+  private target: { exitPos: Vec3; id: string; spot: RoomInstance['hidingSpots'][number] } | null = null;
+  private testing: RoomInstance['hidingSpots'][number] | null = null;
+  private testT = 0;
+  private grappling = false;
+  private heldShut = 0;
+  private required = 4;
+  private jingleT = 0;
+  private rattleT = 0;
+  private shoveCd = 0;
+  private expireT = 0;
+  private rig: RiggedFigure | null = null;
+  private figGroup: import('three').Group | null = null;
+  private baseTiltX = 0;
+
+  constructor() { super('inspector', ENTITY_TUNING.inspector); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = room.index;
+    this.rng = new Rng(c.seed + 31);
+    this.expireT = c.now + 110;
+
+    // Stand just inside the entry door.
+    this.pos = v3(room.entryPos.x, 0, room.entryPos.z);
+    const rig = riggedFigure('monkroose');
+    const brass = MAT.brass();
+    const g = rig?.group ?? tallFigure({
+      height: 2.0, face: 'plate', body: MAT.darkOak(), eyes: 'amber',
+      band: brass, bandY: 1.15,
+    });
+    this.figGroup = g as import('three').Group;
+    // A ring of keys at its hip — its whole job.
+    const ring = new THREE.Group();
+    const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.014, 6, 14), brass);
+    ring.add(hoop);
+    for (let i = 0; i < 4; i++) {
+      const key = new THREE.Mesh(new THREE.BoxGeometry(0.016, 0.09, 0.026), brass);
+      const a = -0.9 + i * 0.6;
+      key.position.set(Math.sin(a) * 0.07, -0.055 - (i % 2) * 0.02, Math.cos(a) * 0.07);
+      key.rotation.z = (i - 1.5) * 0.12;
+      ring.add(key);
+    }
+    ring.position.set(0.22, 1.05, 0.14);
+    g.add(ring);
+    g.position.copy(this.pos);
+    c.addEntityMesh(g);
+    if (rig) { this.rig = rig; rig.play('idle', 0); }
+    this.baseTiltX = g.rotation.x;
+
+    this.spotCount = room.hidingSpots.filter((s) => !s.trappedBy).length;
+    c.cue('collector-rattle', this.pos, '[a ring of keys — it is checking the rooms]', { severity: 'warn' });
+    c.sound.emit({ x: this.pos.x, y: 1.2, z: this.pos.z, intensity: 0.6, category: 'entity-cue', caption: '[keys]', source: this.id });
+    this.state = 'engage';
+  }
+
+  /** Interact presses while it has your lid — route from Game's exitHide. */
+  struggle(): void {
+    if (!this.grappling) return;
+    this.heldShut++;
+    this.rig?.play('attack', 0.05);
+  }
+
+  private nextSpot(room: RoomInstance): void {
+    let best: RoomInstance['hidingSpots'][number] | null = null;
+    let bestD = Infinity;
+    for (const s of room.hidingSpots) {
+      if (this.checked.has(s.id) || s.trappedBy) continue;
+      const d = v3dist(this.pos, s.exitPos);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    this.target = best ? { exitPos: best.exitPos, id: best.id, spot: best } : null;
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[c.currentRoomIndex];
+    if (!room || room.index !== this.hostRoom) {
+      c.cue('collector-rattle', this.pos, '[the keys fade down the corridor]', { severity: 'info' });
+      this.done();
+      return;
+    }
+    if (c.now > this.expireT) { this.done(); return; }
+    if (this.shoveCd > 0) this.shoveCd -= dt;
+
+    if (this.testing) {
+      // Working the lid — rattle + shake; join grapple if the player is inside.
+      this.testT -= dt;
+      this.rattleT -= dt;
+      if (this.rattleT <= 0) {
+        this.rattleT = 0.42;
+        c.sound.emit({ x: this.testing.exitPos.x, y: 1.1, z: this.testing.exitPos.z, intensity: 0.4, category: 'impact', caption: '', source: this.id });
+      }
+      if (this.figGroup) this.figGroup.rotation.x = this.baseTiltX + Math.sin(c.now * 26) * 0.03;
+      if (!this.grappling && p.hiddenSpot === this.testing) {
+        this.grappling = true;
+        this.heldShut = 0;
+        this.testing.trappedBy = 'inspector';
+        c.cue('hide-creak', this.testing.exitPos, '[it has the lid — HOLD IT SHUT]', { severity: 'danger' });
+      }
+      if (this.testT <= 0) {
+        const spot = this.testing;
+        if (this.grappling && spot.trappedBy === 'inspector') {
+          spot.trappedBy = undefined;
+          if (this.heldShut >= this.required) {
+            c.cue('hide-creak', spot.exitPos, '[it lets go — moves on]', { severity: 'info' });
+          } else {
+            p.exitHiding(c.now);
+            c.damagePlayer(this.tuning.damage, 'inspector', 'It tests every lid — bail out before it reaches your spot, or hold it shut through the rattle.');
+            c.cue('door-rattle', spot.exitPos, '[it pulls you out]', { severity: 'danger' });
+          }
+        }
+        this.checked.add(spot.id);
+        this.grappling = false;
+        this.testing = null;
+        this.target = null;
+        if (this.figGroup) this.figGroup.rotation.x = this.baseTiltX;
+        this.rig?.play('move');
+        return;
+      }
+      return;
+    }
+
+    // All spots checked → it moves on.
+    if (this.target === null) this.nextSpot(room);
+    if (this.target === null) {
+      if (this.checked.size >= this.spotCount) {
+        c.cue('collector-rattle', this.pos, '[it moves on to the next room]', { severity: 'info' });
+        this.done();
+      } else {
+        // Remaining spots are all trapped — nothing left to try.
+        this.done();
+      }
+      return;
+    }
+
+    // Walk to the next unchecked spot.
+    const tgt = this.target.exitPos;
+    const dx = tgt.x - this.pos.x, dz = tgt.z - this.pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.42) {
+      this.testing = this.target.spot;
+      this.testT = 2.6;
+      this.grappling = false;
+      this.rig?.play('idle');
+      c.cue('hide-creak', tgt, '[it tries the lid]', { severity: 'warn' });
+      c.sound.emit({ x: tgt.x, y: 1.1, z: tgt.z, intensity: 0.5, category: 'impact', caption: '[rattle]', source: this.id });
+      // Player already inside → grapple starts now.
+      if (p.hiddenSpot === this.testing) {
+        this.grappling = true;
+        this.heldShut = 0;
+        this.testing.trappedBy = 'inspector';
+        c.cue('hide-creak', tgt, '[it has the lid — HOLD IT SHUT]', { severity: 'danger' });
+      }
+      return;
+    }
+    const speed = this.tuning.speed;
+    this.pos.x += (dx / d) * speed * dt;
+    this.pos.z += (dz / d) * speed * dt;
+    if (this.figGroup) {
+      this.figGroup.position.copy(this.pos);
+      this.figGroup.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.play('move');
+    this.rig?.update(dt);
+    this.jingleT -= dt;
+    if (this.jingleT <= 0) {
+      this.jingleT = 1.15 + this.rng.float() * 0.5;
+      c.sound.emit({ x: this.pos.x, y: 1.0, z: this.pos.z, intensity: 0.3, category: 'entity-cue', caption: '', source: this.id });
+    }
+    // Shoulder-check: standing in its path is answered with a shove.
+    if (!p.dead && !p.hiddenSpot && v3dist(this.pos, p.pos) < 1.0 && this.shoveCd <= 0) {
+      this.shoveCd = 4;
+      c.damagePlayer(8, 'inspector', 'It will not be slowed — stay out of its way or stay out of sight.');
+      c.cue('luggage-thud', this.pos, '[it shoulders past]', { severity: 'warn' });
+    }
+  }
+
+  override threatPos(): Vec3 | null {
+    if (this.state !== 'engage') return null;
+    return this.testing ? this.testing.exitPos : (this.target ? this.target.exitPos : this.pos);
+  }
+
+  protected override onDone(): void {
+    if (this.testing && this.testing.trappedBy === 'inspector') this.testing.trappedBy = undefined;
+    if (this.figGroup) { this.ctx.removeEntityMesh(this.figGroup); this.figGroup = null; }
+    this.rig = null;
   }
 }

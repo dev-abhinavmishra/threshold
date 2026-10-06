@@ -32,7 +32,7 @@ import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner, Warden } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
-import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell } from '../entities/room';
+import { Witness, Whisper, Inkling, Redactor, EchoSkin, Margin, Stillframe, Hollow, Husk, HazardField, Lurker, Porter, Groundswell, Inspector } from '../entities/room';
 import { AudioManager, bindSoundBus } from '../audio/audio';
 import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
@@ -92,6 +92,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   porter: { sfx: 'hide-creak', text: '[drips of dust — something clings overhead]', sev: 'warn' },
   warden: { sfx: 'footstep', text: '[measured pacing — something walks its post]', sev: 'warn' },
   groundswell: { sfx: 'floor-creak', text: '[the boards groan — a swell in the floor]', sev: 'warn' },
+  inspector: { sfx: 'collector-rattle', text: '[a latch being tried — one after another]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -125,6 +126,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   porter: '[the dust pours — it is already above the door]',
   warden: '[the whistle again — it is still on station]',
   groundswell: '[the floor rolls again]',
+  inspector: '[the keys again — it is still checking]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -837,6 +839,8 @@ export class Game {
       case 'warden': this.spawnEntity(new Warden()); break;
       // The Groundswell: the room itself heaves — sidestep the travelling hump.
       case 'groundswell': this.spawnEntity(new Groundswell()); break;
+      // The Inspector: walks the room testing every hiding spot.
+      case 'inspector': this.spawnEntity(new Inspector()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;
@@ -1305,6 +1309,14 @@ export class Game {
         return;
       }
       case 'exitHide': {
+        if (this.player.hiddenSpot?.trappedBy === 'inspector') {
+          // Hold-the-lid grapple — presses feed the Inspector's struggle(),
+          // never exit; it clears trappedBy itself when the rattle resolves.
+          const insp = this.entities.find((e) => e instanceof Inspector);
+          if (insp) (insp as Inspector).struggle();
+          this.cue('stabilize-tick', null, '[hold it shut!]', 'danger');
+          return;
+        }
         if (this.player.hiddenSpot?.trappedBy === 'hollow') {
           // struggle minigame
           const hollow = this.entities.find((e) => e instanceof Hollow);

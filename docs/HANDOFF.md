@@ -743,6 +743,58 @@ line of sight mid-charge.*
   :4173 before expecting new code in e2e.
 - Gates: tsc, lint, 96 vitest (+3), 5-seed sim, props.spec 12/12, build.
 
+## Sprint 236 — the Inspector (anti-camping: it tests every hiding spot)
+
+- Room-bound checker on guest/records/gallery 16–82: a livery figure
+  (monkroose + brass keyring) walks spot→spot nearest-first at 1.7, tries
+  each lid for 2.6s. If yours is being tested the prompt becomes a
+  hold-the-lid grapple: 4 interact presses inside the window → it lets go
+  and moves on; none → it pulls you out for 30dmg. It NEVER re-checks a
+  spot — the meta is staying one spot behind it, or bailing out early.
+  Standing in its walking path earns an 8dmg shove (4s cd).
+- Mechanics: skips trappedBy spots (hollow lids stay hollow's); checked
+  set per room instance; grapple reuses the Hollow `trappedBy` channel —
+  Game's exitHide case routes presses to `inspector.struggle()` and never
+  calls exitHiding while trapped; the entity clears trappedBy itself on
+  resolve and can force `player.exitHiding(now)` directly (ctx.player is
+  the real controller).
+- Scheduling: ENTITY_TUNING slot ~7 (after lurker) still left seeds at
+  0–1 — upstream entities eat the biomes before its roll. Fix = a
+  spot-aware guarantee pin after the standard guarantees: first free
+  room 22–44 with ≥2 untrapped hidingSpots. Now 8/8 seeds roll it
+  ('threshold'→27 morgue, 's'→77 bullpen, 'gilt'→21+63).
+- Generator gate: `inspector` needs `room.hidingSpots.length >= 2`.
+- Tuning: speed 1.7, damage 30, cooldown 9, spawnChance 0.44, tier 2,
+  FORBIDDEN_IN_MILESTONE; LISTEN_CUES '[a latch being tried]' +
+  ROUSED_LINES '[the keys again]'.
+- E2E: 'the inspector tests every lid' — 's' @77 records-bullpen (2
+  runtime-untrapped lids): hold the nearest through real exitHide
+  presses → 'lets go', then the second lid unanswered → 'pulls you out'.
+  'gilt-spine-777' @21 is a BAD room: the hollow-trap pass marks its
+  second lid AT RUNTIME (generator sees it clean) — always pick rooms by
+  runtime `!s.trappedBy` count, not generator output.
+- Debugging traps learned (all in props.spec warden/inspector specs):
+  - `killPlayer` is NOT godMode-gated — a co-spawned bellman legitimately
+    executed the exposed test player mid-spec (silent assert failure —
+    no captions, no strikes). Bail on `g.player.dead` in long drives and
+    retire co-spawned entities (`ent.state='done'` is public) that are
+    under test elsewhere.
+  - The warden's blind charge has TWO legal endings: 'whistle dies'
+    (lostT>2.2) OR 'Warden strikes' — if the hiding spot sits within 1m
+    of your last-seen position it strikes through the volume. Assert
+    either; don't assume give-up.
+  - Spot `exitPos` is EXPOSED (outside the hide volume): teleporting the
+    player there while "hidden" lets room watchers/cameras see you —
+    drive hidden players to the volume CENTRE.
+  - '[the handle rattles — held]' is the ambient doorTry scare
+    (Game.ts ~4835), NOT grapple feedback; '[small scuffle]' is
+    critters; '[something crosses the far door]' is figure-pass. Grep
+    caption text before attributing it to an entity.
+  - `room.entryPos` does not exist — the entry door pos is `room.n`
+    (rooms use n/s compass fields).
+- Vitest fakePlayer grew `dead` + `exitHiding` (clears hiddenSpot).
+- Gates: tsc, lint, 99 vitest (+3), 5-seed sim, props.spec 12/12, build.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

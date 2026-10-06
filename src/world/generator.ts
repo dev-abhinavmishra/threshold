@@ -909,6 +909,8 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       if ((ENTITY_TIER[id] ?? 2) > tier) continue;
       if (id === 'whisper' && !room.darkRoom) continue;
       if (id === 'inkling' && !room.darkRoom) continue;
+      // The Inspector needs lids to test.
+      if (id === 'inspector' && room.hidingSpots.length < 2) continue;
       if (id === 'echoskin' && room.index < 63) continue;
       if (id === 'maelstrom' && room.index < 55) continue;
       // Witness needs apertures.
@@ -940,6 +942,20 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
   guarantee(rooms, encRng, 'reprise', 31, 38);
   guarantee(rooms, encRng, 'echoskin', 63, 68);
   guarantee(rooms, encRng, 'maelstrom', 55, 70);
+  // The Inspector teaches hiding discipline — pin one early-mid instance
+  // in a room that actually has lids to test.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'inspector'))) {
+    const room = rooms.find((r) => r.index >= 22 && r.index <= 44 && !r.authored && r.biome !== 'safe'
+      && r.hidingSpots.length >= 2 && r.scheduled.length === 0 && windowCompatible(rooms, r, 'inspector'));
+    if (room) room.scheduled.push({ entity: 'inspector', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
+  // The Bellman teaches gaze discipline — pin one mid-route too; it can
+  // kill, so the pinned room must offer survival like the scheduler gate.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'bellman'))) {
+    const room = rooms.find((r) => r.index >= 30 && r.index <= 52 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && hasSurvivalOption(rooms, r.index) && windowCompatible(rooms, r, 'bellman'));
+    if (room) room.scheduled.push({ entity: 'bellman', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
 
   // Density floor: no stretch of 11+ eligible rooms stays unscheduled — seed a
   // low-tier presence at each void's midpoint so valleys never become voids.
