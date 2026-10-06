@@ -37,6 +37,7 @@ interface ThresholdG {
   };
   input: { interactPressed: boolean };
   keys: Set<string>;
+  audio: { onCaption(fn: (c: { text: string; severity?: string }) => void): unknown };
   interaction: {
     focused?: { prompt: string; holdTime?: number } | null;
     interactables: { kind: string; id: string; pos: { x: number; y: number; z: number } }[];
@@ -64,9 +65,13 @@ interface ThresholdG {
 
 interface GRoom {
   index: number;
+  templateId?: string;
   origin: { x: number; z: number };
   yaw: number;
-  spec?: { props: { kind: string; x: number; z: number; y?: number }[] };
+  doors?: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number }[];
+  scheduled?: { entity: string }[];
+  darkRoom?: boolean;
+  spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
   hidingSpots: { id: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
   sockets?: { meta?: Record<string, unknown>; pos: { x: number; y: number; z: number } }[];
 }
@@ -422,5 +427,126 @@ test('document pickup reaches the codex', async ({ page }) => {
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.after).toBeGreaterThan(result.before ?? 0);
+  expect(errors).toEqual([]);
+});
+
+test('ear to the seam: listen reports what waits beyond a door', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+
+    const inRoom = (r: GRoom, x: number, z: number) => {
+      const dx = x - r.origin.x, dz = z - r.origin.z;
+      const c = Math.cos(r.yaw), s = Math.sin(r.yaw);
+      const lx = dx * c - dz * s, lz = dx * s + dz * c;
+      const sw = r.spec?.width ?? r.spec?.w, sd = r.spec?.depth ?? r.spec?.d;
+      return !!sw && !!sd && Math.abs(lx) <= sw / 2 + 0.5 && Math.abs(lz) <= sd / 2 + 0.5;
+    };
+    const standIn = (r: GRoom, x: number, z: number, rad = 1.1) => {
+      // Teleport to the r-side of point (x,z) — nudged toward room centre.
+      const dx = r.origin.x - x, dz = r.origin.z - z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(x + (dx / L) * rad, 0, z + (dz / L) * rad);
+      g.currentRoom = r.index;
+      for (let f = 0; f < 40; f++) g.frame();
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        g.player.pitch = Math.atan2(at.y + 0.4 - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+    const main = g.route.rooms.filter((r) => r.index >= 0).sort((a, b) => a.index - b.index);
+    const rec = g as unknown as Record<string, Set<string>>;
+    const HEARD = 'listenedDoors';
+
+    // Door between host room i and i+1 is `door-{i+1}-in`, owned by the next
+    // room — stand inside host near the shared wall and find its seam point.
+    const listenAt = (host: GRoom, next: GRoom): { prompts: string; heard: number; caps: string[] } | { none: true } => {
+      const door = (next.doors ?? []).find((d) => d.id === `door-${next.index}-in`);
+      if (!door) return { none: true };
+      const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+      const cand = [1, -1].map((s) => ({ x: door.pos.x + nx * 1.4 * s, z: door.pos.z + nz * 1.4 * s })).find((p) => inRoom(host, p.x, p.z));
+      if (!cand) return { none: true };
+      g.player.teleport(cand.x, 0, cand.z);
+      g.currentRoom = host.index;
+      for (let f = 0; f < 40; f++) g.frame();
+      g.keys.add('KeyC'); // crouched: the seam point registers
+      for (let f = 0; f < 10; f++) g.frame();
+      const seam = g.interaction.interactables.find((i) => i.kind === 'listen' && i.id === `listen-${door.id}`);
+      if (!seam) { g.keys.delete('KeyC'); return { none: true }; }
+      // At the seam — close enough that the edge point outranks the door.
+      standIn(host, seam.pos.x, seam.pos.z, 0.55);
+      const before = rec[HEARD].size;
+      const prompts = drive(seam.pos, /listen at door/i, () => rec[HEARD].size > before, 240);
+      g.keys.delete('KeyC');
+      return { prompts, heard: rec[HEARD].size, caps: [...caps] };
+    };
+
+    // 1) a door whose next room has a scheduled entity → the entity's tell.
+    const withEnt: { prompts: string; heard: number; caps: string[]; entity: string; room: number } | { none: true } = (() => {
+      for (let i = 0; i < main.length - 1; i++) {
+        const next = main[i + 1];
+        const sched = next.scheduled?.[0];
+        if (!sched) continue;
+        caps.length = 0;
+        const r = listenAt(main[i], next);
+        if ('none' in r) continue;
+        return { ...r, entity: sched.entity, room: next.index };
+      }
+      return { none: true };
+    })();
+
+    // 2) a door whose next room is quiet → '[nothing moves]' or dark/safe tell.
+    const quiet = (() => {
+      for (let i = 0; i < main.length - 1; i++) {
+        const next = main[i + 1];
+        if (next.scheduled?.length) continue;
+        caps.length = 0;
+        const r = listenAt(main[i], next);
+        if ('none' in r) continue;
+        const quietCap = r.caps.find((c) => /nothing moves|dark beyond|resting place|dead air|draught/i.test(c));
+        return { ...r, quietCap, room: next.index, dark: next.darkRoom, tpl: next.templateId };
+      }
+      return { none: true };
+    })();
+
+    return { withEnt, quiet, heardTotal: rec[HEARD].size };
+  });
+
+  const ent = result.withEnt;
+  expect('none' in ent ? 'none' : `entity @${ent.room} prompts[${ent.prompts}]`).not.toBe('none');
+  if (!('none' in ent)) {
+    expect(ent.heard, `prompts seen [${ent.prompts}]`).toBeGreaterThan(0);
+    const tell = ent.caps.find((c) => /crawl|breath|whisper|feet|page|footsteps|chord|steps|ticking|hum|rattle|machine|stiff|rustle|unwritten|grafting|hiss|gears|cloth|vast|counting|lullaby|moves beyond/i.test(c));
+    expect(tell ?? `no tell — caps[${ent.caps}] entity ${ent.entity}`).toBeTruthy();
+  }
+  const q = result.quiet;
+  expect('none' in q ? 'none' : `quiet @${q.room} prompts[${q.prompts}]`).not.toBe('none');
+  if (!('none' in q)) {
+    expect(q.quietCap ?? `no quiet caption — caps[${q.caps}] dark ${q.dark} tpl ${q.tpl}`).toBeTruthy();
+  }
   expect(errors).toEqual([]);
 });

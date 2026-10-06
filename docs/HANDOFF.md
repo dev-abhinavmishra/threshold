@@ -571,6 +571,21 @@ CURRENT STATE (as of sprint 223)
   -3%. Regression guard: rack = 35 LEDs / 7 material clones.
   80 unit tests.
 
+  Sprint 229 ear-to-the-seam: crouch at a closed door's edge and a
+  'Listen at Door N' point appears ~0.55m off the leaf (priority 4,
+  holdTime 1.1) — position-disambiguated so door-centre still reads
+  Open and crouch+quiet-open survives. Hold it: probes 1.7m through
+  the leaf (roomBeyondDoor → pointInRoom on spec.width/depth) and
+  reports honestly — scheduled entity → its own audio vocabulary
+  (LISTEN_CUES map at Game.ts:64), safe landing → [still air], dark
+  room → [stale air], deep door → cold draught, false door / dead
+  wall → [dead air — nothing behind it]. Journals into
+  `listenedDoors` Set. Registration lives in
+  addCrouchedDoorInteracts (player/interaction.ts) — extracted from
+  Game.ts so vitest can drive it directly; also covers peek now.
+  E2E harness note: the seam interactable only exists while
+  crouched — hold KeyC before looking it up. 81 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

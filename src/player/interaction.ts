@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
+  | 'door' | 'peek' | 'listen' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
@@ -174,5 +174,33 @@ export class InteractionSystem {
       return f;
     }
     return null;
+  }
+}
+
+/** Crouch-lean interacts on doors, re-registered per frame while crouched:
+ *  a keyhole-peek on locked leaves, and ear-to-the-seam on any closed leaf.
+ *  The seam sits one step off the leaf's edge — position-disambiguated so a
+ *  door's centre still reads Open (crouch+quiet-open survives) and its edge
+ *  reads Listen. False doors keep their seam: listening is the counter-tell. */
+export function addCrouchedDoorInteracts(sys: InteractionSystem): void {
+  for (const it of sys.interactables) {
+    const d = it.data as Door | undefined;
+    if (it.kind !== 'door' || !d) continue;
+    if (d.locked && !d.falseDoor) {
+      sys.add({
+        kind: 'peek', id: `peek-${it.id}`, pos: it.pos,
+        prompt: `Peek Door ${d.label}`, holdTime: 0.9,
+        data: d, enabled: true, priority: 4,
+      });
+    }
+    if (d.openT <= 0.4) {
+      const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+      sys.add({
+        kind: 'listen', id: `listen-${it.id}`,
+        pos: { x: it.pos.x + latX * 0.55, y: it.pos.y, z: it.pos.z + latZ * 0.55 },
+        prompt: `Listen at Door ${d.label}`, holdTime: 1.1,
+        data: d, enabled: true, priority: 4,
+      });
+    }
   }
 }

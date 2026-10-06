@@ -27,7 +27,7 @@ import { portLocalPos } from '../world/spec';
 import { MAT } from '../world/materials';
 import { HeldView } from './viewmodel';
 import { PlayerController, type MoveInput } from '../player/controller';
-import { InteractionSystem, type Interactable } from '../player/interaction';
+import { InteractionSystem, addCrouchedDoorInteracts, type Interactable } from '../player/interaction';
 import { Entity, type EntityCtx } from '../entities/base';
 import { CorridorRunner } from '../entities/corridor';
 import { tickFigure, statueFigure, tallFigure } from '../entities/figure';
@@ -58,6 +58,35 @@ export interface StartOptions {
 const KEY_DEFAULT = (s: SettingsData, name: string) => s.keybinds[name] ?? '';
 
 const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+
+/** Ear-to-the-seam tells: entity scheduled beyond the door → what leaks
+ *  through the crack. Each borrows that entity's own audio vocabulary. */
+const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' }> = {
+  sweep: { sfx: 'floor-creak', text: '[floor-creaks crawling — it is coming]', sev: 'danger' },
+  reprise: { sfx: 'floor-creak', text: '[floor-creaks crawling — again]', sev: 'danger' },
+  witness: { sfx: 'witness-drone', text: '[a held breath — it waits to be seen]', sev: 'warn' },
+  whisper: { sfx: 'whisper-voice', text: '[whispering — your name, or near enough]', sev: 'warn' },
+  inkling: { sfx: 'inkling-hiss', text: '[small feet — too many of them]', sev: 'warn' },
+  redactor: { sfx: 'redactor-sense', text: '[a page turning itself]', sev: 'warn' },
+  echoskin: { sfx: 'echoskin-steps', text: '[your own footsteps, answering late]', sev: 'danger' },
+  maelstrom: { sfx: 'steam-hiss', text: '[a held chord, straining]', sev: 'danger' },
+  pursuer: { sfx: 'husk-foot', text: '[heavy steps — pacing]', sev: 'danger' },
+  curator: { sfx: 'curator-search', text: '[ticking — it is hunting]', sev: 'danger' },
+  hollow: { sfx: 'hollow-wake', text: '[a hum, pitched wrong]', sev: 'danger' },
+  husk: { sfx: 'husk-stir', text: '[a low rattle — something remembers being people]', sev: 'warn' },
+  redline: { sfx: 'printer-jam', text: '[a machine trying to start]', sev: 'warn' },
+  stillframe: { sfx: 'stillframe-snap', text: '[the air held stiff]', sev: 'warn' },
+  returner: { sfx: 'echoskin-step', text: '[steps that know the way back]', sev: 'danger' },
+  margin: { sfx: 'margin-rustle', text: '[a rustle along the far wall]', sev: 'warn' },
+  editor: { sfx: 'editor-delete', text: '[paper being unwritten]', sev: 'warn' },
+  grafter: { sfx: 'grafter-grind', text: '[something grafting itself together]', sev: 'warn' },
+  hazard: { sfx: 'steam-hiss', text: '[a hiss, steady]', sev: 'warn' },
+  orrery: { sfx: 'orrery-wake', text: '[gears — a slow count]', sev: 'warn' },
+  lurker: { sfx: 'lurker-stalk', text: '[cloth dragged over boards]', sev: 'danger' },
+  behemoth: { sfx: 'behemoth-thud', text: '[something vast shifting]', sev: 'danger' },
+  collector: { sfx: 'collector-rattle', text: '[a rattle — counting]', sev: 'warn' },
+  singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
+};
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
 const wallWordTextures = new Map<string, THREE.Texture>();
@@ -452,6 +481,7 @@ export class Game {
     this.crackedVents.clear();
     this.litHearths.clear();
     this.answeredPhones.clear();
+    this.listenedDoors.clear();
     this.armedTraps.clear();
     this.snappedTraps.clear();
     this.priedTraps.clear();
@@ -770,6 +800,42 @@ export class Game {
     this.audio.play(name, at, caption, severity);
   }
 
+  /** Ear-to-the-seam: probe through the leaf for an honest report on the
+   *  room beyond — scheduled entities get their own audible tell, darkness
+   *  and safe landings read differently, and walls with nothing behind them
+   *  (false doors, dead plaster) report dead air. */
+  private listenedDoors = new Set<string>();
+  private listenThrough(door: Door): { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } {
+    if (door.openT > 0.4) return { sfx: 'floor-creak', text: '[the door hangs open — you can just look]' };
+    if (door.falseDoor) return { sfx: 'floor-creak', text: '[dead air — plaster, and nothing behind it]', sev: 'warn' };
+    if (door.deep) return { sfx: 'margin-edge', text: '[a draught, far too cold — a breath held]', sev: 'warn' };
+    const target = this.roomBeyondDoor(door);
+    if (!target) return { sfx: 'floor-creak', text: '[dead air — nothing behind it]' };
+    const sched = target.scheduled[0];
+    if (sched) return LISTEN_CUES[sched.entity] ?? { sfx: 'floor-creak', text: '[something moves beyond]', sev: 'warn' as const };
+    if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
+    if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
+    return { sfx: 'floor-creak', text: '[nothing moves]' };
+  }
+
+  /** The room on the far side of a door: probe both directions along the
+   *  leaf normal and take the room that contains the far point. */
+  private roomBeyondDoor(door: Door): RoomInstance | null {
+    const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+    const cur = this.activeRooms()[this.currentRoom];
+    for (const s of [1, -1]) {
+      const x = door.pos.x + nx * 1.7 * s, z = door.pos.z + nz * 1.7 * s;
+      for (const room of this.activeRooms()) {
+        if (room === cur || !room.spec) continue;
+        const dx = x - room.origin.x, dz = z - room.origin.z;
+        const c = Math.cos(room.yaw), sy = Math.sin(room.yaw);
+        const lx = dx * c - dz * sy, lz = dx * sy + dz * c;
+        if (Math.abs(lx) <= room.spec.width / 2 + 0.8 && Math.abs(lz) <= room.spec.depth / 2 + 0.8) return room;
+      }
+    }
+    return null;
+  }
+
   private flickerRoom(roomIndex: number, mode: 'sweep' | 'reprise' | 'dim' | 'break'): void {
     const built = this.streamer.get(roomIndex);
     if (!built) return;
@@ -896,18 +962,9 @@ export class Game {
     }
     // Entity-registered points (the Collector's toll) survive rebuilds.
     for (const it of this.dynamicInteractables) this.interaction.add(it);
-    // Crouched at a locked door: a keyhole-peek target outranks the lock.
-    if (this.player.crouching) {
-      for (const it of this.interaction.interactables) {
-        const d = it.data as Door | undefined;
-        if (it.kind !== 'door' || !d?.locked || d.falseDoor) continue;
-        this.interaction.add({
-          kind: 'peek', id: `peek-${it.id}`, pos: it.pos,
-          prompt: `Peek Door ${d.label}`, holdTime: 0.9,
-          data: d, enabled: true, priority: 4,
-        });
-      }
-    }
+    // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
+    // beside any closed one (see addCrouchedDoorInteracts).
+    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction);
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -1160,6 +1217,13 @@ export class Game {
       case 'peek': {
         // Tap only rattles — the peek itself fires on hold completion.
         this.cue('door-locked', it.pos, '[locked — hold to peek]', 'warn');
+        return;
+      }
+      case 'listen': {
+        const door = it.data as Door;
+        this.listenedDoors.add(door.id);
+        const c = this.listenThrough(door);
+        this.cue(c.sfx, it.pos, c.text, c.sev);
         return;
       }
       case 'door': {

@@ -444,3 +444,33 @@ describe('underscript weathering (sprint 226)', () => {
     expect(dangled, 'no dangling fixtures found across 30 under-rooms').toBeGreaterThan(0);
   });
 });
+
+describe('door listen seams (sprint 229)', () => {
+  it('every closed door gains an ear-to-the-seam point while crouched', async () => {
+    const { InteractionSystem, addCrouchedDoorInteracts } = await import('../src/player/interaction');
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const sys = new InteractionSystem();
+    let closed = 0, listens = 0, locked = 0, peeks = 0;
+    for (const r of route.rooms.filter((x) => x.index >= 0).slice(0, 40)) {
+      sys.clear();
+      sys.addRoomInteractables(r);
+      addCrouchedDoorInteracts(sys);
+      for (const d of r.doors) {
+        if (d.openT > 0.4) continue;
+        closed++;
+        const li = sys.interactables.find((i) => i.kind === 'listen' && i.data === d);
+        if (!li) continue;
+        listens++;
+        expect(li.holdTime).toBeGreaterThanOrEqual(0.9);
+        expect(Math.hypot(li.pos.x - d.pos.x, li.pos.z - d.pos.z)).toBeGreaterThan(0.3);
+        if (d.locked && !d.falseDoor) {
+          locked++;
+          if (sys.interactables.some((i) => i.kind === 'peek' && i.data === d)) peeks++;
+        }
+      }
+    }
+    expect(closed).toBeGreaterThan(30);
+    expect(listens).toBe(closed); // false doors keep theirs — listening is the counter-tell
+    expect(peeks).toBe(locked);   // keyhole-peek still covers every locked leaf
+  });
+});
