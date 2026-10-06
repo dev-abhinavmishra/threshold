@@ -1319,3 +1319,33 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Brace UX race watch; milestone-set hearing remains a design call.
   - e2e file is 25 specs / 2.1min — splitting props.spec by theme
     (books / doors / entities) would halve per-spec feedback time.
+
+## Sprint 251 — the under hears you + pull the alarm
+
+- `fireAlarm` props (u-stair-landings, 13/seed) are now live: crouch-free
+  `Pull the alarm` point (0.7s hold, priority 2) — a pulled bell emits a
+  1.0 'machine' crash + `[the bell screams in the stairwell]`. The under's
+  own lure: loud, fixed, free, and it rings exactly where you stand.
+- The under-cast now hears loud noise, scoped to where the fiction fits:
+  Grafter drifts `target` to an in-room crash it doesn't owe to a seen
+  body (`[the rubble drags toward the sound]`, 6s repeat-gate); a real
+  lure. Stillframe strikes a crash in player earshot while its shutter
+  is open — `[the shutter catches the noise]`, provoked like groundswell,
+  "a crash IS movement". Margin skipped (its wrong-edge rustle is
+  already sound-themed).
+- Traps: e2e interactable references go STALE — `rebuildInteractables`
+  runs every frame and replaces objects; check liveness by re-querying
+  `interactables` (kind+enabled), never by `it.enabled` on a held ref.
+  Stillframe's `inputHeld` path strikes on ANY held key in the window —
+  testing the noise path needs a held-key-free emitter (tossPebble works:
+  0.45 'distraction', above the 0.42 in-room floor).
+- e2e "the under hears you": bell pull → caption + point gone; bus-level
+  crash in a grafter's room → target lands on the point + drag caption;
+  pebble in a stillframe window → snap caption + real damage. 26/26.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - props.spec is 26 specs / 2.2min — splitting by theme (books / doors /
+    entities) would halve per-spec feedback time.
+  - Under-cast depth: the Returner (u-exit guard) is the only scheduled
+    under entity with no noise verb — alarm pulls could wake it.

@@ -10,6 +10,8 @@ import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import type { SoundEvent } from '../engine/events';
 import type { Vec3 } from '../engine/math';
 
 /* ============================ PURSUER ============================ */
@@ -327,6 +329,8 @@ export class Grafter extends Entity {
   private grindT = 0;
   private roamT = 0;
   private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private noiseDriftCd = 0;
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
 
@@ -363,7 +367,28 @@ export class Grafter extends Entity {
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('grafter-wake', this.pos, '[the rubble folds into a shape]', { severity: 'danger' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** Loose masonry drags toward a crash — a pulled bell or a slammed
+   *  door bends its amble to the sound point, so a lure genuinely
+   *  walks it across the room. A real body in sight outranks noise. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage') return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    if (this.roomOf(v3(e.x, 0, e.z)) !== this.spawnRoom) return;
+    const p = c.player;
+    const d = v3dist(this.pos, p.pos);
+    if (d < this.tuning.seeRange && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom) return;
+    this.target = v3(e.x, 0, e.z);
+    this.roamT = 0;
+    if (this.noiseDriftCd <= c.now) {
+      this.noiseDriftCd = c.now + 7;
+      c.cue('grafter-grind', this.pos, '[the rubble drags toward the sound]', { severity: 'warn' });
+    }
   }
 
   private pickRoam(): void {
@@ -433,5 +458,6 @@ export class Grafter extends Entity {
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }
 }

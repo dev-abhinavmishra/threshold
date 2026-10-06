@@ -1138,7 +1138,7 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0, al = 0;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
@@ -1150,6 +1150,7 @@ export class Game {
           const isWin = p.kind === 'window';
           const isCool = p.kind === 'waterCooler';
           const isSeat = p.kind === 'bench' || p.kind === 'plasticChair' || p.kind === 'armchair' || p.kind === 'diningChair';
+          const isAlarm = p.kind === 'fireAlarm';
           const wx = pr.origin.x + p.x * c + p.z * s;
           const wz = pr.origin.z - p.x * s + p.z * c;
           // ticking ironwork: proximity tells that answer the house's pulse
@@ -1178,9 +1179,9 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat) ord[p.kind] = n + 1;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
           if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
             this.interaction.add({
@@ -1231,6 +1232,12 @@ export class Game {
                 prompt: 'Pry the trap', holdTime: 0.7, enabled: true, priority: 2,
               });
             }
+          } else if (isAlarm && !this.pulledAlarms.has(key)) {
+            this.interaction.add({
+              kind: 'alarm', id: `alarm-${key}`,
+              pos: { x: wx, y: 1.2, z: wz },
+              prompt: 'Pull the alarm', holdTime: 0.7, enabled: true, priority: 2,
+            });
           } else if (isWash && !this.ranWashers.has(key)) {
             this.interaction.add({
               kind: 'washer', id: `wash-${key}`,
@@ -1813,6 +1820,17 @@ export class Game {
         const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
         this.audio.play('trap-click', at, '[the spring slackens]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'alarm': {
+        // A pulled bell is the under's own lure — loud, fixed, free, and
+        // it rings exactly where you stand. The crew's bells were wired
+        // for someone else's safety; now they only announce you.
+        it.enabled = false;
+        const key = it.id.replace(/^alarm-/, '');
+        this.pulledAlarms.add(key);
+        this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 1.0, category: 'machine', caption: '[the alarm screams]' });
+        this.cue('door-slam', it.pos, '[the bell screams in the stairwell]', 'warn');
         return;
       }
       case 'washer': {
@@ -3581,6 +3599,7 @@ export class Game {
   private warnedChandeliers = new Set<string>();
   private pendingChanDrop: { key: string; x: number; z: number; t: number } | null = null;
   private chanHooked = false;
+  private pulledAlarms = new Set<string>();
   /* — the house watches: armed cameras pan to track you and, once
      their glass settles on you for a breath, they report you — */
   private camObjs = new Map<string, { o: THREE.Object3D; i: number; expo: number; fired: boolean }>();

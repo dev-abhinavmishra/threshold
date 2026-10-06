@@ -101,7 +101,7 @@ test('ambient prop interacts: tv, clock, hearth, window, cooler, typewriter, pri
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
@@ -187,7 +187,7 @@ test('washer runs a cycle, then pays out on empty', async ({ page }) => {
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
@@ -258,7 +258,7 @@ test('armed floor trap can be pried before it snaps', async ({ page }) => {
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
@@ -317,7 +317,7 @@ test('hiding: enter + leave a safe spot; a hollow spot grips and spawns', async 
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
@@ -395,7 +395,7 @@ test('document pickup reaches the codex', async ({ page }) => {
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
@@ -467,7 +467,7 @@ test('ear to the seam: listen reports what waits beyond a door', async ({ page }
     };
     const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
       const seen: string[] = [];
-      for (let f = 0; f < cap && !done(); f++) {
+            for (let f = 0; f < cap && !done(); f++) {
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         g.player.pitch = Math.atan2(at.y + 0.4 - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
@@ -2025,5 +2025,103 @@ test("the work order files open tickets — the under's own paper answers cargo"
   expect(r.tickets).toMatch(/open tickets: Door \d{3} —/);
   // The last under-room's stamp always reads Door 120.
   expect(r.egress).toMatch(/egress stamp is filed at Door 120/);
+  expect(errors).toEqual([]);
+});
+
+test("the under hears you — a pulled bell drifts the grafter, a crash catches the stillframe", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': fireAlarm @ u-7/10/13/…, stillframe @ u-7, grafter @ u-19/42/…
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      entities: { id: string; threatPos(): { x: number; z: number }; target?: { x: number; z: number }; state: string }[];
+      spawnScheduled(): void;
+    };
+
+    // --- 1. the bell itself ---
+    ga.enterUnderscript();
+    const bellRoom = g.route.underRooms.find((r) => r.spec?.props?.some((p) => p.kind === 'fireAlarm'));
+    if (!bellRoom) return { stage: 'no-bell' } as const;
+    g.player.teleport(bellRoom.origin.x, 0, bellRoom.origin.z);
+    ga.currentRoom = bellRoom.index;
+    g.godMode = true;
+    for (let f = 0; f < 30; f++) g.frame();
+    const bell = g.interaction.interactables.find((i) => i.kind === 'alarm');
+    if (!bell) return { stage: 'no-bell-point', kinds: g.interaction.interactables.map((i) => i.kind) } as const;
+        for (let f = 0; f < 120 && bell.enabled; f++) {
+      const ax = bell.pos.x - g.player.pos.x, az = bell.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(bell.pos.x - (ax / al) * 1.1, 0, bell.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(bell.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === bell.id) g.keys.add('KeyE');
+      if (!g.interaction.interactables.some((i) => i.kind === 'alarm' && i.enabled)) break;
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    const bellRung = !g.interaction.interactables.some((i) => i.kind === 'alarm' && i.enabled)
+      && caps.some((c) => /alarm screams|bell screams/.test(c));
+
+    // --- 2. the grafter drifts to a crash ---
+    const gRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    if (!gRoom) return { stage: 'no-grafter' } as const;
+    g.player.teleport(gRoom.origin.x, 0, gRoom.origin.z);
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const grafter = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done');
+    if (!grafter) return { stage: 'no-grafter-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    // stand just outside — a crash INSIDE its room is noise, not a body
+    const emitPt = { x: gRoom.origin.x + 1.5, z: gRoom.origin.z };
+    const w = (gRoom.spec as { width?: number } | undefined)?.width ?? 8;
+    g.player.teleport(gRoom.origin.x - w / 2 - 1.5, 0, gRoom.origin.z);
+    (g as unknown as { sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void } })
+      .sound.emit({ x: emitPt.x, y: 1, z: emitPt.z, intensity: 0.9, category: 'machine', caption: '[a machine knocks]' });
+    // its target must land on the crash point — then it walks there
+    let driftToNoise = false;
+    for (let f = 0; f < 160 && !driftToNoise; f++) {
+      g.frame();
+      const t = (grafter as { target?: { x: number; z: number } }).target;
+      if (t && Math.hypot(t.x - emitPt.x, t.z - emitPt.z) < 1.5) driftToNoise = true;
+    }
+    const dragCue = caps.some((c) => /drags toward the sound/.test(c));
+
+    // --- 3. the stillframe photographs a crash ---
+    // pick a room that ISN'T the bell room — its stillframe already ran
+    const sRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'stillframe') && r.index !== bellRoom.index);
+    if (!sRoom) return { stage: 'no-still' } as const;
+    g.player.teleport(sRoom.origin.x, 0, sRoom.origin.z);
+    ga.currentRoom = sRoom.index;
+    g.godMode = false; // the strike must land to be observed
+    for (let f = 0; f < 30; f++) g.frame();
+    const still = ga.entities.find((e) => e.id === 'stillframe' && e.state !== 'done');
+    if (!still) return { stage: 'no-still-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    const hpBefore = (g.player as { health?: number }).health ?? -1;
+    // a tossed pebble in the open shutter — a crash is motion enough. NO held
+    // key: inputHeld is the stillframe's own strike path and would land first.
+    g.player.yaw = 0;
+    (g as unknown as { tossPebble(): void }).tossPebble();
+    for (let f = 0; f < 120; f++) g.frame();
+    const hpAfter = (g.player as { health?: number }).health ?? -1;
+    const snapCue = caps.some((c) => /shutter catches the noise/.test(c));
+
+    return { stage: 'done', bellRung, bellPos: bell.pos, driftToNoise, dragCue, snapCue, hpBefore, hpAfter, caps: caps.slice(-12) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { bellRung: boolean; seen?: string[]; driftToNoise: boolean; dragCue: boolean; snapCue: boolean; hpBefore: number; hpAfter: number; caps: string[] };
+  expect(r.bellRung, `bell never pulled — seen: ${(r.seen ?? []).join(' · ')}`).toBe(true);
+  expect(r.dragCue, `no drift cue — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.driftToNoise).toBe(true);
+  expect(r.snapCue).toBe(true);
+  expect(r.hpAfter).toBeLessThan(r.hpBefore);
   expect(errors).toEqual([]);
 });

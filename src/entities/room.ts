@@ -494,6 +494,8 @@ export class Redactor extends Entity {
 export class Stillframe extends Entity {
   private mesh: THREE.Mesh | null = null;
   private window: { start: number; end: number } | null = null;
+  private noiseUnsub: (() => void) | null = null;
+  private provoked = false;
   grace = 1.2; // accessibility can extend
 
   constructor() { super('stillframe', ENTITY_TUNING.stillframe); }
@@ -510,7 +512,24 @@ export class Stillframe extends Entity {
     this.mesh = new THREE.Mesh(geo, MAT.paperOld());
     this.mesh.position.set(0, 1.4, 0);
     c.addEntityMesh(this.mesh);
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** It photographs movement — and a crash IS movement. A loud noise in
+   *  its earshot while the shutter is open exposes the film: slammed
+   *  doors, sprinted steps, your own ringing lure all count the same. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    const w = this.window;
+    if (this.state !== 'engage' || !w || this.provoked) return;
+    if (c.now <= w.start || c.now > w.end) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, c.player.pos.x, c.player.pos.z)) return;
+    this.provoked = true;
+    c.cue('stillframe-snap', null, '[the shutter catches the noise]', { severity: 'danger' });
+    c.damagePlayer(this.tuning.damage, 'stillframe', 'Stillframe photographs movement — a crash in the open shutter is motion enough.');
+    this.done();
   }
 
   /** Called by input layer each frame with "any input held". */
@@ -537,6 +556,7 @@ export class Stillframe extends Entity {
 
   protected override onDone(): void {
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }
 }
 
