@@ -1248,17 +1248,31 @@ export class Game {
     // Beside a hauler's sledge: 'Pick the sledge' — pilfer the moving load.
     for (const ent of this.entities) {
       if (ent.id !== 'hauler' || ent.state === 'done') continue;
-      const h = ent as unknown as { sledgePos: Vec3; stock: number; roomIdx: number };
-      if (h.stock <= 0 || !this.streamer.builtIndices.includes(h.roomIdx)) continue;
+      const h = ent as unknown as { sledgePos: Vec3; lampPos: Vec3; lampLit: boolean; stock: number; roomIdx: number };
+      if (!this.streamer.builtIndices.includes(h.roomIdx)) continue;
       const dx = h.sledgePos.x - this.player.pos.x, dz = h.sledgePos.z - this.player.pos.z;
-      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
-      this.interaction.add({
-        kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
-        pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
-        prompt: 'Pick the sledge',
-        holdTime: 0.9, enabled: true, priority: 3,
-        data: ent as unknown as Record<string, unknown>,
-      });
+      if (h.stock > 0 && dx * dx + dz * dz <= 1.9 * 1.9) {
+        this.interaction.add({
+          kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
+          pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
+          prompt: 'Pick the sledge',
+          holdTime: 0.9, enabled: true, priority: 3,
+          data: ent as unknown as Record<string, unknown>,
+        });
+      }
+      // its work-lamp is a separate lift — the drag goes dark for it
+      if (h.lampLit) {
+        const lx = h.lampPos.x - this.player.pos.x, lz = h.lampPos.z - this.player.pos.z;
+        if (lx * lx + lz * lz <= 1.9 * 1.9) {
+          this.interaction.add({
+            kind: 'strip', id: `strip-${this.space}:${h.roomIdx}`,
+            pos: { x: h.lampPos.x, y: 0.75, z: h.lampPos.z },
+            prompt: 'Strip the lamp',
+            holdTime: 1.1, enabled: true, priority: 3,
+            data: ent as unknown as Record<string, unknown>,
+          });
+        }
+      }
     }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
@@ -2254,6 +2268,19 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
+        return;
+      }
+      case 'strip': {
+        const h = it.data as unknown as { lampLit: boolean; stripLamp(): void };
+        if (!h.lampLit) { it.enabled = false; return; }
+        h.stripLamp();
+        this.unpaidTheft += 1; // off the sledge, into the tally
+        it.enabled = false;
+        // the lamp IS the loot — a hooded hand lamp at half battery, or a
+        // top-up for the one you carry (count is charge).
+        this.giveItem('handLamp', 55);
+        this.cue('pickup', it.pos, '[the work-lamp comes free — hooded, half a battery]');
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         return;
       }
       case 'forge': {

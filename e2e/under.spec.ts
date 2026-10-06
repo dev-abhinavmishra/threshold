@@ -414,15 +414,39 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
     }
     ga.keys.delete('KeyE');
     for (let f = 0; f < 10; f++) g.frame();
+    // then the lamp: aim at the tail light, hold E — the drag goes dark
+    const hl = hauler as unknown as { lampPos: { x: number; z: number }; lampLit: boolean };
+    const hadCharge = (g as unknown as { inventory: { id: string; count: number }[] })
+      .inventory.find((i) => i.id === 'handLamp')?.count ?? 0;
+    let stripPrompt = '';
+    for (let f = 0; f < 45 && hl.lampLit; f++) {
+      g.player.teleport(hl.lampPos.x, 0, hl.lampPos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.75 - eyeY, 0.5);
+      g.player.yaw = Math.atan2(hl.lampPos.x - g.player.pos.x,
+        hl.lampPos.z - g.player.pos.z) || 0;
+      g.frame();
+      stripPrompt = g.interaction.focused?.prompt ?? stripPrompt;
+      if (f === 8) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 10; f++) g.frame();
+    const lampAfter = (g as unknown as { inventory: { id: string; count: number }[] })
+      .inventory.find((i) => i.id === 'handLamp');
     return { stage: 'done', prompt, spent: hauler.stock < st0,
       paid: ga.marginalia > m0 || caps.some((c) => /off the sledge/.test(c)),
-      caps: caps.filter((c) => /sledge|scrape|pilfer/.test(c)) } as const;
+      stripPrompt, lampOut: !hl.lampLit,
+      lampPocketed: (lampAfter?.count ?? 0) - hadCharge >= 55,
+      caps: caps.filter((c) => /sledge|scrape|pilfer|lamp/.test(c)) } as const;
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.prompt, JSON.stringify(result)).toMatch(/Pick the sledge/);
   expect(result.spent, JSON.stringify(result)).toBe(true);
   expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.stripPrompt, JSON.stringify(result)).toMatch(/Strip the lamp/);
+  expect(result.lampOut, JSON.stringify(result)).toBe(true);
+  expect(result.lampPocketed, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
 

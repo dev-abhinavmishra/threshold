@@ -1536,6 +1536,25 @@ describe('the Hauler (sprint 271)', () => {
     expect(hits.length, 'one ram per rouse').toBe(1);
     h.dispose();
   });
+
+  it('the work-lamp rides the tail — stripping it darks the drag for good', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h = new Hauler();
+    h.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; h.update(0.05); }
+    // the lamp hangs off the sledge's tail, ~0.62m behind the drag point
+    const s1 = (h as unknown as { sledgePos: { x: number; z: number } }).sledgePos;
+    const l1 = (h as unknown as { lampPos: { x: number; z: number } }).lampPos;
+    expect(Math.hypot(l1.x - s1.x, l1.z - s1.z)).toBeGreaterThan(0.4);
+    expect(Math.hypot(l1.x - s1.x, l1.z - s1.z)).toBeLessThan(0.9);
+    expect(h.lampLit).toBe(true);
+    h.stripLamp();
+    expect(h.lampLit).toBe(false);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((c) => c.includes('goes dark'))).toBe(true);
+    h.dispose();
+  });
 });
 
 describe('the Laundress (sprint 272)', () => {

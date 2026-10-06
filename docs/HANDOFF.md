@@ -1969,3 +1969,44 @@ his weapon is that the building knows your face.
   `built.lights`; no lights → mul stays 1 → device glow undimmable. Power
   specs must pick rooms with `built.lights.length > 0`. And blink/screen
   anims oscillate per-frame — sample emissive MAX over frames, not a point.
+
+## Sprint 279 — the sledge lamp (light you can lift off the haul)
+
+**What:** the hauler's drag now carries a hooded work-lamp on its tail —
+a real PointLight pool (amber, r≈5.5, flickers at ~7Hz) swinging with
+the haul through the under's dark rooms. It's a second lift beside
+'Pick the sledge': `'Strip the lamp'` (1.1s hold, registered on the
+lamp's own trailing pos at 1.9m, priority 3) frees it as
+`giveItem('handLamp', 55)` — a hooded hand lamp at half battery for
+new carriers, a +55 top-up for owners (count IS charge). The drag goes
+dark permanently: `stripLamp()` kills the light and swaps the bulb to
+screenDark. Pilfer-level quiet (0.35 emit), `unpaidTheft += 1` — the
+Auditor counts the lamp too.
+
+**The fork:** leave it = a free moving reveal while the team works your
+flooded hall (its pool shows wires, arcs, the laundress's basin); strip
+it = pocket light, the room loses the beacon for good. Same counterweight
+as the sledge itself — loud noise near it still rams you.
+
+**Traps:**
+- **The two sledge verbs need separate anchor points** — 'pick' on
+  sledgePos (y 0.4) vs 'strip' on lampPos (y 0.75), ~0.62m apart; the
+  same 1.9m gate admits both but the aim separates them in focus
+  scoring. Priority stays equal (3) — let proximity decide, don't
+  outrank the cheaper verb.
+- **`lampPos` trails the drag's heading** — sledge rotation is
+  atan2(heading) so the tail lamp's world pos is sledgePos − heading·0.62,
+  computed per frame like sledgePos itself.
+- **Vec3 is a plain object** — `v3set`/direct fields, not `.set()`.
+- **Shared cached materials** — never mutate MAT.amber() to dim a bulb
+  (every amber fixture in the scene dims); swap `bulb.material` to
+  MAT.screenDark() instead.
+- e2e: the haul leg now drives BOTH lifts — pick (stock--) then strip
+  (lampLit→false, +55 handLamp charge delta). Aim at lampPos directly:
+  standing on the point with atan2 → yaw 0, pitch at the 0.75 point.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - A dark sledge's return trip could 're-light' if you strip near a
+    lit room — the team scavenges a bulb? (economy of darkness)
+  - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
