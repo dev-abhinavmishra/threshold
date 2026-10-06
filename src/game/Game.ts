@@ -1517,14 +1517,20 @@ export class Game {
         if (sock.meta.sold) return;
         const item = sock.meta.brokerItem as ItemId;
         const price = (sock.meta.brokerPrice as number) ?? 20;
-        if (this.marginalia >= price) {
-          this.marginalia -= price;
+        // the clerks' score is on your hands — an unpaid tally trades at
+        // the marked rate, the same reading the Auditor's desk makes
+        const marked = this.unpaidTheft > 0;
+        const effPrice = marked ? price + Math.min(4 + this.unpaidTheft * 2, 14) : price;
+        if (this.marginalia >= effPrice) {
+          this.marginalia -= effPrice;
           sock.meta.sold = true;
           it.enabled = false;
           this.giveItem(item, 1);
-          this.cue('purchase', it.pos, `[traded — ${price} marginalia]`, 'info');
+          this.cue('purchase', it.pos,
+            marked ? `[traded at the marked rate — ${effPrice} marginalia]` : `[traded — ${effPrice} marginalia]`, 'info');
         } else {
-          this.cue('door-locked', it.pos, `[${price} marginalia required]`, 'warn');
+          this.cue('door-locked', it.pos,
+            marked ? `[the marked rate is ${effPrice} marginalia — settle the tally or pay the crew]` : `[${effPrice} marginalia required]`, 'warn');
         }
         return;
       }

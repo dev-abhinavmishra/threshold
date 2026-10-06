@@ -490,12 +490,29 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
     g.marginalia = price;
     standAt(lobby, sock.pos);
     drive(sock.pos, /trade wares|inspect|take/i, () => sock.meta.sold === true, 40);
+
+    // The marked rate: the crew reads the tally on your hands — the second
+    // pedestal charges price + the clerks' marked fee while unpaidTheft > 0.
+    const sock2 = lobby.sockets.find((s) => s.meta?.broker !== undefined
+      && s.meta?.brokerItem !== undefined && s !== sock);
+    let markedPaid = false, markedCap = '', expected2 = 0;
+    if (sock2) {
+      const price2 = sock2.meta.brokerPrice as number;
+      (g as unknown as { unpaidTheft: number }).unpaidTheft = 3;
+      expected2 = price2 + Math.min(4 + 3 * 2, 14); // +10 on the marked rate
+      g.marginalia = expected2;
+      standAt(lobby, sock2.pos);
+      drive(sock2.pos, /trade wares|inspect|take/i, () => sock2.meta.sold === true, 40);
+      markedPaid = sock2.meta.sold === true && g.marginalia === 0;
+      markedCap = caps.find((t) => /marked rate/.test(t)) ?? '';
+    }
     return {
       stage: 'done', refused, refuseCap, price, item,
       sold: sock.meta.sold === true,
-      paid: g.marginalia === 0,
+      paid: g.marginalia === 0 || markedPaid,
       hasItem: g.inventory.some((s) => s.id === item),
       traded: caps.some((t) => /traded/.test(t)),
+      twoPedestals: !!sock2, markedPaid, markedCap, expected2,
     };
   });
 
@@ -506,6 +523,9 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(result.paid).toBe(true);
   expect(result.hasItem).toBe(true);
   expect(result.traded).toBe(true);
+  expect(result.twoPedestals, JSON.stringify(result)).toBe(true);
+  expect(result.markedPaid, JSON.stringify(result)).toBe(true);
+  expect(result.markedCap).toMatch(/marked rate/);
   expect(errors).toEqual([]);
 });
 

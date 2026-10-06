@@ -2081,3 +2081,34 @@ NEXT SPRINT IDEAS (pick the biggest first)
     split under-traversal vs the under-economy legs if it keeps growing.
   - The scavenged bulb could be *plantable*: donate a bulb to a dark
     sledge, re-light it your way? (probably gimmick)
+
+## Sprint 282 — the marked rate (the tally reaches the counter)
+The under's clerks' score now prices the one staffed trade: carrying
+`unpaidTheft > 0` to a Broker pedestal charges the same reading the
+Auditor's desk makes — `effPrice = price + min(4 + owed*2, 14)`. Cues:
+`[traded at the marked rate — N marginalia]` on pay, `[the marked rate
+is N marginalia — settle the tally or pay the crew]` on short. Theft now
+has an invisible surcharge running under the whole floor; the Auditor's
+desk is the only way back to clean prices. Custodian/main-route shops
+are untouched (different ledger — `unpaidHeld` is the Detective's book;
+vends are imprints-only so the marked rate has no other recipient).
+Traps:
+- **'shop' kind covers broker AND custodian prompts** but the custodian
+  never reaches the case — `CustodianEncounter.onInteract` eats it first;
+  the case's `meta.broker === undefined` early-return keeps it broker-only.
+- e2e: u-lobby carries TWO broker pedestals — buy clean, then set
+  `(g as { unpaidTheft }).unpaidTheft = 3` (private is runtime-writable)
+  and buy the second at the marked rate; assert the exact fee
+  `price + min(4+owed*2, 14)` not just 'more'.
+- The marked rate only applies where a CREW MEMBER reads you — cages are
+  unattended claims and stay flat-priced; they accrue the mark, they
+  don't price it.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - `under.spec.ts` (873 lines) is now the biggest spec — could split
+    traversal vs under-economy legs.
+  - The Detective has a warrant escalation (phones ahead); the Auditor's
+    equivalent could be a wanted poster — a marked face the under cast
+    reads? (design call — how does a clerk share your face?)
