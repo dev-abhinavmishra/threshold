@@ -318,6 +318,14 @@ interface GRoom {
   entryPos: { x: number; y: number; z: number };
   sockets: GSock[]; doors: GDoor[];
 }
+interface GMilestone {
+  clamps: Set<string>;
+  phase?: string;
+  relaysTaken?: number;
+  routingStep?: number;
+  routingSequence?: number[];
+  boardShowing?: number;
+}
 interface ThresholdG {
   renderFrame(): void;
   clock: { tick(): boolean; dt: number; time: number };
@@ -326,13 +334,15 @@ interface ThresholdG {
   currentRoom: number;
   space: string;
   imprints: number;
+  marginalia: number;
   inventory: { id: string; count: number }[];
-  milestones: { get(i: number): { clamps: Set<string> } | undefined };
+  milestones: { get(i: number): GMilestone | undefined };
   giveItem(id: string, n?: number): void;
-  stats: { underscriptDeepest: number; underscriptCompleted: boolean };
+  stats: { underscriptDeepest: number; underscriptCompleted: boolean; victory: boolean };
   input: { interactPressed: boolean };
   keys: Set<string>;
   interaction: { focused?: { prompt: string; holdTime?: number } | null };
+  audio: { onCaption(fn: (c: { text: string; severity?: string }) => void): unknown };
   player: {
     pos: { x: number; y: number; z: number };
     yaw: number; pitch: number; eyeHeight: number;
@@ -568,5 +578,320 @@ test('underscript gate: seal clamps + resonance key descend, exit returns with p
   expect(result.space).toBe('main');
   expect(result.completed).toBe(true);
   expect(result.palimpsest).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('custodian shop: short imprints refuses, paid pedestal sells and stocks out', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    const room = g.route.rooms.find((r) => r.templateId === 'ms-custodian');
+    if (!room) return { stage: 'no-custodian' } as const;
+    g.currentRoom = room.index;
+    const stocked = room.sockets.filter((s) => s.meta?.shop !== undefined && s.meta?.shopItem !== undefined);
+    if (!stocked.length) return { stage: 'no-stock' } as const;
+    const sock = stocked[0];
+    const price = sock.meta.price as number;
+    const item = sock.meta.shopItem as string;
+
+    // Poor: refuse — keep the money, pedestal stays stocked.
+    g.imprints = price - 5;
+    standAt(room, sock.pos);
+    drive(sock.pos, /inspect wares|take|trade/i, () => sock.meta.sold === true, 40);
+    const refused = sock.meta.sold !== true && g.imprints === price - 5;
+    const refuseCap = caps.find((t) => /imprints required/.test(t));
+
+    // Pay: pedestal sells (CustodianEncounter marks meta.sold, not taken),
+    // item lands in the satchel, 'purchased' caption fires.
+    g.imprints = price;
+    standAt(room, sock.pos);
+    drive(sock.pos, /inspect wares|take|trade/i, () => sock.meta.sold === true, 40);
+    return {
+      stage: 'done', refused, refuseCap, price, item,
+      sold: sock.meta.sold === true,
+      paid: g.imprints === 0,
+      hasItem: g.inventory.some((s) => s.id === item),
+      bought: caps.some((t) => /purchased/.test(t)),
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused).toBe(true);
+  expect(result.refuseCap).toBeTruthy();
+  expect(result.sold).toBe(true);
+  expect(result.paid).toBe(true);
+  expect(result.hasItem).toBe(true);
+  expect(result.bought).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('broker pedestal: short marginalia refuses, paid trade grants the ware', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    // Descend: release both clamps, pay the resonance key.
+    const entrance = g.route.rooms.find((r) => r.templateId === 'ms-under-entrance');
+    if (!entrance) return { stage: 'no-entrance' } as const;
+    const doorSock = entrance.sockets.find((s) => s.meta?.underDoor === true);
+    const clamps = entrance.sockets.filter((s) => !!s.meta?.sealClamp);
+    if (!doorSock || clamps.length < 2) return { stage: 'no-fixture' } as const;
+    g.currentRoom = entrance.index;
+    for (const c of clamps) {
+      standAt(entrance, c.pos);
+      drive(c.pos, /release seal clamp|take|search/i, () => false, 80);
+    }
+    g.giveItem('resonanceKey', 1);
+    standAt(entrance, doorSock.pos);
+    drive(doorSock.pos, /underscript|open|inspect/i, () => g.space === 'under', 60);
+    if (g.space !== 'under') return { stage: 'no-descent' } as const;
+
+    // The landing lobby is a u-lobby — the Broker's pedestals are stocked.
+    const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
+      && r.sockets.some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined));
+    if (!lobby) return { stage: 'no-lobby' } as const;
+    g.currentRoom = lobby.index;
+    const sock = lobby.sockets.find((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined)!;
+    const price = sock.meta.brokerPrice as number;
+    const item = sock.meta.brokerItem as string;
+
+    // Poor: refuse.
+    g.marginalia = Math.max(0, price - 5);
+    standAt(lobby, sock.pos);
+    drive(sock.pos, /trade wares|inspect|take/i, () => sock.meta.sold === true, 40);
+    const refused = sock.meta.sold !== true && g.marginalia === Math.max(0, price - 5);
+    const refuseCap = caps.find((t) => /marginalia required/.test(t));
+
+    // Pay: trade.
+    g.marginalia = price;
+    standAt(lobby, sock.pos);
+    drive(sock.pos, /trade wares|inspect|take/i, () => sock.meta.sold === true, 40);
+    return {
+      stage: 'done', refused, refuseCap, price, item,
+      sold: sock.meta.sold === true,
+      paid: g.marginalia === 0,
+      hasItem: g.inventory.some((s) => s.id === item),
+      traded: caps.some((t) => /traded/.test(t)),
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused).toBe(true);
+  expect(result.refuseCap).toBeTruthy();
+  expect(result.sold).toBe(true);
+  expect(result.paid).toBe(true);
+  expect(result.hasItem).toBe(true);
+  expect(result.traded).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('engine: relays unlock the routing board, sequence frees the lift to victory', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const aimAt = (at: { x: number; y: number; z: number }) => {
+      const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        aimAt(at);
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    const room = g.route.rooms.find((r) => r.templateId === 'ms-engine');
+    if (!room) return { stage: 'no-engine' } as const;
+    const ms = g.milestones.get(room.index);
+    if (!ms) return { stage: 'no-milestone' } as const;
+
+    // Walk in — teleport inside the room AABB so the room-change hook
+    // detects the entry and wakes the Engine (phase relays + Curator).
+    // (Pre-setting currentRoom would make prev===current and skip enter().)
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 90 && ms.phase !== 'relays'; f++) g.frame();
+    if (ms.phase !== 'relays') return { stage: 'no-wake', phase: ms.phase } as const;
+
+    // Pull five relays.
+    const relays = room.sockets.filter((s) => s.meta?.relay === true);
+    for (const s of relays.slice(0, 5)) {
+      standAt(room, s.pos);
+      drive(s.pos, /resonance relay|take/i, () => s.meta.taken === true, 60);
+    }
+    const phaseAfterRelays = ms.phase;
+
+    // Wrong press: board showing anything but the next terminal resets.
+    const board = room.sockets.find((s) => s.meta?.board === true);
+    const isolator = room.sockets.find((s) => s.meta?.isolator === true);
+    if (!board || !isolator) return { stage: 'no-board', phaseAfterRelays } as const;
+    standAt(room, board.pos);
+    let wrongPressed = false;
+    for (let f = 0; f < 400 && !wrongPressed; f++) {
+      aimAt(board.pos);
+      if (ms.boardShowing !== ms.routingSequence![0]) {
+        g.input.interactPressed = true;
+        wrongPressed = true;
+      }
+      g.frame();
+      g.input.interactPressed = false;
+    }
+    const rejected = caps.some((t) => /route rejected/.test(t));
+    const resetHeld = ms.routingStep === 0;
+
+    // Correct sequence: press only when the board shows the next terminal.
+    for (let f = 0; f < 2400 && (ms.routingStep ?? 0) < 3; f++) {
+      aimAt(board.pos);
+      if (ms.boardShowing === ms.routingSequence![ms.routingStep ?? 0]) g.input.interactPressed = true;
+      g.frame();
+      g.input.interactPressed = false;
+    }
+    const phaseAfterBoard = ms.phase;
+
+    // Pull the isolator — the lift fires the victory.
+    standAt(room, isolator.pos);
+    drive(isolator.pos, /isolator|pull/i, () => g.stats.victory === true, 40);
+    return {
+      stage: 'done', phaseAfterRelays, wrongPressed, rejected, resetHeld,
+      phaseAfterBoard, victory: g.stats.victory === true,
+      liftFree: caps.some((t) => /routing complete/.test(t)),
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.phaseAfterRelays).toBe('routing');
+  expect(result.wrongPressed).toBe(true);
+  expect(result.rejected).toBe(true);
+  expect(result.resetHeld).toBe(true);
+  expect(result.phaseAfterBoard).toBe('escape');
+  expect(result.liftFree).toBe(true);
+  expect(result.victory).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('under-draft: the sealed passage breathes when you stand near it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const room = g.route.rooms.find((r) => r.templateId === 'ms-under-entrance');
+    if (!room) return { stage: 'no-entrance' } as const;
+    const sock = room.sockets.find((s) => s.meta?.underDoor === true);
+    if (!sock) return { stage: 'no-sock' } as const;
+    g.currentRoom = room.index;
+    const dx = room.origin.x - sock.pos.x, dz = room.origin.z - sock.pos.z;
+    const L = Math.hypot(dx, dz) || 1;
+    g.player.teleport(sock.pos.x + (dx / L) * 1.5, 0, sock.pos.z + (dz / L) * 1.5);
+    for (let f = 0; f < 60; f++) g.frame();
+    return { stage: 'done', caps: caps.filter((t) => /seeps|draft|breathes/.test(t)) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  const caps = (result as { caps?: string[] }).caps ?? [];
+  expect(caps.length).toBeGreaterThan(0);
+  expect(caps[0]).toContain('cold draft seeps up');
   expect(errors).toEqual([]);
 });

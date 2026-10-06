@@ -109,7 +109,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 220)
+CURRENT STATE (as of sprint 221)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -380,6 +380,26 @@ CURRENT STATE (as of sprint 220)
   (u-corridor) put generator-placed props inside door lanes — guard
   pushes with inDoorLane(spec,x,z); the interaction socket alone is the
   fallback (pre-batch behavior).
+  Sprint 221 mechanics e2e part 3 (mechanics.spec.ts → 10/10): custodian
+  shop purchase (imprints<price warns '[N imprints required]', exact pay →
+  sock.meta.sold + 'purchased' + giveItem — handled inside
+  CustodianEncounter.onInteract BEFORE Game.ts's switch, NOT the 'shop'
+  case which is broker-only), broker trade (descend → u-lobby[0]
+  pedestal, marginalia path), engine routing (teleport inside room-100
+  AABB → enter() → phase relays; 5 relay pulls → routing; wrong board
+  press resets routingStep + 'route rejected'; 3 timed presses → escape
+  → isolator → stats.victory), under-draft seep caption near the sealed
+  passage. LEARNINGS: (a) game captions are OFF by default
+  (settings.captions=false gates emitCaption) — for caption assertions
+  subscribe g.audio.onCaption AND set g.audio.captionsEnabled=true;
+  (b) milestone onInteract intercepts before the kind switch —
+  shop-flag conventions differ per path (custodian meta.sold vs vend
+  meta.taken); (c) room-enter hooks need a REAL position change —
+  pre-setting g.currentRoom makes prev===current and silently skips
+  ms.enter(); teleport inside the room AABB and let currentRoomIndex()
+  detect it; (d) boardShowing ticks inside the same frame() as the press
+  — a press-on-match loop that re-reads each frame self-corrects across
+  the 1.4s boundary (a rejected press resets routingStep, loop retries).
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
@@ -391,8 +411,9 @@ NEXT SPRINT IDEAS (pick the biggest first)
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
-  - e2e: remaining untested paths — underscript seep/clamor ambience,
-    broker/shop trades, puzzle/routing-board encounters.
+  - e2e: remaining untested paths — Lens-hall orrery pylons (room 75,
+    hold-to-charge while beams sweep), catalogue/card sockets, puzzle
+    mechanism sockets (meta.puzzle), wake coffin long-hold.
   - More mill batches if dressing still reads thin: main-route sideboard
     variants + corridor furniture; u-room kit is milled now (sprint 220) —
     next under-room depth is variants/weathering, not new kinds.
