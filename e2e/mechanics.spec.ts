@@ -317,7 +317,7 @@ test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ pa
     return { stage: 'done', doorAtFind, refusePrompt, stayedLocked, paid, presses, focusLog, charge, imprints: g.imprints, openT: door.openT, refuseLog };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, `door=${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
   expect(result.stayedLocked, `${result.doorAtFind} refuse=${JSON.stringify(result.refuseLog)} imp=${result.imprints}`).toBe(true);
   expect(result.paid, `focus=${JSON.stringify(result.focusLog)} presses=${result.presses}`).toBe(true);
   expect(result.charge).toBe(3);
@@ -444,7 +444,7 @@ test('vend machine refuses on short funds, sells on exact pay', async ({ page })
     return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints, inv: g.inventory.map((s) => s.id) };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.refused, result.promptsA).toBe(true);
   expect(result.sold, JSON.stringify(result.inv)).toBe(true);
   expect(errors).toEqual([]);
@@ -513,7 +513,7 @@ test('keyed door: find the brass key, return, unlock the lock', async ({ page })
     return { stage: 'done', wasLocked, keyPrompts, doorPrompts, paid: !door.locked, openT: door.openT, keyLeft };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.wasLocked).toBe(true);
   expect(result.paid, result.doorPrompts).toBe(true);
   expect(result.openT).toBeGreaterThan(0.5);
@@ -599,7 +599,7 @@ test('underscript gate: seal clamps + resonance key descend, exit returns with p
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.refusedEarly).toBe(true);
   expect(result.clampsDone).toBe(2);
   expect(result.underStart).toEqual({ room: 0, space: 'under' });
@@ -678,7 +678,7 @@ test('custodian shop: short imprints refuses, paid pedestal sells and stocks out
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.refused).toBe(true);
   expect(result.refuseCap).toBeTruthy();
   expect(result.sold).toBe(true);
@@ -772,7 +772,7 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.refused).toBe(true);
   expect(result.refuseCap).toBeTruthy();
   expect(result.sold).toBe(true);
@@ -881,7 +881,7 @@ test('engine: relays unlock the routing board, sequence frees the lift to victor
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.phaseAfterRelays).toBe('routing');
   expect(result.wrongPressed).toBe(true);
   expect(result.rejected).toBe(true);
@@ -917,7 +917,7 @@ test('under-draft: the sealed passage breathes when you stand near it', async ({
     return { stage: 'done', caps: caps.filter((t) => /seeps|draft|breathes/.test(t)) } as const;
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   const caps = (result as { caps?: string[] }).caps ?? [];
   expect(caps.length).toBeGreaterThan(0);
   expect(caps[0]).toContain('cold draft seeps up');
@@ -1059,7 +1059,7 @@ test('index: five cards → master catalogue → seal console glyph order frees 
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.earlyRefused).toBe(true);
   expect(result.fiveCards).toBe(true);
   expect(result.catalogRead).toBe(true);
@@ -1146,7 +1146,7 @@ test('puzzle-valve: cracking the mechanism vents steam and yields its key', asyn
     return { stage: 'done', wasLocked, cracked, vented, hissCap, gotKey, opened, openT: door.openT };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.wasLocked).toBe(true);
   expect(result.cracked).toBe(true);
   expect(result.vented).toBe(true);
@@ -1207,7 +1207,7 @@ test('wake: lifting the coffin lid frees the bier document', async ({ page }) =>
     return { stage: 'done', sawPrompt, held, opened: g.coffinOpened, warmCap, doc };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.sawPrompt).toBe(true);
   expect(result.opened).toBe(true);
   expect(result.warmCap).toBe(true);
@@ -1273,7 +1273,7 @@ test('lens hall: tuning all four pylons solves the orrery', async ({ page }) => 
     };
   });
 
-  expect(result.stage, `${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.woke).toBe(true);
   expect(result.final?.length).toBe(4);
   expect(result.final?.every((p) => p >= 1)).toBe(true);

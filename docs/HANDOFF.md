@@ -472,6 +472,35 @@ CURRENT STATE (as of sprint 223)
   DROP/ORPHAN/CLIP/CLASH per template × seed — run it after editing
   template props.
   78 unit tests.
+  Sprint 224 main-route corridor mill pass: corridors were the last
+  big procedural-looking surface. 12 new milled kinds — wall-skin
+  trim (pilaster, wainscotRun, corniceRun, wallPanel, beamRun,
+  wallLantern, doorSurround, pierMirror) + floor pieces
+  (runnerRug, grandfatherClock, consoleTable, newelPost). New
+  corridorTrim(w,d,h,opts) helper lays out a pilaster-grid rhythm
+  (1.9m bays) with wainscot + cornice + wallPanel fills per bay and
+  opts {skipW/skipE, beams, lanterns, panels} — dressed across all
+  10 corridor templates (corr-straight/wide/l-turn/zigzag/junction/
+  grand-hall/closet-branch/doors-row + unlit-hall + laundry-hall).
+  Floor pieces lane-verified by geometry (clocks 1.18m visual vs
+  0.62m collider — pediment overhang is cosmetic-only).
+  propsClash gained a TRIM_KINDS exemption: trim kinds are the
+  wall's own face — panelling behind furniture is intended
+  layering, not a collision (a pair-whitelist would need ~30
+  entries). corr-doors-row adds 4 doorSurrounds at bay centres
+  (pilasters sit at bay edges — never co-locate). runnerRug yaw=π/2
+  turns its long axis along the corridor (glTF X-long → world Z).
+  NewelPost milled but unplaced — belongs to the staircase kit.
+  78 unit tests.
+
+  ENV TRAP (sprint 224): under SwiftShader on this box,
+  renderer.render()/composer=null on a BUILT streamer room
+  deterministically kills the page for heavy rooms (corr-doors-row
+  crashed 5/5 tries; every individual mesh renders fine; standalone
+  GLTF renders fine; geometry/index/drawRange scans all clean —
+  cumulative-load env limit, not a content bug). Use standalone-
+  piece renders (contact sheet) or the testing agent's pipeline;
+  don't bisect in-room renders expecting a bad mesh.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per

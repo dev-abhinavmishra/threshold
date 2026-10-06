@@ -2641,6 +2641,259 @@ def chapelAltar():
     join_all('chapelAltar')
 
 
+
+# ---------- corridor architecture batch (sprint 224) ----------
+
+def pilaster():
+    """Flat wall pilaster — plinth, recessed-panel shaft, capital.
+    Center-anchored wall mount, back at y=0."""
+    w, h, d = 0.36, 2.5, 0.09
+    cube('plinth', (0, -d / 2 - 0.015, -h / 2 + 0.14), (w, d + 0.03, 0.28), STONE, 0.012)
+    cube('shaft', (0, -d / 2, -0.12), (w - 0.08, d, h - 0.75), STONE, 0.008)
+    # recessed panel: proud surround strips + inset field
+    cube('panel', (0, -d - 0.006, -0.12), (w - 0.18, 0.016, h - 1.0), STONE, 0.004)
+    for sz in (-1, 1):
+        cube('stile', (sz * (w / 2 - 0.09), -d - 0.014, -0.12), (0.035, 0.03, h - 0.95), STONE, 0.003)
+    for zz in (-0.12 - (h - 1.0) / 2, -0.12 + (h - 1.0) / 2):
+        cube('rail', (0, -d - 0.014, zz), (w - 0.18, 0.03, 0.04), STONE, 0.003)
+    # capital: necking + echinus + abacus
+    cube('neck', (0, -d / 2 - 0.01, h / 2 - 0.26), (w - 0.04, d + 0.02, 0.08), STONE, 0.008)
+    cube('echin', (0, -d / 2 - 0.025, h / 2 - 0.17), (w + 0.05, d + 0.05, 0.09), STONE, 0.012)
+    cube('abacus', (0, -d / 2 - 0.03, h / 2 - 0.06), (w + 0.1, d + 0.06, 0.07), STONE, 0.008)
+    join_all('pilaster')
+
+
+def wainscotRun():
+    """Dado-height wainscot section — baseboard, three raised panels,
+    chair rail. Center-anchored wall mount, back at y=0."""
+    w, h, d = 1.8, 0.95, 0.05
+    cube('base', (0, -d / 2 - 0.01, -h / 2 + 0.09), (w, d + 0.05, 0.18), DARK, 0.008)
+    # field slab behind panels
+    cube('field', (0, -d / 2, 0.02), (w - 0.06, d, h - 0.34), WOOD, 0.004)
+    # stiles
+    for i in range(4):
+        x = -w / 2 + 0.06 + i * (w - 0.12) / 3
+        cube('stile', (x - (w - 0.12) / 6, -d - 0.012, 0.02), (0.07, 0.028, h - 0.32), DARK, 0.004)
+    # raised panels: bevel-edged proud slabs
+    for i in range(3):
+        x = -w / 2 + 0.06 + (i + 0.5) * (w - 0.12) / 3
+        cube('panel', (x, -d - 0.02, 0.02), ((w - 0.12) / 3 - 0.18, 0.035, h - 0.62), WOOD, 0.014)
+    cube('chairrail', (0, -d / 2 - 0.02, h / 2 - 0.05), (w + 0.02, d + 0.06, 0.09), DARK, 0.01)
+    join_all('wainscotRun')
+
+
+def corniceRun():
+    """Crown moulding strip — stepped cove/fillet/corona profile with a
+    dentil course. Center-anchored wall mount, back at y=0."""
+    w = 1.8
+    cube('cove', (0, -0.03, -0.09), (w, 0.10, 0.06), STONE, 0.008)
+    for i in range(20):
+        x = -w / 2 + 0.05 + i * (w - 0.1) / 19
+        cube('dentil', (x, -0.075, -0.035), (0.035, 0.09, 0.06), STONE, 0.002)
+    cube('fillet', (0, -0.045, -0.005), (w, 0.13, 0.05), STONE, 0.006)
+    cube('cyma', (0, -0.065, 0.045), (w, 0.17, 0.05), STONE, 0.008)
+    cube('corona', (0, -0.05, 0.095), (w, 0.21, 0.05), STONE, 0.006)
+    join_all('corniceRun')
+
+
+def wallPanel():
+    """Upper-wall raised panel between pilasters — moulded frame around a
+    recessed field. Center-anchored wall mount, back at y=0."""
+    w, h = 1.4, 1.2
+    cube('field', (0, -0.015, 0), (w - 0.12, 0.03, h - 0.12), STONE, 0.004)
+    for sx in (-1, 1):
+        cube('stile', (sx * (w / 2 - 0.05), -0.04, 0), (0.09, 0.05, h), STONE, 0.006)
+    for sz in (-1, 1):
+        cube('rail', (0, -0.04, sz * (h / 2 - 0.05)), (w - 0.1, 0.05, 0.09), STONE, 0.006)
+    # inner bead molding
+    for sx in (-1, 1):
+        cube('bead', (sx * (w / 2 - 0.13), -0.048, 0), (0.025, 0.04, h - 0.24), STONE, 0.003)
+    for sz in (-1, 1):
+        cube('bead', (0, -0.048, sz * (h / 2 - 0.13)), (w - 0.24, 0.04, 0.025), STONE, 0.003)
+    join_all('wallPanel')
+
+
+def beamRun():
+    """Ceiling cross-beam — moulded timber with stepped corbel ends and an
+    iron strap. Center-anchored, spans the corridor width."""
+    w = 3.4
+    cube('beam', (0, 0, 0), (w, 0.24, 0.22), DARK, 0.012)
+    cube('soffit', (0, 0, -0.13), (w - 0.1, 0.16, 0.05), WOOD, 0.006)
+    for sx in (-1, 1):
+        cube('corbel1', (sx * (w / 2 - 0.09), 0, -0.16), (0.22, 0.2, 0.1), DARK, 0.008)
+        cube('corbel2', (sx * (w / 2 - 0.06), 0, -0.24), (0.14, 0.16, 0.08), DARK, 0.006)
+    cube('strap', (0, -0.005, -0.02), (0.07, 0.26, 0.24), IRON, 0.003)
+    join_all('beamRun')
+
+
+def runnerRug():
+    """Long carpet runner — bordered field, center lozenge, knotted fringe.
+    Lies flat on the floor."""
+    w, d = 2.8, 1.0
+    cube('field', (0, 0, 0.008), (w - 0.16, d - 0.16, 0.016), VELVET, 0.004)
+    # border
+    for sx in (-1, 1):
+        cube('bside', (sx * (w / 2 - 0.08), 0, 0.009), (0.12, d, 0.018), DARK, 0.003)
+    for sz in (-1, 1):
+        cube('bend', (0, sz * (d / 2 - 0.08), 0.009), (w, 0.12, 0.018), DARK, 0.003)
+    # center lozenge + corner guls
+    loz = cube('lozenge', (0, 0, 0.012), (0.5, 0.32, 0.012), WORN, 0.02)
+    loz.rotation_euler[2] = math.pi / 4
+    for sx in (-1, 1):
+        for sz in (-1, 1):
+            gul = cube('gul', (sx * (w / 2 - 0.32), sz * (d / 2 - 0.28), 0.011),
+                       (0.14, 0.14, 0.011), WORN, 0.02)
+            gul.rotation_euler[2] = math.pi / 4
+    # fringe tassels
+    for sx in (-1, 1):
+        for i in range(14):
+            y = -d / 2 + 0.03 + i * (d - 0.06) / 13
+            cube('fringe', (sx * (w / 2 + 0.045), y, 0.006), (0.09, 0.025, 0.008), LINEN, 0.002)
+    join_all('runnerRug')
+
+
+def grandfatherClock():
+    """Longcase clock — pediment hood with brass dial, glazed waist showing
+    the pendulum, stepped base. Floor piece."""
+    w, d = 0.56, 0.36
+    # base: plinth + step + kick
+    cube('plinth', (0, 0, 0.07), (w, d, 0.14), DARK, 0.012)
+    cube('step', (0, 0, 0.19), (w - 0.06, d - 0.04, 0.1), WOOD, 0.01)
+    # waist case + glazed door (dark recess, brass bob + rod visible)
+    cube('waist', (0, 0, 0.85), (w - 0.1, d - 0.08, 1.25), WOOD, 0.012)
+    cube('recess', (0, -d / 2 + 0.055, 0.85), (w - 0.26, 0.04, 0.95), DARK, 0.006)
+    cyl('rod', (0, -d / 2 + 0.062, 0.92), 0.008, 0.7, BRASS, 8)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.06,
+        location=(0, -d / 2 + 0.062, 0.55))
+    bob = bpy.context.object
+    bob.scale = (1, 0.35, 1.2)
+    bpy.ops.object.transform_apply(scale=True)
+    bob.data.materials.append(BRASS)
+    # waist door frame strips
+    for sx in (-1, 1):
+        cube('jamb', (sx * (w / 2 - 0.11), -d / 2 + 0.045, 0.85), (0.06, 0.05, 1.0), WOOD, 0.005)
+    cube('railT', (0, -d / 2 + 0.045, 1.33), (w - 0.22, 0.05, 0.06), WOOD, 0.005)
+    cube('railB', (0, -d / 2 + 0.045, 0.37), (w - 0.22, 0.05, 0.06), WOOD, 0.005)
+    # hood: case + arched top + crown + dial
+    cube('hood', (0, 0, 1.72), (w + 0.02, d, 0.5), WOOD, 0.012)
+    hood_arc = cyl('arch', (0, 0, 1.97), (w + 0.02) / 2, d, WOOD, 20)
+    hood_arc.rotation_euler[0] = math.pi / 2
+    cube('crown', (0, -0.01, 1.52), (w + 0.08, d + 0.06, 0.07), DARK, 0.008)
+    # dial: brass bezel + face + hands
+    dl = cyl('dial', (0, -d / 2 + 0.03, 1.72), 0.15, 0.02, BRASS, 20)
+    dl.rotation_euler[0] = math.pi / 2
+    fc = cyl('face', (0, -d / 2 + 0.02, 1.72), 0.12, 0.02, CANDLE, 20)
+    fc.rotation_euler[0] = math.pi / 2
+    h1 = cube('handH', (0, -d / 2 + 0.008, 1.75), (0.015, 0.006, 0.07), IRON, 0.002)
+    h1.rotation_euler[1] = 0.5
+    cube('handM', (0, -d / 2 + 0.008, 1.73), (0.01, 0.006, 0.1), IRON, 0.002)
+    # finials
+    for sx in (-1, 0, 1):
+        cyl('fin', (sx * (w / 2 - 0.06), 0, 2.26), 0.012, 0.07, BRASS, 8)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.02,
+            location=(sx * (w / 2 - 0.06), 0, 2.31))
+        bpy.context.object.data.materials.append(BRASS)
+    join_all('grandfatherClock')
+
+
+def consoleTable():
+    """Demi-lune console — serpentine top, four tapered legs, low shelf
+    and a small drawer front. Floor piece."""
+    w, d, h = 1.05, 0.4, 0.84
+    cube('top', (0, 0, h - 0.025), (w, d, 0.05), WOOD, 0.012)
+    cube('apron', (0, -0.01, h - 0.09), (w - 0.1, d - 0.08, 0.09), DARK, 0.008)
+    cube('drawer', (0, -d / 2 + 0.045, h - 0.09), (0.4, 0.03, 0.07), WOOD, 0.006)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.015,
+        location=(0, -d / 2 + 0.025, h - 0.09))
+    bpy.context.object.data.materials.append(BRASS)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x = sx * (w / 2 - 0.05)
+            y = sy * (d / 2 - 0.045)
+            # cabriole hint: hip block + tapered leg + pad foot
+            cube('hip', (x, y, h - 0.2), (0.09, 0.09, 0.14), WOOD, 0.014)
+            leg = cyl('leg', (x, y, (h - 0.2) / 2), 0.028, h - 0.28, WOOD, 10)
+            cube('foot', (x, y, 0.035), (0.07, 0.07, 0.07), DARK, 0.012)
+    cube('shelf', (0, 0, 0.16), (w - 0.14, d - 0.12, 0.03), WOOD, 0.008)
+    join_all('consoleTable')
+
+
+def wallLantern():
+    """Carriage lantern on an iron wall bracket — scrolled arm, tapered
+    lantern cage, candle inside. Center-anchored wall mount."""
+    cube('plate', (0, -0.01, 0.12), (0.08, 0.03, 0.24), IRON, 0.006)
+    arm = cyl('arm', (0, -0.11, 0.2), 0.012, 0.24, IRON, 8)
+    arm.rotation_euler[0] = math.pi / 2
+    # scroll: small curled torus under the arm end
+    torus('scroll', (0, -0.16, 0.13), 0.05, 0.011, IRON, rot=(math.pi / 2, 0, 0), seg=16)
+    cyl('chain', (0, -0.22, 0.12), 0.006, 0.1, IRON, 6)
+    # lantern body: cap cone + 4 corner rods + base + candle
+    bpy.ops.mesh.primitive_cone_add(vertices=4, radius1=0.09, radius2=0.02, depth=0.09,
+        location=(0, -0.22, 0.045))
+    cap = bpy.context.object
+    cap.rotation_euler[2] = math.pi / 4
+    bpy.ops.object.transform_apply(rotation=True)
+    cap.data.materials.append(IRON)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            cyl('rod', (sx * 0.055, -0.22 + sy * 0.055, -0.05), 0.005, 0.14, IRON, 6)
+    cube('lbase', (0, -0.22, -0.13), (0.14, 0.14, 0.03), IRON, 0.006)
+    cyl('candle', (0, -0.22, -0.09), 0.02, 0.07, CANDLE, 8)
+    bpy.ops.mesh.primitive_cone_add(vertices=6, radius1=0.008, radius2=0.002, depth=0.03,
+        location=(0, -0.22, -0.045))
+    bpy.context.object.data.materials.append(BRASS)
+    join_all('wallLantern')
+
+
+def doorSurround():
+    """Architrave door frame — moulded jambs, lintel and a low pediment
+    crest. Center-anchored wall mount; decorates a portal edge."""
+    w, h = 1.35, 2.35
+    for sx in (-1, 1):
+        x = sx * (w / 2 - 0.05)
+        cube('jambOuter', (x, -0.03, -h / 2 + h * 0.45), (0.14, 0.1, h * 0.9), STONE, 0.008)
+        cube('jambBead', (x - sx * 0.075, -0.055, -h / 2 + h * 0.45), (0.03, 0.08, h * 0.88), STONE, 0.004)
+        cube('jambBase', (x, -0.04, -h / 2 + 0.07), (0.18, 0.12, 0.16), STONE, 0.008)
+        cube('impost', (x, -0.045, h / 2 - 0.2), (0.18, 0.12, 0.1), STONE, 0.006)
+    cube('lintel', (0, -0.03, h / 2 - 0.1), (w, 0.11, 0.16), STONE, 0.008)
+    cube('frieze', (0, -0.055, h / 2 + 0.015), (w + 0.06, 0.09, 0.07), STONE, 0.004)
+    # low pediment: stepped cap
+    cube('ped1', (0, -0.035, h / 2 + 0.09), (w * 0.62, 0.09, 0.08), STONE, 0.006)
+    cube('ped2', (0, -0.035, h / 2 + 0.15), (w * 0.34, 0.09, 0.06), STONE, 0.006)
+    join_all('doorSurround')
+
+
+def pierMirror():
+    """Tall pier-glass mirror — brass frame, crest ornament, base rail.
+    Center-anchored wall mount."""
+    w, h = 0.72, 1.85
+    cube('glass', (0, -0.028, -0.06), (w - 0.14, 0.015, h - 0.3), MIRROR, 0.01)
+    for sx in (-1, 1):
+        cube('fstile', (sx * (w / 2 - 0.045), -0.035, -0.06), (0.07, 0.05, h - 0.14), BRASS, 0.008)
+    cube('frailT', (0, -0.035, h / 2 - 0.12), (w - 0.05, 0.05, 0.07), BRASS, 0.006)
+    cube('frailB', (0, -0.035, -h / 2 + 0.045), (w - 0.05, 0.05, 0.07), BRASS, 0.006)
+    # crest: scroll shell + finial ball
+    torus('crest', (0, -0.04, h / 2 + 0.0), 0.09, 0.022, BRASS, seg=18)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=8, ring_count=6, radius=0.035,
+        location=(0, -0.04, h / 2 + 0.1))
+    bpy.context.object.data.materials.append(BRASS)
+    join_all('pierMirror')
+
+
+def newelPost():
+    """Stair newel — stepped base, turned shaft (bead-and-reel stack),
+    ball finial. Floor piece."""
+    cube('base', (0, 0, 0.06), (0.22, 0.22, 0.12), DARK, 0.01)
+    cyl('foot', (0, 0, 0.16), 0.075, 0.08, WOOD, 12)
+    zs = [(0.26, 0.045), (0.34, 0.065), (0.44, 0.04), (0.56, 0.075), (0.7, 0.045), (0.82, 0.06)]
+    for i, (z, r) in enumerate(zs):
+        cyl(f'shaft{i}', (0, 0, z), r, 0.12, WOOD, 12)
+    cube('cap', (0, 0, 0.94), (0.16, 0.16, 0.07), DARK, 0.008)
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=10, radius=0.07,
+        location=(0, 0, 1.05))
+    bpy.context.object.data.materials.append(BRASS)
+    join_all('newelPost')
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -2693,6 +2946,13 @@ PIECES = {
     'platedRoast': platedRoast, 'platedPie': platedPie,
     'ceilingRose': ceilingRose, 'pewRow': pewRow,
     'chapelAltar': chapelAltar,
+    # corridor architecture batch (sprint 224)
+    'pilaster': pilaster, 'wainscotRun': wainscotRun,
+    'corniceRun': corniceRun, 'wallPanel': wallPanel,
+    'beamRun': beamRun, 'runnerRug': runnerRug,
+    'grandfatherClock': grandfatherClock, 'consoleTable': consoleTable,
+    'wallLantern': wallLantern, 'doorSurround': doorSurround,
+    'pierMirror': pierMirror, 'newelPost': newelPost,
 }
 
 def main():

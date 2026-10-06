@@ -221,6 +221,22 @@ export const MODEL_FOR: Partial<Record<string, ModelSpec>> = {
   ceilingRose: { dir: 'ceilingRose', height: 0.24, collider: [0, 0, 0], anchor: 'center' },
   pewRow: { dir: 'pewRow', height: 1.05, collider: [2.4, 1.05, 0.6] },
   chapelAltar: { dir: 'chapelAltar', height: 1.15, collider: [1.6, 1.15, 0.8] },
+  // sprint 224 — corridor architecture batch. Pilasters, wainscot, cornice,
+  // panels, surrounds and lanterns are all wall/ceiling-mount ghosts
+  // (collider [0,0,0]) so they can never intrude on door lanes; the two
+  // floor pieces carry real colliders.
+  pilaster: { dir: 'pilaster', height: 2.5, collider: [0, 0, 0], anchor: 'center' },
+  wainscotRun: { dir: 'wainscotRun', height: 0.95, collider: [0, 0, 0], anchor: 'center' },
+  corniceRun: { dir: 'corniceRun', height: 0.22, collider: [0, 0, 0], anchor: 'center' },
+  wallPanel: { dir: 'wallPanel', height: 1.2, collider: [0, 0, 0], anchor: 'center' },
+  beamRun: { dir: 'beamRun', height: 0.5, collider: [0, 0, 0], anchor: 'center' },
+  runnerRug: { dir: 'runnerRug', height: 0.02, collider: [0, 0, 0] },
+  grandfatherClock: { dir: 'grandfatherClock', height: 2.32, collider: [0.62, 2.32, 0.42] },
+  consoleTable: { dir: 'consoleTable', height: 0.84, collider: [1.05, 0.84, 0.4] },
+  wallLantern: { dir: 'wallLantern', height: 0.42, collider: [0, 0, 0], anchor: 'center' },
+  doorSurround: { dir: 'doorSurround', height: 2.5, collider: [0, 0, 0], anchor: 'center' },
+  pierMirror: { dir: 'pierMirror', height: 1.95, collider: [0, 0, 0], anchor: 'center' },
+  newelPost: { dir: 'newelPost', height: 1.12, collider: [0.22, 1.12, 0.22] },
   pantryShelf: { dir: 'pantryShelf', height: 1.9, collider: [1.32, 1.9, 0.5] },
   stackedLinen: { dir: 'stackedLinen', height: 1.8, collider: [1.12, 1.8, 0.55] },
   upholsteredHeadboard: { dir: 'upholsteredHeadboard', height: 1.28, collider: [0, 0, 0] },

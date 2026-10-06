@@ -787,3 +787,20 @@ New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.
 | `ceilingRose/` | Ornamental ceiling rose — disc, twin plaster rings, 12 petals, hanging boss (ceiling-mount) | guest-standard, suite-split, staff-dining, records-office |
 | `pewRow/` | Chapel pew — tall panel back, bench seat, closed cheeks, kneeler shelf | gallery-cathedral ×4 |
 | `chapelAltar/` | Draped stone altar — slab, block legs, cloth front, brass candle prickets | safe-sanctuary |
+
+## Sprint 224 — corridor architecture mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `pilaster/` | Flat wall pilaster — plinth, recessed-panel shaft, capital (wall-mount ghost) | corr-straight, corr-wide, corr-l-turn, corr-zigzag, corr-junction, corr-grand-hall, corr-closet-branch, corr-doors-row, unlit-hall, laundry-hall |
+| `wainscotRun/` | Dado wainscot section — baseboard, three raised panels, chair rail | all corridor templates above |
+| `corniceRun/` | Crown moulding — stepped cove/fillet/corona profile + dentil course | all corridor templates above |
+| `wallPanel/` | Upper-wall raised panel — moulded frame + recessed field + inner bead | corr-straight, corr-wide, corr-junction, corr-grand-hall, corr-doors-row |
+| `beamRun/` | Ceiling cross-beam — moulded timber, stepped corbels, iron strap | corr-straight, corr-zigzag, corr-grand-hall, corr-doors-row |
+| `runnerRug/` | Long carpet runner — bordered velvet field, center lozenge, corner guls, fringe | corr-straight, corr-grand-hall, corr-doors-row |
+| `grandfatherClock/` | Longcase clock — arched pediment hood, brass dial + hands, glazed waist with pendulum | corr-wide, corr-junction, corr-grand-hall |
+| `consoleTable/` | Demi-lune console — serpentine top, drawer front, tapered legs, low shelf | corr-wide |
+| `wallLantern/` | Carriage lantern on scrolled iron bracket — cage + candle (wall-mount) | corr-straight, corr-wide, corr-junction, corr-grand-hall, corr-doors-row |
+| `doorSurround/` | Architrave door frame — moulded jambs, lintel, pediment crest (wall-mount) | corr-doors-row ×4 |
+| `pierMirror/` | Tall pier-glass — brass frame, scroll crest, mirror plate (wall-mount) | corr-wide, corr-grand-hall |
+| `newelPost/` | Stair newel — stepped base, bead-and-reel turned shaft, ball finial | milled for the upcoming staircase kit |

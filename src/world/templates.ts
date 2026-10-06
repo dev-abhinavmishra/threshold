@@ -135,6 +135,56 @@ function wallProps(w: number, d: number, rng: Rng, kinds: PropKind[], n: number,
   return out;
 }
 
+/* ---- corridor architectural trim (sprint 224) ----
+ * Rhythmic wall dressing for corridor runs: pilaster/wallPanel bays with
+ * continuous wainscot + cornice lines, ceiling cross-beams, bracket
+ * lanterns. Every piece is a wall/ceiling-mounted ghost (collider
+ * [0,0,0]) so door-lane culling never drops them; bays falling inside a
+ * side-wall port's lateral range (skipW/skipE, port center ±1.35m) are
+ * skipped so a leaf can never clip a pilaster on its wall. */
+function corridorTrim(
+  w: number, d: number, h: number,
+  opts: { skipW?: number[]; skipE?: number[]; beams?: boolean; lanterns?: number; panels?: boolean } = {},
+): PropSpec[] {
+  const out: PropSpec[] = [];
+  const xw = w / 2 - 0.05;
+  const bayW = 1.9;
+  const bays = Math.max(2, Math.round((d - 1.2) / bayW));
+  const span = bays * bayW;
+  const z0 = -span / 2;
+  const panels = opts.panels !== false;
+  for (const side of [-1, 1]) {
+    const yaw = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    const skip = side < 0 ? (opts.skipW ?? []) : (opts.skipE ?? []);
+    const clear = (z: number) => skip.every((s) => Math.abs(z - s) > 1.35);
+    for (let i = 0; i <= bays; i++) {
+      const z = z0 + i * bayW;
+      if (clear(z)) out.push({ kind: 'pilaster', x: side * xw, z, y: 1.25, yaw });
+      if (i < bays && clear(z + bayW / 2)) {
+        const zc = z + bayW / 2;
+        out.push({ kind: 'wainscotRun', x: side * xw, z: zc, y: 0.55, yaw });
+        out.push({ kind: 'corniceRun', x: side * xw, z: zc, y: h - 0.11, yaw });
+        if (panels) out.push({ kind: 'wallPanel', x: side * xw, z: zc, y: 1.78, yaw });
+      }
+    }
+  }
+  if (opts.beams) {
+    for (let i = 1; i < bays; i += 2) {
+      out.push({ kind: 'beamRun', x: 0, z: z0 + i * bayW, y: h - 0.34, scale: Math.max(1, w / 3.4) });
+    }
+  }
+  const nl = opts.lanterns ?? 0;
+  for (let i = 0; i < nl; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const z = z0 + ((i + 1) * span) / (nl + 1);
+    const skip = side < 0 ? (opts.skipW ?? []) : (opts.skipE ?? []);
+    if (skip.every((s) => Math.abs(z - s) > 1.35)) {
+      out.push({ kind: 'wallLantern', x: side * xw, z, y: 2.1, yaw: side < 0 ? Math.PI / 2 : -Math.PI / 2 });
+    }
+  }
+  return out;
+}
+
 /* ---- prop-vs-prop clash resolution ----
  * wallProps filler lands blind to the room's fixed furniture, so spec()
  * resolves collisions after the fact: a wall-hung prop that materially
@@ -191,11 +241,22 @@ export const CLASH_OK: ReadonlyArray<readonly [PropKind, PropKind]> = [
   ['bust', 'wallNiche'],          // bust standing in the niche
 ];
 
+/** Wall/ceiling-skin trim kinds (sprint 224 batch): pilasters, panelling,
+ *  cornice, surrounds, lanterns. These ARE the wall's face — furniture or
+ *  wall decor overlapping them reads as the intended layered look (a
+ *  radiator in front of wainscot, a painting on a panelled wall), never a
+ *  collision, so clash checks exempt any pair that touches one. */
+export const TRIM_KINDS: ReadonlySet<PropKind> = new Set([
+  'pilaster', 'wainscotRun', 'corniceRun', 'wallPanel', 'doorSurround',
+  'pierMirror', 'beamRun', 'wallLantern',
+]);
+
 /** True when two props materially share the same floor space. */
 export function propsClash(a: PropSpec, b: PropSpec): boolean {
   // Two elevated props are tabletop clutter — authored position is the
   // design; footprint rules only exist to catch furniture-scale embeds.
   if ((a.y ?? 0) > 0.5 && (b.y ?? 0) > 0.5) return false;
+  if (TRIM_KINDS.has(a.kind) || TRIM_KINDS.has(b.kind)) return false;
   const [ax, az] = propFootprint(a);
   const [bx, bz] = propFootprint(b);
   const dx = Math.abs(a.x - b.x), dz = Math.abs(a.z - b.z);
@@ -249,8 +310,9 @@ const corridorStraight: RoomTemplate = {
     return spec('corr-straight', 'corridor', 3.2, d, 2.9, {
     entryOff: 0,
     props: [
+      ...corridorTrim(3.2, d, 2.9, { beams: true, lanterns: 2 }),
       ...wallProps(3.2, d, rng, ['painting', 'wallSconce', 'sign', 'wallClock', 'keyRack', 'exitSign', 'pegRail'], rng.int(2, 4)),
-      { kind: 'rug', x: 0, z: 0 },
+      { kind: 'runnerRug', x: 0, z: -d / 4, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: d / 4, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'payphone', x: 1.3, z: -1.2, yaw: -Math.PI / 2 },
@@ -279,6 +341,11 @@ const corridorWide: RoomTemplate = {
   build: (rng) => spec('corr-wide', 'corridor', 6, 9, 3.2, {
     props: [
       { kind: 'archway', x: 0, z: -0.2, scale: 0.88 },
+      ...corridorTrim(6, 9, 3.2, { lanterns: 2 }),
+      { kind: 'grandfatherClock', x: 2.62, z: -1.4, yaw: -Math.PI / 2 },
+      { kind: 'consoleTable', x: -1.5, z: 4.05, yaw: Math.PI },
+      { kind: 'vase', x: -1.5, z: 4.05, y: 0.88 },
+      { kind: 'pierMirror', x: -2.9, z: -0.4, y: 1.05, yaw: Math.PI / 2 },
       { kind: 'transomWindow', x: 0, z: -4.42, y: 2.3 },
       { kind: 'transomWindow', x: 0, z: 4.42, y: 2.3, yaw: Math.PI },
       { kind: 'radiatorFin', x: -2.82, z: 1.2, yaw: Math.PI / 2 },
@@ -318,6 +385,7 @@ const corridorL: RoomTemplate = {
   build: (rng) => spec('corr-l-turn', 'corridor', 4, 8, 2.9, {
     exits: [P(1.2, 'e'), P(0, 'n', 1.4)], // exit east; north retained only if branch
     props: [
+      ...corridorTrim(4, 8, 2.9, { skipE: [1.2] }),
       ...wallProps(4, 8, rng, ['wallSconce', 'painting', 'curtain', 'wallClock', 'keyRack', 'pegRail'], 3, { zs: [1.2] }),
       { kind: 'conduitRun', x: 0, z: 0, y: 2.68 },
       { kind: 'radiatorFin', x: -1.82, z: -0.6, yaw: Math.PI / 2 },
@@ -342,6 +410,7 @@ const corridorZig: RoomTemplate = {
     entryOff: -1.4,
     exits: [P(1.4, 'n')],
     props: [
+      ...corridorTrim(5, 10, 2.9, { panels: false }),
       { kind: 'partition', x: -0.6, z: -1.4, scale: 2.4 },
       { kind: 'partition', x: 0.9, z: 1.6, scale: 2.6 },
       { kind: 'drawerUnit', x: 1.9, z: -3, yaw: -Math.PI / 2 },
@@ -372,6 +441,8 @@ const corridorJunction: RoomTemplate = {
     exits: [P(0, 'n'), P(-1.8, 'w'), P(1.8, 'e')],
     props: [
       { kind: 'pillar', x: 0, z: 0, meta: { height: 3 } },
+      ...corridorTrim(7, 7, 3.0, { skipW: [-1.8], skipE: [1.8], lanterns: 2 }),
+      { kind: 'grandfatherClock', x: -3.0, z: 2.95, yaw: Math.PI / 2 },
       ...wallProps(7, 7, rng, ['painting', 'wallSconce', 'wallClock', 'pegRail', 'curtainSwag'], 4, { zs: [-1.8, 1.8] }),
       { kind: 'cabinet', x: 2.6, z: -2.4, yaw: -Math.PI / 2 },
       { kind: 'clock', x: -2.8, z: -3.2 },
@@ -1062,6 +1133,7 @@ const roomDarkHall: RoomTemplate = {
       { kind: 'paperStack', x: -1.6, z: -1.4 },
       { kind: 'paperStack', x: 1.4, z: 0.6 },
       { kind: 'paperStack', x: -0.8, z: 2.6 },
+      ...corridorTrim(5, 9, 2.8, { panels: false }),
       { kind: 'shelf', x: 2.0, z: -2.8, yaw: -Math.PI / 2 },
       { kind: 'snare', x: 0, z: 1.2 },
       { kind: 'carton', x: -2.0, z: -3.0, yaw: 0.7 },
@@ -1344,7 +1416,10 @@ const roomLongHall: RoomTemplate = {
       { kind: 'pillar', x: 1.8, z: 0, meta: { height: 3.4 } },
       { kind: 'pillar', x: -1.8, z: 4, meta: { height: 3.4 } },
       { kind: 'pillar', x: 1.8, z: 4, meta: { height: 3.4 } },
-      { kind: 'rug', x: 0, z: 0 },
+      ...corridorTrim(5.5, 14, 3.4, { beams: true, lanterns: 4 }),
+      { kind: 'runnerRug', x: 0, z: -3.5, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 0, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 3.5, yaw: Math.PI / 2 },
+      { kind: 'grandfatherClock', x: -2.5, z: -4.9, yaw: Math.PI / 2 },
+      { kind: 'pierMirror', x: -2.7, z: 3.6, y: 1.05, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'planter', x: -2.2, z: -5.9, yaw: Math.PI / 2 },
@@ -1382,6 +1457,7 @@ const roomBranchCloset: RoomTemplate = {
   build: (rng) => spec('corr-closet-branch', 'corridor', 5, 8, 2.9, {
     exits: [P(0, 'n'), P(1.4, 'e', 1.1)],
     props: [
+      ...corridorTrim(5, 8, 2.9, { skipE: [1.4], panels: false }),
       { kind: 'cabinet', x: 2.1, z: -0.4, yaw: -Math.PI / 2 },
       { kind: 'drawerUnit', x: -2.0, z: 1.8, yaw: Math.PI / 2 },
       { kind: 'bin', x: -2.2, z: -2.6 },
@@ -1587,11 +1663,16 @@ const roomMotelCorridor: RoomTemplate = {
   id: 'corr-doors-row',
   build: (rng) => spec('corr-doors-row', 'corridor', 6, 9, 3.0, {
     props: [
+      ...corridorTrim(6, 9, 3.0, { lanterns: 2 }),
+      { kind: 'doorSurround', x: -2.92, z: -2.85, y: 1.25, yaw: Math.PI / 2 },
+      { kind: 'doorSurround', x: -2.92, z: 0.95, y: 1.25, yaw: Math.PI / 2 },
+      { kind: 'doorSurround', x: 2.92, z: -0.95, y: 1.25, yaw: -Math.PI / 2 },
+      { kind: 'doorSurround', x: 2.92, z: 2.85, y: 1.25, yaw: -Math.PI / 2 },
       { kind: 'painting', x: -2.8, z: -2.4, y: 1.7, yaw: Math.PI / 2 },
       { kind: 'painting', x: 2.8, z: -0.8, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'painting', x: -2.8, z: 1.2, y: 1.7, yaw: Math.PI / 2 },
       { kind: 'cabinet', x: 2.4, z: 3.2, yaw: -Math.PI / 2 },
-      { kind: 'rug', x: 0, z: 0 },
+      { kind: 'runnerRug', x: 0, z: -1.8, yaw: Math.PI / 2 }, { kind: 'runnerRug', x: 0, z: 1.8, yaw: Math.PI / 2 },
       { kind: 'fireplace', x: -5.15, z: 0, yaw: Math.PI / 2 },
       { kind: 'medallion', x: 0, z: -2.5, y: 4.3 }, { kind: 'medallion', x: 0, z: 2.5, y: 4.3 },
       { kind: 'payphone', x: 2.55, z: -3.4, yaw: -Math.PI / 2 },
@@ -1934,6 +2015,7 @@ const roomLaundry: RoomTemplate = {
   id: 'laundry-hall',
   build: (_rng) => spec('laundry-hall', 'maintenance', 7, 10, 3.0, {
     props: [
+      ...corridorTrim(7, 10, 3.0, { panels: false }),
       { kind: 'washer', x: -2.9, z: -3.4, yaw: Math.PI / 2 },
       { kind: 'washer', x: -2.9, z: -2.4, yaw: Math.PI / 2 },
       { kind: 'washer', x: -2.9, z: -1.4, yaw: Math.PI / 2 },

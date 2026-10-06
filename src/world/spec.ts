@@ -132,6 +132,10 @@ export type PropKind =
   | 'wineRack' | 'grateDrain'
   // sprint 216 — chapel / dining dressing batch
   | 'platedRoast' | 'platedPie' | 'ceilingRose' | 'pewRow' | 'chapelAltar'
+  // sprint 224 — corridor architecture batch
+  | 'pilaster' | 'wainscotRun' | 'corniceRun' | 'wallPanel' | 'beamRun'
+  | 'runnerRug' | 'grandfatherClock' | 'consoleTable' | 'wallLantern'
+  | 'doorSurround' | 'pierMirror' | 'newelPost'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript
