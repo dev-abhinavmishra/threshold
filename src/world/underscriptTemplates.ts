@@ -44,9 +44,9 @@ const u_corridor: RoomTemplate = {
       { kind: 'conduitRun', x: 1.3, z: -0.5, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'hangingCable', x: 0, z: 2.8, y: 2.25 },
       ...(rng.bool(0.4) ? [{ kind: 'printer' as const, x: 0.9, z: 1.2 }] : []),
-      ...(rng.bool(0.5) ? [{ kind: 'plasticCrate2' as const, x: -1.0, z: -3.0 }] : []),
+      ...(rng.bool(0.5) ? [{ kind: 'plasticCrate2' as const, x: -1.0, z: -3.0, meta: { laneBlock: true } }] : []),
       ...(rng.bool(0.35) ? [{ kind: 'mousetrap' as const, x: 1.1, z: -1.5 }] : []),
-      ...(rng.bool(0.3) ? [{ kind: 'rustCan' as const, x: -1.1, z: 2.5 }] : []),
+      ...(rng.bool(0.3) ? [{ kind: 'rustCan' as const, x: -1.1, z: 2.5, meta: { laneBlock: true } }] : []),
       ...(rng.bool(0.45) ? [{ kind: 'ceilingHook' as const, x: 0.6, z: -3.2, y: 2.13 }] : []),
     ],
     sockets: rng.bool(0.35) ? [{ kind: 'loot', x: 0.9, z: 1.2, meta: {} }] : [],
@@ -116,11 +116,13 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'pan', x: -0.6, z: -0.1, y: 0.78 },
       { kind: 'cheeseBox', x: 0.3, z: 0.12, y: 0.78 },
       { kind: 'bleachBottle', x: -2.4, z: 2.0 },
-      { kind: 'dartboard', x: 0.8, z: -2.93, y: 1.7 },
+      { kind: 'dartboard', x: 0.8, z: -2.93, y: 1.7, meta: { laneBlock: true } },
       { kind: 'lifebuoy', x: -1.2, z: -2.95, y: 1.7 },
       { kind: 'fishHat', x: 2.1, z: 1.4 },
       { kind: 'sumpPump', x: -2.4, z: 0.9 },
+
       { kind: 'sign', x: 1.2, z: 2.95, y: 1.8 },
+
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.5 },
     ],
     sockets: [{ kind: 'loot', x: -2.4, z: -2.4, meta: {} }, { kind: 'loot', x: 2.4, z: 2.4, meta: {} }],
@@ -170,8 +172,10 @@ const u_longHall: RoomTemplate = {
       { kind: 'airconUnit', x: -1.52, z: -4.5, y: 2.25, yaw: Math.PI / 2 },
       { kind: 'broom', x: 1.35, z: -6.5 },
       { kind: 'cableTray', x: -1.3, z: -2, y: 2.3 },
+
       { kind: 'portcullis', x: -0.6, z: 5.9, yaw: Math.PI },
       { kind: 'hatch', x: 1.15, z: -5.8 },
+
       { kind: 'ductRun', x: 0.9, z: 0, y: 2.3, yaw: Math.PI / 2 },
       { kind: 'conduitRun', x: -1.5, z: -4, y: 1.6, yaw: Math.PI / 2 },
       { kind: 'hangingCable', x: 0, z: 4.5, y: 2.3 },
@@ -217,11 +221,13 @@ const u_openOffice: RoomTemplate = {
         yaw: (i % 2) ? Math.PI : 0,
       }))),
       { kind: 'fluoroTube', x: -2, z: -1, y: 2.7 }, { kind: 'fluoroTube', x: 2, z: 1, y: 2.7 },
+
       { kind: 'printerRow', x: 2.4, z: 3.8 },
+
       { kind: 'waterCooler', x: -5, z: 3.6 },
       { kind: 'schoolDesk', x: 4.6, z: 0.4, yaw: -Math.PI / 2 }, { kind: 'schoolChair', x: 4.0, z: 0.4, yaw: -Math.PI / 2 },
       { kind: 'laptop', x: 4.55, z: 0.4, y: 0.75, yaw: -Math.PI / 2 },
-      { kind: 'boombox', x: 0.3, z: 3.75, y: 0.85 },
+      { kind: 'boombox', x: -3.1, z: 3.75, y: 0.85 },
       { kind: 'plasticCrate3', x: -4.8, z: -3.8 },
       // a building that should not be here — facade + crane riding the
       // back wall of the basement office floor
@@ -256,7 +262,7 @@ const u_serverRoom: RoomTemplate = {
       { kind: 'chainFence', x: -1.9, z: -0.7 },
       { kind: 'cableTray', x: 0, z: -1.2, y: 2.7 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.8 },
-      { kind: 'pipeManifold', x: 0, z: -3.85, yaw: 0 },
+      { kind: 'pipeManifold', x: 0, z: -3.85, yaw: 0, meta: { laneBlock: true } },
       { kind: 'breakerPanel', x: 3.85, z: 2.0, y: 0.8, yaw: -Math.PI / 2 },
       { kind: 'keyCabinet', x: -3.85, z: -2.0, y: 1.55, yaw: Math.PI / 2 },
       { kind: 'wallVent', x: -3.85, z: 2.6, y: 1.8, yaw: Math.PI / 2 },
@@ -331,18 +337,22 @@ const u_lobby: RoomTemplate = {
   id: 'u-lobby',
   build: (_rng) => us('u-lobby', 9, 7, 3.2, {
     props: [
+
       // counter hugging the NW wall — dead-center at scale 2.6 used to eat
       // the north door lane and get culled everywhere (sprint-221 finding)
       { kind: 'counter', x: -3.1, z: 2.2 },
+
       { kind: 'sofa', x: -3.2, z: -1.4, yaw: Math.PI / 2 },
       { kind: 'sofa', x: 3.2, z: -1.4, yaw: -Math.PI / 2 },
       { kind: 'waterCooler', x: -3.6, z: 2.6 },
-      { kind: 'shutterDoor', x: 0, z: 3.4 },
+      { kind: 'shutterDoor', x: 0, z: 3.4, meta: { laneBlock: true } },
       { kind: 'plasticChair', x: 1.8, z: -0.8, yaw: 2.6 },
       { kind: 'streetSeat', x: -3.4, z: -0.4, yaw: Math.PI / 2 },
       { kind: 'coffeeCart', x: 3.8, z: -0.6, yaw: -Math.PI / 2 },
+
       { kind: 'keyCabinet', x: -4.4, z: 1.0, y: 1.55, yaw: Math.PI / 2 },
       { kind: 'register', x: -2.9, z: 2.2, y: 1.13 },
+
       { kind: 'bin', x: -4.0, z: -2.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 3.1 },
       { kind: 'exitSign', x: 0, z: 3.4, y: 2.6 },
@@ -365,11 +375,13 @@ const u_deadEnd: RoomTemplate = {
   build: (_rng) => us('u-dead-end-loot', 4, 5, 2.5, {
     exits: [P(1.2, 'e'), P(0, 'n')],
     props: [
-      { kind: 'filing', x: 1.4, z: -1.8 }, { kind: 'filing', x: 1.4, z: -1.1 },
+      { kind: 'filing', x: 1.4, z: -1.8, meta: { laneBlock: true } }, { kind: 'filing', x: 1.4, z: -1.1, meta: { laneBlock: true } },
       { kind: 'sumpPump', x: -1.4, z: -1.7 },
-      { kind: 'crate', x: -1.2, z: 1.6 },
+      { kind: 'crate', x: -1.2, z: 1.6, meta: { laneBlock: true } },
       { kind: 'chest', x: -1.0, z: 0.2, yaw: 0.6 },
+
       { kind: 'suitcase', x: 1.3, z: 2.35, yaw: -0.5 },
+
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.4 },
     ],
     sockets: [{ kind: 'loot', x: 1.4, z: -1.4, meta: {} }, { kind: 'loot', x: -1.2, z: 1.6, meta: {} }],

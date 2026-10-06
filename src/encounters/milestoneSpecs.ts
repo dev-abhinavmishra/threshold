@@ -33,15 +33,17 @@ function lobbySpec(): RoomSpec {
     floorMaterial: 'carpet',
     props: [
       // The front desk: counter, register, bell, the ledger — arrival theater.
+
       { kind: 'counter', x: 0, z: 1.5, scale: 3.4 },
       { kind: 'register', x: 0.8, z: 1.5, y: 1.15 },
       { kind: 'counterBell', x: 1.55, z: 1.4, y: 1.12 },
       { kind: 'paperStack', x: -0.9, z: 1.5, y: 1.1 },
       { kind: 'vase', x: -1.8, z: 1.5, y: 1.05 },
+
       // Pigeonhole key/mail racks flanking the lift behind the desk.
       { kind: 'keyRack', x: -3.15, z: 4.36, y: 1.35, yaw: Math.PI },
       { kind: 'keyRack', x: 3.15, z: 4.36, y: 1.35, yaw: Math.PI },
-      { kind: 'liftDoors', x: 0, z: 4.45 },
+      { kind: 'liftDoors', x: 0, z: 4.45, meta: { laneBlock: true } },
       { kind: 'chandelier', x: 0, z: 0, y: 4.0 },
       // Seating islands.
       { kind: 'sofa', x: -3.6, z: 0.4, yaw: Math.PI / 2 },
@@ -109,10 +111,12 @@ function indexSpec(rng: Rng): RoomSpec {
     colliders.push({ x: Math.cos(a) * 2.4, z: Math.sin(a) * 2.4, w: 0.6, d: 0.6, h: 4.6 });
   }
   shelves.push({ kind: 'catalogueDesk', x: 0, z: 0 });
+
   // Seal console hugs the back wall OFF the door axis — dead-center at
   // (0,-9.4) sat inside the entry door's swing lane and was lane-culled
   // out of existence (sprint-222 find).
   shelves.push({ kind: 'sealConsole', x: 3.6, z: -9.2 });
+
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14 });
   shelves.push({ kind: 'catalogTrack', x: 0, z: 0, y: 4.2, scale: 14, yaw: Math.PI / 2 });
   shelves.push({ kind: 'rollingLadder', x: 4.4, z: 2.0 });
@@ -327,7 +331,7 @@ function engineSpec(): RoomSpec {
   // Three-level engine chamber approximated as a tall hall with platforms,
   // relay sockets distributed across levels, central routing board, freight lift.
   const props: RoomSpec['props'] = [
-    { kind: 'freightLift', x: 0, z: 10.5 },
+    { kind: 'freightLift', x: 0, z: 10.5, meta: { laneBlock: true } },
     { kind: 'liftDoors', x: 0, z: 9.0 },
     { kind: 'routingBoard', x: 0, z: -6.5 },
     { kind: 'machineBox', x: -5.5, z: -4, scale: 1.6 },
@@ -350,8 +354,10 @@ function engineSpec(): RoomSpec {
     { kind: 'instrPanel', x: -8.2, z: -4, yaw: Math.PI / 2 },
     { kind: 'instrPanel', x: 8.2, z: -4, yaw: -Math.PI / 2 },
     { kind: 'instrPanel', x: -8.2, z: 3, yaw: Math.PI / 2 },
+
     { kind: 'ironGate', x: -1.9, z: -10.6, yaw: 0 },
     { kind: 'ironGate', x: 1.9, z: -10.6, yaw: 0 },
+
     { kind: 'barrel', x: -7.6, z: -7.4 },
     { kind: 'propaneTank', x: 7.6, z: -7.2 },
     { kind: 'toolChest', x: -6.8, z: -7.2 },
@@ -484,8 +490,10 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
       return base('ms-wake', 12, 11, 3.6, {
         special: 'wake', floorMaterial: 'carpet',
         props: [
+
           { kind: 'coffin', x: 0, z: 2.0 },
           { kind: 'screenPanels', x: 0, z: 4.8, yaw: 0 },
+
           { kind: 'statue', x: -2.8, z: 4.3, yaw: Math.PI },
           { kind: 'statue', x: 2.8, z: 4.3, yaw: Math.PI },
           { kind: 'bench', x: -1.4, z: 0.4, yaw: Math.PI },
@@ -496,7 +504,7 @@ export function milestoneSpec(id: string, rng: Rng, _label: string): RoomSpec | 
           { kind: 'bench', x: 1.4, z: 2.8, yaw: Math.PI },
           { kind: 'candle', x: -1.1, z: 3.0 }, { kind: 'candle', x: 1.1, z: 3.0 },
           { kind: 'candle', x: -1.3, z: 4.1 }, { kind: 'candle', x: 1.3, z: 4.1 },
-          { kind: 'candle', x: 0.4, z: 4.4 }, { kind: 'candle', x: -0.5, z: 4.4 },
+          { kind: 'candle', x: 0.4, z: 4.4, meta: { laneBlock: true } }, { kind: 'candle', x: -0.5, z: 4.4, meta: { laneBlock: true } },
           { kind: 'vase', x: -2.0, z: 4.5 }, { kind: 'vase', x: 2.0, z: 4.5 },
           { kind: 'clock', x: -4.6, z: -4.4, yaw: Math.PI / 2 },
           { kind: 'sign', x: 0, z: -5.0, y: 2.6 },

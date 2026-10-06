@@ -110,7 +110,9 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
+
 CURRENT STATE (as of sprint 223)
+
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -493,6 +495,7 @@ CURRENT STATE (as of sprint 223)
   NewelPost milled but unplaced — belongs to the staircase kit.
   78 unit tests.
 
+
   ENV TRAP (sprint 224): under SwiftShader on this box,
   renderer.render()/composer=null on a BUILT streamer room
   deterministically kills the page for heavy rooms (corr-doors-row
@@ -828,6 +831,7 @@ line of sight mid-charge.*
   find a visible pocket when writing specs for other rooms.
 - Vitest +3 (seal/release, arc-catch+throwback, exit-open yield): 102 total.
 - Gates: tsc, lint, 102 vitest, 5-seed sim, props.spec 13/13, build.
+
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
@@ -1970,6 +1974,20 @@ his weapon is that the building knows your face.
   specs must pick rooms with `built.lights.length > 0`. And blink/screen
   anims oscillate per-frame — sample emissive MAX over frames, not a point.
 
+Sprint 217 re-merge note (this branch, after main raced to 278):
+- The sprint-217 door-lane work collided with ~60 parallel sprints;
+  merged toward main's placement audit (sprints 221-223) and kept only
+  the UNIQUE mechanism: laneBlock meta + footprintInDoorLeaf +
+  builder collider-shed. clearDoorLanes exempts meta.laneBlock props;
+  the builder keeps their meshes but drops colliders inside a leaf's
+  ±0.35m×0.9m throat. Sweep on merged code finds ZERO culled props —
+  the mechanism is dormant but guards the sealed-doorway regression
+  class: the leaf test fails if a collider in the throat isn't tagged.
+- laneBlock tags were NOT re-applied (main moved every in-lane prop
+  out — nothing to preserve today). Tag a prop laneBlock only when it
+  genuinely belongs inside a doorway (portcullis, archway decor).
+
+
 ## Sprint 279 — the sledge lamp (light you can lift off the haul)
 
 **What:** the hauler's drag now carries a hooded work-lamp on its tail —
@@ -2176,3 +2194,4 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The Auditor wanted-poster stays a design call.
   - wetFloor (13 uses) is still dead dressing — a second slip family is
     probably too same-y with armed puddles; keep dormant.
+
