@@ -2121,3 +2121,24 @@ property, crew board, claim register, audit — 6 legs). Both files are
 harness-typed — no local interface block this time (the legacy layer
 only exists in the mechanics lineage). 'the wash' keeps its known
 seed-gated skip (no laundress on 's').
+
+## Sprint 284 — the wash un-skipped (and its aim fixed for real)
+The wash leg's seed-gated skip since sprint 272 ended: 's' drifted the
+laundress off schedule; gilt-spine-777 (already a sim seed) schedules
+TWO — u-15 (lit flood) + u-105 (drowned mains). The leg is fully dynamic
+(`find(r.scheduled laundress)`) so only the seed swapped. But un-skipping
+exposed two latent spec bugs the skip had hidden:
+- **Floor-aim never reached the drain**: drain interactable pos.y=0.9 →
+  focus point is 1.5 (pos.y+0.6), nearly eye level. Aiming pitch at 0.5
+  gave align≈0.68 <0.86 and prox 1.23 >1.1 — focus could NEVER land.
+  The wash socket (y=0.5, prox-covered) is why the basket phases always
+  looked fine. All aim loops now pitch at the interactable's own focus
+  point (drain 1.5, wash 1.1) against live horizontal distance.
+- **The sniff window makes the drain unreachable at close stand**:
+  while she's in 'engage', 'Search the wash' (priority 3) out-scores the
+  drain (priority 2) at any stand where its prox <1.1 admits it — the
+  crank is structurally unfocusable under ~1m. Phase-3 stand moved to
+  1.05m: wash prox >1.1 AND align <0.86 → ineligible → drain alone.
+Trap logged for future specs: **aim at it.pos.y + 0.6, not the prop**,
+and always compute pitch from live horizontal distance — collision can
+push a teleported stand point ~0.25m off.

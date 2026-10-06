@@ -127,7 +127,7 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
 test('the wash — a fouled drain, the thrown sound, the window', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
-  await seededRun(page, 's'); // laundress @ u-3 (drowned mains)
+  await seededRun(page, 'gilt-spine-777'); // laundress @ u-15 (lit flood) + u-105 (drowned mains)
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
@@ -154,14 +154,18 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
       { guarding: boolean; drainPos: { x: number; z: number }; state: string } | undefined;
     if (!w) return { stage: 'no-laundress' } as const;
 
-    // stand at the basin and work the crank — she fouls it
+    // stand at the basin and work the crank — she fouls it.
+    // Aim at the interactable's focus point (pos.y + 0.6): the drain sits
+    // at y=0.9 → aim at 1.5, nearly level — a floor-aim misses align>0.86
+    // and prox is too far (1.23 > 1.1) to save it.
     g.player.teleport(w.drainPos.x + 0.6, 0, w.drainPos.z);
     const foulCapBefore = caps.length;
     let pressed = '';
     for (let f = 0; f < 55; f++) {
       g.player.teleport(w.drainPos.x + 0.6, 0, w.drainPos.z);
       const eyeY = g.player.pos.y + g.player.eyeHeight;
-      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      const hd = Math.max(0.3, Math.hypot(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(1.5 - eyeY, hd);
       g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
       g.frame();
       if (ga.interaction.focused?.prompt) pressed = ga.interaction.focused.prompt;
@@ -177,12 +181,14 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
       intensity: 0.6, category: 'impact', caption: '[slam]' });
     for (let f = 0; f < 40; f++) g.frame(); // she goes to sniff
     const offGuard = !w.guarding;
-    // window one: pick the wash and let her come home to it — the keen
+    // window one: pick the wash and let her come home to it — the keen.
+    // The wash socket sits at y=0.5 → focus point 1.1; prox covers it anyway.
     const winCapsBefore = caps.length;
     for (let f = 0; f < 40; f++) {
       g.player.teleport(w.drainPos.x + 0.5, 0, w.drainPos.z);
       const eyeY = g.player.pos.y + g.player.eyeHeight;
-      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      const hd = Math.max(0.3, Math.hypot(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(1.1 - eyeY, hd);
       g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
       g.frame();
       if (f === 5) ga.keys.add('KeyE');
@@ -192,14 +198,18 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
     g.player.teleport(wRoom.origin.x, 0, wRoom.origin.z); // stand back for her return
     for (let f = 0; f < 260 && !caps.some((c) => /wail at the basin|wash is lighter/.test(c)); f++) g.frame();
     const keened = caps.some((c) => /wail at the basin|wash is lighter/.test(c));
-    // window two: pull her off again and take the crank — no keen, she rides out
+    // window two: pull her off again and take the crank — no keen, she rides
+    // out. While she sniffs, 'Search the wash' (priority 3, prox-eligible)
+    // out-scores the drain on any close stand — stand ≥1.0m so its prox
+    // (>1.1) and align (<0.86) both fail, leaving the drain the only verb.
     ga.sound.emit({ x: w.drainPos.x + ox * 0.7, y: 0.3, z: w.drainPos.z + oz * 0.7,
       intensity: 0.6, category: 'impact', caption: '[slam]' });
     for (let f = 0; f < 40; f++) g.frame();
     for (let f = 0; f < 55; f++) {
-      g.player.teleport(w.drainPos.x + 0.5, 0, w.drainPos.z);
+      g.player.teleport(w.drainPos.x + 1.05, 0, w.drainPos.z);
       const eyeY = g.player.pos.y + g.player.eyeHeight;
-      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      const hd = Math.max(0.3, Math.hypot(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(1.5 - eyeY, hd);
       g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
       g.frame();
       if (f === 5) ga.keys.add('KeyE');
