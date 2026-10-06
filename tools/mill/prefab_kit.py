@@ -1773,6 +1773,101 @@ def grateDrain():
     join_all('grateDrain')
 
 
+def platedRoast():
+    """Roast fowl on an oval serving platter — browned dome body, two leg
+    drums and a few garnish wedges. Table prop ~0.55 wide, ~0.24 tall."""
+    cyl('platter', (0, 0, 0.015), 0.27, 0.03, DARK, 24)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.17, segments=16, ring_count=8,
+                                         location=(0, 0, 0.13))
+    body = bpy.context.object
+    body.name = 'roast'
+    body.scale = (1.25, 0.85, 0.75)
+    bpy.ops.object.transform_apply(scale=True)
+    body.data.materials.append(WORN)
+    for sx in (-1, 1):
+        leg = cyl('leg', (sx * 0.16, -0.02, 0.1), 0.035, 0.16, WORN, 10)
+        leg.rotation_euler[1] = sx * 1.15
+        bpy.context.view_layer.update()
+    for i in range(5):
+        a = -0.6 + i * 0.3
+        cube('garnish', (math.sin(a) * 0.22, 0.1 + math.cos(a) * 0.05, 0.04),
+             (0.05, 0.09, 0.03), CLOTH, 0.008)
+    torus('rim', (0, 0, 0.03), 0.25, 0.012, BRASS, seg=24)
+    join_all('platedRoast')
+
+
+def platedPie():
+    """Pie in a tin — domed crust, crimped rim and a lattice top.
+    Table prop ~0.3 diameter, ~0.15 tall."""
+    cyl('tin', (0, 0, 0.03), 0.15, 0.06, IRON, 20)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.14, segments=16, ring_count=8,
+                                         location=(0, 0, 0.07))
+    dome = bpy.context.object
+    dome.name = 'crust'
+    dome.scale = (1, 1, 0.55)
+    bpy.ops.object.transform_apply(scale=True)
+    dome.data.materials.append(WORN)
+    torus('crimp', (0, 0, 0.1), 0.145, 0.018, WORN, seg=20)
+    for i in range(-2, 3):
+        cube('lat', (i * 0.045, 0, 0.135), (0.03, 0.24, 0.012), WORN, 0.005)
+        cube('lat', (0, i * 0.045, 0.145), (0.24, 0.03, 0.012), WORN, 0.005)
+    join_all('platedPie')
+
+
+def ceilingRose():
+    """Ornamental ceiling rose — flat backing disc, two concentric plaster
+    rings, a ring of small petals and a central hanging boss. Mounted
+    centre-anchored under the ceiling; ~1.1 diameter, ~0.2 deep."""
+    cyl('disc', (0, 0, -0.01), 0.55, 0.03, STONE, 32)
+    torus('outer', (0, 0, -0.02), 0.48, 0.035, STONE, seg=32)
+    torus('mid', (0, 0, -0.045), 0.3, 0.03, STONE, seg=24)
+    for i in range(12):
+        a = math.pi * 2 * i / 12
+        p = cube('petal', (math.cos(a) * 0.36, math.sin(a) * 0.36, -0.05),
+                 (0.07, 0.14, 0.04), STONE, 0.015)
+        p.rotation_euler[2] = a
+        bpy.context.view_layer.update()
+    cyl('boss', (0, 0, -0.1), 0.09, 0.12, DARK, 16)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.07, segments=12, ring_count=6,
+                                         location=(0, 0, -0.18))
+    bpy.context.object.data.materials.append(BRASS)
+    join_all('ceilingRose')
+
+
+def pewRow():
+    """Chapel pew — tall panel back, bench seat, closed end-cheeks and a
+    narrow kneeler shelf. ~2.4 wide x 0.6 deep x 1.05 tall; glTF +z is the
+    pew front (faces the altar)."""
+    cube('back', (0, -0.24, 0.62), (2.4, 0.07, 0.86), WOOD, 0.02)
+    cube('seat', (0, 0, 0.45), (2.3, 0.5, 0.07), WOOD, 0.015)
+    cube('apron', (0, 0.19, 0.25), (2.3, 0.06, 0.4), DARK, 0.01)
+    for sx in (-1, 1):
+        cube('cheek', (sx * 1.18, -0.02, 0.52), (0.08, 0.55, 1.0), DARK, 0.015)
+        cube('cheekCap', (sx * 1.18, -0.26, 1.03), (0.1, 0.1, 0.06), WORN, 0.01)
+    cube('shelf', (0, -0.34, 0.88), (2.2, 0.16, 0.04), WORN, 0.01)
+    for x in (-0.9, 0, 0.9):
+        cube('panel', (x, -0.275, 0.6), (0.5, 0.03, 0.5), DARK, 0.008)
+    join_all('pewRow')
+
+
+def chapelAltar():
+    """Draped stone altar — slab on block legs, long front cloth and two
+    brass candle prickets. ~1.6 wide x 0.8 deep x 1.15 tall; glTF +z faces
+    the congregation."""
+    cube('legL', (-0.6, 0, 0.42), (0.28, 0.6, 0.84), STONE, 0.02)
+    cube('legR', (0.6, 0, 0.42), (0.28, 0.6, 0.84), STONE, 0.02)
+    cube('slab', (0, 0, 0.9), (1.6, 0.8, 0.12), STONE, 0.015)
+    cube('cloth', (0, 0.3, 0.52), (1.5, 0.06, 0.75), CLOTH, 0.01)
+    cube('clothTop', (0, 0.05, 0.965), (1.5, 0.7, 0.03), CLOTH, 0.008)
+    for sx in (-1, 1):
+        cyl('pricket', (sx * 0.55, -0.05, 1.08), 0.03, 0.22, BRASS, 12)
+        cyl('wax', (sx * 0.55, -0.05, 1.23), 0.018, 0.09, STONE, 10)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.09, segments=12, ring_count=6,
+                                         location=(0, -0.15, 1.02))
+    bpy.context.object.data.materials.append(STONE)
+    join_all('chapelAltar')
+
+
 PIECES = {
     'archway': archway, 'vault': vault, 'fireplace': fireplace,
     'windowArch': windowArch, 'hatch': hatch, 'medallion': medallion,
@@ -1804,6 +1899,9 @@ PIECES = {
     'valveWheel': valveWheel, 'dumbWaiterDoor': dumbWaiterDoor,
     'apothecaryCabinet': apothecaryCabinet, 'meatHook': meatHook,
     'wineRack': wineRack, 'grateDrain': grateDrain,
+    'platedRoast': platedRoast, 'platedPie': platedPie,
+    'ceilingRose': ceilingRose, 'pewRow': pewRow,
+    'chapelAltar': chapelAltar,
 }
 
 def main():

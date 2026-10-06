@@ -120,6 +120,8 @@ export type PropKind =
   | 'curtainSwag' | 'drapePanel' | 'linenPress' | 'candelabra'
   | 'valveWheel' | 'dumbWaiterDoor' | 'apothecaryCabinet' | 'meatHook'
   | 'wineRack' | 'grateDrain'
+  // sprint 216 — chapel / dining dressing batch
+  | 'platedRoast' | 'platedPie' | 'ceilingRose' | 'pewRow' | 'chapelAltar'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript

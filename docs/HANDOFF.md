@@ -110,7 +110,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 213)
+CURRENT STATE (as of sprint 216)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -287,6 +287,23 @@ CURRENT STATE (as of sprint 213)
   Wall mounts live in WALL_MOUNT_Y (also makes them WALL_THIN insets);
   anything mounted >=1.95y is door-lane-immune. Hanging props
   (meatHook y2.35) survive lanes via the y>1.9 rule.
+  Sprint 216 prop-clash system + chapel/dining mill: rooms were
+  landing wall-hung filler inside fixed furniture (props overlapped,
+  rooms looked messy — user feedback). spec() now runs
+  resolveWallClashes(): wallProps tags each prop meta:{wall:true}, and
+  any wall prop materially overlapping an earlier prop shifts along
+  its own wall (±0.8/1.6/2.4m) then drops — matches the door-lane
+  drop rule. propsClash(a,b) = footprint-overlap + vertical-span
+  test; CLASH_OK whitelists ~24 authored co-location pairs (chairs at
+  tables, busts on pillars, candle clusters). Regression test sweeps
+  EVERY template x 3 seeds: no non-wall floor props overlap.
+  Fixed-embeds found & re-placed by the sweep: guest clock, records
+  bookCart/board, mezzanine bookshelf+ladder, cubicle filing row,
+  grand-suite TV/clock/vase heights, waiting-room bin, conservatory
+  plant. 5 new mill pieces — platedRoast, platedPie, ceilingRose,
+  pewRow (replaces cathedral benches), chapelAltar — dressed into
+  staff-dining, banquet, cathedral, sanctuary, kitchen, guest rooms.
+  ~72 mill dirs; MILL_DIRS covers all.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material

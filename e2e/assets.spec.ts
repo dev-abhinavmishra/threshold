@@ -25,6 +25,7 @@ const MILL_DIRS = [
   'upholsteredHeadboard', 'coalScuttle',
   'curtainSwag', 'drapePanel', 'linenPress', 'candelabra', 'valveWheel',
   'dumbWaiterDoor', 'apothecaryCabinet', 'meatHook', 'wineRack', 'grateDrain',
+  'platedRoast', 'platedPie', 'ceilingRose', 'pewRow', 'chapelAltar',
 ];
 
 const FIGURES = [

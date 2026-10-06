@@ -736,3 +736,13 @@ New room templates this sprint: `kitchen-service`, `scullery`, `staff-dining`.
 | `meatHook/` | Chain + gape hook + hanging carcass slab w/ ribs (ceiling) | kitchen-service ×2 |
 | `wineRack/` | Wall lattice wine rack, 6 bottles | staff-dining |
 | `grateDrain/` | Floor drain — rim ring, iron slats, dark pit | kitchen-service, scullery, maint-pipes, maint-boiler, maint-flooded |
+
+## Sprint 216 — chapel / dining mill batch (all original, tools/mill/prefab_kit.py)
+
+| Directory | Contents | Used in |
+|---|---|---|
+| `platedRoast/` | Roast fowl on oval platter — dome body, leg drums, garnish, brass rim | staff-dining, gallery-banquet |
+| `platedPie/` | Pie tin — domed crust, crimped rim, lattice top | staff-dining, kitchen-service, gallery-banquet |
+| `ceilingRose/` | Ornamental ceiling rose — disc, twin plaster rings, 12 petals, hanging boss (ceiling-mount) | guest-standard, suite-split, staff-dining, records-office |
+| `pewRow/` | Chapel pew — tall panel back, bench seat, closed cheeks, kneeler shelf | gallery-cathedral ×4 |
+| `chapelAltar/` | Draped stone altar — slab, block legs, cloth front, brass candle prickets | safe-sanctuary |
