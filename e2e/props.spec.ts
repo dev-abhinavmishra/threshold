@@ -46,7 +46,7 @@ interface ThresholdG {
     interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } }[];
   };
   entities: { id: string; state: string }[];
-  route: { rooms: GRoom[]; branchRooms?: GRoom[] };
+  route: { rooms: GRoom[]; branchRooms?: GRoom[]; underRooms: GRoom[] };
   // interact journals (private fields — reachable at runtime)
   litTVs: Set<string>;
   woundClocks: Set<string>;
@@ -1972,5 +1972,58 @@ test("a forged ledger lies by omission — the wet-ink page conceals the forger'
   expect(r.ledgerLine).not.toMatch(/Door 071/);
   // The tell: legible in the moment, damning in retrospect.
   expect(r.wetInk).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("the work order files open tickets — the under's own paper answers cargo", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': work orders at u-22,26,39,67,79,112,113,119
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as { enterUnderscript(): void; currentRoom: number; marginalia: number };
+
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.workOrder));
+    if (!room) return { stage: 'no-order' } as const;
+    ga.currentRoom = room.index;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    const pt = g.interaction.interactables.find((i) => i.kind === 'workOrder');
+    if (!pt) return { stage: 'no-order-point', kinds: g.interaction.interactables.map((i) => i.kind) } as const;
+    const sock = pt.data!;
+    const price = (sock.meta as { price?: number }).price ?? 0;
+    ga.marginalia = 40;
+    for (let f = 0; f < 160 && !(sock.meta as { taken?: boolean }).taken; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    const filed = (sock.meta as { taken?: boolean }).taken === true;
+    const tickets = caps.find((c) => /open tickets|stamped closed/.test(c)) ?? '';
+    const egress = caps.find((c) => /egress stamp is filed/.test(c)) ?? '';
+    return { stage: 'done', price, filed, tickets, egress, marginalia: ga.marginalia, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { price: number; filed: boolean; tickets: string; egress: string; marginalia: number; caps: string[] };
+  expect(r.filed, `the order never filed — caps: ${r.caps.join(' | ')}`).toBe(true);
+  expect(r.marginalia).toBe(40 - r.price);
+  expect(r.tickets).toMatch(/open tickets: Door \d{3} —/);
+  // The last under-room's stamp always reads Door 120.
+  expect(r.egress).toMatch(/egress stamp is filed at Door 120/);
   expect(errors).toEqual([]);
 });

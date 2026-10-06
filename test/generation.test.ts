@@ -359,6 +359,25 @@ describe('sprint mechanics coverage', () => {
     expect(rosters).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("work orders: marginalia-priced cargo sheets under the route", () => {
+    const IDS = new Set(['u-office-row', 'u-open-office', 'u-print-shop', 'u-server', 'u-break', 'u-records-cage', 'u-lobby']);
+    let orders = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        for (const s of r.sockets.filter((x) => x.meta.workOrder)) {
+          orders++;
+          expect(IDS.has(r.templateId)).toBe(true);
+          const price = s.meta.price as number;
+          expect(price).toBeGreaterThanOrEqual(3);
+          expect(price).toBeLessThanOrEqual(8);
+        }
+      }
+    }
+    // the under carries several sheets a run, sparse like its vends
+    expect(orders).toBeGreaterThanOrEqual(SEEDS.length * 4);
+  });
+
   it("complaint books: cheap hazard filings in maintenance + gallery", () => {
     let books = 0;
     for (const seed of SEEDS) {
@@ -394,7 +413,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;

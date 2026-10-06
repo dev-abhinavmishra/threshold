@@ -575,6 +575,32 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
         }
       }
+      // The work-order book — the under's fourth paper. Where the books
+      // above answer threats and staff, the order sheet answers CARGO:
+      // which rooms still hold unclaimed stock (and where the egress is
+      // stamped). Priced in marginalia — the crew's own currency.
+      const WORK_ORDER_ROOMS = new Set([
+        'u-office-row', 'u-open-office', 'u-print-shop', 'u-server',
+        'u-break', 'u-records-cage', 'u-lobby',
+      ]);
+      const WORK_ORDER_SURF = new Set([
+        'printerRow', 'breakTable', 'schoolDesk', 'filing', 'keyCabinet',
+        'machineBox', 'typewriter', 'counter', 'cubicle', 'printer',
+      ]);
+      for (const room of underRooms) {
+        if (!WORK_ORDER_ROOMS.has(room.templateId) || !room.spec || !lootRng.bool(0.12)) continue;
+        const surf = room.spec.props.find((p) => WORK_ORDER_SURF.has(p.kind));
+        if (!surf) continue;
+        const wp = localToWorld(room.origin, room.yaw, surf.x, 0, surf.z);
+        const toW = { x: room.origin.x - wp.x, z: room.origin.z - wp.z };
+        const twL = Math.hypot(toW.x, toW.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(wp.x + (toW.x / twL) * 0.5, 0.9, wp.z + (toW.z / twL) * 0.5),
+          yaw: 0, filled: true,
+          meta: { workOrder: true, price: lootRng.int(3, 8) },
+        });
+      }
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
       const returnRoom = mainRooms[Math.min(underReturn, mainRooms.length - 1)];

@@ -1689,6 +1689,47 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'workOrder': {
+        // The work-order book — the under's own paper, priced in marginalia.
+        // Where the books above answer threats and staff, the order sheet
+        // answers CARGO: which rooms still hold unclaimed stock, and where
+        // the egress is stamped.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const TASKS: Record<string, string> = {
+          imprints: 'imprints for the tin', marginalia: 'marginalia for the margins',
+          lore: 'papers unsigned',
+        };
+        const tickets: string[] = [];
+        const under = this.route?.underRooms ?? [];
+        for (const r of under) {
+          if (r.index <= this.currentRoom || r.index > this.currentRoom + 12 || tickets.length >= 4) continue;
+          for (const s of r.sockets ?? []) {
+            if (tickets.length >= 4) break;
+            if (s.meta.taken || s.meta.workOrder) continue;
+            if (s.meta.vend) tickets.push(`Door ${String(r.index).padStart(3, '0')} — the machine still stocks`);
+            else if (s.meta.contains) {
+              const t = TASKS[s.meta.contains as string] ?? 'a tool unclaimed';
+              tickets.push(`Door ${String(r.index).padStart(3, '0')} — ${t}`);
+            }
+          }
+        }
+        const egress = under[under.length - 1];
+        const text = tickets.length
+          ? `[open tickets: ${tickets.join(' · ')}]`
+          : "[the sheet is stamped closed ahead — the crew's been through]";
+        this.cue('whisper', it.pos, text);
+        if (egress) this.cue('whisper', it.pos, `[the egress stamp is filed at Door ${String(egress.index).padStart(3, '0')}]`);
+        return;
+      }
       case 'item':
       case 'lore':
       case 'card': {

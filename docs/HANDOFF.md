@@ -1294,3 +1294,28 @@ NEXT SPRINT IDEAS (pick the biggest first)
     u-maintenance, marginalia-priced?) extends the triad below.
   - Warden cross-room keys fiction call (staff ring vs patrol weight).
   - Brace UX race watch; milestone-set hearing remains a design call.
+
+## Sprint 250 — the work-order book (the under's fourth paper)
+
+- `File the work order — N marginalia` on under work surfaces in
+  u-office-row / u-open-office / u-print-shop / u-server / u-break /
+  u-records-cage / u-lobby (template gate + 0.12 roll → 6–10/run, 3–8
+  marginalia — the crew's own currency, spent only here and at the Broker).
+- The book answers CARGO, not threats: `[open tickets: Door 023 —
+  imprints for the tin · Door 028 — the machine still stocks]` — under
+  rooms in +12 with unspent loot/vend sockets — then `[the egress stamp
+  is filed at Door 120]` so the sheet always points at the way out.
+  Empty → `[the sheet is stamped closed ahead — the crew's been through]`.
+- The library is now four books across two currencies: ledger predicts,
+  roster locates, complaint files hazards, work order files cargo.
+- Trap: the under-cache fill test asserts every filled under socket has
+  `meta.contains` — book/vend sockets must be excluded like vend.
+- e2e drives the real descent (`enterUnderscript()` callable via cast —
+  it rewires space/streamer/entities) then files u-22 on 's': open
+  tickets caption + egress stamp + marginalia debit. props.spec 25/25.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Warden cross-room keys fiction call (staff ring vs patrol weight).
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - e2e file is 25 specs / 2.1min — splitting props.spec by theme
+    (books / doors / entities) would halve per-spec feedback time.
