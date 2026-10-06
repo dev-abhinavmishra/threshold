@@ -513,6 +513,19 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
   applyForeshadowing(mainRooms, streams.stream('scare'));
 
+  // The forged page — a book near a forger of doors can be rewritten. A
+  // ledger within sight of a redactor's door (inside the book's own
+  // +10 read window) omits that filing — the first lie the books tell,
+  // legible only in retrospect (one page of still-wet ink). Stamped here,
+  // after every scheduled pass has settled.
+  for (const room of mainRooms) {
+    const sock = room.sockets.find((s) => s.meta.register);
+    if (!sock) continue;
+    const cover = mainRooms.find((rx) => rx.index > room.index && rx.index <= room.index + 10
+      && rx.scheduled.some((s) => s.entity === 'redactor'))?.index;
+    if (cover !== undefined) { sock.meta.forged = true; sock.meta.forgedCover = cover; }
+  }
+
   // Underscript
   let underRooms: RoomInstance[] = [];
   let underEntrance = 0;

@@ -313,6 +313,31 @@ describe('sprint mechanics coverage', () => {
     expect(ledgers).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it("forged pages: ledgers near a redactor conceal its door", () => {
+    let forged = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of mainRooms(route)) {
+        for (const s of r.sockets.filter((x) => x.meta.register)) {
+          const cover = s.meta.forgedCover as number | undefined;
+          if (cover === undefined) {
+            expect(s.meta.forged).toBeFalsy();
+            continue;
+          }
+          forged++;
+          expect(s.meta.forged).toBe(true);
+          // the concealed door must be inside the book's own read window
+          expect(cover).toBeGreaterThan(r.index);
+          expect(cover).toBeLessThanOrEqual(r.index + 10);
+          const covered = mainRooms(route).find((x) => x.index === cover);
+          expect(covered?.scheduled?.some((x) => x.entity === 'redactor')).toBe(true);
+        }
+      }
+    }
+    // rare by construction — at least one seed carries a forged book
+    expect(forged).toBeGreaterThanOrEqual(1);
+  });
+
   it("duty rosters: cheap staff-location reads on records desks only", () => {
     let rosters = 0;
     for (const seed of SEEDS) {

@@ -1921,3 +1921,56 @@ test("the fault book files hazards by door — the cheapest paper knows what bit
   expect(r.bookLine).toMatch(/floor heaves|pass too fast|nests in the lids|lid that bites|door that isn't/);
   expect(errors).toEqual([]);
 });
+
+test("a forged ledger lies by omission — the wet-ink page conceals the forger's door", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'ash-vault-101'); // forged ledger @65 conceals redactor @71
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+
+    const room = g.route.rooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.forged));
+    if (!room) return { stage: 'no-forged' } as const;
+    const cover = ((room.sockets ?? []).find((s) => s.meta?.forged)?.meta?.forgedCover as number) ?? -1;
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    const pt = g.interaction.interactables.find((i) => i.kind === 'register');
+    if (!pt) return { stage: 'no-register-point' } as const;
+    const sock = pt.data!;
+    purse.imprints = 80;
+    for (let f = 0; f < 160 && !(sock.meta as { taken?: boolean }).taken; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.1 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    const paid = (sock.meta as { taken?: boolean }).taken === true;
+    const ledgerLine = caps.find((c) => /the ledger expects|pages ahead are blank/.test(c)) ?? '';
+    const wetInk = caps.some((c) => /ink on one page is still wet/.test(c));
+    return { stage: 'done', cover, paid, ledgerLine, wetInk, caps: caps.slice(-10) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { cover: number; paid: boolean; ledgerLine: string; wetInk: boolean; caps: string[] };
+  expect(r.cover).toBe(71);
+  expect(r.paid, `the forged book never read — caps: ${r.caps.join(' | ')}`).toBe(true);
+  // The lie: Door 071 holds a redactor and the book says nothing about it.
+  expect(r.ledgerLine).toMatch(/the ledger expects/);
+  expect(r.ledgerLine).not.toMatch(/Door 071/);
+  // The tell: legible in the moment, damning in retrospect.
+  expect(r.wetInk).toBe(true);
+  expect(errors).toEqual([]);
+});

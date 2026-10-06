@@ -1264,3 +1264,33 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Warden cross-room keys question remains open (staff ring vs patrol
     doesn't rate keys) — fiction call.
   - Brace UX watch; milestone-set hearing remains a design call.
+
+## Sprint 249 — the forged page (the books' first lie)
+
+- The information covenant now has its exception: a guest ledger whose
+  own read window (+10) contains a redactor's door carries `forged` +
+  `forgedCover` meta — stamped in generateRoute AFTER scheduleEncounters
+  settles (see trap below).
+- The lie is omission, played honestly: the covered room's filings are
+  dropped from the expects-line. If that was the only filing, the book
+  asserts empty — `[the ledger expects: still air until Door 071]` —
+  through a door that holds a forger. The tell is physical and readable:
+  a second whisper `[the ink on one page is still wet]`.
+- Rarity: ledgers rarely sit in a redactor's sightline — 5 forged books
+  across 3/7 seeds (ash-vault 65/68→71, wax-bell 45→48 & 81→86,
+  sable-cord 62→72; none on 's' or 'threshold').
+- Trap learned: `fillSockets` runs BEFORE `scheduleEncounters` — socket
+  meta that depends on `room.scheduled` must be stamped in a post-pass
+  inside generateRoute, not inline in the socket blocks. (First attempt
+  found zero covers and silently no-op'd; second attempt landed inside
+  generateUnderscript's tail — the `return rooms` after the editor pin
+  is the UNDER rooms' scheduler, not main.)
+- vitest: forged ⇒ cover within (idx, idx+10] and holds a redactor;
+  ≥1 seed carries one. e2e ash-vault-101: ledger@65 omits Door 071,
+  emits the wet-ink tell, purse decrements. props.spec 24/24.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - The underscript has no books — a fourth (work orders/fault sheets in
+    u-maintenance, marginalia-priced?) extends the triad below.
+  - Warden cross-room keys fiction call (staff ring vs patrol weight).
+  - Brace UX race watch; milestone-set hearing remains a design call.

@@ -1579,9 +1579,11 @@ export class Game {
         };
         const seen = new Set<string>();
         const parts: string[] = [];
+        const cover = sock.meta.forgedCover as number | undefined;
         const rooms = this.route?.rooms ?? [];
         for (const r of rooms) {
           if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || parts.length >= 4) continue;
+          if (r.index === cover) continue;   // the forged page — a lie by omission
           for (const s of r.scheduled ?? []) {
             const noun = NOUNS[s.entity] ?? 'a guest unlisted';
             const key = `${noun}|${r.index}`;
@@ -1592,8 +1594,11 @@ export class Game {
         }
         const text = parts.length
           ? `[the ledger expects: ${parts.join(' · ')}]`
-          : "[the ledger's pages ahead are blank — nothing is expected]";
+          : cover !== undefined
+            ? `[the ledger expects: still air until Door ${String(cover).padStart(3, '0')}]`
+            : "[the ledger's pages ahead are blank — nothing is expected]";
         this.cue('whisper', it.pos, text);
+        if (cover !== undefined) this.cue('whisper', it.pos, '[the ink on one page is still wet]');
         return;
       }
       case 'roster': {
