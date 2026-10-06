@@ -521,6 +521,29 @@ CURRENT STATE (as of sprint 223)
   rotated boards use rotation_euler[0]=-atan(rise/run) for low-front/
   high-back. 78 unit tests.
 
+  Sprint 226 underscript weathering pass: the 121 under-rooms reuse
+  ~15 milled kinds — per-instance decay is the "variants/weathering"
+  depth layer. builder.ts now weathers under-rooms at build time:
+  - fluoroTube/exitSign props: ~12%/8% dead (shared DEAD_TUBE_MAT,
+    still merges per room), ~30%/18% dying (cloned emissive mat +
+    'flicker' anim coupled to the nearest spec.lights entry via
+    lsRef — Game resolves lightRef lazily, same as fixture flicker),
+    ~12% of live tubes hang snapped (group.rotation.z tilt — ghost
+    colliders, so always safe).
+  - Milled GLB mats carry no emissive: the lit face is the 'wax'
+    material bucket (tubes / legend strokes). Dying clones it and
+    sets emissive (fluoro ivory / sign red); procedural fallbacks
+    still match on emissiveIntensity>0.05.
+  - U_JITTER: desk/floor pieces sit askew per kind (paperStack/
+    typewriter ±0.5, waterCooler ±0.25, printer/breakTable ±0.08).
+  - paperStack ~15% spilling lean (rotation.z).
+  - Paper litter drift: 1-3 spots/room, 3-6 sheets each, merged to
+  ONE paperOld mesh per room (+1 draw call), lane-guarded via
+    footprintInDoorLane. Floor stains already existed (stainP 0.8).
+  - clone(true) on GLB instances shares materials — safe to REPLACE
+    mesh.material, never mutate a shared instance.
+  79 unit tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
     sconce) and per-device prop clones (LED/screen/button) stay — each
@@ -537,7 +560,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - More mill batches if dressing still reads thin: main-route sideboard
     variants + corridor furniture; u-room kit is milled now (sprint 220) —
     next under-room depth is variants/weathering, not new kinds.
-    Grand staircase kit + arched window tracery still open on main side.
+    Grand staircase kit + tracery done (225); u-weathering done (226) —
+    next under-room depth is authored variants, not systems.
 ```
 
 ---

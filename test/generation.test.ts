@@ -417,3 +417,30 @@ describe('room build — lamp material pairing', () => {
     expect(paired[0].material).not.toBe(paired[1].material);
   });
 });
+
+describe('underscript weathering (sprint 226)', () => {
+  // The 121 under-rooms reuse ~15 milled kinds — per-instance decay marks
+  // (dying/dead fixtures, paper litter) are what keep the repetition from
+  // reading flat. Assert the marks exist across a slice of the route.
+  it('under-rooms carry fixture decay + paper litter', () => {
+    const route = generateRoute({ seedText: 'under-weather', difficulty: 'standard', includeUnderscript: true });
+    let flickered = 0, dead = 0, litter = 0, dangled = 0;
+    for (const room of route.underRooms.slice(0, 30)) {
+      if (!room.spec) continue;
+      const built = buildRoomMesh(room, room.spec, 11, 'high');
+      built.group.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh) return;
+        if (m.userData.anim === 'flicker') flickered++;
+        const sm = m.material as THREE.MeshStandardMaterial;
+        if (sm?.color && sm.color.getHex() === 0x22251f) dead++;
+        if (m.material === MAT.paperOld()) litter++;
+      });
+      for (const c of built.group.children) if (c.rotation.z !== 0) dangled++;
+    }
+    expect(flickered, 'no dying fixtures found across 30 under-rooms').toBeGreaterThan(0);
+    expect(dead, 'no dead fixtures found across 30 under-rooms').toBeGreaterThan(0);
+    expect(litter, 'no paper litter found across 30 under-rooms').toBeGreaterThan(0);
+    expect(dangled, 'no dangling fixtures found across 30 under-rooms').toBeGreaterThan(0);
+  });
+});

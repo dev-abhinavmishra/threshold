@@ -37,6 +37,17 @@ export interface BuiltRoom {
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
+// Underscript weathering — ~121 rooms reuse a small set of milled pieces, so
+// per-instance decay is what keeps the repetition from reading flat. Dead
+// fixtures share one dark material so they still merge per room; dying ones
+// carry a cloned emissive + the 'flicker' anim (coupled to the nearest room
+// light through lsRef, resolved lazily by the game loop).
+const DEAD_TUBE_MAT = new THREE.MeshStandardMaterial({ color: 0x22251f, roughness: 0.8, metalness: 0.15 });
+const U_JITTER: Record<string, number> = {
+  paperStack: 0.5, typewriter: 0.5, waterCooler: 0.25,
+  printer: 0.08, breakTable: 0.08, dishDrainer: 0.3,
+};
+
 // Signature of everything mergeGeometries() requires to match across
 // geometries: attribute names, index-ness, morph attribute names and
 // morphTargetsRelative. Buckets with identical signatures always merge.
@@ -1562,7 +1573,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const laneSpec = { width: w, depth: d, entry: spec.entry, exits: spec.exits };
   for (const p of passthrough) {
     try {
-      const built = buildProp({ ...p }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
+      // Underscript furniture loosening — desk items and coolers sit askew.
+      const jit = isUnder ? U_JITTER[p.kind] : 0;
+      const ps = jit ? { ...p, yaw: (p.yaw ?? 0) + (rng.float() - 0.5) * jit } : p;
+      const built = buildProp({ ...ps }, rng.fork(Math.floor(p.x * 97 + p.z * 13)));
       if (p.kind === 'deadTenant') built.group.name = `tenant-${room.index}`;
       if (p.kind === 'coffin') built.group.name = `coffin-${room.index}`;
       if (p.kind === 'pianoUpright') built.group.name = `piano-${room.index}`;
@@ -1585,6 +1599,43 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       // any whose solid collider footprint overlaps the door rectangle.
       if (built.colliders.some((c) => !c.losOnly && !c.walkable && (c.y ?? 0) < 1.9 && footprintInDoorLane(laneSpec, c.x, c.z, c.w / 2, c.d / 2))) continue;
       group.add(built.group);
+      if (isUnder) {
+        // Fixture decay — dead tubes go dark, dying ones flicker off their
+        // nearest room light, a few hang snapped at an angle.
+        if (p.kind === 'fluoroTube' || p.kind === 'exitSign') {
+          const sign = p.kind === 'exitSign';
+          const dead = rng.float() < (sign ? 0.08 : 0.12);
+          const dying = !dead && rng.float() < (sign ? 0.18 : 0.3);
+          if (dead || dying) {
+            built.group.traverse((o) => {
+              const m = o as THREE.Mesh;
+              if (!m.isMesh || Array.isArray(m.material)) return;
+              const sm = m.material as THREE.MeshStandardMaterial;
+              // Milled fixtures carry no emissive — the lit face is the
+              // 'wax' bucket (tubes / legend strokes); procedural fallbacks
+              // use a real emissive material.
+              if ((sm.emissiveIntensity ?? 0) < 0.05 && sm.name !== 'wax') return;
+              if (dead) { m.material = DEAD_TUBE_MAT; return; }
+              const cm = sm.clone();
+              if ((cm.emissiveIntensity ?? 0) < 0.05) {
+                cm.emissive.setHex(sign ? 0xd82618 : 0xccd4b8);
+                cm.emissiveIntensity = 1.2;
+              }
+              m.material = cm;
+              m.userData.anim = 'flicker';
+              m.userData.animSeed = rng.float() * 100;
+              const ls = spec.lights?.find((l) => Math.hypot(l.x - p.x, l.z - p.z) < 2.4);
+              if (ls) m.userData.lsRef = ls;
+            });
+          }
+          if (!sign && !dead && rng.float() < 0.12) {
+            built.group.rotation.z += (rng.float() < 0.5 ? -1 : 1) * (0.08 + rng.float() * 0.2);
+          }
+        } else if (p.kind === 'paperStack' && rng.float() < 0.15) {
+          // spilling stack — slight lean, reads disturbed
+          built.group.rotation.z = (rng.float() < 0.5 ? -1 : 1) * (0.06 + rng.float() * 0.1);
+        }
+      }
       let animated = false;
       built.group.traverse((o) => { if (o.userData.anim) animated = true; });
       if (!built.group.name && !animated) bakeable.push(built.group);
@@ -1611,6 +1662,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     } catch {
       // skip broken prop rather than fail room
+    }
+  }
+
+  // Underscript floor weathering — paper litter drift and grime stains, all
+  // on shared materials so the bake keeps them cheap.
+  if (isUnder) {
+    const litterGeos: THREE.BufferGeometry[] = [];
+    const nSpots = 1 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < nSpots; i++) {
+      const sx = (rng.float() - 0.5) * (w - 1.4), sz = (rng.float() - 0.5) * (d - 1.4);
+      if (footprintInDoorLane(laneSpec, sx, sz, 0.3, 0.3)) continue;
+      const n = 3 + Math.floor(rng.float() * 4);
+      for (let j = 0; j < n; j++) {
+        const g = texBox(0.24 + rng.float() * 0.1, 0.004, 0.32 + rng.float() * 0.08);
+        g.applyMatrix4(new THREE.Matrix4()
+          .makeRotationY(rng.float() * Math.PI * 2)
+          .setPosition(sx + (rng.float() - 0.5) * 0.55, 0.006 + j * 0.0035, sz + (rng.float() - 0.5) * 0.55));
+        litterGeos.push(g);
+      }
+    }
+    if (litterGeos.length) {
+      const litter = mergeGeometries(litterGeos, false);
+      if (litter) {
+        const lm = new THREE.Mesh(litter, MAT.paperOld());
+        lm.receiveShadow = true;
+        group.add(lm);
+      }
     }
   }
 
