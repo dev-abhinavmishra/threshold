@@ -116,6 +116,12 @@ export type PropKind =
   // sprint 213 — service-wing mill batch
   | 'kitchenRange' | 'sculleryRack' | 'potRack' | 'pantryShelf'
   | 'stackedLinen' | 'upholsteredHeadboard' | 'coalScuttle'
+  // sprint 215 — dressing batch: window/dining/service detail
+  | 'curtainSwag' | 'drapePanel' | 'linenPress' | 'candelabra'
+  | 'valveWheel' | 'dumbWaiterDoor' | 'apothecaryCabinet' | 'meatHook'
+  | 'wineRack' | 'grateDrain'
+  // sprint 216 — chapel / dining dressing batch
+  | 'platedRoast' | 'platedPie' | 'ceilingRose' | 'pewRow' | 'chapelAltar'
   // hazards
   | 'snare' | 'puddle' | 'steamVent' | 'fan' | 'brokenFloor'
   // underscript

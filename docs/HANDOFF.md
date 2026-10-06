@@ -110,7 +110,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 213)
+CURRENT STATE (as of sprint 216)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -279,7 +279,31 @@ CURRENT STATE (as of sprint 213)
 
   WORKFLOW CHANGE: PR #1 merged. Post-merge sprints each get a fresh
   branch off main + their own PR (sprint 213 = PR #2, branch
-  devin/1791165821-sprint-213).
+  devin/1791165821-sprint-213; sprint 215 branched off the 213 tip
+  before it merged — stacked PRs are fine).
+  Sprint 215 dressing mill batch: curtainSwag, drapePanel, linenPress,
+  candelabra, valveWheel, dumbWaiterDoor, apothecaryCabinet, meatHook,
+  wineRack, grateDrain — 10 pieces in prefab_kit PIECES + MILL_DIRS.
+  Wall mounts live in WALL_MOUNT_Y (also makes them WALL_THIN insets);
+  anything mounted >=1.95y is door-lane-immune. Hanging props
+  (meatHook y2.35) survive lanes via the y>1.9 rule.
+  Sprint 216 prop-clash system + chapel/dining mill: rooms were
+  landing wall-hung filler inside fixed furniture (props overlapped,
+  rooms looked messy — user feedback). spec() now runs
+  resolveWallClashes(): wallProps tags each prop meta:{wall:true}, and
+  any wall prop materially overlapping an earlier prop shifts along
+  its own wall (±0.8/1.6/2.4m) then drops — matches the door-lane
+  drop rule. propsClash(a,b) = footprint-overlap + vertical-span
+  test; CLASH_OK whitelists ~24 authored co-location pairs (chairs at
+  tables, busts on pillars, candle clusters). Regression test sweeps
+  EVERY template x 3 seeds: no non-wall floor props overlap.
+  Fixed-embeds found & re-placed by the sweep: guest clock, records
+  bookCart/board, mezzanine bookshelf+ladder, cubicle filing row,
+  grand-suite TV/clock/vase heights, waiting-room bin, conservatory
+  plant. 5 new mill pieces — platedRoast, platedPie, ceilingRose,
+  pewRow (replaces cathedral benches), chapelAltar — dressed into
+  staff-dining, banquet, cathedral, sanctuary, kitchen, guest rooms.
+  ~72 mill dirs; MILL_DIRS covers all.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material
@@ -296,8 +320,10 @@ NEXT SPRINT IDEAS (pick the biggest first)
     restricting SSAO to 'high' only when fps allows, or half-res.
   - e2e: remaining untested paths — maelstrom stabilize minigame, witness
     drain, underscript seep/clamor, toll-door purchase.
-  - More mill batches if dressing still reads thin: curtain variants,
-    upholstered headboards, kitchen/scullery kit, stacked-linen shelves.
+  - More mill batches if dressing still reads thin: curtain variants +
+    headboards done (215/213); still open — plated foods (roast,
+    pie), grand staircase kit, ceiling rose/cove molding, pew rows,
+    arched window tracery kit.
 ```
 
 ---
