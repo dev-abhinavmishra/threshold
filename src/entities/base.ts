@@ -34,6 +34,10 @@ export interface EntityCtx {
    *  holding its breath. Optional: no-ops when no bed is playing. */
   duckTone?: (seconds: number, level?: number) => void;
   spawnAt: (roomIndex: number) => Vec3;
+  /** Rolling breadcrumbs of where the player has walked (world XZ, ~1.15m
+   *  apart, oldest first). Entities that trail the player read these; it's
+   *  live — appended to every frame the player moves. */
+  playerTrail?: Vec3[];
   difficulty: import('../game/types').Difficulty;
   accessibility: { reducedMotion: boolean; captions: boolean; minigameAssist: number };
   gameState: () => string;
@@ -72,6 +76,10 @@ export abstract class Entity {
   protected abstract onSpawn(): void;
   protected abstract onUpdate(dt: number): void;
   protected onDone(): void {}
+
+  /** ctx.playerTrail dropped its oldest crumb — entities that index into it
+   *  adjust their cursor. No-op by default. */
+  trailShifted(): void {}
 
   update(dt: number): void {
     this.stateT += dt;

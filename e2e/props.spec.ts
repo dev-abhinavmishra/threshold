@@ -622,3 +622,74 @@ test('noise through the door rouses what waits beyond', async ({ page }) => {
   }
   expect(errors).toEqual([]);
 });
+
+test('the bellman trails your steps — knock, follow, yield to a held gaze', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'threshold');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const bellmanRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bellmanRoom) return { stage: 'none-scheduled' } as const;
+    const prev = g.route.rooms[bellmanRoom.index - 1];
+    // Walk in from the previous room — a real position change so enter()
+    // fires the scheduled spawn.
+    g.player.teleport(prev.origin.x, 0, prev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    g.player.teleport(bellmanRoom.origin.x, 0, bellmanRoom.origin.z);
+    for (let f = 0; f < 50; f++) g.frame();
+    const ent = g.entities.find((e) => e.id === 'bellman') as Ent | undefined;
+    if (!ent) return { stage: 'not-spawned' } as const;
+    // Keep moving — stand still and it legitimately catches you.
+    const marks: { x: number; z: number }[] = [];
+    const hops: number[][] = [];
+    const nxt = g.route.rooms[bellmanRoom.index + 1];
+    const nxt2 = g.route.rooms[bellmanRoom.index + 2];
+    if (nxt) hops.push([nxt.origin.x, nxt.origin.z]);
+    if (nxt2) hops.push([nxt2.origin.x, nxt2.origin.z]);
+    let framesWatched = 0;
+    let outcome = 'watching';
+    for (const [x, z] of hops) {
+      g.player.teleport(x, 0, z);
+      for (let f = 0; f < 35; f++) {
+        const tp = ent.threatPos();
+        if (tp) marks.push({ x: tp.x, z: tp.z });
+        g.frame();
+      }
+    }
+    // Distance travelled while we walked the next two rooms.
+    let travelled = 0;
+    for (let i = 1; i < marks.length; i++) travelled += Math.hypot(marks[i].x - marks[i - 1].x, marks[i].z - marks[i - 1].z);
+    // Now hold it in your gaze — it must freeze, then yield. Teleport to a
+    // spot ~4m from its head so it's in gaze range, then keep facing it.
+    const tp = ent.threatPos();
+    if (tp) {
+      const dir = Math.atan2(tp.x - g.player.pos.x, tp.z - g.player.pos.z);
+      g.player.teleport(tp.x - Math.sin(dir) * 4, 0, tp.z - Math.cos(dir) * 4);
+      g.player.yaw = dir;
+    }
+    for (let f = 0; f < 1200; f++) {
+      const tp2 = ent.threatPos();
+      if (ent.state === 'done' || !g.entities.includes(ent as never)) { outcome = 'yielded'; break; }
+      if (!tp2) { g.frame(); continue; }
+      const dx = tp2.x - g.player.pos.x, dz = tp2.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(dx, dz);
+      if (Math.hypot(dx, dz) < 10.5) framesWatched++;
+      g.frame();
+    }
+    return { stage: 'done', followed: travelled, outcome, framesWatched, state: ent.state } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { followed: number; outcome: string; framesWatched: number };
+  expect(r.followed).toBeGreaterThan(1.5);
+  expect(r.framesWatched).toBeGreaterThan(0);
+  expect(r.outcome).toBe('yielded');
+  expect(errors).toEqual([]);
+});

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner } from '../src/entities/corridor';
+import { Bellman } from '../src/entities/bellman';
 import { Witness, Hollow, Lurker, Margin, Husk } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
@@ -217,6 +218,87 @@ describe('Hollow trap', () => {
     for (let i = 0; i < 3; i++) h.struggle();
     expect(h.state).toBe('done');
     h.dispose();
+  });
+});
+
+describe('Bellman (sprint 232)', () => {
+  const step = (b: Bellman, ctx: EntityCtx, seconds: number, at = 0) => {
+    const ctxMut = ctx as { now: number };
+    let t = at;
+    const frames = Math.ceil(seconds / 0.05);
+    for (let i = 0; i < frames; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    return t;
+  };
+
+  it('spawns at the entry door and knocks it open a beat later', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const b = new Bellman();
+    b.spawn(ctx);
+    step(b, ctx, 3);
+    const door = rooms[20].doors[0];
+    expect(door.opening).toBe(true);
+    const names = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(names).toContain('door-rattle');
+    b.dispose();
+  });
+
+  it('follows the trail and kills an exposed lingerer', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    // Crumbs from the entry door to the room centre where the player stands.
+    const px = room.origin.x, pz = room.origin.z;
+    const trail = Array.from({ length: 9 }, (_, i) =>
+      v3(entry.x + ((px - entry.x) * i) / 8, 0, entry.z + ((pz - entry.z) * i) / 8));
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(px, 0, pz);
+    player.yaw = Math.atan2(entry.x - px, entry.z - pz); // facing the door —
+    // but the gaze frees only while watched long: it crosses ~7m in ~4s,
+    // inside kill reach before watch accumulates. Kill still fires first
+    // because exposure is checked before the trail step.
+    player.yaw = Math.PI + player.yaw; // face AWAY to isolate the kill path
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    b.dispose();
+  });
+
+  it('yields to sustained direct gaze without ever reaching you', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x, 0, room.origin.z);
+    player.yaw = Math.atan2(entry.x - room.origin.x, entry.z - room.origin.z); // face it
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /folds back/.test(c))).toBe(true);
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
+  });
+
+  it('starves out when the trail goes cold', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    player.yaw = Math.PI;
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /falls away/.test(c))).toBe(true);
+    expect((ctx.killPlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
+    b.dispose();
   });
 });
 

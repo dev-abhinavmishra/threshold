@@ -620,6 +620,28 @@ CURRENT STATE (as of sprint 223)
   rouse the sweep; the spec also flips d.opening and asserts the entity
   exists without entering room 12. 83 unit tests.
 
+  Sprint 232 the Bellman: first TRAILING entity — everything before was
+  room-bound or a scripted corridor pass. Game now records playerTrail,
+  breadcrumbs of player.pos every 1.15m (cap 160, shift notifies entities
+  via Entity.trailShifted() so trailing cursors stay aligned). Bellman
+  (src/entities/bellman.ts) spawns at the trigger room's entry door —
+  behind the player — and walks the crumb trail at 2.1m/s (< walk 3.4,
+  so it only catches a lingerer). It reads crumbs from the LIVE head at
+  spawn (crumb = trail.length-1), not the run's start — an earlier draft
+  indexed crumb 0 and it marched back to room 0. Closed doors in reach
+  get a latch-rattle knock then d.opening=true 0.85s later. Direct gaze
+  (LOS + facing + <11m) freezes it; 2.6s cumulative watch yields it —
+  '[it folds back into the hall]'. Safe-room crumbs stall it at the
+  threshold ~5.5s then it quits. Trail exhaustion starves it out (~9s).
+  Touch kill uses playerExposed at killRange 1.05. Scheduled generically:
+  tuning minRoom 16 maxRoom 74, biomes corridor/guest/records/gallery/
+  maintenance/unlit, tier 2, incompatible with sweep+reprise, gated by
+  hasSurvivalOption, FORBIDDEN_IN_MILESTONE. 's'/'ash-vault-101' roll no
+  bellman; 'threshold' gets @35 and @55. Rig = monkroose + brass bell cone.
+  SAFE_ROOM_TEMPLATES moved Game.ts → config.ts so entities can read it.
+  87 unit tests, e2e props.spec 8/8 (spec on 'threshold': spawn at
+  door-35-in, follows crumbs through 2 rooms, yields under gaze).
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit done (228): tools/audit_materials.ts reports per-biome
     mats/meshes; LED clones pooled per row/source. Remaining clones are

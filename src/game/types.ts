@@ -41,6 +41,7 @@ export type EntityId =
   | 'curator'
   | 'hollow'
   | 'husk'
+  | 'bellman'
   // Underscript
   | 'redline'
   | 'stillframe'

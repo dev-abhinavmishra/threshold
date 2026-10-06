@@ -17,7 +17,7 @@ import { GameClock } from '../engine/clock';
 import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
 import { SeedStreams, Rng } from '../engine/rng';
-import { v3, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
+import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { buildProp } from '../world/props';
@@ -42,7 +42,8 @@ import { Editor, Grafter } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
-import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER } from '../game/config';
+import { Bellman } from '../entities/bellman';
+import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
@@ -58,7 +59,7 @@ export interface StartOptions {
 
 const KEY_DEFAULT = (s: SettingsData, name: string) => s.keybinds[name] ?? '';
 
-const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+// SAFE_ROOM_TEMPLATES lives in config.ts — shared with entities (bellman).
 
 /** Ear-to-the-seam tells: entity scheduled beyond the door → what leaks
  *  through the crack. Each borrows that entity's own audio vocabulary. */
@@ -87,6 +88,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   behemoth: { sfx: 'behemoth-thud', text: '[something vast shifting]', sev: 'danger' },
   collector: { sfx: 'collector-rattle', text: '[a rattle — counting]', sev: 'warn' },
   singer: { sfx: 'singer-steps', text: '[humming — a lullaby]', sev: 'danger' },
+  bellman: { sfx: 'knock', text: '[a knock — courteous, in no hurry]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -116,6 +118,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   behemoth: '[the vast thing shifts — floor settling]',
   collector: '[the rattle rattles — counting louder]',
   singer: '[the lullaby lifts — it heard you coming]',
+  bellman: '[the knocking quickens — it knows you are there]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -514,6 +517,8 @@ export class Game {
     this.answeredPhones.clear();
     this.listenedDoors.clear();
     this.rousedSpawned.clear();
+    this.playerTrail.length = 0;
+    this.lastCrumbSet = false;
     this.armedTraps.clear();
     this.snappedTraps.clear();
     this.priedTraps.clear();
@@ -751,6 +756,7 @@ export class Game {
         const r = this.activeRooms()[i];
         return r ? v3(r.origin.x, 0, r.origin.z) : v3();
       },
+      playerTrail: this.playerTrail,
       difficulty: useGameStore.getState().difficulty,
       accessibility: {
         reducedMotion: this.settings.reducedMotion,
@@ -817,6 +823,8 @@ export class Game {
       case 'grafter': this.spawnEntity(new Grafter()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
+      // The Bellman: a stalker that follows your own trail through the hotel.
+      case 'bellman': this.spawnEntity(new Bellman()); break;
       // Ambient Curator: post-Index it walks the deep stacks — scheduled only
       // in records/gallery/unlit threat-tier rooms (see ENTITY_TUNING.curator).
       case 'curator': this.spawnEntity(new Curator()); break;
@@ -857,6 +865,11 @@ export class Game {
 
   /** Doors that already pre-spawned their roused encounters (one-shot). */
   private rousedSpawned = new Set<string>();
+  /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
+   *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
+  private playerTrail: Vec3[] = [];
+  private lastCrumb = v3();
+  private lastCrumbSet = false;
 
   /** Loud-noise rouse: a loud enough player-side event near a closed door
    *  wakes whatever is scheduled beyond it. The door shudders, the thing
@@ -4223,6 +4236,18 @@ export class Game {
     const blockers = this.collectBlockers();
     this.player.update(dt, moveIn, blockers, this.settings, this.sound, this.activeRooms()[this.currentRoom] ?? null, this.clock.time);
     this.player.refreshProtection(this.activeRooms()[this.currentRoom]?.safeZones ?? []);
+
+    // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
+    // The Bellman (and anything else that trails you) reads these.
+    if (!this.lastCrumbSet || v3dist(this.lastCrumb, this.player.pos) >= 1.15) {
+      this.playerTrail.push(v3(this.player.pos.x, 0, this.player.pos.z));
+      v3copy(this.lastCrumb, this.player.pos);
+      this.lastCrumbSet = true;
+      if (this.playerTrail.length > 160) {
+        this.playerTrail.shift();
+        for (const e of this.entities) e.trailShifted?.();
+      }
+    }
 
     // room tracking
     const prev = this.currentRoom;

@@ -130,6 +130,11 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 0.8, speed: 4.0, damage: 100, killRange: 1.35, seeRange: 9,
     cooldown: 16, spawnChance: 0.38, minRoom: 34,
   },
+  bellman: {
+    warningTime: 1.5, speed: 2.1, damage: 100, killRange: 1.05, seeRange: 0,
+    cooldown: 9, spawnChance: 0.28, minRoom: 16, maxRoom: 74,
+    biomes: ['corridor', 'guest', 'records', 'gallery', 'maintenance', 'unlit'],
+  },
   hazard: {
     warningTime: 0, speed: 0, damage: 20, killRange: 0.7, seeRange: 0,
     cooldown: 0, spawnChance: 0, minRoom: 0,
@@ -213,15 +218,20 @@ export const QUALITY = {
   high: { pixelRatioCap: 2.0, shadowMap: true, fogDensity: 0.035, maxLights: 4, particleMul: 1.0 },
 } as const;
 
+/** Templates where entities do not intrude — resting rooms on the route. */
+export const SAFE_ROOM_TEMPLATES = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+
 /** Entities that must never be scheduled in milestone or safe rooms. */
 export const FORBIDDEN_IN_MILESTONE: EntityId[] = [
   'sweep', 'reprise', 'witness', 'whisper', 'inkling', 'redactor',
-  'echoskin', 'maelstrom', 'hollow',
+  'echoskin', 'maelstrom', 'hollow', 'bellman',
 ];
 
 /** Entities incompatible to overlap in one room-window. */
 export const INCOMPATIBLE: [EntityId, EntityId][] = [
   ['whisper', 'inkling'],     // taught separately; never co-scheduled
+  ['bellman', 'sweep'],       // trail-stalker vs sprint-pressure — competing pressure
+  ['bellman', 'reprise'],
   ['witness', 'maelstrom'],   // camera pull vs precision stabilization
   ['stillframe', 'pursuer'],  // freeze input vs chase — unfair
   ['stillframe', 'maelstrom'],
