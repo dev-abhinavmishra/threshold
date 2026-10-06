@@ -43,7 +43,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const hazardSrc = readFileSync('src/entities/room.ts', 'utf8');
     // defuse verbs: snip (snare), bleed (steam), coax (wired drawer),
     // valve/drain (puddle), trap (floor trap pry)
-    for (const kind of ["'snip'", "'bleed'", "'coax'"]) {
+    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'"]) {
       expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
       expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
     }
@@ -59,5 +59,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toContain('latch bites');
     // the drain kills the arc — the puddle's paid quiet
     expect(hazardSrc).toContain('isRoomDrained');
+    // sign erasure: the felt-wrap cover-up clears hazard evidence
+    expect(gameSrc).toContain('hazard.evidence');
   });
 });

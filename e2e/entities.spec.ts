@@ -1154,7 +1154,7 @@ test('scent — a killed hazard signs the room, the Warden reads it', async ({ p
   if (result.stage !== 'done') test.skip();
   expect(result.investigated, JSON.stringify(result)).toBe(true);
   expect(result.closest, JSON.stringify(result)).toBeLessThan(1.2);
-  expect(result.read.some((r) => r.startsWith('warden')), JSON.stringify(result)).toBe(true);
+  expect((result.read ?? []).some((r) => r.startsWith('warden')), JSON.stringify(result)).toBe(true);
   expect(result.backOnLine, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

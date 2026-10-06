@@ -247,6 +247,7 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
       hazard: { steams: { pos: { x: number; y: number; z: number }; room: number;
         phase: number; cycle: number; dead: boolean }[];
         evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; readBy: string[] }[] };
+      inventory: { id: string; count: number }[];
     };
     const room = g.route.rooms.find((r) => (r.sockets ?? []).some((sk) => sk.meta?.hazard === 'steam'));
     if (!room) return { stage: 'no-vent' } as const;
@@ -284,13 +285,34 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
       bled = st.dead;
     }
     ga.keys.delete('KeyE');
+    const evSign0 = ga.hazard.evidence.length > evBefore
+      && ga.hazard.evidence.slice(evBefore).some((e) => e.kind === 'line' && e.room === room.index);
+
+    // scrub the sign — a felt wrap erases what a hunter could read
+    ga.inventory.push({ id: 'feltWrap', count: 1 });
+    ga.keys.add('KeyC');
+    for (let f = 0; f < 6; f++) g.frame();
+    let scrubbed = false;
+    for (let f = 0; f < 150 && !scrubbed; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'scrub' && i.enabled);
+      if (!it) break;
+      g.player.yaw = Math.atan2(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + 0.95;
+      g.player.pitch = Math.atan2(it.pos.y - eyeY, Math.hypot(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z) || 1);
+      if (/scrub the sign — felt wrap/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      g.frame();
+      scrubbed = !ga.hazard.evidence.some((e) => e.kind === 'line' && e.room === room.index);
+    }
+    ga.keys.delete('KeyE'); ga.keys.delete('KeyC');
+    const wrapSpent = (ga.inventory.find((i) => i.id === 'feltWrap')?.count ?? -1) === 0;
+    const evSign = evSign0;
+
     const hpAfter = g.player.health;
     g.player.teleport(st.pos.x + 0.2, 0, st.pos.z + 0.2);
     for (let f = 0; f < 200; f++) g.frame();
     return { stage: 'done', room: room.index, warned, sawBlast, bitten, bled,
       quietAfter: g.player.health >= hpAfter - 0.01,
-      sign: ga.hazard.evidence.length > evBefore
-        && ga.hazard.evidence.slice(evBefore).some((e) => e.kind === 'line' && e.room === room.index),
+      sign: evSign, scrubbed, wrapSpent,
       caps: caps.slice(-12) } as const;
   });
 
@@ -301,5 +323,7 @@ test('the line sings — steam warns, vents blood, and dies on the bleed', async
   expect(result.bled, JSON.stringify(result)).toBe(true);
   expect(result.quietAfter, JSON.stringify(result)).toBe(true);
   expect(result.sign, JSON.stringify(result)).toBe(true);
+  expect(result.scrubbed, JSON.stringify(result)).toBe(true);
+  expect(result.wrapSpent, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

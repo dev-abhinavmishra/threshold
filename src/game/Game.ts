@@ -1165,6 +1165,23 @@ export class Game {
       }
       }
     }
+    // Crouched at fresh sign: 'Scrub the sign' — a felt wrap rubbed over
+    // the mark erases what a hunter could read. Quiet AND clean.
+    if (this.player.crouching) {
+      for (const ev of this.hazard.evidence) {
+        const dx = ev.pos.x - this.player.pos.x, dz = ev.pos.z - this.player.pos.z;
+        if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+        this.interaction.add({
+          kind: 'scrub', id: `scrub-${this.space}:${ev.room}:${Math.round(ev.pos.x * 7)}x${Math.round(ev.pos.z * 7)}`,
+          pos: { x: ev.pos.x, y: 0.4, z: ev.pos.z },
+          prompt: this.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+            ? 'Scrub the sign — felt wrap'
+            : 'Scrub the sign (needs a felt wrap)',
+          holdTime: 1.8, enabled: true, priority: 3,
+          data: ev,
+        });
+      }
+    }
     // Crouched at a door: keyhole-peek on locked leaves, ear-to-the-seam
     // beside any closed one (see addCrouchedDoorInteracts).
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
@@ -1953,6 +1970,22 @@ export class Game {
         }
         this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz }, '[the pressure falls — the line goes quiet]');
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
+        return;
+      }
+      case 'scrub': {
+        const ev = it.data as { pos: Vec3; room: number; kind: string; readBy: string[] };
+        const wrap = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!wrap) {
+          this.cue('drawer', it.pos, '[a felt wrap would rub this out]', 'warn');
+          return;
+        }
+        wrap.count--;
+        it.enabled = false;
+        // Every sign within the rub's reach goes — one wrap, one clean floor.
+        this.hazard.evidence = this.hazard.evidence.filter((e) =>
+          Math.hypot(e.pos.x - ev.pos.x, e.pos.z - ev.pos.z) > 2.6);
+        this.cue('item', it.pos, '[the sign rubs out under the felt — nothing left to read]');
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt on stone]' });
         return;
       }
       case 'alarm': {

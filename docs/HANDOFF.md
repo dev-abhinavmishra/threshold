@@ -1654,3 +1654,18 @@ NEXT SPRINT IDEAS (pick the biggest first)
   overrides first, run files separately; (4) `toContain` on string
   arrays is exact-match, not substring.
 - Tests: 148 vitest (+2), sim, e2e leg 'scent'.
+
+## Sprint 265 — 'scrub the sign' (the cover-up verb)
+
+- The defuse triad closes: loud (trip it), quiet (cut it), quiet-AND-
+  clean (scrub it). Crouch at fresh sign → 'Scrub the sign — felt wrap'
+  (1.8s hold): every evidence record within 2.6m erased, one feltWrap
+  spent. Without a wrap the prompt tells you '(needs a felt wrap)' and
+  the press explains '[a felt wrap would rub this out]'.
+- Economy: feltWrap was a 2-minute step-muffle; it's now also the
+  sign-eraser — stocked in both vend arrays + the Broker, so the
+  cover-up is a real spend, not a free gesture.
+- One subtlety: the sign-erase filters evidence within the RUB's
+  radius, not just the focused record — one wrap cleans a floor.
+- Tests: contract spec gained 'scrub'; e2e 'the line sings' drives
+  bleed→sign→scrub→wrap-spent. Gates all green.
