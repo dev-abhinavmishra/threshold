@@ -544,6 +544,20 @@ CURRENT STATE (as of sprint 223)
     mesh.material, never mutate a shared instance.
   79 unit tests.
 
+  Sprint 227 prop-interact e2e (e2e/props.spec.ts, 5 specs): closes the
+  remaining interact coverage — ambient props across the route
+  (tv/clock/hearth/window/cooler/typewriter/printer/phone/seat each
+  driven through the real focus+hold pipeline until its journal Set
+  grows), washer two-stage cycle (run -> ~24s thump -> ding -> empty
+  pays out), armed mousetrap pried, hiding enter/exit + hollow trap
+  (clue text in the prompt, Hollow spawns on entry, leave = struggle
+  mash until the grip breaks), document socket -> codex. Harness notes:
+  prop interacts only register for NON-safe templates, and enter()
+  hooks still need a real position change — teleport into the room
+  before expecting liveTraps/interactables. Prompt targets iterate
+  every room carrying the kind since individual props can be
+  lane-culled or inside a safe template.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Perf audit follow-up: sconce decal clones (throwMat/poolMat2 per
     sconce) and per-device prop clones (LED/screen/button) stay — each
@@ -554,9 +568,8 @@ NEXT SPRINT IDEAS (pick the biggest first)
     raise vend prices or trim loot weights rather than payouts again.
   - Milestone-only entities stay authored-only (pursuer/hazard); ambient
     scheduling is done for everything else.
-  - e2e: remaining — merchant/alarm/tv/clock/hearth prop interacts,
-    underRooms beyond lobby depth (u-room exit/backtrack path), hiding
-    spot enter/exit + trap reveal, document pickup → codex UI.
+  - e2e: done — ambient interacts, washer cycle, trap pry, hiding
+    enter/exit + hollow struggle, document→codex all green (props.spec.ts).
   - More mill batches if dressing still reads thin: main-route sideboard
     variants + corridor furniture; u-room kit is milled now (sprint 220) —
     next under-room depth is variants/weathering, not new kinds.
