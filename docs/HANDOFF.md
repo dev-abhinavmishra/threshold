@@ -110,7 +110,7 @@ DOCS (read when unsure — they're maintained per the rehaul brief)
   Any major system change gets a REHAUL_PLAN entry (why/preserve/replace/
   architecture/tests/regressions) before the code lands.
 
-CURRENT STATE (as of sprint 216)
+CURRENT STATE (as of sprint 217)
   101-room run + 121-room Underscript, 19 entities, authored milestones
   (Index 50, Custodian 51, Lens 75, Engine 100, chases), hiding/Panic,
   economy (imprints/marginalia/toll doors — payouts halved sprint 198, sim
@@ -304,6 +304,54 @@ CURRENT STATE (as of sprint 216)
   pewRow (replaces cathedral benches), chapelAltar — dressed into
   staff-dining, banquet, cathedral, sanctuary, kitchen, guest rooms.
   ~72 mill dirs; MILL_DIRS covers all.
+  Sprint 217 lane-cull root-cause fix (2 Devin Review bugs on PR #5 —
+  wall decorations all dropped in wide corridors; sanctuary altar
+  culled by its own collider — both traced to the same thing):
+  THREE-layer lane model now.
+  (a) inDoorLane(spec,x,z,r) = WIDE placement-time margin (reaches
+      ~2.55m in, lateral port.width/2+0.6+r) — used by wallProps +
+      hiding-spot push guards + the route test for hiding spots.
+  (b) footprintInDoorLane(spec,cx,cz,hx,hz) = PHYSICAL overlap: prop
+      collider AABB (halves hx/hz, yaw-swapped) vs the door strip
+      (reaches 1.3m in, lateral port.width/2+0.3). This is the
+      builder's drop rule (builder.ts ~L1588) and the route-test
+      prop rule. Exported from spec.ts.
+  (c) meta.laneBlock exempts a prop from the footprint cull —
+      authored door furniture that INTENTIONALLY sits at/in the
+      doorway: portcullis/hatch/ironGate/stairGate/balustrade,
+      archway/boneArch, counter+register desks (ms-lobby, u-lobby,
+      lobby-waiting), sealConsole/freightLift/screenPanels set
+      pieces, machineBox+keypad puzzle gates, recordsCage, wall
+      mounts that live above/beside a door (keyRack/dartboard/sign/
+      mirror/towelRail/conduitRun/pipeManifold/serverRack rows),
+      and u-dead-end-loot's wall-hugging clutter (the 4x5 closet
+      can't fit anything outside all 3 ports' strips).
+  ROOT CAUSE worth remembering: old clearDoorLanes dropped EVERY
+  prop (y<=1.9) inside the WIDE lane — that silently culled all
+  authored door furniture (counters, sealConsole, keypads, cage
+  rooms, arches) on main AND made the old lane test vacuous. It
+  now only drops meta.wall FILLER (wallProps spam) + hiding spots;
+  fixed props are kept and the builder's footprint rule does the
+  physical check. ~40 authored placements got laneBlock or moved;
+  ~10 real pinches (mousetraps/wrench/candle/football + tabletop
+  props orphaned when desks moved — check z of items ON furniture
+  after moving the furniture) got relocated.
+  Test additions: route-level test now asserts footprintInDoorLane
+  per prop (skip y>1.9 + laneBlock) + inDoorLane on hiding;
+  template-level test 'authored collider footprints stay clear of
+  door lanes' mirrors the builder rule on every template's default
+  ports; 'thin wall mounts survive clash resolution' guards
+  resolveWallClashes bound check on the shifted axis only.
+  propFootprint is now EXPORTED from templates.ts (MODEL_FOR
+  collider halves + quarter-turn yaw swap; fallback [0.25,0.25]).
+  GOTCHA: generated rooms get GENERATED ports (placement rotates/
+  mirrors them) — an authored prop that is fine vs the template's
+  default ports can still flag under a generated port. laneBlock
+  is the right answer when the prop was authored to be exactly
+  there (desk in front of an exit = walk-around-able furniture),
+  NOT a guarantee the doorway is clear.
+  72 tests; e2e all green (heavy-load context timeouts retry-pass;
+  powered-emissives flake passes in isolation).
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Quality-mode scaling: lampMesh pairing + device tagging add material

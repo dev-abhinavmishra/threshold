@@ -307,9 +307,31 @@ export function inDoorLane(spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'e
   });
 }
 
-/** Drop props and hiding spots whose centers land inside a door lane. */
+/** True when an axis-aligned collider footprint (center + half extents,
+ * room-local) physically overlaps a port's approach strip — the doorway
+ * apron a prop can't enter without pinching it. This is the builder's
+ * cull rule; the wider inDoorLane margin stays for placement-time
+ * avoidance, where props can still be relocated instead of dropped. */
+export function footprintInDoorLane(
+  spec: Pick<RoomSpec, 'width' | 'depth' | 'entry' | 'exits'>,
+  cx: number, cz: number, hx: number, hz: number,
+): boolean {
+  return [spec.entry, ...spec.exits].some((port) => {
+    const lp = portLocalPos(port, spec.width, spec.depth);
+    const dir = portOutwardDir(port);
+    const a = -((cx - lp.x) * dir.x + (cz - lp.z) * dir.z);
+    const b = Math.abs((cx - lp.x) * -dir.z + (cz - lp.z) * dir.x);
+    const aH = hx * Math.abs(dir.x) + hz * Math.abs(dir.z);
+    const bH = hx * Math.abs(dir.z) + hz * Math.abs(dir.x);
+    return a + aH > -0.4 && a - aH < 1.3 && b - bH < port.width / 2 + 0.3;
+  });
+}
+
+/** Drop filler props and hiding spots whose centers land inside a door
+ * lane. Authored fixed props are skipped — the builder's footprint rule
+ * culls them only when the collider truly overlaps the doorway apron. */
 export function clearDoorLanes(spec: RoomSpec): void {
-  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !inDoorLane(spec, p.x, p.z));
+  spec.props = spec.props.filter((p) => (p.y ?? 0) > 1.9 || !p.meta?.wall || !inDoorLane(spec, p.x, p.z));
   spec.hiding = spec.hiding.filter((h) => !inDoorLane(spec, h.x, h.z));
 }
 

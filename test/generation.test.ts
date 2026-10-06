@@ -3,8 +3,9 @@ import { generateRoute } from '../src/world/generator';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
-import { portLocalPos, inDoorLane } from '../src/world/spec';
-import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
+import { portLocalPos, inDoorLane, footprintInDoorLane } from '../src/world/spec';
+import { MAIN_TEMPLATES, propsClash, CLASH_OK, propFootprint } from '../src/world/templates';
+import { MODEL_FOR } from '../src/world/modelLibrary';
 import { SeedStreams } from '../src/engine/rng';
 
 // Must match src/world/generator.ts rotXZ (world-space convention).
@@ -308,8 +309,12 @@ describe('sprint mechanics coverage', () => {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of [...mainRooms(route), ...route.underRooms]) {
         const spec = r.spec!;
-        for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9)) {
-          expect(inDoorLane(spec, p.x, p.z), `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z}`).toBe(false);
+        for (const p of spec.props.filter((x) => (x.y ?? 0) <= 1.9 && !x.meta?.laneBlock)) {
+          const [hx, hz] = propFootprint(p);
+          expect(
+            footprintInDoorLane(spec, p.x, p.z, hx, hz),
+            `${r.index} ${spec.templateId} prop ${p.kind} @ ${p.x},${p.z} footprint reaches a lane`,
+          ).toBe(false);
         }
         for (const h of spec.hiding) {
           expect(inDoorLane(spec, h.x, h.z), `${r.index} ${spec.templateId} hiding ${h.kind} @ ${h.x},${h.z}`).toBe(false);
@@ -340,5 +345,43 @@ describe('sprint mechanics coverage', () => {
         }
       }
     }
+  });
+
+  it('authored collider footprints stay clear of door lanes (builder drop rule)', () => {
+    // builder.ts culls any prop whose solid collider footprint overlaps a
+    // lane — a fixed prop violating that is silently never rendered.
+    for (const t of MAIN_TEMPLATES) {
+      for (const seed of ['a', 'b', 'c']) {
+        const spec = t.build(new SeedStreams(seed).roomStream('test', 1));
+        const lanes = { width: spec.width, depth: spec.depth, entry: spec.entry, exits: spec.exits };
+        for (const p of spec.props) {
+          if ((p.y ?? 0) > 1.9 || p.meta?.laneBlock) continue;
+          const m = MODEL_FOR[p.kind as keyof typeof MODEL_FOR];
+          const cw = m?.collider?.[0] ?? 0, cd = m?.collider?.[2] ?? 0;
+          if (!cw && !cd) continue;
+          const swap = Math.abs(Math.round((p.yaw ?? 0) / (Math.PI / 2))) % 2 === 1;
+          const [hx, hz] = swap ? [cd / 2, cw / 2] : [cw / 2, cd / 2];
+          expect(
+            footprintInDoorLane(lanes, p.x, p.z, hx, hz),
+            `${t.id} seed=${seed}: ${p.kind}(${p.x},${p.z}) footprint reaches a lane`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('thin wall mounts survive clash resolution', () => {
+    // Sprint-216 regression: resolveWallClashes bound-checked both axes at
+    // 0.3m, which dropped every 0.12–0.15m wall mount. Count the mounts
+    // that make it through across the whole template set.
+    const THIN = new Set(['painting', 'wallSconce', 'mirror', 'wallClock', 'sign', 'curtain', 'pegRail', 'towelRail', 'curtainSwag', 'drapePanel', 'exitSign', 'wallVent', 'keyRack', 'extinguisher', 'fireAlarm', 'potRack', 'sculleryRack']);
+    let kept = 0;
+    for (const t of MAIN_TEMPLATES) {
+      for (const seed of ['a', 'b', 'c']) {
+        const spec = t.build(new SeedStreams(seed).roomStream('test', 1));
+        kept += spec.props.filter((p) => p.meta?.wall && THIN.has(p.kind)).length;
+      }
+    }
+    expect(kept, 'thin wall mounts across all templates x seeds').toBeGreaterThan(60);
   });
 });
