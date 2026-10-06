@@ -800,3 +800,135 @@ export class Hauler extends Entity {
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }
 }
+
+/* ============================ LAUNDRESS ============================ */
+/** A drowned laundress works a flooded room's drain basin — her wash chokes
+ *  the crank. While she keeps the basin the drain verb fails; loud noise
+ *  pulls her off it to inspect the splash, which is the window. Touch the
+ *  crank while she watches and she takes your hand. When the water goes
+ *  she rides it out. */
+export class Laundress extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private sniffUntil = 0;
+  private scrubT = 0;
+  private hissT = 0;
+  private struckCd = 0;
+  private noiseUnsub: (() => void) | null = null;
+  /** The basin she guards — public so the drain verb can ask her. */
+  drainPos = v3();
+  /** The point she left the basin to inspect. */
+  private alerted: Vec3 | null = null;
+  get guarding(): boolean { return !this.alerted; }
+
+  constructor() { super('laundress', ENTITY_TUNING.laundress); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    // her basin: the room's plumbing prop the drain verb sits on
+    const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    const basin = (room.spec?.props ?? []).find((pp) => DRAIN_PROPS.has(pp.kind));
+    const lx = basin ? basin.x : 0, lz = basin ? basin.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    // generator's rotXZ: x*c + z*s, -x*s + z*c
+    this.drainPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    // she stands a half-metre off the fitting, facing it
+    const ox = this.roomO.x - this.drainPos.x, oz = this.roomO.z - this.drainPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.drainPos.x + (ox / ol) * 0.55, 0, this.drainPos.z + (oz / ol) * 0.55);
+    const g = new THREE.Group();
+    const rig = riggedFigure('hooded');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.28, 1.0, 4, 8), MAT.ink());
+      body.position.y = 1.0;
+      g.add(body);
+    }
+    // the bundle she works — pale cloth over the basin
+    const bundle = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), MAT.figureCloth());
+    bundle.position.set(this.drainPos.x - this.pos.x, 0.55, this.drainPos.z - this.pos.z);
+    g.add(bundle);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('puddle-splash', this.pos, '[wash, wring — somebody works the drain]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  private hear(e: SoundEvent): void {
+    if (this.state !== 'engage' || e.source || !noiseCanBeHeard(e)) return;
+    const room = this.ctx.rooms[this.spawnRoom];
+    if (!pointInRoom(room, e.x, e.z, 0.4)) return;
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 6) return;
+    this.alerted = v3(e.x, 0, e.z);
+    this.sniffUntil = this.ctx.now + 5;
+  }
+
+  /** The drain press reaches her — she takes the hand on the crank. */
+  aggravate(p: Vec3): void {
+    const c = this.ctx;
+    if (this.struckCd > 0 || this.rising()) return;
+    c.cue('puddle-splash', this.pos, '[she wrings her hands]', { severity: 'warn' });
+    c.sound.emit({ x: this.pos.x, y: 0.5, z: this.pos.z, intensity: 0.5, category: 'impact', caption: '[a hiss through wet cloth]', source: 'laundress' });
+    if (v3dist(this.pos, p) < this.tuning.killRange + 0.8) {
+      this.struckCd = 2.5;
+      this.rig?.play('attack', 0.05);
+      c.damagePlayer(this.tuning.damage, 'laundress', 'The Laundress keeps her basin — pull her off the drain with a thrown sound before you touch the crank.');
+    }
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.hissT -= dt; this.struckCd -= dt; this.scrubT -= dt;
+    // when her medium goes she goes with it
+    if (c.isRoomDrained?.(this.spawnRoom)) {
+      c.cue('puddle-splash', this.pos, '[the wash goes down the drain]', { severity: 'info' });
+      this.state = 'done';
+      return;
+    }
+    // work-song at the basin — ambient, below the hearing floor
+    if (this.guarding && this.scrubT <= 0) {
+      this.scrubT = 3.2;
+      c.sound.emit({ x: this.pos.x, y: 0.4, z: this.pos.z, intensity: 0.25, category: 'item', caption: '[wash, wring]', source: 'laundress' });
+    }
+    // standing too close to a watched basin is its own tell
+    if (this.guarding && this.hissT <= 0 && v3dist(this.pos, p) < 1.6) {
+      this.hissT = 3;
+      c.cue('puddle-splash', this.pos, '[she wrings her hands — the drain is watched]', { severity: 'warn' });
+    }
+    const goal = this.alerted ?? this.drainPos;
+    const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.3) {
+      const sp = this.alerted ? this.tuning.speed * 1.6 : this.tuning.speed;
+      this.pos.x += (dx / dd) * sp * dt;
+      this.pos.z += (dz / dd) * sp * dt;
+    } else if (this.alerted && c.now > this.sniffUntil) {
+      this.alerted = null; // nothing at the splash — back to the basin
+    }
+    if (this.mesh) {
+      this.mesh.position.copy(this.pos);
+      if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}

@@ -834,3 +834,22 @@ describe('coaxed drawers (sprint 268)', () => {
     expect(found, 'somebody worked some latches before you').toBeGreaterThan(0);
   });
 });
+
+describe('the laundress (sprint 272)', () => {
+  it('fouled basins only — flooded rooms with plumbing', () => {
+    const PLUMBING = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'laundress') ?? false,
+          `laundress on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        if (!r.scheduled?.some((s) => s.entity === 'laundress')) continue;
+        expect(r.flooded, `laundress on a dry room ${seed} u-${r.index}`).toBe(true);
+        expect((r.spec?.props ?? []).some((p) => PLUMBING.has(p.kind)),
+          `laundress with no basin ${seed} u-${r.index}`).toBe(true);
+      }
+    }
+  });
+});

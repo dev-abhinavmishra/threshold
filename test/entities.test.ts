@@ -1537,3 +1537,55 @@ describe('the Hauler (sprint 271)', () => {
     h.dispose();
   });
 });
+
+describe('the Laundress (sprint 272)', () => {
+  const laundryRoom = {
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 11, flooded: true,
+    spec: { width: 9, depth: 11, props: [{ kind: 'pipeManifold', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('keeps her basin — a hand on the crank is answered', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); } // past the rise
+    expect(w.guarding, 'she holds the drain').toBe(true);
+    const dp = (w as unknown as { drainPos: { x: number; z: number } }).drainPos;
+    w.aggravate(v3(dp.x + 0.4, 0, dp.z)); // a hand on the crank, within reach
+    expect(ctx.damagePlayer, 'she takes the hand').toHaveBeenCalledWith(
+      15, 'laundress', expect.any(String));
+    w.aggravate(v3(dp.x + 0.4, 0, dp.z)); // still biting cooldown — once
+    expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    w.dispose();
+  });
+
+  it('a splash pulls her off the basin, then she returns to it', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const w = new Laundress();
+    w.spawn(ctx);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    // a splash across the room — close enough to worry her (aim inside the 9-wide room)
+    for (const fn of listeners) fn({ x: wp.x - 3, y: 0.3, z: wp.z, intensity: 0.6, category: 'impact', caption: '[slam]' });
+    expect(w.guarding, 'the basin is unwatched').toBe(false);
+    for (let i = 0; i < 150; i++) { ctx.now += 0.05; w.update(0.05); } // ~7.5s: out, sniff, return
+    expect(w.guarding, 'nothing at the splash — back to work').toBe(true);
+    w.dispose();
+  });
+
+  it('rides the water out when the room drains', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    let drained = false;
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => drained });
+    const w = new Laundress();
+    w.spawn(ctx);
+    drained = true;
+    ctx.now += 0.05; w.update(0.05);
+    expect(w.state, 'the wash went down the drain').toBe('done');
+  });
+});

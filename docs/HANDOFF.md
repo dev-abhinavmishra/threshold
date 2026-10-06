@@ -1757,3 +1757,32 @@ under-flavored item, emit 0.35 so the team never hears you pilfering it;
 - **A moving anchor wants per-frame registration** — the pick point reads
   `sledgePos` fresh inside `rebuildInteractables`; the e2e pins the player to it
   each frame (a real player walks-with at 0.85 — hold range 1.9m ≥ 0.77m drift).
+
+## Sprint 272 — the Laundress (`washer`-adjacent, flooded-basin guard)
+
+**What:** a drowned laundress works a flooded room's drain basin — her wash
+chokes the crank. While she `guarding`s (not investigating), 'Open the drain'
+on her fitting fails `[the drain is choked with somebody's wash]` and she
+`aggravate`s — a hiss plus a 15dmg hand-take inside killRange+0.8. Loud noise
+in her room (<6m, noiseCanBeHeard floor) pulls her to the splash for ~5s —
+the thrown-pebble window to take the crank. Room drains → `[the wash goes
+down the drain]` → she despawns. Flood + plumbing gate in the scheduler, so
+0–2 per run — the swamper claims flooded rooms first, she lands on leftovers.
+
+**Traps:**
+- **Under candidates roll in order — first success wins the room.** 'swamper'
+  ahead of 'laundress' means she only lands where swamper's flood roll failed;
+  gate-first-scheduled-order is a composition decision, not a bug. To pair a
+  room with two entities the loop's `break` must go — don't.
+- **Scheduled entities can't gate on scheduler-invisible state.** 'laundress'
+  needs flooded + DRAIN_PROPS plumbing; both exist on `room` at schedule time
+  (`room.flooded` set at :1277, `room.spec.props` populated) — check there,
+  not in the entity.
+- **`aggravate()` is the drain press reaching the entity** — the dispatch
+  scans `this.entities` for a guarding laundress near the drain point before
+  the crank runs. The bite is `killRange + 0.8` (she lunges past her post).
+- **e2e hold durations are per-verb** — pick 0.9s, drain 1.2s; a hold that
+  finishes one frame short shows a focused prompt + zero dispatch. Budget
+  hold frames ≥ holdTime + 0.3s.
+- **e2e `ga.keys` needs a type entry** — add `keys: Set<string>` to the `ga`
+  cast when a spec starts holding E.

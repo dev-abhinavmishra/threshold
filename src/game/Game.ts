@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor, Grafter, Hauler, Swamper } from '../entities/setpieces';
+import { Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -97,6 +97,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   commissionaire: { sfx: 'collector-rattle', text: '[a gloved hand raps the frame — a door held shut]', sev: 'warn' },
   swamper: { sfx: 'puddle-splash', text: '[water, and something in it — slow]', sev: 'warn' },
   hauler: { sfx: 'impact', text: '[a sledge scrape — cargo on the move]', sev: 'warn' },
+  laundress: { sfx: 'puddle-splash', text: '[wash, wring — somebody works the drain]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -137,6 +138,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   commissionaire: '[the rap again — it is still holding the doors]',
   swamper: '[the flood stirs — it is still in the water]',
   hauler: '[the scrape halts — it heard you]',
+  laundress: '[the wringing stops — the drain is watched]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -857,6 +859,8 @@ export class Game {
       case 'swamper': this.spawnEntity(new Swamper()); break;
       // The Hauler: a salvage-drag drudge — the sledge is a moving loot source.
       case 'hauler': this.spawnEntity(new Hauler()); break;
+      // The Laundress: works a flooded drain and fouls it — the crank is hers.
+      case 'laundress': this.spawnEntity(new Laundress()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
@@ -1755,7 +1759,7 @@ export class Game {
           stillframe: 'the paused hall', editor: 'the revising hand',
           inkling: 'an inkstain walking', husk: 'a guest long emptied',
           singer: 'the choir of one', swamper: 'a drowned porter in the flood',
-          hauler: 'a porter who hauls salvage',
+          hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
         };
         const seen = new Set<string>();
         const parts: string[] = [];
@@ -1845,7 +1849,7 @@ export class Game {
           inkling: 'an inkstain walking', returner: 'a guest come back',
           sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
           swamper: 'a drowned porter, under the water',
-          hauler: 'a porter who hauls salvage',
+          hauler: 'a porter who hauls salvage', laundress: 'a laundress at the outflow',
         };
         const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
         const filings: string[] = [];
@@ -2106,6 +2110,15 @@ export class Game {
         return;
       }
       case 'drain': {
+        // The Laundress fouls her basin — the crank answers to her while she works.
+        for (const ent of this.entities) {
+          if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
+          const w = ent as unknown as { drainPos: Vec3; guarding: boolean; aggravate: (p: Vec3) => void };
+          if (!w.guarding || v3dist(it.pos, w.drainPos) > 0.9) continue;
+          this.cue('puddle-splash', it.pos, "[the drain is choked with somebody's wash]", 'warn');
+          w.aggravate(this.player.pos);
+          return;
+        }
         // The crank is loud once — then the water goes and the hall is quiet.
         it.enabled = false;
         const parts = it.id.split(':');

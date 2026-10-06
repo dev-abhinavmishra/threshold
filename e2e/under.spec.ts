@@ -425,3 +425,83 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the wash — a fouled drain, the thrown sound, the window', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // laundress @ u-3 (drowned mains)
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      entities: { id: string; state: string }[];
+      drainedRooms: Set<string>; keys: Set<string>;
+      sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void };
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true; // her bite is not the subject — the foul and the window are
+    const wRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'laundress'));
+    if (!wRoom) return { stage: 'none-scheduled' } as const;
+    g.player.teleport(wRoom.origin.x, 0, wRoom.origin.z);
+    ga.currentRoom = wRoom.index;
+    for (let f = 0; f < 60; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'laundress') as
+      { guarding: boolean; drainPos: { x: number; z: number }; state: string } | undefined;
+    if (!w) return { stage: 'no-laundress' } as const;
+
+    // stand at the basin and work the crank — she fouls it
+    g.player.teleport(w.drainPos.x + 0.6, 0, w.drainPos.z);
+    const foulCapBefore = caps.length;
+    let pressed = '';
+    for (let f = 0; f < 55; f++) {
+      g.player.teleport(w.drainPos.x + 0.6, 0, w.drainPos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
+      g.frame();
+      if (ga.interaction.focused?.prompt) pressed = ga.interaction.focused.prompt;
+      if (f === 10) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const fouled = caps.slice(foulCapBefore).some((c) => /choked with somebody's wash/.test(c));
+    const stillWet = !ga.drainedRooms.has(`under:${wRoom.index}`);
+
+    // pull her off the basin with a thrown sound, then take the window
+    const ox = wRoom.origin.x - w.drainPos.x, oz = wRoom.origin.z - w.drainPos.z;
+    ga.sound.emit({ x: w.drainPos.x + ox * 0.7, y: 0.3, z: w.drainPos.z + oz * 0.7,
+      intensity: 0.6, category: 'impact', caption: '[slam]' });
+    for (let f = 0; f < 40; f++) g.frame(); // she goes to sniff
+    const offGuard = !w.guarding;
+    // the window: crank while she sniffs the splash
+    for (let f = 0; f < 45; f++) {
+      g.player.teleport(w.drainPos.x + 0.5, 0, w.drainPos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 15; f++) g.frame();
+    const drained = ga.drainedRooms.has(`under:${wRoom.index}`);
+    const rodeOut = caps.some((c) => /wash goes down the drain/.test(c));
+    return { stage: 'done', pressed, fouled, stillWet, offGuard, drained, rodeOut,
+      gone: w.state === 'done' } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.pressed, JSON.stringify(result)).toMatch(/Open the drain/);
+  expect(result.fouled, JSON.stringify(result)).toBe(true);
+  expect(result.stillWet, JSON.stringify(result)).toBe(true);
+  expect(result.offGuard, JSON.stringify(result)).toBe(true);
+  expect(result.drained, JSON.stringify(result)).toBe(true);
+  expect(result.rodeOut, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
