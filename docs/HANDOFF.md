@@ -2042,3 +2042,42 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
   - The scavenged bulb could be *plantable*: a peeled handLamp bulb
     donated to a dark sledge re-lights it YOUR way? (probably gimmick)
+
+## Sprint 281 — the spec split (feedback time)
+`entities.spec.ts` (1330 lines, ~1.4m) and `mechanics.spec.ts` (1283)
+split by theme so a sprint runs only what it touches:
+- `entities.spec.ts` — the stalker cast + hearing (10: bellman, porter,
+  warden, groundswell, inspector, commissionaire, hears×2).
+- `hazards.spec.ts` — flood + sign ecology (5: swamper, dark water, cut
+  the seal, scent, ghosts). Harness `ThresholdG`.
+- `economy.spec.ts` — pay-or-refuse + the claim register (5: toll, vend,
+  custodian, broker, house detective). Mixed types: shop tests keep the
+  local interface block; the detective test casts `HarnessG` (see trap).
+- `setpieces.spec.ts` — authored puzzle legs (7: gate, engine, draft,
+  index, valve, wake, lens). Local interface block.
+- `mechanics.spec.ts` — core verbs (3: witness, maelstrom, keyed door).
+Traps:
+- **`mechanics.spec.ts` had its own type layer** — mid-file `interface
+  GSock/GDoor/GRoom/GMilestone/ThresholdG` (orig. 329–382), richer than
+  the harness types (keyPairs, milestones, giveItem, underReturn...).
+  Moved tests need the block copied in; files authored against the
+  harness types need `import type { ThresholdG as HarnessG }` for their
+  casts, not a second local ThresholdG (TS2440).
+- **`seededRun(page)` in mechanics meant 'threshold'** — the local
+  bootstrap defaulted there; the harness default is 's'. Moved legs that
+  relied on the default must pass 'threshold' explicitly.
+- **Latent skip unmasked by the move**: 'cut the seal' found the FIRST
+  room with a snare socket — room 2's is `spent` (sprint-266 old sign,
+  dead), so the leg silently skipped since 266 landed. Socket finds now
+  filter `!sk.meta?.spent` (same fix in the dark-water leg).
+- File headers carry the theme comment; per-test seed comments keep the
+  original wording so `// 's': ...` greps still work.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav (standing
+    dead-on the lamp admits pick AND strip via prox<1.1).
+  - `under.spec.ts` (873 lines / ~1.1m) is now the biggest file — could
+    split under-traversal vs the under-economy legs if it keeps growing.
+  - The scavenged bulb could be *plantable*: donate a bulb to a dark
+    sledge, re-light it your way? (probably gimmick)

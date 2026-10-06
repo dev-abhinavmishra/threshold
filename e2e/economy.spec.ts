@@ -1,0 +1,511 @@
+import { test, expect } from '@playwright/test';
+import { seededRun } from './harness';
+import type { ThresholdG as HarnessG } from './harness';
+
+test.setTimeout(300_000);
+
+// The spend economy: pay-or-refuse shops (toll/vend/custodian/broker)
+// and the human who registers your claims — every purse has a counter.
+test('the house detective — he phones ahead, or you settle', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: HarnessG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      imprints: number; currentRoom: number; keys: Set<string>;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      entities: { id: string; clocked?: boolean; warranted?: boolean }[];
+    };
+    ga.imprints = 80;
+
+    // --- 1. draw a guest's held bag — the register accrues ---
+    const cageRoom = g.route.rooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim === true && s.meta?.marginalia !== true && !s.meta?.taken));
+    if (!cageRoom) return { stage: 'no-cage' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    for (let f = 0; f < 40; f++) g.frame();
+    const cage = (cageRoom.sockets ?? []).find((s) => s.meta?.claim === true && s.meta?.marginalia !== true && !s.meta?.taken);
+    if (!cage?.meta) return { stage: 'no-cage-sock' } as const;
+    const cx = cageRoom.origin.x - cage.pos.x, cz = cageRoom.origin.z - cage.pos.z;
+    const cl = Math.hypot(cx, cz) || 1;
+    for (let f = 0; f < 55 && !cage.meta.taken; f++) {
+      g.player.teleport(cage.pos.x + (cx / cl) * 0.9, 0, cage.pos.z + (cz / cl) * 0.9);
+      g.player.yaw = Math.atan2(cage.pos.x - g.player.pos.x, cage.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((cage.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
+
+    // --- 2. walk into his room — he clocks you ---
+    const dRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'detective'));
+    if (!dRoom) return { stage: 'no-detective' } as const;
+    const prev = g.route.rooms[dRoom.index - 1];
+    if (prev) { g.player.teleport(prev.origin.x, 0, prev.origin.z); for (let f = 0; f < 25; f++) g.frame(); }
+    g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
+    let det: { clocked?: boolean; warranted?: boolean } | undefined;
+    for (let f = 0; f < 200; f++) {
+      g.frame();
+      det = ga.entities.find((e) => e.id === 'detective') ?? det;
+      if (det?.clocked) break;
+    }
+    if (!det) return { stage: 'no-det-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    const clocked = caps.some((c) => /has your face|goes on the wire/.test(c));
+
+    // --- 3. slip a room without settling — the wire rings ahead ---
+    const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
+    if (!nxt) return { stage: 'no-neighbor' } as const;
+    const ringCap = caps.length;
+    g.player.teleport(nxt.origin.x, 0, nxt.origin.z);
+    for (let f = 0; f < 40; f++) g.frame();
+    const rang = caps.slice(ringCap).some((c) => /house phone rings ahead/.test(c));
+
+    // --- 4. back to his desk — settle ---
+    const settle = g.interaction.interactables.find((i) => i.kind === 'settle' && i.enabled);
+    if (!settle) return { stage: 'no-settle' } as const;
+    const i0 = ga.imprints;
+    let settlePrompt = '';
+    for (let f = 0; f < 70; f++) {
+      const sx = dRoom.origin.x - settle.pos.x, sz = dRoom.origin.z - settle.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(settle.pos.x + (sx / sl) * 0.9, 0, settle.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(settle.pos.x - g.player.pos.x, settle.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((settle.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (!settlePrompt) {
+        const fp = ga.interaction.focused?.prompt;
+        if (fp && /Settle the account/.test(fp)) settlePrompt = fp;
+      }
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
+    return { stage: 'done' as const, clocked, rang, settlePrompt, paid,
+      spent: ga.imprints < i0, warranted: det?.warranted === true };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.clocked, JSON.stringify(result)).toBe(true);
+  expect(result.rang, JSON.stringify(result)).toBe(true);
+  expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.warranted, JSON.stringify(result)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as {
+      __thresholdGame: {
+        renderFrame(): void;
+        clock: { tick(): boolean; dt: number; time: number };
+        godMode: boolean;
+        frame(): void;
+        imprints: number;
+        input: { interactPressed: boolean };
+        interaction: { focused: { prompt: string } | null };
+        player: {
+          pos: { x: number; y: number; z: number };
+          yaw: number; pitch: number; eyeHeight: number;
+          teleport(x: number, y: number, z: number, yaw?: number): void;
+        };
+        route: { rooms: {
+          index: number; origin: { x: number; z: number };
+          doors: { id: string; pos: { x: number; y: number; z: number }; locked: boolean; lockId?: string; openT: number; opening: boolean }[];
+        }[] };
+      };
+    }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+
+    // Seed 's' generates toll doors on branch closets (door-53-b1
+    // among them — seed 'threshold' lost its toll rooms when new
+    // templates shifted the layout, sprint 223).
+    let door: { id: string; pos: { x: number; y: number; z: number }; locked: boolean; lockId?: string; openT: number; opening: boolean } | null = null;
+    let parent: { index: number; origin: { x: number; z: number } } | null = null;
+    for (const room of g.route.rooms) {
+      const d = room.doors.find((x) => x.lockId === 'toll');
+      if (d) { door = d; parent = room; break; }
+    }
+    if (!door || !parent) return { stage: 'no-toll-door' } as const;
+    const doorAtFind = `${door.id}@${parent.index} locked=${door.locked}`;
+
+    // Stand 1.2m room-side of the leaf, aimed at its center like the
+    // chase-test door approach.
+    const dx = parent.origin.x - door.pos.x, dz = parent.origin.z - door.pos.z;
+    const L = Math.hypot(dx, dz) || 1;
+    g.player.teleport(door.pos.x + (dx / L) * 1.2, 0, door.pos.z + (dz / L) * 1.2);
+    const aimAtLeaf = () => {
+      const ax = door.pos.x - g.player.pos.x, az = door.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const dist = Math.hypot(ax, az);
+      g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(door.pos.y + 0.6 - eyeY, dist || 1)));
+    };
+
+    // Loot near the leaf can out-focus it — and the toll plate's own
+    // prompt is a take-family prompt ('Take' pressed the plate and PAID
+    // 3 imprints on the first draft of this spec). So: clear out-focus
+    // sockets while pinning the purse at 2 — a too-poor player stays
+    // too-poor even when a spark socket grants imprints mid-loop. The
+    // refusal itself must come from a door/toll-family prompt: pressing
+    // it with 2 imprints has to refuse and keep the leaf locked.
+    g.imprints = 2;
+    let refusePrompt = '';
+    const refuseLog: string[] = [];
+    for (let f = 0; f < 40 && door.locked; f++) {
+      aimAtLeaf();
+      const prompt = g.interaction.focused?.prompt ?? '';
+      refuseLog.push(`${f}:${prompt}|i${g.imprints}|L${door.locked}`);
+      if (/door|unlock|toll|pay/i.test(prompt)) refusePrompt = prompt;
+      g.input.interactPressed = /door|unlock|toll|pay|take|loot|search/i.test(prompt);
+      g.frame();
+      if (g.imprints > 2) g.imprints = 2;
+    }
+    g.input.interactPressed = false;
+    const stayedLocked = door.locked && /door|unlock|toll|pay/i.test(refusePrompt);
+
+    // Paid — 5 imprints: unlock takes 3, door opens. A nearby loot
+    // socket may pad imprints before the unlocking press, so measure
+    // the charge itself: imprints delta across the frame that flipped
+    // the lock must be exactly -3 (the toll).
+    g.imprints = 5;
+    let paid = false, presses = 0, charge = 0, prev = g.imprints;
+    const focusLog: string[] = [];
+    for (let f = 0; f < 60 && !paid; f++) {
+      aimAtLeaf();
+      const prompt = g.interaction.focused?.prompt ?? '';
+      if (f % 10 === 0) focusLog.push(prompt);
+      g.input.interactPressed = /door|take|loot|search/i.test(prompt);
+      if (g.input.interactPressed) presses++;
+      prev = g.imprints;
+      g.frame();
+      if (!door.locked) { paid = true; charge = prev - g.imprints; }
+    }
+    // Let the leaf animate open to prove the path completes.
+    for (let f = 0; f < 60 && door.openT < 0.5; f++) g.frame();
+    return { stage: 'done', doorAtFind, refusePrompt, stayedLocked, paid, presses, focusLog, charge, imprints: g.imprints, openT: door.openT, refuseLog };
+  });
+
+  expect(result.stage, `door=${result.doorAtFind} ${JSON.stringify(result)}`).toBe('done');
+  expect(result.stayedLocked, `${result.doorAtFind} refuse=${JSON.stringify(result.refuseLog)} imp=${result.imprints}`).toBe(true);
+  expect(result.paid, `focus=${JSON.stringify(result.focusLog)} presses=${result.presses}`).toBe(true);
+  expect(result.charge).toBe(3);
+  expect(result.imprints).toBeGreaterThanOrEqual(2);
+  expect(result.openT).toBeGreaterThan(0.5);
+  expect(errors).toEqual([]);
+});
+
+interface GSock { kind: string; pos: { x: number; y: number; z: number }; meta: Record<string, unknown> }
+interface GDoor { pos: { x: number; y: number; z: number }; locked: boolean; lockId?: string; openT: number }
+interface GRoom {
+  index: number; templateId?: string;
+  origin: { x: number; z: number };
+  yaw: number;
+  entryPos: { x: number; y: number; z: number };
+  sockets: GSock[]; doors: GDoor[];
+  spec?: { props?: { kind: string; x: number; z: number; y?: number }[] };
+}
+interface GMilestone {
+  clamps: Set<string>;
+  phase?: string;
+  relaysTaken?: number;
+  routingStep?: number;
+  routingSequence?: number[];
+  boardShowing?: number;
+  done?: boolean;
+  cardsTaken?: number;
+  catalogRead?: boolean;
+  consoleStep?: number;
+  consoleShowing?: number;
+  targetGlyphs?: string[];
+  orrery?: { solved: boolean; pylonProgress: number[] };
+}
+interface ThresholdG {
+  renderFrame(): void;
+  clock: { tick(): boolean; dt: number; time: number };
+  godMode: boolean;
+  frame(): void;
+  currentRoom: number;
+  space: string;
+  imprints: number;
+  marginalia: number;
+  inventory: { id: string; count: number }[];
+  milestones: { get(i: number): GMilestone | undefined };
+  giveItem(id: string, n?: number): void;
+  stats: { underscriptDeepest: number; underscriptCompleted: boolean; victory: boolean };
+  steamMasks: { until: number }[];
+  coffinOpened: boolean;
+  documents: { id: string }[];
+  input: { interactPressed: boolean };
+  keys: Set<string>;
+  interaction: { focused?: { prompt: string; holdTime?: number } | null };
+  audio: { onCaption(fn: (c: { text: string; severity?: string }) => void): unknown };
+  player: {
+    pos: { x: number; y: number; z: number };
+    yaw: number; pitch: number; eyeHeight: number;
+    teleport(x: number, y: number, z: number, yaw?: number): void;
+  };
+  route: {
+    rooms: GRoom[]; underRooms: GRoom[]; underReturn: number;
+    keyPairs: { keyRoom: number; lockRoom: number; lockId: string }[];
+  };
+}
+
+test('vend machine refuses on short funds, sells on exact pay', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'threshold');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    // Stand on the interior side of an interactable — a fixed world offset
+    // can land inside a wall/prop and shove the player back out.
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    let sock: GSock | null = null, room: GRoom | null = null;
+    for (const r of g.route.rooms) {
+      const s = r.sockets.find((x) => x.meta?.vend === true && x.meta.taken !== true);
+      if (s) { sock = s; room = r; break; }
+    }
+    if (!sock || !room) return { stage: 'no-vend' } as const;
+    const price = sock.meta.price as number, item = sock.meta.vendItem as string;
+    g.currentRoom = room.index;
+    standAt(room, sock.pos);
+
+    // Short funds: the feed completes and the machine refuses.
+    g.imprints = price - 1;
+    const promptsA = drive(sock.pos, /feed the machine/i, () => false, 70);
+    const refused = sock.meta.taken !== true && g.imprints === price - 1;
+
+    // Exact pay: feed again — charged, item granted, socket spent.
+    g.imprints = price;
+    standAt(room, sock.pos);
+    drive(sock.pos, /feed the machine/i, () => sock.meta.taken === true, 70);
+    const inv = g.inventory.find((s) => s.id === item);
+    const sold = sock.meta.taken === true && g.imprints === 0 && !!inv;
+    return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints, inv: g.inventory.map((s) => s.id) };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused, result.promptsA).toBe(true);
+  expect(result.sold, JSON.stringify(result.inv)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('custodian shop: short imprints refuses, paid pedestal sells and stocks out', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'threshold');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    const room = g.route.rooms.find((r) => r.templateId === 'ms-custodian');
+    if (!room) return { stage: 'no-custodian' } as const;
+    g.currentRoom = room.index;
+    const stocked = room.sockets.filter((s) => s.meta?.shop !== undefined && s.meta?.shopItem !== undefined);
+    if (!stocked.length) return { stage: 'no-stock' } as const;
+    const sock = stocked[0];
+    const price = sock.meta.price as number;
+    const item = sock.meta.shopItem as string;
+
+    // Poor: refuse — keep the money, pedestal stays stocked.
+    g.imprints = price - 5;
+    standAt(room, sock.pos);
+    drive(sock.pos, /inspect wares|take|trade/i, () => sock.meta.sold === true, 40);
+    const refused = sock.meta.sold !== true && g.imprints === price - 5;
+    const refuseCap = caps.find((t) => /imprints required/.test(t));
+
+    // Pay: pedestal sells (CustodianEncounter marks meta.sold, not taken),
+    // item lands in the satchel, 'purchased' caption fires.
+    g.imprints = price;
+    standAt(room, sock.pos);
+    drive(sock.pos, /inspect wares|take|trade/i, () => sock.meta.sold === true, 40);
+    return {
+      stage: 'done', refused, refuseCap, price, item,
+      sold: sock.meta.sold === true,
+      paid: g.imprints === 0,
+      hasItem: g.inventory.some((s) => s.id === item),
+      bought: caps.some((t) => /purchased/.test(t)),
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused).toBe(true);
+  expect(result.refuseCap).toBeTruthy();
+  expect(result.sold).toBe(true);
+  expect(result.paid).toBe(true);
+  expect(result.hasItem).toBe(true);
+  expect(result.bought).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('broker pedestal: short marginalia refuses, paid trade grants the ware', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'threshold');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const standAt = (room: GRoom, p: { x: number; z: number }, r = 1.15) => {
+      const dx = room.origin.x - p.x, dz = room.origin.z - p.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(p.x + (dx / L) * r, 0, p.z + (dz / L) * r);
+    };
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    // Descend: release both clamps, pay the resonance key.
+    const entrance = g.route.rooms.find((r) => r.templateId === 'ms-under-entrance');
+    if (!entrance) return { stage: 'no-entrance' } as const;
+    const doorSock = entrance.sockets.find((s) => s.meta?.underDoor === true);
+    const clamps = entrance.sockets.filter((s) => !!s.meta?.sealClamp);
+    if (!doorSock || clamps.length < 2) return { stage: 'no-fixture' } as const;
+    g.currentRoom = entrance.index;
+    for (const c of clamps) {
+      standAt(entrance, c.pos);
+      drive(c.pos, /release seal clamp|take|search/i, () => false, 80);
+    }
+    g.giveItem('resonanceKey', 1);
+    standAt(entrance, doorSock.pos);
+    drive(doorSock.pos, /underscript|open|inspect/i, () => g.space === 'under', 60);
+    if (g.space !== 'under') return { stage: 'no-descent' } as const;
+
+    // The landing lobby is a u-lobby — the Broker's pedestals are stocked.
+    const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
+      && r.sockets.some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined));
+    if (!lobby) return { stage: 'no-lobby' } as const;
+    g.currentRoom = lobby.index;
+    const sock = lobby.sockets.find((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined)!;
+    const price = sock.meta.brokerPrice as number;
+    const item = sock.meta.brokerItem as string;
+
+    // Poor: refuse.
+    g.marginalia = Math.max(0, price - 5);
+    standAt(lobby, sock.pos);
+    drive(sock.pos, /trade wares|inspect|take/i, () => sock.meta.sold === true, 40);
+    const refused = sock.meta.sold !== true && g.marginalia === Math.max(0, price - 5);
+    const refuseCap = caps.find((t) => /marginalia required/.test(t));
+
+    // Pay: trade.
+    g.marginalia = price;
+    standAt(lobby, sock.pos);
+    drive(sock.pos, /trade wares|inspect|take/i, () => sock.meta.sold === true, 40);
+    return {
+      stage: 'done', refused, refuseCap, price, item,
+      sold: sock.meta.sold === true,
+      paid: g.marginalia === 0,
+      hasItem: g.inventory.some((s) => s.id === item),
+      traded: caps.some((t) => /traded/.test(t)),
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.refused).toBe(true);
+  expect(result.refuseCap).toBeTruthy();
+  expect(result.sold).toBe(true);
+  expect(result.paid).toBe(true);
+  expect(result.hasItem).toBe(true);
+  expect(result.traded).toBe(true);
+  expect(errors).toEqual([]);
+});
+

@@ -1,0 +1,325 @@
+import { test, expect } from '@playwright/test';
+import { seededRun, ThresholdG } from './harness';
+
+test.setTimeout(300_000);
+
+// The hazard ecology: flooded-water entity + the sign system — swamper,
+// submerged wires, the cut verb, and the hunters that read evidence.
+test('the swamper answers stirred water — the drain takes its medium', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': flooded u-3/24/48; swamper scheduled on u-24
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      entities: { id: string; state: string; threatPos(): { x: number; z: number } }[];
+      spawnScheduled(): void;
+      drainedRooms: Set<string>;
+    };
+
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => r.flooded && r.scheduled?.some((s) => s.entity === 'swamper'));
+    if (!room) return { stage: 'no-swamper-room' } as const;
+
+    // Wade in — it rises in the far corner.
+    g.player.teleport(room.origin.x, 0, room.origin.z);
+    ga.currentRoom = room.index;
+    ga.godMode = false;
+    for (let f = 0; f < 40; f++) g.frame();
+    const ent = ga.entities.find((e) => e.id === 'swamper');
+    if (!ent) return { stage: 'not-spawned' } as const;
+
+    // Stir the flood: upright wading splashes pull it in — and it takes the
+    // stirring thing.
+    const hp0 = g.player.health;
+    g.keys.add('KeyW');
+    let closeSeen = false;
+    for (let f = 0; f < 400; f++) {
+      g.frame();
+      const tp = ent.threatPos();
+      const d = Math.hypot(tp.x - g.player.pos.x, tp.z - g.player.pos.z);
+      if (d < 2) closeSeen = true;
+      if (g.player.health < hp0) break;
+      // keep wading through the middle of the room
+      if (f % 60 === 59) { const px = room.origin.x - g.player.pos.x, pz = room.origin.z - g.player.pos.z; g.player.yaw = Math.atan2(px, pz); }
+    }
+    g.keys.delete('KeyW');
+    const struck = g.player.health < hp0;
+    if (!struck) return { stage: 'no-strike', closeSeen, hp: g.player.health, caps } as const;
+    const rose = caps.some((c) => /water stands up|water is not empty/.test(c));
+
+    // The drain empties the room of it.
+    ga.godMode = true;
+    const DRAIN = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    const drainProp = room.spec?.props?.find((p) => DRAIN.has(p.kind));
+    if (!drainProp) return { stage: 'no-drain-prop', struck, closeSeen } as const;
+    const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+    const dp = { x: room.origin.x + drainProp.x * c + drainProp.z * s, z: room.origin.z - drainProp.x * s + drainProp.z * c };
+    g.player.teleport(dp.x + 1.0, 0, dp.z + 1.0);
+    for (let f = 0; f < 30; f++) g.frame();
+    const key = `under:${room.index}`;
+    for (let f = 0; f < 260 && !ga.drainedRooms.has(key); f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'drain' && i.enabled);
+      if (!it) break;
+      const ax = it.pos.x - g.player.pos.x, az = it.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(it.pos.y + 0.55 - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
+      if (/open the drain/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+    }
+    g.keys.delete('KeyE');
+    if (!ga.drainedRooms.has(key)) return { stage: 'drain-failed', struck, closeSeen } as const;
+    for (let f = 0; f < 20; f++) g.frame();
+    const slipped = caps.some((c) => /slips down the drain/.test(c));
+    const gone = ent.state === 'done' || !ga.entities.includes(ent as never);
+
+    return { stage: 'done', room: room.index, struck, closeSeen, rose, slipped, gone, hp: g.player.health } as const;
+  });
+
+  if (result.stage === 'no-swamper-room' || result.stage === 'not-spawned') test.skip();
+  expect(result.struck, JSON.stringify(result)).toBe(true);
+  expect(result.rose, JSON.stringify(result)).toBe(true);
+  expect(result.gone, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the dark water hides the wire — upright trips it, the slow wade feels it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': dark flooded halls u-3/u-24 carry submerged snares
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      player: { rootedUntil: number };
+    };
+
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => r.flooded && r.darkRoom
+      && r.sockets?.some((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent));
+    if (!room) return { stage: 'no-dark-flood' } as const;
+    const snares = room.sockets!.filter((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent);
+    ga.godMode = true; // keep the room's swamper out of the signal — we read roots, not blood
+
+    const wadeOnto = (s: { x: number; z: number }, crouched: boolean) => {
+      // approach along the corridor's long axis — side-on starts can sit
+      // behind a prop collider and pin the wade against the wall
+      g.player.teleport(s.x, 0, s.z + 0.9);
+      g.player.yaw = Math.atan2(s.x - s.x, s.z - (s.z + 0.9));
+      ga.currentRoom = room.index;
+      for (let f = 0; f < 25; f++) g.frame();
+      const rooted0 = ga.player.rootedUntil;
+      if (crouched) g.keys.add('KeyC');
+      g.keys.add('KeyW');
+      for (let f = 0; f < 70; f++) g.frame();
+      g.keys.delete('KeyW');
+      g.keys.delete('KeyC');
+      return { rooted: ga.player.rootedUntil > rooted0, at: { x: g.player.pos.x, z: g.player.pos.z } };
+    };
+
+    const up = wadeOnto(snares[0].pos, false);
+    const tripped = up.rooted && caps.some((c) => /paper snare/.test(c));
+    let felt = false;
+    if (snares.length > 1) {
+      const down = wadeOnto(snares[1].pos, true);
+      felt = !down.rooted && caps.some((c) => /wire underfoot/.test(c));
+    }
+    // and the wire can be cut — but only a crouched wader can find it
+    const last = snares[snares.length - 1].pos;
+    g.player.teleport(last.x + 0.6, 0, last.z + 0.6);
+    for (let f = 0; f < 20; f++) g.frame();
+    const blindNoPrompt = !g.interaction.interactables.some((i) => i.kind === 'snip');
+    g.keys.add('KeyC');
+    for (let f = 0; f < 30; f++) g.frame();
+    let cut = false;
+    for (let f = 0; f < 160 && !cut; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!it) break;
+      const ax = it.pos.x - g.player.pos.x, az = it.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = -0.7;
+      if (/cut/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      g.frame();
+      cut = caps.some((c) => /wire comes loose/.test(c));
+    }
+    g.keys.delete('KeyE');
+    g.keys.delete('KeyC');
+    return { stage: 'done', room: room.index, nSnares: snares.length, tripped, felt,
+      blindNoPrompt, cut, caps: caps.slice(-16) } as const;
+  });
+
+  if (result.stage === 'no-dark-flood') test.skip();
+  expect(result.tripped, JSON.stringify(result)).toBe(true);
+  if ((result.nSnares ?? 0) > 1) expect(result.felt, JSON.stringify(result)).toBe(true);
+  expect(result.blindNoPrompt, JSON.stringify(result)).toBe(true);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('cut the seal — an upright player can disarm a dry wire', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // armed snares @ maint-service-narrow + unlit rooms
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      godMode: boolean; hazard: { snares: { room: number; armed: boolean; pos: { x: number; y: number; z: number } }[] };
+      currentRoom: number; keys: Set<string>;
+    };
+    ga.godMode = true;
+    const room = g.route.rooms.find((r) => !r.flooded
+      && r.sockets?.some((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent));
+    if (!room) return { stage: 'no-snare' } as const;
+    if (!ga.hazard.snares.some((h) => h.room === room.index && h.armed)) return { stage: 'no-snare' } as const;
+    const hz0 = ga.hazard.snares.find((h) => h.room === room.index)!.pos;
+    g.player.teleport(hz0.x + 0.7, 0, hz0.z + 0.7);
+    ga.currentRoom = room.index;
+    for (let f = 0; f < 25; f++) g.frame();
+    const sawPrompt = g.interaction.interactables.some((i) => i.kind === 'snip');
+    let cut = false;
+    for (let f = 0; f < 160 && !cut; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!it) break;
+      g.player.yaw = Math.atan2(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z);
+      g.player.pitch = -0.7;
+      if (/cut the seal/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      g.frame();
+      cut = caps.some((c) => /seal parts/.test(c));
+    }
+    ga.keys.delete('KeyE');
+    return { stage: 'done', room: room.index, sawPrompt, cut,
+      disarmed: !ga.hazard.snares.find((h) => h.room === room.index)?.armed,
+      caps: caps.slice(-12) } as const;
+  });
+
+  if (result.stage === 'no-snare') test.skip();
+  expect(result.sawPrompt, JSON.stringify(result)).toBe(true);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(result.disarmed, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('scent — a killed hazard signs the room, the Warden reads it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // warden on patrol at 33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string; threatPos?(): { x: number; y: number; z: number } | null }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    // stand in the room to spawn the patrol, then step out of its sight
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    const sign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: 0, readBy: [] as string[] };
+    ga.hazard.evidence.push(sign);
+    let closest = Infinity, investigated = false;
+    for (let f = 0; f < 700; f++) {
+      g.frame();
+      const tp = w.threatPos?.();
+      if (tp) closest = Math.min(closest, Math.hypot(tp.x - sign.pos.x, tp.z - sign.pos.z));
+      if (caps.some((c) => /reads the sign/.test(c))) investigated = true;
+      if (investigated && closest < 0.9) break;
+    }
+    return { stage: 'done', investigated, closest, read: sign.readBy,
+      backOnLine: w.state === 'engage', caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.investigated, JSON.stringify(result)).toBe(true);
+  expect(result.closest, JSON.stringify(result)).toBeLessThan(1.2);
+  expect((result.read ?? []).some((r) => r.startsWith('warden')), JSON.stringify(result)).toBe(true);
+  expect(result.backOnLine, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's' grafter @6
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[]; old?: boolean }[] };
+      entities: { id: string; update(d: number): void; pos?: { x: number; z: number } }[];
+    };
+    const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    if (!gRoom) return { stage: 'none-scheduled' } as const;
+    // hide in a real spot in the grafter's room — let it spawn + settle
+    const spot = gRoom.hidingSpots?.find((sp) => !sp.trappedBy);
+    if (!spot) return { stage: 'no-spot' } as const;
+    g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+    (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    // plant stale sign in the room — old evidence only a grafter smells
+    ga.hazard.evidence.push({
+      pos: { x: gRoom.origin.x, y: 0, z: gRoom.origin.z }, room: gRoom.index,
+      kind: 'wire', t: -1, readBy: [], old: true,
+    });
+    let closest = Infinity;
+    for (let f = 0; f < 900; f++) {
+      g.frame();
+      const gr = ga.entities.find((e) => e.id === 'grafter');
+      if (gr?.pos) closest = Math.min(closest,
+        Math.hypot(gr.pos.x - gRoom.origin.x, gr.pos.z - gRoom.origin.z));
+    }
+    const staleRead = ga.hazard.evidence[ga.hazard.evidence.length - 1].readBy.some((r) => r.startsWith('grafter'));
+    const ghostCaption = caps.some((c) => /old mark/.test(c));
+    return { stage: 'done', closest, staleRead, ghostCaption, caps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.staleRead, JSON.stringify(result)).toBe(true);
+  expect(result.closest, JSON.stringify(result)).toBeLessThan(3.2);
+  expect(result.ghostCaption, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
