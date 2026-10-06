@@ -563,14 +563,22 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     const cz = ep.z + Math.cos(face) * 2.4;
     const good = CASE_GOODS[caseRng.int(0, CASE_GOODS.length - 1)];
     const isMarks = caseRng.bool(0.4);
+    const isWarrant = !isMarks && caseRng.bool(0.35);
     room.sockets.push({
       kind: 'loot',
       pos: v3(cx, 0.9, cz),
       yaw: 0, filled: true,
-      meta: { confiscated: true, contains: isMarks ? 'imprints' : good[0],
+      meta: { confiscated: true, contains: isWarrant ? 'warrant' : isMarks ? 'imprints' : good[0],
         amount: isMarks ? caseRng.int(8, 16) : good[1] },
     });
     casePlaced = true;
+  }
+  // Every route with a case carries at least one warrant — the court's
+  // paper gets seized first. Flip the earliest case when the roll didn't.
+  if (casePlaced && !mainRooms.some((r) => r.sockets.some((s) => s.meta.confiscated && s.meta.contains === 'warrant'))) {
+    const first = mainRooms.find((r) => r.sockets.some((s) => s.meta.confiscated));
+    const sock = first?.sockets.find((s) => s.meta.confiscated);
+    if (sock) { sock.meta.contains = 'warrant'; delete sock.meta.amount; }
   }
 
   // The forged page — a book near a forger of doors can be rewritten. A

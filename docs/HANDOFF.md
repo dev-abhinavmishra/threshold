@@ -2280,3 +2280,28 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The case currently guards goods — a 'sealed warrant' variant could
     hold paper (a claims sheet for main-route ledgers: which rooms'
     effects were drawn).
+
+## Sprint 288 — the sealed warrant (e2e/books leg 9, generation spec)
+
+What:
+- ~35% of confiscated cases carry 'warrant' instead of goods — a court
+  filing on the held effects. Every route with cases files at least one
+  (the earliest case flips when the roll misses — the paper is seized
+  first). 's' fixture: warrant@36.
+- Pry a warrant → reads the next 12 rooms' porter's-cage tags LIVE:
+  `Door NNN — 'Tag' still held` / `drawn` (meta.taken at read time).
+  The claim register's upstairs twin: the under's register files under
+  claims, the warrant files main-route claims, and its cost is the
+  cone, not the purse.
+- e2e leg pays a tag first so the filing exercises both lines.
+Traps: none new — the 287 ordering lesson held (confiscate stream
+  stayed isolated; the warrant draws never touched 'loot').
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - Counter-scent asymmetry: forged sign leaves weak 'water' sign only
+    grafters read — your lies leave residue.
+  - 'Seen'-record echo (hunters that already read your sign act like
+    they know you) — half-baked, logged skip.

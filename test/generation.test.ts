@@ -424,8 +424,9 @@ describe('sprint mechanics coverage', () => {
   });
 
   it("confiscated cases: the prize lives only under a live eye", () => {
-    const GOODS = new Set(['latchpick', 'chalkSpool', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash']);
+    const GOODS = new Set(['latchpick', 'chalkSpool', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash', 'warrant']);
     let cases = 0;
+    let warrants = 0;
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       const watchedLit = mainRooms(route).filter((r) =>
@@ -434,6 +435,7 @@ describe('sprint mechanics coverage', () => {
       const caseRooms = mainRooms(route).filter((r) => r.sockets.some((s) => s.meta.confiscated));
       // a lit watched room always guards at least one case when one exists
       if (watchedLit.length) expect(caseRooms.length).toBeGreaterThanOrEqual(1);
+      let seedWarrants = 0;
       for (const r of caseRooms) {
         cases += 1;
         expect(r.authored).toBeFalsy();
@@ -444,12 +446,18 @@ describe('sprint mechanics coverage', () => {
         if (s.meta.contains === 'imprints') {
           expect(s.meta.amount as number).toBeGreaterThanOrEqual(8);
           expect(s.meta.amount as number).toBeLessThanOrEqual(16);
+        } else if (s.meta.contains === 'warrant') {
+          seedWarrants += 1;
         } else {
           expect(GOODS.has(s.meta.contains as string)).toBe(true);
         }
       }
+      // the court's paper is always seized — any route with cases files ≥1 warrant
+      if (caseRooms.length) expect(seedWarrants).toBeGreaterThanOrEqual(1);
+      warrants += seedWarrants;
     }
     expect(cases).toBeGreaterThanOrEqual(SEEDS.length);
+    expect(warrants).toBeGreaterThanOrEqual(SEEDS.length);
   });
 
   it('baggage hall is authored at room 25 with loot sockets', () => {

@@ -2112,6 +2112,23 @@ export class Game {
           this.imprints += amt;
           this.stats.imprintsEarned += amt;
           this.cue('pickup', it.pos, `[the case held a purse — +${amt} imprints]`);
+        } else if (contains === 'warrant') {
+          // The sealed warrant — the court's own filing on which held
+          // effects are still held and which were already drawn. Reads
+          // the next 12 rooms' porter's-cage tags live.
+          const entries: string[] = [];
+          for (const r of this.route?.rooms ?? []) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 12) continue;
+            for (const s of r.sockets) {
+              if (!s.meta.claim) continue;
+              const tag = s.meta.claimTag as string | undefined;
+              entries.push(`Door ${String(r.index).padStart(3, '0')} — '${tag ?? '?'}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+            }
+          }
+          const text = entries.length
+            ? `[the warrant files: ${entries.join(' · ')}]`
+            : '[the warrant files no claims ahead]';
+          this.cue('whisper', it.pos, text);
         } else if (contains) {
           this.giveItem(contains as ItemId, amt);
           this.cue('pickup', it.pos, `[the case breaks open — confiscated goods, now yours]`);

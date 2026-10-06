@@ -486,3 +486,80 @@ test("the inspection sheet marks which doors the house watches", async ({ page }
   expect(r.cleanLine, `sheet@${r.cleanIdx} should read clean`).toMatch(/nothing watches the doors ahead/);
   expect(errors).toEqual([]);
 });
+
+test('the sealed warrant files which claims still pay', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': the first case @36 always carries a warrant
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const purse = g as unknown as { imprints: number };
+    const ga = g as unknown as {
+      currentRoom: number; godMode: boolean; keys: Set<string>;
+      interaction: { focused?: { prompt?: string } };
+    };
+    ga.godMode = true;
+    purse.imprints = 90;
+    const caseRoom = g.route.rooms.find((r) => r.sockets?.some((s) => s.meta?.confiscated && s.meta?.contains === 'warrant'));
+    const caze = caseRoom?.sockets?.find((s) => s.meta?.confiscated);
+    if (!caseRoom || !caze) return { stage: 'no-warrant' } as const;
+    // a claim room inside the warrant's +12 window — pay one tag first so
+    // the read has a 'drawn' line to file
+    const claimRoom = g.route.rooms.find((r) => r.index > caseRoom.index && r.index <= caseRoom.index + 12
+      && r.sockets?.some((s) => s.meta?.claim && !s.meta?.taken));
+    const aimHold = (pos: { x: number; y: number; z: number }, roomIdx: number, frames: number, holdFrom: number, match: RegExp) => {
+      let seen = '';
+      for (let f = 0; f < frames; f++) {
+        g.player.teleport(pos.x + 0.7, 0, pos.z + 0.7);
+        ga.currentRoom = roomIdx;
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        const hd = Math.max(0.3, Math.hypot(pos.x - g.player.pos.x, pos.z - g.player.pos.z));
+        g.player.pitch = Math.atan2((pos.y + 0.6) - eyeY, hd);
+        g.player.yaw = Math.atan2(pos.x - g.player.pos.x, pos.z - g.player.pos.z);
+        g.frame();
+        if (match.test(ga.interaction.focused?.prompt ?? '')) seen = ga.interaction.focused!.prompt!;
+        if (f === holdFrom) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      return seen;
+    };
+    let paidTag = '';
+    let claimTaken = -1;
+    if (claimRoom) {
+      const cs = claimRoom.sockets!.find((s) => s.meta?.claim && !s.meta?.taken)!;
+      paidTag = cs.meta!.claimTag as string;
+      const prompt = aimHold(cs.pos, claimRoom.index, 110, 10, /claim the bag tagged/i);
+      for (let f = 0; f < 15; f++) g.frame();
+      claimTaken = cs.meta!.taken ? 1 : 0;
+      if (!claimTaken) return { stage: 'claim-unpaid', prompt } as const;
+    }
+    // pry the warrant — the filing reads the tags live
+    const prompt = aimHold(caze.pos, caseRoom.index, 130, 10, /pry the confiscated case/i);
+    for (let f = 0; f < 15; f++) g.frame();
+    const line = caps.find((c) => /warrant files/.test(c)) ?? '';
+    return { stage: 'done', idx: caseRoom.index, prompt, line,
+      paidTag, claimIdx: claimRoom?.index ?? -1,
+      nextHeld: g.route.rooms
+        .filter((r) => r.index > caseRoom.index && r.index <= caseRoom.index + 12)
+        .flatMap((r) => r.sockets!.filter((s) => s.meta?.claim && !s.meta?.taken).map(() => r.index)) };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  expect(result.prompt).toMatch(/pry the confiscated case/i);
+  expect(result.line, 'the warrant must file its read').toMatch(/the warrant files:/);
+  if (result.claimIdx >= 0) {
+    expect(result.line).toContain(`Door ${String(result.claimIdx).padStart(3, '0')} — '${result.paidTag}' drawn`);
+  }
+  for (const idx of result.nextHeld) {
+    expect(result.line).toContain(`Door ${String(idx).padStart(3, '0')}`);
+    expect(result.line).toMatch(/still held/);
+  }
+  expect(errors).toEqual([]);
+});
