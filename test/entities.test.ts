@@ -1491,3 +1491,49 @@ describe('the belt-wheel (sprint 267)', () => {
     expect(ctx.damagePlayer, 'a duck clears the blades').not.toHaveBeenCalled();
   });
 });
+
+describe('the Hauler (sprint 271)', () => {
+  const haulRoom = {
+    index: 0, templateId: 'u-long-hall', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 14, spec: { width: 8, depth: 14, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('hauls a–b down the long axis, the sledge trailing the line', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h = new Hauler();
+    h.spawn(ctx);
+    const z0 = (h as unknown as { pos: { x: number; z: number } }).pos.z;
+    for (let i = 0; i < 120; i++) { ctx.now += 0.05; h.update(0.05); }
+    const p1 = (h as unknown as { pos: { x: number; z: number } }).pos;
+    const s1 = (h as unknown as { sledgePos: { x: number; z: number } }).sledgePos;
+    expect(Math.abs(p1.z - z0), 'the haul advances').toBeGreaterThan(1);
+    // the drag trails the heading by ~1.25m
+    const behind = Math.hypot(s1.x - p1.x, s1.z - p1.z);
+    expect(behind).toBeGreaterThan(1.0);
+    expect(behind).toBeLessThan(1.6);
+    h.dispose();
+  });
+
+  it('a crash near the sledge pulls the ram — once', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    // wire the bus by hand — the ctx spy only records emits
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const h = new Hauler();
+    h.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; h.update(0.05); } // past the rise
+    // stand on the haul line, bang the boards beside the sledge
+    const hp = (h as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = hp.x; ctx.player.pos.z = hp.z + 1.0;
+    for (const fn of listeners) fn({ x: hp.x, y: 0.3, z: hp.z, intensity: 0.7, category: 'impact', caption: '[slam]' });
+    for (let i = 0; i < 60; i++) { ctx.now += 0.05; h.update(0.05); }
+    expect(ctx.damagePlayer, 'the sledge team rams the sound').toHaveBeenCalledWith(
+      25, 'hauler', expect.any(String));
+    const hits = (ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.filter((c) => c[1] === 'hauler');
+    expect(hits.length, 'one ram per rouse').toBe(1);
+    h.dispose();
+  });
+});

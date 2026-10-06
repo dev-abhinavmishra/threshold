@@ -1729,3 +1729,31 @@ NEXT SPRINT IDEAS (pick the biggest first)
 - **Evidence pos must be a complete Vec3** — a planted `{x, z}` record (no `y`) makes `v3dist` NaN → the `d > 3` guard passes as false → the player-read fires `cue(pos=NaN)` → `exponentialRampToValueAtTime` throws inside `audio.play`. Always `v3(x, 0, z)` / `{x, y:0, z}`.
 - e2e hiding spots expose `exitPos`, not `pos`, in the harness type — teleport to `exitPos` + assign `hiddenSpot` (sprint-264 pattern).
 - Probe scripts need the repo's node_modules (run from repo root), the preview server on :4173 (`npm run preview -- --port 4173`), and the `?debug` + `.seed-input` fill + first-button-click boot (no `?seed=` URL param).
+
+## Sprint 271 — the Hauler (`new-forge`, under salvage-drag)
+
+**What:** a sledge team hauls salvage down under-rooms — a–b on the room's long
+axis at 0.85, the sledge trailing 1.25m behind the heading (`sledgePos` is a
+public anchor that moves every frame). It scrapes `[the sledge scrapes]` every
+2.4s ('impact' 0.3 — audible scenery, below the rouse floor). Loud noise within
+7m of the sledge pulls a one-shot ram (25dmg 'hauler') — picking is quiet,
+crashing beside it is not. Done after drifting 2+ rooms from spawn.
+`stock = 4` — 'Pick the sledge' (1.8m, 0.9s hold) skims 4–9 marginalia or an
+under-flavored item, emit 0.35 so the team never hears you pilfering it;
+`[the sledge is stripped]` at zero.
+
+**Traps:**
+- **Evaluate the rouse-strike BEFORE the move-clear** — the old order nulled
+  `alerted` on arrival (`dd < 0.35`) before the ram check ran, so noise that
+  landed ON the hauler never roused it. Strike first, then walk/clear.
+- **Entity `data` on an interactable needs the Record cast** —
+  `Interactable.data` is `HidingSpot|Socket|Door|Record` — `Entity` fails the
+  union. `data: ent as unknown as Record<string, unknown>`, then the press
+  handler narrows it back through `as unknown as { stock, sledgePos }`.
+- **Cooldown × spawnChance is the real density knob** — `spawnChance 0.5` with
+  `cooldown 9` scheduled ~11 haulers per 121-room under. Cooldown 26 lands ~5.
+  Under candidates roll in order — the first 'swamper' entry masks 'hauler'
+  rolls less than you'd think because swamper's flood gate usually fails.
+- **A moving anchor wants per-frame registration** — the pick point reads
+  `sledgePos` fresh inside `rebuildInteractables`; the e2e pins the player to it
+  each frame (a real player walks-with at 0.85 — hold range 1.9m ≥ 0.77m drift).

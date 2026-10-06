@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Editor, Grafter, Swamper } from '../entities/setpieces';
+import { Editor, Grafter, Hauler, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -96,6 +96,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   inspector: { sfx: 'collector-rattle', text: '[a latch being tried — one after another]', sev: 'warn' },
   commissionaire: { sfx: 'collector-rattle', text: '[a gloved hand raps the frame — a door held shut]', sev: 'warn' },
   swamper: { sfx: 'puddle-splash', text: '[water, and something in it — slow]', sev: 'warn' },
+  hauler: { sfx: 'impact', text: '[a sledge scrape — cargo on the move]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -135,6 +136,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   inspector: '[the keys again — it is still checking]',
   commissionaire: '[the rap again — it is still holding the doors]',
   swamper: '[the flood stirs — it is still in the water]',
+  hauler: '[the scrape halts — it heard you]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -853,6 +855,8 @@ export class Game {
       case 'grafter': this.spawnEntity(new Grafter()); break;
       // The Swamper: drowned thing that lies in flooded halls and hears splashes.
       case 'swamper': this.spawnEntity(new Swamper()); break;
+      // The Hauler: a salvage-drag drudge — the sledge is a moving loot source.
+      case 'hauler': this.spawnEntity(new Hauler()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
@@ -1215,6 +1219,21 @@ export class Game {
           : 'Chock the blades (needs a door chock)',
         holdTime: 1.2, enabled: true, priority: 4,
         data: f,
+      });
+    }
+    // Beside a hauler's sledge: 'Pick the sledge' — pilfer the moving load.
+    for (const ent of this.entities) {
+      if (ent.id !== 'hauler' || ent.state === 'done') continue;
+      const h = ent as unknown as { sledgePos: Vec3; stock: number; roomIdx: number };
+      if (h.stock <= 0 || !this.streamer.builtIndices.includes(h.roomIdx)) continue;
+      const dx = h.sledgePos.x - this.player.pos.x, dz = h.sledgePos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'pick', id: `pick-${this.space}:${h.roomIdx}`,
+        pos: { x: h.sledgePos.x, y: 0.4, z: h.sledgePos.z },
+        prompt: 'Pick the sledge',
+        holdTime: 0.9, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
       });
     }
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
@@ -1736,6 +1755,7 @@ export class Game {
           stillframe: 'the paused hall', editor: 'the revising hand',
           inkling: 'an inkstain walking', husk: 'a guest long emptied',
           singer: 'the choir of one', swamper: 'a drowned porter in the flood',
+          hauler: 'a porter who hauls salvage',
         };
         const seen = new Set<string>();
         const parts: string[] = [];
@@ -1825,6 +1845,7 @@ export class Game {
           inkling: 'an inkstain walking', returner: 'a guest come back',
           sweep: 'steps that pass too fast', reprise: 'steps that come back too fast',
           swamper: 'a drowned porter, under the water',
+          hauler: 'a porter who hauls salvage',
         };
         const STAFF = new Set(['bellman', 'warden', 'inspector', 'commissionaire', 'porter', 'custodian', 'collector']);
         const filings: string[] = [];
@@ -2034,6 +2055,27 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
+        return;
+      }
+      case 'pick': {
+        const h = it.data as unknown as { stock: number; sledgePos: Vec3 };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the sledge]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the sledge]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
       }
       case 'forge': {

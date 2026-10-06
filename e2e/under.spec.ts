@@ -368,3 +368,60 @@ test('old sign — a sprung wire from before you arrived reads as history', asyn
   expect(result.readOnce, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the haul — a sledge you can pick while it scrapes the hall', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // hauler @ u-2
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      entities: { id: string; state: string }[];
+      marginalia: number; keys: Set<string>;
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    const hRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'hauler'));
+    if (!hRoom) return { stage: 'none-scheduled' } as const;
+    g.player.teleport(hRoom.origin.x, 0, hRoom.origin.z);
+    ga.currentRoom = hRoom.index;
+    for (let f = 0; f < 60; f++) g.frame();
+    const hauler = ga.entities.find((e) => e.id === 'hauler') as
+      { id: string; sledgePos: { x: number; z: number }; stock: number; state: string } | undefined;
+    if (!hauler) return { stage: 'no-hauler' } as const;
+    const m0 = ga.marginalia;
+    const st0 = hauler.stock;
+    // stand on the drag, aim at it, hold E — pilfer on the move
+    g.player.teleport(hauler.sledgePos.x, 0, hauler.sledgePos.z);
+    let prompt = '';
+    for (let f = 0; f < 40; f++) {
+      // stay pinned to the moving sledge — the pick walks with the haul
+      g.player.teleport(hauler.sledgePos.x, 0, hauler.sledgePos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.4 - eyeY, 0.5);
+      g.player.yaw = Math.atan2(hauler.sledgePos.x - g.player.pos.x,
+        hauler.sledgePos.z - g.player.pos.z) || 0;
+      g.frame();
+      prompt = g.interaction.focused?.prompt ?? prompt;
+      if (f === 8) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 10; f++) g.frame();
+    return { stage: 'done', prompt, spent: hauler.stock < st0,
+      paid: ga.marginalia > m0 || caps.some((c) => /off the sledge/.test(c)),
+      caps: caps.filter((c) => /sledge|scrape|pilfer/.test(c)) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.prompt, JSON.stringify(result)).toMatch(/Pick the sledge/);
+  expect(result.spent, JSON.stringify(result)).toBe(true);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

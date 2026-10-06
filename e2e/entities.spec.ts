@@ -1174,7 +1174,7 @@ test('ghosts — stale sign still pulls the Grafter, the caption says so', async
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       currentRoom: number;
-      hazard: { evidence: { pos: { x: number; z: number }; room: number; kind: string; t: number; readBy: string[]; old?: boolean }[] };
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[]; old?: boolean }[] };
       entities: { id: string; update(d: number): void; pos?: { x: number; z: number } }[];
     };
     const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));

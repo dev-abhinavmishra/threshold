@@ -645,3 +645,158 @@ export class Swamper extends Entity {
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
   }
 }
+
+/* ============================ HAULER ============================ */
+/** The under's working drudge: it drags a salvage sledge on a slow a–b
+ *  haul through its room, scraping loud enough to hear two doors off.
+ *  The sledge is a moving loot source — crouch beside it and pick it
+ *  while it hauls. Loud noise near it makes it drop the haul and ram
+ *  the point; quiet picking is free. */
+export class Hauler extends Entity {
+  private pos = v3();
+  private target = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private roomW = 0;
+  private roomD = 0;
+  private endA = v3();
+  private endB = v3();
+  private heading = v3(0, 0, 1);
+  private alerted: Vec3 | null = null;
+  private struck = false;
+  private scrapeT = 0;
+  private lifeT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private sledge: THREE.Group | null = null;
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+
+  /** The drag's world position — the interactable anchors here per frame. */
+  sledgePos = v3();
+  /** Picks left on the sledge — a sledge picked clean stops registering. */
+  stock = 4;
+
+  constructor() { super('hauler', ENTITY_TUNING.hauler); }
+
+  override threatPos(): Vec3 { return this.pos; }
+  get roomIdx(): number { return this.spawnRoom; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    this.roomW = room.width;
+    this.roomD = room.depth;
+    // the haul runs the room's long axis, clear of the walls
+    const span = Math.max(this.roomW, this.roomD) / 2 - 1.3;
+    const long = this.roomW >= this.roomD ? v3(1, 0, 0) : v3(0, 0, 1);
+    this.endA = v3(this.roomO.x - long.x * span, 0, this.roomO.z - long.z * span);
+    this.endB = v3(this.roomO.x + long.x * span, 0, this.roomO.z + long.z * span);
+    this.pos = v3copy(v3(), this.endA);
+    this.target = v3copy(v3(), this.endB);
+    this.sledgePos = v3copy(v3(), this.pos);
+
+    const g = new THREE.Group();
+    const rig = riggedFigure('yeti');
+    if (rig) {
+      this.rig = rig;
+      rig.play('move', 0);
+      g.add(rig.group);
+    } else {
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.3, 6), MAT.steelDark());
+      body.position.y = 0.65;
+      g.add(body);
+    }
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    // the sledge itself — a drag behind the haul line
+    const s = new THREE.Group();
+    const bed = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.22, 1.1), MAT.darkOak());
+    bed.position.y = 0.16;
+    s.add(bed);
+    for (const [sx, sz, sy] of [[-0.18, -0.2, 0.38], [0.16, 0.22, 0.34]] as const) {
+      const sack = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 5), MAT.figureCloth());
+      sack.scale.y = 0.7;
+      sack.position.set(sx, sy, sz);
+      s.add(sack);
+    }
+    s.position.copy(this.sledgePos);
+    this.sledge = s;
+    c.addEntityMesh(s);
+    c.cue('grafter-grind', this.pos, '[something hauls salvage down the hall]', { severity: 'warn' });
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    this.state = 'engage';
+  }
+
+  /** It can't see — but the sledge hears enough. A crash near the haul
+   *  pulls the whole team onto the sound point, and it rams what it finds. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage') return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    const room = c.rooms[this.spawnRoom];
+    if (!room || !pointInRoom(room, e.x, e.z, 0.4)) return;
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 7) return;
+    this.alerted = v3(e.x, 0, e.z);
+    this.struck = false;
+    c.cue('grafter-grind', this.pos, '[the scrape halts — it sets the sledge down]', { severity: 'warn' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    this.lifeT += dt;
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2) { this.done(); return; }
+    const p = c.player;
+
+    // the ram: the whole team hits the sound point — once per rouse
+    if (this.alerted && !this.struck && !this.rising() && v3dist(this.pos, p.pos) < this.tuning.killRange) {
+      this.struck = true;
+      this.rig?.play('attack', 0.05);
+      c.cue('grafter-grind', this.pos, '[the sledge team rams through]', { severity: 'danger' });
+      c.sound.emit({ x: this.pos.x, y: 0.5, z: this.pos.z, intensity: 0.6, category: 'impact', caption: '[the sledge slams]', source: 'hauler' });
+      c.damagePlayer(this.tuning.damage, 'hauler', 'The Hauler rams what it hears near the sledge — crash noise by the haul line is the mistake. Pick it quiet, or stay loud and gone.');
+    }
+    const goal = this.alerted ?? this.target;
+    const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z;
+    const dd = Math.hypot(dx, dz);
+    if (dd > 0.35) {
+      const sp = this.alerted ? this.tuning.speed * 2.6 : this.tuning.speed;
+      this.pos.x += (dx / dd) * sp * dt;
+      this.pos.z += (dz / dd) * sp * dt;
+      this.heading = v3(dx / dd, 0, dz / dd);
+      this.rig?.play('move');
+      if (!this.alerted && c.now > this.scrapeT) {
+        this.scrapeT = c.now + 2.4;
+        c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.3, category: 'impact', caption: '[the sledge scrapes]', source: 'hauler' });
+      }
+    } else if (this.alerted) {
+      this.alerted = null;
+      c.cue('grafter-grind', this.pos, '[it finds nothing — the haul resumes]', { severity: 'info' });
+    } else {
+      // turn at the end of the haul line
+      this.target = this.target === this.endA ? this.endB : this.endA;
+      this.rig?.play('idle');
+    }
+
+    // the drag trails the haul line
+    this.sledgePos = v3(this.pos.x - this.heading.x * 1.25, 0, this.pos.z - this.heading.z * 1.25);
+    if (this.mesh) {
+      this.mesh.position.copy(this.pos);
+      if (dd > 0.35) this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    if (this.sledge) {
+      this.sledge.position.copy(this.sledgePos);
+      this.sledge.rotation.y = Math.atan2(this.heading.x, this.heading.z);
+    }
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    if (this.sledge) { this.ctx.removeEntityMesh(this.sledge); this.sledge = null; }
+    this.rig = null;
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+  }
+}
