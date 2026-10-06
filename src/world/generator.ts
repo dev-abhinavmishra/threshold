@@ -1195,6 +1195,10 @@ function guarantee(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, i
 
 /* ==================== UNDERSCRIPT ==================== */
 
+/** Under templates that can hold standing water — the low service halls
+ *  water actually collects in (never the staffed offices or safe landings). */
+const FLOOD_TEMPLATES = new Set(['u-corridor', 'u-long-hall', 'u-server', 'u-narrow-stacks', 'u-partition-maze', 'u-break']);
+
 function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstance[] {
   const count = opts.shortRun ? 21 : 121; // U-000..U-120
   const placed: PlacedRoom[] = [];
@@ -1227,6 +1231,9 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
     if (uConn) addConnectorColliders(room, uConn);
     room.biome = 'underscript';
     if (streams.roomStream('dressing', 700 + i).bool(0.45)) room.darkRoom = true;
+    // Flooded runs — water collects in the low service halls. Wading is
+    // slow and every step carries; the drain is the paid quiet.
+    if (FLOOD_TEMPLATES.has(room.templateId) && streams.roomStream('dressing', 710 + i).bool(0.12)) room.flooded = true;
     rooms.push(room);
     const pw = portWorld(p, p.spec.exits[0]);
     connPos = pw.pos; connDir = pw.dir;

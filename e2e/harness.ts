@@ -72,6 +72,7 @@ export interface GRoom {
   doors: { id: string; pos: { x: number; z: number }; yaw: number; label: string; falseDoor?: boolean; deep?: boolean; openT?: number; opening?: boolean; heldBy?: string; locked?: boolean }[];
   scheduled?: { entity: string; roused?: boolean; triggerRoom: number; seed: number }[];
   darkRoom?: boolean;
+  flooded?: boolean;
   spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
   hidingSpots: { id: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
   sockets?: { meta?: Record<string, unknown>; pos: { x: number; y: number; z: number } }[];

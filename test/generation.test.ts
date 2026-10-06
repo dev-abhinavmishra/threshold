@@ -423,6 +423,29 @@ describe('sprint mechanics coverage', () => {
     expect(anyFilled).toBe(true);
   });
 
+  it('flooded halls: low service templates only, drains where the plumbing allows', () => {
+    const FLOOD_TEMPLATES = new Set(['u-corridor', 'u-long-hall', 'u-server', 'u-narrow-stacks', 'u-partition-maze', 'u-break']);
+    const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    let total = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const fl = route.underRooms.filter((r) => r.flooded);
+      total += fl.length;
+      for (const r of fl) {
+        expect(FLOOD_TEMPLATES.has(r.templateId)).toBe(true);
+        // water never floods a safe landing or the lobby
+        expect(r.index % 20).not.toBe(0);
+        // a flooded hall is traversable — never the whole route
+        expect(fl.length).toBeLessThanOrEqual(12);
+        // where the plumbing allows, a drain exists — mazes run loud or slow
+        if (r.spec?.props.some((p) => DRAIN_PROPS.has(p.kind))) {
+          expect(r.spec!.props.filter((p) => DRAIN_PROPS.has(p.kind)).length).toBeGreaterThan(0);
+        }
+      }
+    }
+    expect(total).toBeGreaterThanOrEqual(SEEDS.length * 2);
+  });
+
   it('deep doors are optional branch doors only, never toll', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });

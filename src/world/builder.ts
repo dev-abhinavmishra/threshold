@@ -325,6 +325,15 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   const floor = new THREE.Mesh(texBox(w, 0.1, d), floorMat);
   floor.position.y = -0.05;
   group.add(floor);
+  // Flooded halls — a dark sheet lying on the floor. It stays a live named
+  // mesh (never merged) so the game can sink it when the drain opens.
+  if (room.flooded) {
+    const sheet = new THREE.Mesh(texBox(w * 0.97, 0.02, d * 0.97), MAT.waterDark());
+    sheet.position.y = 0.05;
+    sheet.name = `flood-${room.index}`;
+    sheet.userData.anim = 'flood';
+    group.add(sheet);
+  }
   const ceil = new THREE.Mesh(texBox(w, 0.1, d), ceilMat);
   ceil.position.y = h + 0.05;
   // Corridor carpet runner — a worn strip down the length of the passage,

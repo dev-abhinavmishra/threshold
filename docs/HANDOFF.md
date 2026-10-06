@@ -1382,3 +1382,37 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Brace UX race watch; milestone-set hearing remains a design call.
   - Under-cast depth done; next archetype: an under-room hazard layer
     (flooding maintenance, lights-out server hall)?
+
+## Sprint 254 — flooded under-halls (the under-room hazard layer)
+
+- `RoomInstance.flooded` on the wet service templates (u-corridor,
+  u-long-hall, u-server, u-narrow-stacks, u-partition-maze, u-break) at a
+  0.12 dressing roll — 3–7 flooded rooms per seed; safe landings and the
+  lobby never flood (template gate keeps it off safe-room kinds).
+- Builder lays a `flood-<idx>` water sheet (MAT.waterDark, ~5cm, covers
+  the floor) marked `userData.anim` so the merge pass leaves it live and
+  it can sink when drained.
+- Wade rules (Game per-frame): inside a flooded, undrained room upright
+  movement is speedMul 0.7 and every ~1.7m of travel emits 'impact' 0.55
+  `[water takes every step]` — loud enough to rouse doors and feed the
+  under's hunters. Crouch-wading is quiet but still slow. Entering a
+  flooded room captions `[water covers the floor here — every step
+  carries]` once per room (drainNoted).
+- `Open the drain` (1.2s hold) sits on the room's first pipe-family prop
+  (DRAIN_PROPS = pipeManifold/conduitRun/sumpPump/hydrant/wallVent). The
+  crank is loud once — 'machine' 0.55 `[the crank screams once]` — then
+  the room joins `drainedRooms`, the sheet sinks over ~6s, and the hall
+  is quiet. Flooded rooms without drainable plumbing (partition-maze)
+  honestly get no drain — cross them loud, or slow.
+- Gates: tsc, lint, 127 vitest (+1 generation spec: flooded only on wet
+  templates, never safe landings, drain where plumbing allows), 5-seed
+  sim, e2e 27/27 (new props.spec leg: 10 splash emits upright, 0 crouched,
+  drain → 0 emits + sheet at −0.06), build.
+- Harness trap learned: `player.crouching` is recomputed from held keys
+  every frame — assert the field drives nothing; hold 'KeyC' instead.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Brace UX race watch; milestone-set hearing remains a design call.
+  - Under hazard layer landed; next: a lights-out variant for the same
+    wet corridors (dying fixtures already exist — a hall where the mains
+    are out entirely and the water hides the floor traps)?

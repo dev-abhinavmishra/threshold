@@ -190,6 +190,8 @@ export interface RoomInstance {
   /** Diegetic light groups for warnings/flicker. */
   lightGroup: 'main' | 'dim' | 'none';
   darkRoom: boolean;
+  /** Underscript: standing water — wading is slow and every step is loud. */
+  flooded?: boolean;
   authored: boolean;
   /** LOS-safe alcove volumes that count as physical safe spots. */
   safeZones: Aabb[];

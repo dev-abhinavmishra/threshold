@@ -99,6 +99,9 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
  *  used by the rouse tell and by ear-to-the-seam listens. */
+/** Pipe-family props a flooded room's water can be drained through. */
+const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+
 const ROUSED_LINES: Record<EntityId, string> = {
   sweep: '[floor-creaks racing the boards — it heard you]',
   reprise: '[the creaking doubles back — it heard you]',
@@ -1138,9 +1141,11 @@ export class Game {
       if (pr?.spec && !SAFE_ROOM_TEMPLATES.has(pr.templateId)) {
         const c = Math.cos(pr.yaw), s = Math.sin(pr.yaw);
         const ord: Record<string, number> = {};
-        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0, al = 0;
+        let vn = 0, hn = 0, pn = 0, tn = 0, wn = 0, rn = 0, yn = 0, gn = 0, cn = 0, rg = 0, pd2 = 0, sn2 = 0, chn = 0, al = 0, dn = 0;
+        let drainDone = false;
         for (const p of pr.spec.props) {
           const isVent = p.kind === 'steamVent' || p.kind === 'boilerTank' || p.kind === 'pipeManifold';
+          const isDrain = !!pr.flooded && DRAIN_PROPS.has(p.kind);
           const isHearth = p.kind === 'fireplace' || p.kind === 'stove' || p.kind === 'masonryHeater' || p.kind === 'firePit';
           const isPhone = p.kind === 'payphone';
           const isTrap = p.kind === 'mousetrap';
@@ -1179,9 +1184,9 @@ export class Game {
           if (p.kind === 'bookshelf' || p.kind === 'papers' || p.kind === 'paperStack' || p.kind === 'books' || p.kind === 'drawerUnit') {
             this.liveBooks.push({ x: wx, z: wz, key: `${this.space}:${pr.index}:${p.kind === 'bookshelf' ? 's' : p.kind === 'papers' ? 'p' : p.kind === 'paperStack' ? 't' : p.kind === 'books' ? 'b' : 'd'}${this.liveBooks.length}` });
           }
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
-          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : (ord[p.kind] ?? 0);
-          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm) ord[p.kind] = n + 1;
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain && p.kind !== 'pianoUpright' && p.kind !== 'television' && p.kind !== 'clock') continue;
+          const n = isVent ? vn++ : isHearth ? hn++ : isPhone ? pn++ : isTrap ? tn++ : isWash ? wn++ : isPrint ? rn++ : isType ? yn++ : isWin ? gn++ : isCool ? cn++ : isSeat ? sn2++ : isAlarm ? al++ : isDrain ? dn++ : (ord[p.kind] ?? 0);
+          if (!isVent && !isHearth && !isPhone && !isTrap && !isWash && !isPrint && !isType && !isWin && !isCool && !isSeat && !isAlarm && !isDrain) ord[p.kind] = n + 1;
           const key = `${this.space}:${pr.index}:${n}`;
           if (p.kind === 'pianoUpright' && !this.playedPianos.has(key)) {
             this.interaction.add({
@@ -1200,6 +1205,13 @@ export class Game {
               kind: 'clock', id: `clock-${key}`,
               pos: { x: wx, y: 1.3, z: wz },
               prompt: 'Wind the clock', holdTime: 1.4, enabled: true, priority: 2,
+            });
+          } else if (isDrain && !drainDone && !this.drainedRooms.has(`${this.space}:${pr.index}`)) {
+            drainDone = true;
+            this.interaction.add({
+              kind: 'drain', id: `drain-${key}`,
+              pos: { x: wx, y: 0.9, z: wz },
+              prompt: 'Open the drain', holdTime: 1.2, enabled: true, priority: 2,
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -1831,6 +1843,17 @@ export class Game {
         this.pulledAlarms.add(key);
         this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 1.0, category: 'machine', caption: '[the alarm screams]' });
         this.cue('door-slam', it.pos, '[the bell screams in the stairwell]', 'warn');
+        return;
+      }
+      case 'drain': {
+        // The crank is loud once — then the water goes and the hall is quiet.
+        it.enabled = false;
+        const parts = it.id.split(':');
+        const rIdx = Number(parts[1]);
+        this.drainedRooms.add(`${this.space}:${rIdx}`);
+        this.draining.set(rIdx, 0);
+        this.sound.emit({ x: it.pos.x, y: 0.9, z: it.pos.z, intensity: 0.55, category: 'machine', caption: '[the crank screams once]' });
+        this.cue('puddle-splash', it.pos, '[the water finds the drain]', 'info');
         return;
       }
       case 'washer': {
@@ -3591,6 +3614,11 @@ export class Game {
   private livePuddles: { x: number; z: number; key: string }[] = [];
   private armedPuddles = new Map<string, boolean>();
   private slippedPuddles = new Set<string>();
+  private drainedRooms = new Set<string>();
+  private drainNoted = new Set<string>();
+  private draining = new Map<number, number>();
+  private wadeAcc = 0;
+  private wadeMul = false;
   /* — the glass falls: armed chandeliers creak when you stand under
      them; a loud enough noise there brings the whole thing down — */
   private liveChandeliers: { x: number; z: number; key: string }[] = [];
@@ -5121,6 +5149,42 @@ export class Game {
           }
           this.player.panic = Math.min(1, this.player.panic + 0.07);
         }
+      }
+    }
+
+    // Flooded halls — standing water carries every upright stride; the
+    // crouch-wade is quiet but slow, and the drain is the paid quiet.
+    {
+      const cur = this.activeRooms()[this.currentRoom];
+      const floodKey = `${this.space}:${this.currentRoom}`;
+      const wading = !!cur?.flooded && !this.drainedRooms.has(floodKey)
+        && pointInRoom(cur, this.player.pos.x, this.player.pos.z);
+      if (wading) {
+        if (!this.drainNoted.has(floodKey)) {
+          this.drainNoted.add(floodKey);
+          this.cue('puddle-splash', this.player.pos, '[water covers the floor here — every step carries]', 'warn');
+        }
+        const spd = Math.hypot(this.player.vel.x, this.player.vel.z);
+        if (!this.player.crouching) {
+          this.player.speedMul = Math.min(this.player.speedMul, 0.7);
+          this.wadeMul = true;
+          this.wadeAcc += spd * dt;
+          if (spd > 1.2 && this.wadeAcc > 1.7) {
+            this.wadeAcc = 0;
+            this.sound.emit({ x: this.player.pos.x, y: 0.1, z: this.player.pos.z, intensity: 0.55, category: 'impact', caption: '[water takes every step]' });
+          }
+        }
+      } else if (this.wadeMul) {
+        this.wadeMul = false;
+        if (this.player.speedMul === 0.7) this.player.speedMul = 1;
+        this.wadeAcc = 0;
+      }
+      // Opened drains sink their sheets over a few seconds.
+      for (const [idx, el] of this.draining) {
+        const t2 = el + dt;
+        const sheet = this.streamer.get(idx)?.group.getObjectByName(`flood-${idx}`);
+        if (sheet) sheet.position.y = Math.max(-0.06, 0.05 - t2 * 0.02);
+        if (t2 > 6) this.draining.delete(idx); else this.draining.set(idx, t2);
       }
     }
 

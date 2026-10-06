@@ -358,3 +358,118 @@ test('document pickup reaches the codex', async ({ page }) => {
   expect(result.after).toBeGreaterThan(result.before ?? 0);
   expect(errors).toEqual([]);
 });
+
+// Flooded halls (sprint 254): standing water makes every upright stride loud
+// and slow; crouch-wading is quiet but slower; the drain is the paid quiet.
+test('flooded halls: wading carries, crouch is quiet, the drain pays', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const ga = g as unknown as {
+      enterUnderscript(): void; space: string; godMode: boolean; currentRoom: number;
+      drainedRooms: Set<string>; drainNoted: Set<string>;
+      streamer: { get(i: number): { group: { getObjectByName(n: string): { position: { y: number } } | undefined } } | undefined };
+      sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption?: string; source?: unknown }): void };
+      player: { pos: { x: number; y: number; z: number }; vel: { x: number; z: number }; yaw: number; pitch: number; crouching: boolean; speedMul: number; teleport(x: number, y: number, z: number): void; eyeHeight: number };
+    };
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    ga.godMode = true;
+    let splashes = 0;
+    const origEmit = ga.sound.emit.bind(ga.sound);
+    ga.sound.emit = (e) => { if (e.category === 'impact' && /water/.test(e.caption ?? '')) splashes++; origEmit(e); };
+
+    ga.enterUnderscript();
+    const DRAIN = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+    const room = g.route.underRooms.find((r) => r.flooded && r.spec?.props?.some((p) => DRAIN.has(p.kind)));
+    if (!room) return { stage: 'no-flooded-drainable' } as const;
+    const drainless = g.route.underRooms.filter((r) => r.flooded && !r.spec?.props?.some((p) => DRAIN.has(p.kind)));
+
+    const drive = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        ga.player.yaw = Math.atan2(ax, az);
+        const eyeY = ga.player.pos.y + ga.player.eyeHeight;
+        ga.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.55 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    // Wade in — the room notices and the water carries steps.
+    ga.player.teleport(room.origin.x, 0, room.origin.z);
+    ga.currentRoom = room.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const key = `under:${room.index}`;
+    const noted = ga.drainNoted.has(key);
+
+    // Upright stride: loud and slowed.
+    let slowSeen = 1;
+    g.keys.add('KeyW'); g.keys.add('ShiftLeft');
+    for (let f = 0; f < 120; f++) { g.frame(); slowSeen = Math.min(slowSeen, ga.player.speedMul); }
+    g.keys.delete('KeyW'); g.keys.delete('ShiftLeft');
+    const loudSplashes = splashes;
+
+    // Crouch-wade: quiet.
+    splashes = 0;
+    g.keys.add('KeyC'); g.keys.add('KeyW');
+    for (let f = 0; f < 120; f++) g.frame();
+    g.keys.delete('KeyW'); g.keys.delete('KeyC');
+    const quietSplashes = splashes;
+
+    // The drain — a real interactable on the room's pipework.
+    const drainIt = g.interaction.interactables.find((i) => i.kind === 'drain' && i.enabled);
+    if (!drainIt) return { stage: 'no-drain', noted, loudSplashes, quietSplashes, slowSeen } as const;
+    const prompts = drive(drainIt.pos, /open the drain/i, () => ga.drainedRooms.has(key), 220);
+    const drained = ga.drainedRooms.has(key);
+    if (!drained) return { stage: 'drain-failed', noted, loudSplashes, quietSplashes, slowSeen, prompts } as const;
+
+    // Drained: walk it again — the water stopped carrying.
+    ga.player.teleport(room.origin.x, 0, room.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    splashes = 0;
+    g.keys.add('KeyW');
+    for (let f = 0; f < 90; f++) g.frame();
+    g.keys.delete('KeyW');
+    const drainedSplashes = splashes;
+
+    // The sheet sinks.
+    for (let f = 0; f < 220; f++) g.frame();
+    const sheetY = ga.streamer.get(room.index)?.group.getObjectByName(`flood-${room.index}`)?.position.y ?? null;
+
+    return {
+      stage: 'done', room: room.index, noted, loudSplashes, quietSplashes, slowSeen,
+      drained, drainedSplashes, sheetY, drainlessCount: drainless.length,
+      drainlessHaveDrain: drainless.some((r) => {
+        ga.currentRoom = r.index;
+        for (let f = 0; f < 5; f++) g.frame();
+        return g.interaction.interactables.some((i) => i.kind === 'drain' && i.id.startsWith(`drain-${r.index}:`) || (i.kind === 'drain' && i.id.includes(`:${r.index}:`)));
+      }),
+      prompts,
+    } as const;
+  });
+
+  if (result.stage === 'no-flooded-drainable') test.skip();
+  expect(result.noted, JSON.stringify(result)).toBe(true);
+  expect(result.loudSplashes, JSON.stringify(result)).toBeGreaterThan(0);
+  expect(result.quietSplashes, JSON.stringify(result)).toBe(0);
+  expect(result.slowSeen, JSON.stringify(result)).toBeLessThanOrEqual(0.7);
+  expect(result.drained, JSON.stringify(result)).toBe(true);
+  expect(result.drainedSplashes, JSON.stringify(result)).toBe(0);
+  expect(result.sheetY, JSON.stringify(result)).toBeLessThan(0.05);
+  expect(result.drainlessHaveDrain).toBe(false);
+  expect(errors).toEqual([]);
+});

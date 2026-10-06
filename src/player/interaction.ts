@@ -10,7 +10,7 @@ import { PLAYER } from '../game/config';
 export type InteractKind =
   | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
-  | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator'
+  | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'washer' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll';
 
 export interface Interactable {
