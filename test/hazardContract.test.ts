@@ -65,3 +65,13 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toContain('hazard.evidence');
   });
 });
+
+describe('coaxed drawers (sprint 268)', () => {
+  it('the scarred latch tells before it opens', () => {
+    const sys = new InteractionSystem();
+    sys.addRoomInteractables(roomWith([sock('drawer', { coaxed: true, bare: true, contains: 'bandage' })]));
+    const d = sys.interactables.find((i) => i.kind === 'drawer');
+    expect(d?.prompt, 'the worked latch reads scarred').toMatch(/scarred/);
+    expect(d?.prompt, 'and does not lie about being forced').not.toMatch(/forced/);
+  });
+});

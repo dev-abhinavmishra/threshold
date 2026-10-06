@@ -2260,6 +2260,10 @@ export class Game {
       });
       return;
     }
+    if (sock.meta.bare === true) {
+      this.cue('drawer', it.pos, '[the drawer is bare — someone else was through it first]');
+      return;
+    }
     if (contains === 'imprints' || contains === 'imprints-few' || contains === 'imprints-many') {
       const amt = (sock.meta.amount as number) ?? 12;
       this.imprints += amt;

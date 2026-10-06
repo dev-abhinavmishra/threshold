@@ -814,3 +814,23 @@ describe('the belt-wheel (sprint 267)', () => {
     expect(fans.length, 'the wheels spin on the main route').toBeGreaterThan(3);
   });
 });
+
+describe('coaxed drawers (sprint 268)', () => {
+  it('already-worked latches: sprung, bare, and scarred', () => {
+    let found = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        for (const sk of r.sockets ?? []) {
+          if (sk.meta?.coaxed === true) {
+            found++;
+            expect(sk.meta.wired, 'a coaxed latch is already sprung').not.toBe(true);
+            expect(sk.meta.bare, 'a worked drawer is an empty one').toBe(true);
+            expect(sk.meta.drawerLocked, 'the coax beats the lock').not.toBe(true);
+          }
+        }
+      }
+    }
+    expect(found, 'somebody worked some latches before you').toBeGreaterThan(0);
+  });
+});

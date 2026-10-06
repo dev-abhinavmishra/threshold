@@ -85,10 +85,12 @@ export class InteractionSystem {
       if (sock.kind === 'drawer') {
         const locked = sock.meta.drawerLocked === true;
         const wired = sock.meta.wired === true;
+        const coaxed = sock.meta.coaxed === true;
         this.add({
           kind: 'drawer', id: `drawer-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}`,
           pos: sock.pos,
-          prompt: locked ? 'Drawer (locked)' : wired ? 'Search drawer — the latch looks forced; kneel to coax it' : 'Search drawer',
+          prompt: locked ? 'Drawer (locked)' : wired ? 'Search drawer — the latch looks forced; kneel to coax it'
+            : coaxed ? 'Search drawer — the latch is scarred, already worked' : 'Search drawer',
           holdTime: locked ? 1.6 : 0.5,
           data: sock, enabled: !sock.meta.opened, priority: 1,
         });

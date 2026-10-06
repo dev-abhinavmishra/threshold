@@ -620,3 +620,62 @@ test('the wheel chews — fan warns, bites a stander, and dies on the chock', as
   expect(result.signLeft, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the scarred latch — a drawer somebody else already coaxed', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // coaxed drawer at main room 77
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+    };
+    let target: { pos: { x: number; y: number; z: number }; meta?: Record<string, unknown> } | undefined;
+    let roomIdx = -1;
+    for (const r of g.route.rooms) {
+      const sk = (r.sockets ?? []).find((s) => s.meta?.coaxed === true);
+      if (sk) { target = sk; roomIdx = r.index; break; }
+    }
+    if (!target?.meta) return { stage: 'none' } as const;
+    const sock = target as { pos: { x: number; y: number; z: number }; meta: Record<string, unknown> };
+    // stand at the drawer — the scar tells first
+    const room = g.route.rooms[roomIdx];
+    const inX = room.origin.x - sock.pos.x, inZ = room.origin.z - sock.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    g.player.teleport(sock.pos.x + (inX / inL) * 1.4, 0, sock.pos.z + (inZ / inL) * 1.4);
+    ga.currentRoom = roomIdx;
+    const eyeY = g.player.pos.y + g.player.eyeHeight;
+    g.player.pitch = Math.atan2(sock.pos.y + 0.4 - eyeY, 1.4);
+    g.player.yaw = Math.atan2(sock.pos.x - g.player.pos.x, sock.pos.z - g.player.pos.z);
+    const inv0 = ga.inventory.map((i) => `${i.id}:${i.count}`).join(',');
+    const hp0 = ga.player.health;
+    let prompt = '';
+    for (let f = 0; f < 30; f++) { g.frame(); prompt = g.interaction.focused?.prompt ?? prompt; }
+    // hold E to search — no teeth, just the bare drawer
+    g.keys.add('KeyE');
+    for (let f = 0; f < 50 && sock.meta.opened !== true; f++) g.frame();
+    g.keys.delete('KeyE');
+    for (let f = 0; f < 10; f++) g.frame();
+    const inv1 = ga.inventory.map((i) => `${i.id}:${i.count}`).join(',');
+    return { stage: 'done', prompt, opened: sock.meta.opened === true,
+      noBite: !caps.some((c) => /latch snaps|latch bites/.test(c)),
+      bare: caps.some((c) => /drawer is bare/.test(c)),
+      paidNothing: inv0 === inv1 && ga.player.health === hp0, caps } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.prompt, JSON.stringify(result)).toMatch(/scarred/);
+  expect(result.opened, JSON.stringify(result)).toBe(true);
+  expect(result.noBite, JSON.stringify(result)).toBe(true);
+  expect(result.bare, JSON.stringify(result)).toBe(true);
+  expect(result.paidNothing, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

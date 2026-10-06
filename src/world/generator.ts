@@ -851,6 +851,9 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
           else s.meta = { contains: roll };
           if (locked) s.meta.drawerLocked = true;
           else if (!SAFE_ROOM_TEMPLATES.has(room.templateId) && lootRng.bool(0.09)) s.meta.wired = true;
+          if (s.meta.wired === true && lootRng.bool(0.12)) {
+            s.meta.wired = false; s.meta.coaxed = true; s.meta.bare = true;
+          }
         }
       } else if (s.kind === 'loot') {
         if (lootRng.bool(0.5 * resourceMul)) {

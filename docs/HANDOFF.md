@@ -1695,3 +1695,15 @@ NEXT SPRINT IDEAS (pick the biggest first)
 - e2e focus: a hazard point near a hiding spot loses focus ties — defuse verbs want priority ≥3 (chock 4). Same prox<1.1 fallback family as the coax anchor.
 - Sprint-266's generation spec pinned spent kinds to ['snare','steam'] — extending the hazard family means updating the allowlist (its own guard caught the new kind).
 - 's' live fans: 39,48,60,67,71,88,92.
+
+## Sprint 268 — the scarred latch (old sign at the loot layer)
+
+- ~12% of wired drawers roll `coaxed`: the latch was already worked — `wired` cleared (no bite), `bare: true` (loot suppressed), scar tell on the prompt: 'Search drawer — the latch is scarred, already worked'.
+- `resolveSocketLoot` gained a `bare` early-return: '[the drawer is bare — someone else was through it first]'. The room tells you it was looted before you arrived — sprint-266's sign idea at loot granularity.
+- No guarantee pass (unlike hazard sign): coaxed drawers are rare texture (0–2/route), not a floor feature.
+- 's': one coaxed drawer, main room 77.
+
+**Traps**
+- The drawer-wired rolls live in TWO fill passes (main :852 SAFE_ROOM_TEMPLATES-guarded; under :585 'unwary' comment) — patch both or the route halves diverge.
+- `resolveSocketLoot`'s `contains === undefined` fallthrough pays default loot (+6 marginalia under / +imprints main) — a bare drawer needs the explicit `bare` flag, not an absent `contains`.
+- Socket `meta` is optional in the e2e route type — cast after the find, don't type the loop var non-nullable.
