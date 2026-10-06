@@ -107,14 +107,32 @@ const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
 };
 const WALL_THIN: ReadonlySet<PropKind> = new Set(Object.keys(WALL_MOUNT_Y) as PropKind[]);
 
+// Curtain pieces cluster by design (rod over panel over swag = one
+// dressed window), so they share one family for spacing purposes.
+const CURTAIN_FAMILY: ReadonlySet<PropKind> = new Set([
+  'curtain', 'curtainRod', 'curtainLong', 'curtainSwag', 'drapePanel',
+]);
+const wallFamily = (k: PropKind): PropKind => (CURTAIN_FAMILY.has(k) ? 'curtain' : k);
+// Min centre gap between different dressing families on one wall — a
+// wall reads curated, not cluttered, when pieces breathe.
+const WALL_GAP = 1.1, FAMILY_GAP = 0.45;
+
 function wallProps(w: number, d: number, rng: Rng, kinds: PropKind[], n: number, exitLanes: { xs?: number[]; zs?: number[] } = {}): PropSpec[] {
   const laneX = exitLanes.xs ?? [0]; // +z exit wall: avoid these x centers
   const laneZ = exitLanes.zs ?? [];  // e/w exit walls: avoid these z centers
   const out: PropSpec[] = [];
   const free = (v: number, lanes: number[]) => lanes.every((l) => Math.abs(v - l) >= 1.95);
+  // along-wall axis gap: z on e/w walls, x on the exit wall
+  const gapOk = (side: number, pos: number, kind: PropKind) =>
+    out.every((p) =>
+      p.meta?.side !== side ||
+      Math.abs((side === 2 ? p.x : p.z) - pos) >= (wallFamily(p.kind) === wallFamily(kind) ? FAMILY_GAP : WALL_GAP));
   for (let i = 0; i < n; i++) {
     const wall = rng.int(0, 2); // 0 west, 1 east, 2 exit (+z) wall
-    const kind = rng.pick(kinds);
+    // back-to-back same-kind repeats on one wall read as spam — reroll a few
+    let kind = rng.pick(kinds);
+    for (let t = 0; t < 4 && out.some((p) => p.meta?.side === wall && p.kind === kind); t++)
+      kind = rng.pick(kinds);
     const inX = WALL_THIN.has(kind) ? 0.12 : 0.5;
     const inZ = WALL_THIN.has(kind) ? 0.15 : 0.6;
     const y = WALL_MOUNT_Y[kind];
@@ -122,14 +140,14 @@ function wallProps(w: number, d: number, rng: Rng, kinds: PropKind[], n: number,
       const x = (wall === 0 ? -1 : 1) * (w / 2 - inX);
       const yaw = wall === 0 ? Math.PI / 2 : -Math.PI / 2;
       let z = -d / 2 + 1 + rng.float() * (d - 2);
-      for (let t = 0; t < 8 && !free(z, laneZ); t++) z = -d / 2 + 1 + rng.float() * (d - 2);
-      if (!free(z, laneZ)) continue;
-      out.push({ kind, x, z, y, yaw, meta: { wall: true } });
+      for (let t = 0; t < 8 && (!free(z, laneZ) || !gapOk(wall, z, kind)); t++) z = -d / 2 + 1 + rng.float() * (d - 2);
+      if (!free(z, laneZ) || !gapOk(wall, z, kind)) continue;
+      out.push({ kind, x, z, y, yaw, meta: { wall: true, side: wall } });
     } else {
       let x = -w / 2 + 1 + rng.float() * (w - 2);
-      for (let t = 0; t < 8 && !free(x, laneX); t++) x = -w / 2 + 1 + rng.float() * (w - 2);
-      if (!free(x, laneX)) continue; // no wall segment clear of the exit lane
-      out.push({ kind, x, z: d / 2 - inZ, y, yaw: Math.PI, meta: { wall: true } });
+      for (let t = 0; t < 8 && (!free(x, laneX) || !gapOk(wall, x, kind)); t++) x = -w / 2 + 1 + rng.float() * (w - 2);
+      if (!free(x, laneX) || !gapOk(wall, x, kind)) continue; // no wall segment clear of the exit lane
+      out.push({ kind, x, z: d / 2 - inZ, y, yaw: Math.PI, meta: { wall: true, side: wall } });
     }
   }
   return out;
@@ -286,6 +304,10 @@ function resolveWallClashes(props: PropSpec[], w: number, d: number, entry: Port
     const ok = () =>
       !kept.some((q) => propsClash(placed, q)) &&
       !inDoorLane(lanes, placed.x, placed.z, 0.5) &&
+      kept.every((q) =>
+        q.meta?.side !== placed.meta?.side ||
+        Math.abs((sideWall ? q.z - placed.z : q.x - placed.x)) >=
+          (wallFamily(q.kind) === wallFamily(placed.kind) ? FAMILY_GAP : WALL_GAP * 0.7)) &&
       (sideWall ? Math.abs(placed.z) < d / 2 - 0.3 : Math.abs(placed.x) < w / 2 - 0.3);
     for (const shift of [0.8, -0.8, 1.6, -1.6, 2.4, -2.4]) {
       if (ok()) break;
