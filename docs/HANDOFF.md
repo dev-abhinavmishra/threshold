@@ -1786,3 +1786,30 @@ down the drain]` → she despawns. Flood + plumbing gate in the scheduler, so
   hold frames ≥ holdTime + 0.3s.
 - **e2e `ga.keys` needs a type entry** — add `keys: Set<string>` to the `ga`
   cast when a spec starts holding E.
+
+## Sprint 273 — pick the wash (the laundress's second window)
+
+**What:** her basket is a loot socket with her schedule. While she
+`guarding`s there's no point — while she sniffs a splash, 'Search the wash'
+appears at her basin (1.0s hold, priority 3 — beats the drain's 2, so a
+window visit steals first, then cranks). Pays cloth goods or hem-pins.
+Two consequence orderings: pilfer-and-leave → she comes home, counts the
+load, and `[a keen — the wash is lighter]` emits 0.55 loud (feeds the
+under's hunters); pilfer-then-drain → she rides the water out before she
+ever finds it light — the silent path. Also: hands on her basin while she
+works are now bitten outright (<0.8 proximity aggravate — the guard post
+is real, the hiss at 1.6 is the warning).
+
+**Traps:**
+- **Outcomes can be mutually exclusive across a state transition** — the
+  e2e's first draft demanded `keened && drained` in one leg; the drain
+  despawns her before the return-check can fire. Two orderings = two
+  windows in one leg (lure→pick→return→keen, lure→crank→ride-out).
+- **Same-position interactables resolve on priority alone** — basket (3)
+  and drain (2) both sit at drainPos; the higher one holds focus until
+  spent, then the next appears. Ordering the loot before the verb is the
+  designed UX here, not an accident — the window sequence reads
+  steal→drain naturally.
+- **Proximity bites need a warning tier** — the hiss cue at 1.6m exists
+  precisely so the <0.8 auto-aggravate is fair; bites without a tell are
+  ambush, and ambush on a static guard is cheap.

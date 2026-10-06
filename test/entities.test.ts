@@ -1588,4 +1588,39 @@ describe('the Laundress (sprint 272)', () => {
     ctx.now += 0.05; w.update(0.05);
     expect(w.state, 'the wash went down the drain').toBe('done');
   });
+
+  it('hands on her basin while she works are bitten', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); }
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = wp.x + 0.4; ctx.player.pos.z = wp.z; // at the basin
+    ctx.now += 0.05; w.update(0.05);
+    expect(ctx.damagePlayer, 'she guards the wash').toHaveBeenCalledWith(
+      15, 'laundress', expect.any(String));
+    w.dispose();
+  });
+
+  it('a pilfered basket keens on her return — loud enough to feed hunters', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([laundryRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const listeners: ((e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }) => void)[] = [];
+    ctx.sound.on = ((fn: never) => { listeners.push(fn); return () => {}; }) as never;
+    const w = new Laundress();
+    w.spawn(ctx);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    for (const fn of listeners) fn({ x: wp.x - 3, y: 0.3, z: wp.z, intensity: 0.6, category: 'impact', caption: '[slam]' });
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; w.update(0.05); } // she's out sniffing
+    expect(w.guarding).toBe(false);
+    w.basketFull = false; // pilfered mid-window
+    for (let i = 0; i < 140; i++) { ctx.now += 0.05; w.update(0.05); } // she returns
+    expect(w.guarding, 'back to the basin').toBe(true);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0] as { caption: string; intensity: number });
+    const keen = emits.find((e) => /wail at the basin/.test(e.caption));
+    expect(keen, 'the wash is lighter').toBeTruthy();
+    expect(keen!.intensity, 'the keen carries').toBeGreaterThanOrEqual(0.55);
+    w.dispose();
+  });
 });

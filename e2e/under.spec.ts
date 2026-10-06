@@ -479,8 +479,26 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
       intensity: 0.6, category: 'impact', caption: '[slam]' });
     for (let f = 0; f < 40; f++) g.frame(); // she goes to sniff
     const offGuard = !w.guarding;
-    // the window: crank while she sniffs the splash
-    for (let f = 0; f < 45; f++) {
+    // window one: pick the wash and let her come home to it — the keen
+    const winCapsBefore = caps.length;
+    for (let f = 0; f < 40; f++) {
+      g.player.teleport(w.drainPos.x + 0.5, 0, w.drainPos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
+      g.player.yaw = Math.atan2(w.drainPos.x - g.player.pos.x, w.drainPos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const basketPaid = caps.slice(winCapsBefore).some((c) => /clean linen|pins in the hem/.test(c));
+    g.player.teleport(wRoom.origin.x, 0, wRoom.origin.z); // stand back for her return
+    for (let f = 0; f < 260 && !caps.some((c) => /wail at the basin|wash is lighter/.test(c)); f++) g.frame();
+    const keened = caps.some((c) => /wail at the basin|wash is lighter/.test(c));
+    // window two: pull her off again and take the crank — no keen, she rides out
+    ga.sound.emit({ x: w.drainPos.x + ox * 0.7, y: 0.3, z: w.drainPos.z + oz * 0.7,
+      intensity: 0.6, category: 'impact', caption: '[slam]' });
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 55; f++) {
       g.player.teleport(w.drainPos.x + 0.5, 0, w.drainPos.z);
       const eyeY = g.player.pos.y + g.player.eyeHeight;
       g.player.pitch = Math.atan2(0.5 - eyeY, 0.8);
@@ -492,7 +510,7 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
     for (let f = 0; f < 15; f++) g.frame();
     const drained = ga.drainedRooms.has(`under:${wRoom.index}`);
     const rodeOut = caps.some((c) => /wash goes down the drain/.test(c));
-    return { stage: 'done', pressed, fouled, stillWet, offGuard, drained, rodeOut,
+    return { stage: 'done', pressed, fouled, stillWet, offGuard, basketPaid, keened, drained, rodeOut,
       gone: w.state === 'done' } as const;
   });
 
@@ -501,7 +519,9 @@ test('the wash — a fouled drain, the thrown sound, the window', async ({ page 
   expect(result.fouled, JSON.stringify(result)).toBe(true);
   expect(result.stillWet, JSON.stringify(result)).toBe(true);
   expect(result.offGuard, JSON.stringify(result)).toBe(true);
+  expect(result.basketPaid, JSON.stringify(result)).toBe(true);
   expect(result.drained, JSON.stringify(result)).toBe(true);
   expect(result.rodeOut, JSON.stringify(result)).toBe(true);
+  expect(result.keened, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -820,6 +820,9 @@ export class Laundress extends Entity {
   private noiseUnsub: (() => void) | null = null;
   /** The basin she guards — public so the drain verb can ask her. */
   drainPos = v3();
+  /** Her claimed load — 'Search the wash' skims it while she's off the basin. */
+  basketFull = true;
+  private keened = false;
   /** The point she left the basin to inspect. */
   private alerted: Vec3 | null = null;
   get guarding(): boolean { return !this.alerted; }
@@ -918,6 +921,16 @@ export class Laundress extends Entity {
       this.pos.z += (dz / dd) * sp * dt;
     } else if (this.alerted && c.now > this.sniffUntil) {
       this.alerted = null; // nothing at the splash — back to the basin
+      // she counts her load — a pilfered basket keens, loud enough to feed hunters
+      if (!this.basketFull && !this.keened) {
+        this.keened = true;
+        c.cue('puddle-splash', this.pos, '[a keen — the wash is lighter]', { severity: 'warn' });
+        c.sound.emit({ x: this.pos.x, y: 0.6, z: this.pos.z, intensity: 0.55, category: 'item', caption: '[a wail at the basin]', source: 'laundress' });
+      }
+    }
+    // hands on her basin while she works are bitten
+    if (this.guarding && !this.rising() && this.struckCd <= 0 && v3dist(this.pos, p) < 0.8) {
+      this.aggravate(p);
     }
     if (this.mesh) {
       this.mesh.position.copy(this.pos);

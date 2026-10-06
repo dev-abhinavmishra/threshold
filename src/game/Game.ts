@@ -1240,6 +1240,21 @@ export class Game {
         data: ent as unknown as Record<string, unknown>,
       });
     }
+    // While the laundress sniffs a splash: 'Search the wash' on her basin.
+    for (const ent of this.entities) {
+      if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
+      const w = ent as unknown as { drainPos: Vec3; guarding: boolean; basketFull: boolean; spawnRoomIdx?: number };
+      if (w.guarding || !w.basketFull) continue;
+      const dx = w.drainPos.x - this.player.pos.x, dz = w.drainPos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'basket', id: `basket-${this.space}:${this.currentRoom}`,
+        pos: { x: w.drainPos.x, y: 0.5, z: w.drainPos.z },
+        prompt: 'Search the wash',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
@@ -2059,6 +2074,26 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
+        return;
+      }
+      case 'basket': {
+        const w = it.data as unknown as { basketFull: boolean };
+        if (!w.basketFull) { it.enabled = false; return; }
+        w.basketFull = false;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const pool = ['feltWrap', 'bandage', 'tonic', 'chalkSpool'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — clean linen, still warm]`);
+        } else {
+          const amt = this.streams.stream('loot').int(8, 14);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — pins in the hem]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[linen lifted]' });
         return;
       }
       case 'pick': {
