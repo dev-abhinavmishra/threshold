@@ -435,7 +435,7 @@ export class Grafter extends Entity {
       c.cue('grafter-grind', this.pos, '[stone drags on stone]', { severity: 'warn' });
     }
 
-    if (d < this.tuning.killRange && p.protection !== 'hidden') {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising()) {
       this.rig?.play('attack', 0.05);
       c.cue('grafter-strike', this.pos, '', { severity: 'danger' });
       c.killPlayer('grafter', 'The Grafter is slow. Walk around it — never let it close the gap.');
@@ -571,7 +571,7 @@ export class Swamper extends Entity {
     // Strike: it knows you only by the water you move. An upright wader
     // stirs; a crouched one is a stone.
     const stirred = !p.crouching && Math.hypot(p.vel.x, p.vel.z) > 0.45 && p.protection !== 'hidden';
-    if (dP < this.tuning.killRange && stirred && c.now >= this.strikeCd) {
+    if (dP < this.tuning.killRange && stirred && !this.rising() && c.now >= this.strikeCd) {
       this.strikeCd = c.now + 8;
       this.surfT = 0.9;
       this.huntUntil = 0;

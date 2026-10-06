@@ -87,6 +87,13 @@ export abstract class Entity {
    *  adjust their cursor. No-op by default. */
   trailShifted(): void {}
 
+  /** true during the first beat after spawning — the rise is the warning.
+   *  Contact killers must not strike while rising, so a thing that appears
+   *  in the player's own room can never hit before the player can answer it. */
+  protected rising(): boolean {
+    return this.stateT < 1.4;
+  }
+
   update(dt: number): void {
     this.stateT += dt;
     this.onUpdate(dt);

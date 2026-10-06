@@ -1455,3 +1455,30 @@ NEXT SPRINT IDEAS (pick the biggest first)
     min room area for killRange entities, or survival-option gating.
   - Lights-out wet corridors: dead mains on flooded halls (water hides
     traps in the dark).
+
+## Sprint 256 — the rise is the warning (spawn-grace for contact killers)
+
+- New `Entity.rising()` on base (`stateT < 1.4`) — the wake cue is now a
+  real grace beat: contact killers cannot strike while rising, so a thing
+  that appears in your own room can never hit before you can answer it.
+- Applied to the three entities that can spawn adjacent to the player:
+  Grafter (setpieces), Swamper, Bellman. Pursuer/Editor stay scripted —
+  their authored pacing is their grace.
+- Root cause it fixes (from sprint 255's schedule drift): a grafter
+  scheduled on u-lobby (9×7) spawns ~4m off a center-standing player and
+  legitimately kills inside ~1.1s — an unavoidable ambush on tiny rooms.
+  The grace makes the wake cue honest instead of posthumous.
+- Considered and rejected: a scheduling gate (killRange entities need min
+  room halfdiag) — guts the under's grafter count on corridor/narrow
+  templates where the ambush is mostly a test-teleport artifact; in real
+  play you enter at a door (~6.7m of warning) and the rise covers the rest.
+- vitest +2 (grafter closet rise, swamper contact-while-rising), no new
+  e2e legs — the entity suite re-verifies the whole cast.
+- Gates: tsc, lint, 132 vitest, 5-seed sim, e2e 28/28, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call — needs user input.
+  - Lights-out wet corridors: dead mains on flooded halls (water hides
+    traps in the dark).
+  - props.spec is 6 specs; books/doors/entities carry the suite — the
+    split already landed; next depth: under-room backtrack/exit coverage.

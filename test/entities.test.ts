@@ -1158,6 +1158,22 @@ describe('Swamper (sprint 255)', () => {
     sw.dispose();
   });
 
+  it('the rise is the warning — contact during its first beat is still safe', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, step } = hearingCtx(rooms);
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    const pos = (sw as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = pos.x; ctx.player.pos.z = pos.z;
+    ctx.player.vel.x = 1.4;
+    step(sw, 20); // 1.0s — still rising, even on contact
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    step(sw, 40); // past the rise — the stirred wader gets it
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
+    sw.dispose();
+  });
+
   it('noise beyond the flood never reaches it; an open drain empties the room of it', async () => {
     const { Swamper } = await import('../src/entities/setpieces');
     const rooms = [floodRoom()];
@@ -1180,5 +1196,28 @@ describe('Swamper (sprint 255)', () => {
     const captions = (ctx2.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /slips down the drain/.test(c))).toBe(true);
     sw2.dispose();
+  });
+});
+
+
+describe('Grafter (sprint 256)', () => {
+  it('the rise is the warning — a grafter risen at your feet cannot strike yet', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    // the u-lobby ambush from sprint 255: a closet where the far corner is
+    // already inside kill range — without the grace this killed on frame 1.
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 4, depth: 4, spec: { width: 4, depth: 4, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; g.update(0.05); } // 1.0s
+    expect(ctx.killPlayer).not.toHaveBeenCalled();
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); } // past the rise
+    expect(ctx.killPlayer).toHaveBeenCalledWith('grafter', expect.any(String));
+    g.dispose();
   });
 });

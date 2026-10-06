@@ -214,7 +214,7 @@ export class Bellman extends Entity {
     this.watchT = Math.max(0, this.watchT - dt * 0.5);
 
     // Touch kill — exposed and unfrozen.
-    if (!p.dead && d < this.tuning.killRange && playerExposed(c, this.pos) === 'kill') {
+    if (!p.dead && !this.rising() && d < this.tuning.killRange && playerExposed(c, this.pos) === 'kill') {
       this.rig?.play('attack', 0.05);
       c.killPlayer(this.id, 'It had been walking your steps all along.');
       this.done();
