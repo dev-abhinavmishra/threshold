@@ -976,3 +976,60 @@ test('the swamper answers stirred water — the drain takes its medium', async (
   expect(result.gone, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the dark water hides the wire — upright trips it, the slow wade feels it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's': dark flooded halls u-3/u-24 carry submerged snares
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      player: { rootedUntil: number };
+    };
+
+    ga.enterUnderscript();
+    const room = g.route.underRooms.find((r) => r.flooded && r.darkRoom
+      && r.sockets?.some((sk) => sk.meta?.hazard === 'snare'));
+    if (!room) return { stage: 'no-dark-flood' } as const;
+    const snares = room.sockets!.filter((sk) => sk.meta?.hazard === 'snare');
+    ga.godMode = true; // keep the room's swamper out of the signal — we read roots, not blood
+
+    const wadeOnto = (s: { x: number; z: number }, crouched: boolean) => {
+      // approach along the corridor's long axis — side-on starts can sit
+      // behind a prop collider and pin the wade against the wall
+      g.player.teleport(s.x, 0, s.z + 0.9);
+      g.player.yaw = Math.atan2(s.x - s.x, s.z - (s.z + 0.9));
+      ga.currentRoom = room.index;
+      for (let f = 0; f < 25; f++) g.frame();
+      const rooted0 = ga.player.rootedUntil;
+      if (crouched) g.keys.add('KeyC');
+      g.keys.add('KeyW');
+      for (let f = 0; f < 70; f++) g.frame();
+      g.keys.delete('KeyW');
+      g.keys.delete('KeyC');
+      return { rooted: ga.player.rootedUntil > rooted0, at: { x: g.player.pos.x, z: g.player.pos.z } };
+    };
+
+    const up = wadeOnto(snares[0].pos, false);
+    const tripped = up.rooted && caps.some((c) => /paper snare/.test(c));
+    let felt = false;
+    if (snares.length > 1) {
+      const down = wadeOnto(snares[1].pos, true);
+      felt = !down.rooted && caps.some((c) => /wire underfoot/.test(c));
+    }
+    return { stage: 'done', room: room.index, nSnares: snares.length, tripped, felt,
+      upAt: up.at, s0: snares[0].pos, caps: caps.slice(-14) } as const;
+  });
+
+  if (result.stage === 'no-dark-flood') test.skip();
+  expect(result.tripped, JSON.stringify(result)).toBe(true);
+  if ((result.nSnares ?? 0) > 1) expect(result.felt, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

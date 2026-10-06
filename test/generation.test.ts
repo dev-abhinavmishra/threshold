@@ -446,6 +446,52 @@ describe('sprint mechanics coverage', () => {
     expect(total).toBeGreaterThanOrEqual(SEEDS.length * 2);
   });
 
+  it('drowned mains: dark flooded halls carry submerged snares off the door lanes', () => {
+    let darkFloods = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) {
+        const snares = r.sockets.filter((sk) => sk.meta.hazard === 'snare');
+        if (!(r.flooded && r.darkRoom)) {
+          // submerged wires only exist where the water hides them
+          expect(snares.filter((sk) => sk.meta.submerged).length).toBe(0);
+          continue;
+        }
+        darkFloods++;
+        expect(snares.length).toBeGreaterThanOrEqual(1);
+        expect(snares.length).toBeLessThanOrEqual(2);
+        for (const sk of snares) {
+          expect(sk.meta.submerged).toBe(true);
+          // inside room bounds (yawed rooms rotate local coords — bound
+          // by the half-diagonal, not the raw axes)
+          expect(Math.hypot(sk.pos.x - r.origin.x, sk.pos.z - r.origin.z))
+            .toBeLessThanOrEqual(Math.hypot(r.width / 2, r.depth / 2) + 0.01);
+          // never in a door lane
+          for (const d of r.doors) {
+            expect(Math.hypot(d.pos.x - sk.pos.x, d.pos.z - sk.pos.z)).toBeGreaterThanOrEqual(1.5);
+          }
+        }
+        // the matching snare props exist for anyone draining the room
+        expect(r.spec?.props.filter((pr) => pr.kind === 'snare').length).toBe(snares.length);
+      }
+    }
+    expect(darkFloods).toBeGreaterThanOrEqual(SEEDS.length);
+  });
+
+  it('authored snare props arm themselves — every paper seal is a live tripwire', () => {
+    let armed = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        const props = (r.spec?.props ?? []).filter((pr) => pr.kind === 'snare').length;
+        const sockets = r.sockets.filter((sk) => sk.meta.hazard === 'snare').length;
+        expect(sockets).toBe(props);
+        armed += sockets;
+      }
+    }
+    expect(armed).toBeGreaterThan(0);
+  });
+
   it('deep doors are optional branch doors only, never toll', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });

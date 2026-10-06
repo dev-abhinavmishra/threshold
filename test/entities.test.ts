@@ -19,6 +19,7 @@ function fakePlayer() {
     exitHiding(_now: number) { self.hiddenSpot = null; },
     teleport(x: number, _y: number, z: number) { self.pos.x = x; self.pos.y = 0; self.pos.z = z; },
     protection: 'exposed',
+    rootedUntil: 0,
     crouching: false,
     sprinting: false,
     lampOn: true,
@@ -1219,5 +1220,48 @@ describe('Grafter (sprint 256)', () => {
     for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); } // past the rise
     expect(ctx.killPlayer).toHaveBeenCalledWith('grafter', expect.any(String));
     g.dispose();
+  });
+});
+
+
+describe('HazardField snares (sprint 257)', () => {
+  const snareRoom = (flooded: boolean): RoomInstance => ({
+    index: 0, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 6, depth: 12, spec: { width: 6, depth: 12, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded,
+    sockets: [{ kind: 'hazard', pos: v3(1.5, 0, 0), yaw: 0, filled: false, meta: { hazard: 'snare', submerged: true } }],
+  } as unknown as RoomInstance);
+
+  it('an upright stride trips the paper seal — root, blood, and a loud carry', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [snareRoom(false)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(8, 'hazard', expect.any(String));
+    expect(ctx.player.rootedUntil).toBeGreaterThan(ctx.now);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(emits.some((e) => e.intensity >= 0.7 && e.category === 'impact')).toBe(true);
+  });
+
+  it('a crouched wader feels submerged wire and steps over — the snare stays armed', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [snareRoom(true)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, isRoomDrained: () => false });
+    const h = new HazardField();
+    h.addFromRoom(rooms[0]);
+    ctx.player.pos.x = 1.5; ctx.player.pos.z = 0;
+    ctx.player.crouching = true;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).not.toHaveBeenCalled();
+    expect((h.snares[0] as { armed: boolean }).armed).toBe(true);
+    const emits = (ctx.sound.emit as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]);
+    expect(emits.some((e) => e.intensity <= 0.3 && /wire underfoot/.test(String(e.caption)))).toBe(true);
+    // but an upright wade over the same wire trips it
+    ctx.player.crouching = false;
+    h.update(ctx, 0.05);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(8, 'hazard', expect.any(String));
   });
 });

@@ -235,6 +235,13 @@ function instantiate(index: number, label: string, placed: PlacedRoom, isMainRou
     const p = localToWorld(origin, yaw, s.x, s.y ?? 0, s.z);
     return { kind: s.kind, pos: p, yaw: yaw + (s.yaw ?? 0), filled: false, meta: s.meta ?? {} };
   });
+  // Authored snare props arm themselves — the paper seal on the floor is a
+  // live tripwire, not set dressing (the hazard field reads these sockets).
+  for (const pr of spec.props) {
+    if (pr.kind !== 'snare') continue;
+    const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
+    sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false, meta: { hazard: 'snare' } });
+  }
 
   const safeZones = spec.safeZones.map((z) => {
     const p = localToWorld(origin, yaw, z.x, 0, z.z);
@@ -1230,10 +1237,26 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
     const room = instantiate(i, `U-${String(i).padStart(3, '0')}`, p, true);
     if (uConn) addConnectorColliders(room, uConn);
     room.biome = 'underscript';
-    if (streams.roomStream('dressing', 700 + i).bool(0.45)) room.darkRoom = true;
     // Flooded runs — water collects in the low service halls. Wading is
     // slow and every step carries; the drain is the paid quiet.
     if (FLOOD_TEMPLATES.has(room.templateId) && streams.roomStream('dressing', 710 + i).bool(0.12)) room.flooded = true;
+    // Drowned mains — flooded halls lose their lights far more often.
+    if (streams.roomStream('dressing', 700 + i).bool(room.flooded ? 0.7 : 0.45)) room.darkRoom = true;
+    // Submerged wires — the dark water hides paper snares: an upright
+    // wader trips them loud, a slow wader feels them and steps over.
+    if (room.flooded && room.darkRoom) {
+      const sr = streams.roomStream('dressing', 720 + i);
+      const count = 1 + (sr.bool(0.55) ? 1 : 0);
+      for (let placed = 0, tries = 0; placed < count && tries < 8; tries++) {
+        const lx = sr.range(-room.width / 2 + 1.0, room.width / 2 - 1.0);
+        const lz = sr.range(-room.depth / 2 + 1.0, room.depth / 2 - 1.0);
+        const wp = localToWorld(room.origin, room.yaw, lx, 0, lz);
+        if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.6)) continue;
+        room.spec?.props.push({ kind: 'snare', x: lx, z: lz, yaw: sr.float() * Math.PI * 2 });
+        room.sockets.push({ kind: 'hazard', pos: wp, yaw: room.yaw, filled: false, meta: { hazard: 'snare', submerged: true } });
+        placed++;
+      }
+    }
     rooms.push(room);
     const pw = portWorld(p, p.spec.exits[0]);
     connPos = pw.pos; connDir = pw.dir;

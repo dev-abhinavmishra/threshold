@@ -1482,3 +1482,35 @@ NEXT SPRINT IDEAS (pick the biggest first)
     traps in the dark).
   - props.spec is 6 specs; books/doors/entities carry the suite — the
     split already landed; next depth: under-room backtrack/exit coverage.
+
+## Sprint 257 — drowned mains (the dark water hides the wire)
+
+- DEAD SYSTEM RESURRECTED: `HazardField.snares` was fully dead code — no
+  room ever emitted a `meta.hazard='snare'` socket, and `addFromRoom` was
+  never called. instantiate() now converts every authored `snare` prop to
+  an armed hazard socket (unlit-*, maint-service-narrow, chase2 — ~2–3
+  live per seed) and run init populates the field for all rooms.
+- Drowned mains: under flooded halls roll darkRoom at 0.7 not 0.45 —
+  's' drowned 2 of its 3 floods (u-3, u-24; u-48 stayed lit).
+- Submerged wires: a dark flooded room plants 1–2 snare props + hazard
+  sockets (`meta.submerged`) seeded off door lanes, invisible under the
+  sheet. Upright wading trips them: root 1.6s + 8dmg + a LOUD 0.8 impact
+  that the swamper hears. Crouch-wading feels the wire — a soft
+  '[wire underfoot]' scuff (0.25, below the hearing floor), snare stays
+  armed. Flooded→drained rooms revert to normal visible-trip behavior.
+- The stack it completes: flood → splash (feeds swamper) → dark (no
+  visual) → wire (roots) → drain (the only way off the wheel). e2e leg
+  drives upright-trip (rootedUntil + '[paper snare]') then crouch-feel.
+- Harness traps logged: side-on approach teleports can pin against prop
+  colliders — drive along the corridor's long axis; godMode blocks
+  damagePlayer, so read `rootedUntil` + captions instead of health.
+- Gates: tsc, lint, 136 vitest (+2 HazardField +2 generation), 5-seed
+  sim, e2e 29/29, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - The puddle prop's 'electrified' socket semantic is also unwired —
+    more invasive (main-route maint-flooded/laundry/scullery puddles
+    would become damage zones); design call whether to resurrect.
+  - Snare armability in dry rooms: pry-defuse exists for trap lids but
+    not floor snares — 'Cut the seal' interactable with a pebble?
+  - Milestone-set hearing remains a design call.

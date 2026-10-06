@@ -505,6 +505,7 @@ export class Game {
     this.milestones.clear();
     this.doorStates.clear();
     this.hazard = new HazardField();
+    for (const r of [...this.route.rooms, ...this.route.underRooms]) this.hazard.addFromRoom(r);
     this.roomBounds.clear();
     // the prop layer holds no memory across runs — every one-time
     // arm/fire decision resets so a retry or reseed replays honestly

@@ -858,7 +858,7 @@ export class Husk extends Entity {
 /* ============================ HAZARDS ============================ */
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {
-  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean }[] = [];
+  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number }[] = [];
   lastTick = 0;
 
@@ -875,7 +875,19 @@ export class HazardField {
     const p = ctx.player;
     for (const s of this.snares) {
       if (!s.armed) continue;
+      // a snare under live floodwater can't be seen — but a slow
+      // crouch-wader feels the wire and steps over it; only an upright
+      // stride trips what the dark water hides.
+      const sr = ctx.rooms[s.room];
+      const submerged = !!sr?.flooded && !(ctx.isRoomDrained?.(s.room) ?? false);
       if (v3dist(p.pos, s.pos) < 0.7) {
+        if (submerged && p.crouching) {
+          if (ctx.now >= (s.scuffT ?? 0)) {
+            s.scuffT = ctx.now + 3;
+            ctx.sound.emit({ x: s.pos.x, y: 0.2, z: s.pos.z, intensity: 0.25, category: 'footstep', caption: '[wire underfoot]' });
+          }
+          continue;
+        }
         s.armed = false;
         p.rootedUntil = ctx.now + 1.6;
         ctx.damagePlayer(8, 'hazard', 'Paper seals root and rustle. Step around them — everything heard that.');
