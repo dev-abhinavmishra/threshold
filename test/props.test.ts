@@ -38,4 +38,17 @@ describe('procedural prop builders', () => {
     expect(screen).toBe(1);
     expect(blink).toBeGreaterThanOrEqual(30);
   });
+
+  it('rack LEDs pool material clones per row (sprint 228 audit)', () => {
+    // 'blink' is seeded — LEDs sharing (clone, seed) render identically, so
+    // a rack rows its LEDs: 35 LEDs / 7 rows = 7 clones, not 35.
+    const rack = buildProp({ kind: 'serverRack', x: 0, z: 0 }, rng.fork(7));
+    const mats = new Set<unknown>();
+    let leds = 0;
+    rack.group.traverse((o) => {
+      if (o.userData.anim === 'blink') { leds++; mats.add((o as THREE.Mesh).material); }
+    });
+    expect(leds).toBe(35);
+    expect(mats.size).toBe(7);
+  });
 });

@@ -14,9 +14,10 @@ import {
 import type {
   Biome, Door, EntityId, EntityTuning, HidingSpot, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
-import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR } from '../game/config';
+import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR, SAFE_ROOM_TEMPLATES } from '../game/config';
 import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
 import { portLocalPos, portOutwardDir, clearDoorLanes, inDoorLane } from './spec';
+import { modelCollider } from './modelLibrary';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
@@ -152,7 +153,13 @@ function pickSpec(
 /** Convert placed spec to a RoomInstance (world-space data, no meshes). */
 function instantiate(index: number, label: string, placed: PlacedRoom, isMainRouteExit: boolean): RoomInstance {
   const { spec, origin, yaw } = placed;
-  clearDoorLanes(spec);
+  // Ghost-collider kinds (archways, transoms, wall dressing) can never
+  // reach a door rect — exempt them from the center-based spec cull.
+  const isGhost = (kind: string) => {
+    const c = modelCollider(kind);
+    return c !== null && c[0] === 0;
+  };
+  clearDoorLanes(spec, isGhost);
   // Hiding spots render no mesh of their own — each needs furniture at its
   // position to hide in/behind. Spawn the declared propKind when no prop is
   // already there. Spots that survived clearDoorLanes are outside door lanes,
@@ -228,6 +235,33 @@ function instantiate(index: number, label: string, placed: PlacedRoom, isMainRou
     const p = localToWorld(origin, yaw, s.x, s.y ?? 0, s.z);
     return { kind: s.kind, pos: p, yaw: yaw + (s.yaw ?? 0), filled: false, meta: s.meta ?? {} };
   });
+  // Authored snare props arm themselves — the paper seal on the floor is a
+  // live tripwire, not set dressing (the hazard field reads these sockets).
+  for (const pr of spec.props) {
+    if (pr.kind === 'snare') {
+      const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
+      // Old sign: ~6% of wires were sprung before you arrived.
+      const spent = ((p.x * 11 + p.z * 3 + index * 17) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'snare', spent: true } : { hazard: 'snare' } });
+    }
+    // Steam fittings are live pressure lines — they blast on a seeded
+    // cycle until somebody bleeds the line.
+    if (pr.kind === 'steamVent') {
+      const p = localToWorld(origin, yaw, pr.x, pr.y ?? 0, pr.z);
+      const spent = ((p.x * 11 + p.z * 3 + index * 17) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'steam', spent: true } : { hazard: 'steam' } });
+    }
+    // Belt-wheels spin at shoulder height — standing flesh feeds them;
+    // a chock (or a crouch) is the way through.
+    if (pr.kind === 'fan') {
+      const p = localToWorld(origin, yaw, pr.x, 0, pr.z);
+      const spent = ((p.x * 11 + p.z * 3 + index * 19) % 97) < 6;
+      sockets.push({ kind: 'hazard', pos: p, yaw: yaw + (pr.yaw ?? 0), filled: false,
+        meta: spent ? { hazard: 'fan', spent: true } : { hazard: 'fan' } });
+    }
+  }
 
   const safeZones = spec.safeZones.map((z) => {
     const p = localToWorld(origin, yaw, z.x, 0, z.z);
@@ -506,6 +540,19 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
   applyForeshadowing(mainRooms, streams.stream('scare'));
 
+  // The forged page — a book near a forger of doors can be rewritten. A
+  // ledger within sight of a redactor's door (inside the book's own
+  // +10 read window) omits that filing — the first lie the books tell,
+  // legible only in retrospect (one page of still-wet ink). Stamped here,
+  // after every scheduled pass has settled.
+  for (const room of mainRooms) {
+    const sock = room.sockets.find((s) => s.meta.register);
+    if (!sock) continue;
+    const cover = mainRooms.find((rx) => rx.index > room.index && rx.index <= room.index + 10
+      && rx.scheduled.some((s) => s.entity === 'redactor'))?.index;
+    if (cover !== undefined) { sock.meta.forged = true; sock.meta.forgedCover = cover; }
+  }
+
   // Underscript
   let underRooms: RoomInstance[] = [];
   let underEntrance = 0;
@@ -536,10 +583,13 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-u${room.index}` };
           else s.meta = { contains: roll };
           if (s.kind === 'drawer' && lootRng.bool(0.25)) s.meta.drawerLocked = true;
+          // Wired drawers — the latch bites the unwary. Unlocked ones only;
+          // the tell rides the prompt ('the latch looks forced').
+          if (s.kind === 'drawer' && !s.meta.drawerLocked && lootRng.bool(0.1)) s.meta.wired = true;
         }
       }
       // Under vending — rarer, hungrier.
-      const vendItemsU = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+      const vendItemsU = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal', 'doorChock', 'doorChock'];
       for (const room of underRooms) {
         if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.12)) continue;
         const lx = room.spec.width / 2 - 1.1;
@@ -548,6 +598,113 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         room.sockets.push({
           kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
           meta: { vend: true, price: lootRng.int(5, 11), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
+        });
+        // The machine is real now — vend sockets hang on a milled unit
+        // (skipped where a door lane claims the footprint).
+        if (!inDoorLane(room.spec, lx + 0.45, lz)) {
+          room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
+        }
+      }
+      // The lost-property cage — the under's recurring spend point, the
+      // porter's cage for the staff level. Misfiled effects hang on cage/
+      // locker furniture, tagged to owners who stopped answering — priced
+      // in marginalia, semi-blind like the bags above.
+      const LOST_PROP_HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);
+      const effectTags = ['Briggs', 'Okonkwo', 'Vasquez', 'Lindqvist', 'Mori', 'Cabrera', 'Ash', 'Delacroix', 'Fontaine', 'Greer', 'Hobbes', 'Iyer'];
+      const effectPool = [
+        'latchpick', 'doorChock', 'doorChock', 'feltWrap', 'chalkSpool',
+        'bandage', 'tonic', 'windAlarm', 'sparkFlash', 'marginalia', 'lore',
+      ];
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => LOST_PROP_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        const fx = toC.x / tcL, fz = toC.z / tcL;
+        const nTags = lootRng.int(2, 3);
+        for (let i = 0; i < nTags; i++) {
+          const roll = effectPool[lootRng.int(0, effectPool.length - 1)];
+          const meta: Record<string, number | string | boolean> = {
+            claim: true, marginalia: true, price: lootRng.int(3, 9),
+            claimTag: effectTags[lootRng.int(0, effectTags.length - 1)],
+          };
+          if (roll === 'marginalia') { meta.contains = 'marginalia'; meta.amount = lootRng.int(6, 14); }
+          else meta.contains = roll;
+          const off = (i - (nTags - 1) / 2) * 0.3;
+          room.sockets.push({
+            kind: 'loot',
+            pos: v3(hp.x + fx * 0.42 - fz * off, 0.7, hp.z + fz * 0.42 + fx * off),
+            yaw: room.yaw, filled: true, meta,
+          });
+        }
+      }
+
+      // The crew board — the under's entity foresight. The shift sheet
+      // says who is signed on down the line: the next dozen rooms' waiting
+      // things, in crew euphemisms. Pinned where crews sign out.
+      const BOARD_HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.09)) continue;
+        const host = room.spec.props.find((p) => BOARD_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.45, 1.0, hp.z + (toC.z / tcL) * 0.45),
+          yaw: room.yaw, filled: true,
+          meta: { crewBoard: true, price: lootRng.int(3, 8) },
+        });
+      }
+
+      // The claim register — the under library's third book. Where the
+      // crew board answers crew and the order sheet answers cargo, the
+      // register answers CLAIMS: which tagged effects in the next stretch
+      // are still held and which the crew already drew. Cheapest paper —
+      // a cross-reference, not a decision.
+      const REGISTER_HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind));
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { claimRegister: true, price: lootRng.int(2, 6) },
+        });
+      }
+
+      // The work-order book — the under's fourth paper. Where the books
+      // above answer threats and staff, the order sheet answers CARGO:
+      // which rooms still hold unclaimed stock (and where the egress is
+      // stamped). Priced in marginalia — the crew's own currency.
+      const WORK_ORDER_ROOMS = new Set([
+        'u-office-row', 'u-open-office', 'u-print-shop', 'u-server',
+        'u-break', 'u-records-cage', 'u-lobby',
+      ]);
+      const WORK_ORDER_SURF = new Set([
+        'printerRow', 'breakTable', 'schoolDesk', 'filing', 'keyCabinet',
+        'machineBox', 'typewriter', 'counter', 'cubicle', 'printer',
+      ]);
+      for (const room of underRooms) {
+        if (!WORK_ORDER_ROOMS.has(room.templateId) || !room.spec || !lootRng.bool(0.12)) continue;
+        const surf = room.spec.props.find((p) => WORK_ORDER_SURF.has(p.kind));
+        if (!surf) continue;
+        const wp = localToWorld(room.origin, room.yaw, surf.x, 0, surf.z);
+        const toW = { x: room.origin.x - wp.x, z: room.origin.z - wp.z };
+        const twL = Math.hypot(toW.x, toW.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(wp.x + (toW.x / twL) * 0.5, 0.9, wp.z + (toW.z / twL) * 0.5),
+          yaw: 0, filled: true,
+          meta: { workOrder: true, price: lootRng.int(3, 8) },
         });
       }
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
@@ -769,6 +926,10 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
           else if (roll === 'lore') s.meta = { contains: 'lore', doc: `doc-${room.index}` };
           else s.meta = { contains: roll };
           if (locked) s.meta.drawerLocked = true;
+          else if (!SAFE_ROOM_TEMPLATES.has(room.templateId) && lootRng.bool(0.09)) s.meta.wired = true;
+          if (s.meta.wired === true && lootRng.bool(0.12)) {
+            s.meta.wired = false; s.meta.coaxed = true; s.meta.bare = true;
+          }
         }
       } else if (s.kind === 'loot') {
         if (lootRng.bool(0.5 * resourceMul)) {
@@ -780,6 +941,14 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
         }
       }
     }
+  }
+
+  // Old sign guaranteed: every route remembers somebody's earlier work —
+  // if no hazard rolled spent, the first one carries the mark.
+  {
+    const haz = rooms.flatMap((r) => r.sockets.filter((sk) =>
+      sk.meta.hazard === 'snare' || sk.meta.hazard === 'steam' || sk.meta.hazard === 'fan'));
+    if (haz.length && !haz.some((sk) => sk.meta.spent === true)) haz[0].meta.spent = true;
   }
 
   // Hand lamp guaranteed early (dark rooms incoming).
@@ -800,7 +969,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
   // Vending machines — maintenance and records rooms sometimes carry one.
   // Filled but never lootable for free: `meta.vend` routes it to the
   // imprint-feed interaction. The vendItem is seeded so runs differ.
-  const vendItems = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal'];
+  const vendItems = ['bandage', 'tonic', 'sparkFlash', 'latchpick', 'windAlarm', 'wardSeal', 'doorChock', 'doorChock'];
   for (const room of rooms) {
     if (room.authored || !room.spec || (room.biome !== 'maintenance' && room.biome !== 'records')) continue;
     if (!lootRng.bool(0.22)) continue;
@@ -810,6 +979,119 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     room.sockets.push({
       kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
       meta: { vend: true, price: lootRng.int(4, 9), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
+    });
+    // The machine is real now — vend sockets hang on a milled unit
+    // (skipped where a door lane claims the footprint).
+    if (!inDoorLane(room.spec, lx + 0.45, lz)) {
+      room.spec.props.push({ kind: 'vendingUnit', x: lx + 0.45, z: lz, yaw: -Math.PI / 2 });
+    }
+  }
+
+  // The porter's cage — the guest wing's own spend point. A key cabinet
+  // of "held bags" whose owners never came back: 2–3 claim tags per cage,
+  // each priced and semi-blind (the tag names the claimant, not the
+  // contents). Distinct from the vend machine's single stocked item.
+  const claimTags = ['Voss', 'Halloran', 'Marchetti', 'Oduya', 'Pemberton', 'Reyes', 'Sable', 'Thorne', 'Whitlock', 'Yarrow', 'Iverson', 'Cray', 'Bellamy', 'Renner', 'Ashcombe'];
+  const claimPool = [
+    'bandage', 'tonic', 'chalkSpool', 'latchpick', 'feltWrap', 'sparkFlash',
+    'doorChock', 'doorChock', 'windAlarm', 'wardSeal', 'imprints', 'lore',
+  ];
+  for (const room of rooms) {
+    if (room.authored || !room.spec || (room.biome !== 'guest' && room.biome !== 'lobby')) continue;
+    if (!lootRng.bool(0.38)) continue;
+    const w = room.spec.width, d = room.spec.depth;
+    // Try the wall spots in seeded order — first that's lane-free and
+    // clear of already-placed furniture wins.
+    const spots = [
+      { x: w / 2 - 1.1, z: lootRng.range(-d / 3, d / 3), yaw: -Math.PI / 2 },
+      { x: -w / 2 + 1.1, z: lootRng.range(-d / 3, d / 3), yaw: Math.PI / 2 },
+      { x: lootRng.range(-w / 4, w / 4), z: -d / 2 + 1.1, yaw: 0 },
+      { x: lootRng.range(-w / 4, w / 4), z: d / 2 - 1.1, yaw: Math.PI },
+    ];
+    // The cabinet carries no collider — clearance is for visual overlap only.
+    const spot = spots.find((s) => !inDoorLane(room.spec!, s.x, s.z) && !(room.spec!.props as { x: number; z: number; kind: string }[]).some((p) => !/runner|stain|tray/.test(p.kind) && Math.hypot(p.x - s.x, p.z - s.z) < 0.7));
+    if (!spot) continue;
+    room.spec.props.push({ kind: 'keyCabinet', x: spot.x, z: spot.z, yaw: spot.yaw });
+    const nBags = lootRng.int(2, 3);
+    const p = localToWorld(room.origin, room.yaw, spot.x, 0, spot.z);
+    const faceX = Math.sin(room.yaw + spot.yaw), faceZ = Math.cos(room.yaw + spot.yaw);
+    for (let i = 0; i < nBags; i++) {
+      const roll = claimPool[lootRng.int(0, claimPool.length - 1)];
+      const meta: Record<string, number | string | boolean> = {
+        claim: true, price: lootRng.int(6, 15), claimTag: claimTags[lootRng.int(0, claimTags.length - 1)],
+      };
+      if (roll === 'imprints') { meta.contains = 'imprints'; meta.amount = lootRng.int(8, 26); }
+      else meta.contains = roll;
+      const off = (i - (nBags - 1) / 2) * 0.3;
+      room.sockets.push({
+        kind: 'loot',
+        pos: v3(p.x + faceX * 0.42 - faceZ * off, 0.7, p.z + faceZ * 0.42 + faceX * off),
+        yaw: spot.yaw, filled: true, meta,
+      });
+    }
+  }
+
+  // The guest ledger — a priced foresight read on real reception counters.
+  // The hotel's own book says who is expected: the next few doors' waiting
+  // things, in its own euphemisms. Information is the second economy.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    const counter = room.spec.props.find((p) => p.kind === 'counter');
+    if (!counter) continue;
+    if (!lootRng.bool(0.6)) continue;
+    const cp = localToWorld(room.origin, room.yaw, counter.x, 0, counter.z);
+    const toC = { x: room.origin.x - cp.x, z: room.origin.z - cp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(cp.x + (toC.x / tcL) * 0.55, 1.0, cp.z + (toC.z / tcL) * 0.55),
+      yaw: 0, filled: true,
+      meta: { register: true, price: lootRng.int(9, 16) },
+    });
+  }
+
+  // The duty roster — the records wing's counterpart to the guest ledger.
+  // Where the ledger predicts, the roster LOCATES: which staff are marked
+  // working right now, and where. Cheaper paper, narrower knowledge.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    if (room.biome !== 'records' && room.biome !== 'maintenance') continue;
+    const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk');
+    if (!desk) continue;
+    if (!lootRng.bool(0.5)) continue;
+    const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+    const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { roster: true, price: lootRng.int(4, 9) },
+    });
+  }
+
+  // The complaint book — cheapest paper of the three. Maintenance work-
+  // tables keep 'the fault book', gallery sideboards 'the complaint
+  // book'; either way it files HAZARDS by door: what the other two books
+  // don't cover — heaving floors, biting lids, doors that aren't doors.
+  for (const room of rooms) {
+    if (room.authored || !room.spec) continue;
+    const isMaint = room.biome === 'maintenance';
+    const isGallery = room.biome === 'gallery';
+    if (!isMaint && !isGallery) continue;
+    const surf = room.spec.props.find((p) =>
+      isMaint ? (p.kind === 'table' || p.kind === 'toolChest' || p.kind === 'toolbox')
+              : (p.kind === 'sideboard' || p.kind === 'desk' || p.kind === 'consoleTable'));
+    if (!surf) continue;
+    if (!lootRng.bool(0.5)) continue;
+    const sp = localToWorld(room.origin, room.yaw, surf.x, 0, surf.z);
+    const toC = { x: room.origin.x - sp.x, z: room.origin.z - sp.z };
+    const tcL = Math.hypot(toC.x, toC.z) || 1;
+    room.sockets.push({
+      kind: 'loot',
+      pos: v3(sp.x + (toC.x / tcL) * 0.5, 0.9, sp.z + (toC.z / tcL) * 0.5),
+      yaw: 0, filled: true,
+      meta: { complaint: true, fault: isMaint, price: lootRng.int(3, 8) },
     });
   }
 
@@ -861,6 +1143,9 @@ function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng')
   }
 }
 
+/** Desk-family props the House Detective anchors to on the main route. */
+const DETECTIVE_DESKS = new Set(['counter', 'desk', 'writingDesk', 'filing']);
+
 /* ==================== ENCOUNTER SCHEDULING ==================== */
 
 function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, opts: GenOptions, beats?: import('./pacing').Beat[]): void {
@@ -879,7 +1164,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
     if (tier === 0 && !encRng.bool(0.15)) continue;
 
     for (const [id, t] of Object.entries(ENTITY_TUNING) as [EntityId, EntityTuning][]) {
-      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin'].includes(id)) continue;
+      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin', 'swamper', 'hauler', 'laundress', 'auditor'].includes(id)) continue;
       if (t.spawnChance <= 0) continue;
       if (room.index < t.minRoom || (t.maxRoom !== undefined && room.index > t.maxRoom)) continue;
       if ((cooldowns.get(id) ?? -999) + t.cooldown > room.index) continue;
@@ -888,10 +1173,14 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
       if (spec?.forbidEntities?.includes(id)) continue;
       if (spec?.allowOnlyEntities && !spec.allowOnlyEntities.includes(id)) continue;
       // Corridor threats need a route + hiding guarantee.
-      if ((id === 'sweep' || id === 'reprise' || id === 'maelstrom' || id === 'behemoth') && !hasSurvivalOption(rooms, room.index)) continue;
+      if ((id === 'sweep' || id === 'reprise' || id === 'maelstrom' || id === 'behemoth' || id === 'bellman') && !hasSurvivalOption(rooms, room.index)) continue;
       if ((ENTITY_TIER[id] ?? 2) > tier) continue;
       if (id === 'whisper' && !room.darkRoom) continue;
       if (id === 'inkling' && !room.darkRoom) continue;
+      // The Inspector needs lids to test.
+      if (id === 'inspector' && room.hidingSpots.length < 2) continue;
+      // The Detective needs a desk or counter to work from.
+      if (id === 'detective' && !(room.spec?.props ?? []).some((pp) => DETECTIVE_DESKS.has(pp.kind))) continue;
       if (id === 'echoskin' && room.index < 63) continue;
       if (id === 'maelstrom' && room.index < 55) continue;
       // Witness needs apertures.
@@ -923,6 +1212,34 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
   guarantee(rooms, encRng, 'reprise', 31, 38);
   guarantee(rooms, encRng, 'echoskin', 63, 68);
   guarantee(rooms, encRng, 'maelstrom', 55, 70);
+  // The Inspector teaches hiding discipline — pin one early-mid instance
+  // in a room that actually has lids to test.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'inspector'))) {
+    const room = rooms.find((r) => r.index >= 22 && r.index <= 44 && !r.authored && r.biome !== 'safe'
+      && r.hidingSpots.length >= 2 && r.scheduled.length === 0 && windowCompatible(rooms, r, 'inspector'));
+    if (room) room.scheduled.push({ entity: 'inspector', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
+  // The Bellman teaches gaze discipline — pin one mid-route too; it can
+  // kill, so the pinned room must offer survival like the scheduler gate.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'bellman'))) {
+    const room = rooms.find((r) => r.index >= 30 && r.index <= 52 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && hasSurvivalOption(rooms, r.index) && windowCompatible(rooms, r, 'bellman'));
+    if (room) room.scheduled.push({ entity: 'bellman', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
+  // The Detective teaches the settle-or-be-known fork — pin one at a desk
+  // room mid-route so every run carries the wire.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'detective'))) {
+    const room = rooms.find((r) => r.index >= 26 && r.index <= 58 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && (r.spec?.props ?? []).some((pp) => DETECTIVE_DESKS.has(pp.kind)));
+    if (room) room.scheduled.push({ entity: 'detective', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
+  // The Commissionaire gates the forward path — pin one early-mid so every
+  // run teaches the bait-and-cross before the deep schedule can skip it.
+  if (!rooms.some((r) => r.scheduled.some((s) => s.entity === 'commissionaire'))) {
+    const room = rooms.find((r) => r.index >= 24 && r.index <= 46 && !r.authored && r.biome !== 'safe'
+      && r.scheduled.length === 0 && windowCompatible(rooms, r, 'commissionaire'));
+    if (room) room.scheduled.push({ entity: 'commissionaire', triggerRoom: room.index, seed: encRng.int(0, 0x7fffffff) });
+  }
 
   // Density floor: no stretch of 11+ eligible rooms stays unscheduled — seed a
   // low-tier presence at each void's midpoint so valleys never become voids.
@@ -1008,6 +1325,10 @@ function guarantee(rooms: RoomInstance[], encRng: import('../engine/rng').Rng, i
 
 /* ==================== UNDERSCRIPT ==================== */
 
+/** Under templates that can hold standing water — the low service halls
+ *  water actually collects in (never the staffed offices or safe landings). */
+const FLOOD_TEMPLATES = new Set(['u-corridor', 'u-long-hall', 'u-server', 'u-narrow-stacks', 'u-partition-maze', 'u-break']);
+
 function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstance[] {
   const count = opts.shortRun ? 21 : 121; // U-000..U-120
   const placed: PlacedRoom[] = [];
@@ -1039,7 +1360,43 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
     const room = instantiate(i, `U-${String(i).padStart(3, '0')}`, p, true);
     if (uConn) addConnectorColliders(room, uConn);
     room.biome = 'underscript';
-    if (streams.roomStream('dressing', 700 + i).bool(0.45)) room.darkRoom = true;
+    // Flooded runs — water collects in the low service halls. Wading is
+    // slow and every step carries; the drain is the paid quiet.
+    if (FLOOD_TEMPLATES.has(room.templateId) && streams.roomStream('dressing', 710 + i).bool(0.12)) room.flooded = true;
+    // Drowned mains — flooded halls lose their lights far more often.
+    if (streams.roomStream('dressing', 700 + i).bool(room.flooded ? 0.7 : 0.45)) room.darkRoom = true;
+    // Submerged wires — the dark water hides paper snares: an upright
+    // wader trips them loud, a slow wader feels them and steps over.
+    if (room.flooded && room.darkRoom) {
+      const sr = streams.roomStream('dressing', 720 + i);
+      const count = 1 + (sr.bool(0.55) ? 1 : 0);
+      for (let placed = 0, tries = 0; placed < count && tries < 8; tries++) {
+        const lx = sr.range(-room.width / 2 + 1.0, room.width / 2 - 1.0);
+        const lz = sr.range(-room.depth / 2 + 1.0, room.depth / 2 - 1.0);
+        const wp = localToWorld(room.origin, room.yaw, lx, 0, lz);
+        if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.6)) continue;
+        room.spec?.props.push({ kind: 'snare', x: lx, z: lz, yaw: sr.float() * Math.PI * 2 });
+        const spentWire = ((wp.x * 11 + wp.z * 3 + room.index * 17) % 97) < 6;
+        room.sockets.push({ kind: 'hazard', pos: wp, yaw: room.yaw, filled: false,
+          meta: spentWire ? { hazard: 'snare', submerged: true, spent: true } : { hazard: 'snare', submerged: true } });
+        placed++;
+      }
+    }
+    // Electrified water — the flip side of drowned mains: a LIVE flooded
+    // hall arcs around its powered fittings (drowned halls carry dead
+    // wires instead). The drain takes the arc's medium with the water.
+    if (room.flooded && !room.darkRoom) {
+      const ARC_PROPS = new Set(['serverRack', 'machineBox', 'controlPanel', 'fluoroTube', 'conduitRun', 'breakerPanel', 'pipeManifold']);
+      const ar = streams.roomStream('dressing', 730 + i);
+      const lives = (room.spec?.props ?? []).filter((pp) => ARC_PROPS.has(pp.kind));
+      const count = Math.min(lives.length > 3 ? 2 : lives.length, 2);
+      for (let n = 0; n < count && lives.length; n++) {
+        const pick = lives.splice(ar.int(0, lives.length - 1), 1)[0];
+        const wp = localToWorld(room.origin, room.yaw, pick.x, 0, pick.z);
+        if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.5)) continue;
+        room.sockets.push({ kind: 'hazard', pos: wp, yaw: 0, filled: false, meta: { hazard: 'puddle', electrified: true } });
+      }
+    }
     rooms.push(room);
     const pw = portWorld(p, p.spec.exits[0]);
     connPos = pw.pos; connDir = pw.dir;
@@ -1050,10 +1407,18 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   const cooldowns = new Map<EntityId, number>();
   for (const room of rooms) {
     if (room.index === 0 || room.index % 20 === 0) continue; // safe landings
-    const candidates: EntityId[] = ['redline', 'stillframe', 'returner', 'margin', 'grafter'];
+    const candidates: EntityId[] = ['swamper', 'hauler', 'laundress', 'redline', 'stillframe', 'returner', 'margin', 'auditor', 'grafter'];
     for (const id of candidates) {
       const t = ENTITY_TUNING[id];
       if ((cooldowns.get(id) ?? -99) + t.cooldown > room.index) continue;
+      if (id === 'swamper' && !room.flooded) continue;
+      // The Laundress needs both her water and her basin — a flooded room
+      // whose plumbing the drain verb could otherwise free.
+      const LAUNDRY_PLUMBING = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+      if (id === 'laundress' && !(room.flooded && (room.spec?.props ?? []).some((pp) => LAUNDRY_PLUMBING.has(pp.kind)))) continue;
+      // The Auditor works a desk — dry rooms with paper furniture only.
+      const AUDIT_DESKS = new Set(['filing', 'cubicle', 'schoolDesk', 'recordsCage', 'keyCabinet']);
+      if (id === 'auditor' && (room.flooded || !(room.spec?.props ?? []).some((pp) => AUDIT_DESKS.has(pp.kind)))) continue;
       if (id === 'redline' || id === 'returner') {
         if (!hasSurvivalOption(rooms, room.index)) continue;
       }

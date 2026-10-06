@@ -10,9 +10,12 @@
  */
 import * as THREE from 'three';
 import { Entity, playerExposed, corridorPath, followPath, pathLength } from './base';
-import { v3dist, type Vec3 } from '../engine/math';
+import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
+import { doorBetween, atRoomDoor, pointInRoom } from '../engine/doorGeo';
+import type { SoundEvent } from '../engine/events';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
 import { riggedFigure, RIGGED, type RiggedFigure } from './rigged';
@@ -62,6 +65,8 @@ export class CorridorRunner extends Entity {
   private rebounded = false;
   private reboundBoost = 1;
   private stepT = 0;
+  private noiseUnsub: (() => void) | null = null;
+  private bellAnswered = false;
 
   constructor(id: EntityId, opts: CorridorOptions = {}) {
     super(id, ENTITY_TUNING[id]);
@@ -129,7 +134,23 @@ export class CorridorRunner extends Entity {
       };
       this.hideWatch = setInterval(checkHidden, 120);
     }
+    // The Returner answers loud noise while still latching doors ahead —
+    // the crew's bells were wired for it, and a pulled alarm is a summons.
+    if (this.id === 'returner') this.noiseUnsub = c.sound.on((e) => this.hear(e));
     }
+
+  /** A crash within earshot of the latching end shortens the warning to a
+   *  heartbeat — it answers the bell once, then it's already coming. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'warn' || this.bellAnswered) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    const at = this.path[0] ?? c.player.pos;
+    if (!withinRouseRadius(e, at.x, at.z)) return;
+    this.bellAnswered = true;
+    this.warnT = Math.min(this.warnT, 1.0);
+    c.cue('returner-warn', at, '[the latching quickens toward the sound]', { severity: 'warn' });
+  }
 
   private hideWatch: ReturnType<typeof setInterval> | null = null;
 
@@ -375,9 +396,270 @@ export class CorridorRunner extends Entity {
 
   protected override onDone(): void {
     if (this.hideWatch) clearInterval(this.hideWatch);
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) {
       this.ctx.removeEntityMesh(this.mesh);
       this.mesh = null;
     }
+  }
+}
+
+/* ============================ WARDEN ============================ */
+/** Corridor patrol — paces a corridor room's spine between its two doors.
+ *  Runners pass through and are gone; the Warden STAYS, walking its post,
+ *  so crossing the corridor becomes the stealth problem: slip by while its
+ *  back is turned or break its line of sight when the whistle blows.
+ *  Seen in the open → whistle blast (rouses everything in earshot) → charge. */
+export class Warden extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private a = v3();           // patrol endpoints: the room's entry/exit doors
+  private b = v3();
+  private towardB = true;
+  private pauseT = 0;
+  private hostRoom = -1;
+  private charging = false;
+  private seenT = 0;          // continuous seconds the player has been in view
+  private lostT = 0;          // seconds since the charge lost sight
+  private lastSeen = v3();    // where it last saw you — it charges THAT, not your live pos
+  private stepT = 0;
+  private expireT = 120;
+  private investigate: Vec3 | null = null;   // a heard noise it walks to check
+  private investigateScan = 0;
+  private scentT = 0;                          // evidence polling
+  private noiseUnsub: (() => void) | null = null;
+
+  constructor() { super('warden', ENTITY_TUNING.warden); }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.hostRoom = c.currentRoomIndex;
+    this.a = v3(room.entryPos.x, 0, room.entryPos.z);
+    this.b = v3(room.exitPos.x, 0, room.exitPos.z);
+    this.pos = v3((this.a.x + this.b.x) / 2, 0, (this.a.z + this.b.z) / 2);
+    const rig = riggedFigure('orc');
+    this.rig = rig;
+    const g = rig?.group ?? tallFigure({
+      height: 2.0, body: MAT.shadowFigure(), face: 'plate', eyes: 'white', band: MAT.brass(), bandY: 1.55,
+    });
+    // A whistle on a brass cord — the thing that calls the floor on you.
+    const whistle = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 8), MAT.brass());
+    whistle.position.set(0, 1.5, 0.18);
+    whistle.rotation.x = Math.PI / 2;
+    g.add(whistle);
+    g.position.set(this.pos.x, 0, this.pos.z);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    rig?.play('move');
+    this.state = 'engage';
+    this.noiseUnsub = c.sound.on((e) => this.hear(e));
+    c.cue('husk-foot', this.pos, '[measured pacing — a walk, not a hunt]', { severity: 'warn' });
+  }
+
+  /** Loud noise pulls it off the a–b line: it walks to the sound and scans.
+   *  Sprint strides, slams, machine knocks, wind-up lures — the windAlarm
+   *  is a real lure here, not just flavour. */
+  private hear(e: SoundEvent): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.charging || this.investigate) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
+    if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
+    // In-room noise it checks directly. Noise in the NEXT room reaches it
+    // too — but only when its patrol has brought it to that room's door,
+    // so it can shoulder through instead of walking the plaster.
+    const room = c.rooms[this.hostRoom];
+    if (room?.spec && !pointInRoom(room, e.x, e.z)) {
+      const noiseRoom = c.rooms.find((r) => r !== room && pointInRoom(r, e.x, e.z));
+      if (!noiseRoom || !atRoomDoor(noiseRoom, this.pos, 2.2)) return;
+    }
+    this.investigate = v3(e.x, 0, e.z);
+    this.investigateScan = 0;
+    c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });
+    this.rig?.play('move', 0.1);
+  }
+
+  /** Doors on the way to a heard noise: braced or locked leaves turn it
+   *  back; everything else it puts a shoulder through and keeps walking. */
+  private doorOnPath(): 'blocked' | null {
+    if (!this.investigate) return null;
+    for (const r of this.ctx.rooms) {
+      for (const d of r.doors) {
+        if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
+        if (v3dist(this.pos, d.pos) > 1.1 || !doorBetween(d, this.pos, this.investigate)) continue;
+        if (d.heldBy || d.locked) return 'blocked';
+        // The doorway is one physical leaf whatever the stack — shove the
+        // whole cluster so both side leaves swing together.
+        const c = this.ctx;
+        for (const r2 of c.rooms) {
+          for (const d2 of r2.doors) {
+            if (Math.hypot(d2.pos.x - d.pos.x, d2.pos.z - d.pos.z) < 0.7) d2.opening = true;
+          }
+        }
+        c.cue('door-slam', { x: d.pos.x, y: 1.2, z: d.pos.z }, '[the Warden puts a shoulder through the door]', { severity: 'warn' });
+        c.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 1.1, category: 'impact', caption: '[door slammed]', source: this.id });
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /** In-view test: same room, in range, unhidden, LOS clear, and in front of
+   *  its walk (the behind check is skipped while charging — it already has you). */
+  private canSee(): boolean {
+    const c = this.ctx;
+    const p = c.player;
+    if (p.dead || p.hiddenSpot) return false;
+    const d = v3dist(this.pos, p.pos);
+    if (d > this.tuning.seeRange) return false;
+    const room = c.rooms[this.hostRoom];
+    if (!room) return false;
+    const eyeW = v3(this.pos.x, 1.7, this.pos.z);
+    const eyeP = v3(p.pos.x, p.pos.y + 1.5, p.pos.z);
+    if (!hasLineOfSight(eyeW, eyeP, room.losBlockers)) return false;
+    if (!this.charging && d > 1.6 && this.mesh) {
+      const hx = Math.sin(this.mesh.rotation.y), hz = Math.cos(this.mesh.rotation.y);
+      if ((hx * (p.pos.x - this.pos.x) / d + hz * (p.pos.z - this.pos.z) / d) < 0.3) return false;
+    }
+    return true;
+  }
+
+  private updateCharge(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    if (this.canSee()) { this.lostT = 0; v3copy(this.lastSeen, p.pos); }
+    else this.lostT += dt;
+    if (this.lostT > 2.2 || p.dead) {
+      this.charging = false;
+      this.lostT = 0;
+      this.seenT = -1.4;      // grace — it doesn't instantly re-spot what it lost
+      c.cue('floor-creak', this.pos, '[the whistle dies — it resumes its walk]', { severity: 'info' });
+      return;
+    }
+    const dx = this.lastSeen.x - this.pos.x, dz = this.lastSeen.z - this.pos.z;
+    const len = Math.hypot(dx, dz);
+    if (len > 0.01) {
+      const step = Math.min(len, 3.5 * dt);
+      this.pos.x += (dx / len) * step;
+      this.pos.z += (dz / len) * step;
+    }
+    if (this.mesh) {
+      this.mesh.position.set(this.pos.x, 0, this.pos.z);
+      this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    if (v3dist(this.pos, p.pos) < 1.0 && !p.dead) {
+      c.damagePlayer(this.tuning.damage, 'warden', 'Its whistle calls the floor — break its line of sight and it loses the scent.');
+      c.cue('husk-foot', this.pos, '[the Warden strikes — and returns to its walk]', { severity: 'danger' });
+      this.charging = false;
+      this.lostT = 0;
+      this.seenT = -1.4;
+      // Resume the walk from the nearer end.
+      this.towardB = v3dist(this.pos, this.b) < v3dist(this.pos, this.a);
+    }
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player;
+    this.rig?.update(dt);
+    this.expireT -= dt;
+    if (c.currentRoomIndex !== this.hostRoom || this.expireT <= 0) { this.done(); return; }
+
+    if (this.charging) { this.updateCharge(dt); return; }
+
+    if (this.canSee()) {
+      this.seenT += dt;
+      if (this.seenT > 0.35) {
+        this.charging = true;
+        this.lostT = 0;
+        v3copy(this.lastSeen, p.pos);
+        c.cue('alarm-ring', this.pos, '[a whistle — the Warden has you]', { severity: 'danger' });
+        c.sound.emit({ x: this.pos.x, y: 1.6, z: this.pos.z, intensity: 1.0, category: 'entity-cue', caption: '[whistle blast]', source: this.id });
+        this.rig?.play('move', 0.05);
+        return;
+      }
+    } else {
+      this.seenT = Math.max(this.seenT > 0 ? 0 : this.seenT, this.seenT - dt * 2);
+    }
+
+    // Off the line, checking a noise it heard — its eyes still work.
+    if (this.investigate) {
+      if (this.doorOnPath() === 'blocked') {
+        // A held or locked leaf answers the shoulder — it gives the check up.
+        this.investigate = null;
+        this.ctx.cue('door-locked', this.pos, '[it turns from the held door]', { severity: 'info' });
+        return;
+      }
+      const dx = this.investigate.x - this.pos.x, dz = this.investigate.z - this.pos.z;
+      const len = Math.hypot(dx, dz);
+      if (len > 0.4) {
+        const step = Math.min(len, this.tuning.speed * 1.4 * dt);
+        this.pos.x += (dx / len) * step;
+        this.pos.z += (dz / len) * step;
+        if (this.mesh) {
+          this.mesh.position.set(this.pos.x, 0, this.pos.z);
+          this.mesh.rotation.y = Math.atan2(dx, dz);
+        }
+      } else {
+        this.investigateScan += dt;
+        if (this.mesh) this.mesh.rotation.y += dt * 2.4;
+        if (this.investigateScan > 1.8) this.investigate = null;
+      }
+      return;
+    }
+
+    // Scent: a hazard that died in its room is a footprint. It leaves
+    // the line to read the sign — quiet work is marked work.
+    this.scentT -= dt;
+    if (this.scentT <= 0) {
+      this.scentT = 1.4;
+      const evs = c.hazardEvidence?.(`warden:${this.hostRoom}`, this.pos.x, this.pos.z, 30) ?? [];
+      const room0 = c.rooms[this.hostRoom];
+      for (const ev of evs) {
+        if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
+        this.investigate = v3(ev.pos.x, 0, ev.pos.z);
+        this.investigateScan = 0;
+        c.cue('floor-creak', this.pos, '[it reads the sign — someone has been here]', { severity: 'warn' });
+        this.rig?.play('move', 0.1);
+        break;
+      }
+      if (this.investigate) return;
+    }
+
+    // Patrol between the doors; at each end it turns and scans.
+    if (this.pauseT > 0) {
+      this.pauseT -= dt;
+      if (this.mesh) this.mesh.rotation.y += dt * 0.9;
+      return;
+    }
+    const target = this.towardB ? this.b : this.a;
+    const dx = target.x - this.pos.x, dz = target.z - this.pos.z;
+    const len = Math.hypot(dx, dz);
+    if (len < 0.35) {
+      this.towardB = !this.towardB;
+      this.pauseT = 1.6;
+      return;
+    }
+    const step = Math.min(len, this.tuning.speed * dt);
+    this.pos.x += (dx / len) * step;
+    this.pos.z += (dz / len) * step;
+    if (this.mesh) {
+      this.mesh.position.set(this.pos.x, 0, this.pos.z);
+      this.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+    this.stepT += dt;
+    if (this.stepT > 0.55) {
+      this.stepT = 0;
+      c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.32, category: 'footstep', caption: '', source: this.id });
+    }
+  }
+
+  override threatPos(): Vec3 | null { return this.state === 'engage' ? this.pos : null; }
+
+  protected override onDone(): void {
+    if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
   }
 }

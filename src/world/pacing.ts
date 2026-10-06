@@ -15,10 +15,10 @@ export interface Beat { from: number; to: number; tier: 0 | 1 | 2 | 3 }
 
 /** Lowest tier each entity may appear in (main floor only). */
 export const ENTITY_TIER: Record<string, number> = {
-  inkling: 1, hollow: 1, redactor: 1, witness: 1, whisper: 1,
+  inkling: 1, hollow: 1, redactor: 1, witness: 1, whisper: 1, porter: 1, groundswell: 1,
   echoskin: 2, husk: 2, grafter: 2,
   sweep: 3, reprise: 3, maelstrom: 3, returner: 3, behemoth: 3,
-  lurker: 2, curator: 2,
+  lurker: 2, curator: 2, bellman: 2, warden: 2, inspector: 2, commissionaire: 2,
 };
 
 export function planBeats(rng: Rng, rooms: RoomInstance[]): Beat[] {

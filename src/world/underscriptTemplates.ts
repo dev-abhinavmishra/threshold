@@ -40,6 +40,7 @@ const u_corridor: RoomTemplate = {
       { kind: 'manhole', x: 0.5, z: 0.8, y: 0.01 },
       { kind: 'wallVent', x: 1.28, z: -1.6, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'breakerPanel', x: -1.28, z: 2.0, y: 0.7, yaw: Math.PI / 2 },
+      { kind: 'keyCabinet', x: -1.3, z: -2.4, y: 1.55, yaw: Math.PI / 2 },
       { kind: 'conduitRun', x: 1.3, z: -0.5, y: 1.7, yaw: -Math.PI / 2 },
       { kind: 'hangingCable', x: 0, z: 2.8, y: 2.25 },
       ...(rng.bool(0.4) ? [{ kind: 'printer' as const, x: 0.9, z: 1.2 }] : []),
@@ -85,7 +86,12 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'printer', x: -2.4, z: -2.4 },
       { kind: 'microwave', x: 0.4, z: 0.05, y: 0.78 },
       { kind: 'plasticChair', x: -0.2, z: -1.1, yaw: 0.4 },
-      { kind: 'stove', x: 2.4, z: 2.4, yaw: Math.PI },
+      { kind: 'stoveRange', x: 2.4, z: 2.4, yaw: Math.PI },
+      // y>1.9 keeps it inside clearDoorLanes' high-mount exemption
+      { kind: 'copperSet', x: 2.7, z: 1.9, y: 1.95, yaw: -Math.PI / 2 },
+      { kind: 'choppingBlock', x: -2.0, z: -0.9, yaw: 0.35 },
+      { kind: 'potRack', x: 0, z: 0, y: 2.0, yaw: 0 },
+      { kind: 'dishDrainer', x: 0.35, z: -0.25, y: 0.78 },
       { kind: 'foodCans', x: -0.5, z: 0.1, y: 0.78 },
       { kind: 'enamelPot', x: -0.2, z: 0.0, y: 0.78 },
       { kind: 'jug', x: 0.1, z: 0.15, y: 0.78 },
@@ -102,6 +108,7 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'cigs', x: 0.2, z: -0.05, y: 0.78 },
       { kind: 'kettle', x: -0.35, z: 0.15, y: 0.78 },
       { kind: 'cuttingBoard', x: 0.5, z: 0.2, y: 0.78 },
+      { kind: 'manglePress', x: 2.45, z: -0.9, yaw: -Math.PI / 2 },
       { kind: 'apple', x: -0.05, z: -0.15, y: 0.78 },
       { kind: 'fruit', x: 0.42, z: 0.28, y: 0.78 },
       { kind: 'cakeSlice', x: 0.12, z: -0.42, y: 0.78 },
@@ -113,7 +120,9 @@ const u_breakRoom: RoomTemplate = {
       { kind: 'lifebuoy', x: -1.2, z: -2.95, y: 1.7 },
       { kind: 'fishHat', x: 2.1, z: 1.4 },
       { kind: 'sumpPump', x: -2.4, z: 0.9 },
-      { kind: 'sign', x: 0, z: 2.95, y: 1.8, meta: { laneBlock: true } },
+
+      { kind: 'sign', x: 1.2, z: 2.95, y: 1.8 },
+
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.5 },
     ],
     sockets: [{ kind: 'loot', x: -2.4, z: -2.4, meta: {} }, { kind: 'loot', x: 2.4, z: 2.4, meta: {} }],
@@ -128,7 +137,7 @@ const u_recordsCageRoom: RoomTemplate = {
     props: [
       { kind: 'recordsCage', x: -2, z: -1 },
       { kind: 'recordsCage', x: 0.6, z: -1 },
-      { kind: 'recordsCage', x: -0.7, z: 1.8 },
+      { kind: 'recordsCage', x: -0.7, z: 1.5 },
       { kind: 'filing', x: 2.8, z: -2.6 }, { kind: 'filing', x: 2.8, z: -1.9 },
       { kind: 'chainFence', x: -3.3, z: 0.4, yaw: Math.PI / 2 },
       { kind: 'ammoBox', x: 2.8, z: -1.2 },
@@ -163,8 +172,10 @@ const u_longHall: RoomTemplate = {
       { kind: 'airconUnit', x: -1.52, z: -4.5, y: 2.25, yaw: Math.PI / 2 },
       { kind: 'broom', x: 1.35, z: -6.5 },
       { kind: 'cableTray', x: -1.3, z: -2, y: 2.3 },
-      { kind: 'portcullis', x: -0.6, z: 6.9, yaw: Math.PI, meta: { laneBlock: true } },
-      { kind: 'hatch', x: 1.15, z: -6.9, meta: { laneBlock: true } },
+
+      { kind: 'portcullis', x: -0.6, z: 5.9, yaw: Math.PI },
+      { kind: 'hatch', x: 1.15, z: -5.8 },
+
       { kind: 'ductRun', x: 0.9, z: 0, y: 2.3, yaw: Math.PI / 2 },
       { kind: 'conduitRun', x: -1.5, z: -4, y: 1.6, yaw: Math.PI / 2 },
       { kind: 'hangingCable', x: 0, z: 4.5, y: 2.3 },
@@ -210,7 +221,9 @@ const u_openOffice: RoomTemplate = {
         yaw: (i % 2) ? Math.PI : 0,
       }))),
       { kind: 'fluoroTube', x: -2, z: -1, y: 2.7 }, { kind: 'fluoroTube', x: 2, z: 1, y: 2.7 },
-      { kind: 'printerRow', x: -3.4, z: 3.8 },
+
+      { kind: 'printerRow', x: 2.4, z: 3.8 },
+
       { kind: 'waterCooler', x: -5, z: 3.6 },
       { kind: 'schoolDesk', x: 4.6, z: 0.4, yaw: -Math.PI / 2 }, { kind: 'schoolChair', x: 4.0, z: 0.4, yaw: -Math.PI / 2 },
       { kind: 'laptop', x: 4.55, z: 0.4, y: 0.75, yaw: -Math.PI / 2 },
@@ -242,7 +255,7 @@ const u_serverRoom: RoomTemplate = {
   build: (_rng) => us('u-server', 8, 8, 2.9, {
     props: [
       { kind: 'machineBox', x: -2.4, z: -2.4, scale: 1.3 },
-      { kind: 'machineBox', x: 0, z: -2.4, scale: 1.3 },
+      { kind: 'machineBox', x: 0, z: -2.0, scale: 1.3 },
       { kind: 'machineBox', x: 2.4, z: -2.4, scale: 1.3 },
       { kind: 'machineBox', x: -2.4, z: 1.0, scale: 1.3 },
       { kind: 'machineBox', x: 2.4, z: 1.0, scale: 1.3 },
@@ -251,6 +264,7 @@ const u_serverRoom: RoomTemplate = {
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.8 },
       { kind: 'pipeManifold', x: 0, z: -3.85, yaw: 0, meta: { laneBlock: true } },
       { kind: 'breakerPanel', x: 3.85, z: 2.0, y: 0.8, yaw: -Math.PI / 2 },
+      { kind: 'keyCabinet', x: -3.85, z: -2.0, y: 1.55, yaw: Math.PI / 2 },
       { kind: 'wallVent', x: -3.85, z: 2.6, y: 1.8, yaw: Math.PI / 2 },
       { kind: 'conduitRun', x: -3.9, z: -1.0, y: 1.9, yaw: Math.PI / 2 },
       { kind: 'hangingCable', x: 1.5, z: 2.5, y: 2.55 },
@@ -274,8 +288,10 @@ const u_maze: RoomTemplate = {
   build: (rng) => {
     // Partition maze — permuted wall positions per seed.
     const parts = [
-      { x: -2, z: -2 }, { x: 1.4, z: -1.2 }, { x: -1.4, z: 0.6 },
-      { x: 2.2, z: 1.8 }, { x: -2.4, z: 2.8 },
+      // Each spot must clear the door rects under both partition
+      // orientations (2.08m reach) — kept >2.73 off-axis or >3.48 deep.
+      { x: -3, z: -2 }, { x: 3, z: -1.2 }, { x: -1.4, z: 0.6 },
+      { x: 3, z: 1.8 }, { x: -2.4, z: 0.9 },
     ];
     rng.shuffle(parts);
     return us('u-partition-maze', 9, 9, 2.7, {
@@ -301,8 +317,8 @@ const u_printShop: RoomTemplate = {
   id: 'u-print-shop',
   build: (_rng) => us('u-print-shop', 8, 7, 2.7, {
     props: [
-      { kind: 'printerRow', x: -1.8, z: -2.4 },
-      { kind: 'printerRow', x: 1.8, z: -2.4 },
+      { kind: 'printerRow', x: -1.8, z: -1.7 },
+      { kind: 'printerRow', x: 1.8, z: -1.7 },
       { kind: 'printerRow', x: 0, z: 0.4 },
       { kind: 'paperStack', x: -3.2, z: 1.8 }, { kind: 'paperStack', x: 3.2, z: 1.8 },
       { kind: 'projector', x: 0, z: 0.45, y: 0.95 },
@@ -321,7 +337,11 @@ const u_lobby: RoomTemplate = {
   id: 'u-lobby',
   build: (_rng) => us('u-lobby', 9, 7, 3.2, {
     props: [
-      { kind: 'counter', x: 0, z: 2.2, scale: 2.6, meta: { laneBlock: true } },
+
+      // counter hugging the NW wall — dead-center at scale 2.6 used to eat
+      // the north door lane and get culled everywhere (sprint-221 finding)
+      { kind: 'counter', x: -3.1, z: 2.2 },
+
       { kind: 'sofa', x: -3.2, z: -1.4, yaw: Math.PI / 2 },
       { kind: 'sofa', x: 3.2, z: -1.4, yaw: -Math.PI / 2 },
       { kind: 'waterCooler', x: -3.6, z: 2.6 },
@@ -329,7 +349,10 @@ const u_lobby: RoomTemplate = {
       { kind: 'plasticChair', x: 1.8, z: -0.8, yaw: 2.6 },
       { kind: 'streetSeat', x: -3.4, z: -0.4, yaw: Math.PI / 2 },
       { kind: 'coffeeCart', x: 3.8, z: -0.6, yaw: -Math.PI / 2 },
-      { kind: 'register', x: 0.6, z: 2.2, y: 1.1, meta: { laneBlock: true } },
+
+      { kind: 'keyCabinet', x: -4.4, z: 1.0, y: 1.55, yaw: Math.PI / 2 },
+      { kind: 'register', x: -2.9, z: 2.2, y: 1.13 },
+
       { kind: 'bin', x: -4.0, z: -2.8 },
       { kind: 'fluoroTube', x: 0, z: 0, y: 3.1 },
       { kind: 'exitSign', x: 0, z: 3.4, y: 2.6 },
@@ -337,7 +360,7 @@ const u_lobby: RoomTemplate = {
       { kind: 'sumpPump', x: 4.2, z: 2.8 },
     ],
     sockets: [
-      { kind: 'loot', x: 0, z: 2.2, meta: {} },
+      { kind: 'loot', x: -3.1, z: 2.2, y: 1.15, meta: {} },
       { kind: 'loot', x: -3.6, z: 2.6, meta: {} },
       { kind: 'itemPedestal', x: -0.5, z: 2.2, y: 1.15, meta: { broker: 'slot0' } },
       { kind: 'itemPedestal', x: 0.5, z: 2.2, y: 1.15, meta: { broker: 'slot1' } },
@@ -356,7 +379,9 @@ const u_deadEnd: RoomTemplate = {
       { kind: 'sumpPump', x: -1.4, z: -1.7 },
       { kind: 'crate', x: -1.2, z: 1.6, meta: { laneBlock: true } },
       { kind: 'chest', x: -1.0, z: 0.2, yaw: 0.6 },
-      { kind: 'suitcase', x: 0.6, z: 1.9, yaw: -0.5, meta: { laneBlock: true } },
+
+      { kind: 'suitcase', x: 1.3, z: 2.35, yaw: -0.5 },
+
       { kind: 'fluoroTube', x: 0, z: 0, y: 2.4 },
     ],
     sockets: [{ kind: 'loot', x: 1.4, z: -1.4, meta: {} }, { kind: 'loot', x: -1.2, z: 1.6, meta: {} }],
@@ -368,7 +393,7 @@ const u_doubleCubicle: RoomTemplate = {
   id: 'u-double-cubicle',
   build: (_rng) => us('u-double-cubicle', 10, 8, 2.7, {
     props: [
-      { kind: 'cubicle', x: -3, z: -2 }, { kind: 'cubicle', x: -0.6, z: -2 }, { kind: 'cubicle', x: 1.8, z: -2 },
+      { kind: 'cubicle', x: -3.3, z: -2 }, { kind: 'cubicle', x: -2.0, z: -2 }, { kind: 'cubicle', x: 1.8, z: -2 },
       { kind: 'cubicle', x: -3, z: 1.2, yaw: Math.PI }, { kind: 'cubicle', x: -0.6, z: 1.2, yaw: Math.PI }, { kind: 'cubicle', x: 1.8, z: 1.2, yaw: Math.PI },
       { kind: 'breakTable', x: 4.0, z: -0.4 },
       { kind: 'fluoroTube', x: -2, z: -0.4, y: 2.6 }, { kind: 'fluoroTube', x: 2, z: 0.4, y: 2.6 },

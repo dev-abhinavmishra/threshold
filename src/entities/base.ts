@@ -34,6 +34,10 @@ export interface EntityCtx {
    *  holding its breath. Optional: no-ops when no bed is playing. */
   duckTone?: (seconds: number, level?: number) => void;
   spawnAt: (roomIndex: number) => Vec3;
+  /** Rolling breadcrumbs of where the player has walked (world XZ, ~1.15m
+   *  apart, oldest first). Entities that trail the player read these; it's
+   *  live — appended to every frame the player moves. */
+  playerTrail?: Vec3[];
   difficulty: import('../game/types').Difficulty;
   accessibility: { reducedMotion: boolean; captions: boolean; minigameAssist: number };
   gameState: () => string;
@@ -44,6 +48,22 @@ export interface EntityCtx {
   /** Distance to the nearest living spatial threat other than `exclude`
    *  (or null) — used for 'tell me what you heard' whispers. */
   nearestThreat: (exclude: Entity) => { d: number; p: Vec3 } | null;
+  /** The player's imprint purse — entities that tax it (the Collector)
+   *  read it live. Optional: headless test ctxs may omit it. */
+  purse?: () => number;
+  /** Flooded-hall drains: true once a room's water has been let out.
+   *  Optional: headless test ctxs may omit it. */
+  isRoomDrained?: (index: number) => boolean;
+  /** The audit tally — marginalia claims / sledge picks / basket steals
+   *  the player hasn't settled for. Optional: headless ctxs may omit it. */
+  claimsOwed?: () => number;
+  /** Held-property tally in imprints — the Detective's book. */
+  heldOwed?: () => number;
+  /** Scent: killed hazards leave sign a hunter can read. Callers pass a
+   *  reader key (e.g. 'warden:33'); returned marks are recorded as read
+   *  so each hunter reads each sign once. Optional for headless ctxs. */
+  hazardEvidence?: (readerKey: string, x: number, z: number, radius: number)
+    => { pos: Vec3; room: number; kind: string; t: number; old?: boolean }[];
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';
@@ -72,6 +92,17 @@ export abstract class Entity {
   protected abstract onSpawn(): void;
   protected abstract onUpdate(dt: number): void;
   protected onDone(): void {}
+
+  /** ctx.playerTrail dropped its oldest crumb — entities that index into it
+   *  adjust their cursor. No-op by default. */
+  trailShifted(): void {}
+
+  /** true during the first beat after spawning — the rise is the warning.
+   *  Contact killers must not strike while rising, so a thing that appears
+   *  in the player's own room can never hit before the player can answer it. */
+  protected rising(): boolean {
+    return this.stateT < 1.4;
+  }
 
   update(dt: number): void {
     this.stateT += dt;
