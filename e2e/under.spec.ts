@@ -388,7 +388,8 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
     };
     ga.enterUnderscript();
     ga.godMode = true;
-    const hRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'hauler'));
+    const hRoom = g.route.underRooms.find((r) => !r.darkRoom && r.scheduled?.some((s) => s.entity === 'hauler'))
+      ?? g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'hauler'));
     if (!hRoom) return { stage: 'none-scheduled' } as const;
     g.player.teleport(hRoom.origin.x, 0, hRoom.origin.z);
     ga.currentRoom = hRoom.index;
@@ -415,7 +416,7 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
     ga.keys.delete('KeyE');
     for (let f = 0; f < 10; f++) g.frame();
     // then the lamp: aim at the tail light, hold E — the drag goes dark
-    const hl = hauler as unknown as { lampPos: { x: number; z: number }; lampLit: boolean };
+    const hl = hauler as unknown as { lampPos: { x: number; z: number }; lampLit: boolean; relit: boolean };
     const hadCharge = (g as unknown as { inventory: { id: string; count: number }[] })
       .inventory.find((i) => i.id === 'handLamp')?.count ?? 0;
     let stripPrompt = '';
@@ -433,11 +434,42 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
     for (let f = 0; f < 10; f++) g.frame();
     const lampAfter = (g as unknown as { inventory: { id: string; count: number }[] })
       .inventory.find((i) => i.id === 'handLamp');
+    // the economy of darkness: under live mains the team scavenges a bulb —
+    // the lamp comes back on, dimmer, and strips a second (smaller) time
+    let relit = false, scavengedPaid = false, secondDark = false;
+    const litRoom = !(hRoom as { darkRoom?: boolean }).darkRoom;
+    if (litRoom) {
+      for (let f = 0; f < 150 && !hl.relit; f++) {
+        g.player.teleport(hl.lampPos.x, 0, hl.lampPos.z);
+        g.frame();
+      }
+      relit = hl.relit && hl.lampLit;
+      if (relit) {
+        const had2 = lampAfter?.count ?? 0;
+        for (let f = 0; f < 45 && hl.lampLit; f++) {
+          g.player.teleport(hl.lampPos.x, 0, hl.lampPos.z);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          g.player.pitch = Math.atan2(0.75 - eyeY, 0.5);
+          g.player.yaw = Math.atan2(hl.lampPos.x - g.player.pos.x,
+            hl.lampPos.z - g.player.pos.z) || 0;
+          g.frame();
+          if (f === 8) ga.keys.add('KeyE');
+        }
+        ga.keys.delete('KeyE');
+        for (let f = 0; f < 10; f++) g.frame();
+        const lamp2 = (g as unknown as { inventory: { id: string; count: number }[] })
+          .inventory.find((i) => i.id === 'handLamp');
+        scavengedPaid = (lamp2?.count ?? 0) - had2 >= 30;
+        for (let f = 0; f < 150; f++) g.frame();
+        secondDark = !hl.lampLit;
+      }
+    }
     return { stage: 'done', prompt, spent: hauler.stock < st0,
       paid: ga.marginalia > m0 || caps.some((c) => /off the sledge/.test(c)),
-      stripPrompt, lampOut: !hl.lampLit,
+      stripPrompt, lampOut: !hl.lampLit || relit,
       lampPocketed: (lampAfter?.count ?? 0) - hadCharge >= 55,
-      caps: caps.filter((c) => /sledge|scrape|pilfer|lamp/.test(c)) } as const;
+      litRoom, relit, scavengedPaid, secondDark,
+      caps: caps.filter((c) => /sledge|scrape|pilfer|lamp|bulb/.test(c)) } as const;
   });
 
   if (result.stage !== 'done') test.skip();
@@ -447,6 +479,11 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
   expect(result.stripPrompt, JSON.stringify(result)).toMatch(/Strip the lamp/);
   expect(result.lampOut, JSON.stringify(result)).toBe(true);
   expect(result.lampPocketed, JSON.stringify(result)).toBe(true);
+  if (result.litRoom) {
+    expect(result.relit, JSON.stringify(result)).toBe(true);
+    expect(result.scavengedPaid, JSON.stringify(result)).toBe(true);
+    expect(result.secondDark, JSON.stringify(result)).toBe(true);
+  }
   expect(errors).toEqual([]);
 });
 

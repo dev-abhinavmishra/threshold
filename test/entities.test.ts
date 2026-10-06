@@ -1555,6 +1555,41 @@ describe('the Hauler (sprint 271)', () => {
     expect(cues.some((c) => c.includes('goes dark'))).toBe(true);
     h.dispose();
   });
+
+  it('a lit room scavenges the lamp back on; dead mains keep the dark', async () => {
+    const { Hauler } = await import('../src/entities/setpieces');
+    // lit room (no darkRoom flag): strip → wait >3.5s → the team wires a bulb on
+    const ctxLit = makeCtx([haulRoom], { currentRoomIndex: 0 });
+    const h1 = new Hauler();
+    h1.spawn(ctxLit);
+    for (let i = 0; i < 30; i++) { ctxLit.now += 0.05; h1.update(0.05); }
+    h1.stripLamp();
+    expect(h1.lampLit).toBe(false);
+    for (let i = 0; i < 90; i++) { ctxLit.now += 0.05; h1.update(0.05); } // 4.5s
+    expect(h1.relit, 'the scavenge happens once, under light').toBe(true);
+    expect(h1.lampLit, 'the lamp fights on').toBe(true);
+    const cues1 = (ctxLit.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues1.some((c) => c.includes('scavenges a bulb'))).toBe(true);
+    // the second strip is the last — the scavenged bulb pays and the dark holds
+    h1.stripLamp();
+    expect(h1.lampLit).toBe(false);
+    for (let i = 0; i < 90; i++) { ctxLit.now += 0.05; h1.update(0.05); }
+    expect(h1.lampLit, 'no second scavenge').toBe(false);
+    const cues2 = (ctxLit.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues2.some((c) => c.includes('scavenged bulb comes free'))).toBe(true);
+    h1.dispose();
+    // dead mains: the drag stays dark
+    const darkRoom = { ...haulRoom, darkRoom: true } as unknown as RoomInstance;
+    const ctxDark = makeCtx([darkRoom], { currentRoomIndex: 0 });
+    const h2 = new Hauler();
+    h2.spawn(ctxDark);
+    for (let i = 0; i < 30; i++) { ctxDark.now += 0.05; h2.update(0.05); }
+    h2.stripLamp();
+    for (let i = 0; i < 90; i++) { ctxDark.now += 0.05; h2.update(0.05); }
+    expect(h2.lampLit, 'nothing to scavenge where the mains are dead').toBe(false);
+    expect(h2.relit).toBe(false);
+    h2.dispose();
+  });
 });
 
 describe('the Laundress (sprint 272)', () => {

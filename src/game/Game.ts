@@ -2271,15 +2271,18 @@ export class Game {
         return;
       }
       case 'strip': {
-        const h = it.data as unknown as { lampLit: boolean; stripLamp(): void };
+        const h = it.data as unknown as { lampLit: boolean; relit: boolean; stripLamp(): void };
         if (!h.lampLit) { it.enabled = false; return; }
+        const scavenged = h.relit;
         h.stripLamp();
         this.unpaidTheft += 1; // off the sledge, into the tally
         it.enabled = false;
         // the lamp IS the loot — a hooded hand lamp at half battery, or a
-        // top-up for the one you carry (count is charge).
-        this.giveItem('handLamp', 55);
-        this.cue('pickup', it.pos, '[the work-lamp comes free — hooded, half a battery]');
+        // top-up for the one you carry (count is charge). A scavenged bulb
+        // is second-hand: less charge, and the strip point re-registers
+        // the moment the team wires a replacement on.
+        this.giveItem('handLamp', scavenged ? 30 : 55);
+        this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         return;
       }

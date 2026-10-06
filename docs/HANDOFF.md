@@ -2010,3 +2010,35 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - A dark sledge's return trip could 're-light' if you strip near a
     lit room — the team scavenges a bulb? (economy of darkness)
   - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
+
+## Sprint 280 — the scavenged bulb (economy of darkness)
+Strip sprint 279's work-lamp in a LIT under room and it doesn't stay dark:
+after ~3.5s the team pulls a bulb off the wall fixtures and wires it back
+on — `[the team scavenges a bulb — the lamp fights on, dimmer]` (intensity
+0.5 vs 0.85, distance 4 vs 5.5). In a drowned-mains room the strip is
+permanent — nothing to scavenge. The scavenged lamp re-registers 'Strip
+the lamp' (`h.lampLit` gates it per frame); the second strip pays 30
+charge instead of 55 (`h.relit` at press time) and the dark holds for
+good — one scavenge per haul. `room.darkRoom` is the lit/dead flag.
+Traps:
+- **The hauler never leaves its spawn room** — 'if you strip near a lit
+  room' collapses to 'if the haul room is lit'. `c.rooms[h.spawnRoom]
+  .darkRoom` is the whole check.
+- **`relightT` accumulates only while unlit and unrelit** — a strip in a
+  dark room just idles the timer (condition `room && !room.darkRoom`).
+- e2e prefers a lit hauler (`find(!darkRoom && scheduled.hauler)` falls
+  back to any) so the re-light branch runs deterministically on 's';
+  `litRoom` flag lets the asserts branch when a seed has none.
+- e2e timing: relight needs >3.5s of frames at dt=1/30 — 150 frames is
+  the margin. Assert `relit && lampLit`, then re-approach for strip two.
+- **`.vite/` needs ignoring twice**: `.gitignore` covers git but eslint
+  scans it — `eslint.config.js` ignores now lists `.vite` too (the dev
+  server's deps cache was linted as 293 errors).
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav (standing
+    dead-on the lamp admits pick AND strip via prox<1.1).
+  - Slow spec files (entities/mechanics ~1.4m each) could split by theme.
+  - The scavenged bulb could be *plantable*: a peeled handLamp bulb
+    donated to a dark sledge re-lights it YOUR way? (probably gimmick)

@@ -680,8 +680,14 @@ export class Hauler extends Entity {
   /** Picks left on the sledge — a sledge picked clean stops registering. */
   stock = 4;
   /** The hooded work-lamp rides the tail — a moving pool of light in dark
-   *  rooms. Strip it and the drag goes dark for the rest of the run. */
+   *  rooms. Strip it and the drag goes dark — unless the fixtures are
+   *  live here: in a lit room the team scavenges a bulb off the walls and
+   *  the lamp fights on, dimmer. One scavenge per haul; the second strip
+   *  pays less and the dark is permanent. */
   lampLit = true;
+  /** True once the team has scavenged a replacement bulb (lit room only). */
+  relit = false;
+  private relightT = 0;
 
   constructor() { super('hauler', ENTITY_TUNING.hauler); }
 
@@ -818,18 +824,37 @@ export class Hauler extends Entity {
     this.lampPos.x = this.sledgePos.x - this.heading.x * 0.62;
     this.lampPos.y = 0.75;
     this.lampPos.z = this.sledgePos.z - this.heading.z * 0.62;
+    // a stripped lamp only stays dark where the mains are dead — under a
+    // lit ceiling the team pulls a bulb off the wall fixtures and wires it
+    // back on, weaker than the works lamp was
+    if (!this.lampLit && !this.relit) {
+      const room = c.rooms[this.spawnRoom];
+      if (room && !room.darkRoom) {
+        this.relightT += dt;
+        if (this.relightT > 3.5) {
+          this.relit = true;
+          this.lampLit = true;
+          if (this.lampLight) { this.lampLight.visible = true; this.lampLight.distance = 4; }
+          if (this.lampBulb) this.lampBulb.material = MAT.amber();
+          c.cue('drawer', this.lampPos, '[the team scavenges a bulb — the lamp fights on, dimmer]', { severity: 'info' });
+        }
+      }
+    }
     if (this.lampLit && this.lampLight) {
-      this.lampLight.intensity = 0.85 + Math.sin(this.lifeT * 7.3) * 0.1;
+      this.lampLight.intensity = (this.relit ? 0.5 : 0.85) + Math.sin(this.lifeT * 7.3) * 0.1;
     }
     this.rig?.update(dt);
   }
 
-  /** 'Strip the lamp' reaches him — the drag goes dark, the light is yours. */
+  /** 'Strip the lamp' reaches him — the drag goes dark, the light is yours.
+   *  A scavenged bulb is a smaller prize, and it can't be scavenged twice. */
   stripLamp(): void {
     this.lampLit = false;
     if (this.lampLight) this.lampLight.visible = false;
     if (this.lampBulb) this.lampBulb.material = MAT.screenDark();
-    this.ctx.cue('drawer', this.lampPos, '[the drag goes dark — the team works blind]', { severity: 'info' });
+    this.ctx.cue('drawer', this.lampPos,
+      this.relit ? '[the scavenged bulb comes free — this drag stays dark]' : '[the drag goes dark — the team works blind]',
+      { severity: 'info' });
   }
 
   protected override onDone(): void {
