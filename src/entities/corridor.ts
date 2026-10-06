@@ -13,7 +13,7 @@ import { Entity, playerExposed, corridorPath, followPath, pathLength } from './b
 import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
-import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
 import type { SoundEvent } from '../engine/events';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
@@ -443,7 +443,7 @@ export class Warden extends Entity {
   private hear(e: SoundEvent): void {
     const c = this.ctx;
     if (this.state !== 'engage' || this.charging || this.investigate) return;
-    if (e.source || !noiseCanRouse(e)) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
     this.investigate = v3(e.x, 0, e.z);
     this.investigateScan = 0;

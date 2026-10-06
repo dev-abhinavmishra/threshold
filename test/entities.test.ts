@@ -786,6 +786,21 @@ describe('Hearing the cast (sprint 238)', () => {
     gs.dispose();
   });
 
+  it('pebbles are heard in-room but too soft to rouse through walls', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    // Breath-quiet (0.3 < 0.42 floor): ignored.
+    emit(pos.x + 2, pos.z + 2, 0.3, 'distraction');
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    // Pebble loudness (0.45): below the door-rouse floor but inside hearing.
+    emit(pos.x + 2, pos.z + 2, 0.45, 'distraction');
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    w.dispose();
+  });
+
   it('inspector glances up — a noise cuts the lid test short', () => {
     const rooms = routeRooms();
     const idx = rooms.findIndex((r) => r.index >= 10 && r.index < 55 && r.hidingSpots.length >= 2);

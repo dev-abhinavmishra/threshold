@@ -26,7 +26,7 @@ import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
-import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
 import type { SoundEvent } from '../engine/events';
 
 const KNOCK_LINES = [
@@ -262,7 +262,7 @@ export class Bellman extends Entity {
     // 'warn' counts — a crumb dropped while it approaches still lands once it engages.
     if ((this.state !== 'engage' && this.state !== 'warn') || e.source) return;
     if (this.underGaze()) return;
-    if (!noiseCanRouse(e)) return;
+    if (!noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
     if (this.noiseCrumb && v3dist(this.noiseCrumb, e) < 0.6) return;
     this.noiseCrumb = v3(e.x, 0, e.z);

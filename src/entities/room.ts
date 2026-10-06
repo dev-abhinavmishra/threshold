@@ -13,7 +13,7 @@ import { plateMaterial } from '../world/builder';
 import { tallFigure, statueFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
-import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
 import type { SoundEvent } from '../engine/events';
 
 /* ============================ WITNESS ============================ */
@@ -1089,7 +1089,7 @@ export class Groundswell extends Entity {
   private hear(e: SoundEvent): void {
     const c = this.ctx;
     if (this.state !== 'engage' || this.front >= 0) return;
-    if (e.source || !noiseCanRouse(e)) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.center.x, this.center.z)) return;
     if (this.waveAt <= c.now + 0.7) return;
     this.waveAt = c.now + 0.7;
@@ -1278,7 +1278,7 @@ export class Inspector extends Entity {
   private hear(e: SoundEvent): void {
     const c = this.ctx;
     if (this.state !== 'engage' || !this.testing || e.source) return;
-    if (!noiseCanRouse(e)) return;
+    if (!noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
     if (this.testT <= 1.2) return;
     this.testT = 1.2;
@@ -1530,7 +1530,7 @@ export class Commissionaire extends Entity {
   private hear(e: SoundEvent): void {
     const c = this.ctx;
     if (this.state !== 'engage' || this.chasing || this.returning) return;
-    if (e.source || !noiseCanRouse(e)) return;
+    if (e.source || !noiseCanBeHeard(e)) return;
     if (!withinRouseRadius(e, this.pos.x, this.pos.z)) return;
     this.pinYaw = Math.atan2(e.x - this.pos.x, e.z - this.pos.z);
     this.pinUntil = c.now + 3.5;

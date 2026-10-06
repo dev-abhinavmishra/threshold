@@ -898,3 +898,45 @@ NEXT SPRINT IDEAS (pick the biggest first)
     prices rather than trim payouts.
   - More mill batches if dressing reads thin: main-route sideboard
     variants, corridor furniture; u-room variants done (226).
+
+## Sprint 239 — hearing e2e + the pebble floor (dead mechanic resurrected)
+
+- Browser-level verification of sprint 238's hearing layer through the
+  REAL paths — not direct emits: `tossPebble()`, `useActiveSlot` on a
+  pushed windAlarm (item → planted lure → Game's tick loop → sound bus),
+  and literal Shift+W sprint strides (controller footfall → 'sprint' emit).
+- DEAD MECHANIC found while wiring the pebble spec: `tossPebble` emits
+  0.45 — below `ROUSE_MIN_INTENSITY` 0.55 — so the 'free, weak lure'
+  reached NOTHING (no door rouse, and sprint-238 entities used the same
+  floor). New `noiseCanBeHeard` (0.42, same category set) splits
+  in-room hearing from door-rousing: pebbles audible to entities in the
+  room, still can't wake what's behind doors. Entities now use it.
+- One spec, three real-path proofs on seed 's' (bellman @32 → warden @33
+  → groundswell @34, consecutive): pebble toss detours the bellman to
+  the crumb; the wound alarm's ticks pull the warden off post to the
+  lure position; sprint strides provoke the next swell early.
+- Emergent-verified, not planned: sprinting in room 34 also pulled the
+  Warden out of room 33 through the wall — withinRouseRadius honestly
+  carries through walls. And you CANNOT toss a pebble at a bellman
+  you're looking at: the gaze freeze evaluates at emit-time, so aimed
+  tosses land dead — the counterplay is tossing sideways (spec asserts
+  the flank toss).
+- Harness traps (spec comments): post-detour the bellman resumes your
+  trail — an exposed lingerer is a touch-kill (killPlayer bypasses
+  godMode) — hide after tossing. Warden whistles on room-enter before
+  you can hide — harmless for the hearing assert (charge gate blocks
+  hearing, lure investigation resumes after the strike).
+- Environment trap now in config comments: playwright webServer has
+  reuseExistingServer — a stale `vite preview` on :4173 serves a build
+  from whenever it started, skipping rebuilds. Kill it before rerunning
+  after source edits, or you'll test yesterday's bundle.
+- Vitest +1 (pebble floor: 0.3 ignored, 0.45 investigates): 108 total.
+- Gates: tsc, lint, 108 vitest, 5-seed sim, props.spec 14/14, build.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - The milestone set is the last deaf spot: pursuer/hazard sound
+    reactions (they're authored-only; adding hearing is a design call).
+  - Pebble/rebalance note: 0.45 in-room hearing makes tossPebble a real
+    tool now — watch whether free lures on an 8s cd trivialize the
+    commissionaire/bellman rooms in playtests.
+  - Economy still ~5x; mill batches still open on main-route furniture.

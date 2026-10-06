@@ -1105,3 +1105,136 @@ test('the commissionaire holds the doors — bait it, then touch the far leaf', 
   expect(r.unsealed).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the cast hears you — pebble pulls the bellman, a lure pulls the warden, sprint provokes the swell', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': bellman @32 → warden @33 → groundswell @34 — three in a row
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type Ent = { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null };
+    const gi = g as unknown as {
+      entities: Ent[];
+      lures: { pos: { x: number; y: number; z: number } }[];
+      inventory: { id: string; count: number }[];
+      activeSlot: number;
+      useActiveSlot(): void;
+      tossPebble(): void;
+    };
+    const enterRoom = (idx: number) => {
+      const prev = g.route.rooms[idx - 1];
+      g.player.teleport(prev.origin.x, 0, prev.origin.z);
+      for (let f = 0; f < 30; f++) g.frame();
+      g.player.teleport(g.route.rooms[idx].origin.x, 0, g.route.rooms[idx].origin.z);
+      for (let f = 0; f < 70; f++) g.frame();
+    };
+
+    // ---------- Phase A: a tossed pebble stoops the bellman ----------
+    const bRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bRoom) return { stage: 'no-bellman' } as const;
+    enterRoom(bRoom.index);
+    const bell = gi.entities.find((e) => e.id === 'bellman');
+    if (!bell) return { stage: 'no-bellman-spawn' } as const;
+    const bp = bell.threatPos();
+    if (!bp) return { stage: 'no-bell-pos', caps: caps.slice(-10) } as const;
+    // Stand ~4.5m off it and toss to a FLANK: aiming the toss at it keeps
+    // your gaze on it, and under your gaze it freezes and hears nothing —
+    // the pebble has to land sideways. Then turn fully away.
+    const px = bp.x + 4.5, pz = bp.z + 1.0;
+    g.player.teleport(px, 0, pz);
+    const tx = bp.x + 3.5, tz = bp.z + 3.5;   // ~5m off it, ~90° off your bearing to it
+    g.player.yaw = Math.atan2(tx - px, tz - pz);
+    gi.tossPebble();
+    const peb = { x: px + Math.sin(g.player.yaw) * 3.5, z: pz + Math.cos(g.player.yaw) * 3.5 };
+    g.player.yaw = Math.atan2(px - bp.x, pz - bp.z); // face away — no gaze freeze
+    // Then hide: after it sniffs, it resumes the trail — an exposed
+    // lingerer in its path is a touch-kill (killPlayer bypasses godMode).
+    const bSpot = bRoom.hidingSpots.find((s) => !s.trappedBy) ?? bRoom.hidingSpots[0];
+    if (bSpot) { g.player.hiddenSpot = bSpot as never; g.player.teleport(bSpot.exitPos.x, 0, bSpot.exitPos.z); }
+    else g.player.teleport(px + 20, 0, pz + 20); // no lid — just be far
+    let sniffed = false;
+    for (let f = 0; f < 900; f++) {
+      g.frame();
+      const tp = bell.threatPos();
+      if (tp && Math.hypot(tp.x - peb.x, tp.z - peb.z) < 0.9) { sniffed = true; break; }
+      if (bell.state !== 'engage') break;
+    }
+    if (g.player.dead) return { stage: 'bell-killed', caps: caps.slice(-10) } as const;
+
+    // ---------- Phase B: the wind-up lure pulls the warden off post ----------
+    bell.state = 'done'; // retire — it trails into the next room and kills
+    g.player.hiddenSpot = null;
+    const wRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wRoom) return { stage: 'no-warden', sniffed } as const;
+    enterRoom(wRoom.index);
+    const ward = gi.entities.find((e) => e.id === 'warden' && e.state === 'engage');
+    if (!ward) return { stage: 'no-warden-spawn', sniffed } as const;
+    // Plant the alarm on a flank, then hide: we isolate HEARING — if its
+    // eyes could see us the whistle would override the investigation.
+    const spot = wRoom.hidingSpots.find((s) => !s.trappedBy) ?? wRoom.hidingSpots[0];
+    const wp = ward.threatPos();
+    if (!wp) return { stage: 'no-ward-pos', sniffed } as const;
+    g.player.teleport(wp.x + 4.0, 0, wp.z + 3.0);
+    g.player.yaw = Math.atan2(wp.x - g.player.pos.x, wp.z - g.player.pos.z); // toss TOWARD its spine
+    gi.inventory.push({ id: 'windAlarm', count: 1 });
+    gi.activeSlot = gi.inventory.findIndex((i) => i.id === 'windAlarm');
+    gi.useActiveSlot();
+    const lure = gi.lures[gi.lures.length - 1];
+    if (!lure) return { stage: 'no-lure', sniffed } as const;
+    if (spot) { g.player.hiddenSpot = spot as never; g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z); }
+    let wardReached = false;
+    for (let f = 0; f < 1400; f++) {
+      g.frame();
+      const tp = ward.threatPos();
+      if (tp && Math.hypot(tp.x - lure.pos.x, tp.z - lure.pos.z) < 0.8) { wardReached = true; break; }
+      if (ward.state !== 'engage') break;
+    }
+
+    // ---------- Phase C: real sprint strides provoke the groundswell ----------
+    const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'groundswell'));
+    if (!gRoom) return { stage: 'no-groundswell', sniffed, wardReached } as const;
+    g.player.hiddenSpot = null;
+    enterRoom(gRoom.index);
+    const swell = gi.entities.find((e) => e.id === 'groundswell' && e.state === 'engage');
+    if (!swell) return { stage: 'no-swell-spawn', sniffed, wardReached } as const;
+    // Sprint down the room axis — footfall emits 'sprint' @0.85 each stride.
+    const ex = gRoom.exitPos, en = gRoom.entryPos;
+    g.player.teleport(en.x + 1.0, 0, en.z + 1.0);
+    g.player.yaw = Math.atan2(ex.x - en.x, ex.z - en.z);
+    g.keys.add('KeyW'); g.keys.add('ShiftLeft');
+    const capsAt = caps.length;
+    for (let f = 0; f < 80; f++) g.frame();
+    g.keys.delete('KeyW'); g.keys.delete('ShiftLeft');
+    let launched = false;
+    for (let f = 0; f < 120; f++) {
+      g.frame();
+      const front = (swell as unknown as { front?: number }).front;
+      if (front !== undefined && front >= 0) { launched = true; break; }
+      if (swell.state !== 'engage') break;
+    }
+    return {
+      stage: 'done', sniffed, wardReached, launched,
+      caps: caps.slice(-14), swellCaps: caps.slice(capsAt, capsAt + 8),
+      allCaps: caps,
+    } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { sniffed: boolean; wardReached: boolean; launched: boolean; caps: string[]; swellCaps: string[]; allCaps: string[] };
+  const tail = r.allCaps.join(' | ');
+  expect(r.sniffed, `caps: ${tail}`).toBe(true);
+  expect(r.allCaps.some((c) => /stoops to the sound/.test(c))).toBe(true);
+  expect(r.wardReached, `caps: ${tail}`).toBe(true);
+  expect(r.allCaps.some((c) => /turns toward the noise/.test(c))).toBe(true);
+  expect(r.launched, `caps: ${tail}`).toBe(true);
+  expect(r.allCaps.some((c) => /boards stir under the noise/.test(c))).toBe(true);
+  expect(errors).toEqual([]);
+});

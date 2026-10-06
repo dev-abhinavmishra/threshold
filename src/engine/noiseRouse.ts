@@ -10,6 +10,10 @@
 import type { SoundEvent } from './events';
 
 export const ROUSE_MIN_INTENSITY = 0.55;
+/** In-room entities hear a little past the door-rouse floor: a tossed pebble
+ *  (0.45) is inaudible through walls but plainly audible in the room. Walk
+ *  strides (0.4, and 'footstep' isn't a rouse category anyway) stay unheard. */
+export const HEAR_MIN_INTENSITY = 0.42;
 
 const ROUSE_CATEGORIES = new Set([
   'sprint', 'door', 'impact', 'item', 'puzzle-fail', 'machine', 'distraction', 'drawer',
@@ -17,6 +21,12 @@ const ROUSE_CATEGORIES = new Set([
 
 export function noiseCanRouse(e: SoundEvent): boolean {
   return !e.source && e.intensity >= ROUSE_MIN_INTENSITY && ROUSE_CATEGORIES.has(e.category);
+}
+
+/** The hearing floor for live entities in the room — same loud-only
+ *  categories, a lower intensity bar. */
+export function noiseCanBeHeard(e: SoundEvent): boolean {
+  return !e.source && e.intensity >= HEAR_MIN_INTENSITY && ROUSE_CATEGORIES.has(e.category);
 }
 
 /** Hearing reach of the room beyond: loud noise carries ~14m per intensity —
