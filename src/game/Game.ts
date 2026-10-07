@@ -44,7 +44,7 @@ import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
 import { Bellman } from '../entities/bellman';
-import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES } from '../game/config';
+import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES, DEATH_HINTS } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
@@ -3140,28 +3140,6 @@ export class Game {
     this.audio.play('death', null, '', 'danger');
     this.audio.setMood('off');
     this.audio.setRoomTone('off');
-    const hints: Record<string, string> = {
-      sweep: 'Its cue is the pressure wave and the flicker. Conceal or break line of sight.',
-      reprise: 'It returns — stay put through every pass.',
-      witness: 'Look away. The pull is resistible; the regard is not.',
-      whisper: 'In darkness, turn toward the voice until you see it.',
-      inkling: 'It hates sustained light. Angle the beam away.',
-      echoskin: 'It borrows your steps. Face it to fold it.',
-      maelstrom: 'It remembers where you hide. Reach a physical safe spot.',
-      redline: 'Printer cascade and red lamps — conceal before the pass.',
-      stillframe: 'Release all input when the shutter sounds.',
-      margin: 'Glance to freeze it; never hold it in view.',
-      returner: 'It comes from ahead. Retreat to known cover.',
-      redactor: 'Check the number, the seam, the hum. Real exits are even-tempered.',
-      hollow: 'Warm cabinets lie. Check for the residue and the off-hum.',
-      husk: 'It sleeps. Keep the beam off it, keep your distance, go quiet.',
-      curator: 'It hunts sound. Crouch, go slow, and distract it.',
-      pursuer: 'Sprint the sequence. Vaults and gates are the route.',
-      orrery: 'Beams read the low floor. Crouch and time the gaps.',
-      editor: 'Red-lined floor is already gone. Keep moving.',
-      grafter: 'It is only rubble until it stands. Give it the berth it cannot give you.',
-      hazard: 'Watch the floor — the building sets snares.',
-    };
     const doc = DOCUMENTS.find((d) => d.id === `doc-${source}`);
     if (doc && !this.documents.some((d) => d.id === doc.id)) {
       this.documents.push({ ...doc, unlockedAt: Date.now() });
@@ -3171,7 +3149,7 @@ export class Game {
     setTimeout(() => {
       useGameStore.setState({
         phase: 'DEAD', paused: true,
-        deathInfo: { cause: source, hint: hints[source] ?? hint, entity: source },
+        deathInfo: { cause: source, hint: DEATH_HINTS[source] ?? hint, entity: source },
       });
       document.exitPointerLock?.();
       this.audio.setMood('menu');

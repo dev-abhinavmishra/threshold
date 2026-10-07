@@ -2346,3 +2346,32 @@ Traps:
 - Wax-bell looter income drifted 103→112 — the confiscated-case marks
   rolls, not foreshadow. Verify economy deltas against sim, not
   assumptions.
+
+## sprint 289 — the cause reads (death screen uniform)
+
+**What**: the death screen printed the raw kill-source id ('groundswell',
+'commissionaire') while the curated hint map only covered the original 20
+entities — newer killers got good caller hints but an unreadable cause
+label. Now every lethal source reads the same way.
+
+**Files**:
+- `src/game/config.ts` — new `DEATH_NAMES` (fiction name per source, e.g.
+  'the Groundswell', 'the House' for hazard) and `DEATH_HINTS` (the
+  curated advice map moved out of killPlayer and extended to all 36
+  sources). `killPlayer` prefers `DEATH_HINTS[source]` over the
+  caller-passed hint — the map is the single source of truth for death
+  lines now.
+- `src/ui/App.tsx` — `.death-cause` renders `DEATH_NAMES[cause] ?? cause`.
+- `test/generation.test.ts` — 'the cause reads' coverage: names+hints for
+  every `ENTITY_TUNING` key + 'hazard' (fails when a new entity is added
+  without read lines).
+- `e2e/runflow.spec.ts` — death test asserts cause shows 'the Sweep' and
+  hint shows the curated line.
+
+**Traps**:
+- `death.cause` / `lastDeathCause` stay the raw entity id — playtest.json
+  and encounter stats depend on it; only the display layer gets the name.
+- Callers still pass hints (deathHint() per entity) — those are the
+  FALLBACK for sources not in DEATH_HINTS; keep writing them.
+- Two callers can kill under one id with different caller hints (inspector
+  has two sites) — the map collapses them to one line on purpose.
