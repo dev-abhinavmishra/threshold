@@ -692,7 +692,10 @@ export class Game {
       victory: () => this.victory(),
       giveItem: (item, n = 1) => this.giveItem(item as ItemId, n),
       spendImprints: (n) => {
-        if (this.imprints >= n) { this.imprints -= n; return true; }
+        if (this.imprints >= n) {
+          this.chargedImprints(n, this.player.pos.x, this.player.pos.z);
+          return true;
+        }
         return false;
       },
       hasItem: (id) => this.inventory.some((i) => i.id === id && i.count > 0),
@@ -1767,7 +1770,7 @@ export class Game {
           const filed = this.unpaidHeld > 0;
           const cEff = filed ? cPrice + Math.min(3 + this.unpaidHeld * 2, 10) : cPrice;
           if (this.imprints >= cEff) {
-            this.imprints -= cEff;
+            this.chargedImprints(cEff, it.pos.x, it.pos.z);
             sock.meta.sold = true;
             it.enabled = false;
             this.giveItem(cItem, 1);
@@ -1864,7 +1867,7 @@ export class Game {
               : `[the clerk wants ${eff} imprints for the page — ${eff - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= eff;
+        this.chargedImprints(eff, it.pos.x, it.pos.z);
         this.clerkAsked.add(roomIndex);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         const q = page.meta.clerkQ as string;
@@ -1949,7 +1952,10 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 8);
           this.imprints += amt;
           this.stats.imprintsEarned += amt;
-          this.cue('pickup', it.pos, `[+${amt} imprints — off the till]`);
+          // sprint 329 — the till's coin is marked: every imprint it pays
+          // out testifies when it lands in a house till (the under washes)
+          this.hotImprints += amt;
+          this.cue('pickup', it.pos, `[+${amt} imprints — off the till — the coin is marked]`);
         } else {
           const pool = ['bandage', 'doorChock', 'feltWrap', 'latchpick'] as const;
           const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
@@ -2004,11 +2010,17 @@ export class Game {
         const dirty = this.unpaidTheft > 0 || this.unpaidHeld > 0 || this.paperTrail > 0;
         const gain = dirty ? 6 : 8;
         this.imprints -= 6;
+        // sprint 329 — the under launders: the Broker takes the till's
+        // marked coin without asking — hot imprints die here, silent
+        const washed = Math.min(6, this.hotImprints);
+        this.hotImprints -= washed;
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
-        this.cue('purchase', it.pos, dirty
-          ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
-          : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
+        this.cue('purchase', it.pos, washed > 0
+          ? `[the purse washes the marked coin — the under doesn't ask · 6 imprints → ${gain} marginalia]`
+          : dirty
+            ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
+            : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
         return;
       }
       case 'bell': {
@@ -2142,7 +2154,7 @@ export class Game {
           if (lockId === 'toll') {
             // The toll door — imprints, not keys, open it.
             if (this.imprints >= 3) {
-              this.imprints -= 3;
+              this.chargedImprints(3, it.pos.x, it.pos.z);
               for (const d of cluster) d.locked = false;
               this.cue('door-unlock', it.pos, '[the door takes its toll — 3 imprints]');
             } else {
@@ -2234,7 +2246,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the machine wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.cue('machine', it.pos, '[the machine coughs something up]');
@@ -2253,7 +2265,8 @@ export class Game {
             `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
           return;
         }
-        if (cur) this.marginalia -= price; else this.imprints -= price;
+        if (cur) this.marginalia -= price;
+        else this.chargedImprints(price, it.pos.x, it.pos.z);
         if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
@@ -2303,7 +2316,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the ledger costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2358,7 +2371,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the roster costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2398,7 +2411,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the book costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2646,7 +2659,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the affidavit asks ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.unpaidHeld = Math.max(0, this.unpaidHeld - 2) + 1;
@@ -2665,7 +2678,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the sheet wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2772,7 +2785,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the register asks ${toll} imprints — ${toll - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= toll;
+        this.chargedImprints(toll, it.pos.x, it.pos.z);
         this.unpaidHeld = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2807,7 +2820,9 @@ export class Game {
         const d = it.data as { pay?: () => void; price?: number } | undefined;
         const price = d?.price ?? 2;
         let paid = false;
-        if (this.imprints >= price) { this.imprints -= price; paid = true; }
+        if (this.imprints >= price) {
+          this.chargedImprints(price, it.pos.x, it.pos.z); paid = true;
+        }
         else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;
@@ -5396,6 +5411,24 @@ export class Game {
   private readonly bellRung = new Map<number, { t: number; x: number; z: number }>();
   /** Staffed counters that watched you rifle the till — closed to you. */
   private readonly closedCounters = new Set<number>();
+  /** sprint 329 — the till's coin is marked: rifled imprints testify
+   *  each time a hot coin lands in a house till. The under's trades
+   *  (the Broker's purse) take marked coin without asking — a wash. */
+  private hotImprints = 0;
+
+  /** Spend imprints at a house service — the marked coin goes first,
+   *  and each hot coin that lands rings where it fell. Only the
+   *  house's services testify; the under answers to different books. */
+  private chargedImprints(n: number, x: number, z: number): void {
+    this.imprints -= n;
+    const hot = Math.min(n, this.hotImprints);
+    if (hot <= 0) return;
+    this.hotImprints -= hot;
+    this.sound.emit({ x, y: 1, z, intensity: 0.5, category: 'distraction',
+      caption: '[a marked coin rings where it lands]' });
+    this.cue('machine', v3(x, 1, z),
+      '[the till knows its own coin — the house hears where it landed]', 'warn');
+  }
 
   private ensureClerk(roomIndex: number): void {
     if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;

@@ -3490,3 +3490,26 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   rings then rifles inside the window (held stays 0, 'unfiled'
   caption, counter still cold).
 - Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+### sprint 329 — the marked coin (rifled imprints testify)
+- The till's coin is marked: rifled imprints pool into `hotImprints`,
+  and every house-side imprint spend runs through `chargedImprints(n,
+  x, z)` — the hot coin goes first, and each marked spend emits
+  'distraction' (0.5, ~9m reach) at the till it lands in + warn cue
+  '[the till knows its own coin — the house hears where it landed]'.
+  Covers toll doors, the Collector's toll, vend machines, the clerk's
+  wares + ask, the register/roster/complaint/watchSheet/affidavit
+  papers, the claim's imprints branch, the Detective's settle, and
+  the ctx `spendImprints` (entity charges incl. the custodian shop).
+- The fence: the Broker's purse (`imprints -= 6`) is the ONE spend
+  that doesn't testify — it silently burns `min(6, hotImprints)` —
+  the under washes the house's marked coin for the spread. The
+  heist chain: ring the bell → rifle blind → launder downstairs.
+- Implementation note: `spendImprints(n)` ctx cb now wraps
+  `chargedImprints` at `player.pos` — entity desk charges testify
+  too. Only the purse keeps a raw `imprints -=` (the wash).
+- e2e: vend leg pays a fully-hot spend (one 'distraction' ring at
+  the vend, hot→0); broker purse leg adds the wash phase (hot 6→0,
+  no emit asserted); clerk leg asserts `hotAfterRifle > 0` iff the
+  rifle caption reads '— the coin is marked' (item branch = clean).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
