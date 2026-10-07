@@ -616,11 +616,36 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       g.player.pitch = Math.atan2(wy - eyeY, hd);
       g.player.yaw = Math.atan2(live.pos.x - g.player.pos.x, live.pos.z - g.player.pos.z);
       g.frame();
-      if (ga.interaction.focused?.prompt) focused = ga.interaction.focused.prompt;
+      // once the hold lands the mount's prompt flips to 'Take the felt
+      // back' — keep the LIVE-eye prompt for the assert
+      if (ga.interaction.focused?.prompt && !live.dead) focused = ga.interaction.focused.prompt;
       if (f === 20) ga.keys.add('KeyE');
     }
     ga.keys.delete('KeyE');
     for (let f = 0; f < 15; f++) g.frame();
+    const blinded = live.dead; // capture before the felt-recovery relights it
+    // the felt comes back: the taped mount now offers 'Take the felt back' —
+    // the eye wakes, the wrap is refunded, the sign it left stays smelled
+    const wrapsBeforeRecover = (g as unknown as { inventory: { id: string; count: number }[] })
+      .inventory.find((i) => i.id === 'feltWrap')?.count ?? 0;
+    let recoverFocused = '';
+    for (let f = 0; f < 80; f++) {
+      g.player.teleport(live.pos.x - fx * 1.2, 0, live.pos.z - fz * 1.2);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const hd = Math.max(0.3, Math.hypot(live.pos.x - g.player.pos.x, live.pos.z - g.player.pos.z));
+      g.player.pitch = Math.atan2(wy - eyeY, hd);
+      g.player.yaw = Math.atan2(live.pos.x - g.player.pos.x, live.pos.z - g.player.pos.z);
+      g.frame();
+      // once the hold lands the mount flips back to 'Tape the eye' —
+      // capture the DEAD-eye prompt for the assert
+      if (ga.interaction.focused?.prompt && live.dead) recoverFocused = ga.interaction.focused.prompt;
+      if (f === 20) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    for (let f = 0; f < 15; f++) g.frame();
+    const wrapsAfterRecover = (g as unknown as { inventory: { id: string; count: number }[] })
+      .inventory.find((i) => i.id === 'feltWrap')?.count ?? 0;
+    const relit = !live.dead;
     // drowned mains: the dark room's cam is dead — no verb, no report
     const darkWatcher = ga.hazard.watchers.find((w) => !w.dead && !!g.route.rooms[w.room]?.darkRoom);
     let darkTapeVerb = true, darkReport = -1;
@@ -628,7 +653,8 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       g.player.teleport(darkWatcher.pos.x, 0, darkWatcher.pos.z + 1);
       ga.currentRoom = darkWatcher.room;
       for (let f = 0; f < 20; f++) g.frame();
-      darkTapeVerb = ga.interaction.interactables.some((i) => i.kind === 'tape');
+      darkTapeVerb = ga.interaction.interactables.some((i) => i.kind === 'tape')
+        || ga.interaction.interactables.some((i) => i.kind === 'untape');
       const dc = caps.length;
       for (let f = 0; f < 250; f++) {
         g.player.teleport(darkWatcher.pos.x + Math.sin(f * 0.7) * 0.05, 0, darkWatcher.pos.z + 2);
@@ -642,7 +668,8 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
         && Math.hypot(e.pos.x - live.pos.x, e.pos.z - live.pos.z) < 0.5);
     return { stage: 'done', warns, settled, stillReports, focused,
       heldAfterSettle, filedCue, heldAfterSecond, talksBack, talksCount,
-      blinded: live.dead, blindSign: !!blindSign,
+      blinded, blindSign: !!blindSign,
+      recoverFocused, wrapsBeforeRecover, wrapsAfterRecover, relit,
       darkFound: !!darkWatcher, darkTapeVerb, darkReport };
   });
 
@@ -661,6 +688,13 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
   expect(result.blinded, 'felt blinds the eye').toBe(true);
   // sprint 315 — the tape is testimony: blinding it left sign at the mount
   expect(result.blindSign, JSON.stringify(result)).toBe(true);
+  // sprint 316 — the felt comes back: the mount offers recovery, the
+  // eye wakes, the wrap returns, the sign it left stays smelled
+  expect(result.recoverFocused, JSON.stringify(result)).toMatch(/felt back/);
+  expect(result.wrapsBeforeRecover).toBe(0);
+  expect(result.wrapsAfterRecover).toBe(1);
+  expect(result.relit, 'the eye blinks awake').toBe(true);
+  expect(result.blindSign, 'recovering the felt does not un-smell the sign').toBe(true);
   if (result.darkFound) {
     expect(result.darkTapeVerb, 'a dead eye has nothing to tape').toBe(false);
     expect(result.darkReport, 'dead mains watch nothing').toBe(0);

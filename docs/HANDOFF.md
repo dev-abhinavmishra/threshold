@@ -3186,3 +3186,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, 231 vitest (+1 contract line asserting
   `kind: 'blind'`), 5-seed sim, e2e hazards — the watched-hall leg
   asserts a 'blind' mark lands within 0.5m of the taped mount, build.
+
+## sprint 316 — the felt comes back (devin/1791396001-threshold-s316)
+
+- Tape is now a PARKED tool, not a consumed one: a taped eye
+  (`w.dead === true` — only felt sets that flag; dead-mains eyes ride
+  `darkRoom` instead) offers 'Take the felt back — it wakes' (`untape`
+  kind, 1.0s hold): `w.dead = false`, `giveItem('feltWrap', 1)`, the
+  mount's prompt flips back to Tape/Smother on the next rebuild. The
+  sprint-315 'blind' mark STAYS — the sign already went out; you can't
+  un-smell it. A re-lit eye can't refile (its `filed` flag persists),
+  its settle restarts from 0.
+- Trap/log: the e2e leg now drives a three-state mount (live → blind
+  → relit) — capture `focused` prompts gated on `live.dead`, or the
+  post-hold frames overwrite 'Tape the eye' with the next state's
+  prompt. Mechanics asserted on state (wraps 0→1, `dead` flag,
+  evidence mark), not on prompt strings.
+- Gates: tsc, lint, 231 vitest (contract kind list += 'untape'),
+  5-seed sim, e2e hazards — the watched-hall leg asserts the recover
+  prompt, wrap refund, relight, and that the blind mark persists,
+  build.
