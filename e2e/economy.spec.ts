@@ -46,6 +46,29 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     ga.keys.delete('KeyE');
     if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
 
+    // --- 1.5 the affidavit — swearing the goods home, in imprints ---
+    (ga as unknown as { unpaidHeld: number }).unpaidHeld = 3; // more held work behind you
+    const afRoom = g.route.rooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.affidavit && !s.meta?.taken));
+    if (afRoom) {
+      g.player.teleport(afRoom.origin.x, 0, afRoom.origin.z);
+      ga.currentRoom = afRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const af = (afRoom.sockets ?? []).find((s) => s.meta?.affidavit && !s.meta?.taken);
+      for (let f = 0; f < 60 && af?.meta && !af.meta.taken; f++) {
+        const ax = afRoom.origin.x - af.pos.x, az = afRoom.origin.z - af.pos.z;
+        const al = Math.hypot(ax, az) || 1;
+        g.player.teleport(af.pos.x + (ax / al) * 0.9, 0, af.pos.z + (az / al) * 0.9);
+        g.player.yaw = Math.atan2(af.pos.x - g.player.pos.x, af.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((af.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const heldAfterAf = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
+
     // --- 2. walk into his room — he clocks you ---
     const dRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'detective'));
     if (!dRoom) return { stage: 'no-detective' } as const;
@@ -90,12 +113,13 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
-    return { stage: 'done' as const, clocked, rang, settlePrompt, paid,
+    return { stage: 'done' as const, clocked, rang, heldAfterAf, settlePrompt, paid,
       spent: ga.imprints < i0, warranted: det?.warranted === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.clocked, JSON.stringify(result)).toBe(true);
+  expect(result.heldAfterAf, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself enters his book
   expect(result.rang, JSON.stringify(result)).toBe(true);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
   expect(result.paid, JSON.stringify(result)).toBe(true);

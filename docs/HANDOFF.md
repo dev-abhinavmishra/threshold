@@ -2815,3 +2815,21 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - e2e 'the audit' seeds theft 3 then files a slip mid-ledger:
   3 → 2 (−2, +1) before the settle still closes the book.
 
+
+## sprint 302 — the affidavit (held ledger's relief valve)
+
+- The triad closes: 'File an affidavit — N imprints' on records/
+  maintenance/lobby/guest desks — a sworn statement the held goods
+  reached their owner. Strikes 2 off `unpaidHeld`, the filing itself
+  enters his book (+1): net −1. Blank register shrugs free. The ONLY
+  relief valve priced in imprints — the under twins run on marginalia.
+  Every ledger now has entity desk (full settle) + paper valve (−1).
+- Own 'affidavit' stream + salt; placed at generateRoute scope AFTER
+  every filing pass (streams aren't in fillSockets' scope — the
+  confiscate pass shows the pattern). Exclusion checks register too —
+  lobby rooms can hold counter + frontDesk and would otherwise take
+  two papers; 'frontDesk' isn't a template prop kind (compile error),
+  lobby/guest desks resolve as consoleTable/desk/writingDesk.
+- e2e detective leg seeds held 3 → files the affidavit → 2 (−2, +1),
+  then the clock/ring/settle arc still runs.
+

@@ -2157,6 +2157,31 @@ export class Game {
         this.cue('whisper', it.pos, '[two thefts struck from the tally — the filing itself is claimed]');
         return;
       }
+      case 'affidavit': {
+        // The affidavit — the held ledger's relief valve, priced in
+        // imprints on the main route (its under twins run on marginalia).
+        // A sworn statement that the held goods reached their owner:
+        // strikes two claims off the detective's register, then the
+        // filing itself enters his book — net −1. Only his desk settles
+        // for real. Blank register → shrug, like the under filings.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.unpaidHeld <= 0) {
+          this.cue('door-locked', it.pos, '[your name is not in the register — the clerk waves the form away]', 'warn');
+          return;
+        }
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the affidavit asks ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.unpaidHeld = Math.max(0, this.unpaidHeld - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[two claims sworn away — the filing itself enters his book]');
+        return;
+      }
       case 'watchSheet': {
         // The inspection sheet — the security wing's paper. Where the fault
         // book files what BITES, this files what WATCHES: which doors ahead
