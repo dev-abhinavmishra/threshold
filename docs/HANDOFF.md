@@ -2912,3 +2912,21 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Carried fix for sibling sprint-291's `Echoskin.onSpawn` using undeclared
   `c` (main's tsc was red; `this.ctx.player.pos` instead).
 - Gates: tsc, lint, 213 vitest, 5-seed sim, build — all green.
+
+## sprint 400 — the second count (balance re-audit)
+
+- `scripts/balance.ts` + `npm run balance`: repeatable per-entity +
+  per-decile encounter histograms + max scheduled gap across the QA
+  seeds — the tool BALANCE.md's method assumed but never committed.
+- Numbers (5 seeds): main maxGap ≤9, ~19-20 distinct ids/seed, no
+  dominant pick (worst: redactor 6, sweep 5, hollow 7); decile curve
+  holds the safe opening (0 in 0-9) with a mid-run ramp. Under stays
+  the gauntlet (62-73/121) with editor pinned at 1.
+- The new cast is alive on real seeds: commissionaire/groundswell/
+  porter/warden/bellman up top; filer+auditor 3-4, detective+inspector
+  1-3, laundress 0-2 (flooded-only) — thin but present by design.
+- No tuning: distribution is intentional; rerun the count after any
+  roster or pacing change instead of guessing.
+- HANDOFF retitle: my PR #23 entry renumbered 302 → 302b (sibling's
+  sprint 302 = the affidavit). Parent/child numbering is now disjoint:
+  child keeps 3xx, parent takes 400+.
