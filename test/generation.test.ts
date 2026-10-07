@@ -425,7 +425,7 @@ describe('sprint mechanics coverage', () => {
   });
 
   it("confiscated cases: the prize lives only under a live eye", () => {
-    const GOODS = new Set(['latchpick', 'chalkSpool', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash']);
+    const GOODS = new Set(['latchpick', 'chalkSpool', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash', 'warrant']);
     let cases = 0;
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });

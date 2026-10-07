@@ -866,7 +866,7 @@ export class HazardField {
    *  scent a posted hunter can read — quiet work is marked work. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
     kind: 'wire' | 'line' | 'water' | 'fan'; t: number; readBy: string[];
-    old?: boolean }[] = [];
+    old?: boolean; weak?: boolean }[] = [];
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles

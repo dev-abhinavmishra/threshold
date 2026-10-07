@@ -462,8 +462,9 @@ test('the confiscated case — the eyes guard a prize', async ({ page }) => {
     for (let f = 0; f < 15; f++) g.frame();
     return { stage: 'done', idx: room.index, watched: !!watcher, taken0,
       sawPry, taken: caze.meta!.taken === true,
+      contains: caze.meta!.contains as string | undefined,
       gained: (purse.imprints - imp0) + (purse.inventory.reduce((a, i) => a + i.count, 0) - items0),
-      openCaption: caps.some((c) => /case breaks open|case held a purse|case cracks/.test(c)),
+      openCaption: caps.some((c) => /case breaks open|case held a purse|case cracks|warrant lists/.test(c)),
       pryGone: !ga.interaction.interactables.some((i) => i.kind === 'pry' && i.enabled) };
   });
 
@@ -472,7 +473,12 @@ test('the confiscated case — the eyes guard a prize', async ({ page }) => {
   expect(result.watched, 'the case must sit under a live eye').toBe(true);
   expect(result.sawPry, 'the pry must out-focus its room').toBe(true);
   expect(result.taken).toBe(true);
-  expect(result.gained, 'the case pays out').toBeGreaterThan(0);
+  // 's' case@36 holds a sealed warrant — its payout is paper, not goods
+  if (result.contains === 'warrant') {
+    expect(result.gained, 'a warrant pays information, not goods').toBe(0);
+  } else {
+    expect(result.gained, 'the case pays out').toBeGreaterThan(0);
+  }
   expect(result.openCaption, 'the pry pays out + rings').toBe(true);
   expect(result.pryGone, 'the pry is one-shot').toBe(true);
   expect(errors).toEqual([]);
