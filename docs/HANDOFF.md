@@ -2833,3 +2833,21 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - e2e detective leg seeds held 3 → files the affidavit → 2 (−2, +1),
   then the clock/ring/settle arc still runs.
 
+
+## sprint 303 — the word goes upstairs (ledger coupling)
+
+- `escaped()` now files: the courier that gets past you carries the card
+  to the house register — `wordFiled` ctx callback → `unpaidHeld += 1`,
+  cue '[the card reaches the stairs — the house register gains your
+  name]'. The runner heads down-spine toward the egress, so an escape
+  was always "bound for the stairs" — now it's mechanically true.
+- Cutting buys silence below AND above (a torn card never files);
+  escape brands you in the Detective's book — the under ask-ledger
+  feeds the upstairs claim-ledger. First MUTATING ctx callback
+  (all prior hooks were `*Owed` getters) — `wordFiled?: () => void`,
+  optional like the rest for headless ctxs.
+- e2e 'the index' now runs BOTH courier endings in one leg: cut the
+  first (word dead), let the second run out after she re-files
+  (`unpaidHeld === 1`), then square. vitest asserts `wordFiled` fires
+  exactly once on escape and never on a cut.
+

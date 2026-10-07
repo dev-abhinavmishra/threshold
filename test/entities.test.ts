@@ -2295,16 +2295,18 @@ describe('the Filer’s runner (sprint 300)', () => {
   }
   async function filed() {
     const { Filer } = await import('../src/entities/setpieces');
+    const wordFiled = vi.fn();
     const ctx = makeCtx(chain, {
       currentRoomIndex: 0,
       trailOwed: () => 3,
+      wordFiled,
       addInteractable: vi.fn(), removeInteractable: vi.fn(),
     });
     ctx.player.pos.x = 0; ctx.player.pos.z = 0;
     const f = new Filer();
     f.spawn(ctx);
     for (let i = 0; i < 80 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
-    return { f, ctx };
+    return { f, ctx, wordFiled };
   }
 
   it('goes out on foot — the word travels the spine, catchable', async () => {
@@ -2319,10 +2321,11 @@ describe('the Filer’s runner (sprint 300)', () => {
   });
 
   it('cut the runner — the word dies with it, the card comes out torn', async () => {
-    const { f, ctx } = await filed();
+    const { f, ctx, wordFiled } = await filed();
     expect(f.runnerOut).toBe(true);
     f.cutRunner();
     expect(f.runnerOut).toBe(false);
+    expect(wordFiled, 'a torn card never reaches the stairs').not.toHaveBeenCalled();
     expect(f.posted, 'the word never lands').toBe(false);
     expect(f.filed, 'the card comes out torn').toBe(false);
     const removes = (ctx.removeEntityMesh as ReturnType<typeof vi.fn>).mock.calls;
@@ -2332,12 +2335,13 @@ describe('the Filer’s runner (sprint 300)', () => {
     f.dispose();
   });
 
-  it('let it run — the word is delivered, past recall', async () => {
-    const { f, ctx } = await filed();
+  it('let it run — the word is delivered, past recall, and files upstairs', async () => {
+    const { f, ctx, wordFiled } = await filed();
     expect(f.runnerOut).toBe(true);
     for (let i = 0; i < 900 && f.runnerOut; i++) { ctx.now += 0.05; f.update(0.05); }
     expect(f.runnerOut, 'the courier is gone').toBe(false);
     expect(f.posted, 'the word is out — the halls still listen').toBe(true);
+    expect(wordFiled, 'the card lands in the house register').toHaveBeenCalledTimes(1);
     f.dispose();
   });
 });

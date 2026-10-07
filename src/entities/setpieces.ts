@@ -1584,6 +1584,8 @@ export class Filer extends Entity {
     this.runnerOut = false;
     this.dropRunner();
     this.ctx.cue('chalk-mark', this.runnerPos, '[the word is out — past reach]', { severity: 'warn' });
+    this.ctx.cue('door-locked', this.runnerPos, '[the card reaches the stairs — the house register gains your name]', { severity: 'warn' });
+    this.ctx.wordFiled?.();
   }
 
   private dropRunner(): void {

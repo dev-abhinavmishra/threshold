@@ -819,6 +819,7 @@ export class Game {
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
+      wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —

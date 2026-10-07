@@ -563,7 +563,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       enterUnderscript(): void; godMode: boolean; currentRoom: number;
-      marginalia: number; keys: Set<string>; paperTrail: number;
+      marginalia: number; keys: Set<string>; paperTrail: number; unpaidHeld: number;
       interaction: { focused?: { prompt?: string; kind?: string } };
       entities: { id: string; filed?: boolean; posted?: boolean }[];
     };
@@ -676,6 +676,13 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     for (let f = 0; f < 200 && !crk.posted; f++) g.frame();
     const refiled = crk.posted === true;
 
+    // --- 3b. this time the courier gets away — the word files upstairs ---
+    // Don't chase: stay put and let it run the chain out. The card lands
+    // in the house register — a line in the Detective's book.
+    g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
+    for (let f = 0; f < 1600 && crk.runnerOut; f++) g.frame();
+    const wordUpstairs = ga.unpaidHeld;
+
     // --- 4. back to the drawer — square the index ---
     g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
     ga.currentRoom = fRoom.index;
@@ -701,7 +708,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
     return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
-      filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, squarePrompt, paid,
+      filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, wordUpstairs, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
 
@@ -717,6 +724,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
   expect(result.courierPaid, JSON.stringify(result)).toBe(true);
   expect(result.wordDead, JSON.stringify(result)).toBe(true);
   expect(result.refiled, JSON.stringify(result)).toBe(true);
+  expect(result.wordUpstairs, JSON.stringify(result)).toBe(1); // the escaped courier's card lands in the register
   expect(result.squarePrompt, JSON.stringify(result)).toMatch(/Square the index/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.trail, JSON.stringify(result)).toBe(0);
