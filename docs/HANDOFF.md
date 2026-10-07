@@ -3232,3 +3232,30 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   sim, e2e economy — the broker leg now drives the full arc: refuse →
   pay → marked rate → fix (held 5→4, call caption) → clean refusal
   uncharged, build.
+
+## sprint 318 — the night clerk (devin/1791397616-threshold-s318)
+
+- The house gains a staffed counter: any un-authored main-route room
+  with a `counter` prop can staff the night clerk — a masked, amber-
+  eyed house-staff figure (`tallFigure`, NO rig: the porcelain service
+  face is the identity, deliberately not the Broker's hooded robe)
+  behind the till + two `itemPedestal` wares on the counter's front
+  edge (local `counter.x±0.55, counter.z−0.55`, y 1.15). First counter
+  room always staffed; own 'clerk' RngStream (registered in rng.ts —
+  stream names are a union type, adding one needs BOTH the union entry
+  AND the STREAM_SALTS record).
+- 'Buy at the counter' rides the existing 'shop' InteractKind — the
+  press case branches `meta.clerk` first (imprints economy, register's
+  rate: `unpaidHeld > 0` → `price + min(3 + held*2, 10)`, caption
+  'the register's rate', refuse 'settle your claims'), then
+  `meta.broker` (marginalia, tally marked rate). Both sold-states set
+  `it.enabled = false` — the clerk branch must mirror it or the ware
+  re-offers.
+- Trap/log: DON'T template-whitelist clerk rooms — wax-bell-256 draws
+  zero reception-family templates; the `counter` prop is the correct
+  discriminator and guarantees coverage (probe confirmed 2-5 clerked
+  rooms on every QA seed).
+- Gates: tsc, lint, 232 vitest (+1 gen spec asserting ≥1 staffed
+  counter + 2 pedestals per clerked room per seed), 5-seed sim,
+  e2e economy 7/7 (new leg: figure present → short refuse → till
+  rings → register's rate +9 on the second pedestal), build.

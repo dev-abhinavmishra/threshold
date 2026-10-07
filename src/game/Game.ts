@@ -530,6 +530,8 @@ export class Game {
     this.phoneRing = null;
     for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
     this.brokerFigs.clear();
+    for (const fig of this.clerkFigs.values()) this.entityGroup.remove(fig);
+    this.clerkFigs.clear();
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
@@ -720,6 +722,7 @@ export class Game {
           this.milestones.set(r.index, new UnderscriptGate(r, events));
           break;
       }
+      if (r.sockets.some((s) => s.meta.clerk !== undefined)) this.populateClerk(r);
     }
     for (const r of this.route!.underRooms) {
       if (r.templateId === 'u-lobby') this.populateBroker(r);
@@ -747,6 +750,30 @@ export class Game {
       if (sock.meta.broker !== undefined && slot < picks.length) {
         sock.meta.brokerItem = picks[slot].id;
         sock.meta.brokerPrice = picks[slot].price;
+        slot++;
+      }
+    }
+  }
+
+  /** The night clerk sells the house's own shelf — priced in imprints,
+   *  not marginalia, the upstairs twin of the Broker's counter. */
+  private populateClerk(room: RoomInstance): void {
+    const rng = this.streams.roomStream('clerk', room.index + 733);
+    const stock: { id: ItemId; price: number }[] = [
+      { id: 'bandage', price: rng.int(8, 14) },
+      { id: 'doorChock', price: rng.int(6, 10) },
+      { id: 'latchpick', price: rng.int(16, 24) },
+      { id: 'feltWrap', price: rng.int(12, 20) },
+    ];
+    const first = rng.int(0, stock.length - 1);
+    let second = rng.int(0, stock.length - 2);
+    if (second >= first) second++;
+    const picks = [stock[first], stock[second]];
+    let slot = 0;
+    for (const sock of room.sockets) {
+      if (sock.meta.clerk !== undefined && slot < picks.length) {
+        sock.meta.clerkItem = picks[slot].id;
+        sock.meta.clerkPrice = picks[slot].price;
         slot++;
       }
     }
@@ -1622,6 +1649,28 @@ export class Game {
     switch (it.kind) {
       case 'shop': {
         const sock = it.data as Socket;
+        // The night clerk's till — imprints, and a filed face pays the
+        // register's rate: the same reading the Detective's desk makes.
+        if (sock.meta.clerk !== undefined) {
+          if (sock.meta.sold) return;
+          const cItem = sock.meta.clerkItem as ItemId | undefined;
+          const cPrice = (sock.meta.clerkPrice as number) ?? 12;
+          if (!cItem) return;
+          const filed = this.unpaidHeld > 0;
+          const cEff = filed ? cPrice + Math.min(3 + this.unpaidHeld * 2, 10) : cPrice;
+          if (this.imprints >= cEff) {
+            this.imprints -= cEff;
+            sock.meta.sold = true;
+            it.enabled = false;
+            this.giveItem(cItem, 1);
+            this.cue('purchase', it.pos,
+              filed ? `[traded at the register's rate — ${cEff} imprints]` : `[the clerk's till rings — ${cEff} imprints]`, 'info');
+          } else {
+            this.cue('door-locked', it.pos,
+              filed ? `[the register's rate is ${cEff} imprints — settle your claims]` : `[${cEff} imprints required]`, 'warn');
+          }
+          return;
+        }
         if (sock.meta.broker === undefined) return;
         if (sock.meta.sold) return;
         // the floor shutters while the count walks — the Broker will not
@@ -3987,6 +4036,7 @@ export class Game {
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
+      this.ensureClerk(i);
       this.tickDoorListening(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
@@ -5021,6 +5071,36 @@ export class Game {
     const greet = this.streams.roomStream('scare', roomIndex + 881);
     if (greet.bool(0.75)) {
       this.cue('custodian-bell', fig.position as unknown as Vec3, '[something stands behind the counter]', 'info');
+    }
+  }
+
+  /** The night clerk — a masked house-staff figure behind reception
+   *  counters, the Broker's upstairs twin: porcelain service-face,
+   *  amber eyes, no hood. Spawned lazily when a clerked room builds. */
+  private readonly clerkFigs = new Map<number, THREE.Object3D>();
+
+  private ensureClerk(roomIndex: number): void {
+    if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room || !room.sockets.some((s) => s.meta.clerk !== undefined)) return;
+    const counter = room.spec?.props.find((p) => p.kind === 'counter');
+    if (!counter) return;
+    const fig = tallFigure({ height: 1.85, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber' });
+    const yaw = room.yaw;
+    const cos = Math.cos(yaw), sin = Math.sin(yaw);
+    const lx = counter.x, lz = counter.z + 1.15;
+    const wx = room.origin.x + lx * cos + lz * sin;
+    const wz = room.origin.z - lx * sin + lz * cos;
+    fig.position.set(wx, room.origin.y, wz);
+    fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
+    fig.userData.clerk = true;
+    this.entityGroup.add(fig);
+    this.clerkFigs.set(roomIndex, fig);
+    // first sighting — the house has staff too, and they wear the same face
+    const greet = this.streams.roomStream('scare', roomIndex + 883);
+    if (greet.bool(0.5)) {
+      this.cue('custodian-bell', fig.position as unknown as Vec3,
+        '[a clerk stands behind the counter — it was not there a moment ago]', 'info');
     }
   }
 

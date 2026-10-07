@@ -108,6 +108,7 @@ export class InteractionSystem {
         else if (contains) prompt = `Take ${contains.replace(/([A-Z])/g, ' $1').trim()}`;
         if (sock.meta.shop !== undefined) { kind = 'shop'; prompt = 'Inspect wares'; }
         if (sock.meta.broker !== undefined) { kind = 'shop'; prompt = 'Trade wares'; }
+        if (sock.meta.clerk !== undefined) { kind = 'shop'; prompt = 'Buy at the counter'; }
         if (sock.meta.puzzle) { kind = 'puzzle'; prompt = 'Examine mechanism'; }
         if (sock.meta.relay) { kind = 'relay'; prompt = 'Take Resonance Relay'; }
         if (sock.meta.board) { kind = 'board'; prompt = 'Use routing board'; }
