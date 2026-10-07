@@ -2736,6 +2736,7 @@ opening tell only, fights stay authored); double-verb → yaw-window on
 wanted poster → poster-as-evidence on downstream boards, suspicion
 tier only, or skip to keep the under's threat texture physical.
 
+
 ## sprint 299 — lockers at the end of the corridor (under cover + hider truth)
 
 **What**:
@@ -2776,3 +2777,41 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   measuring; don't trust a crashed 3-seed run's retry.
 - `enterHiding` returns false inside `panicLockoutUntil` — any scripted
   re-hide must survive ~1.6s of exposure, exactly like a player.
+
+## sprint 300 — the runner made flesh (cut the courier)
+
+- The Filer's post is now physical: `openIndex()` sends a courier sprinting
+  the under spine (`corridorPath` toward spawnRoom±8, the route-flow
+  direction). ~3.4 m/s far, **1.2 m/s while the player is within 4m** —
+  a courier isn't a fighter; closing on it is the only window 'Cut the
+  runner' (1.0s hold, prox-gated like pick/strip, per-frame at runnerPos)
+  gets. At 3.4 it outruns a hold mid-press.
+- `cutRunner()` = the word dies mid-delivery (posted/filed off, index
+  closes torn, no fee) BUT `paperTrail` stays — the ledger is still
+  yours; she re-files a heavy asker on the next slow look. Cutting buys
+  hall-silence, not absolution. Escape ⇒ the word is out, unrecallable.
+- Runner is Filer-internal (not a scheduled entity): no ENTITY_TUNING /
+  TELLS / DEATH_NAMES / scheduler entries needed.
+- Traps: the interactable id must NOT embed `currentRoom` — the chase
+  crosses rooms and a churning id resets the hold (`cutWord-<space>:filer`
+  is stable). Runner's note mesh uses MAT.paper().
+- e2e 'the index' now drives the full arc: counter-claim → docket rifle →
+  file → wordOut → chase → cut → word dead → re-file → square → 0.
+
+## sprint 301 — the return slip (theft ledger's relief valve)
+
+- The Auditor's book gets the counter-claim's twin: 'File a return slip
+  — N marginalia' (3–7, priced a notch cheaper than counter-claims) on
+  the LOST_PROP_HOSTS family — you file the return where the thefts are
+  taken. Strikes 2 off `unpaidTheft`, the filing itself is claimed (+1):
+  net −1. Never cleans the book — only his desk settles. Blank ledger
+  shrugs free. Same economics as sprint 299's counter-claim, aimed at
+  the OTHER ledger — the two papers complete the relief-valve pair:
+  questions answered at desks, thefts answered at cages.
+- Own 'returnslip' stream + salt — the isolated-roll rule again; the
+  counter-claim spec now lists it in the cache-fill contract's exempt
+  metas (`!x.meta.returnSlip` — new consult-socket metas belong there
+  or generation.test.ts:474 goes red while a -t filter hides it).
+- e2e 'the audit' seeds theft 3 then files a slip mid-ledger:
+  3 → 2 (−2, +1) before the settle still closes the book.
+

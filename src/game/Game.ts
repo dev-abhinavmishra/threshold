@@ -1299,6 +1299,22 @@ export class Game {
         }
       }
     }
+    // Beside the filer's courier: 'Cut the runner' — tear the message
+    // mid-delivery and the word dies with it.
+    for (const ent of this.entities) {
+      if (ent.id !== 'filer' || ent.state === 'done') continue;
+      const f = ent as unknown as { runnerOut: boolean; runnerPos: Vec3 };
+      if (!f.runnerOut) continue;
+      const dx = f.runnerPos.x - this.player.pos.x, dz = f.runnerPos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'cutWord', id: `cutWord-${this.space}:filer`,
+        pos: { x: f.runnerPos.x, y: 0.9, z: f.runnerPos.z },
+        prompt: 'Cut the runner',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
       if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
@@ -2117,6 +2133,30 @@ export class Game {
         this.cue('whisper', it.pos, '[the clerk strikes two lines from your file — and logs the asking]');
         return;
       }
+      case 'returnSlip': {
+        // The return slip — the theft ledger's relief valve. You can't
+        // bring the goods back, so you return them in writing: strikes
+        // two thefts off the Auditor's tally, then the filing is itself
+        // a petty claim — net −1. Never cleans the book; only his desk
+        // settles it. Blank ledgers shrug, like the counter-claim.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.unpaidTheft <= 0) {
+          this.cue('door-locked', it.pos, '[nothing owed — the cage clerk waves the slip away]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the return slip wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.unpaidTheft = Math.max(0, this.unpaidTheft - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[two thefts struck from the tally — the filing itself is claimed]');
+        return;
+      }
       case 'watchSheet': {
         // The inspection sheet — the security wing's paper. Where the fault
         // book files what BITES, this files what WATCHES: which doors ahead
@@ -2460,6 +2500,20 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
+        return;
+      }
+      case 'cutWord': {
+        // Tearing the courier's message — the word dies mid-delivery.
+        // Not theft: the card is yours, and the Filer closes it torn.
+        // The runner's satchel still carries the crew's coin, though.
+        const f = it.data as unknown as { runnerOut: boolean; cutRunner(): void };
+        if (!f.runnerOut) { it.enabled = false; return; }
+        f.cutRunner();
+        it.enabled = false;
+        const amt = this.streams.stream('loot').int(3, 6);
+        this.marginalia += amt;
+        this.stats.marginaliaEarned += amt;
+        this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
         return;
       }
       case 'strip': {

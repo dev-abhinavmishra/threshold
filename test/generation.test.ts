@@ -483,7 +483,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && !x.meta.returnSlip && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -1222,6 +1222,31 @@ describe('the counter-claim (sprint 299)', () => {
         }
       }
       expect(count, `no counter-claims on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('the return slip (sprint 301)', () => {
+  it('return forms sit on under cage furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.returnSlip),
+          `return slip on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.returnSlip) continue;
+          count++;
+          expect(r.index % 20, `return slip on a safe landing ${seed}`).not.toBe(0);
+          expect(typeof s.meta.price, `return slip unpriced ${seed}`).toBe('number');
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `return slip on a cage-less room ${seed} u-${r.index}`).toBe(true);
+        }
+      }
+      expect(count, `no return slips on ${seed}`).toBeGreaterThanOrEqual(1);
     }
   });
 });
