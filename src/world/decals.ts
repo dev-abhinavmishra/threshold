@@ -135,6 +135,35 @@ export function poster(rng: Rng): THREE.Texture | null {
   });
 }
 
+/* ---------- wanted notice ---------- */
+
+/** A crew-board wanted sheet — heavy masthead band, one dark portrait
+ *  block for the face they are looking for, and tally lines a clerk
+ *  would write. Reads "you are named" at a glance. */
+export function wantedNotice(rng: Rng): THREE.Texture | null {
+  const pal = POSTER_PALS[0];
+  return canvasTex(128, 176, (ctx) => {
+    ctx.fillStyle = pal.bg;
+    ctx.fillRect(0, 0, 128, 176);
+    ctx.strokeStyle = 'rgba(20,18,14,0.6)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(3, 3, 122, 170);
+    ctx.fillStyle = pal.band;
+    ctx.fillRect(8, 8, 112, 30);
+    // portrait plate — the face they are looking for
+    ctx.strokeStyle = pal.ink;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(34, 48, 60, 52);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(36, 50, 56, 48);
+    // tally lines — the debt written out
+    ctx.fillStyle = pal.ink;
+    for (let i = 0; i < 4; i++) ctx.fillRect(20, 112 + i * 12, 46 + rng.float() * 44, 4);
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18, 0); ctx.lineTo(0, 22); ctx.fill();
+  });
+}
+
 /* ---------- cobweb (wall/ceiling corner) ---------- */
 
 export function cobweb(rng: Rng): THREE.Texture | null {

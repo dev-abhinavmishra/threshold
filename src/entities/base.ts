@@ -59,6 +59,10 @@ export interface EntityCtx {
   claimsOwed?: () => number;
   /** Held-property tally in imprints — the Detective's book. */
   heldOwed?: () => number;
+  /** True while a wanted notice is posted on the crew boards — the
+   *  under-crew saw your hands in the book: their notice reach widens
+   *  a tier until the tally is settled. */
+  wanted?: () => boolean;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */

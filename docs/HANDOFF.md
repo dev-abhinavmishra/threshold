@@ -2854,3 +2854,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - HANDOFF retitle: my PR #23 entry renumbered 302 → 302b (sibling's
   sprint 302 = the affidavit). Parent/child numbering is now disjoint:
   child keeps 3xx, parent takes 400+.
+
+## sprint 401 — the calls come in (primed milestones, sledge yaw, wanted sheets)
+
+- DESIGN_CALLS all answered (B, B, A):
+- **Milestone hearing (B)**: `Milestone.primed` + `prime()`. Loud work in
+  the three doors before a set piece primes it — onRouseNoise primes
+  milestones at currentRoom+1..+3. Same mechanics, hotter opening tell:
+  Index/Engine curators start already moving toward the entry door,
+  the Custodian greets you watching the door, Lens Hall beams open
+  mid-sweep — each with a "[it heard you three doors back]" caption.
+- **Sledge strip yaw window (B)**: 'Strip the lamp' needs you facing the
+  lamp (dot >= 0.6, always inside 0.5m) — grazing the pile while looking
+  away no longer strips it.
+- **Wanted posters (A-lite)**: `ctx.wanted` flag. Once an Auditor's ledger
+  names you (demanded) with unpaid tally, `wantedNotice` sheets pin to
+  the faces of crew-board furniture in the next 5 host rooms downstream
+  and under-crew notice reach widens 1.5x (Grafter sight, Hauler +
+  Laundress hearing). Settling the tally pulls the sheets down.
+- Test: test/priming.test.ts covers primed/unprimed Index, Lens Hall
+  primed caption, prime idempotency.
+- Gates: tsc, lint, 217 vitest — green.

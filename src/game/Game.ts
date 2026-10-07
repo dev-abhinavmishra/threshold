@@ -21,6 +21,7 @@ import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
+import { wantedNotice } from '../world/decals';
 import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
@@ -819,6 +820,7 @@ export class Game {
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
+      wanted: () => this.wantedActive,
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -857,6 +859,10 @@ export class Game {
    *  route is a debt the house keeps. Settled at his desk; walking out
    *  owed puts your face on the wire. */
   private unpaidHeld = 0;
+  /** The Auditor's wanted sheet — true while the crew boards ahead carry
+   *  your face. The under-crew notices a tier harder until you settle. */
+  private wantedActive = false;
+  private wantedRooms = new Map<number, { x: number; z: number }>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -1002,6 +1008,11 @@ export class Game {
         // Other listeners (the Curator) hear it stir too.
         this.sound.emit({ ...pos, intensity: 0.3, category: 'entity-cue', caption: '', source: ent });
       }
+    }
+    // ...and the set pieces hear it too: loud work within three doors
+    // of a milestone means it opens already primed, not cold.
+    for (let i = cur.index + 1; i <= cur.index + 3; i++) {
+      this.milestones.get(i)?.prime();
     }
   }
 
@@ -1288,7 +1299,11 @@ export class Game {
       // its work-lamp is a separate lift — the drag goes dark for it
       if (h.lampLit) {
         const lx = h.lampPos.x - this.player.pos.x, lz = h.lampPos.z - this.player.pos.z;
-        if (lx * lx + lz * lz <= 1.9 * 1.9) {
+        const ld = Math.hypot(lx, lz);
+        // a small yaw window — grazing the pile while looking away
+        // doesn't strip it; you have to mean the lamp
+        const fx = Math.sin(this.player.yaw), fz = Math.cos(this.player.yaw);
+        if (ld <= 1.9 && (ld < 0.5 || (fx * lx + fz * lz) / ld >= 0.6)) {
           this.interaction.add({
             kind: 'strip', id: `strip-${this.space}:${h.roomIdx}`,
             pos: { x: h.lampPos.x, y: 0.75, z: h.lampPos.z },
@@ -3111,6 +3126,70 @@ export class Game {
     });
   }
 
+  /** The clerk's ledger named you — wanted sheets go up on the crew
+   *  boards downstream, and the under-crew listens a tier harder until
+   *  the tally is settled (ctx.wanted widens their notice reach). */
+  private raiseWanted(): void {
+    this.wantedActive = true;
+    const HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
+    const rooms = this.activeRooms();
+    let marked = 0;
+    for (let i = this.currentRoom + 1; i < rooms.length && marked < 5; i++) {
+      const r = rooms[i];
+      const host = r.spec?.props.find((pp) => HOSTS.has(pp.kind));
+      if (!host) continue;
+      const cyr = Math.cos(r.yaw), syr = Math.sin(r.yaw);
+      this.wantedRooms.set(i, {
+        x: r.origin.x + host.x * cyr + host.z * syr,
+        z: r.origin.z - host.x * syr + host.z * cyr,
+      });
+      marked++;
+    }
+    this.cue('chalk-mark', null, '[sheets go up on the boards ahead — your hands are named]', 'warn');
+  }
+
+  private lowerWanted(): void {
+    this.wantedActive = false;
+    this.wantedRooms.clear();
+    for (const i of this.streamer.builtIndices) {
+      const built = this.streamer.get(i);
+      const m = built?.group.getObjectByName('wanted-notice');
+      if (built && m) built.group.remove(m);
+    }
+  }
+
+  private static wantedMat: THREE.MeshBasicMaterial | null | undefined;
+  private static wantedMaterial(): THREE.MeshBasicMaterial | null {
+    if (typeof document === 'undefined') return null;
+    if (Game.wantedMat === undefined) {
+      const tex = wantedNotice(new Rng(0x5eed));
+      Game.wantedMat = tex
+        ? new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide })
+        : null;
+    }
+    return Game.wantedMat;
+  }
+
+  /** A wanted sheet pinned to the face of a crew-board prop, turned to
+   *  the room's middle so it reads on approach. */
+  private ensureWanted(roomIndex: number, built: { group: THREE.Group }): void {
+    const host = this.wantedRooms.get(roomIndex);
+    if (!this.wantedActive || !host) return;
+    if (built.group.getObjectByName('wanted-notice')) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    const mat = Game.wantedMaterial();
+    if (!mat) return;
+    const ox = room.origin.x - host.x, oz = room.origin.z - host.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), mat);
+    m.name = 'wanted-notice';
+    m.position.set(host.x + (ox / ol) * 0.14, 1.35, host.z + (oz / ol) * 0.14);
+    m.rotation.y = Math.atan2(ox, oz);
+    m.renderOrder = 2;
+    built.group.add(m);
+  }
+
   private ensureGateMark(roomIndex: number, built: { group: THREE.Group }): void {
     const room = this.activeRooms()[roomIndex];
     if (!room) return;
@@ -3713,9 +3792,19 @@ export class Game {
       }
     }
 
+    // the wanted sheets: once a clerk's ledger names you the boards
+    // downstream take your face; settling pulls them back down
+    if (this.wantedActive && this.unpaidTheft <= 0) this.lowerWanted();
+    else if (!this.wantedActive && this.unpaidTheft > 0 && this.space === 'under') {
+      for (const e of this.entities) {
+        if (e instanceof Auditor && e.demanded) { this.raiseWanted(); break; }
+      }
+    }
+
     for (const i of this.streamer.builtIndices) {
       const built = this.streamer.get(i);
       if (!built) continue;
+      this.ensureWanted(i, built);
       this.ensureChalkMarks(i, built);
       this.ensureGateMark(i, built);
       this.ensureDeepVoid(i, built);

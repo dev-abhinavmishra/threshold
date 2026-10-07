@@ -40,6 +40,12 @@ export class Curator extends Entity {
 
   constructor() { super('curator', ENTITY_TUNING.curator); }
 
+  /** A milestone heard the approach: the Curator starts already moving
+   *  toward the door the player came through. */
+  prime(at: Vec3): void {
+    v3copy(this.target, { x: at.x, y: 0, z: at.z });
+  }
+
   setLevel(l: 1 | 2): void {
     this.level = l;
   }
