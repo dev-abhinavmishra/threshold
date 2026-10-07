@@ -44,7 +44,7 @@ import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
 import { Bellman } from '../entities/bellman';
-import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES } from '../game/config';
+import { PANIC, DIFFICULTY, ITEM_DEFS, QUALITY, PLAYER, SAFE_ROOM_TEMPLATES, DEATH_HINTS } from '../game/config';
 import type {
   Difficulty, Door, EntityId, ItemId, RoomInstance, SettingsData, RunStats, Document, Socket,
 } from '../game/types';
@@ -2116,21 +2116,23 @@ export class Game {
           this.stats.imprintsEarned += amt;
           this.cue('pickup', it.pos, `[the case held a purse — +${amt} imprints]`);
         } else if (contains === 'warrant') {
-          // The sealed warrant — the court's own filing on which held
-          // effects are still held and which were already drawn. Reads
-          // the next 12 rooms' porter's-cage tags live.
+          // The sealed warrant — the seizure ledger itself. It lists which
+          // confiscated cases in the rooms ahead are still held and which
+          // the house already drew: paper for goods, the house's own trade.
           const entries: string[] = [];
           for (const r of this.route?.rooms ?? []) {
-            if (r.index <= this.currentRoom || r.index > this.currentRoom + 12) continue;
-            for (const s of r.sockets) {
-              if (!s.meta.claim) continue;
-              const tag = s.meta.claimTag as string | undefined;
-              entries.push(`Door ${String(r.index).padStart(3, '0')} — '${tag ?? '?'}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+            // Cases are too sparse for a stretch window — the ledger runs
+            // the rest of the route.
+            if (r.index <= this.currentRoom || entries.length >= 6) continue;
+            for (const s of r.sockets ?? []) {
+              if (entries.length >= 6) break;
+              if (!s.meta.confiscated) continue;
+              entries.push(`Door ${String(r.index).padStart(3, '0')} — case ${s.meta.taken ? 'drawn' : 'still held'}`);
             }
           }
           const text = entries.length
-            ? `[the warrant files: ${entries.join(' · ')}]`
-            : '[the warrant files no claims ahead]';
+            ? `[the warrant lists: ${entries.join(' · ')}]`
+            : "[the warrant's seizure column runs blank ahead]";
           this.cue('whisper', it.pos, text);
         } else if (contains) {
           this.giveItem(contains as ItemId, amt);
@@ -3165,28 +3167,6 @@ export class Game {
     this.audio.play('death', null, '', 'danger');
     this.audio.setMood('off');
     this.audio.setRoomTone('off');
-    const hints: Record<string, string> = {
-      sweep: 'Its cue is the pressure wave and the flicker. Conceal or break line of sight.',
-      reprise: 'It returns — stay put through every pass.',
-      witness: 'Look away. The pull is resistible; the regard is not.',
-      whisper: 'In darkness, turn toward the voice until you see it.',
-      inkling: 'It hates sustained light. Angle the beam away.',
-      echoskin: 'It borrows your steps. Face it to fold it.',
-      maelstrom: 'It remembers where you hide. Reach a physical safe spot.',
-      redline: 'Printer cascade and red lamps — conceal before the pass.',
-      stillframe: 'Release all input when the shutter sounds.',
-      margin: 'Glance to freeze it; never hold it in view.',
-      returner: 'It comes from ahead. Retreat to known cover.',
-      redactor: 'Check the number, the seam, the hum. Real exits are even-tempered.',
-      hollow: 'Warm cabinets lie. Check for the residue and the off-hum.',
-      husk: 'It sleeps. Keep the beam off it, keep your distance, go quiet.',
-      curator: 'It hunts sound. Crouch, go slow, and distract it.',
-      pursuer: 'Sprint the sequence. Vaults and gates are the route.',
-      orrery: 'Beams read the low floor. Crouch and time the gaps.',
-      editor: 'Red-lined floor is already gone. Keep moving.',
-      grafter: 'It is only rubble until it stands. Give it the berth it cannot give you.',
-      hazard: 'Watch the floor — the building sets snares.',
-    };
     const doc = DOCUMENTS.find((d) => d.id === `doc-${source}`);
     if (doc && !this.documents.some((d) => d.id === doc.id)) {
       this.documents.push({ ...doc, unlockedAt: Date.now() });
@@ -3196,7 +3176,7 @@ export class Game {
     setTimeout(() => {
       useGameStore.setState({
         phase: 'DEAD', paused: true,
-        deathInfo: { cause: source, hint: hints[source] ?? hint, entity: source },
+        deathInfo: { cause: source, hint: DEATH_HINTS[source] ?? hint, entity: source },
       });
       document.exitPointerLock?.();
       this.audio.setMood('menu');

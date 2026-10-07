@@ -2347,35 +2347,71 @@ Traps:
   rolls, not foreshadow. Verify economy deltas against sim, not
   assumptions.
 
-## Sprint 288b — the sealed warrant (e2e/books leg 9, generation spec)
+## sprint 289 — the cause reads (death screen uniform)
 
-What:
-- ~35% of confiscated cases carry 'warrant' instead of goods — a court
-  filing on the held effects. Every route with cases files at least one
-  (the earliest case flips when the roll misses — the paper is seized
-  first). 's' fixture: warrant@36.
-- Pry a warrant → reads the next 12 rooms' porter's-cage tags LIVE:
-  `Door NNN — 'Tag' still held` / `drawn` (meta.taken at read time).
-  The claim register's upstairs twin: the under's register files under
-  claims, the warrant files main-route claims, and its cost is the
-  cone, not the purse.
-- e2e leg pays a tag first so the filing exercises both lines.
-Traps: none new — the 287 ordering lesson held (confiscate stream
-  stayed isolated; the warrant draws never touched 'loot').
+**What**: the death screen printed the raw kill-source id ('groundswell',
+'commissionaire') while the curated hint map only covered the original 20
+entities — newer killers got good caller hints but an unreadable cause
+label. Now every lethal source reads the same way.
 
-NEXT SPRINT IDEAS (pick the biggest first)
-  - Milestone-set hearing remains a design call (needs Abhinav).
-  - The shared-anchor double-verb flag is open with Abhinav.
-  - The Auditor wanted-poster stays a design call.
-  - Counter-scent asymmetry: forged sign leaves weak 'water' sign only
-    grafters read — your lies leave residue.
-  - 'Seen'-record echo (hunters that already read your sign act like
-    they know you) — half-baked, logged skip.
+**Files**:
+- `src/game/config.ts` — new `DEATH_NAMES` (fiction name per source, e.g.
+  'the Groundswell', 'the House' for hazard) and `DEATH_HINTS` (the
+  curated advice map moved out of killPlayer and extended to all 36
+  sources). `killPlayer` prefers `DEATH_HINTS[source]` over the
+  caller-passed hint — the map is the single source of truth for death
+  lines now.
+- `src/ui/App.tsx` — `.death-cause` renders `DEATH_NAMES[cause] ?? cause`.
+- `test/generation.test.ts` — 'the cause reads' coverage: names+hints for
+  every `ENTITY_TUNING` key + 'hazard' (fails when a new entity is added
+  without read lines).
+- `e2e/runflow.spec.ts` — death test asserts cause shows 'the Sweep' and
+  hint shows the curated line.
 
-## Sprint 289 — counter-scent (the ash keeps)
+**Traps**:
+- `death.cause` / `lastDeathCause` stay the raw entity id — playtest.json
+  and encounter stats depend on it; only the display layer gets the name.
+- Callers still pass hints (deathHint() per entity) — those are the
+  FALLBACK for sources not in DEATH_HINTS; keep writing them.
+- Two callers can kill under one id with different caller hints (inspector
+  has two sites) — the map collapses them to one line on purpose.
 
-(Parallel numbering: the marked-approach entry above was also sprint 288
-on its branch — merged first, so it keeps the number.)
+## sprint 290 — the sealed warrant (paper for goods)
+
+**What**: the confiscated case had exactly two contents (goods / imprint
+purse). Now some cases hold the seizure ledger itself — a warrant that
+reads which cases ahead are still held vs already drawn.
+
+**Files**:
+- `generator.ts` — the case pass collects `caseSocks`; a post-pass on the
+  same 'confiscate' stream converts ~35% of non-final cases to
+  `meta.contains='warrant'` (drops `amount`). Final case is exempt — a
+  warrant that reports on nothing is a blank.
+- `Game.ts` 'pry' — `contains === 'warrant'` scans ALL later main rooms
+  (not a stretch window — cases are 20-40 doors apart) for `meta.confiscated`
+  sockets, prints `Door NNN — case still held|drawn`, capped at 6.
+- `test/generation.test.ts` — 'sealed warrant' invariant (every warrant
+  has a later case; carries no amount) + the confiscated-cases test now
+  accepts 'warrant' as contents.
+- `e2e/books.spec.ts` — drives gilt-spine-777 to warrant@22, pries, and
+  asserts the read lists `Door 055 — case still held`.
+
+**Traps**:
+- Warrants are sparse by nature: ~1 in 3 non-final cases, and most seeds
+  only carry 1-3 cases. A seed can legitimately ship zero warrants.
+- The read window is the whole remaining route, NOT +10 — every other
+  paper reads a stretch, this one is a full ledger (verified: +10 would
+  have printed blank on both live seeds).
+- **Stale preview server trap**: playwright.config `reuseExistingServer`
+  keeps an old `vite preview` on :4173 — e2e ran the pre-warrant dist and
+  reported 'no-warrant' on a seed that provably places one. When a new
+  generation feature 'isn't there' in e2e, `fuser -k 4173/tcp` first.
+
+## sprint 289b — counter-scent (the ash keeps)
+
+(Parallel sprint numbering across concurrent branches — the warrant
+implementation on main (sprint 290) superseded this branch's own warrant
+draft; kept their seizure ledger, dropped the claim-read variant.)
 
 What:
 - Forging a sign now leaves a SECOND evidence record beside the lie:
@@ -2383,7 +2419,7 @@ What:
   where the wire mark is fake. Caption: `a lie in wire; the ash keeps`.
 - `hazardEvidence` reads three tiers now: fresh sign (both hunters),
   forged sign (both hunters), old sign (grafter only, sprint 270), and
-  weak sign (grafter only, sprint 289). The warden's sharper nose skips
+  weak sign (grafter only, sprint 289b). The warden's sharper nose skips
   `weak` — `staleOk` (grafter keys) gates both `old` and `weak`.
 - Grafter caption forks a third way: `[stone snuffles the ash — it
   smells hands]`. The lie still works; it just costs a residue that
@@ -2411,4 +2447,3 @@ NEXT SPRINT IDEAS (pick the biggest first)
     they know you) — half-baked, logged skip.
   - A scrub that removes the lie leaves the ash? (Scrub radius 2.6m
     already takes both — no work needed; verify in play.)
-

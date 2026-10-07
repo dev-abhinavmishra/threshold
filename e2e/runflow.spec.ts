@@ -24,6 +24,9 @@ test('death shows the death screen and retry restarts the run', async ({ page })
 
   await expect(page.locator('.overlay.death')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.death-title')).toHaveText('The threshold keeps you');
+  // sprint 289: the cause reads as a fiction name, not the raw entity id.
+  await expect(page.locator('.death-cause')).toHaveText('the Sweep');
+  await expect(page.locator('.death-hint')).toContainText('pressure wave');
 
   // force: the death overlay fades in, so the button never reports 'stable'
   await page.getByRole('button', { name: 'Retry from checkpoint' }).click({ force: true });

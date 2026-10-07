@@ -305,6 +305,63 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   doorChock: { name: 'Door Chock', desc: 'A rubber wedge. Set it under a shut door — it holds until you take it back, or something worries it loose.', maxCharges: 2, slotItem: true },
 };
 
+// Fiction name shown on the death screen for each kill source.
+// Cover every schedulable entity plus environmental sources.
+export const DEATH_NAMES: Record<string, string> = {
+  sweep: 'the Sweep', reprise: 'the Reprise', warden: 'the Warden',
+  groundswell: 'the Groundswell', witness: 'the Witness', whisper: 'the Whisper',
+  inkling: 'the Inkling', lurker: 'the Lurker', inspector: 'the Inspector',
+  commissionaire: 'the Commissionaire', behemoth: 'the Behemoth',
+  redactor: 'the Redactor', echoskin: 'the EchoSkin', maelstrom: 'the Maelstrom',
+  pursuer: 'the Pursuer', curator: 'the Curator', hollow: 'the Hollow',
+  redline: 'the Redline', stillframe: 'the Stillframe', returner: 'the Returner',
+  margin: 'the Margin', editor: 'the Editor', grafter: 'the Grafter',
+  swamper: 'the Swamper', hauler: 'the Hauler', laundress: 'the Laundress',
+  auditor: 'the Auditor', detective: 'the Detective', husk: 'the Husk',
+  bellman: 'the Bellman', porter: 'the Porter', hazard: 'the house',
+  orrery: 'the Orrery', collector: 'the Collector', singer: 'the Singer',
+};
+
+// Curated advice line per kill source; the death screen prefers this over the
+// caller-passed hint so the read is uniform no matter where the kill lands.
+export const DEATH_HINTS: Record<string, string> = {
+  sweep: 'Its cue is the pressure wave and the flicker. Conceal or break line of sight.',
+  reprise: 'It returns — stay put through every pass.',
+  warden: 'Its whistle calls the floor — break its line of sight and it loses the scent.',
+  groundswell: 'The floor lifts in waves — read the dust and sidestep the hump.',
+  witness: 'Look away. The pull is resistible; the regard is not.',
+  whisper: 'In darkness, turn toward the voice until you see it.',
+  inkling: 'It hates sustained light. Angle the beam away.',
+  lurker: 'It stalks in the dark — hold your light on it to drive it off.',
+  inspector: 'It tests every lid — bail out before it reaches your spot, or hold it shut through the rattle.',
+  commissionaire: 'It holds the doors — cross on the blind arc, or bait it off its post and run.',
+  behemoth: 'It is the house rolling — never meet it in the corridor.',
+  redactor: 'Check the number, the seam, the hum. Real exits are even-tempered.',
+  echoskin: 'It borrows your steps. Face it to fold it.',
+  maelstrom: 'It remembers where you hide. Reach a physical safe spot.',
+  pursuer: 'Sprint the sequence. Vaults and gates are the route.',
+  curator: 'It hunts sound. Crouch, go slow, and distract it.',
+  hollow: 'Warm cabinets lie. Check for the residue and the off-hum.',
+  redline: 'Printer cascade and red lamps — conceal before the pass.',
+  stillframe: 'Release all input when the shutter sounds.',
+  returner: 'It comes from ahead. Retreat to known cover.',
+  margin: 'Glance to freeze it; never hold it in view.',
+  editor: 'Red-lined floor is already gone. Keep moving.',
+  grafter: 'It is only rubble until it stands. Give it the berth it cannot give you.',
+  swamper: 'It finds you by the water you move — crouch-wade, or open the drain first.',
+  hauler: 'Crash noise by the haul line is the mistake — pick it quiet, or stay loud and gone.',
+  laundress: 'She keeps her basin — pull her off the drain with a thrown sound before the crank.',
+  auditor: 'It collects in kind — settle the ledger at the desk, or carry clean hands.',
+  detective: 'He settles the book — pay the claim, or keep your hands off the shelves.',
+  husk: 'It sleeps. Keep the beam off it, keep your distance, go quiet.',
+  bellman: 'It walks your steps — break your own trail and it has nothing to follow.',
+  porter: 'It waits above the lintel — look up before crossing.',
+  orrery: 'Beams read the low floor. Crouch and time the gaps.',
+  collector: 'Its toll is negotiable — pay, or walk the long way.',
+  singer: 'Its song is a leash — keep moving while it holds a note.',
+  hazard: 'Watch the floor — the building sets snares.',
+};
+
 export const SHOP_PRICES: Record<string, number> = {
   handLamp: 45, sparkFlash: 60, tonic: 30, bandage: 25,
   latchpick: 50, feltWrap: 40, chalkSpool: 20, wardSeal: 90, windAlarm: 55,
