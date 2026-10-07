@@ -692,15 +692,46 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
       drive({ x: fix.pos.x, y: fix.pos.y, z: fix.pos.z }, /fix/i,
         () => caps.some((t) => /slate is clean/.test(t)), 40);
       const cleanCap = caps.find((t) => /slate is clean/.test(t)) ?? '';
+      const cleanUncharged = g.marginalia === 30; // read before the purse phase
+      // The purse — the Broker changes coin: clean books get 6→8,
+      // a dirty ledger sours the rate to 6→6, short refuses.
+      const purse = (g.interaction as { interactables?: { kind: string;
+        pos: { x: number; y: number; z: number } }[] }).interactables
+        ?.find((i) => i.kind === 'purse');
+      let pursePaid = false, purseSour = false, purseShortCap = '',
+        purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '';
+      if (purse) {
+        g.imprints = 20; // marginalia still 30 — the clean fix never charged
+        standAt(lobby, { x: purse.pos.x, z: purse.pos.z }, 0.7);
+        purseSeen = drive(purse.pos, /purse|change/i, () => g.marginalia === 38, 50);
+        pursePaid = g.marginalia === 38 && g.imprints === 14;
+        purseCleanCap = caps.find((t) => /purse changes/.test(t)) ?? '';
+        (g as unknown as { unpaidTheft: number }).unpaidTheft = 2;
+        drive(purse.pos, /purse|change/i, () => g.marginalia === 44, 50);
+        purseSour = g.marginalia === 44 && g.imprints === 8;
+        purseSourCap = caps.find((t) => /rate sours/.test(t)) ?? '';
+        (g as unknown as { unpaidTheft: number }).unpaidTheft = 0;
+        g.imprints = 3;
+        drive(purse.pos, /purse|change/i,
+          () => caps.some((t) => /purse wants/.test(t)), 40);
+        purseShortCap = caps.find((t) => /purse wants/.test(t)) ?? '';
+        margAfterPurse = g.marginalia;
+      }
       return {
         stage: 'done', refused, refuseCap, price, item,
+        purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap,
+        purseShortCap, margAfterPurse,
+        purseSeen, pursePos: purse ? { x: purse.pos.x, y: purse.pos.y, z: purse.pos.z } : null,
+        bsockPos: lobby.sockets.filter((s) => s.meta?.broker !== undefined)
+          .map((s) => ({ x: Math.round(s.pos.x * 10) / 10, y: s.pos.y, z: Math.round(s.pos.z * 10) / 10 })),
+        playerAt: { x: Math.round(g.player.pos.x * 10) / 10, z: Math.round(g.player.pos.z * 10) / 10 },
         sold: sock.meta.sold === true,
         paid: markedPaid || g.marginalia === 0,
         hasItem: g.inventory.some((s) => s.id === item),
         traded: caps.some((t) => /traded/.test(t)),
         twoPedestals: !!sock2, markedPaid, markedCap, expected2,
         fixFound: true, fixPrompt, fixPaid, fixCap, heldAfterFix,
-        cleanCap, cleanUncharged: g.marginalia === 30,
+        cleanCap, cleanUncharged,
       };
     }
     return {
@@ -732,6 +763,14 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(result.fixCap).toMatch(/makes a call/);
   expect(result.cleanCap).toMatch(/slate is clean/);
   expect(result.cleanUncharged).toBe(true);
+  // sprint 323 — the purse: 6 imprints change at 8 clean / 6 sour / refuse short
+  expect(result.purseFound, JSON.stringify(result)).toBe(true);
+  expect(result.pursePaid, JSON.stringify(result)).toBe(true);
+  expect(result.purseCleanCap).toMatch(/purse changes/);
+  expect(result.purseSour, JSON.stringify(result)).toBe(true);
+  expect(result.purseSourCap).toMatch(/rate sours/);
+  expect(result.purseShortCap).toMatch(/purse wants/);
+  expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });
 
