@@ -806,10 +806,14 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       const price2 = sock2.meta.clerkPrice as number;
       ga.unpaidHeld = 3;
       expected2 = price2 + Math.min(3 + 3 * 2, 10); // +9 on the register's rate
-      g.imprints = expected2;
-      drive(sock2.pos, () => sock2.meta.sold === true, 50);
-      ratePaid = sock2.meta.sold === true && g.imprints === 0;
-      rateCap = caps.find((t) => /register's rate/.test(t)) ?? '';
+      // quote the rate via a refusal (keeps the ware unsold for the
+      // cold-counter phase below — a sold socket presses silently)
+      g.imprints = expected2 - 1;
+      drive(sock2.pos, () => caps.some((t) => /register's rate is/.test(t)), 50);
+      rateCap = caps.find((t) => /register's rate is/.test(t)) ?? '';
+      const quoted = Number(/register's rate is (\d+)/.exec(rateCap)?.[1]);
+      ratePaid = quoted === expected2 && sock2.meta.sold !== true
+        && g.imprints === expected2 - 1;
     }
     // Ask the clerk — a second anchor on the figure: one seeded page,
     // priced in imprints at the register's rate, one-shot per clerk.
@@ -842,7 +846,14 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     if (till) {
       ga.unpaidHeld = 0;
       g.imprints = 0;
-      tillSeen = drive(till.pos, () => caps.some((t) => /off the till/.test(t)), 80);
+      // stand close (0.7m): from the default 1.0m stand the unsold
+      // front-edge wares out-score the mid-counter till on proximity —
+      // inside the align band the nearer candidate wins regardless of aim
+      const tdx = clerked.origin.x - till.pos.x, tdz = clerked.origin.z - till.pos.z;
+      const tdl = Math.hypot(tdx, tdz) || 1;
+      tillSeen = drive({ x: till.pos.x - (tdx / tdl) * 0.3, y: till.pos.y,
+        z: till.pos.z - (tdz / tdl) * 0.3 },
+        () => caps.some((t) => /off the till/.test(t)), 80);
       rifleCap = caps.find((t) => /off the till/.test(t)) ?? '';
       tillPaid = rifleCap !== '' && (g.imprints > 0 || g.inventory.length > 0);
       tillHeld = ga.unpaidHeld;
@@ -874,12 +885,33 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       bellTiredCap = caps.find((t) => /tired click/.test(t)) ?? '';
       snd.emit = origEmit;
     }
+    // The counter goes cold: rifled tills close the clerk's service —
+    // wares refuse at any price, the page folds, only the bell (the
+    // house's, not the clerk's) still answers.
+    let coldWareCap = '', coldWareSold = true, coldAskCap = '', coldImprints = -1, coldBellCap = '';
+    g.imprints = 99;
+    if (sock2) {
+      drive(sock2.pos, () => caps.some((t) => /folds its hands/.test(t)), 50);
+      coldWareCap = caps.find((t) => /folds its hands/.test(t)) ?? '';
+      coldWareSold = sock2.meta.sold === true;
+      coldImprints = g.imprints;
+    }
+    if (ask) {
+      drive(ask.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 2, 60);
+      const folds = caps.filter((t) => /folds its hands/.test(t));
+      coldAskCap = folds[folds.length - 1] ?? '';
+    }
+    if (bell) {
+      drive(bell.pos, () => caps.some((t) => /tired click|note rolls/.test(t)), 60);
+      coldBellCap = caps.find((t) => /tired click|note rolls/.test(t)) ?? '';
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
+      coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap,
       clerkQ: sock.meta.clerkQ as string };
   });
 
@@ -910,6 +942,12 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.bellRang).toBe(1);
   expect(result.bellDist).toBeLessThan(0.6);
   expect(result.bellTiredCap).toMatch(/tired click/);
+  // sprint 322 — the counter goes cold: a rifled till ends the clerk's service
+  expect(result.coldWareCap).toMatch(/folds its hands/);
+  expect(result.coldWareSold).toBe(false);
+  expect(result.coldImprints).toBe(99);
+  expect(result.coldAskCap).toMatch(/folds its hands/);
+  expect(result.coldBellCap).toMatch(/tired click|note rolls/);
   expect(errors).toEqual([]);
 });
 

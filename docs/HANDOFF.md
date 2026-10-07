@@ -3346,3 +3346,26 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   extended (ring → distraction emitted AT the bell pos, verified by
   wrapping g.sound.emit → second ring inside 25s gives the tired
   click and emits nothing), build.
+
+## Sprint 322 — the counter goes cold (the rifle's real price)
+
+- A rifled till now closes that counter: `closedCounters: Set<number>`
+  (roomIndex) — 'Buy' and 'Ask' at a cold counter answer
+  '[the clerk folds its hands — the counter is closed to you]' at any
+  price. The bell still answers (the house's, not the clerk's). The
+  rummage stops being nearly free: imprints/items now vs the staffed
+  counter's wares AND its seeded page — rifle last.
+- 'shop' resolves the socket's room via
+  `activeRooms().findIndex(r => r.sockets.includes(sock))` — press-time
+  rarity so the O(rooms) scan costs nothing; 'ask'/'till' carry
+  roomIndex in `it.data` already.
+- Trap: keeping a ware unsold through the leg (register's-rate now
+  quoted via REFUSAL caption, not a sale) re-exposed the sprint-320
+  shadow — from the default 1.0m front stand an enabled 'Buy' on the
+  front edge out-scores the mid-counter till (proximity inside the
+  align band beats aim). Stand at 0.7m: wares go ~40° off-axis and the
+  till takes focus. Generalizes: verbs behind a front-edge row need
+  close-stand drives or a depth offset.
+- Gates: tsc, lint, vitest, 5-seed sim, economy leg extended (cold
+  ware refuses at any price + stays unsold · cold ask folds · bell
+  unaffected), build.
