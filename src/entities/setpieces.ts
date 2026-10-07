@@ -1423,3 +1423,194 @@ export class Detective extends Entity {
     this.rig = null;
   }
 }
+
+/** The Filer — a hooded clerk at an index cabinet in a dry under records
+ *  room, keeping the consult ledger. Every paid read of the under's own
+ *  paper — a work order, a crew board, a claim register — is a question
+ *  logged: `trailOwed` accrues. Walk into her room carrying enough
+ *  questions and over a slow look she files your name — then sends a
+ *  runner: for a stretch of rooms either way, every room you enter
+ *  listens for your step before you arrive. Square the index at her
+ *  station — pay the filing fee, she strikes your card — or outrun the
+ *  word. She never leaves her drawer; her weapon is that the halls
+ *  already know you're coming. */
+export class Filer extends Entity {
+  private mesh: THREE.Group | null = null;
+  private rig: RiggedFigure | null = null;
+  private pos = v3();
+  private spawnRoom = 0;
+  private roomO = v3();
+  private lifeT = 0;
+  private lookT = 0;
+  private lastPlayerRoom = -1;
+  private homebound = false;
+  private interactId: string | null = null;
+  /** Her station — the square point anchors here. */
+  deskPos = v3();
+  /** Your name is on a card in her drawer. */
+  filed = false;
+  /** The word is out — rooms ahead listen for your step. */
+  posted = false;
+
+  constructor() { super('filer', ENTITY_TUNING.filer); }
+
+  override threatPos(): Vec3 { return this.pos; }
+
+  protected override onSpawn(): void {
+    const c = this.ctx;
+    const room = c.rooms[c.currentRoomIndex];
+    this.spawnRoom = c.currentRoomIndex;
+    this.roomO = v3(room.origin.x, 0, room.origin.z);
+    const STATIONS = new Set(['filing', 'recordsCage', 'keyCabinet']);
+    const desk = (room.spec?.props ?? []).find((pp) => STATIONS.has(pp.kind));
+    const lx = desk ? desk.x : 0, lz = desk ? desk.z : 0;
+    const cyr = Math.cos(room.yaw), syr = Math.sin(room.yaw);
+    this.deskPos = v3(this.roomO.x + lx * cyr + lz * syr, 0, this.roomO.z - lx * syr + lz * cyr);
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    this.pos = v3(this.deskPos.x + (ox / ol) * 0.7, 0, this.deskPos.z + (oz / ol) * 0.7);
+    const g = new THREE.Group();
+    const rig = riggedFigure('hooded');
+    if (rig) { this.rig = rig; rig.play('idle', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.24, 0.95, 4, 8), MAT.ink());
+      body.position.y = 0.95;
+      g.add(body);
+    }
+    // the index tray — a flat card box wider than the ledger book
+    const tray = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.3), MAT.darkOak());
+    tray.position.set(0, 1.02, 0.32);
+    tray.rotation.x = -0.25;
+    g.add(tray);
+    g.position.copy(this.pos);
+    this.mesh = g;
+    c.addEntityMesh(g);
+    c.cue('chalk-mark', this.pos, '[an index drawer slides — somebody files what you asked]', { severity: 'warn' });
+    // the docket itself is pilferable — rifling the index is the loudest
+    // question in the under (the Game prices it against both ledgers)
+    c.addInteractable({
+      kind: 'docket', id: this.docketId(),
+      pos: v3(this.deskPos.x, 0.9, this.deskPos.z),
+      prompt: 'Rifle the docket drawer', holdTime: 0.9,
+      data: { stock: 1 },
+      enabled: true, priority: 2,
+    });
+    this.state = 'engage';
+  }
+
+  private roomOf(p: Vec3): number {
+    const rooms = this.ctx.rooms;
+    for (let i = 0; i < rooms.length; i++) {
+      const r = rooms[i];
+      if (Math.abs(p.x - r.origin.x) <= r.width / 2 && Math.abs(p.z - r.origin.z) <= r.depth / 2) return i;
+    }
+    return -1;
+  }
+
+  private squareId(): string { return `square-${this.spawnRoom}`; }
+  private docketId(): string { return `docket-${this.spawnRoom}`; }
+
+  private openIndex(): void {
+    const c = this.ctx;
+    this.filed = true;
+    this.posted = true;
+    this.interactId = this.squareId();
+    const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
+    const ol = Math.hypot(ox, oz) || 1;
+    c.addInteractable({
+      kind: 'square', id: this.interactId,
+      pos: v3(this.deskPos.x + (ox / ol) * 1.15, 0.9, this.deskPos.z + (oz / ol) * 1.15),
+      prompt: 'Square the index — see your file', holdTime: 1.0,
+      data: { filer: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 4,
+    });
+    c.cue('chalk-mark', this.pos, '[she sends a runner — the crew reads ahead]', { severity: 'warn' });
+  }
+
+  private closeIndex(): void {
+    if (this.interactId) { this.ctx.removeInteractable(this.interactId); this.interactId = null; }
+  }
+
+  /** The square press reaches her — the Game has already taken the fee. */
+  squared(): void {
+    this.filed = false;
+    this.posted = false;
+    this.homebound = true;
+    this.closeIndex();
+    this.ctx.cue('checkpoint', this.pos, '[the filer strikes your card]', { severity: 'info' });
+  }
+
+  private cool(): void {
+    // the word only travels so far down the halls
+    this.posted = false;
+    this.filed = false;
+    this.homebound = true;
+    this.closeIndex();
+    this.ctx.cue('chalk-mark', this.pos, '[the word ahead of you goes quiet]', { severity: 'info' });
+  }
+
+  protected override onUpdate(dt: number): void {
+    const c = this.ctx;
+    const p = c.player.pos;
+    this.lifeT += dt;
+    const trail = c.trailOwed?.() ?? 0;
+    const pRoom = this.roomOf(p);
+
+    // drawer work: drift at the station's edge
+    if (!this.homebound) {
+      const step = v3(this.deskPos.x + (this.roomO.x - this.deskPos.x) * 0.08, 0, this.deskPos.z + (this.roomO.z - this.deskPos.z) * 0.08);
+      const dx = step.x - this.pos.x, dz = step.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
+    }
+
+    // the slow look — she files a persistent asker in her room over ~2.5s
+    if (pRoom === this.spawnRoom && trail >= 3 && !this.filed && !this.homebound) {
+      this.lookT += dt;
+      if (this.lookT > 2.5) {
+        this.openIndex();
+        c.cue('chalk-mark', this.pos, '[the filer has your name — square it, or be expected]', { severity: 'warn' });
+      }
+    } else if (pRoom !== this.spawnRoom) {
+      this.lookT = 0;
+    }
+
+    // the runner: each fresh room you enter inside reach listens for you
+    if (this.posted && trail > 0 && pRoom >= 0 && pRoom !== this.spawnRoom && pRoom !== this.lastPlayerRoom) {
+      this.lastPlayerRoom = pRoom;
+      if (Math.abs(pRoom - this.spawnRoom) <= 8) {
+        c.sound.emit({
+          x: p.x, y: 1, z: p.z, intensity: 0.5, category: 'impact',
+          caption: '[the word arrives before you — the room listens for your step]',
+          source: 'filer',
+        });
+      }
+    }
+    // outrun the word, or square it away — either way the card comes out
+    if (this.posted && (trail <= 0 || Math.abs(pRoom - this.spawnRoom) > 8)) this.cool();
+
+    // the return beat — back to the drawer, index shut
+    if (this.homebound) {
+      const dx = this.deskPos.x - this.pos.x, dz = this.deskPos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz);
+      if (dd > 0.3) {
+        this.pos.x += (dx / dd) * this.tuning.speed * dt;
+        this.pos.z += (dz / dd) * this.tuning.speed * dt;
+        this.rig?.play('move');
+      } else {
+        this.homebound = false;
+        this.rig?.play('idle');
+      }
+    }
+
+    if (this.mesh) this.mesh.position.copy(this.pos);
+    this.rig?.update(dt);
+  }
+
+  protected override onDone(): void {
+    this.closeIndex();
+    this.ctx.removeInteractable(this.docketId());
+    if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
+    this.rig = null;
+  }
+}

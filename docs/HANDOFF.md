@@ -2649,6 +2649,58 @@ exists if a PAUSED verdict ever needs breaking (the pointerlockchange
 listener pauses on lock loss).
 
 
+## sprint 297 — the Filer (the index files your questions)
+
+- The under's third ledger entity: a hooded clerk at an index drawer who keeps
+  the tally of what you **ask** — distinct from the Auditor's tally of what you
+  **take** and the Detective's register of what you **carry out**. Every paid
+  consult (workOrder, crewBoard, claimRegister) increments `paperTrail`.
+- `trailOwed` ctx callback (`base.ts`), like `claimsOwed`/`heldOwed`. Filer:
+  slow look (~2.5s shared presence) when `trail>=3 && player in spawnRoom` →
+  `filed`/`posted`, registers a `square` interactable ("Square the index"),
+  and each fresh room entered within ±8 emits impact noise at the player
+  (intensity 0.5 — the halls listen for your step). Non-damaging. 'square'
+  charges `min(4+trail*2,14)` marginalia → `filer.squared()`.
+- **Trap (the real lesson of this sprint):** `applyForeshadowing` consumes the
+  shared 'uscare' stream *per scheduled room* — scheduling a new entity BEFORE
+  that pass shifts every later tell's placement (a ropeBarrier ended up sealing
+  a door leaf). New post-encounter scheduling goes AFTER `applyForeshadowing`,
+  then calls it again with the new third arg `only: Set<string>` to lay that
+  entity's tells on its own stream. Both halves draw on 'filer' exclusively.
+- **Trap 2:** the main-route scheduler iterates every `ENTITY_TUNING` key minus
+  a hardcoded under-entity exclusion list — a new under entity MUST be added
+  there or it rolls as a main-route candidate (filer appeared at r-95).
+- e2e 'the index' (undercast): `paperTrail` is TS-private → runtime writable
+  (`ga.paperTrail = 3`) — drives the full loop without scripting three consults.
+
+## sprint 298 — the docket pilfer (both ledgers in one reach)
+
+- The Filer's own drawer is lootable: 'Rifle the docket drawer' (0.9s hold,
+  registers at spawn, one-shot `stock=1`, priority 2 — sits under 'square' 4).
+  Pays like a sledge pick (60% 4–9 marginalia, else an under item) but prices
+  BOTH ledgers: `unpaidTheft += 1` (the Auditor counts it) AND
+  `paperTrail += 2` — reaching into the index is the loudest question the
+  under records. At trail 1 the rummage literally files you mid-reach.
+- The square point survives a docket pilfer and vice versa — they share the
+  station: square anchors 1.15m toward room center, the docket sits ON the
+  deskPos (y=0.9). Focus scoring separates them by ~1.1m; same aim-pitch
+  idiom (`pos.y + 0.6`) drives both.
+
+## sprint 299 — the counter-claim (the paper that files YOUR file)
+
+- Sixth under paper: 'File a counter-claim — N marginalia' (4–8, desk hosts —
+  the register family). Strikes 2 lines off `paperTrail`, then logs the
+  asking as a consult (+1): **net −1**. At trail 0 it shrugs and charges
+  nothing; at trail 1 it nets 0. It can lighten a file, never clean it —
+  only the Filer's desk squares the card.
+- Generator: post-pass on the new 'countersign' stream (isolated from every
+  lootRng consumer around it), placed after the work-order block.
+- e2e 'the index' now drives the full ledger arc: counter-claim (4→3) →
+  rifle the docket (3→5) → filed → runner → square (→0).
+||||||| 11d94a7
+
+
+
 ## sprint 297 — the subfloor counts too (under playtest legs)
 
 **What**: `e2e/playtest.spec.ts` never measured the Underscript — half
@@ -2684,3 +2736,4 @@ opening tell only, fights stay authored); double-verb → yaw-window on
 `strip` (~10 lines, matches pry's shared-anchor disambiguation);
 wanted poster → poster-as-evidence on downstream boards, suspicion
 tier only, or skip to keep the under's threat texture physical.
+

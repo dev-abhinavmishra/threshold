@@ -39,7 +39,7 @@ import {
   IndexEncounter, CustodianEncounter, ChaseEncounter, LensHallEncounter, EngineEncounter, UnderscriptGate,
   type MilestoneEvents, Milestone,
 } from '../encounters/milestones';
-import { Auditor, Detective, Editor, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
+import { Auditor, Detective, Editor, Filer, Grafter, Hauler, Laundress, Swamper } from '../entities/setpieces';
 import { Collector } from '../entities/collector';
 import { Singer } from '../entities/singer';
 import { Curator } from '../entities/curator';
@@ -100,6 +100,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
   laundress: { sfx: 'puddle-splash', text: '[wash, wring — somebody works the drain]', sev: 'warn' },
   auditor: { sfx: 'chalk-mark', text: '[a ledger page turns — the clerk is in]', sev: 'warn' },
   detective: { sfx: 'chalk-mark', text: '[a register opens — the house is checking names]', sev: 'warn' },
+  filer: { sfx: 'chalk-mark', text: '[an index drawer slides — the index is in]', sev: 'warn' },
 };
 
 /** Agitated variants once a scheduled encounter has been roused by noise —
@@ -143,6 +144,7 @@ const ROUSED_LINES: Record<EntityId, string> = {
   laundress: '[the wringing stops — the drain is watched]',
   auditor: '[scratch of nib — the tally is open]',
   detective: '[the house phone — a name repeated quietly]',
+  filer: '[a card drawn from the drawer — your name on it]',
 };
 
 // Fresh wall scrawl — jagged red caps on transparent, cached per text.
@@ -817,6 +819,7 @@ export class Game {
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
+      trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
         // OLD sign still pulls a grafter (a spent-wire room is free bait),
@@ -854,6 +857,12 @@ export class Game {
    *  route is a debt the house keeps. Settled at his desk; walking out
    *  owed puts your face on the wire. */
   private unpaidHeld = 0;
+
+  /** The Filer's consult ledger — each paid read of the under's own
+   *  paper (work order, crew board, claim register) is a question the
+   *  index logs. Squared at her station; carrying questions into her
+   *  room puts your name on a card. */
+  private paperTrail = 0;
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -895,6 +904,7 @@ export class Game {
       // The Detective: reads the held-property register, phones ahead about debtors.
       case 'detective': this.spawnEntity(new Detective()); break;
       case 'auditor': this.spawnEntity(new Auditor()); break;
+      case 'filer': this.spawnEntity(new Filer()); break;
       case 'collector': this.spawnEntity(new Collector()); break;
       case 'singer': this.spawnEntity(new Singer()); break;
       // The Bellman: a stalker that follows your own trail through the hotel.
@@ -1982,6 +1992,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
+        this.paperTrail += 1;
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2021,6 +2032,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
+        this.paperTrail += 1;
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2028,6 +2040,7 @@ export class Game {
           swamper: 'hands in the water', hauler: 'a haul team on the line',
           laundress: 'a laundress at the outflow', grafter: 'a grafter in the fill',
           auditor: 'a clerk walking the ledger',
+          filer: 'a filer at the index',
           detective: 'a detective on the wire',
           redline: 'the red margin', stillframe: 'the paused hall',
           returner: 'a guest come back', margin: 'the handwritten edge',
@@ -2060,6 +2073,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
+        this.paperTrail += 1;
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2078,6 +2092,29 @@ export class Game {
           ? `[the claim register shows: ${entries.join(' · ')}]`
           : "[the register's claim columns run blank ahead]";
         this.cue('whisper', it.pos, text);
+        return;
+      }
+      case 'counterClaim': {
+        // The counter-claim — the paper that files YOUR file. Strikes two
+        // lines off the consult ledger... but the asking is itself a paid
+        // consult, so the clerk logs it right back: net −1. It can lighten
+        // a file, never empty it cleanly — only her desk squares the card.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.paperTrail <= 0) {
+          this.cue('door-locked', it.pos, '[your file is already blank — the clerk shrugs]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the counter-claim wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.paperTrail = Math.max(0, this.paperTrail - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[the clerk strikes two lines from your file — and logs the asking]');
         return;
       }
       case 'watchSheet': {
@@ -2167,6 +2204,25 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         this.cue('whisper', it.pos, `[paid ${toll} — the clerk turns the page]`);
         (it.data as { auditor?: { settled?: () => void } }).auditor?.settled?.();
+        return;
+      }
+      case 'square': {
+        // The Filer's index — pay the filing fee or the halls keep
+        // listening for your step. Priced in marginalia; the settle
+        // counterpart to the Detective's imprints on the route above.
+        const trail = this.paperTrail;
+        if (trail <= 0) { it.enabled = false; return; }
+        const toll = Math.min(4 + trail * 2, 14);
+        if (this.marginalia < toll) {
+          this.cue('door-locked', it.pos, `[the index asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= toll;
+        this.paperTrail = 0;
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, `[paid ${toll} — the filer strikes your card]`);
+        (it.data as { filer?: { squared?: () => void } }).filer?.squared?.();
         return;
       }
       case 'settle': {
@@ -2377,6 +2433,33 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
+        return;
+      }
+      case 'docket': {
+        // Rifling the Filer's own drawer — a one-shot skim priced against
+        // BOTH ledgers: the crew counts it as theft, and reaching into the
+        // index is itself the loudest question the under records. A hand
+        // in her drawer at trail 2 files you mid-reach.
+        const h = it.data as unknown as { stock: number };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidTheft += 1; // out of her drawer, into the tally
+        this.paperTrail += 2;  // the index logs the rummage as two questions
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the index]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the index]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
         return;
       }
       case 'strip': {
