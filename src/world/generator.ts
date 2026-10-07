@@ -638,7 +638,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
         room.sockets.push({
           kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
-          meta: { vend: true, price: lootRng.int(5, 11), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
+          meta: { vend: true, price: lootRng.int(14, 24), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
         });
         // The machine is real now — vend sockets hang on a milled unit
         // (skipped where a door lane claims the footprint).
@@ -658,7 +658,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
       ];
       for (const room of underRooms) {
         if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
-        const host = room.spec.props.find((p) => LOST_PROP_HOSTS.has(p.kind));
+        const host = room.spec.props.find((p) => LOST_PROP_HOSTS.has(p.kind) && !p.meta?.foreshadow);
         if (!host) continue;
         const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
         const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
@@ -688,7 +688,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
       const BOARD_HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
       for (const room of underRooms) {
         if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.09)) continue;
-        const host = room.spec.props.find((p) => BOARD_HOSTS.has(p.kind));
+        const host = room.spec.props.find((p) => BOARD_HOSTS.has(p.kind) && !p.meta?.foreshadow);
         if (!host) continue;
         const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
         const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
@@ -709,7 +709,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
       const REGISTER_HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
       for (const room of underRooms) {
         if (room.index % 20 === 0 || !room.spec || !lootRng.bool(0.08)) continue;
-        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind));
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind) && !p.meta?.foreshadow);
         if (!host) continue;
         const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
         const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
@@ -736,7 +736,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
       ]);
       for (const room of underRooms) {
         if (!WORK_ORDER_ROOMS.has(room.templateId) || !room.spec || !lootRng.bool(0.12)) continue;
-        const surf = room.spec.props.find((p) => WORK_ORDER_SURF.has(p.kind));
+        const surf = room.spec.props.find((p) => WORK_ORDER_SURF.has(p.kind) && !p.meta?.foreshadow);
         if (!surf) continue;
         const wp = localToWorld(room.origin, room.yaw, surf.x, 0, surf.z);
         const toW = { x: room.origin.x - wp.x, z: room.origin.z - wp.z };
@@ -1019,7 +1019,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
     room.sockets.push({
       kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
-      meta: { vend: true, price: lootRng.int(4, 9), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
+      meta: { vend: true, price: lootRng.int(12, 20), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
     });
     // The machine is real now — vend sockets hang on a milled unit
     // (skipped where a door lane claims the footprint).
@@ -1498,6 +1498,10 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   // The Editor authored climax at the final stair landing.
   const last = rooms[rooms.length - 1];
   if (last) last.scheduled.push({ entity: 'editor', triggerRoom: last.index, seed: encRng.int(0, 0x7fffffff) });
+
+  // The under marks its approach too — the decal layer was always built
+  // for these entities but no pass ever set under rooms' foreshadow.
+  applyForeshadowing(rooms, streams.stream('uscare'));
 
   return rooms;
 }

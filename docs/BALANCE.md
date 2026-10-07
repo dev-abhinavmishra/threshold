@@ -41,3 +41,42 @@ Method: per-entity + per-decile encounter histograms over the 5 QA seeds via
 - shortRun/'qa' caveat: guarantee windows (reprise@31+, maelstrom@55+,
   echoskin@63+) don't exist under ~31 rooms, so a qa route shows ~3
   scheduled encounters — sparse is the mode, not the balance.
+
+## Scripted playtest (sprint 286 — "the counted run")
+
+`e2e/playtest.spec.ts` sim-drives the real game (renderFrame stubbed,
+dt=1/30) room-by-room through a full 101-room 'standard' route under three
+playstyles — walker (never hides or fights), hider (enters the room's first
+spot when a live entity is present), looter (hider + clears every loot/
+drawer socket). `g.lastDeathCause` stamps the killer for the report.
+Milestone/authored rooms run under godMode — their deaths are scripted
+beats a teleporter can't fight fairly.
+
+### Measured (ash-vault-101 / gilt-spine-777 / wax-bell-256)
+
+| style  | deaths           | top killers                                          | economy |
+|--------|------------------|------------------------------------------------------|---------|
+| walker | 16 / 15 / 17     | sweep×3-4, witness×3-4, pursuer×2, reprise, grafter, warden, maelstrom, whisper | — |
+| hider  | 8 / 10 / 9       | sweep×2-3, reprise×1-3, maelstrom, whisper, husk×2 (wax-bell), hazard×3 (wax-bell) | — |
+| looter | 7 / 6 / 8        | same shape as hider minus un-hideable entries        | imp +121 / +33 / +103, inv 10 / 4 / 8 items |
+
+### Read
+
+- The no-react floor is ~1 death per 6-7 rooms — punishing on purpose.
+- Hiding halves deaths but never zeroes them: maelstrom reads spots,
+  witness punishes sight-holds on entry, hazards bite mid-loot, and
+  corridor sweeps land in rooms without a spot. Intended per entity docs.
+- pursuer×2 everywhere = the two scripted chases — teleporter noise, not a
+  balance signal.
+- Economy was ~5x coverage: vend prices were int(4,9)/int(5,11) while sim
+  income is 379-592 imprints and vend totals Σ37-95. Partial-route loot
+  alone (+33..+121) already out-earns buying every machine.
+
+### Tune applied
+
+- Vend price bands: main int(4,9) → int(12,20); under int(5,11) →
+  int(14,24). ~2.5x cost against unchanged income — a real spend point,
+  still affordable at partial loot coverage. Toll/claim/ledger/broker
+  prices untouched (crew economy has its own books + test pins).
+- Open: looted vendables also drop free at decent rates — if playtests
+  still read rich, trim loot weights next, not payouts.

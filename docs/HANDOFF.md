@@ -2174,6 +2174,32 @@ Trap logged for future specs: **aim at it.pos.y + 0.6, not the prop**,
 and always compute pitch from live horizontal distance — collision can
 push a teleported stand point ~0.25m off.
 
+## Sprint 286 — the counted run (scripted balance playtest)
+`e2e/playtest.spec.ts` is the first real playtest: sim-drives the game
+(renderFrame stubbed, dt=1/30 fixed clock — the runflow pattern) through
+all 101 rooms of a 'standard' route × 3 seeds × 3 styles (walker/hider/
+looter). Mechanics: `g.currentRoom=idx` + teleport to entryPos+1.3 toward
+exitPos triggers spawnScheduled on entry; milestone/authored rooms run
+under `g.godMode` (scripted fights a teleporter can't fairly run); hider
+enters `room.hidingSpots[0]` via `player.enterHiding(spot,g.clock.time)`
+and exits before the next room (`exitHiding` — teleport does NOT clear
+hiddenSpot). New instrumentation: `g.lastDeathCause` stamps the killer.
+Reports land in test-results/playtest-<style>.json. Numbers + the tune
+(vend price bands int(4,9)→int(12,20) main, int(5,11)→int(14,24) under —
+economy was ~5x coverage) are in docs/BALANCE.md.
+Traps:
+- `player.dead` freezes the frame loop — after a death you must
+  `g.retryFromCheckpoint()` AND re-stub renderFrame/clock.tick (startRun
+  rebuilds them).
+- hider still dies 8-10×/run — all from sources that bypass hiding BY
+  DESIGN (maelstrom reads spots, witness sight-holds, spotless corridor
+  rooms, hazards mid-loot). Not a tune.
+- pursuer×2 deaths in EVERY report are the scripted chases — noise, not a
+  signal. Exclude milestone deaths from any tuning math.
+- Loot income: looter pulls +33..+121 of the sim's 379-592 possible —
+  sockets are sparse on some seeds (gilt-spine-777: 33) but still
+  out-earn vend spend.
+
 ## Sprint 285 — the watched hall (the eye reads motion)
 The hazard family's sixth axis — and the first that isn't touch, time,
 or posture: `securityCam` (wall-mount dressing: lobby/records/gallery/
@@ -2281,7 +2307,47 @@ NEXT SPRINT IDEAS (pick the biggest first)
     hold paper (a claims sheet for main-route ledgers: which rooms'
     effects were drawn).
 
-## Sprint 288 — the sealed warrant (e2e/books leg 9, generation spec)
+## Sprint 288 — the marked approach (foreshadow completion + under foreshadow)
+
+What:
+- `foreshadow.ts` TELLS now covers EVERY schedulable entity — 16 new prop
+  tell sets (bellman, porter, warden, groundswell, inspector,
+  commissionaire, detective, curator, redline, stillframe, margin, editor,
+  swamper, hauler, laundress, auditor) on top of the original 15.
+  pursuer/hazard/orrery stay untelled (milestone/env, never scheduled).
+- `builder.ts` FORESHADOW_TELLS decal sets added for the 11 entities that
+  had none (bellman→footprintTrail, porter→high grimeStreak,
+  warden→footprintTrail, groundswell→floor crackDecal, inspector→handPrints,
+  commissionaire→scratchMarks, detective→small handPrints, swamper→wide
+  floorStain, hauler→trail+low grimeStreak, laundress→floorStain,
+  auditor→handPrints).
+- **`generateUnderscript` now calls `applyForeshadowing(rooms,
+  streams.stream('uscare'))`** before returning — the under decal tells
+  (stillframe/redline/margin/editor/grafter/returner) were dead code
+  before: built for the builder, never set by generation. New dedicated
+  'uscare' stream (RngStream union + STREAM_SALTS) per the shared-RNG
+  reseat rule.
+- Economy-host finds (`LOST_PROP_HOSTS`, `BOARD_HOSTS`, `REGISTER_HOSTS`,
+  `WORK_ORDER_SURF`) now skip `meta.foreshadow` props — a dropped sign
+  shouldn't qualify as crew furniture. Main-floor host finds run inside
+  fillSockets BEFORE applyForeshadowing so they were already immune.
+Traps:
+- Two foreshadow layers: prop tells (foreshadow.ts → spec.props with
+  meta.foreshadow) and decal tells (builder.ts → room.foreshadow flag).
+  The flag only sets on a back-1 room that is unscheduled + unmarked.
+- Under rooms are NOT authored-flagged the way main milestones are —
+  applyForeshadowing's `prev.authored` skip doesn't exempt landings;
+  `u-stair-landing` rooms can carry tell props (harmless — inDoorLane
+  guards paths).
+- Adding a schedulable entity without a TELLS entry now fails
+  generation.test.ts 'marked approach' coverage.
+- `foreshadow` field type on RoomInstance is the entity id string —
+  decal sets and prop sets are keyed the same way.
+- Wax-bell looter income drifted 103→112 — the confiscated-case marks
+  rolls, not foreshadow. Verify economy deltas against sim, not
+  assumptions.
+
+## Sprint 288b — the sealed warrant (e2e/books leg 9, generation spec)
 
 What:
 - ~35% of confiscated cases carry 'warrant' instead of goods — a court
@@ -2307,6 +2373,9 @@ NEXT SPRINT IDEAS (pick the biggest first)
     they know you) — half-baked, logged skip.
 
 ## Sprint 289 — counter-scent (the ash keeps)
+
+(Parallel numbering: the marked-approach entry above was also sprint 288
+on its branch — merged first, so it keeps the number.)
 
 What:
 - Forging a sign now leaves a SECOND evidence record beside the lie:
@@ -2334,3 +2403,4 @@ NEXT SPRINT IDEAS (pick the biggest first)
     they know you) — half-baked, logged skip.
   - A scrub that removes the lie leaves the ash? (Scrub radius 2.6m
     already takes both — no work needed; verify in play.)
+

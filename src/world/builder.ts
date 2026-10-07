@@ -90,6 +90,18 @@ const FORESHADOW_TELLS: Record<string, ForeshadowTell[]> = {
   orrery: [{ wall: true, tex: grimeStreak, w: 0.9, h: 1.9, cy: 0.7 }],
   collector: [{ tex: floorStain, w: 0.5, h: 0.5, n: 3 }, { wall: true, tex: handPrints, w: 0.5, h: 0.6, cy: 0.8 }],
   singer: [{ tex: footprintTrail, w: 0.8, h: 1.6, n: 2 }],
+  // Sprint 288 — the rest of the schedulable cast marks its approach too.
+  bellman: [{ tex: footprintTrail, w: 0.8, h: 3.4 }],
+  porter: [{ wall: true, tex: grimeStreak, w: 0.8, h: 1.8, cy: 2.1 }],
+  warden: [{ tex: footprintTrail, w: 0.9, h: 4.0 }],
+  groundswell: [{ tex: crackDecal, w: 1.5, h: 1.5, n: 2 }],
+  inspector: [{ wall: true, tex: handPrints, w: 0.8, h: 1.0, cy: 1.0 }],
+  commissionaire: [{ wall: true, tex: scratchMarks, w: 0.9, h: 1.0, cy: 1.1 }],
+  detective: [{ wall: true, tex: handPrints, w: 0.6, h: 0.7, cy: 1.5 }],
+  swamper: [{ tex: floorStain, w: 2.0, h: 2.0 }],
+  hauler: [{ tex: footprintTrail, w: 1.0, h: 4.2 }, { wall: true, tex: grimeStreak, w: 0.9, h: 1.2, cy: 0.6 }],
+  laundress: [{ tex: floorStain, w: 1.4, h: 1.4, n: 2 }],
+  auditor: [{ wall: true, tex: handPrints, w: 0.8, h: 1.0, cy: 1.2 }],
 };
 
 // Soft radial sprite for dust motes — unmapped PointsMaterial renders as

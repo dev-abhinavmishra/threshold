@@ -100,12 +100,25 @@ test('lit lamp takes the hand while its beam is on', async ({ page }) => {
   await page.getByRole('button', { name: /QA/ }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click({ force: true });
   await expect(page.locator('.hud')).toBeVisible({ timeout: 30_000 });
+  // assert JS-side flags only — stub the renderer before any frame step so a
+  // degraded shared GPU process can't wedge the page's main thread
+  await page.evaluate(() => {
+    (window as unknown as { __thresholdGame: { renderFrame(): void } }).__thresholdGame.renderFrame = () => {};
+  });
 
   // equip the key first, then light the lamp — the lamp must take the hand
   await page.keyboard.press('Digit1');
   await page.waitForTimeout(1500);
   await page.keyboard.press('KeyF');
-  await page.waitForTimeout(1500);
+  // the beam flag and the held-item swap only apply on a game frame —
+  // drive frames directly (headless RAF can starve for >30s; every other
+  // leg steps the loop manually for the same reason)
+  await page.evaluate(() => {
+    const g = (window as unknown as {
+      __thresholdGame: { lampOn: boolean; beamGroup: { visible: boolean } | null; frame(): void };
+    }).__thresholdGame;
+    for (let f = 0; f < 10 && !(g.lampOn && g.beamGroup?.visible); f++) g.frame();
+  });
 
   const s = await page.evaluate(() => {
     const g = (window as unknown as {

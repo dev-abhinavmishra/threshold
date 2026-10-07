@@ -15,6 +15,7 @@ export type RngStream =
   | 'puzzle'
   | 'entity'
   | 'scare'
+  | 'uscare'
   | 'pacing'
   | 'confiscate';
 
@@ -27,6 +28,7 @@ const STREAM_SALTS: Record<RngStream, number> = {
   puzzle: 0x9a221e55,
   entity: 0xe7717a15,
   scare: 0x5ca4e000,
+  uscare: 0x05ca4e00,
   pacing: 0x9ac1e000,
   confiscate: 0xc0514cae,
 };
