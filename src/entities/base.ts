@@ -63,6 +63,10 @@ export interface EntityCtx {
    *  in the house register upstairs: +1 line in the Detective's book.
    *  Optional for headless ctxs. */
   wordFiled?: () => void;
+  /** The player pulled the house line off the wall — the dead wire is
+   *  billed as damages: +1 line in the Detective's book.
+   *  Optional for headless ctxs. */
+  lineCut?: () => void;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */

@@ -835,6 +835,7 @@ export class Game {
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
+      lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -2656,6 +2657,16 @@ export class Game {
         this.marginalia += amt;
         this.stats.marginaliaEarned += amt;
         this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
+        return;
+      }
+      case 'houseLine': {
+        // Pulling the Detective's junction box — the broadcast dies on the
+        // spot (or never starts), but the dead wire is damages he files
+        // in his book. Sabotage is a price, not a trick.
+        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean } };
+        if (d.keeper?.lineDead) { it.enabled = false; return; }
+        it.enabled = false;
+        d.keeper?.pulledLine();
         return;
       }
       case 'strip': {
