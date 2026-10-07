@@ -2697,7 +2697,6 @@ listener pauses on lock loss).
   lootRng consumer around it), placed after the work-order block.
 - e2e 'the index' now drives the full ledger arc: counter-claim (4→3) →
   rifle the docket (3→5) → filed → runner → square (→0).
-||||||| 11d94a7
 
 
 
@@ -2737,3 +2736,43 @@ opening tell only, fights stay authored); double-verb → yaw-window on
 wanted poster → poster-as-evidence on downstream boards, suspicion
 tier only, or skip to keep the under's threat texture physical.
 
+## sprint 299 — lockers at the end of the corridor (under cover + hider truth)
+
+**What**:
+- `injectCornerCabinet` (generator.ts) — shared corner/mid-wall cabinet
+  injector; fixes a latent bug on BOTH routes: density passes pushed
+  `spec.hiding` post-instantiate but never `spec.props`, so injected
+  cabinets hid you inside nothing (functional cover, no mesh). Now the
+  locker prop lands too.
+- `ensureUnderCoverDensity` — the under had no density pass at all:
+  cover in 48-60% of rooms, dead stretches to 7 rooms (main enforces ≤2
+  natural). Same ±2 window → no 5-room dead stretch; authored landings
+  skipped; mid-wall candidates cover corridor-width templates
+  (u-long-hall) whose corners all sit in door lanes. Runs AFTER
+  scheduling so spawn counts don't move — cover only, never more
+  patrols. Fork: `roomStream('dressing', 790)`.
+- e2e hider model was wrong in a way that mattered: it hid from ANY live
+  entity and never waited out a pass. Under patrols never vacate → the
+  hider lived in lockers → panic re-entry lockout ate every room hop →
+  every "redline kill" landed in the forced ~1.6s exposed transition.
+  Fixed model: hides only for RUNNERISH entities (sweep/reprise/
+  maelstrom/redline/returner/pursuer/orrery), waits passes out inside
+  the locker (600f cap), un-hides when quiet, backtracks ≤2 rooms for
+  cover, flees forward when there's none. Log adds `deathsHidden` +
+  `deathsSeq` (`room:cause~liveEntities`, `^` = died hidden).
+
+**Re-measured** (BALANCE.md sprint-299 correction): hider-under 8/7/9
+(vs 17/16/16 artifact) — ZERO runner deaths in 363 rooms. Residual =
+grafter×4-6 (walks blind into rubble — honest counterplay), margin×2
+(reads cover), editor×1 (authored climax). The "under ~2x for hider"
+read retracts — main-parity; the under's extra edge lives in room
+hazards, not corridors. hider-main 9/8/12, same profile.
+
+**Traps**:
+- Multi-seed under runs still intermittently crash the page even with
+  boot-per-seed (browser-process OOM across heavy evaluates). Solo
+  seeds are reliable (~45-100s): `PLAYTEST_SEEDS=<seed> npx playwright
+  test e2e/playtest.spec.ts -g under-hider`. Collect per-seed when
+  measuring; don't trust a crashed 3-seed run's retry.
+- `enterHiding` returns false inside `panicLockoutUntil` — any scripted
+  re-hide must survive ~1.6s of exposure, exactly like a player.
