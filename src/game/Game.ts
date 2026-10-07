@@ -2762,8 +2762,15 @@ export class Game {
         const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
         const w = wp && this.hazard.watchers.find((x) =>
           !x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
-        if (w) w.dead = true;
-        this.cue('item', it.pos, '[the eye goes blind under the felt]');
+        if (w) {
+          w.dead = true;
+          // the tape is testimony — a mounted felt patch reads as your
+          // work to every hunter that smells it. Fresh sign, not ash:
+          // unlike a forged lie this pulls both readers once.
+          this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+            kind: 'blind', t: this.clock.time, readBy: [] });
+        }
+        this.cue('item', it.pos, '[the eye goes blind under the felt — and the felt smells of your work]');
         this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
         return;
       }

@@ -3167,3 +3167,22 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   < stranger*0.85, warn exactly once), 5-seed sim, e2e hazards — the
   watched-hall leg asserts talksBack fires exactly once after filing,
   build.
+
+## sprint 315 — the tape is testimony (devin/1791395701-threshold-s315)
+
+- Blinding an eye now leaves sign: the 'tape' case pushes a `kind:
+  'blind'` evidence mark at the mount (fresh t, no flags) — a mounted
+  felt patch is substantive work, not ash (unlike forge's weak mark),
+  so BOTH readers (warden + grafter) pull to it once. The eye fork is
+  now three-way: dodge it (free), eat the file (+1 held), or tape it
+  (permanent blind + fresh sign the hunters chase). Cue amended:
+  '[the eye goes blind under the felt — and the felt smells of your
+  work]'.
+- Trap/log: `wiped` is the wrong flag for "warden reads this" —
+  warden SKIPS wiped entries as targets ('a wipe is a filter on the
+  sign, not a target', corridor.ts ~630); wiped exists only to poison
+  nearby marks via the doubt filter. For a real pull, push a plain
+  fresh mark — `kind` only matters for player-readable old sign.
+- Gates: tsc, lint, 231 vitest (+1 contract line asserting
+  `kind: 'blind'`), 5-seed sim, e2e hazards — the watched-hall leg
+  asserts a 'blind' mark lands within 0.5m of the taped mount, build.

@@ -75,6 +75,8 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/wardenOk \|\| !e\.wiped/);
     // sign goes cold — the warden only believes fresh work (~6 min)
     expect(gameSrc).toMatch(/e\.t >= cold/);
+    // the tape is testimony — a blinded eye leaves fresh sign both readers chase
+    expect(gameSrc).toContain("kind: 'blind'");
     const corridorSrc = readFileSync(new URL('../src/entities/corridor.ts', import.meta.url), 'utf8');
     expect(corridorSrc).toContain('the floor smells wiped');
   });
