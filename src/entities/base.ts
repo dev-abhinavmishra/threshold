@@ -59,6 +59,10 @@ export interface EntityCtx {
   claimsOwed?: () => number;
   /** Held-property tally in imprints — the Detective's book. */
   heldOwed?: () => number;
+  /** Consult tally — paid reads of the under's own paper (work order,
+   *  crew board, claim register) the player hasn't squared for. The
+   *  Filer's ledger: questions asked, not goods taken. */
+  trailOwed?: () => number;
   /** Scent: killed hazards leave sign a hunter can read. Callers pass a
    *  reader key (e.g. 'warden:33'); returned marks are recorded as read
    *  so each hunter reads each sign once. Optional for headless ctxs. */

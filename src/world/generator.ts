@@ -1232,7 +1232,7 @@ function scheduleEncounters(rooms: RoomInstance[], encRng: import('../engine/rng
     if (tier === 0 && !encRng.bool(0.15)) continue;
 
     for (const [id, t] of Object.entries(ENTITY_TUNING) as [EntityId, EntityTuning][]) {
-      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin', 'swamper', 'hauler', 'laundress', 'auditor'].includes(id)) continue;
+      if (['pursuer', 'editor', 'hazard', 'redline', 'stillframe', 'returner', 'margin', 'swamper', 'hauler', 'laundress', 'auditor', 'filer'].includes(id)) continue;
       if (t.spawnChance <= 0) continue;
       if (room.index < t.minRoom || (t.maxRoom !== undefined && room.index > t.maxRoom)) continue;
       if ((cooldowns.get(id) ?? -999) + t.cooldown > room.index) continue;
@@ -1507,6 +1507,25 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   // The under marks its approach too — the decal layer was always built
   // for these entities but no pass ever set under rooms' foreshadow.
   applyForeshadowing(rooms, streams.stream('uscare'));
+
+  // The Filer — a pass on its own stream ('filer') AFTER foreshadowing:
+  // applyForeshadowing consumes the 'uscare' stream per scheduled room, so
+  // scheduling her earlier would shift every later tell's placement.
+  // Her own tells are then laid by a filtered second pass on 'filer' —
+  // a stream nobody else draws — so neither side disturbs the other.
+  const FILE_STATIONS = new Set(['filing', 'recordsCage', 'keyCabinet']);
+  const fileRng = streams.stream('filer');
+  let fileCd = -99;
+  for (const room of rooms) {
+    if (room.index === 0 || room.index % 20 === 0) continue; // safe landings
+    if (fileCd + ENTITY_TUNING.filer.cooldown > room.index) continue;
+    if (room.flooded || room.scheduled.length > 0) continue;
+    if (!(room.spec?.props ?? []).some((pp) => FILE_STATIONS.has(pp.kind))) continue;
+    if (!fileRng.bool(ENTITY_TUNING.filer.spawnChance)) continue;
+    room.scheduled.push({ entity: 'filer', triggerRoom: room.index, seed: fileRng.int(0, 0x7fffffff) });
+    fileCd = room.index;
+  }
+  applyForeshadowing(rooms, fileRng, new Set(['filer']));
 
   return rooms;
 }

@@ -2647,3 +2647,27 @@ PLAYING|MINIGAME|PAUSED. `phase` is not on `window`; `clock.time`
 advancing is the only reliable "sim is running" signal, and `g.resume()`
 exists if a PAUSED verdict ever needs breaking (the pointerlockchange
 listener pauses on lock loss).
+
+## sprint 297 — the Filer (the index files your questions)
+
+- The under's third ledger entity: a hooded clerk at an index drawer who keeps
+  the tally of what you **ask** — distinct from the Auditor's tally of what you
+  **take** and the Detective's register of what you **carry out**. Every paid
+  consult (workOrder, crewBoard, claimRegister) increments `paperTrail`.
+- `trailOwed` ctx callback (`base.ts`), like `claimsOwed`/`heldOwed`. Filer:
+  slow look (~2.5s shared presence) when `trail>=3 && player in spawnRoom` →
+  `filed`/`posted`, registers a `square` interactable ("Square the index"),
+  and each fresh room entered within ±8 emits impact noise at the player
+  (intensity 0.5 — the halls listen for your step). Non-damaging. 'square'
+  charges `min(4+trail*2,14)` marginalia → `filer.squared()`.
+- **Trap (the real lesson of this sprint):** `applyForeshadowing` consumes the
+  shared 'uscare' stream *per scheduled room* — scheduling a new entity BEFORE
+  that pass shifts every later tell's placement (a ropeBarrier ended up sealing
+  a door leaf). New post-encounter scheduling goes AFTER `applyForeshadowing`,
+  then calls it again with the new third arg `only: Set<string>` to lay that
+  entity's tells on its own stream. Both halves draw on 'filer' exclusively.
+- **Trap 2:** the main-route scheduler iterates every `ENTITY_TUNING` key minus
+  a hardcoded under-entity exclusion list — a new under entity MUST be added
+  there or it rolls as a main-route candidate (filer appeared at r-95).
+- e2e 'the index' (undercast): `paperTrail` is TS-private → runtime writable
+  (`ga.paperTrail = 3`) — drives the full loop without scripting three consults.

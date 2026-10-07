@@ -56,12 +56,14 @@ export const TELLS: Record<string, PropKind[][]> = {
   hauler:     [['sledge', 'handTruck'], ['crowbar', 'ropeBarrier']],
   laundress:  [['linenHamper', 'towelRail'], ['manglePress', 'basinSink']],
   auditor:    [['register', 'paperStack'], ['typewriter', 'stationery']],
+  filer:      [['mailCart', 'paperScatter'], ['keyCabinet', 'papers']],
 };
 
-export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {
+export function applyForeshadowing(rooms: RoomInstance[], rng: Rng, only?: Set<string>): void {
   const byIndex = new Map(rooms.map((r) => [r.index, r]));
   for (const room of rooms) {
     for (const sch of room.scheduled) {
+      if (only && !only.has(sch.entity)) continue;
       const sets = TELLS[sch.entity];
       if (!sets) continue;
       for (let back = 1; back <= 2; back++) {

@@ -1188,3 +1188,28 @@ describe('the sealed warrant (sprint 290)', () => {
     }
   });
 });
+
+describe('the Filer (sprint 297)', () => {
+  it('clerks work dry index rooms below, never the main route', () => {
+    const STATIONS = new Set(['filing', 'recordsCage', 'keyCabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'filer') ?? false,
+          `filer on the main route ${seed}`).toBe(false);
+      }
+      const clerks = route.underRooms.filter((r) => r.scheduled?.some((s) => s.entity === 'filer'));
+      for (const r of clerks) {
+        expect(r.flooded, `filer in a flooded room ${seed} u-${r.index}`).not.toBe(true);
+        expect((r.spec?.props ?? []).some((p) => STATIONS.has(p.kind)),
+          `filer on an index-less room ${seed} u-${r.index}`).toBe(true);
+        expect(r.index % 20, `filer on a safe landing ${seed}`).not.toBe(0);
+        expect(r.scheduled!.length, `filer shares a room ${seed} u-${r.index}`).toBe(1);
+      }
+      // her pass is a post-roll on its own stream — approach marks still land
+      const tells = route.underRooms.filter((r) =>
+        (r.spec?.props ?? []).some((p) => p.meta?.foreshadow === 'filer'));
+      expect(tells.length, `no filer foreshadow on ${seed}`).toBeGreaterThanOrEqual(clerks.length > 0 ? 1 : 0);
+    }
+  });
+});

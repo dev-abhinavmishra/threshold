@@ -142,6 +142,10 @@ export const DOCUMENTS: Document[] = [
     body: 'A clerk in the under-offices who keeps the tally of everything you take. Settle the ledger at his desk, or carry clean hands — he only collects what the books say you owe.',
   },
   {
+    id: 'doc-filer', title: 'Entity: Filer', category: 'entity', unlockedAt: 0,
+    body: 'A hooded clerk at an index drawer who keeps the tally of everything you ASK. Every paid read of the under\'s paper is a question she logs; carry enough questions into her room and she files your name — then the halls ahead listen for your step. Square the index at her station, or ask fewer questions. She never leaves her drawer.',
+  },
+  {
     id: 'doc-swamper', title: 'Entity: Swamper', category: 'entity', unlockedAt: 0,
     body: 'It lives in the flooded halls and hears every ripple you make. Crouch-wade, or open the drain and let the water leave ahead of you.',
   },
