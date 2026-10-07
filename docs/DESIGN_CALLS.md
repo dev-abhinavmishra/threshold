@@ -72,8 +72,10 @@ can't tell which verb you're about to hold?
 
 **Recommendation: B.** The overlap is only confusing because radius is
 the sole discriminator — a yaw window on `strip` keeps both verbs live,
-costs ~10 lines, and matches how 'pry' already disambiguates shared
-anchors elsewhere.
+costs ~10 lines, and works inside a rule the game already has: the focus
+resolver gates every candidate on facing (align > 0.86) before scoring.
+Pry-style priority is the other axis, not this one — the proposal adds a
+facing gate *inside* the verb, on top of the resolver's own.
 
 ---
 
@@ -103,12 +105,14 @@ equivalent: its ledger is read-only, and the question left open was —
   threat texture stays different (physical patrols > bureaucracy).
 
 **Recommendation: A-lite** — the poster prop only, as evidence: wanted
-notices appear on downstream boards naming the player's debt, raising
-crew suspicion one tier (cheaper than full engagement changes). It gives
-the under a visible "the house knows you're here" texture the main route
-already has via the Detective, and props-not-behavior keeps the tuning
-surface small. If you'd rather keep the under less bureaucratic, C is
-the honest alternative — the duplication argument is real.
+notices appear on downstream boards naming the player's debt. The
+visible part is props-only; the recommendation carries exactly ONE
+behavior knob — crew suspicion raised one tier on sighting you — so
+price the decision on that knob, not on a false "props-not-behavior"
+frame. It gives the under a visible "the house knows you're here"
+texture the main route already has via the Detective. If you'd rather
+keep the under less bureaucratic, C is the honest alternative — the
+duplication argument is real.
 
 ---
 

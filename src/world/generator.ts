@@ -1245,8 +1245,8 @@ function injectCornerCabinet(r: RoomInstance, rng: import('../engine/rng').Rng):
   const d = r.spec?.depth ?? 8;
   const corners = [
     { x: -w / 2 + 0.9, z: -d / 2 + 0.9, yaw: 0 },
-    { x: w / 2 - 0.9, z: -d / 2 + 0.9, yaw: Math.PI / 2 },
-    { x: -w / 2 + 0.9, z: d / 2 - 0.9, yaw: -Math.PI / 2 },
+    { x: w / 2 - 0.9, z: -d / 2 + 0.9, yaw: 0 },
+    { x: -w / 2 + 0.9, z: d / 2 - 0.9, yaw: Math.PI },
     // Corridor-width rooms put every corner in a door lane — door approach
     // zones are shallow, so a mid-wall locker against a long wall is the
     // honest cover there (utility corridors have them).
@@ -1271,9 +1271,13 @@ function injectCornerCabinet(r: RoomInstance, rng: import('../engine/rng').Rng):
   });
   if (r.spec) {
     r.spec.hiding.push({ kind: 'cabinet', x: corner.x, z: corner.z, yaw: corner.yaw, propKind: 'locker' });
-    const hasFurniture = r.spec.props.some(
-      (p) => Math.hypot(p.x - corner.x, p.z - corner.z) <= 1.3 && (p.y ?? 0) < 0.2,
-    );
+    // Only a prop with real body counts as covering furniture — flat floor
+    // dressing (manholes, stains, decals) can't be the cabinet's skin, so a
+    // spot next to one still needs its locker mesh.
+    const hasFurniture = r.spec.props.some((p) => {
+      if (Math.hypot(p.x - corner.x, p.z - corner.z) > 1.3 || (p.y ?? 0) >= 0.2) return false;
+      return (modelCollider(p.kind)?.[1] ?? 0) >= 0.5;
+    });
     if (!hasFurniture) r.spec.props.push({ kind: 'locker', x: corner.x, z: corner.z, yaw: corner.yaw });
   }
 }

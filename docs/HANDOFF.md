@@ -2816,6 +2816,7 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   3 → 2 (−2, +1) before the settle still closes the book.
 
 
+
 ## sprint 302 — the affidavit (held ledger's relief valve)
 
 - The triad closes: 'File an affidavit — N imprints' on records/
@@ -2889,3 +2890,25 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   5 back): the wire's ring wakes the neighbour's listeners and a grab
   drags the player >10 rooms — the cool is then legitimate.
 
+
+
+## sprint 302b — review debt: wall-eject exits, honest docs, echoskin fix
+
+- Devin Review triage on merged PRs #17/#18/#20 — all findings real, all fixed:
+  - injectCornerCabinet two of five corners faced a wall and ejected the
+    player out of the room on leave; the furniture check also counted
+    floor-flat props (manholes) as cover so the locker mesh never spawned.
+    Corners now yaw into the room; hasFurniture needs a ≥0.5 collider.
+  - The same convention slip existed in authored spots: records-vault
+    cabinet, gallery-rotunda's second losAlcove, morgue-drawers locker,
+    library-stacks desk-hide all exited through a wall. New test sweeps
+    every template ×5 seeds: each hiding spot's exitPos must land inside
+    its room, and injected cabinets need a real prop body.
+  - Death now reloads `documents` into state so the Archive stops showing
+    freshly-unlocked docs as locked until restart. Singer doc rewritten to
+    match the nonlethal trail-follower it actually is. DESIGN_CALLS yaw
+    rationale + poster scope wording corrected. Playtest hider keeps
+    fleeing when exposed with no cover instead of skipping to idle.
+- Carried fix for sibling sprint-291's `Echoskin.onSpawn` using undeclared
+  `c` (main's tsc was red; `this.ctx.player.pos` instead).
+- Gates: tsc, lint, 213 vitest, 5-seed sim, build — all green.

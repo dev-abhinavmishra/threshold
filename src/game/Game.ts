@@ -3408,6 +3408,7 @@ export class Game {
       useGameStore.setState({
         phase: 'DEAD', paused: true,
         deathInfo: { cause: source, hint: DEATH_HINTS[source] ?? hint, entity: source },
+        documents: this.loadDocs(),
       });
       document.exitPointerLock?.();
       this.audio.setMood('menu');
