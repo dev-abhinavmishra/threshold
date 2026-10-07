@@ -1224,6 +1224,19 @@ export class Game {
         holdTime: 1.2, enabled: true, priority: 3,
       });
     }
+    // The clerk's page — a question desk on the figure itself: each
+    // clerk holds one seeded query (staff on duty, faults on file, or
+    // the house's held-file). priority 3 so facing the clerk outranks
+    // the counter's priority-1 wares.
+    for (const [roomIndex, fig] of this.clerkFigs) {
+      this.interaction.add({
+        kind: 'ask', id: `ask-${this.space}:${roomIndex}`,
+        pos: { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z },
+        prompt: 'Ask the clerk',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: { roomIndex },
+      });
+    }
     // Cut the seal — an armed paper wire is a quiet thing you can cut;
     // under live floodwater the wire only shows itself to a wader
     // crouched low enough to feel for it.
@@ -1726,6 +1739,83 @@ export class Game {
         } else {
           this.paperTrail -= 1;
           this.cue('purchase', it.pos, `[the broker makes a call — a line comes off your file · ${price} marginalia]`, 'info');
+        }
+        return;
+      }
+      case 'ask': {
+        // The clerk's page — one seeded question per staffed counter,
+        // priced in imprints at the register's rate, one-shot. The page
+        // lives on the room's slot0 socket; the verb anchors the figure.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const room = this.activeRooms()[roomIndex];
+        const page = room?.sockets.find((s) => s.meta.clerk === 'slot0');
+        if (!room || !page || page.meta.clerkQ === undefined) return;
+        if (this.clerkAsked.has(roomIndex)) {
+          this.cue('door-locked', it.pos, '[the clerk has said what it knows]', 'info');
+          return;
+        }
+        const price = (page.meta.clerkQPrice as number) ?? 6;
+        const filed = this.unpaidHeld > 0;
+        const eff = filed ? price + Math.min(2 + this.unpaidHeld, 6) : price;
+        if (this.imprints < eff) {
+          this.cue('door-locked', it.pos,
+            filed ? `[the clerk wants ${eff} imprints for the page — the register's rate, settle your claims]`
+              : `[the clerk wants ${eff} imprints for the page — ${eff - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.imprints -= eff;
+        this.clerkAsked.add(roomIndex);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const q = page.meta.clerkQ as string;
+        const mains = this.route?.rooms ?? [];
+        const door = (i: number) => `Door ${String(i).padStart(3, '0')}`;
+        if (q === 'staff') {
+          const STAFF: Record<string, string> = {
+            bellman: 'a valet', warden: 'a watchman', inspector: 'a clerk',
+            commissionaire: 'a doorman', porter: 'a porter', detective: 'a detective',
+            redactor: 'a forger', collector: 'a toll-taker',
+          };
+          const marks: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || marks.length >= 4) continue;
+            for (const s of r.scheduled) {
+              const noun = STAFF[s.entity];
+              if (noun && marks.length < 4) marks.push(`${door(r.index)} — ${noun}`);
+            }
+          }
+          this.cue('whisper', it.pos, marks.length
+            ? `[the clerk turns the duty sheet: ${marks.join(' · ')}]`
+            : '[the clerk turns the duty sheet — the next stretch stands unstaffed]');
+        } else if (q === 'hazard') {
+          const FAULT: Record<string, string> = {
+            snare: 'a live wire', steamVent: 'a vent about to breathe', fan: 'a wheel that chews',
+            puddle: 'a floor standing wet', securityCam: 'the eye pans', searchlight: 'the light sweeps',
+          };
+          const marks: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || marks.length >= 4) continue;
+            for (const p of r.spec?.props ?? []) {
+              const noun = FAULT[p.kind];
+              if (noun && marks.length < 4) marks.push(`${door(r.index)} — ${noun}`);
+            }
+          }
+          this.cue('whisper', it.pos, marks.length
+            ? `[the clerk's ledger of faults: ${marks.join(' · ')}]`
+            : '[the clerk\'s ledger of faults — nothing filed ahead]');
+        } else {
+          const entries: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || entries.length >= 5) continue;
+            for (const s of r.sockets ?? []) {
+              if (entries.length >= 5) break;
+              if (!s.meta.claim || s.meta.marginalia === true) continue;
+              const tag = (s.meta.claimTag as string) ?? 'unsigned';
+              entries.push(`${door(r.index)} — '${tag}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+            }
+          }
+          this.cue('whisper', it.pos, entries.length
+            ? `[the clerk's held-file: ${entries.join(' · ')}]`
+            : '[the clerk\'s held-file — the house holds nothing ahead]');
         }
         return;
       }
@@ -5078,6 +5168,8 @@ export class Game {
    *  counters, the Broker's upstairs twin: porcelain service-face,
    *  amber eyes, no hood. Spawned lazily when a clerked room builds. */
   private readonly clerkFigs = new Map<number, THREE.Object3D>();
+  /** Counters that already read you their page — one ask per clerk. */
+  private readonly clerkAsked = new Set<number>();
 
   private ensureClerk(roomIndex: number): void {
     if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;

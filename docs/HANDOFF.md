@@ -3259,3 +3259,35 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   counter + 2 pedestals per clerked room per seed), 5-seed sim,
   e2e economy 7/7 (new leg: figure present → short refuse → till
   rings → register's rate +9 on the second pedestal), build.
+
+## Sprint 319 — ask the clerk (the staffed page)
+
+- New InteractKind 'ask': a second anchor on the clerk figure itself
+  (pos.y+1.4, holdTime 1.0, priority 3 — same floor as 'fix'). Data
+  carries { roomIndex }; the query lives on the room's slot0 socket
+  meta (`clerkQ` ∈ 'staff'|'hazard'|'claims', `clerkQPrice` 4-9,
+  seeded on the existing 'clerk' stream — no new stream needed, the
+  pass already owns clerked rooms).
+- 'Ask the clerk' — one-shot per counter (`clerkAsked` set): pays the
+  page at list price, or the register's rate for a filed face
+  (`price + min(2 + held, 6)`). Answers scan the next 8 main rooms:
+  staff → `r.scheduled` entity nouns (STAFF map), hazard → spec.props
+  fault nouns (FAULT map), claims → next 10 rooms' claim tags
+  (still held/drawn). Empty stretches get a clean 'nothing filed'
+  line, not silence.
+- Trap: the verb is on the FIGURE, and `meta.clerkQ` must never mint
+  an interactable — putting 'ask' on the slot0 socket would shadow
+  'Buy at the counter' at the same anchor (interaction.ts maps
+  `meta.clerk !== undefined` → kind 'shop'; a second mapping on the
+  same socket only sees one branch). Page data on the socket, verb
+  on the man.
+- Trap: e2e leg drives hold verbs by prompt regex — the economy
+  clerk drive's `/counter|buy|wares|take/i` couldn't see 'Ask the
+  clerk', so the second ask never held KeyE. Match lists must cover
+  every prompt the leg touches; ambient watcher captions can satisfy
+  a loose `caps.length > mark` done-predicate and end the drive
+  early — wait on the specific caption.
+- Gates: tsc, lint, vitest (clerk spec extended: every clerked room's
+  slot0 carries a valid clerkQ + 4-9 price; hazardContract += 'ask'),
+  5-seed sim, e2e economy leg extended (ask anchor found → paid at
+  list price → page answered → second ask says what it knows), build.
