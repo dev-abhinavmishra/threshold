@@ -5575,17 +5575,20 @@ export class Game {
   private readonly stockSeen = new Set<number>();
 
   /** Spend imprints at a house service — the marked coin goes first,
-   *  and each hot coin that lands rings where it fell. Only the
-   *  house's services testify; the under answers to different books. */
+   *  and each hot coin that lands testifies twice: it rings where it
+   *  fell AND the till files the hands that fed it into the register.
+   *  Only the house's services testify; the under answers to different
+   *  books (the purse launders silently, for the asking's price). */
   private chargedImprints(n: number, x: number, z: number): void {
     this.imprints -= n;
     const hot = Math.min(n, this.hotImprints);
     if (hot <= 0) return;
     this.hotImprints -= hot;
+    this.unpaidHeld += 1;
     this.sound.emit({ x, y: 1, z, intensity: 0.5, category: 'distraction',
       caption: '[a marked coin rings where it lands]' });
     this.cue('machine', v3(x, 1, z),
-      '[the till knows its own coin — the house hears where it landed]', 'warn');
+      '[the till knows its own coin — the register files the hands that fed it]', 'warn');
   }
 
   private ensureClerk(roomIndex: number): void {
