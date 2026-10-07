@@ -2192,6 +2192,33 @@ export class Game {
         this.cue('whisper', it.pos, '[two thefts struck from the tally — the filing itself is claimed]');
         return;
       }
+      case 'misfile': {
+        // The quiet amendment — the count's relief valve. The other
+        // filings settle ledgers; this buries the count itself: every
+        // pending loss-report leaves the books — no ring, no checker.
+        // A timing play, not a pardon: file it BEFORE the ring lands,
+        // and a walker already out keeps walking. Dearest paper below.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 8;
+        if (this.crewCount.pending <= 0) {
+          this.cue('door-locked', it.pos, '[the tally is already honest — the clerk waves the slip away]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the amendment wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        const buried = this.crewCount.pending;
+        this.crewCount.reset();
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, buried === 1
+          ? '[a line item leaves the count — it never reaches the books]'
+          : `[${buried} line items leave the count — they never reach the books]`);
+        return;
+      }
       case 'affidavit': {
         // The affidavit — the held ledger's relief valve, priced in
         // imprints on the main route (its under twins run on marginalia).

@@ -972,3 +972,93 @@ test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 
   expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
   expect(errors).toEqual([]);
 });
+
+test('the quiet amendment — bury the count before it rings (sprint 308)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      checker: { stage: string };
+      crewCount: { pending: number };
+      sound: { on(fn: (e: { caption?: string }) => void): unknown };
+    };
+    const rings: string[] = [];
+    ga.sound.on((e) => { if (e.caption && /count is short/.test(e.caption)) rings.push(e.caption); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 60;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    const formRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.misfile));
+    if (!cageRoom || !formRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    const form = (formRoom.sockets ?? []).find((s) => s.meta?.misfile);
+    if (!tag || !form) return { stage: 'no-tag' } as const;
+    // pilfer the tag — a loss-report queues
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    const queued = ga.crewCount.pending;
+    // run to the amendment desk and file before the ring lands
+    g.player.teleport(formRoom.origin.x, 0, formRoom.origin.z);
+    ga.currentRoom = formRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    // stand on the room-center side of the paper — the socket sits +0.5
+    // toward center off a desk collider, so +0.4 lands inside the prop
+    // and the frame pushes you ~1.1m out, swinging the aim off align
+    const toC = { x: formRoom.origin.x - form.pos.x, z: formRoom.origin.z - form.pos.z };
+    const toCL = Math.hypot(toC.x, toC.z) || 1;
+    const stand = { x: form.pos.x + (toC.x / toCL) * 0.9, z: form.pos.z + (toC.z / toCL) * 0.9 };
+    for (let f = 0; f < 60; f++) {
+      g.player.teleport(stand.x, 0, stand.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      // aim at the FOCUS point (pos.y + 0.6), not the socket point — a
+      // down-pitch at the desk-elevated socket fails the 0.86 align gate
+      const hd = Math.hypot(form.pos.x - g.player.pos.x, form.pos.z - g.player.pos.z);
+      g.player.pitch = Math.atan2((form.pos.y + 0.6) - eyeY, hd);
+      g.player.yaw = Math.atan2(form.pos.x - g.player.pos.x, form.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+      if (ga.crewCount.pending === 0) break;
+    }
+    ga.keys.delete('KeyE');
+    const buried = ga.crewCount.pending === 0;
+    // wait past the count's due window — nothing should ring, nobody walks
+    for (let f = 0; f < 90 * 30; f++) g.frame();
+    return { stage: 'done', paid, queued, buried,
+      rang: rings.length > 0, walked: ga.checker.stage !== 'idle',
+      burySeen: caps.some((c) => /never reaches the books/.test(c)),
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.queued, JSON.stringify(result)).toBeGreaterThanOrEqual(1); // the theft queued a report
+  expect(result.buried, JSON.stringify(result)).toBe(true); // the filing buried it
+  expect(result.burySeen, JSON.stringify(result)).toBe(true);
+  expect(result.rang, JSON.stringify(result)).toBe(false); // the count never rang
+  expect(result.walked, JSON.stringify(result)).toBe(false); // nobody walked
+  expect(errors).toEqual([]);
+});

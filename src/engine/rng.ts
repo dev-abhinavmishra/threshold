@@ -21,7 +21,8 @@ export type RngStream =
   | 'filer'
   | 'countersign'
   | 'returnslip'
-  | 'affidavit';
+  | 'affidavit'
+  | 'misfile';
 
 const STREAM_SALTS: Record<RngStream, number> = {
   structure: 0x517ac0de,
@@ -39,6 +40,7 @@ const STREAM_SALTS: Record<RngStream, number> = {
   countersign: 0xc04e51d0,
   returnslip: 0x4e7151e7,
   affidavit: 0xa55d71e8,
+  misfile: 0x151f11e5,
 };
 
 /** FNV-1a 32-bit string hash — used to derive seeds from player-entered text. */

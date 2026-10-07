@@ -3001,3 +3001,26 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   checker as `it.data` — same cast-to-Record pattern as the hauler.
 - Gates: tsc, lint, 222 vitest (+6 incl. 2 strip specs), 5-seed sim,
   undercast **10/10** (+strip leg), build.
+
+## sprint 308 — the quiet amendment (bury the count before it rings)
+
+- Seventh under paper: 'Misfile a line item — N marginalia' (6–11, the
+  register's desk family: filing/cubicle/schoolDesk/keyCabinet/
+  recordsCage). The filing strikes every PENDING loss-report out of the
+  count — buried reports never ring, so no checker is dispatched.
+  It is a timing play, not a pardon: a checker already walking keeps
+  walking, and the pilfer itself is already in the Auditor's tally.
+- Blank books shrug free ('[the tally is already honest — nothing to
+  bury]'); short purse warns. One-shot per socket (`meta.taken`).
+- New RngStream 'misfile' (0x151f11e5) isolates the 0.08 roll — same
+  safe-landing / foreshadow-host exclusions as the other papers.
+- Traps/log: the e2e leg needed TWO aim fixes — (1) pitch must target
+  the focus point `pos.y + 0.6`, not the socket point: a desk-elevated
+  socket aimed at raw pos.y is a ~55° down-pitch that fails the 0.86
+  align gate (the +0.6 focus point sits near eye level). (2) standing at
+  `sock.pos + 0.4x` puts you INSIDE the host desk's collider — the frame
+  pushes you ~1.1m out and swings the aim ~45° off. Stand on the
+  room-center side: `sock.pos + dirToCenter * 0.9` (the paper juts that
+  way by design). Distances recompute from g.player.pos AFTER teleport.
+- Gates: tsc, lint, 225 vitest (+1 gen spec), 5-seed sim, undercast
+  **11/11** (+quiet amendment leg), build.

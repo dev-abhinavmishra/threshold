@@ -819,6 +819,26 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           meta: { returnSlip: true, price: rsRng.int(3, 7) },
         });
       }
+      // The quiet amendment — the count axis's relief valve, on its own
+      // 'misfile' stream. The other filings settle LEDGERS; this buries
+      // the count itself: pending loss-reports never reach the books —
+      // no ring, no checker. Dearest paper below (silence costs more than
+      // answers), same desk family — a clerk's slip, not a crew notice.
+      const mfRng = streams.stream('misfile');
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !mfRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind) && !p.meta?.foreshadow);
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { misfile: true, price: mfRng.int(6, 11) },
+        });
+      }
 
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
