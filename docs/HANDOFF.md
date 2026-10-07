@@ -3389,3 +3389,25 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, vitest (contract += 'purse'), 5-seed sim, e2e
   broker leg extended (clean 6→8 · sour 6→6 · short refuse · the
   fixed anchor verified via purseSeen diagnostics), build.
+
+## Sprint 324 — the purse's other direction (the exchange completes)
+
+- 'Change the purse — 8 marginalia' anchors off the clerk counter's
+  near end (the mirror anchor of the Broker's): pays 8 marginalia
+  for 6 imprints on clean books, 4 for a filed face (unpaidHeld > 0
+  — the clerk reads the register, not the under's tallies).
+  Repeatable; a rifled counter folds like the rest of its service.
+- The currency bridge is now two-way: imprints buy marginalia below
+  (6→8/6), marginalia buy imprints above (8→6/4). Both spreads are
+  the house's cut — clean books always pay better than filed ones.
+- Trap (collider-eject stale aim): a verb anchored at the counter's
+  far lateral end can put the at+1.0·dirToCenter stand INSIDE the
+  counter flank's collider. The eject fires after the drive's aim
+  was set, so every frame's lookDir misses by ~60° and focus sees
+  zero candidates (probed: d0.41 a0.48 — purse dead-ahead but
+  misaligned). Symptom to spot: focused===null for frames on end,
+  not 'wrong prompt'. Fix: shift `at` ~0.4 toward center so the
+  stand clears the collider — same idiom as the till's close-stand.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
+  clean 8→6 · filed-face sour 8→4 · short refuse · cold-counter
+  fold; broker leg unchanged), build.

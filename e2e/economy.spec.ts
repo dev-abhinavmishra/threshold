@@ -815,7 +815,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
         const prompt = g.interaction.focused?.prompt ?? '';
         if (f % 10 === 0) seen.push(prompt);
-        if (/counter|buy|wares|take|ask|clerk|rifle|till|ring|bell/i.test(prompt)) {
+        if (/counter|buy|wares|take|ask|clerk|rifle|till|ring|bell|purse|change/i.test(prompt)) {
           if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
         } else { g.keys.delete('KeyE'); g.input.interactPressed = false; }
         g.frame();
@@ -876,6 +876,35 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         askPrompt = g.interaction.focused?.prompt ?? askPrompt;
       }
     }
+    // Change the purse — the clerk's counter converts marginalia to
+    // imprints: clean books 8→6, a filed face sours it to 8→4.
+    const purse = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'purse');
+    let pursePaid = false, purseSour = false, purseShortCap = '',
+      purseCleanCap = '', purseSourCap = '', purseSeen = '';
+    if (purse) {
+      // the purse sits at the counter's lateral end — at+1.0·dirToCenter lands
+      // inside the counter flank's collider and the eject leaves the aim stale
+      // (lookDir set pre-push misses by ~60°); stand 0.6m off instead
+      const pcx = clerked.origin.x - purse.pos.x;
+      const pcz = clerked.origin.z - purse.pos.z;
+      const pL = Math.hypot(pcx, pcz) || 1;
+      const purseAt = { x: purse.pos.x - (pcx / pL) * 0.4, y: purse.pos.y,
+        z: purse.pos.z - (pcz / pL) * 0.4 };
+      g.marginalia = 20; g.imprints = 10;
+      purseSeen = drive(purseAt, () => g.imprints === 16, 60);
+      pursePaid = g.imprints === 16 && g.marginalia === 12;
+      purseCleanCap = caps.find((t) => /purse changes/.test(t)) ?? '';
+      ga.unpaidHeld = 2; // a filed face — the register sours the change
+      drive(purseAt, () => g.imprints === 20, 50);
+      purseSour = g.imprints === 20 && g.marginalia === 4;
+      purseSourCap = caps.find((t) => /counts your coins twice|rate sours/.test(t)) ?? '';
+      ga.unpaidHeld = 0;
+      g.marginalia = 5; g.imprints = 20;
+      drive(purseAt, () => caps.some((t) => /purse wants/.test(t)), 40);
+      purseShortCap = caps.find((t) => /purse wants/.test(t)) ?? '';
+    }
     // Rifle the till — the staffed-register rummage: pays once, files
     // your face twice, and the till never re-offers.
     const till = (g.interaction as { interactables?: { kind: string;
@@ -927,7 +956,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     // The counter goes cold: rifled tills close the clerk's service —
     // wares refuse at any price, the page folds, only the bell (the
     // house's, not the clerk's) still answers.
-    let coldWareCap = '', coldWareSold = true, coldAskCap = '', coldImprints = -1, coldBellCap = '';
+    let coldWareCap = '', coldWareSold = true, coldAskCap = '', coldImprints = -1, coldBellCap = '', coldPurseCap = '';
     g.imprints = 99;
     if (sock2) {
       drive(sock2.pos, () => caps.some((t) => /folds its hands/.test(t)), 50);
@@ -944,13 +973,26 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       drive(bell.pos, () => caps.some((t) => /tired click|note rolls/.test(t)), 60);
       coldBellCap = caps.find((t) => /tired click|note rolls/.test(t)) ?? '';
     }
+    // the purse is the clerk's service too — a cold counter folds it
+    if (purse) {
+      drive(purse.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 3, 60);
+      const folds = caps.filter((t) => /folds its hands/.test(t));
+      coldPurseCap = folds[folds.length - 1] ?? '';
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
-      coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap,
+      coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
+      purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
+      purseSeen, pursePos: purse ? { x: Math.round(purse.pos.x*10)/10, y: purse.pos.y, z: Math.round(purse.pos.z*10)/10 } : null,
+      pursePlayer: { x: Math.round(g.player.pos.x*10)/10, z: Math.round(g.player.pos.z*10)/10 },
+      nearPurse: purse ? (g.interaction as { interactables?: { kind: string; enabled?: boolean;
+        pos: { x: number; y: number; z: number }; priority?: number }[] }).interactables
+        ?.filter((i) => Math.hypot(i.pos.x - purse.pos.x, i.pos.z - purse.pos.z) < 3)
+        .map((i) => `${i.kind}${i.enabled === false ? '!' : ''}@${Math.round(Math.hypot(i.pos.x - purse.pos.x, i.pos.z - purse.pos.z) * 10) / 10}`) : [],
       clerkQ: sock.meta.clerkQ as string };
   });
 
@@ -987,6 +1029,14 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.coldImprints).toBe(99);
   expect(result.coldAskCap).toMatch(/folds its hands/);
   expect(result.coldBellCap).toMatch(/tired click|note rolls/);
+  expect(result.coldPurseCap).toMatch(/folds its hands/);
+  // sprint 324 — the purse's other direction: marginalia changes to imprints
+  expect(result.purseFound, JSON.stringify(result)).toBe(true);
+  expect(result.pursePaid, JSON.stringify(result)).toBe(true);
+  expect(result.purseCleanCap).toMatch(/purse changes/);
+  expect(result.purseSour, JSON.stringify(result)).toBe(true);
+  expect(result.purseSourCap).toMatch(/counts your coins twice|rate sours/);
+  expect(result.purseShortCap).toMatch(/purse wants/);
   expect(errors).toEqual([]);
 });
 
