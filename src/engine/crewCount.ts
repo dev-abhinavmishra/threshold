@@ -32,6 +32,12 @@ export class CrewCount {
     return this.losses.length;
   }
 
+  /** The sockets of every still-queued report — the books marked them
+   *  together, so a dispatch may route through tills that haven't rung. */
+  pendingSockets(): { x: number; z: number }[] {
+    return this.losses.map((l) => ({ x: l.x, z: l.z }));
+  }
+
   /** Run teardown — a queued report must not ring in the next run. */
   reset(): void {
     this.losses = [];

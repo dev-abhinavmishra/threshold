@@ -63,6 +63,8 @@ export class CrewChecker {
   private travel = 0;
   private sweepAt = 0;
   private sweepRoom = -1;
+  private stops: { at: number; room: number }[] = [];
+  private stopIdx = 0;
   private state: 'idle' | 'inbound' | 'sweep' | 'outbound' = 'idle';
   private sweepT = 0;
   private spotT = 0;
@@ -94,25 +96,39 @@ export class CrewChecker {
     return 45;
   }
 
-  /** Answer a rung count. Returns false when a checker is already out —
-   *  the books send one walker per beat, not a crowd. */
-  dispatch(rooms: RoomInstance[], socket: { x: number; z: number }, hooks: CheckerHooks): boolean {
+  /** Answer a rung count. Every socket is a till that rang or is queued —
+   *  the walker sweeps each one on a single hi→lo route. Returns false
+   *  when a checker is already out: the books send one walker per beat,
+   *  not a crowd. */
+  dispatch(rooms: RoomInstance[], sockets: { x: number; z: number }[], hooks: CheckerHooks): boolean {
     if (this.active) return false;
-    const socketRoom = roomOf(rooms, socket);
-    if (socketRoom < 0) return false;
-    this.sweepRoom = socketRoom;
-    const lo = Math.max(0, socketRoom - REACH);
-    const hi = Math.min(rooms.length - 1, socketRoom + REACH);
+    // one stop per till room — duplicate sockets on a room collapse
+    const tills: { x: number; z: number; room: number }[] = [];
+    const seen = new Set<number>();
+    for (const s of sockets) {
+      const ri = roomOf(rooms, s);
+      if (ri >= 0 && !seen.has(ri)) { seen.add(ri); tills.push({ x: s.x, z: s.z, room: ri }); }
+    }
+    if (!tills.length) return false;
+    const lo = Math.max(0, Math.min(...tills.map((t) => t.room)) - REACH);
+    const hi = Math.min(rooms.length - 1, Math.max(...tills.map((t) => t.room)) + REACH);
     // the crew comes from deeper in the under — walk hi → lo
     this.path = corridorPath(rooms, lo, hi).reverse();
-    // the sweep stands on the path point nearest the rung socket
-    let acc = 0, best = Infinity;
-    this.sweepAt = 0;
-    for (let i = 0; i < this.path.length - 1; i++) {
-      const d = Math.hypot(this.path[i].x - socket.x, this.path[i].z - socket.z);
-      if (d < best) { best = d; this.sweepAt = acc; }
-      acc += Math.hypot(this.path[i + 1].x - this.path[i].x, this.path[i + 1].z - this.path[i].z);
-    }
+    // a stop per till: the path point nearest each socket, in walk order
+    const segAt: number[] = [0];
+    for (let i = 0; i < this.path.length - 1; i++)
+      segAt.push(segAt[i] + Math.hypot(this.path[i + 1].x - this.path[i].x, this.path[i + 1].z - this.path[i].z));
+    this.stops = tills.map((t) => {
+      let best = Infinity, at = 0;
+      for (let i = 0; i < this.path.length - 1; i++) {
+        const d = Math.hypot(this.path[i].x - t.x, this.path[i].z - t.z);
+        if (d < best) { best = d; at = segAt[i]; }
+      }
+      return { at, room: t.room };
+    }).sort((a, b) => a.at - b.at);
+    this.stopIdx = 0;
+    this.sweepAt = this.stops[0].at;
+    this.sweepRoom = this.stops[0].room;
     this.travel = 0;
     this.sweepT = 0;
     this.spotT = 0;
@@ -139,7 +155,9 @@ export class CrewChecker {
     this.mesh = g;
     hooks.addMesh(g);
     this.state = 'inbound';
-    hooks.cue('chalk-mark', this.pos, '[the count is answered — somebody walks the row with a lamp]', { severity: 'warn' });
+    hooks.cue('chalk-mark', this.pos, this.stops.length > 1
+      ? '[the count is answered wide — the lamp has more than one till]'
+      : '[the count is answered — somebody walks the row with a lamp]', { severity: 'warn' });
     return true;
   }
 
@@ -175,13 +193,25 @@ export class CrewChecker {
         this.spotT = 0;
       }
       if (this.sweepT >= SWEEP_T) {
-        this.state = 'outbound';
-        this.rig?.play('move');
-        hooks.cue('chalk-mark', this.pos, this.found
-          ? '[the checker closes the count — you are in the book]'
-          : this.lampLit
-            ? '[the checker counts the till and moves on]'
-            : '[the checker counts blind — the count stays open]', { severity: this.found || !this.lampLit ? 'warn' : 'info' });
+        this.stopIdx++;
+        if (this.stopIdx < this.stops.length) {
+          // another till rang on this route — walk on to it
+          this.state = 'inbound';
+          this.sweepAt = this.stops[this.stopIdx].at;
+          this.sweepRoom = this.stops[this.stopIdx].room;
+          this.sweepT = 0;
+          this.spotT = 0;
+          this.rig?.play('move');
+          hooks.cue('chalk-mark', this.pos, '[the checker counts a till — the walk continues]', { severity: 'info' });
+        } else {
+          this.state = 'outbound';
+          this.rig?.play('move');
+          hooks.cue('chalk-mark', this.pos, this.found
+            ? '[the checker closes the count — you are in the book]'
+            : this.lampLit
+              ? '[the checker counts the till and moves on]'
+              : '[the checker counts blind — the count stays open]', { severity: this.found || !this.lampLit ? 'warn' : 'info' });
+        }
       }
     } else {
       this.travel += WALK * dt;

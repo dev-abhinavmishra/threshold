@@ -6260,8 +6260,13 @@ export class Game {
     // loud enough to rouse the dormant AND pull the room's own listeners
     this.crewCount.tick(this.clock.time, (l) => {
       this.sound.emit({ x: l.x, y: 0.6, z: l.z, intensity: 0.6, category: 'item', caption: l.caption });
-      // ...and the books send somebody to look
-      if (this.route) this.checker.dispatch(this.route.underRooms, l, this.checkerHooks());
+      // ...and the books send somebody to look — at every till they marked
+      if (this.route) {
+        const extra = this.crewCount.pendingSockets();
+        const sent = this.checker.dispatch(this.route.underRooms, [l, ...extra], this.checkerHooks());
+        if (sent && extra.length)
+          this.cue('chalk-mark', null, '[the books marked them together — the lamp has more than one till]', 'warn');
+      }
     });
     // the checker walks: inbound → sweep the rung socket → outbound
     if (this.checker.active && this.route) {

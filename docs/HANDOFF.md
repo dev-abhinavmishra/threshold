@@ -3099,3 +3099,32 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
   checker leg now asserts closed-cue + refusal + reopening sale),
   build.
+
+## sprint 312 — the multi-stop sweep (the books mark them together)
+
+- `CrewChecker.dispatch` now takes `sockets[]` and walks ONE hi→lo
+  route that sweeps every till the books marked — one stop per till
+  room. Pilfer twice before the count rings and the lamp visits both
+  rooms on the same walk; a second dispatch while a route is live is
+  still refused ('one walker per beat, not a crowd' holds).
+- `CrewCount.pendingSockets()` exposes queued-but-unrung reports —
+  the books marked them the moment the pilfer happened, so the route
+  covers tills whose ring hasn't gone out yet (their ring still emits
+  on schedule; the walk is already decided).
+- State machine: inbound → sweep → [more stops → inbound → sweep] →
+  outbound → idle. Interim cue '[the checker counts a till — the walk
+  continues]' at each non-final stop; the contextual close (found /
+  lamp-lit / blind) only at the last. Dispatch cue goes wide:
+  '[the count is answered wide — the lamp has more than one till]'.
+- found/witnessed stay once-per-dispatch (the first held face); a
+  multi-stop route also LENGTHENS the sprint-311 shutter window.
+- Traps/log: the e2e find lands at the LAST stop now — the 306 leg's
+  170*30 linger cap was sized for one stop (~55s walk); a 2-stop route
+  puts the second till's sweep ~150s out — cap raised to 340*30. The
+  shutter-attempt loop checks `stage === 'idle'` BEFORE pressing, not
+  after — a same-frame departure could sell through the gate. Spec
+  files treat `sockets`/`meta` optional: `(x.sockets ?? [])` / `?.`.
+- Gates: tsc, lint, 229 vitest (+1 two-stop spec: sweeps counted = 2),
+  5-seed sim, undercast **12/12** (the leg pilfers a second cage tag —
+  's' has tills at under-rooms 1/26/53/56/71/73/90 — asserts the wide
+  cue + walk-continues + found at the linger room), build.

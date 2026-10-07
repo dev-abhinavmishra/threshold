@@ -34,7 +34,7 @@ describe('CrewChecker (the count answered)', () => {
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
-    expect(c.dispatch(rooms, socket, h)).toBe(true);
+    expect(c.dispatch(rooms, [socket], h)).toBe(true);
     expect(c.stage).toBe('inbound');
     const player = { pos: v3(socket.x, 0, socket.z), room: ri, exposed: true };
     // inbound: walk until the sweep starts
@@ -63,11 +63,32 @@ describe('CrewChecker (the count answered)', () => {
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
-    c.dispatch(rooms, socket, h);
+    c.dispatch(rooms, [socket], h);
     step(c, rooms, h, 300);
     expect(c.stage).toBe('idle');
     expect(emitted).toHaveLength(0);
     expect(cues.some((t) => /counts the till and moves on/.test(t))).toBe(true);
+  });
+
+  it('the books mark the tills together — two queued reports get one walker with two stops', () => {
+    const rooms = underRooms();
+    const { h, cues, witnessed } = hooks();
+    const c = new CrewChecker();
+    const s30 = { x: rooms[30].origin.x, z: rooms[30].origin.z };
+    const s33 = { x: rooms[33].origin.x, z: rooms[33].origin.z };
+    expect(c.dispatch(rooms, [s30, s33], h)).toBe(true);
+    expect(cues.some((t) => /more than one till/.test(t))).toBe(true);
+    // it sweeps BOTH sockets: count 'sweep' entries across the whole walk
+    let sweeps = 0, prev = c.stage;
+    for (let t = 0; t < 400 && c.stage !== 'idle'; t += 0.1) {
+      c.update(0.1, rooms, { pos: v3(9e9, 0, 9e9), room: -1, exposed: false }, h);
+      if (c.stage === 'sweep' && prev !== 'sweep') sweeps++;
+      prev = c.stage;
+    }
+    expect(c.stage).toBe('idle');
+    expect(sweeps).toBe(2);
+    expect(cues.some((t) => /walk continues/.test(t))).toBe(true);
+    expect(witnessed).not.toHaveBeenCalled(); // nobody home at either till
   });
 
   it('the books send one walker at a time', () => {
@@ -75,10 +96,10 @@ describe('CrewChecker (the count answered)', () => {
     const { h } = hooks();
     const c = new CrewChecker();
     const socket = { x: rooms[30].origin.x, z: rooms[30].origin.z };
-    expect(c.dispatch(rooms, socket, h)).toBe(true);
-    expect(c.dispatch(rooms, socket, h)).toBe(false);
+    expect(c.dispatch(rooms, [socket], h)).toBe(true);
+    expect(c.dispatch(rooms, [socket], h)).toBe(false);
     step(c, rooms, h, 300);
-    expect(c.dispatch(rooms, socket, h)).toBe(true); // free again after it leaves
+    expect(c.dispatch(rooms, [socket], h)).toBe(true); // free again after it leaves
   });
 
   it('roomOf resolves socket positions to their under room', () => {
@@ -95,7 +116,7 @@ describe('CrewChecker — strip the lamp', () => {
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
-    c.dispatch(rooms, socket, h);
+    c.dispatch(rooms, [socket], h);
     // steal its light mid-walk — it feels it go
     const charge = c.stripLamp(h);
     expect(charge).toBe(45);
@@ -118,10 +139,10 @@ describe('CrewChecker — strip the lamp', () => {
     const { h } = hooks();
     const c = new CrewChecker();
     const socket = { x: rooms[30].origin.x, z: rooms[30].origin.z };
-    c.dispatch(rooms, socket, h);
+    c.dispatch(rooms, [socket], h);
     c.stripLamp(h);
     step(c, rooms, h, 300);
-    c.dispatch(rooms, socket, h);
+    c.dispatch(rooms, [socket], h);
     expect(c.lampLit).toBe(true); // the crew wires another one
   });
 });

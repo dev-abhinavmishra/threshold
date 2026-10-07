@@ -859,10 +859,30 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
     if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // sprint 312 — pilfer a second till before the first report rings, so
+    // the books mark them together and the lamp walks both rooms
+    const cageRoom2 = g.route.underRooms.find((r) => r !== cageRoom
+      && (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    let pilfered2 = false;
+    if (cageRoom2) {
+      const tag2 = (cageRoom2.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia)!;
+      ga.currentRoom = cageRoom2.index;
+      for (let f = 0; f < 50; f++) {
+        g.player.teleport(tag2.pos.x + 0.4, 0, tag2.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(tag2.pos.y - eyeY, 0.5);
+        g.player.yaw = Math.atan2(tag2.pos.x - g.player.pos.x, tag2.pos.z - g.player.pos.z);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      pilfered2 = caps.filter((c) => /effects held|inside the bag|old papers|someone's papers/.test(c)).length >= 2;
+    }
     // linger exposed in the pilfered room — the count rings ~75s out, then
     // the checker walks. Stay put: this is the losing play, on purpose.
+    // (cap sized for a 2-stop route: sweep of this room can land ~150s in)
     let dispatched = false;
-    for (let f = 0; f < 170 * 30 && heard.length === 0; f++) {
+    for (let f = 0; f < 340 * 30 && heard.length === 0; f++) {
       g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
       g.frame();
       if (ga.checker.stage !== 'idle') dispatched = true;
@@ -871,14 +891,15 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     // sprint 311 — the floor shutters while the count walks: a stocked
     // broker pedestal must refuse trade until the checker leaves
     const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
-      && r.sockets.some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined && s.meta?.sold !== true));
+      && (r.sockets ?? []).some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined && s.meta?.sold !== true));
     if (!lobby) return { stage: 'no-lobby' } as const;
-    const bsock = lobby.sockets.find((s) => s.meta?.broker !== undefined
+    const bsock = (lobby.sockets ?? []).find((s) => s.meta?.broker !== undefined
       && s.meta?.brokerItem !== undefined && s.meta?.sold !== true)!;
     ga.marginalia = 99;
     ga.currentRoom = lobby.index;
     const closedBefore = caps.length;
-    for (let f = 0; f < 90 && bsock.meta.sold !== true; f++) {
+    for (let f = 0; f < 90 && bsock.meta?.sold !== true; f++) {
+      if (ga.checker.stage === 'idle') break; // too late — he already left
       const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
       const L = Math.hypot(dx, dz) || 1;
       g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
@@ -891,14 +912,13 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
       }
       g.frame();
       g.input.interactPressed = false;
-      if (ga.checker.stage === 'idle') break; // too late — he already left
     }
     const closedSeen = caps.slice(closedBefore).some((c) => /floor is closed/.test(c));
-    const refusedWhileWalking = bsock.meta.sold !== true;
+    const refusedWhileWalking = bsock.meta?.sold !== true;
     // let it close the count and leave
     for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
     // the floor reopens — the same pedestal trades now
-    for (let f = 0; f < 90 && bsock.meta.sold !== true; f++) {
+    for (let f = 0; f < 90 && bsock.meta?.sold !== true; f++) {
       const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
       const L = Math.hypot(dx, dz) || 1;
       g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
@@ -912,13 +932,15 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
       g.frame();
       g.input.interactPressed = false;
     }
-    const soldAfter = bsock.meta.sold === true;
+    const soldAfter = bsock.meta?.sold === true;
     return { stage: 'done', paid, dispatched, found: heard.length > 0,
-      closedSeen, refusedWhileWalking, soldAfter,
+      closedSeen, refusedWhileWalking, soldAfter, pilfered2,
+      wideSeen: caps.some((c) => /more than one till|marked them together/.test(c)),
+      walkCont: caps.some((c) => /walk continues/.test(c)),
       fx: found?.x, fz: found?.z, intensity: found?.intensity,
       finalStage: ga.checker.stage,
       px: tag.pos.x + 0.4, pz: tag.pos.z,
-      cueSeen: caps.some((c) => /walks the row/.test(c)),
+      cueSeen: caps.some((c) => /walks the row|more than one till/.test(c)),
       closeSeen: caps.some((c) => /closes the count|counts the till/.test(c)),
       witSeen: caps.some((c) => /register gains a witness/.test(c)),
       heldAfter: ga.unpaidHeld,
@@ -936,6 +958,11 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
   expect(result.closedSeen, JSON.stringify(result)).toBe(true);
   expect(result.refusedWhileWalking, JSON.stringify(result)).toBe(true);
   expect(result.soldAfter, JSON.stringify(result)).toBe(true);
+  // sprint 312 — two tills marked together: one wide walk, both swept
+  if (result.pilfered2) {
+    expect(result.wideSeen, JSON.stringify(result)).toBe(true);
+    expect(result.walkCont, JSON.stringify(result)).toBe(true);
+  }
   // the find rings at YOU — the building learns where you are now
   expect(Math.abs((result.fx ?? 99) - (result.px ?? 0)) + Math.abs((result.fz ?? 99) - (result.pz ?? 0)), JSON.stringify(result)).toBeLessThan(1.0);
   expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
