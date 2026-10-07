@@ -3182,7 +3182,7 @@ export class Game {
     if (!mat) return;
     const ox = room.origin.x - host.x, oz = room.origin.z - host.z;
     const ol = Math.hypot(ox, oz) || 1;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.46), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.56), mat);
     m.name = 'wanted-notice';
     m.position.set(host.x + (ox / ol) * 0.14, 1.35, host.z + (oz / ol) * 0.14);
     m.rotation.y = Math.atan2(ox, oz);
