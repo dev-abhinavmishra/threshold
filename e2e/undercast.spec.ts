@@ -868,9 +868,53 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
       if (ga.checker.stage !== 'idle') dispatched = true;
     }
     const found = heard[0];
+    // sprint 311 — the floor shutters while the count walks: a stocked
+    // broker pedestal must refuse trade until the checker leaves
+    const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
+      && r.sockets.some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined && s.meta?.sold !== true));
+    if (!lobby) return { stage: 'no-lobby' } as const;
+    const bsock = lobby.sockets.find((s) => s.meta?.broker !== undefined
+      && s.meta?.brokerItem !== undefined && s.meta?.sold !== true)!;
+    ga.marginalia = 99;
+    ga.currentRoom = lobby.index;
+    const closedBefore = caps.length;
+    for (let f = 0; f < 90 && bsock.meta.sold !== true; f++) {
+      const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
+      const ax = bsock.pos.x - g.player.pos.x, az = bsock.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(bsock.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+      if (/trade wares|inspect|take/i.test(g.interaction.focused?.prompt ?? '')) {
+        g.input.interactPressed = true;
+      }
+      g.frame();
+      g.input.interactPressed = false;
+      if (ga.checker.stage === 'idle') break; // too late — he already left
+    }
+    const closedSeen = caps.slice(closedBefore).some((c) => /floor is closed/.test(c));
+    const refusedWhileWalking = bsock.meta.sold !== true;
     // let it close the count and leave
     for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
+    // the floor reopens — the same pedestal trades now
+    for (let f = 0; f < 90 && bsock.meta.sold !== true; f++) {
+      const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
+      const ax = bsock.pos.x - g.player.pos.x, az = bsock.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(bsock.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+      if (/trade wares|inspect|take/i.test(g.interaction.focused?.prompt ?? '')) {
+        g.input.interactPressed = true;
+      }
+      g.frame();
+      g.input.interactPressed = false;
+    }
+    const soldAfter = bsock.meta.sold === true;
     return { stage: 'done', paid, dispatched, found: heard.length > 0,
+      closedSeen, refusedWhileWalking, soldAfter,
       fx: found?.x, fz: found?.z, intensity: found?.intensity,
       finalStage: ga.checker.stage,
       px: tag.pos.x + 0.4, pz: tag.pos.z,
@@ -888,6 +932,10 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
   expect(result.found, JSON.stringify(result)).toBe(true); // the lamp found the lingerer
   expect(result.heldAfter, JSON.stringify(result)).toBe(1); // the witness line landed
   expect(result.witSeen, JSON.stringify(result)).toBe(true);
+  // sprint 311 — the floor shutters while he walks, reopens when he leaves
+  expect(result.closedSeen, JSON.stringify(result)).toBe(true);
+  expect(result.refusedWhileWalking, JSON.stringify(result)).toBe(true);
+  expect(result.soldAfter, JSON.stringify(result)).toBe(true);
   // the find rings at YOU — the building learns where you are now
   expect(Math.abs((result.fx ?? 99) - (result.px ?? 0)) + Math.abs((result.fz ?? 99) - (result.pz ?? 0)), JSON.stringify(result)).toBeLessThan(1.0);
   expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
