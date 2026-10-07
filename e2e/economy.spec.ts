@@ -776,7 +776,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
         const prompt = g.interaction.focused?.prompt ?? '';
         if (f % 10 === 0) seen.push(prompt);
-        if (/counter|buy|wares|take|ask|clerk|rifle|till/i.test(prompt)) {
+        if (/counter|buy|wares|take|ask|clerk|rifle|till|ring|bell/i.test(prompt)) {
           if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
         } else { g.keys.delete('KeyE'); g.input.interactPressed = false; }
         g.frame();
@@ -850,11 +850,36 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       tillGone = !(g.interaction as { interactables?: { kind: string }[] })
         .interactables?.some((i) => i.kind === 'till');
     }
+    // Ring the desk bell — the house's only positional lure: noise at
+    // the counter, not at you, then a cooldown the tired click names.
+    const bell = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'bell');
+    let bellDist = -1, bellCap = '', bellTiredCap = '', bellRang = 0;
+    if (bell) {
+      const snd = (g as unknown as { sound: { emit: (e: never) => void } }).sound;
+      const origEmit = snd.emit.bind(snd);
+      const rings: { x: number; z: number }[] = [];
+      snd.emit = (e: { category?: string; x?: number; z?: number; intensity?: number; y?: number }) => {
+        if (e.category === 'distraction') rings.push({ x: e.x ?? 0, z: e.z ?? 0 });
+        return origEmit(e as never);
+      };
+      drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60);
+      bellCap = caps.find((t) => /note rolls/.test(t)) ?? '';
+      bellRang = rings.length;
+      bellDist = rings.length
+        ? Math.hypot(rings[0].x - bell.pos.x, rings[0].z - bell.pos.z) : -1;
+      // inside the cooldown a second ring only clicks
+      drive(bell.pos, () => caps.some((t) => /tired click/.test(t)), 60);
+      bellTiredCap = caps.find((t) => /tired click/.test(t)) ?? '';
+      snd.emit = origEmit;
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
+      bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       clerkQ: sock.meta.clerkQ as string };
   });
 
@@ -879,6 +904,12 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.tillPaid, JSON.stringify(result)).toBe(true);
   expect(result.tillHeld).toBe(2);
   expect(result.tillGone).toBe(true);
+  // sprint 321 — the desk bell: noise at the counter, a spent tool inside 25s
+  expect(result.bellFound, JSON.stringify(result)).toBe(true);
+  expect(result.bellCap).toMatch(/note rolls/);
+  expect(result.bellRang).toBe(1);
+  expect(result.bellDist).toBeLessThan(0.6);
+  expect(result.bellTiredCap).toMatch(/tired click/);
   expect(errors).toEqual([]);
 });
 
