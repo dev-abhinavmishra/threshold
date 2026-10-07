@@ -790,7 +790,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     const ga = g as unknown as { unpaidHeld: number;
       clerkFigs?: Map<number, unknown>;
       hazard: { evidence: { pos: { x: number; z: number }; kind: string;
-        weak?: boolean }[] } };
+        weak?: boolean }[] };
+      bellRung?: Map<number, { t: number; x: number; z: number }> };
 
     const clerked = g.route.rooms.find((r) =>
       r.sockets.some((s) => s.meta?.clerk !== undefined && s.meta?.clerkItem !== undefined));
@@ -918,11 +919,28 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       { position: { x: number; z: number }; rotation: { y: number };
         userData?: { figureParts?: { head?: { rotation: { y: number } } } } } | undefined;
     const clerkHead = clerkFig?.userData?.figureParts?.head;
+    // the bell draws its eye — a warm clerk answers its own ring; the
+    // cold counter ignores the house's sound and watches only you
+    const bell = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'bell');
+    const bellRungMap = ga.bellRung;
+    const normRel = (dx: number, dz: number, yaw: number) =>
+      Math.atan2(Math.sin(Math.atan2(dx, dz) - yaw), Math.cos(Math.atan2(dx, dz) - yaw));
+    let bellLookWarm = 0, relBellN = 0, bellLookCold = 0, relPlayerN = 0;
     if (till) {
       ga.unpaidHeld = 0;
       g.imprints = 0;
       // pre-rifle: the clerk attends the till — its head never tracks
       headPre = clerkHead ? Math.abs(clerkHead.rotation.y) : -1;
+      if (bell && clerkFig && clerkHead) {
+        drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60);
+        for (let f = 0; f < 20; f++) g.frame();
+        relBellN = normRel(bell.pos.x - clerkFig.position.x,
+          bell.pos.z - clerkFig.position.z, clerkFig.rotation.y);
+        bellLookWarm = clerkHead.rotation.y;
+        bellRungMap?.delete(g.route.rooms.indexOf(clerked)); // let the later phase ring fresh
+      }
       // stand close (0.7m): from the default 1.0m stand the unsold
       // front-edge wares out-score the mid-counter till on proximity —
       // inside the align band the nearer candidate wins regardless of aim
@@ -954,9 +972,6 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     }
     // Ring the desk bell — the house's only positional lure: noise at
     // the counter, not at you, then a cooldown the tired click names.
-    const bell = (g.interaction as { interactables?: { kind: string;
-      pos: { x: number; y: number; z: number } }[] }).interactables
-      ?.find((i) => i.kind === 'bell');
     let bellDist = -1, bellCap = '', bellTiredCap = '', bellRang = 0;
     if (bell) {
       const snd = (g as unknown as { sound: { emit: (e: never) => void } }).sound;
@@ -966,11 +981,25 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         if (e.category === 'distraction') rings.push({ x: e.x ?? 0, z: e.z ?? 0 });
         return origEmit(e as never);
       };
-      drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60);
+      // the warm ring's caption is already in caps — wait for a NEW one
+      const ringsBefore = caps.filter((t) => /note rolls/.test(t)).length;
+      drive(bell.pos, () => caps.filter((t) => /note rolls/.test(t)).length > ringsBefore, 60);
       bellCap = caps.find((t) => /note rolls/.test(t)) ?? '';
       bellRang = rings.length;
       bellDist = rings.length
         ? Math.hypot(rings[0].x - bell.pos.x, rings[0].z - bell.pos.z) : -1;
+      // ...but the cold clerk doesn't look — its eye stays on the thief.
+      // Stand on the side opposite the bell; the head should track YOU.
+      if (clerkFig && clerkHead) {
+        const side = relBellN >= 0 ? -1.0 : 1.0; // opposite the bell
+        g.player.teleport(
+          clerkFig.position.x + Math.sin(clerkFig.rotation.y + side) * 2.0, 0,
+          clerkFig.position.z + Math.cos(clerkFig.rotation.y + side) * 2.0);
+        for (let f = 0; f < 20; f++) g.frame();
+        relPlayerN = normRel(g.player.pos.x - clerkFig.position.x,
+          g.player.pos.z - clerkFig.position.z, clerkFig.rotation.y);
+        bellLookCold = clerkHead.rotation.y;
+      }
       // inside the cooldown a second ring only clicks
       drive(bell.pos, () => caps.some((t) => /tired click/.test(t)), 60);
       bellTiredCap = caps.find((t) => /tired click/.test(t)) ?? '';
@@ -1007,7 +1036,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
-      workMark, headPre, headPost,
+      workMark, headPre, headPost, bellLookWarm, relBellN, bellLookCold, relPlayerN,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
@@ -1044,6 +1073,16 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.workMark, JSON.stringify(result)).toBe(true); // fresh 'work' sign at the counter
   expect(result.headPre).toBeLessThan(0.15); // untracked before the rifle
   expect(result.headPost, JSON.stringify(result)).toBeGreaterThan(0.25); // the clerk watches your hands
+  // sprint 327 — the bell draws its eye: warm clerk turns toward its own
+  // ring (when the bell isn't dead-ahead), cold clerk keeps watching you
+  if (Math.abs(result.relBellN ?? 0) > 0.3) {
+    expect(Math.sign(result.bellLookWarm ?? 0), `rel=${result.relBellN} ${JSON.stringify(result)}`).toBe(Math.sign(result.relBellN ?? 0));
+    expect(Math.abs(result.bellLookWarm ?? 0)).toBeGreaterThan(0.15);
+  }
+  if (Math.abs(result.relPlayerN ?? 0) > 0.3
+    && Math.abs((result.relPlayerN ?? 0) - (result.relBellN ?? 0)) > 0.4) {
+    expect(Math.sign(result.bellLookCold ?? 0), `relP=${result.relPlayerN} relB=${result.relBellN} ${JSON.stringify(result)}`).toBe(Math.sign(result.relPlayerN ?? 0));
+  }
   // sprint 321 — the desk bell: noise at the counter, a spent tool inside 25s
   expect(result.bellFound, JSON.stringify(result)).toBe(true);
   expect(result.bellCap).toMatch(/note rolls/);

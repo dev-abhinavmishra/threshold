@@ -3445,3 +3445,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   (untracked), >0.25 rad post-rifle standing ~52° off the fig's
   facing.
 - Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 327 — the bell draws its eye
+- The lure's landing made visible: `bellRung` widened to
+  `Map<roomIndex, {t,x,z}>` — the ring now stores the bell's pos,
+  not just the time.
+- A warm (un-rifled) clerk's head turns to its own bell for ~3.5s
+  after a ring — `watches` picks tx/tz = rung pos inside the window,
+  player otherwise; brokers and `closedCounters` clerks keep the
+  thief. The house's own sound answers for the clerk — after the
+  rifle, the bell can't buy its eye back.
+- e2e trap (stale-caption family): a phase's `drive(at, done)`
+  matched a caption left in `caps` by an EARLIER ring — `done`
+  fired at frame 0, no press, `rings` stayed empty. When a later
+  phase must see a FRESH emit, count occurrences:
+  `caps.filter(re).length > before`, or manipulate `bellRung`
+  (`ga.bellRung?.delete(idx)`) to force a fresh ring inside a
+  cooldown.
+- e2e clerk leg asserts both look directions: warm ring → head yaw
+  shares `rel(bell−fig)`'s sign; post-rifle fresh ring with the
+  player at the opposite side → head keeps `rel(player−fig)`.
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.

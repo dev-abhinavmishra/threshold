@@ -2010,12 +2010,12 @@ export class Game {
         // listening answers the counter, not you. Per-room cooldown
         // keeps a rung-out bell a spent tool, not a spammable siren.
         const roomIndex = (it.data as { roomIndex: number }).roomIndex;
-        const last = this.bellRung.get(roomIndex) ?? -Infinity;
+        const last = this.bellRung.get(roomIndex)?.t ?? -Infinity;
         if (this.clock.time - last < 25) {
           this.cue('door-locked', it.pos, '[the bell gives a tired click — the house has heard enough]', 'info');
           return;
         }
-        this.bellRung.set(roomIndex, this.clock.time);
+        this.bellRung.set(roomIndex, { t: this.clock.time, x: it.pos.x, z: it.pos.z });
         this.sound.emit({ x: it.pos.x, y: it.pos.y, z: it.pos.z, intensity: 0.8, category: 'distraction', caption: '' });
         this.cue('phone-ring', it.pos, "[the bell's note rolls down the hall]", 'info');
         return;
@@ -4590,14 +4590,22 @@ export class Game {
         // Broker figures track the player with their head.
         if (o.userData.broker || o.userData.clerk) {
           const head = (o.userData.figureParts as Record<string, THREE.Object3D>).head;
-          // The clerk only turns its head after the rifle — a cold
-          // counter's face finds your hands. Before that it attends
-          // the till like furniture.
-          const watches = o.userData.broker === true
+          // The clerk only turns its head for the house's own sounds:
+          // a fresh ring draws its eye to the bell for ~3.5s (the lure
+          // landing visibly), and after the rifle it ignores the bell
+          // entirely — the cold counter's face finds your hands.
+          let tx = this.player.pos.x, tz = this.player.pos.z;
+          let watches = o.userData.broker === true
             || this.closedCounters.has(o.userData.clerkRoomIndex as number);
+          if (o.userData.clerk === true && !watches) {
+            const rung = this.bellRung.get(o.userData.clerkRoomIndex as number);
+            if (rung && this.clock.time - rung.t < 3.5) {
+              tx = rung.x; tz = rung.z; watches = true;
+            }
+          }
           if (head && watches) {
-            const dx = this.player.pos.x - o.position.x;
-            const dz = this.player.pos.z - o.position.z;
+            const dx = tx - o.position.x;
+            const dz = tz - o.position.z;
             const dist = Math.hypot(dx, dz);
             if (dist > 0.01 && dist < 16) {
               const rel = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.rotation.y), Math.cos(Math.atan2(dx, dz) - o.rotation.y));
@@ -5377,7 +5385,7 @@ export class Game {
   /** Counters that already read you their page — one ask per clerk. */
   private readonly clerkAsked = new Set<number>();
   /** Desk-bell cooldowns: roomIndex -> clock.time of the last ring. */
-  private readonly bellRung = new Map<number, number>();
+  private readonly bellRung = new Map<number, { t: number; x: number; z: number }>();
   /** Staffed counters that watched you rifle the till — closed to you. */
   private readonly closedCounters = new Set<number>();
 
