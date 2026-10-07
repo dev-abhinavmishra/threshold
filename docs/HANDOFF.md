@@ -2669,3 +2669,18 @@ Hider residue beyond alarms is ~3-5/121.
   under (no pass to outlast); looter keeps 240 for socket loops.
 - `PLAYTEST_SEEDS` env narrows the sweep for smoke runs.
 - `page.on('crash')` is logged on under legs for future stalls.
+
+
+## docs — the open calls, decision-ready
+
+**What**: the three Abhinav-blocked backlog items (milestone-set
+hearing, shared-anchor double-verb, Auditor wanted-poster) are written
+up in `docs/DESIGN_CALLS.md` — status quo, options, and a
+recommendation each. When he answers, delete the doc's settled section
+and build the pick.
+
+**Recommendations recorded**: milestone hearing → light touch (primed
+opening tell only, fights stay authored); double-verb → yaw-window on
+`strip` (~10 lines, matches pry's shared-anchor disambiguation);
+wanted poster → poster-as-evidence on downstream boards, suspicion
+tier only, or skip to keep the under's threat texture physical.
