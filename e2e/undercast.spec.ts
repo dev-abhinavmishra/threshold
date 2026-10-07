@@ -474,6 +474,29 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     ga.keys.delete('KeyE');
     if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
 
+    // --- 1.5 the return slip — writing back what you took ---
+    ga.unpaidTheft = 3; // more petty work behind you than the tag shows
+    const slipRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.returnSlip && !s.meta?.taken));
+    if (slipRoom) {
+      g.player.teleport(slipRoom.origin.x, 0, slipRoom.origin.z);
+      ga.currentRoom = slipRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const slip = (slipRoom.sockets ?? []).find((s) => s.meta?.returnSlip && !s.meta?.taken);
+      for (let f = 0; f < 60 && slip?.meta && !slip.meta.taken; f++) {
+        const sx = slipRoom.origin.x - slip.pos.x, sz = slipRoom.origin.z - slip.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(slip.pos.x + (sx / sl) * 0.9, 0, slip.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(slip.pos.x - g.player.pos.x, slip.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((slip.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const theftAfterSlip = ga.unpaidTheft;
+
     // --- 2. walk into his room — the ledger opens ---
     const aRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'auditor')
       && r.index !== cageRoom.index);
@@ -511,12 +534,13 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
-    return { stage: 'done' as const, demanded, settlePrompt, paid,
+    return { stage: 'done' as const, demanded, theftAfterSlip, settlePrompt, paid,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.demanded, JSON.stringify(result)).toBe(true);
+  expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);

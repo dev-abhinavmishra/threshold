@@ -2133,6 +2133,30 @@ export class Game {
         this.cue('whisper', it.pos, '[the clerk strikes two lines from your file — and logs the asking]');
         return;
       }
+      case 'returnSlip': {
+        // The return slip — the theft ledger's relief valve. You can't
+        // bring the goods back, so you return them in writing: strikes
+        // two thefts off the Auditor's tally, then the filing is itself
+        // a petty claim — net −1. Never cleans the book; only his desk
+        // settles it. Blank ledgers shrug, like the counter-claim.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 5;
+        if (this.unpaidTheft <= 0) {
+          this.cue('door-locked', it.pos, '[nothing owed — the cage clerk waves the slip away]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the return slip wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.unpaidTheft = Math.max(0, this.unpaidTheft - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[two thefts struck from the tally — the filing itself is claimed]');
+        return;
+      }
       case 'watchSheet': {
         // The inspection sheet — the security wing's paper. Where the fault
         // book files what BITES, this files what WATCHES: which doors ahead

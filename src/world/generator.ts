@@ -773,6 +773,25 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           meta: { counterClaim: true, price: csRng.int(4, 8) },
         });
       }
+      // The return slip — the theft ledger's relief valve, on its own
+      // 'returnslip' stream. Filed at the cage hosts where the thefts
+      // happen: you return the goods in writing, the Auditor's tally
+      // loses lines. Same net-−1 arithmetic as the counter-claim.
+      const rsRng = streams.stream('returnslip');
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !rsRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => LOST_PROP_HOSTS.has(p.kind) && !p.meta?.foreshadow);
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { returnSlip: true, price: rsRng.int(3, 7) },
+        });
+      }
 
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];

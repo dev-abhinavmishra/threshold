@@ -2757,3 +2757,21 @@ tier only, or skip to keep the under's threat texture physical.
   is stable). Runner's note mesh uses MAT.paper().
 - e2e 'the index' now drives the full arc: counter-claim → docket rifle →
   file → wordOut → chase → cut → word dead → re-file → square → 0.
+
+## sprint 301 — the return slip (theft ledger's relief valve)
+
+- The Auditor's book gets the counter-claim's twin: 'File a return slip
+  — N marginalia' (3–7, priced a notch cheaper than counter-claims) on
+  the LOST_PROP_HOSTS family — you file the return where the thefts are
+  taken. Strikes 2 off `unpaidTheft`, the filing itself is claimed (+1):
+  net −1. Never cleans the book — only his desk settles. Blank ledger
+  shrugs free. Same economics as sprint 299's counter-claim, aimed at
+  the OTHER ledger — the two papers complete the relief-valve pair:
+  questions answered at desks, thefts answered at cages.
+- Own 'returnslip' stream + salt — the isolated-roll rule again; the
+  counter-claim spec now lists it in the cache-fill contract's exempt
+  metas (`!x.meta.returnSlip` — new consult-socket metas belong there
+  or generation.test.ts:474 goes red while a -t filter hides it).
+- e2e 'the audit' seeds theft 3 then files a slip mid-ledger:
+  3 → 2 (−2, +1) before the settle still closes the book.
+
