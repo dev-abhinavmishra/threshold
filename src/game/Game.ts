@@ -2114,6 +2114,25 @@ export class Game {
           this.imprints += amt;
           this.stats.imprintsEarned += amt;
           this.cue('pickup', it.pos, `[the case held a purse — +${amt} imprints]`);
+        } else if (contains === 'warrant') {
+          // The sealed warrant — the seizure ledger itself. It lists which
+          // confiscated cases in the rooms ahead are still held and which
+          // the house already drew: paper for goods, the house's own trade.
+          const entries: string[] = [];
+          for (const r of this.route?.rooms ?? []) {
+            // Cases are too sparse for a stretch window — the ledger runs
+            // the rest of the route.
+            if (r.index <= this.currentRoom || entries.length >= 6) continue;
+            for (const s of r.sockets ?? []) {
+              if (entries.length >= 6) break;
+              if (!s.meta.confiscated) continue;
+              entries.push(`Door ${String(r.index).padStart(3, '0')} — case ${s.meta.taken ? 'drawn' : 'still held'}`);
+            }
+          }
+          const text = entries.length
+            ? `[the warrant lists: ${entries.join(' · ')}]`
+            : "[the warrant's seizure column runs blank ahead]";
+          this.cue('whisper', it.pos, text);
         } else if (contains) {
           this.giveItem(contains as ItemId, amt);
           this.cue('pickup', it.pos, `[the case breaks open — confiscated goods, now yours]`);

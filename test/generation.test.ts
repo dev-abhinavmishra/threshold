@@ -445,6 +445,9 @@ describe('sprint mechanics coverage', () => {
         if (s.meta.contains === 'imprints') {
           expect(s.meta.amount as number).toBeGreaterThanOrEqual(8);
           expect(s.meta.amount as number).toBeLessThanOrEqual(16);
+        } else if (s.meta.contains === 'warrant') {
+          // the seizure ledger — paperwork, not goods
+          expect(s.meta.amount).toBeUndefined();
         } else {
           expect(GOODS.has(s.meta.contains as string)).toBe(true);
         }
@@ -1147,6 +1150,31 @@ describe('the cause reads (sprint 289)', () => {
   it('every kill source has a curated advice line', () => {
     for (const id of SOURCES) {
       expect(DEATH_HINTS[id], `no death hint for ${id}`).toBeTruthy();
+    }
+  });
+});
+
+describe('the sealed warrant (sprint 290)', () => {
+  // A warrant is only paperwork worth prying if the ledger has a later
+  // entry to report — the last case on the route can never hold one.
+  it('every warrant case has a later case to report on', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: false });
+      const caseRooms: number[] = [];
+      const warrantRooms: number[] = [];
+      for (const room of route.rooms) {
+        for (const s of room.sockets ?? []) {
+          if (!s.meta?.confiscated) continue;
+          caseRooms.push(room.index);
+          if (s.meta.contains === 'warrant') {
+            warrantRooms.push(room.index);
+            expect(s.meta.amount, `warrant carries an amount on ${seed}`).toBeUndefined();
+          }
+        }
+      }
+      for (const w of warrantRooms) {
+        expect(caseRooms.some((ci) => ci > w), `warrant at ${w} has no later case on ${seed}`).toBe(true);
+      }
     }
   });
 });

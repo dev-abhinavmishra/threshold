@@ -552,6 +552,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     ['feltWrap', 1], ['handLamp', 40], ['sparkFlash', 1],
   ];
   let casePlaced = false;
+  const caseSocks: { room: RoomInstance; sock: Socket }[] = [];
   for (const room of mainRooms) {
     if (room.authored || !room.spec || room.darkRoom) continue;
     const eye = room.spec.props.find((p) => p.kind === 'securityCam' || p.kind === 'searchlight');
@@ -563,14 +564,26 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     const cz = ep.z + Math.cos(face) * 2.4;
     const good = CASE_GOODS[caseRng.int(0, CASE_GOODS.length - 1)];
     const isMarks = caseRng.bool(0.4);
-    room.sockets.push({
+    const sock: Socket = {
       kind: 'loot',
       pos: v3(cx, 0.9, cz),
       yaw: 0, filled: true,
       meta: { confiscated: true, contains: isMarks ? 'imprints' : good[0],
         amount: isMarks ? caseRng.int(8, 16) : good[1] },
-    });
+    };
+    room.sockets.push(sock);
+    caseSocks.push({ room, sock });
     casePlaced = true;
+  }
+
+  // The sealed warrant — some cases hold paperwork, not goods: the seizure
+  // ledger itself. Prying one free reads which confiscated cases in the
+  // rooms ahead are still held and which the house already drew. Never the
+  // last case on the route — a warrant that reports on nothing is a blank.
+  for (let i = 0; i < caseSocks.length - 1; i++) {
+    if (!caseRng.bool(0.35)) continue;
+    caseSocks[i].sock.meta.contains = 'warrant';
+    delete caseSocks[i].sock.meta.amount;
   }
 
   // The forged page — a book near a forger of doors can be rewritten. A

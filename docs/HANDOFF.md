@@ -2375,3 +2375,34 @@ label. Now every lethal source reads the same way.
   FALLBACK for sources not in DEATH_HINTS; keep writing them.
 - Two callers can kill under one id with different caller hints (inspector
   has two sites) — the map collapses them to one line on purpose.
+
+## sprint 290 — the sealed warrant (paper for goods)
+
+**What**: the confiscated case had exactly two contents (goods / imprint
+purse). Now some cases hold the seizure ledger itself — a warrant that
+reads which cases ahead are still held vs already drawn.
+
+**Files**:
+- `generator.ts` — the case pass collects `caseSocks`; a post-pass on the
+  same 'confiscate' stream converts ~35% of non-final cases to
+  `meta.contains='warrant'` (drops `amount`). Final case is exempt — a
+  warrant that reports on nothing is a blank.
+- `Game.ts` 'pry' — `contains === 'warrant'` scans ALL later main rooms
+  (not a stretch window — cases are 20-40 doors apart) for `meta.confiscated`
+  sockets, prints `Door NNN — case still held|drawn`, capped at 6.
+- `test/generation.test.ts` — 'sealed warrant' invariant (every warrant
+  has a later case; carries no amount) + the confiscated-cases test now
+  accepts 'warrant' as contents.
+- `e2e/books.spec.ts` — drives gilt-spine-777 to warrant@22, pries, and
+  asserts the read lists `Door 055 — case still held`.
+
+**Traps**:
+- Warrants are sparse by nature: ~1 in 3 non-final cases, and most seeds
+  only carry 1-3 cases. A seed can legitimately ship zero warrants.
+- The read window is the whole remaining route, NOT +10 — every other
+  paper reads a stretch, this one is a full ledger (verified: +10 would
+  have printed blank on both live seeds).
+- **Stale preview server trap**: playwright.config `reuseExistingServer`
+  keeps an old `vite preview` on :4173 — e2e ran the pre-warrant dist and
+  reported 'no-warrant' on a seed that provably places one. When a new
+  generation feature 'isn't there' in e2e, `fuser -k 4173/tcp` first.

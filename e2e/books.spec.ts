@@ -486,3 +486,66 @@ test("the inspection sheet marks which doors the house watches", async ({ page }
   expect(r.cleanLine, `sheet@${r.cleanIdx} should read clean`).toMatch(/nothing watches the doors ahead/);
   expect(errors).toEqual([]);
 });
+
+// The sealed warrant — a confiscated case that holds paperwork instead of
+// goods: the seizure ledger. Prying it reads which cases ahead are held.
+test('the sealed warrant reads the seizure ledger for rooms ahead', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await seededRun(page, 'gilt-spine-777'); // warrant case @22, live case @55
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+
+    const wRoom = g.route.rooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.confiscated && s.meta.contains === 'warrant'));
+    if (!wRoom) return { stage: 'no-warrant' } as const;
+    const laterCase = g.route.rooms.find((r) =>
+      r.index > wRoom.index && (r.sockets ?? []).some((s) => s.meta?.confiscated));
+    if (!laterCase) return { stage: 'no-later-case' } as const;
+
+    g.player.teleport(wRoom.origin.x, 0, wRoom.origin.z);
+    let pt: { id: string; pos: { x: number; y: number; z: number }; prompt: string } | null = null;
+    for (let f = 0; f < 500 && !pt; f++) {
+      g.frame();
+      const t = g.interaction.interactables.find((i) => {
+        if (i.kind !== 'pry') return false;
+        const sock = i.data as { meta?: { contains?: string } } | undefined;
+        return sock?.meta?.contains === 'warrant';
+      });
+      if (t) pt = t as unknown as { id: string; pos: { x: number; y: number; z: number }; prompt: string };
+    }
+    if (!pt) return { stage: 'no-pry', caps: caps.slice(-10) } as const;
+    const prompt = pt.prompt;
+
+    const before = caps.length;
+    let read = '';
+    for (let f = 0; f < 300 && !read; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.2, 0, pt.pos.z - (az / al) * 1.2);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, Math.hypot(ax, az) || 1);
+      if (g.interaction.focused?.id === pt.id) g.keys.add('KeyE');
+      g.frame();
+      read = caps.slice(before).find((c) => /warrant lists|seizure column/.test(c)) ?? '';
+    }
+    g.keys.delete('KeyE');
+    return { stage: 'done', prompt, read, wIdx: wRoom.index, laterIdx: laterCase.index } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { prompt: string; read: string; wIdx: number; laterIdx: number };
+  expect(r.prompt).toMatch(/pry the confiscated case/i);
+  expect(r.read, `warrant@${r.wIdx} should list case@${r.laterIdx}`).toMatch(/the warrant lists:/);
+  expect(r.read).toContain(`Door ${String(r.laterIdx).padStart(3, '0')} — case still held`);
+  expect(errors).toEqual([]);
+});
