@@ -2403,6 +2403,35 @@ describe('the watched hall (sprint 285)', () => {
       expect.stringContaining('your face is filed'), expect.anything());
   });
 
+  it('a marked face settles faster — the register talks back', async () => {
+    const framesToSettle = async (owed: number) => {
+      const { h, ctx } = await pinCam(false);
+      ctx.heldOwed = () => owed;
+      ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+      h.update(ctx, 0.05);
+      let f = 0;
+      for (; f < 600; f++) {
+        ctx.player.pos.x = Math.sin(f) * 0.02; ctx.player.pos.z = 2;
+        ctx.now += 0.05; h.update(ctx, 0.05);
+        if ((ctx.cue as ReturnType<typeof vi.fn>).mock.calls
+          .some((c) => String(c[2]).includes('settles on you'))) break;
+      }
+      return { f, ctx };
+    };
+    const stranger = await framesToSettle(0);
+    const marked = await framesToSettle(3);
+    expect(marked.f, 'a filed face settles ~1.6x faster')
+      .toBeLessThan(stranger.f * 0.85);
+    expect(marked.ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('register talks back'), expect.anything());
+    expect(stranger.ctx.cue).not.toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('register talks back'), expect.anything());
+    // one warn per marking — the flag holds across many reports
+    const talks = (marked.ctx.cue as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c) => String(c[2]).includes('register talks back')).length;
+    expect(talks).toBe(1);
+  });
+
   it('still feet pass it — no settle, no report', async () => {
     const { h, ctx } = await pinCam(false);
     ctx.player.pos.x = 0; ctx.player.pos.z = 2;

@@ -892,6 +892,8 @@ export class HazardField {
     arc: number; half: number; range: number; cycle: number; phase0: number;
     dead: boolean; settle: number; lastReport: number; warnT: number;
     filed: boolean }[] = [];
+  /** One warn per marking: reset when the book no longer holds you. */
+  private markedWarned = false;
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -1001,6 +1003,12 @@ export class HazardField {
     }
     // Wall eyes read MOTION, not presence — inside the cone you stand
     // still and let it pan past, or you move and it settles and tells.
+    // And the register talks back: once the book holds a line on you
+    // (unpaidHeld > 0 — a lamp's witness, an eye's report, a courier's
+    // card, a cut wire) every eye has your description and settles
+    // ~1.6x faster. Settle the book and they go back to strangers.
+    const marked = (ctx.heldOwed?.() ?? 0) > 0;
+    if (!marked) this.markedWarned = false;
     const wMoving = Number.isFinite(this.wPX)
       && Math.hypot(p.pos.x - this.wPX, p.pos.z - this.wPZ) > 0.004;
     this.wPX = p.pos.x; this.wPZ = p.pos.z;
@@ -1014,13 +1022,17 @@ export class HazardField {
         w.warnT = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye pans — still feet pass it]', { severity: 'info' });
       }
+      if (marked && live && !this.markedWarned) {
+        this.markedWarned = true;
+        ctx.cue('steam-hiss', w.pos, '[the register talks back — the eyes have your description]', { severity: 'warn' });
+      }
       if (!live || d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
       const facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       if (Math.abs(diff) > w.half) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
-      w.settle = wMoving ? w.settle + dt : Math.max(0, w.settle - dt * 2);
+      w.settle = wMoving ? w.settle + dt * (marked ? 1.6 : 1) : Math.max(0, w.settle - dt * 2);
       if (w.settle > 0.9 && ctx.now - w.lastReport > 5) {
         w.lastReport = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye settles on you — it has your position]', { severity: 'warn' });
