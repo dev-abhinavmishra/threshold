@@ -2407,6 +2407,7 @@ reads which cases ahead are still held vs already drawn.
   reported 'no-warrant' on a seed that provably places one. When a new
   generation feature 'isn't there' in e2e, `fuser -k 4173/tcp` first.
 
+
 ## sprint 289b — counter-scent (the ash keeps)
 
 (Parallel sprint numbering across concurrent branches — the warrant
@@ -2447,6 +2448,7 @@ NEXT SPRINT IDEAS (pick the biggest first)
     they know you) — half-baked, logged skip.
   - A scrub that removes the lie leaves the ash? (Scrub radius 2.6m
     already takes both — no work needed; verify in play.)
+
 
 ## sprint 291 — the warden doubts (the wipe's shadow)
 
@@ -2570,3 +2572,32 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - Counter-learning: a player could OVERFEED a room's hunter
     (plant cheap forged marks to... nothing — learning only helps the
     hunter; the feed is pure cost. Skip.)
+
+
+
+## review fixes — mounted tells + the honest looter (post-merge, PRs #12/#13)
+
+**What**: Devin Review flagged the merged sprints. All four findings real:
+- `applyForeshadowing` dropped every tell at floor level — wall-hung kinds
+  (keyRack, pegRail, towelRail, sign, wallVent...) plus transomWindow and
+  securityCam sank through the floor. `WALL_MOUNT_Y` is now exported from
+  templates.ts; foreshadow mounts those kinds at eye height flush on the
+  wall face (TELL_MOUNT_Y adds transomWindow/securityCam at 2.3 — not in
+  the table; their templates mount them explicitly).
+- playtest looter never fed a machine: the prompt regex missed 'Feed the
+  machine' and single-frame `interactPressed` can't complete a 1.2s hold
+  verb anyway. Loot pass now holds KeyE up to 45 frames on
+  /feed|vend|claim|pry|register|read|search|loot|take|open|drawer/.
+- Retry restores checkpoint currency → income depended on death timing.
+  Earned counters (imprintsEarned/marginaliaEarned) are now banked past
+  the restore (`banked`/`econBase`) — net-of-spend is the honest figure.
+- Comment said looter = walker + loot; it actually hides like hider.
+  Comment corrected; semantics unchanged.
+
+**Numbers moved** (BALANCE.md): looter net +121/+33/+103 → +5/+23/+0 —
+vend prices after sprint 286 roughly balance a looter's income, so the
+'~5x coverage' read was unspent-wealth inflation.
+
+**Trap**: any tell/host-find that injects props must respect mount
+conventions — check WALL_MOUNT_Y membership before placing at y=0.
+

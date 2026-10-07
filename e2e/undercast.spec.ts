@@ -345,7 +345,10 @@ test('the crew board — the shift sheet says who is signed on', async ({ page }
       g.player.pitch = Math.atan2((board.pos.y + 0.6) - eyeY, 0.95);
       g.player.yaw = Math.atan2(board.pos.x - g.player.pos.x, board.pos.z - g.player.pos.z);
       g.frame();
-      prompt = ga.interaction.focused?.prompt ?? prompt;
+      // capture the aimed verb BEFORE the hold — once the board is read
+      // its interactable disables and focus falls to whatever prop sits
+      // beside it (a typewriter won this room's socket after 's' reseated)
+      if (f < 5) prompt = ga.interaction.focused?.prompt ?? prompt;
       if (f === 5) ga.keys.add('KeyE');
     }
     ga.keys.delete('KeyE');
@@ -407,7 +410,9 @@ test('the claim register — which tags still pay and which are drawn', async ({
       g.player.pitch = Math.atan2((reg.pos.y + 0.6) - eyeY, 0.95);
       g.player.yaw = Math.atan2(reg.pos.x - g.player.pos.x, reg.pos.z - g.player.pos.z);
       g.frame();
-      prompt = ga.interaction.focused?.prompt ?? prompt;
+      // capture pre-press — a read/taken paper disables and focus falls
+      // to whatever prop sits beside it
+      if (f < 5) prompt = ga.interaction.focused?.prompt ?? prompt;
       if (f === 5) ga.keys.add('KeyE');
     }
     ga.keys.delete('KeyE');

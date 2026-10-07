@@ -16,9 +16,10 @@ import { join } from 'node:path';
  *     live entity is present and waits the pass out. Measures the
  *     competent-player bound: a player who reads tells and hides should
  *     survive almost everything ambient.
- *   looter — walker + visits every loot/drawer socket on the path and
- *     presses E on take/search prompts. Measures economy income against
- *     toll/vend spend.
+ *   looter — hider walk (hides whenever a live entity is around) plus
+ *     visits every loot/drawer/machine socket on the path and holds E on
+ *     take/search/vend/claim prompts — hold verbs included. Measures
+ *     economy income against toll/vend spend.
  *
  * Each run writes test-results/playtest-<seed>-<style>.json; BALANCE.md
  * carries the interpreted numbers. Assertions are structural only — this
@@ -103,17 +104,16 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         stats: null as unknown as RunReport['stats'], inventory: [], errors: [],
       };
       const deaths: string[] = [];
+      // Economy earned before a death survives into `banked` — the
+      // checkpoint restore would otherwise erase it from the report.
+      const banked = { imprintsEarned: 0, marginaliaEarned: 0 };
+      const econBase = { imprintsEarned: 0, marginaliaEarned: 0 };
 
       const standIn = (room: G['route']['rooms'][number]) => {
         const en = room.entryPos, ex = room.exitPos;
         const dx = ex.x - en.x, dz = ex.z - en.z, L = Math.hypot(dx, dz) || 1;
         g.player.teleport(en.x + (dx / L) * 1.3, 0, en.z + (dz / L) * 1.3, Math.atan2(dx, dz));
       };
-      const pressIfFocused = (re: RegExp) => {
-        g.input.interactPressed = re.test(g.interaction.focused?.prompt ?? '');
-        g.frame();
-      };
-
       for (let i = 0; i < g.route.rooms.length; i++) {
         const room = g.route.rooms[i];
         if (g.player.hiddenSpot) g.player.exitHiding(g.clock.time);
@@ -137,10 +137,25 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
           g.frame();
           // loot pass mid-room
           if (style === 'looter' && f === 30) {
+            const LOOT_PROMPT = /search|loot|take|open|drawer|pry|claim|feed|vend|register|read/i;
             for (const s of room.sockets) {
               if (!/loot|drawer|key|cabinet|machine/.test(s.kind)) continue;
               g.player.teleport(s.pos.x, 0, s.pos.z, 0);
-              for (let t = 0; t < 8; t++) pressIfFocused(/search|loot|take|open|drawer|pry|claim/i);
+              // hold verbs (vend/claim/pry/register take 1.2s+) need a held
+              // key across frames, not a one-frame press — keep E down while
+              // the prompt matches, bail when the verb completes/disables.
+              for (let t = 0; t < 45; t++) {
+                if (LOOT_PROMPT.test(g.interaction.focused?.prompt ?? '')) {
+                  g.keys.add('KeyE');
+                  g.input.interactPressed = true;
+                } else {
+                  g.keys.delete('KeyE');
+                  break;
+                }
+                g.frame();
+              }
+              g.keys.delete('KeyE');
+              g.input.interactPressed = false;
               rep.socketsTouched++;
             }
             standIn(room);
@@ -154,9 +169,17 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         if (g.player.dead) {
           const cause = g.lastDeathCause || 'unknown';
           deaths.push(`${room.index}:${cause}`);
+          // retry restores checkpoint currency — bank earned counters so
+          // income doesn't depend on death timing.
+          for (const k of Object.keys(banked) as (keyof typeof banked)[]) {
+            banked[k] += g.stats[k] - econBase[k];
+          }
           g.retryFromCheckpoint(); // restores frame loop
           g.renderFrame = () => {};
           g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+          for (const k of Object.keys(econBase) as (keyof typeof econBase)[]) {
+            econBase[k] = g.stats[k];
+          }
         }
         rep.farthestRoom = Math.max(rep.farthestRoom, i);
         rep.roomsReached = i + 1;
@@ -167,7 +190,11 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         rep.deaths[c] = (rep.deaths[c] ?? 0) + 1;
       }
       rep.deathsTotal = deaths.length;
-      rep.stats = { ...g.stats };
+      rep.stats = {
+        ...g.stats,
+        imprintsEarned: banked.imprintsEarned + g.stats.imprintsEarned - econBase.imprintsEarned,
+        marginaliaEarned: banked.marginaliaEarned + g.stats.marginaliaEarned - econBase.marginaliaEarned,
+      };
       rep.inventory = g.inventory.map((x) => ({ ...x }));
       return rep;
     },
