@@ -881,7 +881,7 @@ export class HazardField {
    *  record is the felt-wrap's shadow: the floor was worked clean, and only
    *  the warden's nose bothers to doubt sign planted near it. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe'; t: number; readBy: string[];
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind'; t: number; readBy: string[];
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,

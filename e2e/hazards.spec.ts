@@ -636,9 +636,14 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       }
       darkReport = caps.slice(dc).filter((t) => /settles on you/.test(t)).length;
     }
+    // the tape is testimony — the blinded eye left fresh sign at the mount
+    const blindSign = (ga.hazard as { evidence?: { kind: string; pos: { x: number; z: number }; t: number }[] })
+      .evidence?.find((e) => e.kind === 'blind'
+        && Math.hypot(e.pos.x - live.pos.x, e.pos.z - live.pos.z) < 0.5);
     return { stage: 'done', warns, settled, stillReports, focused,
       heldAfterSettle, filedCue, heldAfterSecond, talksBack, talksCount,
-      blinded: live.dead, darkFound: !!darkWatcher, darkTapeVerb, darkReport };
+      blinded: live.dead, blindSign: !!blindSign,
+      darkFound: !!darkWatcher, darkTapeVerb, darkReport };
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
@@ -654,6 +659,8 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
   expect(result.stillReports, JSON.stringify(result)).toBe(0);
   expect(result.focused).toMatch(/Tape the eye|Smother the beam/);
   expect(result.blinded, 'felt blinds the eye').toBe(true);
+  // sprint 315 — the tape is testimony: blinding it left sign at the mount
+  expect(result.blindSign, JSON.stringify(result)).toBe(true);
   if (result.darkFound) {
     expect(result.darkTapeVerb, 'a dead eye has nothing to tape').toBe(false);
     expect(result.darkReport, 'dead mains watch nothing').toBe(0);
