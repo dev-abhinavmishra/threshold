@@ -613,6 +613,32 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     }
   }
 
+  // The night clerk — a staffed counter on the main route: the house
+  // sells its own shelf for imprints. Any un-authored room with a
+  // counter can staff it — a till is a till; the first counter room is
+  // always staffed so every route answers the clerk at least once.
+  // Own 'clerk' stream.
+  {
+    const clRng = streams.stream('clerk');
+    let clerked = false;
+    for (const room of mainRooms) {
+      if (room.authored || !room.spec) continue;
+      const counter = room.spec.props.find((p) => p.kind === 'counter');
+      if (!counter) continue;
+      if (!clRng.bool(0.6) && clerked) continue;
+      for (const [slot, lx] of [[0, -0.55], [1, 0.55]] as const) {
+        const sp = localToWorld(room.origin, room.yaw, counter.x + lx, 0, counter.z - 0.55);
+        room.sockets.push({
+          kind: 'itemPedestal',
+          pos: v3(sp.x, 1.15, sp.z),
+          yaw: 0, filled: true,
+          meta: { clerk: `slot${slot}` },
+        });
+      }
+      clerked = true;
+    }
+  }
+
   // The forged page — a book near a forger of doors can be rewritten. A
   // ledger within sight of a redactor's door (inside the book's own
   // +10 read window) omits that filing — the first lie the books tell,

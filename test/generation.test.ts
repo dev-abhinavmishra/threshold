@@ -231,6 +231,19 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('the night clerk: counter rooms carry two clerk pedestals, every seed answers one (sprint 318)', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const clerked = mainRooms(route).filter((r) => r.sockets.some((s) => s.meta.clerk !== undefined));
+      expect(clerked.length, `${seed}: at least one staffed counter`).toBeGreaterThanOrEqual(1);
+      for (const r of clerked) {
+        expect(r.spec?.props.some((p) => p.kind === 'counter'), `${seed}/${r.index}: clerk only at a counter`).toBe(true);
+        const peds = r.sockets.filter((s) => s.meta.clerk !== undefined);
+        expect(peds.length, `${seed}/${r.index}: two wares on the counter`).toBe(2);
+      }
+    }
+  });
+
   it('trapped hiding spots always carry readable trap clues', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });

@@ -735,3 +735,97 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(errors).toEqual([]);
 });
 
+test('the night clerk: short imprints refuses, paid sells, filed face pays the register\'s rate', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 'threshold');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const ga = g as unknown as { unpaidHeld: number;
+      clerkFigs?: Map<number, unknown> };
+
+    const clerked = g.route.rooms.find((r) =>
+      r.sockets.some((s) => s.meta?.clerk !== undefined && s.meta?.clerkItem !== undefined));
+    if (!clerked) return { stage: 'no-clerk' } as const;
+    g.player.teleport(clerked.origin.x, 0, clerked.origin.z);
+    g.currentRoom = clerked.index;
+    for (let f = 0; f < 30; f++) g.frame();
+
+    const sock = clerked.sockets.find((s) => s.meta?.clerk !== undefined
+      && s.meta?.clerkItem !== undefined)!;
+    const price = sock.meta.clerkPrice as number;
+    const item = sock.meta.clerkItem as string;
+    const figPresent = ga.clerkFigs?.has(clerked.index) === true;
+
+    const drive = (at: { x: number; y: number; z: number }, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const dx = clerked.origin.x - at.x, dz = clerked.origin.z - at.z;
+        const L = Math.hypot(dx, dz) || 1;
+        g.player.teleport(at.x + (dx / L) * 1.0, 0, at.z + (dz / L) * 1.0);
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 10 === 0) seen.push(prompt);
+        if (/counter|buy|wares|take/i.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else { g.keys.delete('KeyE'); g.input.interactPressed = false; }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    // Short: refuse.
+    g.imprints = Math.max(0, price - 3);
+    drive(sock.pos, () => sock.meta.sold === true, 50);
+    const refused = sock.meta.sold !== true && g.imprints === Math.max(0, price - 3);
+    const refuseCap = caps.find((t) => /imprints required/.test(t)) ?? '';
+
+    // Pay: the till rings.
+    g.imprints = price;
+    drive(sock.pos, () => sock.meta.sold === true, 50);
+    const sold = sock.meta.sold === true;
+    const tillCap = caps.find((t) => /till rings/.test(t)) ?? '';
+
+    // The register's rate: a filed face pays more on the second pedestal.
+    const sock2 = clerked.sockets.find((s) => s.meta?.clerk !== undefined
+      && s.meta?.clerkItem !== undefined && s !== sock);
+    let ratePaid = false, rateCap = '', expected2 = 0;
+    if (sock2) {
+      const price2 = sock2.meta.clerkPrice as number;
+      ga.unpaidHeld = 3;
+      expected2 = price2 + Math.min(3 + 3 * 2, 10); // +9 on the register's rate
+      g.imprints = expected2;
+      drive(sock2.pos, () => sock2.meta.sold === true, 50);
+      ratePaid = sock2.meta.sold === true && g.imprints === 0;
+      rateCap = caps.find((t) => /register's rate/.test(t)) ?? '';
+    }
+    return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
+      hasItem: g.inventory.some((s) => s.id === item),
+      twoSocks: !!sock2, ratePaid, rateCap, expected2 };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.figPresent).toBe(true);
+  expect(result.refused).toBe(true);
+  expect(result.refuseCap).toMatch(/imprints required/);
+  expect(result.sold).toBe(true);
+  expect(result.tillCap).toMatch(/till rings/);
+  expect(result.hasItem).toBe(true);
+  expect(result.twoSocks, JSON.stringify(result)).toBe(true);
+  expect(result.ratePaid, JSON.stringify(result)).toBe(true);
+  expect(result.rateCap).toMatch(/register's rate/);
+  expect(errors).toEqual([]);
+});
+
