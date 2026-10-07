@@ -1299,6 +1299,22 @@ export class Game {
         }
       }
     }
+    // Beside the filer's courier: 'Cut the runner' — tear the message
+    // mid-delivery and the word dies with it.
+    for (const ent of this.entities) {
+      if (ent.id !== 'filer' || ent.state === 'done') continue;
+      const f = ent as unknown as { runnerOut: boolean; runnerPos: Vec3 };
+      if (!f.runnerOut) continue;
+      const dx = f.runnerPos.x - this.player.pos.x, dz = f.runnerPos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.9 * 1.9) continue;
+      this.interaction.add({
+        kind: 'cutWord', id: `cutWord-${this.space}:filer`,
+        pos: { x: f.runnerPos.x, y: 0.9, z: f.runnerPos.z },
+        prompt: 'Cut the runner',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
       if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
@@ -2460,6 +2476,20 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
+        return;
+      }
+      case 'cutWord': {
+        // Tearing the courier's message — the word dies mid-delivery.
+        // Not theft: the card is yours, and the Filer closes it torn.
+        // The runner's satchel still carries the crew's coin, though.
+        const f = it.data as unknown as { runnerOut: boolean; cutRunner(): void };
+        if (!f.runnerOut) { it.enabled = false; return; }
+        f.cutRunner();
+        it.enabled = false;
+        const amt = this.streams.stream('loot').int(3, 6);
+        this.marginalia += amt;
+        this.stats.marginaliaEarned += amt;
+        this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
         return;
       }
       case 'strip': {

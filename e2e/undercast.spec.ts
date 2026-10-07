@@ -613,7 +613,46 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     for (let f = 0; f < 12; f++) g.frame();
     const wordOut = caps.slice(capMark).some((c) => /the word arrives before you/.test(c));
 
-    // --- 3. back to the drawer — square the index ---
+    // --- 3. run the courier down — the word dies with it ---
+    const mCut = ga.marginalia;
+    const crk = clerk as { runnerOut?: boolean; posted?: boolean; runnerPos?: { x: number; z: number } };
+    let cutPrompt = '';
+    for (let f = 0; f < 240 && crk.runnerOut; f++) {
+      const rp = crk.runnerPos;
+      if (!rp) break;
+      g.player.teleport(rp.x + 0.5, 0, rp.z + 0.5);
+      g.player.yaw = Math.atan2(rp.x - g.player.pos.x, rp.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(1.5 - eyeY, 0.7);
+      g.frame();
+      if (!cutPrompt) {
+        const fp = ga.interaction.focused?.prompt;
+        if (fp && /Cut the runner/.test(fp)) cutPrompt = fp;
+      }
+      if (f === 4) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const cut = crk.runnerOut === false && crk.posted === false;
+    const courierPaid = ga.marginalia > mCut || caps.some((c) => /off the courier/.test(c));
+
+    // the word is dead: a further room should not light for you
+    const next2 = g.route.underRooms.find((r) => r.index > next.index);
+    let wordDead = true;
+    if (next2) {
+      const capMark2 = caps.length;
+      g.player.teleport(next2.origin.x, 0, next2.origin.z);
+      ga.currentRoom = next2.index;
+      for (let f = 0; f < 12; f++) g.frame();
+      wordDead = !caps.slice(capMark2).some((c) => /the word arrives before you/.test(c));
+    }
+
+    // but the ledger is still yours — she re-files a heavy asker on sight
+    g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
+    ga.currentRoom = fRoom.index;
+    for (let f = 0; f < 200 && !crk.posted; f++) g.frame();
+    const refiled = crk.posted === true;
+
+    // --- 4. back to the drawer — square the index ---
     g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
     ga.currentRoom = fRoom.index;
     for (let f = 0; f < 8; f++) g.frame();
@@ -638,7 +677,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
     return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
-      filed, wordOut, squarePrompt, paid,
+      filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
 
@@ -649,6 +688,11 @@ test('the index — the filer files your questions, the halls listen', async ({ 
   expect(result.docketPaid, JSON.stringify(result)).toBe(true);
   expect(result.filed, JSON.stringify(result)).toBe(true);
   expect(result.wordOut, JSON.stringify(result)).toBe(true);
+  expect(result.cutPrompt, JSON.stringify(result)).toMatch(/Cut the runner/);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(result.courierPaid, JSON.stringify(result)).toBe(true);
+  expect(result.wordDead, JSON.stringify(result)).toBe(true);
+  expect(result.refiled, JSON.stringify(result)).toBe(true);
   expect(result.squarePrompt, JSON.stringify(result)).toMatch(/Square the index/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.trail, JSON.stringify(result)).toBe(0);

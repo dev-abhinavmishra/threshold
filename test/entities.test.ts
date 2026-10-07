@@ -2276,3 +2276,68 @@ describe('the watched hall (sprint 285)', () => {
     expect(emit.mock.calls.filter((c) => c[0].category === 'machine').length).toBe(0);
   });
 });
+
+describe('the Filer’s runner (sprint 300)', () => {
+  const fileRoom = {
+    index: 0, templateId: 'under-records', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'keyCabinet', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const chain: RoomInstance[] = [fileRoom];
+  for (let i = 1; i <= 10; i++) {
+    chain.push({ index: i, templateId: 'corridor', origin: { x: 0, y: 0, z: i * 12 },
+      width: 6, depth: 12,
+      entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 },
+      navNodes: [], spec: { width: 6, depth: 12, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [] } as unknown as RoomInstance);
+  }
+  async function filed() {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx(chain, {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 80 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    return { f, ctx };
+  }
+
+  it('goes out on foot — the word travels the spine, catchable', async () => {
+    const { f, ctx } = await filed();
+    expect(f.runnerOut, 'the courier is out').toBe(true);
+    const z0 = f.runnerPos.z;
+    for (let i = 0; i < 30 && f.runnerOut; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.runnerPos.z - z0, 'it moves down the chain').toBeGreaterThan(1);
+    const meshes = (ctx.addEntityMesh as ReturnType<typeof vi.fn>).mock.calls;
+    expect(meshes.length, 'desk + courier meshes').toBeGreaterThanOrEqual(2);
+    f.dispose();
+  });
+
+  it('cut the runner — the word dies with it, the card comes out torn', async () => {
+    const { f, ctx } = await filed();
+    expect(f.runnerOut).toBe(true);
+    f.cutRunner();
+    expect(f.runnerOut).toBe(false);
+    expect(f.posted, 'the word never lands').toBe(false);
+    expect(f.filed, 'the card comes out torn').toBe(false);
+    const removes = (ctx.removeEntityMesh as ReturnType<typeof vi.fn>).mock.calls;
+    expect(removes.length, 'the courier is down').toBeGreaterThan(0);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.some((c) => String(c[0]).startsWith('square')), 'the square point closes').toBe(true);
+    f.dispose();
+  });
+
+  it('let it run — the word is delivered, past recall', async () => {
+    const { f, ctx } = await filed();
+    expect(f.runnerOut).toBe(true);
+    for (let i = 0; i < 900 && f.runnerOut; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.runnerOut, 'the courier is gone').toBe(false);
+    expect(f.posted, 'the word is out — the halls still listen').toBe(true);
+    f.dispose();
+  });
+});

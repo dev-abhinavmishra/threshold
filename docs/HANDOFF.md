@@ -2737,3 +2737,23 @@ opening tell only, fights stay authored); double-verb → yaw-window on
 wanted poster → poster-as-evidence on downstream boards, suspicion
 tier only, or skip to keep the under's threat texture physical.
 
+
+## sprint 300 — the runner made flesh (cut the courier)
+
+- The Filer's post is now physical: `openIndex()` sends a courier sprinting
+  the under spine (`corridorPath` toward spawnRoom±8, the route-flow
+  direction). ~3.4 m/s far, **1.2 m/s while the player is within 4m** —
+  a courier isn't a fighter; closing on it is the only window 'Cut the
+  runner' (1.0s hold, prox-gated like pick/strip, per-frame at runnerPos)
+  gets. At 3.4 it outruns a hold mid-press.
+- `cutRunner()` = the word dies mid-delivery (posted/filed off, index
+  closes torn, no fee) BUT `paperTrail` stays — the ledger is still
+  yours; she re-files a heavy asker on the next slow look. Cutting buys
+  hall-silence, not absolution. Escape ⇒ the word is out, unrecallable.
+- Runner is Filer-internal (not a scheduled entity): no ENTITY_TUNING /
+  TELLS / DEATH_NAMES / scheduler entries needed.
+- Traps: the interactable id must NOT embed `currentRoom` — the chase
+  crosses rooms and a churning id resets the hold (`cutWord-<space>:filer`
+  is stable). Runner's note mesh uses MAT.paper().
+- e2e 'the index' now drives the full arc: counter-claim → docket rifle →
+  file → wordOut → chase → cut → word dead → re-file → square → 0.

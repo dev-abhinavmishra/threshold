@@ -1451,6 +1451,14 @@ export class Filer extends Entity {
   filed = false;
   /** The word is out — rooms ahead listen for your step. */
   posted = false;
+  /** The courier — a physical runner carrying the word down the chain.
+   *  Catch it ('Cut the runner') and the message dies with it. */
+  runnerPos = v3();
+  runnerOut = false;
+  private runnerPath: Vec3[] = [];
+  private runnerTravel = 0;
+  private runnerMesh: THREE.Group | null = null;
+  private runnerRig: RiggedFigure | null = null;
 
   constructor() { super('filer', ENTITY_TUNING.filer); }
 
@@ -1525,6 +1533,62 @@ export class Filer extends Entity {
       enabled: true, priority: 4,
     });
     c.cue('chalk-mark', this.pos, '[she sends a runner — the crew reads ahead]', { severity: 'warn' });
+    this.sendRunner();
+  }
+
+  /** The post goes out on foot — a courier down the under chain, carrying
+   *  the word to the rooms ahead. It flees the spine; catching it kills
+   *  the message. Escapes ⇒ the word is delivered, unrecallable. */
+  private sendRunner(): void {
+    const c = this.ctx;
+    const dir = this.spawnRoom + 8 <= c.rooms.length - 1 ? 1 : -1;
+    const target = Math.max(0, Math.min(c.rooms.length - 1, this.spawnRoom + 8 * dir));
+    this.runnerPath = corridorPath(c.rooms, this.spawnRoom, target);
+    this.runnerTravel = 0;
+    if (this.runnerPath.length >= 2) v3copy(this.runnerPos, this.runnerPath[0]);
+    else v3copy(this.runnerPos, this.deskPos);
+    const g = new THREE.Group();
+    const rig = riggedFigure('ninja');
+    if (rig) { this.runnerRig = rig; rig.play('move', 0); g.add(rig.group); }
+    else {
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.7, 4, 8), MAT.ink());
+      body.position.y = 0.6;
+      g.add(body);
+    }
+    // the word itself — a sealed fold strapped at the hip
+    const note = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.02, 0.12), MAT.paper());
+    note.position.set(0.14, 0.7, 0);
+    g.add(note);
+    g.position.copy(this.runnerPos);
+    this.runnerMesh = g;
+    c.addEntityMesh(g);
+    this.runnerOut = true;
+  }
+
+  /** 'Cut the runner' reaches it — you tear the message. The word never
+   *  lands; her index closes on a torn card. */
+  cutRunner(): void {
+    this.runnerOut = false;
+    this.dropRunner();
+    // the word dies with the courier — same end-state as squaring,
+    // without the fee
+    this.filed = false;
+    this.posted = false;
+    this.homebound = true;
+    this.closeIndex();
+    this.ctx.cue('checkpoint', this.runnerPos, '[you tear the message — the word dies with the runner]', { severity: 'info' });
+    this.ctx.cue('chalk-mark', this.pos, '[the filer closes your card — torn]', { severity: 'warn' });
+  }
+
+  private escaped(): void {
+    this.runnerOut = false;
+    this.dropRunner();
+    this.ctx.cue('chalk-mark', this.runnerPos, '[the word is out — past reach]', { severity: 'warn' });
+  }
+
+  private dropRunner(): void {
+    if (this.runnerMesh) { this.ctx.removeEntityMesh(this.runnerMesh); this.runnerMesh = null; }
+    this.runnerRig = null;
   }
 
   private closeIndex(): void {
@@ -1535,6 +1599,8 @@ export class Filer extends Entity {
   squared(): void {
     this.filed = false;
     this.posted = false;
+    this.runnerOut = false;
+    this.dropRunner();
     this.homebound = true;
     this.closeIndex();
     this.ctx.cue('checkpoint', this.pos, '[the filer strikes your card]', { severity: 'info' });
@@ -1544,6 +1610,8 @@ export class Filer extends Entity {
     // the word only travels so far down the halls
     this.posted = false;
     this.filed = false;
+    this.runnerOut = false;
+    this.dropRunner();
     this.homebound = true;
     this.closeIndex();
     this.ctx.cue('chalk-mark', this.pos, '[the word ahead of you goes quiet]', { severity: 'info' });
@@ -1586,6 +1654,24 @@ export class Filer extends Entity {
         });
       }
     }
+    // the courier sprints the spine at a fast walk — catchable, not for
+    // long. It isn't a fighter: closing on it slows its stride, which is
+    // the only window the cut gets.
+    if (this.runnerOut) {
+      const rd = Math.hypot(p.x - this.runnerPos.x, p.z - this.runnerPos.z);
+      this.runnerTravel += dt * (rd < 4 ? 1.2 : 3.4);
+      const f = followPath(this.runnerPath, this.runnerTravel);
+      v3copy(this.runnerPos, f.pos);
+      if (this.runnerMesh) {
+        this.runnerMesh.position.copy(this.runnerPos);
+        const nxt = followPath(this.runnerPath, this.runnerTravel + 0.5);
+        const mx = nxt.pos.x - f.pos.x, mz = nxt.pos.z - f.pos.z;
+        if (mx * mx + mz * mz > 1e-6) this.runnerMesh.rotation.y = Math.atan2(mx, mz);
+      }
+      this.runnerRig?.update(dt);
+      if (f.doneT || this.runnerTravel > 140) this.escaped();
+    }
+
     // outrun the word, or square it away — either way the card comes out
     if (this.posted && (trail <= 0 || Math.abs(pRoom - this.spawnRoom) > 8)) this.cool();
 
@@ -1610,6 +1696,8 @@ export class Filer extends Entity {
   protected override onDone(): void {
     this.closeIndex();
     this.ctx.removeInteractable(this.docketId());
+    this.runnerOut = false;
+    this.dropRunner();
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }
