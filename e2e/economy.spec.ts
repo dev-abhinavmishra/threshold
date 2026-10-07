@@ -721,7 +721,8 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
       let pursePaid = false, purseSour = false, purseShortCap = '',
         purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '',
         purseWashCap = '', purseWashed = false, fenceCap = '', fencePaid = false,
-        cpLedger = false;
+        cpLedger = false, bookCap = '', bookRead = false,
+        bookFound = false, bookSeen = '';
       if (purse) {
         g.imprints = 20; // marginalia still 30 — the clean fix never charged
         standAt(lobby, { x: purse.pos.x, z: purse.pos.z }, 0.7);
@@ -776,12 +777,30 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
             && cpS.unpaidTheft === 0 && cpS.hotImprints === gh.hotImprints
             && Array.isArray(cpS.hotItems) && cpS.hotItems.length === gh.hotItems.size;
         }
+        // sprint 334 — the book answers back: the under's ledgers read
+        // out loud for a pittance, and the asking files a question too
+        const book = (g.interaction as { interactables?: { kind: string;
+          pos: { x: number; y: number; z: number } }[] }).interactables
+          ?.find((i) => i.kind === 'book');
+        bookFound = !!book;
+        if (book) {
+          const mBook = g.marginalia;
+          const tBook = gh.paperTrail;
+          standAt(lobby, { x: book.pos.x, z: book.pos.z }, 0.7);
+          bookSeen = drive(book.pos, /book|ask/i,
+            () => caps.some((t) => /book on you|one line on you/.test(t)), 50);
+          bookCap = caps.find((t) => /book on you|one line on you/.test(t)) ?? '';
+          bookRead = bookCap !== '' && g.marginalia === mBook - 3
+            && gh.paperTrail === tBook + 1
+            && bookCap.includes(`${tBook + 1} question`);
+        }
       }
       return {
         stage: 'done', refused, refuseCap, price, item,
         purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap,
         purseShortCap, margAfterPurse, purseWashCap, purseWashed,
-        fenceCap, fencePaid, cpLedger,
+        fenceCap, fencePaid, cpLedger, bookCap, bookRead,
+        bookFound, bookSeen,
         purseSeen, pursePos: purse ? { x: purse.pos.x, y: purse.pos.y, z: purse.pos.z } : null,
         bsockPos: lobby.sockets.filter((s) => s.meta?.broker !== undefined)
           .map((s) => ({ x: Math.round(s.pos.x * 10) / 10, y: s.pos.y, z: Math.round(s.pos.z * 10) / 10 })),
@@ -841,6 +860,10 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   // sprint 332 — the checkpoint carries the ledgers (trail/marks mirror
   // live state, death can't launder the books)
   expect(result.cpLedger, JSON.stringify(result)).toBe(true);
+  // sprint 334 — the book reads you: costs 3 marginalia + one filed
+  // question, and the read counts the asking
+  expect(result.bookRead, JSON.stringify(result)).toBe(true);
+  expect(result.bookCap).toMatch(/question|one line/);
   expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });

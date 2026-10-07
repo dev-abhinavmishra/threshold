@@ -3595,3 +3595,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   1.0m default lands inside the counter flank collider → eject →
   '' samples; same class as the s324 purse fix).
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 334 — the book answers back (info layer for the ledgers)
+- The five ledgers (`unpaidTheft`/`unpaidHeld`/`paperTrail`/`hotImprints`/
+  `hotItems`) were player-invisible — the only signal was a surcharge.
+  'Ask what the book says — 3 marginalia' is now minted inside the
+  bSocks>=2 broker block, anchored LOW on the fig's flank
+  (`fig.pos + 0.8·lateral`, y+0.55, holdTime 0.8, p2). Case 'book'
+  (Game.ts, before 'purse'): under-only + `checker.active` shutter +
+  `marginalia < 3` refuse. On press: `marginalia -= 3; paperTrail += 1`
+  — the asking files too, so the read counts itself — then captions
+  `[the book on you — N questions filed · M thefts tallied — the asking
+  files too]` / clean `[the book holds one line on you — this one]`.
+  Repeatable, not one-shot.
+- Trap (new class): two same-fig anchors ~0.35m apart lose the in-band
+  priority fight — the first book anchor (fig+0.7lat, +1.1y) sat inside
+  'fix''s focus band and p3 won every frame (`bookSeen` showed only
+  'Ask the Broker for a fix'). Waist-height at 0.8·lateral makes it a
+  pitch-DOWN vs pitch-UP read — disambiguates. e2e legs on fig verbs
+  should assert `xSeen` contains the target prompt, not just the cap.
+- Verb wiring: interaction.ts union + hazardContract kind list.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg green, build.
