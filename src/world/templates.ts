@@ -761,7 +761,7 @@ const recordsVault: RoomTemplate = {
     ],
     sockets: lootSockets([[0, 0], [-2.4, 2.4], [2.4, -2.4]]),
     hiding: [
-      { kind: 'cabinet', x: -2.4, z: 2.5, yaw: Math.PI / 4, propKind: 'cabinet' },
+      { kind: 'cabinet', x: -2.4, z: 2.5, yaw: (3 * Math.PI) / 4, propKind: 'cabinet' },
     ],
     safeZones: [{ x: 2.4, z: 2.4, w: 1.2, d: 1.2 }],
     weight: 6,
@@ -1721,7 +1721,7 @@ const roomRotunda: RoomTemplate = {
     sockets: lootSockets([[0, 0], [-4, 0], [4, 0]]),
     hiding: [
       { kind: 'losAlcove', x: -4, z: -4, yaw: Math.PI / 4, propKind: 'partition' },
-      { kind: 'losAlcove', x: 4, z: 4, yaw: -Math.PI / 4, propKind: 'partition' },
+      { kind: 'losAlcove', x: 4, z: 4, yaw: (-3 * Math.PI) / 4, propKind: 'partition' },
     ],
     safeZones: [{ x: -4, z: -4, w: 1.3, d: 1.3 }, { x: 4, z: 4, w: 1.3, d: 1.3 }],
     weight: 3,
@@ -2073,7 +2073,7 @@ const roomMorgue: RoomTemplate = {
     sockets: [...drawerSockets([[-2.0, 4.0]]), ...lootSockets([[-0.8, -1.1], [1.0, 1.5]])],
     hiding: [
       { kind: 'underFurniture', x: -0.8, z: -1.1, yaw: 0, propKind: 'gurney' },
-      { kind: 'cabinet', x: 2.9, z: -3.8, yaw: Math.PI, propKind: 'locker' },
+      { kind: 'cabinet', x: 2.9, z: -3.8, yaw: 0, propKind: 'locker' },
     ],
     lights: [
       { x: 0, y: 2.62, z: -1.6, color: 0xd4e8dc, intensity: 0.85, range: 8, group: 'main', breakable: true },
@@ -2288,7 +2288,7 @@ const roomLibraryStacks: RoomTemplate = {
     sockets: [...drawerSockets([[0, -4.6]]), ...lootSockets([[-2.4, 0.0], [2.4, 3.6], [0.0, 4.5]])],
     hiding: [
       { kind: 'cabinet', x: -4.0, z: -4.6, yaw: 0, propKind: 'cabinet' },
-      { kind: 'underFurniture', x: 0, z: -4.6, yaw: Math.PI, propKind: 'desk' },
+      { kind: 'underFurniture', x: 0, z: -4.6, yaw: 0, propKind: 'desk' },
     ],
     lights: [
       { x: -2.4, y: 3.0, z: 0, color: 0xffd9a0, intensity: 0.6, range: 6, group: 'dim', breakable: true },

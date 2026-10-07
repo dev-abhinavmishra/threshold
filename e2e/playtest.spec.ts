@@ -68,6 +68,7 @@ interface G {
   player: {
     dead: boolean; health: number; panic: number;
     pos: { x: number; y: number; z: number };
+    yaw: number;
     protection: string;
     hiddenSpot: unknown;
     teleport(x: number, y: number, z: number, yaw?: number): void;
@@ -75,7 +76,7 @@ interface G {
     exitHiding(now: number): void;
   };
   currentRoom: number;
-  entities: { id: string }[];
+  entities: { id: string; threatPos?(): { x: number; y: number; z: number } | null }[];
   inventory: { id: string; count: number }[];
   stats: RunReport['stats'];
   input: { interactPressed: boolean };
@@ -129,11 +130,40 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         const dx = ex.x - en.x, dz = ex.z - en.z, L = Math.hypot(dx, dz) || 1;
         g.player.teleport(en.x + (dx / L) * 1.3, 0, en.z + (dz / L) * 1.3, Math.atan2(dx, dz));
       };
+      // A player doesn't stand in the doorway for the whole visit — after a
+      // moment reading the room they cross it. Rooms budget 150-240 frames;
+      // standing at entry that long lets a slow roamer (grafter, warden
+      // patrol, husk) walk up to a player who in reality is long gone.
+      const moveToExit = (room: G['route']['rooms'][number]) => {
+        const en = room.entryPos, ex = room.exitPos;
+        const dx = ex.x - en.x, dz = ex.z - en.z, L = Math.hypot(dx, dz) || 1;
+        g.player.teleport(ex.x - (dx / L) * 1.0, 0, ex.z - (dz / L) * 1.0, Math.atan2(dx, dz));
+      };
       // Corridor runners are what cover is for. Patrol entities (hauler,
       // auditor, margin, grafter, stillframe) never vacate and don't demand
       // a locker — hiding from them is the over-use that buys lockout.
       const RUNNERISH = new Set(['sweep', 'reprise', 'maelstrom', 'redline', 'returner', 'pursuer', 'orrery']);
       const runnerLive = () => g.entities.some((e) => RUNNERISH.has(e.id));
+      // The gaze fights: witness punishes facing it (the pull is resistible —
+      // a real player wrenches away), whisper and echoskin are dismissed by
+      // holding them in view. The harness owns yaw outright, so it must play
+      // both sides of the regard: face away from a witness, face into a
+      // whisper — toward wins when both press at once (the whisper's window
+      // is lethal; the witness only bleeds).
+      const gazeYaw = (): number | null => {
+        const pp = g.player.pos;
+        let away: { x: number; z: number } | null = null;
+        let toward: { x: number; z: number } | null = null;
+        for (const e of g.entities) {
+          const t = e.threatPos?.();
+          if (!t) continue;
+          if (e.id === 'witness') away = t;
+          else if (e.id === 'whisper' || e.id === 'echoskin') toward = t;
+        }
+        if (toward) return Math.atan2(toward.x - pp.x, toward.z - pp.z);
+        if (away) return Math.atan2(pp.x - away.x, pp.z - away.z);
+        return null;
+      };
       for (let i = 0; i < rooms.length; i++) {
         const room = rooms[i];
         // A real hider waits out a live pass inside the locker instead of
@@ -177,6 +207,7 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
           }
           return null;
         };
+        let crossed = style === 'walker';
         for (let f = 0; f < budget && !g.player.dead; f++) {
           // hider: retreat into cover while a runner is live; with no
           // cover within reach a real player flees onward, not stand still.
@@ -185,12 +216,26 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
             if (spot) {
               g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z, 0);
               g.player.enterHiding(spot, g.clock.time);
-            } else {
-              break;
             }
+            // No cover in reach: a real player keeps fleeing through the
+            // room — exposed — rather than standing still. Fall through and
+            // let the frames (and the runner) decide; skipping ahead here
+            // would erase the transit exposure the death rate is for.
           }
           if (g.player.hiddenSpot) g.keys.clear();
           g.frame();
+          // Cross the room once the entry has settled — a real player keeps
+          // moving; doorway-loitering is how roamers catch a stationary mark.
+          if (!crossed && !g.player.hiddenSpot && f >= 12) {
+            moveToExit(room);
+            crossed = true;
+          }
+          // Regard discipline — the witness only bleeds you if you keep
+          // looking, and the whisper/echoskin only leaves when you do.
+          if (style !== 'walker' && !g.player.hiddenSpot) {
+            const y = gazeYaw();
+            if (y !== null) g.player.yaw = y;
+          }
           // Un-hide the moment the pass is over — lingering in the locker is
           // what makes the next room's transit cost a lockout wait.
           if (g.player.hiddenSpot && !runnerLive()) g.player.exitHiding(g.clock.time);
@@ -217,7 +262,7 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
               g.input.interactPressed = false;
               rep.socketsTouched++;
             }
-            standIn(room);
+            moveToExit(room);
           }
           // entities gone → hider comes out and moves on early
           if (f > 60 && g.entities.length === 0 && !g.player.dead) break;

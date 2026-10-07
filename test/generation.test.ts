@@ -6,6 +6,7 @@ import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
 import { portLocalPos, inDoorLane, footprintInDoorLane, footprintInDoorLeaf } from '../src/world/spec';
+import { modelCollider } from '../src/world/modelLibrary';
 import { modelCollider, MODEL_FOR } from '../src/world/modelLibrary';
 import { buildProp } from '../src/world/props';
 import { Rng } from '../src/engine/rng';
@@ -1172,6 +1173,50 @@ describe('the cause reads (sprint 289)', () => {
     const docIds = new Set(DOCUMENTS.map((d) => d.id));
     for (const id of SOURCES) {
       expect(docIds.has(`doc-${id}`), `no archive document for ${id}`).toBe(true);
+    }
+  });
+});
+
+describe('injected cover sanity (sprint 302)', () => {
+  // Review bugs: corner lockers could eject the player through the wall,
+  // and flat floor props (manholes) counted as covering furniture so the
+  // locker mesh never spawned.
+  const toLocal = (r: { origin: { x: number; z: number }; yaw: number }, wx: number, wz: number) => {
+    const dx = wx - r.origin.x, dz = wz - r.origin.z;
+    const c = Math.cos(r.yaw), s = Math.sin(r.yaw);
+    return { lx: dx * c - dz * s, lz: dx * s + dz * c };
+  };
+
+  it('every hiding spot exits inside its own room', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        if (!r.spec) continue;
+        for (const spot of r.hidingSpots ?? []) {
+          const { lx, lz } = toLocal(r, spot.exitPos.x, spot.exitPos.z);
+          const tag = `seed ${seed} room ${r.index} spot ${spot.id}`;
+          expect(Math.abs(lx), `${tag} exits through a side wall`).toBeLessThanOrEqual(r.spec.width / 2 + 0.02);
+          expect(Math.abs(lz), `${tag} exits through an end wall`).toBeLessThanOrEqual(r.spec.depth / 2 + 0.02);
+        }
+      }
+    }
+  });
+
+  it('injected cabinets sit on a real prop body, not floor dressing', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of [...route.rooms, ...route.underRooms]) {
+        if (!r.spec) continue;
+        for (const spot of r.hidingSpots ?? []) {
+          if (!spot.id.endsWith('-inj')) continue;
+          const cx = (spot.volume.minX + spot.volume.maxX) / 2;
+          const cz = (spot.volume.minZ + spot.volume.maxZ) / 2;
+          const { lx, lz } = toLocal(r, cx, cz);
+          const body = r.spec.props.find((p) =>
+            Math.hypot(p.x - lx, p.z - lz) <= 1.3 && (modelCollider(p.kind)?.[1] ?? 0) >= 0.5);
+          expect(body, `seed ${seed} room ${r.index}: injected cabinet has no visible prop`).toBeTruthy();
+        }
+      }
     }
   });
 });
