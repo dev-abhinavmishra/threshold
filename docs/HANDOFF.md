@@ -3466,3 +3466,27 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   shares `rel(bell−fig)`'s sign; post-rifle fresh ring with the
   player at the opposite side → head keeps `rel(player−fig)`.
 - Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 328 — the unfiled hands (the eye's window pays)
+- The sprint-327 head-turn made mechanical: rifled inside the bell's
+  look window (`bellRung.get(roomIndex)`, `clock.time − rung.t < 3.5`),
+  'Rifle the till' files NOTHING — the clerk's eye is on the bell, not
+  your hands: `unpaidHeld +0`, caption '[it was watching the bell —
+  your hands go unfiled]'. The till still opens, still smells ('work'
+  sign lands), and `closedCounters` still folds the counter — only
+  the witness is missing. Ring → cross → rifle is a real steal-window
+  (~1.5m of counter between bell and till inside ~3.5s).
+- e2e trap (second stale-caption instance): the clerk leg's room-B
+  till drive waited on `/off the till/` — room A's rifle caption
+  satisfied `done()` at frame 0, so the drive never teleported
+  (player stranded at the bell stand, `seen=''`, probe showed
+  align −0.16 from a stale spot — mimicked the collider-eject trap).
+  Diagnose order: a `done()` that may match an EARLIER phase's emit
+  must count occurrences, not `some()`. Also: the leg's `drive()`
+  hardcodes `clerked.origin` for its stand direction — multi-room
+  legs need a `toward` param (added; default keeps old callers).
+- e2e clerk leg drives both books: room A rifles unseen-by-nothing
+  (+2 held — rung deleted mid-leg to expire the window), room B
+  rings then rifles inside the window (held stays 0, 'unfiled'
+  caption, counter still cold).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
