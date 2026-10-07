@@ -890,3 +890,85 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
   expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
   expect(errors).toEqual([]);
 });
+
+test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 307)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      checker: { stage: string; lampLit: boolean; position: { x: number; z: number } };
+      crewCount: { pending: number };
+      inventory: { id: string; count: number }[];
+      sound: { on(fn: (e: { caption?: string }) => void): unknown };
+    };
+    const cried: string[] = [];
+    ga.sound.on((e) => { if (e.caption && /dies in your hands/.test(e.caption)) cried.push(e.caption); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // wait for the books to send somebody (~75s ring + dispatch)
+    for (let f = 0; f < 100 * 30 && ga.checker.stage === 'idle'; f++) g.frame();
+    if (ga.checker.stage === 'idle') return { stage: 'no-dispatch', caps: caps.slice(-8) } as const;
+    // shadow the walker — steal its light while it counts
+    let stripped = false;
+    for (let f = 0; f < 400; f++) {
+      const cp = ga.checker.position;
+      g.player.teleport(cp.x - 0.3, 0, cp.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.9 - eyeY, 0.4);
+      g.player.yaw = Math.atan2(cp.x - g.player.pos.x, cp.z - g.player.pos.z);
+      g.frame();
+      if (f === 2) ga.keys.add('KeyE');
+      if (!ga.checker.lampLit) { stripped = true; break; }
+      if (ga.checker.stage === 'idle') break;
+    }
+    ga.keys.delete('KeyE');
+    const lamp = ga.inventory.find((i) => i.id === 'handLamp');
+    // let it finish counting blind and leave
+    for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
+    return { stage: 'done', stripped, cried: cried.length > 0,
+      charge: lamp?.count ?? 0, pending: ga.crewCount.pending,
+      blindSeen: caps.some((c) => /counts blind/.test(c)),
+      pickupSeen: caps.some((c) => /count's lamp comes free/.test(c)),
+      finalStage: ga.checker.stage,
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.stripped, JSON.stringify(result)).toBe(true);
+  expect(result.cried, JSON.stringify(result)).toBe(true); // it felt the light die
+  expect(result.charge, JSON.stringify(result)).toBe(45); // warm, still swinging
+  expect(result.pending, JSON.stringify(result)).toBeGreaterThanOrEqual(1); // the lamp files another count
+  expect(result.blindSeen, JSON.stringify(result)).toBe(true); // swept blind, count stays open
+  expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
+  expect(errors).toEqual([]);
+});

@@ -2980,3 +2980,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   e2e: `ga.checker.stage` is runtime-reachable (TS private ≠ #private).
 - Gates: tsc, lint, 218 vitest (+4), undercast count/index/audit/checker
   legs 4/4, build pending.
+
+## sprint 307 — strip the checker's lamp (the boldest pilfer in the under)
+
+- The crew's counterparty carries stealable light: 'Strip the lamp'
+  (1.1s hold, prox-gated per-frame interactable on the walking checker,
+  new kind `stripCheck`) frees a `handLamp` at 45 charge — between the
+  scavenged bulb's 30 and the sledge lamp's 55.
+- The recursion is the design: it is HOLDING the light, so it feels it
+  die on the spot (0.65 impact emit at ITS position — wakes the room),
+  and the lamp is crew property → the strip files ANOTHER loss-report
+  (crewCount.push) → ~75s later the books send the next checker, fresh
+  lamp wired. The lamps are endless; you can strip every one.
+- Blind counting: `lampLit` gates the sweep's find — strip before or
+  during the sweep and it counts you invisible, closing with
+  `[the checker counts blind — the count stays open]`.
+- Traps/log: checker's interactable id is a constant 'stripCheck' (one
+  walker at a time, so no room suffix needed — hold persists across its
+  walk since the id is stable while pos tracks it). Game passes the
+  checker as `it.data` — same cast-to-Record pattern as the hauler.
+- Gates: tsc, lint, 222 vitest (+6 incl. 2 strip specs), 5-seed sim,
+  undercast **10/10** (+strip leg), build.
