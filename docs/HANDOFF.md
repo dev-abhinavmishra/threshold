@@ -3411,3 +3411,21 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
   clean 8→6 · filed-face sour 8→4 · short refuse · cold-counter
   fold; broker leg unchanged), build.
+
+## Sprint 325 — the till smells of hands (the rifle's third price)
+
+- 'Rifle the till' now leaves fresh `kind: 'work'` evidence at the
+  counter — substantive sign, not ash, so the warden pulls to it
+  like any kill or mounted wrap and `signReads` weighs it toward
+  learning. The rifle's price stack is now three deep: the file
+  (+2 held), the cold counter, and scent — steal early and the
+  floor reads worked where the warden walks.
+- Free emergent counterplay: the crouch-scrub loop iterates
+  `hazard.evidence`, so a felt wrap rubs the hands-smell off the
+  counter too — costing a wrap and leaving a wipe shadow that
+  poisons that floor's later reads for the same warden.
+- Evidence union gained 'work' (room.ts — the kind-agnostic reader
+  filters only on old/weak/wiped flags, so both hunters pull it
+  without reader changes).
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
+  work mark lands at the till pos on rifle), build.

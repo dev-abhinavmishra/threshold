@@ -1926,11 +1926,18 @@ export class Game {
         const roomIndex = (it.data as { roomIndex: number }).roomIndex;
         const room = this.activeRooms()[roomIndex];
         const till = room?.sockets.find((s) => s.meta.clerk === 'slot0');
-        if (!till || till.meta.tillTaken === true) { it.enabled = false; return; }
+        if (!room || !till || till.meta.tillTaken === true) { it.enabled = false; return; }
         till.meta.tillTaken = true;
         this.closedCounters.add(roomIndex);
         this.unpaidHeld += 2;
         it.enabled = false;
+        // the till smells of hands — hands in a staffed register leave
+        // fresh sign at the counter: substantive work, not ash, so the
+        // warden pulls to it like any kill or mounted wrap (and weighs
+        // it toward learning). The rifle's third price after the file
+        // and the cold counter: scent.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: room.index,
+          kind: 'work', t: this.clock.time, readBy: [] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 8);
