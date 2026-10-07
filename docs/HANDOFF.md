@@ -2407,6 +2407,49 @@ reads which cases ahead are still held vs already drawn.
   reported 'no-warrant' on a seed that provably places one. When a new
   generation feature 'isn't there' in e2e, `fuser -k 4173/tcp` first.
 
+
+## sprint 289b — counter-scent (the ash keeps)
+
+(Parallel sprint numbering across concurrent branches — the warrant
+implementation on main (sprint 290) superseded this branch's own warrant
+draft; kept their seizure ledger, dropped the claim-read variant.)
+
+What:
+- Forging a sign now leaves a SECOND evidence record beside the lie:
+  `{kind: 'water', weak: true}` — rubbed felt sheds a real trace even
+  where the wire mark is fake. Caption: `a lie in wire; the ash keeps`.
+- `hazardEvidence` reads three tiers now: fresh sign (both hunters),
+  forged sign (both hunters), old sign (grafter only, sprint 270), and
+  weak sign (grafter only, sprint 289b). The warden's sharper nose skips
+  `weak` — `staleOk` (grafter keys) gates both `old` and `weak`.
+- Grafter caption forks a third way: `[stone snuffles the ash — it
+  smells hands]`. The lie still works; it just costs a residue that
+  pulls the duller hunter to the same spot twice (once for the lie,
+  once for the ash — separate records, read-once each).
+- `weak` added to both evidence record types (room.ts field + the
+  EntityCtx callback shape in base.ts — they're parallel interfaces,
+  keep them in sync).
+Traps: none new — the record lands at +0.4/+0.4 off the player so the
+  grafter's room-of check still resolves inside the same room.
+- Resume decodes the full route's GLB set on the main thread: first cold
+  run can starve RAF for >60s (CDP stack samples show continuous
+  GLTFLoader.loadBufferView/traverse). viewmodel:77 now stubs renderFrame
+  and waits on an INTERVAL poll (RAF polling starves with the loop);
+  the remaining flake is a cold-decode timeout, retry-warm passes ~5s.
+  Manual g.frame() evaluates also queue behind decode — never trust a
+  90s evaluate hang to mean a frame loop; sample the stack via CDP
+  Debugger.pause first.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - 'Seen'-record echo (hunters that already read your sign act like
+    they know you) — half-baked, logged skip.
+  - A scrub that removes the lie leaves the ash? (Scrub radius 2.6m
+    already takes both — no work needed; verify in play.)
+
+
 ## review fixes — mounted tells + the honest looter (post-merge, PRs #12/#13)
 
 **What**: Devin Review flagged the merged sprints. All four findings real:

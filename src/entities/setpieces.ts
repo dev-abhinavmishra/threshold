@@ -440,7 +440,7 @@ export class Grafter extends Entity {
         if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
         this.target = v3(ev.pos.x, 0, ev.pos.z);
         this.roamT = 0;
-        c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]' : '[stone drags to the fresh sign]', { severity: 'warn' });
+        c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]' : ev.weak ? '[stone snuffles the ash — it smells hands]' : '[stone drags to the fresh sign]', { severity: 'warn' });
         break;
       }
     }

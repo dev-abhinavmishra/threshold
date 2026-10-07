@@ -705,7 +705,7 @@ test('the lie in wire — a forged sign reads like fresh work to a hunter', asyn
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       currentRoom: number;
-      hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number }; readBy: string[] }[] };
+      hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number }; readBy: string[]; weak?: boolean }[] };
       inventory: { id: string; count: number }[];
     };
     const room = g.route.rooms[4];
@@ -721,19 +721,23 @@ test('the lie in wire — a forged sign reads like fresh work to a hunter', asyn
     for (let f = 0; f < 80 && ga.hazard.evidence.length === ev0; f++) g.frame();
     g.keys.delete('KeyE');
     g.keys.delete('KeyC');
-    const ev = ga.hazard.evidence[ga.hazard.evidence.length - 1];
+    const evs = ga.hazard.evidence.slice(-2) as { kind: string; room: number; readBy: string[]; weak?: boolean }[];
     const wraps = ga.inventory.find((i) => i.id === 'feltWrap')?.count ?? 0;
     const liesCaption = caps.some((c) => /lie in wire/.test(c));
     // the forged mark is ordinary fresh sign — a hunter's getter would read it
-    const hunterReadable = !!ev && ev.room === 4 && ev.readBy.length === 0;
-    return { stage: 'done', prompt, grew: ga.hazard.evidence.length === ev0 + 1,
-      hunterReadable, spent: wraps === 1, liesCaption, caps } as const;
+    const hunterReadable = !!evs[0] && evs[0].room === 4 && evs[0].readBy.length === 0;
+    // ...and the wrap's ash lands as a second, weak mark beside it
+    const ash = evs[1];
+    return { stage: 'done', prompt, grew: ga.hazard.evidence.length === ev0 + 2,
+      hunterReadable, ashWeak: ash?.weak === true && ash?.kind === 'water' && ash?.room === 4,
+      spent: wraps === 1, liesCaption, caps } as const;
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.prompt, JSON.stringify(result)).toMatch(/Forge the sign/);
   expect(result.grew, JSON.stringify(result)).toBe(true);
   expect(result.hunterReadable, JSON.stringify(result)).toBe(true);
+  expect(result.ashWeak, 'the rub left a weak water-ash the grafter alone reads').toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);
   expect(result.liesCaption, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
