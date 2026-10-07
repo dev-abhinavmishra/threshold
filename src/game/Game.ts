@@ -1252,6 +1252,20 @@ export class Game {
           holdTime: 0.8, enabled: true, priority: 1,
           data: { roomIndex },
         });
+        // The fence — the Broker takes marked stock off your hands on
+        // the counter's other flank (the purse's mirror). The under's
+        // second wash: goods out for a pittance, the book opens a line.
+        this.interaction.add({
+          kind: 'fence', id: `fence-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX + (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ + (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Fence the take',
+          holdTime: 0.9, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
       }
     }
     // The clerk's page — a question desk on the figure itself: each
@@ -1960,7 +1974,10 @@ export class Game {
           const pool = ['bandage', 'doorChock', 'feltWrap', 'latchpick'] as const;
           const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
           this.giveItem(item as ItemId, 1);
-          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the till]`);
+          // sprint 331 — the till's stock is marked too: carry it past a
+          // warm clerk and its own stock tells (the Broker fences it)
+          this.hotItems.add(item as ItemId);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the till — the stock is marked]`);
         }
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, unfiled
@@ -2024,6 +2041,36 @@ export class Game {
           : dirty
             ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
             : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
+        return;
+      }
+      case 'fence': {
+        // sprint 331 — the Broker takes marked stock off your hands:
+        // the goods-side wash. The take leaves your bag at an insult
+        // rate and the under's book opens a line for the question —
+        // the same price the purse charges for the coin.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id));
+        if (take.length === 0) {
+          this.cue('whisper', it.pos,
+            "[the broker glances at your bag — nothing he'd touch]", 'info');
+          return;
+        }
+        const count = take.reduce((n, i) => n + i.count, 0);
+        const pay = 4 * count;
+        for (const i of take) {
+          this.hotItems.delete(i.id);
+          i.count = 0;
+        }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.marginalia += pay;
+        this.stats.marginaliaEarned += pay;
+        this.paperTrail += 1;
+        this.cue('purchase', it.pos,
+          `[the broker takes the marked stock without a word — the under's book opens a line · +${pay} marginalia]`);
         return;
       }
       case 'bell': {
@@ -4627,6 +4674,21 @@ export class Game {
             const rung = this.bellRung.get(o.userData.clerkRoomIndex as number);
             if (rung && this.clock.time - rung.t < 3.5) {
               tx = rung.x; tz = rung.z; watches = true;
+            } else if (this.hotItems.size > 0
+                && this.inventory.some((i) => this.hotItems.has(i.id))) {
+              // sprint 331 — the till's stock testifies: carried goods
+              // still read as the clerk's own shelf — its eye finds the
+              // take on you, and the first read pings where you stand.
+              watches = true;
+              const rIdx = o.userData.clerkRoomIndex as number;
+              if (!this.stockSeen.has(rIdx)) {
+                this.stockSeen.add(rIdx);
+                this.sound.emit({ x: this.player.pos.x, y: 1, z: this.player.pos.z,
+                  intensity: 0.4, category: 'distraction',
+                  caption: "[the till's stock answers for itself]" });
+                this.cue('drawer', this.player.pos,
+                  '[the clerk reads its own stock on you — the till wares tell]', 'warn');
+              }
             }
           }
           if (head && watches) {
@@ -5418,6 +5480,12 @@ export class Game {
    *  each time a hot coin lands in a house till. The under's trades
    *  (the Broker's purse) take marked coin without asking — a wash. */
   private hotImprints = 0;
+  /** sprint 331 — the till's stock is marked too: the ids a rifled
+   *  till paid out in goods. A warm clerk reads its own stock on you
+   *  (the eye finds the take); the Broker fences it clean off. */
+  private readonly hotItems = new Set<ItemId>();
+  /** Rooms whose clerk already read the marked stock — one ping each. */
+  private readonly stockSeen = new Set<number>();
 
   /** Spend imprints at a house service — the marked coin goes first,
    *  and each hot coin that lands rings where it fell. Only the
