@@ -11,7 +11,7 @@ import type { Rng } from '../engine/rng';
 import type { RoomInstance } from '../game/types';
 import { inDoorLane, type PropKind } from './spec';
 
-const TELLS: Record<string, PropKind[][]> = {
+export const TELLS: Record<string, PropKind[][]> = {
   // two candidate sets per entity: nearer rooms pull from later sets
   whisper:    [['papers', 'candle'], ['paperStack']],
   inkling:    [['paperStack', 'papers'], ['books']],
@@ -29,6 +29,24 @@ const TELLS: Record<string, PropKind[][]> = {
   behemoth:   [['rubblePile'], ['rubble', 'wallVent']],
   collector:  [['lantern'], ['papers', 'paperScatter']],
   singer:     [['rubberBoots'], ['papers']],
+  // Sprint 288 — every schedulable entity marks its approach. The newer
+  // cast got no tells when they shipped; now the cast reads complete.
+  bellman:    [['suitcase', 'luggageRack'], ['keyRack']],
+  porter:     [['woodLadder'], ['rubble', 'pegRail']],
+  warden:     [['keyRack', 'lantern'], ['megaphone']],
+  groundswell:[['rubblePile', 'rubble'], ['cementBag', 'bucket']],
+  inspector:  [['wardrobe'], ['dresser', 'locker']],
+  commissionaire: [['transomWindow'], ['keyRack', 'papers']],
+  detective:  [['payphone'], ['stationery', 'papers']],
+  curator:    [['bookCart', 'books'], ['libraryLadder']],
+  redline:    [['roadBarrier'], ['chainFence', 'sign']],
+  stillframe: [['statue'], ['bust', 'watcherFigure']],
+  margin:     [['bookCart', 'books'], ['paperStack', 'papers']],
+  editor:     [['register', 'paperStack'], ['typewriter', 'stapler']],
+  swamper:    [['wetFloor', 'bucket'], ['plunger']],
+  hauler:     [['sledge', 'handTruck'], ['crowbar', 'ropeBarrier']],
+  laundress:  [['linenHamper', 'towelRail'], ['manglePress', 'basinSink']],
+  auditor:    [['register', 'paperStack'], ['typewriter', 'stationery']],
 };
 
 export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {

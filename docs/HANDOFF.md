@@ -2306,3 +2306,43 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The case currently guards goods — a 'sealed warrant' variant could
     hold paper (a claims sheet for main-route ledgers: which rooms'
     effects were drawn).
+
+## Sprint 288 — the marked approach (foreshadow completion + under foreshadow)
+
+What:
+- `foreshadow.ts` TELLS now covers EVERY schedulable entity — 16 new prop
+  tell sets (bellman, porter, warden, groundswell, inspector,
+  commissionaire, detective, curator, redline, stillframe, margin, editor,
+  swamper, hauler, laundress, auditor) on top of the original 15.
+  pursuer/hazard/orrery stay untelled (milestone/env, never scheduled).
+- `builder.ts` FORESHADOW_TELLS decal sets added for the 11 entities that
+  had none (bellman→footprintTrail, porter→high grimeStreak,
+  warden→footprintTrail, groundswell→floor crackDecal, inspector→handPrints,
+  commissionaire→scratchMarks, detective→small handPrints, swamper→wide
+  floorStain, hauler→trail+low grimeStreak, laundress→floorStain,
+  auditor→handPrints).
+- **`generateUnderscript` now calls `applyForeshadowing(rooms,
+  streams.stream('uscare'))`** before returning — the under decal tells
+  (stillframe/redline/margin/editor/grafter/returner) were dead code
+  before: built for the builder, never set by generation. New dedicated
+  'uscare' stream (RngStream union + STREAM_SALTS) per the shared-RNG
+  reseat rule.
+- Economy-host finds (`LOST_PROP_HOSTS`, `BOARD_HOSTS`, `REGISTER_HOSTS`,
+  `WORK_ORDER_SURF`) now skip `meta.foreshadow` props — a dropped sign
+  shouldn't qualify as crew furniture. Main-floor host finds run inside
+  fillSockets BEFORE applyForeshadowing so they were already immune.
+Traps:
+- Two foreshadow layers: prop tells (foreshadow.ts → spec.props with
+  meta.foreshadow) and decal tells (builder.ts → room.foreshadow flag).
+  The flag only sets on a back-1 room that is unscheduled + unmarked.
+- Under rooms are NOT authored-flagged the way main milestones are —
+  applyForeshadowing's `prev.authored` skip doesn't exempt landings;
+  `u-stair-landing` rooms can carry tell props (harmless — inDoorLane
+  guards paths).
+- Adding a schedulable entity without a TELLS entry now fails
+  generation.test.ts 'marked approach' coverage.
+- `foreshadow` field type on RoomInstance is the entity id string —
+  decal sets and prop sets are keyed the same way.
+- Wax-bell looter income drifted 103→112 — the confiscated-case marks
+  rolls, not foreshadow. Verify economy deltas against sim, not
+  assumptions.
