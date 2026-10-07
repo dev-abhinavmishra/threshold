@@ -11,7 +11,7 @@ export type InteractKind =
   | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'pry' | 'cutWord';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'pry' | 'cutWord' | 'stripCheck';
 
 export interface Interactable {
   kind: InteractKind;

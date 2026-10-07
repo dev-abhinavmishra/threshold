@@ -1331,6 +1331,21 @@ export class Game {
         data: ent as unknown as Record<string, unknown>,
       });
     }
+    // Beside the checker's lamp: 'Strip the lamp' — take its light mid-
+    // count. The boldest pilfer in the under: it is HOLDING the light.
+    if (this.checker.active && this.checker.lampLit) {
+      const cp = this.checker.position;
+      const dx = cp.x - this.player.pos.x, dz = cp.z - this.player.pos.z;
+      if (dx * dx + dz * dz <= 1.9 * 1.9) {
+        this.interaction.add({
+          kind: 'stripCheck', id: 'stripCheck',
+          pos: { x: cp.x, y: 0.9, z: cp.z },
+          prompt: 'Strip the lamp',
+          holdTime: 1.1, enabled: true, priority: 3,
+          data: this.checker as unknown as Record<string, unknown>,
+        });
+      }
+    }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
       if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
@@ -2633,6 +2648,21 @@ export class Game {
         // its lamp is crew property too — stripped or scavenged, it counts
         this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
           '[the drag\'s lamp is marked gone — the count is short]');
+        return;
+      }
+      case 'stripCheck': {
+        // Stealing the light mid-count — it feels it die instantly, and
+        // the lamp is crew property: the strip files ANOTHER loss-report.
+        const ch = it.data as unknown as { lampLit: boolean; stripLamp(h: CheckerHooks): number };
+        if (!ch.lampLit) { it.enabled = false; return; }
+        const charge = ch.stripLamp(this.checkerHooks());
+        this.unpaidTheft += 1; // off the crew's hands, into the tally
+        it.enabled = false;
+        this.giveItem('handLamp', charge);
+        this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the count\'s lamp is marked gone — the count is short]');
         return;
       }
       case 'forge': {

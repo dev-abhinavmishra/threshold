@@ -68,10 +68,28 @@ export class CrewChecker {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
   private lamp: THREE.PointLight | null = null;
+  /** Its working light — stealable. A blind sweep finds nobody. */
+  lampLit = true;
 
   get active(): boolean { return this.state !== 'idle'; }
   get stage(): string { return this.state; }
   get position(): Vec3 { return this.pos; }
+
+  /** 'Strip the lamp' completes — the most brazen pilfer in the under.
+   *  It is holding the light: it feels it die on the spot, and the lamp
+   *  is crew property, so the Game files this strip to the count too.
+   *  Returns the charge the stolen lamp hands over. */
+  stripLamp(hooks: CheckerHooks): number {
+    if (!this.lampLit) return 0;
+    this.lampLit = false;
+    if (this.lamp) this.lamp.intensity = 0;
+    hooks.emit({
+      x: this.pos.x, y: 1, z: this.pos.z,
+      intensity: 0.65, category: 'impact',
+      caption: '[the lamp dies in your hands — it felt it go]',
+    });
+    return 45;
+  }
 
   /** Answer a rung count. Returns false when a checker is already out —
    *  the books send one walker per beat, not a crowd. */
@@ -96,6 +114,7 @@ export class CrewChecker {
     this.sweepT = 0;
     this.spotT = 0;
     this.found = false;
+    this.lampLit = true;
     v3copy(this.pos, this.path[0]);
     const g = new THREE.Group();
     const rig = riggedFigure('hooded');
@@ -136,8 +155,8 @@ export class CrewChecker {
       this.sweepT += dt;
       // the lamp swings a slow scan over the socket
       if (this.mesh) this.mesh.rotation.y += Math.sin(this.sweepT * 0.9) * 0.35 * dt;
-      if (this.lamp) this.lamp.intensity = 1.7 + Math.sin(this.sweepT * 7.3) * 0.25;
-      if (!this.found && player.room === this.sweepRoom && player.exposed) {
+      if (this.lamp && this.lampLit) this.lamp.intensity = 1.7 + Math.sin(this.sweepT * 7.3) * 0.25;
+      if (!this.found && this.lampLit && player.room === this.sweepRoom && player.exposed) {
         this.spotT += dt;
         if (this.spotT >= SPOT_T) {
           this.found = true;
@@ -155,7 +174,9 @@ export class CrewChecker {
         this.rig?.play('move');
         hooks.cue('chalk-mark', this.pos, this.found
           ? '[the checker closes the count — you are in the book]'
-          : '[the checker counts the till and moves on]', { severity: this.found ? 'warn' : 'info' });
+          : this.lampLit
+            ? '[the checker counts the till and moves on]'
+            : '[the checker counts blind — the count stays open]', { severity: this.found || !this.lampLit ? 'warn' : 'info' });
       }
     } else {
       this.travel += WALK * dt;
