@@ -143,6 +143,12 @@ export interface CheckpointSave {
   marginalia: number;
   inventory: { id: ItemId; count: number }[];
   stats: RunStats;
+  // the ledgers outlive you — the books keep your name past a death
+  unpaidTheft?: number;
+  unpaidHeld?: number;
+  paperTrail?: number;
+  hotImprints?: number;
+  hotItems?: ItemId[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

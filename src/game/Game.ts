@@ -616,6 +616,15 @@ export class Game {
     this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
+    // the books keep your name past a death — restored from the
+    // checkpoint, zeroed for a fresh run (fields aren't implicit state)
+    this.unpaidTheft = cp?.unpaidTheft ?? 0;
+    this.unpaidHeld = cp?.unpaidHeld ?? 0;
+    this.paperTrail = cp?.paperTrail ?? 0;
+    this.hotImprints = cp?.hotImprints ?? 0;
+    this.hotItems.clear();
+    for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
+    this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
     this.wardArmed = false;
@@ -3957,6 +3966,11 @@ export class Game {
       marginalia: this.marginalia,
       inventory: this.inventory.map((i) => ({ ...i })),
       stats: { ...this.stats, entityEncounters: { ...this.stats.entityEncounters } },
+      unpaidTheft: this.unpaidTheft,
+      unpaidHeld: this.unpaidHeld,
+      paperTrail: this.paperTrail,
+      hotImprints: this.hotImprints,
+      hotItems: [...this.hotItems],
     };
   }
 

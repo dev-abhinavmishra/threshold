@@ -720,7 +720,8 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
         ?.find((i) => i.kind === 'purse');
       let pursePaid = false, purseSour = false, purseShortCap = '',
         purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '',
-        purseWashCap = '', purseWashed = false, fenceCap = '', fencePaid = false;
+        purseWashCap = '', purseWashed = false, fenceCap = '', fencePaid = false,
+        cpLedger = false;
       if (purse) {
         g.imprints = 20; // marginalia still 30 — the clean fix never charged
         standAt(lobby, { x: purse.pos.x, z: purse.pos.z }, 0.7);
@@ -766,13 +767,21 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
           fencePaid = g.marginalia === mFence + 8 && gh.hotItems.size === 0
             && gh.paperTrail === trail2 + 1
             && !g.inventory.some((s) => s.id === 'bandage');
+          // sprint 332 — the ledgers outlive you: a checkpoint written
+          // now carries the books and the marks, not just the purse
+          const cpS = (g as { makeCheckpoint?: (n: number) => unknown })
+            .makeCheckpoint?.(0) as { paperTrail?: number; hotItems?: unknown[];
+            unpaidTheft?: number; hotImprints?: number } | undefined;
+          cpLedger = !!cpS && cpS.paperTrail === gh.paperTrail
+            && cpS.unpaidTheft === 0 && cpS.hotImprints === gh.hotImprints
+            && Array.isArray(cpS.hotItems) && cpS.hotItems.length === gh.hotItems.size;
         }
       }
       return {
         stage: 'done', refused, refuseCap, price, item,
         purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap,
         purseShortCap, margAfterPurse, purseWashCap, purseWashed,
-        fenceCap, fencePaid,
+        fenceCap, fencePaid, cpLedger,
         purseSeen, pursePos: purse ? { x: purse.pos.x, y: purse.pos.y, z: purse.pos.z } : null,
         bsockPos: lobby.sockets.filter((s) => s.meta?.broker !== undefined)
           .map((s) => ({ x: Math.round(s.pos.x * 10) / 10, y: s.pos.y, z: Math.round(s.pos.z * 10) / 10 })),
@@ -829,6 +838,9 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   // sprint 331 — the fence: marked stock out at the insult rate, a line
   expect(result.fencePaid, JSON.stringify(result)).toBe(true);
   expect(result.fenceCap).toMatch(/takes the marked stock/);
+  // sprint 332 — the checkpoint carries the ledgers (trail/marks mirror
+  // live state, death can't launder the books)
+  expect(result.cpLedger, JSON.stringify(result)).toBe(true);
   expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });
