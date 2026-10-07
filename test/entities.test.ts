@@ -2123,6 +2123,92 @@ describe('the House Detective (sprint 278)', () => {
     expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
     d.dispose();
   });
+
+  it('pull the house line before the look — he files a face, but the wire never starts (sprint 309)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const lineCut = vi.fn();
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'houseLine'),
+      'the junction box registers at spawn').toBe(true);
+    d.pulledLine();
+    expect(lineCut, 'the dead wire is billed as damages').toHaveBeenCalledTimes(1);
+    expect(d.clocked, 'his phone dies on the desk — a face is filed on the spot').toBe(true);
+    expect(d.warranted, 'the broadcast never starts').toBe(false);
+    const cue = ctx.cue as ReturnType<typeof vi.fn>;
+    expect(cue.mock.calls.some((c) => /dead in his hand/.test(String(c[2]))),
+      'the dead-line tell').toBe(true);
+    // slip a fresh room — nothing rings
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    emit.mockClear();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'detective'),
+      'no ring on a dead line').toBe(false);
+    // still settleable — the book stays open
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'),
+      'the settle point still registers').toBe(true);
+    d.settled();
+    expect(d.clocked).toBe(false);
+    d.dispose();
+  });
+
+  it('pull the house line mid-warrant — the broadcast dies, the book stays open', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const lineCut = vi.fn();
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    d.pulledLine();
+    expect(d.warranted, 'the wire dies mid-run').toBe(false);
+    expect(d.clocked, 'he already had your face').toBe(true);
+    expect(lineCut).toHaveBeenCalledTimes(1);
+    // a second pull is a no-op — one-shot sabotage
+    d.pulledLine();
+    expect(lineCut).toHaveBeenCalledTimes(1);
+    d.dispose();
+  });
+
+  it('outrunning a dead line still cools the face-ledger', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const rooms = [deskRoom, hallRoom];
+    for (let i = 2; i <= 12; i++) {
+      rooms.push({ ...hallRoom, index: i, origin: { x: 0, y: 0, z: i * 12 },
+        entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 } } as unknown as RoomInstance);
+    }
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    d.pulledLine();
+    expect(d.clocked).toBe(true);
+    expect(d.warranted).toBe(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12 * 12; // past the reach
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the register cools even with the wire dead').toBe(false);
+    d.dispose();
+  });
 });
 
 describe('the Filer (sprint 297)', () => {

@@ -3024,3 +3024,30 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   way by design). Distances recompute from g.player.pos AFTER teleport.
 - Gates: tsc, lint, 225 vitest (+1 gen spec), 5-seed sim, undercast
   **11/11** (+quiet amendment leg), build.
+
+## sprint 309 — the dead line (the wire's counterplay)
+
+- The Detective's broadcast finally has a physical counter: 'Pull the
+  house line' (1.4s hold) on a junction box + conduit mounted beside his
+  entry door (entryPos + perp*0.75 − entryDir*0.25, y1.25 box).
+- The pull is sabotage, not a trick: it emits '[a junction box comes off
+  the wall]' (0.5 item noise — heard), bills +1 held as damages
+  (ctx.lineCut → unpaidHeld+1), and his desk phone dying files a face on
+  the spot — `openRegister()` runs with the dead-line cue variant
+  ('[the line is dead in his hand — he files your name longhand]').
+- Asymmetry vs the runner-cut: cutting the courier kills the whole
+  filing (card closes torn); pulling the line kills only the broadcast —
+  `warranted` never sets (or dies mid-run) but `clocked` and the settle
+  desk stand. The under's word is carried; the house's wire is
+  infrastructure.
+- openRegister now sets `warranted = !lineDead` — pull BEFORE the slow
+  look lands and the wire never starts (prevention play, still priced).
+- Fixed the latent cool-gate hole: `warranted &&` gated the outrun/payoff
+  cool — a dead line never sets warranted, so a clocked-only register
+  could never cool. Now `(warranted || clocked) &&`.
+- Traps/log: test fixtures lack entryDir — `room.entryDir?.x ?? 0`.
+  lineMesh stores the GROUP (box+pipe), not the box — removeEntityMesh
+  needs what addEntityMesh got. The junction is registered at spawn
+  (entity interactable, not a socket — no generation allowlist needed).
+- Gates: tsc, lint, 228 vitest (+3), 5-seed sim, economy **6/6** (+dead
+  line leg; the phone-ahead leg still passes unchanged), build.

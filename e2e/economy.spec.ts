@@ -162,6 +162,110 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
   expect(errors).toEqual([]);
 });
 
+test('the dead line — pull the house wire and the broadcast never starts (sprint 309)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: HarnessG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      imprints: number; currentRoom: number; keys: Set<string>; unpaidHeld: number;
+      interaction: { focused?: { prompt?: string; kind?: string; id?: string } };
+      entities: { id: string; clocked?: boolean; warranted?: boolean; lineDead?: boolean }[];
+    };
+    ga.imprints = 80;
+    (ga as { godMode?: boolean }).godMode = true;
+
+    const dRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'detective'));
+    if (!dRoom) return { stage: 'no-detective' } as const;
+    (ga as { unpaidHeld: number }).unpaidHeld = 1; // a claim behind you
+
+    // spawn him from the prev room, then pull the junction by the door
+    const prev = g.route.rooms[dRoom.index - 1];
+    if (prev) { g.player.teleport(prev.origin.x, 0, prev.origin.z); for (let f = 0; f < 25; f++) g.frame(); }
+    g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
+    let det: { clocked?: boolean; warranted?: boolean; lineDead?: boolean } | undefined;
+    for (let f = 0; f < 60; f++) {
+      g.frame();
+      det = ga.entities.find((e) => e.id === 'detective') ?? det;
+      if (det) break;
+    }
+    if (!det) return { stage: 'no-det-spawn' } as const;
+    const line = g.interaction.interactables.find((i) => i.kind === 'houseLine' && i.enabled);
+    if (!line) return { stage: 'no-line' } as const;
+    // adaptive-stand on the junction: rotate candidate sides at 0.9m,
+    // hold E only while the line has focus — the door socket is a neighbour
+    let linePrompt = '';
+    for (let f = 0, ci = 0; f < 140 && !det.lineDead; f++) {
+      const ang = ci * Math.PI / 4;
+      g.player.teleport(line.pos.x + Math.sin(ang) * 0.9, 0, line.pos.z + Math.cos(ang) * 0.9);
+      g.player.yaw = Math.atan2(line.pos.x - g.player.pos.x, line.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      const hd = Math.hypot(line.pos.x - g.player.pos.x, line.pos.z - g.player.pos.z);
+      g.player.pitch = Math.atan2((line.pos.y + 0.6) - eyeY, hd);
+      g.frame();
+      if (g.interaction.focused?.id === line.id) ga.keys.add('KeyE');
+      else ga.keys.delete('KeyE');
+      if (g.interaction.focused?.id !== line.id) ci++;
+      const fp = ga.interaction.focused?.prompt;
+      if (!linePrompt && fp && /house line/.test(fp)) linePrompt = fp;
+    }
+    ga.keys.delete('KeyE');
+    const heldAfterPull = ga.unpaidHeld;
+    const dead = det.lineDead === true;
+    const deadCue = caps.some((c) => /comes off the wall|dead in his hand/.test(c));
+    const clocked = det.clocked === true;
+    const warranted = det.warranted === true;
+
+    // slip the next room — a dead wire cannot ring
+    const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
+    if (!nxt) return { stage: 'no-neighbor' } as const;
+    const ringCap = caps.length;
+    g.player.teleport(nxt.origin.x, 0, nxt.origin.z);
+    for (let f = 0; f < 6; f++) g.frame();
+    const rang = caps.slice(ringCap).some((c) => /house phone rings ahead/.test(c));
+    g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
+    for (let f = 0; f < 5; f++) g.frame();
+
+    // settle — the book is still open; the damages stand in it
+    const settle = g.interaction.interactables.find((i) => i.kind === 'settle' && i.enabled);
+    let paid = false;
+    if (settle) {
+      for (let f = 0; f < 70; f++) {
+        const sx = dRoom.origin.x - settle.pos.x, sz = dRoom.origin.z - settle.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(settle.pos.x + (sx / sl) * 0.9, 0, settle.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(settle.pos.x - g.player.pos.x, settle.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((settle.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
+    }
+    return { stage: 'done' as const, linePrompt, dead, deadCue, clocked, warranted,
+      rang, heldAfterPull, paid };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.linePrompt, JSON.stringify(result)).toMatch(/Pull the house line/);
+  expect(result.dead, JSON.stringify(result)).toBe(true);
+  expect(result.deadCue, JSON.stringify(result)).toBe(true);
+  expect(result.heldAfterPull, JSON.stringify(result)).toBe(2); // 1 owed + 1 damages
+  expect(result.clocked, JSON.stringify(result)).toBe(true); // he files whoever stood in the room
+  expect(result.warranted, JSON.stringify(result)).toBe(false); // the wire never starts
+  expect(result.rang, JSON.stringify(result)).toBe(false);
+  expect(result.paid, JSON.stringify(result)).toBe(true); // the book still settles
+  expect(errors).toEqual([]);
+});
+
 test('toll door: too-poor refuses, paid opens and deducts imprints', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
