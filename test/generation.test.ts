@@ -484,7 +484,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && !x.meta.returnSlip && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && !x.meta.returnSlip && !x.meta.misfile && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -1298,6 +1298,32 @@ describe('the affidavit (sprint 302)', () => {
         }
       }
       expect(count, `no affidavits on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('the quiet amendment (sprint 308)', () => {
+  it('amendment forms sit on under desk furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.misfile),
+          `quiet amendment on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.misfile) continue;
+          count++;
+          expect(r.index % 20, `amendment on a safe landing ${seed}`).not.toBe(0);
+          expect(typeof s.meta.price, `amendment unpriced ${seed}`).toBe('number');
+          expect(s.meta.price as number, `amendment underpriced ${seed}`).toBeGreaterThanOrEqual(6);
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `amendment on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        }
+      }
+      expect(count, `no quiet amendments on ${seed}`).toBeGreaterThanOrEqual(1);
     }
   });
 });
