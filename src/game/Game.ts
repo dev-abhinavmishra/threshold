@@ -1275,6 +1275,23 @@ export class Game {
           holdTime: 0.9, enabled: true, priority: 1,
           data: { roomIndex },
         });
+        // The book — the under's book reads YOU back: a cheap consult
+        // on the man's own ledger, hung LOW on his flank (waist level
+        // at 0.8·lateral): the fix is a look-UP at the same fig and the
+        // counter's verbs own the mid line, so a chest-height anchor
+        // ~0.35m off the fix loses the in-band priority fight. Pitch
+        // down-left disambiguates. The asking is itself a filed question.
+        this.interaction.add({
+          kind: 'book', id: `book-${this.space}:${roomIndex}`,
+          pos: {
+            x: fig.position.x + (lx / ll) * 0.8,
+            y: fig.position.y + 0.55,
+            z: fig.position.z + (lz / ll) * 0.8,
+          },
+          prompt: 'Ask what the book says — 3 marginalia',
+          holdTime: 0.8, enabled: true, priority: 2,
+          data: { roomIndex },
+        });
       }
     }
     // The clerk's page — a question desk on the figure itself: each
@@ -2026,6 +2043,28 @@ export class Game {
         this.cue('drawer', it.pos, take.length === 1
           ? '[the till takes its own back — the wrap never left the shelf]'
           : `[the till takes its own back — ${take.length} wraps never left the shelf]`);
+        return;
+      }
+      case 'book': {
+        // sprint 334 — the book answers back: the under's two ledgers
+        // read out loud for a pittance. The asking is itself a filed
+        // question — the numbers it reads already count this one.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const bPrice = 3;
+        if (this.marginalia < bPrice) {
+          this.cue('door-locked', it.pos, `[the book wants ${bPrice} marginalia — even questions have a price]`, 'warn');
+          return;
+        }
+        this.marginalia -= bPrice;
+        this.paperTrail += 1;
+        const t = this.paperTrail, th = this.unpaidTheft;
+        this.cue('whisper', it.pos, t === 1 && th === 0
+          ? '[the book holds one line on you — this one]'
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too]`);
         return;
       }
       case 'purse': {
