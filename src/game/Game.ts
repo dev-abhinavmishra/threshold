@@ -1487,13 +1487,20 @@ export class Game {
           } else if (isWatch) {
             // Wall eyes: tape/smother blinds the eye — only while it's live
             // (dead mains already killed it; a taped eye is furniture).
+            // A TAPED eye (w.dead — only felt sets that flag) offers the
+            // felt back: tape is a parked tool, not a consumed one.
             const wy = p.y ?? (p.kind === 'securityCam' ? 2.35 : 1.4);
-            const live = !pr.darkRoom && this.hazard.watchers.some((w) =>
-              !w.dead && w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
-            if (live) this.interaction.add({
+            const wHere = this.hazard.watchers.find((w) =>
+              w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
+            if (wHere && !wHere.dead && !pr.darkRoom) this.interaction.add({
               kind: 'tape', id: `tape-${key}`, pos: { x: wx, y: wy, z: wz },
               prompt: p.kind === 'securityCam' ? 'Tape the eye — felt wrap' : 'Smother the beam — felt wrap',
               holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
+            });
+            else if (wHere?.dead) this.interaction.add({
+              kind: 'untape', id: `untape-${key}`, pos: { x: wx, y: wy, z: wz },
+              prompt: 'Take the felt back — it wakes',
+              holdTime: 1.0, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -2772,6 +2779,20 @@ export class Game {
         }
         this.cue('item', it.pos, '[the eye goes blind under the felt — and the felt smells of your work]');
         this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
+        return;
+      }
+      case 'untape': {
+        // Take the felt back: the eye wakes, the wrap is yours again —
+        // and the sign the tape left stays smelled (it already went out).
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (!w) return;
+        w.dead = false;
+        it.enabled = false;
+        this.giveItem('feltWrap', 1);
+        this.cue('item', it.pos, '[the felt is yours again — the eye blinks awake]', 'warn');
+        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.15, category: 'item', caption: '[felt pulled free]' });
         return;
       }
       case 'drain': {
