@@ -272,6 +272,178 @@ test('scent — a killed hazard signs the room, the Warden reads it', async ({ p
   expect(errors).toEqual([]);
 });
 
+// The wipe is the scrub's shadow: the warden smells a cleaned floor and
+// doubts any mark planted beside it — it never leaves the line.
+test('the warden doubts — sign beside a wiped floor is not investigated', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[]; wiped?: boolean }[] };
+      entities: { id: string; state: string; threatPos?(): { x: number; y: number; z: number } | null }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // a wiped floor + fresh sign 2m inside its doubt radius
+    const sign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: 0, readBy: [] as string[] };
+    ga.hazard.evidence.push({ pos: { x: sign.pos.x + 0.4, y: 0, z: sign.pos.z - 2 }, room: wardenRoom.index, kind: 'wipe', t: 0, readBy: [], wiped: true });
+    ga.hazard.evidence.push(sign);
+    let read = false, investigated = false;
+    for (let f = 0; f < 700; f++) {
+      g.frame();
+      if ((w as unknown as { investigate: unknown }).investigate) investigated = true;
+      if (caps.some((c) => /reads the sign/.test(c))) read = true;
+    }
+    return { stage: 'done', investigated, read, doubted: caps.some((c) => /floor smells wiped/.test(c)),
+      marked: sign.readBy.some((r) => r.startsWith('warden')), caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.doubted, JSON.stringify(result)).toBe(true);
+  expect(result.read, `the wiped-floor mark must not be believed: ${JSON.stringify(result.caps)}`).toBe(false);
+  expect(result.marked, 'the doubt still consumes the mark').toBe(true);
+  expect(result.investigated, 'it never leaves the line for a doubted mark').toBe(false);
+  expect(errors).toEqual([]);
+});
+
+// Sign goes cold: a mark older than ~6 sim-minutes has dried — the warden
+// never picks it up; a fresh mark in the same room still pulls it.
+test('the sign goes cold — the warden only believes fresh work', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // a cold mark: dried 400s before the frame's sim-time
+    const coldSign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: g.clock.time - 400, readBy: [] as string[] };
+    ga.hazard.evidence.push(coldSign);
+    let coldRead = false;
+    for (let f = 0; f < 400 && !coldRead; f++) {
+      g.frame();
+      coldRead = caps.some((c) => /reads the sign/.test(c));
+    }
+    // sanity: fresh work in the same room still pulls it
+    const freshSign = { pos: { x: wardenRoom.origin.x - 1.2, y: 0, z: wardenRoom.origin.z + 1.2 }, room: wardenRoom.index, kind: 'wire', t: g.clock.time, readBy: [] as string[] };
+    ga.hazard.evidence.push(freshSign);
+    let freshRead = false;
+    for (let f = 0; f < 400 && !freshRead; f++) {
+      g.frame();
+      freshRead = caps.some((c) => /reads the sign/.test(c));
+    }
+    return { stage: 'done', coldRead, coldMarked: coldSign.readBy.length > 0,
+      freshRead, caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.coldRead, `cold sign must be ignored: ${JSON.stringify(result.caps)}`).toBe(false);
+  expect(result.coldMarked, 'the warden never even reads it').toBe(false);
+  expect(result.freshRead, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+// The second read teaches: a warden that has weighed two marks knows the
+// floor is worked — it announces it once and the line runs faster.
+test('the second read teaches — the warden quickens on a worked floor', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // two marks, read across separate scent cycles — the second teaches
+    const mk = (dx: number, dz: number) => ga.hazard.evidence.push({
+      pos: { x: wardenRoom.origin.x + dx, y: 0, z: wardenRoom.origin.z + dz },
+      room: wardenRoom.index, kind: 'line', t: g.clock.time, readBy: [],
+    });
+    mk(0.8, 0);
+    for (let f = 0; f < 60; f++) g.frame(); // one scent cycle reads mark one
+    mk(-1.2, 1.2);
+    for (let f = 0; f < 500; f++) g.frame();
+    return { stage: 'done',
+      learned: caps.some((c) => /floor is worked/.test(c)),
+      learnOnce: caps.filter((c) => /floor is worked/.test(c)).length === 1,
+      caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.learned, JSON.stringify(result)).toBe(true);
+  expect(result.learnOnce, 'the lesson announces once').toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -320,6 +492,54 @@ test('ghosts — stale sign still pulls the Grafter, the caption says so', async
   expect(result.staleRead, JSON.stringify(result)).toBe(true);
   expect(result.closest, JSON.stringify(result)).toBeLessThan(3.2);
   expect(result.ghostCaption, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+
+// The rubble hungers: a grafter that has dragged to two marks turns
+// eager — it announces once and hunts faster/longer (sprint 295).
+test('the rubble hungers — two marks and the grafter hunts in earnest', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's' grafter @6
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string }[];
+    };
+    const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    if (!gRoom) return { stage: 'none-scheduled' } as const;
+    const spot = gRoom.hidingSpots?.find((sp) => !sp.trappedBy);
+    if (!spot) return { stage: 'no-spot' } as const;
+    g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+    (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    if (!ga.entities.some((e) => e.id === 'grafter')) return { stage: 'no-spawn' } as const;
+    // two marks, read across separate scent cycles — the second feeds it
+    const mk = (dx: number, dz: number) => ga.hazard.evidence.push({
+      pos: { x: gRoom.origin.x + dx, y: 0, z: gRoom.origin.z + dz },
+      room: gRoom.index, kind: 'wire', t: g.clock.time, readBy: [],
+    });
+    mk(1.5, 0.5);
+    for (let f = 0; f < 90; f++) g.frame(); // one scent cycle eats mark one
+    mk(-1.5, 1.5);
+    for (let f = 0; f < 500; f++) g.frame();
+    const learned = caps.filter((c) => /hunts in earnest/.test(c)).length;
+    return { stage: 'done', learned, caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.learned, JSON.stringify(result)).toBe(1);
   expect(errors).toEqual([]);
 });
 

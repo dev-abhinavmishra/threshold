@@ -75,6 +75,9 @@ test('equipped slot item renders in-hand; lit lamp takes the hand for its beam',
 });
 
 test('lit lamp takes the hand while its beam is on', async ({ page }) => {
+  // the resume's GLB decode flood has measured >90s under contention —
+  // this leg gets the budget to survive it cold
+  test.setTimeout(210_000);
   await page.addInitScript(() => {
     localStorage.setItem('threshold.run.v1', JSON.stringify({
       seedText: 'viewmodel-seed',
@@ -106,19 +109,46 @@ test('lit lamp takes the hand while its beam is on', async ({ page }) => {
     (window as unknown as { __thresholdGame: { renderFrame(): void } }).__thresholdGame.renderFrame = () => {};
   });
 
-  // equip the key first, then light the lamp — the lamp must take the hand
+  // equip the key first, then light the lamp — the lamp must take the hand.
+  // KeyF only binds while phase === 'PLAYING'; on a cold resume the async
+  // boot + GLB decode flood can hold a pre-PLAYING phase for a stretch and
+  // any press landing in the gap is silently dropped. clock.time only
+  // advances while the sim runs — and the runner's RAF can die outright
+  // under load (observed: lastFrameNow frozen at boot+4.5s while the event
+  // loop lived) — so step the sim manually with frame() until it ticks,
+  // then the press is guaranteed to bind.
+  const bootT = await page.evaluate(() => (window as unknown as {
+    __thresholdGame: { clock: { time: number } };
+  }).__thresholdGame.clock.time);
+  await page.waitForFunction((t0) => {
+    const g = (window as unknown as {
+      __thresholdGame: { clock: { time: number }; frame(): void };
+    }).__thresholdGame;
+    if (g.clock.time <= t0) g.frame(); // manual tick when RAF starves
+    return g.clock.time > t0;
+  }, bootT, { timeout: 150_000, polling: 250 });
   await page.keyboard.press('Digit1');
-  await page.waitForTimeout(1500);
-  await page.keyboard.press('KeyF');
-  // the beam flag and the held-item swap only apply on a sim frame, and the
-  // resume floods the main thread with GLB decode — poll on an interval
-  // (RAF polling would starve with the same loop) until a frame lands
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('KeyF');
+    const on = await page.evaluate(() => (window as unknown as {
+      __thresholdGame: { lampOn: boolean };
+    }).__thresholdGame.lampOn);
+    if (on) break;
+    await page.waitForTimeout(1500);
+  }
+  // the beam flag and the held-item swap only apply on a sim frame — keep
+  // stepping frame() inside the poll so a dead RAF can't wedge the leg
   await page.waitForFunction(() => {
     const g = (window as unknown as {
-      __thresholdGame: { lampOn: boolean; beamGroup: { visible: boolean } | null };
+      __thresholdGame: {
+        lampOn: boolean;
+        beamGroup: { visible: boolean } | null;
+        frame(): void;
+      };
     }).__thresholdGame;
+    if (!(g.lampOn && g.beamGroup?.visible)) g.frame();
     return g.lampOn && g.beamGroup?.visible === true;
-  }, null, { timeout: 60_000, polling: 500 });
+  }, null, { timeout: 150_000, polling: 250 });
 
   const s = await page.evaluate(() => {
     const g = (window as unknown as {

@@ -527,6 +527,159 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    // a wiped floor 2m from the sign — inside the 3.5m doubt radius
+    const wipe = { pos: v3(mid.x + 1.2, 0, mid.z - 2), room: 28, kind: 'wipe', t: 0, readBy: [] as string[], wiped: true };
+    const evidence = { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] };
+    const records = [wipe, evidence];
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = records.filter((e) => (e.wiped || !e.readBy.includes(key))
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
+        for (const e of out) if (!e.wiped) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    for (let i = 0; i < 400; i++) step(warden, ctx, 0.05);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /the floor smells wiped/.test(t)), 'it sniffs the wipe and doubts').toBe(true);
+    expect(cues.some((t) => /reads the sign/.test(t)), 'it never believes the wiped-floor mark').toBe(false);
+    expect((warden as unknown as { investigate: unknown }).investigate, 'it stays on the line').toBeNull();
+    expect(evidence.readBy).toContain('warden:28'); // the doubt still consumed the mark
+    warden.dispose();
+  });
+
+  it('the second read teaches — two marks and the pace quickens (sprint 293)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const records = [
+      { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] },
+      { pos: v3(mid.x - 1.5, 0, mid.z + 1), room: 28, kind: 'wire', t: 0, readBy: [] as string[] },
+    ];
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        // one mark per read, as they arrive in play — the live callback
+        // marks everything returned, and the warden only weighs to the
+        // first in-room mark, so a second would burn unseen anyway
+        const out = records.filter((e) => !e.readBy.includes(key)
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { pos: { x: number; z: number }; signReads: number; investigate: unknown };
+    // two marks land across cycles; it weighs both (spends the reads)
+    let t = 0;
+    for (let i = 0; i < 600; i++) { t = step(warden, ctx, 0.05, t); if (w.signReads >= 2) break; }
+    expect(w.signReads, 'it weighs both marks').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((s) => /floor is worked/.test(s)), 'the second read teaches — once').toBe(true);
+    // let any investigation finish, then run both a learned warden and a
+    // fresh one on the same line for the same window — the learned one
+    // covers more ground (1.18 speed + shorter end pauses).
+    for (let i = 0; i < 300 && w.investigate; i++) t = step(warden, ctx, 0.05, t);
+    const baseline = new Warden();
+    baseline.spawn(ctx); // same key — records already read, it learns nothing
+    const wb = baseline as unknown as { pos: { x: number; z: number } };
+    let dLearned = 0, dBase = 0;
+    for (let i = 0; i < 240; i++) {
+      const lx = w.pos.x, lz = w.pos.z, bx = wb.pos.x, bz = wb.pos.z;
+      t = step(warden, ctx, 0.05, t); baseline.update(0.05);
+      dLearned += Math.hypot(w.pos.x - lx, w.pos.z - lz);
+      dBase += Math.hypot(wb.pos.x - bx, wb.pos.z - bz);
+    }
+    expect(dLearned, `learned ${dLearned.toFixed(1)} vs baseline ${dBase.toFixed(1)}`)
+      .toBeGreaterThan(dBase * 1.1);
+    warden.dispose();
+    baseline.dispose();
+  });
+
+  it('a learned warden strikes first — the whistle dies quick (sprint 294)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const records = [
+      { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] },
+      { pos: v3(mid.x - 1.5, 0, mid.z + 1), room: 28, kind: 'wire', t: 0, readBy: [] as string[] },
+    ];
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = records.filter((e) => !e.readBy.includes(key)
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object; dead: boolean };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as {
+      pos: { x: number; z: number }; signReads: number; investigate: unknown;
+      charging: boolean; mesh: { rotation: { y: number } } | null;
+    };
+    let t = 0;
+    for (let i = 0; i < 600 && w.signReads < 2; i++) t = step(warden, ctx, 0.05, t);
+    expect(w.signReads).toBeGreaterThanOrEqual(2);
+    for (let i = 0; i < 300 && w.investigate; i++) t = step(warden, ctx, 0.05, t);
+    const baseline = new Warden();
+    baseline.spawn(ctx);
+    const wb = baseline as unknown as typeof w;
+
+    // keep the player pinned 8m ahead of the warden's live heading — it
+    // stays in the facing cone through line-end turns — count frames to
+    // the whistle, then charge pace over 20 frames (inside the 1.5s
+    // lost-scent grace so a stray LOS drop can't end the charge early)
+    const expose = (hunter: typeof w, upd: () => void) => {
+      const pin = () => {
+        const h = hunter.mesh ? hunter.mesh.rotation.y : 0;
+        player.pos = v3(hunter.pos.x + Math.sin(h) * 8, 0, hunter.pos.z + Math.cos(h) * 8);
+      };
+      player.hiddenSpot = null;
+      player.dead = false;
+      pin();
+      let frames = 0;
+      while (frames++ < 60 && !hunter.charging) { pin(); upd(); }
+      let walked = 0;
+      for (let i = 0; i < 20; i++) {
+        const px = hunter.pos.x, pz = hunter.pos.z;
+        pin(); upd();
+        walked += Math.hypot(hunter.pos.x - px, hunter.pos.z - pz);
+      }
+      return { frames, walked };
+    };
+    const a = expose(w, () => { t = step(warden, ctx, 0.05, t); });
+    // hide again — the strike may have 'killed' the stub player
+    player.hiddenSpot = { id: 'cab' } as object;
+    player.dead = false;
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    const b = expose(wb, () => baseline.update(0.05));
+
+    expect(a.frames, `learned whistles at frame ${a.frames}`).toBeLessThanOrEqual(6);
+    expect(b.frames, `baseline needs ${b.frames}`).toBeGreaterThanOrEqual(7);
+    expect(a.walked, `charge ${a.walked.toFixed(1)} vs ${b.walked.toFixed(1)}`)
+      .toBeGreaterThan(b.walked * 1.15);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((s) => /already knows you/.test(s)), 'the learned whistle reads different').toBe(true);
+    warden.dispose();
+    baseline.dispose();
+  });
+
   it('whistles and charges a player caught in the open', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
@@ -1309,6 +1462,58 @@ describe('Grafter (sprint 256)', () => {
     const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(cues.some((t) => /old mark/.test(t)), 'stale sign smells like stale sign').toBe(true);
     g.dispose();
+  });
+
+  it('the rubble hungers — two marks and it hunts in earnest (sprint 295)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    ctx.player.protection = 'hidden'; // hidden reads as furniture — the drag must win, not the notice
+    const records = [
+      { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] },
+      { pos: v3(-1.5, 0, 3.0), room: 0, kind: 'line' as const, t: 0, readBy: [] as string[] },
+    ];
+    ctx.hazardEvidence = (key, x, z, r) => {
+      // one mark per call — see sprint 293's note about burn-unseen
+      const out = records.filter((e) => !e.readBy.includes(key)
+        && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { pos: { x: number; z: number }; markReads: number };
+    for (let i = 0; i < 900 && gi.markReads < 2; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(gi.markReads, 'it weighed both marks').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /hunts in earnest/.test(t)), 'appetite announces once').toBe(true);
+    // drag speed is the fair measure: roam picks are lifeT-seeded and
+    // diverge between instances. Same spot, same mark, count frames.
+    const b = new Grafter();
+    b.spawn(ctx); // grafter:0 already read both marks — it learns nothing
+    const bi = b as unknown as { pos: { x: number; z: number }; markReads: number };
+    const drag = (hunter: Grafter, hp: { x: number; z: number }) => {
+      hp.x = 0; hp.z = 0;
+      const mark = { pos: v3(0, 0, -4), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] };
+      records.push(mark);
+      (hunter as unknown as { scentT: number }).scentT = 0; // poll next frame, not in 1.6s
+      let frames = 0;
+      while (frames++ < 800 && Math.hypot(hp.x - mark.pos.x, hp.z - mark.pos.z) > 0.4) {
+        ctx.now += 0.05; hunter.update(0.05);
+      }
+      return frames;
+    };
+    const fE = drag(g, gi.pos);
+    const fB = drag(b, bi.pos);
+    expect(fE, `eager drag ${fE}f vs baseline ${fB}f`).toBeLessThan(fB * 0.95);
+    g.dispose();
+    b.dispose();
   });
 });
 

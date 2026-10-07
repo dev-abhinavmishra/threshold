@@ -2450,6 +2450,131 @@ NEXT SPRINT IDEAS (pick the biggest first)
     already takes both — no work needed; verify in play.)
 
 
+## sprint 291 — the warden doubts (the wipe's shadow)
+
+What:
+- Scrubbing sign now leaves a permanent `wiped` evidence record
+  (`kind:'wipe'`) where the mark stood — the floor smells worked.
+- `hazardEvidence` returns wipes ONLY to `warden:` keys and never marks
+  them read (`e.wiped || !e.readBy.includes(key)`; wiped records skip
+  the readBy push) — a wiped floor poisons that hunter's reads in the
+  zone permanently. Grafter keys never see them (its dumb nose doesn't
+  smell cleaned floor).
+- The warden partitions its scent list: wipes are a filter, not a
+  target. Sign within 3.5m of a wipe → `[it doubts the mark — the floor
+  smells wiped]`, no investigation; the mark is still consumed
+  (readBy-marked on return, like every sign).
+- The tradeoff: scrub twice and the floor betrays your LATER lies —
+  a forge or real kill beside a wipe is doubted, never believed.
+  Scrub is now both cleanup AND inoculation for a spot you control.
+- Scrub offers skip wiped records (nothing to rub); a re-scrub still
+  erases wipes within 2.6m like any record.
+Traps:
+- 's' warden patrol line passes ~0.8m from its room origin — e2e can't
+  assert "never approaches" as proof of no-investigation; assert the
+  `investigate` field stays null (runtime-readable on the entity).
+- vitest ctx stubs must mirror the callback contract: wipes return
+  unmarked for warden keys — the doubt test's stub replicates
+  `e.wiped || !e.readBy.includes(key)`.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - 'Seen'-record echo — half-baked, logged skip.
+  - A wipe could decay ('the smell fades after N minutes') if permanent
+    zone-poison proves too strong in play.
+
+## sprint 292 — the sign goes cold
+
+What:
+- `hazardEvidence` gains a time axis: `e.t >= clock.time - 360` for
+  non-grafter keys — a mark older than ~6 sim-minutes has dried and the
+  warden stops believing it (grafter keys exempt: `staleOk` — the grafter's
+  whole diet is ghosts anyway). Wipes bypass the clock (`e.wiped ||`)
+  so the doubt-zone never ages out.
+- Fresh sign now has a shelf life: kill a hazard early and by the time
+  you backtrack the warden shrugs — loud work is marked work, but only
+  RECENT work. Your forge's lie dries too (~6 min per planted bait).
+- e2e 'the sign goes cold': a `t = now-400` mark never reads (readBy
+  stays empty — not even consumed), a fresh mark same room pulls.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - 'Seen'-record echo — half-baked, logged skip.
+
+## sprint 293 — the second read teaches ('seen'-record echo)
+
+What:
+- The warden counts in-room marks it weighs: `signReads`. Doubted marks
+  count too — reading enough sign, believed or not, teaches it the
+  floor is worked.
+- At 2+, `learned`: patrol speed ×1.18, end-pauses 1.6s→0.9s, the
+  arrive-and-scan lingers 1.8s→2.6s. One cue: `[it knows this floor is
+  worked — the pace quickens]`. State lives on the warden instance —
+  it un-learns when it despawns.
+- The first kill marks you; the SECOND makes you a pattern. Loud work
+  in a warden's room now escalates the hunter, not just the paper.
+Traps:
+- The live hazardEvidence marks readBy on ALL returned records; the
+  warden weighs only to the first in-room mark (`break`). Two
+  simultaneous marks → the second burns unseen, never counted.
+  Vitest stubs must feed marks one per call (`.slice(0,1)`), as they
+  arrive in play.
+- Patrol speed comparisons need PATH length, not net displacement —
+  the a–b line is back-and-forth; |end-start| ≈ 0 regardless of pace.
+- A second warden spawned on the same hostRoom shares key
+  `warden:N` — same-ctx baselines read nothing (readBy already full):
+  useful for A/B pacing tests.
+
+## sprint 294 — the whistle dies quick
+
+What:
+- The learned escalation reaches the strike: a learned warden's
+  whistle grace drops 0.35s→0.12s and its charge runs 4.3 (was 3.5).
+  The whistle caption changes — `[a whistle — the Warden already
+  knows you]` — the tell that the worked floor armed the strike.
+Traps:
+- Whistle-timing assertions: leave slack for an LOS blink — `seenT`
+  decays on a missed frame (pin-ahead ordering cost one frame).
+- Charge speed needs a path-length measure while pinning the player
+  ahead of live heading — a static target ends the charge early
+  (strike at <1.0m) and caps `walked` at the gap, not the speed.
+- Keep walked measurement under the 1.5s lost-scent grace — a stray
+  LOS drop mid-measure ends the charge.
+
+## sprint 295 — the rubble hungers (learned grafter)
+
+What:
+- The grafter's escalation is appetite, not pace: `markReads` counts
+  in-room marks it drags to (old/weak/fresh all count — its diet is
+  ghosts). At 2+, eager: base drag ×1.15, the notice multiplier
+  1.4→1.75, lifeT cap 75→120 (it lingers feasting). One cue:
+  `[stone has tasted too much — it hunts in earnest]`.
+- Asymmetry on purpose: the warden quickens; the grafter hungers.
+Traps:
+- Grafter A/B roam measures DON'T work: pickRoam seeds off
+  `lifeT` — two instances at different ages pick different targets.
+  Measure drag speed instead: same spot, fresh mark, frames-to-mark.
+- makeCtx's stub player is `protection: 'exposed'` — a hiddenSpot
+  field alone does NOT hide them; `notices` outranks the scent target
+  within seeRange (9m). Set `protection = 'hidden'` explicitly or the
+  grafter chases the player, not the mark.
+- Grafter kill is instant at killRange once `rising` ends — keep the
+  player 'hidden' in drag-measure tests.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - Counter-learning: a player could OVERFEED a room's hunter
+    (plant cheap forged marks to... nothing — learning only helps the
+    hunter; the feed is pure cost. Skip.)
+
+
+
 ## review fixes — mounted tells + the honest looter (post-merge, PRs #12/#13)
 
 **What**: Devin Review flagged the merged sprints. All four findings real:
@@ -2493,3 +2618,32 @@ promise was empty for half the roster. Filled the shelf:
 
 **Tuning**: none. Documentation-only sprint; all new docs are category
 'entity', unlockedAt 0 (unlocked by the kill that names them).
+
+
+## e2e harness — the RAF-death flake (viewmodel:77)
+
+**What**: `viewmodel.spec.ts:77` ('lit lamp takes the hand while its beam
+is on') starved for multiple full runs under machine load — diagnosed as
+the runner's `requestAnimationFrame` dying outright: `lastFrameNow`
+froze at boot+4.5s while the page's event loop stayed live (KeyF still
+bound, `lampOn` toggled). Not a pause, not decode-starve — zero RAF
+callbacks for 150s+.
+
+**Fix**: the leg now steps the sim manually — `g.frame()` is called
+inside `waitForFunction` polls, so a dead RAF can't wedge the leg:
+
+- Gate before key presses: `clock.time` only advances when the sim
+  actually ticks (phase PLAYING/MINIGAME) — poll `g.clock.time > bootT`
+  with `g.frame()` inside the predicate. This replaces fixed-cadence
+  presses racing the PLAYING gate (keydowns in non-PLAYING phases are
+  silently discarded — `useLamp`/`useActiveSlot` bind only while running).
+- Beam build needs one sim tick after `lampOn` — same `g.frame()` step
+  inside the beam wait.
+- `frame()` is private but runtime-callable; each manual call
+  re-schedules one RAF — bounded and self-healing when RAF revives.
+
+**Trap**: `.hud` visible does NOT mean PLAYING — it renders for
+PLAYING|MINIGAME|PAUSED. `phase` is not on `window`; `clock.time`
+advancing is the only reliable "sim is running" signal, and `g.resume()`
+exists if a PAUSED verdict ever needs breaking (the pointerlockchange
+listener pauses on lock loss).
