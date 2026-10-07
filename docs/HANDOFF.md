@@ -2671,3 +2671,16 @@ listener pauses on lock loss).
   there or it rolls as a main-route candidate (filer appeared at r-95).
 - e2e 'the index' (undercast): `paperTrail` is TS-private → runtime writable
   (`ga.paperTrail = 3`) — drives the full loop without scripting three consults.
+
+## sprint 298 — the docket pilfer (both ledgers in one reach)
+
+- The Filer's own drawer is lootable: 'Rifle the docket drawer' (0.9s hold,
+  registers at spawn, one-shot `stock=1`, priority 2 — sits under 'square' 4).
+  Pays like a sledge pick (60% 4–9 marginalia, else an under item) but prices
+  BOTH ledgers: `unpaidTheft += 1` (the Auditor counts it) AND
+  `paperTrail += 2` — reaching into the index is the loudest question the
+  under records. At trail 1 the rummage literally files you mid-reach.
+- The square point survives a docket pilfer and vice versa — they share the
+  station: square anchors 1.15m toward room center, the docket sits ON the
+  deskPos (y=0.9). Focus scoring separates them by ~1.1m; same aim-pitch
+  idiom (`pos.y + 0.6`) drives both.

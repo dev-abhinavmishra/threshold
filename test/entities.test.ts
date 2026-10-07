@@ -2196,6 +2196,30 @@ describe('the Filer (sprint 297)', () => {
     expect(f.filed, 'two questions never reach the index').toBe(false);
     f.dispose();
   });
+
+  it('the docket registers at her station — pilferable, and outlives a square', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'docket'),
+      'the drawer is on the station from the start').toBe(true);
+    for (let i = 0; i < 60 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    f.squared();
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    const removed = rm.mock.calls.map((c) => c[0] as string);
+    expect(removed.some((id) => id.startsWith('square-')), 'the square point comes down').toBe(true);
+    expect(removed.some((id) => id.startsWith('docket-')), 'the drawer survives a square').toBe(false);
+    f.dispose();
+    const removed2 = rm.mock.calls.map((c) => c[0] as string);
+    expect(removed2.some((id) => id.startsWith('docket-')), 'the drawer comes down with her').toBe(true);
+  });
 });
 
 describe('the watched hall (sprint 285)', () => {

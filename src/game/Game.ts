@@ -2412,6 +2412,33 @@ export class Game {
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
       }
+      case 'docket': {
+        // Rifling the Filer's own drawer — a one-shot skim priced against
+        // BOTH ledgers: the crew counts it as theft, and reaching into the
+        // index is itself the loudest question the under records. A hand
+        // in her drawer at trail 2 files you mid-reach.
+        const h = it.data as unknown as { stock: number };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidTheft += 1; // out of her drawer, into the tally
+        this.paperTrail += 2;  // the index logs the rummage as two questions
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the index]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the index]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
+        return;
+      }
       case 'strip': {
         const h = it.data as unknown as { lampLit: boolean; relit: boolean; stripLamp(): void };
         if (!h.lampLit) { it.enabled = false; return; }

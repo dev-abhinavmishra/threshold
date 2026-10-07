@@ -1486,6 +1486,15 @@ export class Filer extends Entity {
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('chalk-mark', this.pos, '[an index drawer slides — somebody files what you asked]', { severity: 'warn' });
+    // the docket itself is pilferable — rifling the index is the loudest
+    // question in the under (the Game prices it against both ledgers)
+    c.addInteractable({
+      kind: 'docket', id: this.docketId(),
+      pos: v3(this.deskPos.x, 0.9, this.deskPos.z),
+      prompt: 'Rifle the docket drawer', holdTime: 0.9,
+      data: { stock: 1 },
+      enabled: true, priority: 2,
+    });
     this.state = 'engage';
   }
 
@@ -1499,6 +1508,7 @@ export class Filer extends Entity {
   }
 
   private squareId(): string { return `square-${this.spawnRoom}`; }
+  private docketId(): string { return `docket-${this.spawnRoom}`; }
 
   private openIndex(): void {
     const c = this.ctx;
@@ -1599,6 +1609,7 @@ export class Filer extends Entity {
 
   protected override onDone(): void {
     this.closeIndex();
+    this.ctx.removeInteractable(this.docketId());
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }

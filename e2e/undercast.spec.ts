@@ -546,21 +546,42 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     ga.enterUnderscript();
     ga.godMode = true;
     ga.marginalia = 40;
-    // Three consults on the books — the field the Game itself writes.
-    ga.paperTrail = 3;
+    // One consult on the books — beneath notice until the docket rifling
+    // pushes the trail over her threshold (1 + 2 = 3).
+    ga.paperTrail = 1;
 
-    // --- 1. walk into her room — the slow look files your name ---
+    // --- 1. rifle her drawer — the loudest question in the under ---
     const fRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'filer'));
     if (!fRoom) return { stage: 'no-filer' } as const;
     g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
     ga.currentRoom = fRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const docket = g.interaction.interactables.find((i) => i.kind === 'docket' && i.enabled);
+    if (!docket) return { stage: 'no-docket', ents: ga.entities.map((e) => e.id) } as const;
+    const mDocket = ga.marginalia;
+    for (let f = 0; f < 60 && (docket.data as { stock?: number }).stock !== 0; f++) {
+      const sx = fRoom.origin.x - docket.pos.x, sz = fRoom.origin.z - docket.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(docket.pos.x + (sx / sl) * 0.9, 0, docket.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(docket.pos.x - g.player.pos.x, docket.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((docket.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const rifled = (docket.data as { stock?: number }).stock === 0;
+    const trailAfterRifle = ga.paperTrail;
+    const docketPaid = ga.marginalia > mDocket || caps.some((c) => /off the index/.test(c));
+
+    // --- 2. the rummage itself filed you — the slow look lands ---
     let clerk: { filed?: boolean; posted?: boolean } | undefined;
     for (let f = 0; f < 160; f++) {
       g.frame();
       clerk = ga.entities.find((e) => e.id === 'filer') ?? clerk;
       if (clerk?.posted) break;
     }
-    if (!clerk) return { stage: 'no-filer-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    if (!clerk) return { stage: 'no-filer-spawn', ents: ga.entities.map((e) => e.id), rifled } as const;
     const filed = caps.some((c) => /the filer has your name/.test(c));
 
     // --- 2. into the next room — the word travels ahead ---
@@ -596,11 +617,15 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
-    return { stage: 'done' as const, filed, wordOut, squarePrompt, paid,
+    return { stage: 'done' as const, rifled, trailAfterRifle, docketPaid,
+      filed, wordOut, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
 
   if (result.stage !== 'done') test.skip();
+  expect(result.rifled, JSON.stringify(result)).toBe(true);
+  expect(result.trailAfterRifle, JSON.stringify(result)).toBe(3);
+  expect(result.docketPaid, JSON.stringify(result)).toBe(true);
   expect(result.filed, JSON.stringify(result)).toBe(true);
   expect(result.wordOut, JSON.stringify(result)).toBe(true);
   expect(result.squarePrompt, JSON.stringify(result)).toMatch(/Square the index/);
