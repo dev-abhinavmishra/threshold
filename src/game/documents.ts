@@ -113,4 +113,80 @@ export const DOCUMENTS: Document[] = [
     id: 'doc-guest-bier', title: 'Note — “the bier was answered”', category: 'lore', unlockedAt: 0,
     body: 'It knocked when I leaned in — I swear it knocked. I lifted the lid anyway because of course I did. No body. The pillow was still warm and there was a brass name tag on the satin and the name was mine. I put the lid back gently, like manners would save me, and I did not stop walking for three rooms. Do not open it. Or do, and tell me if the name is yours too. — a previous guest',
   },
+  {
+    id: 'doc-bellman', title: 'Entity: Bellman', category: 'entity', unlockedAt: 0,
+    body: 'It carries the luggage a room behind you, walking whatever trail you write — wet shoes, chalk, a door you braced too hard. Break your own trail: dry crossings, unmarked doors, a turn doubled back. It only knows where you have been. Never let that be where you are.',
+  },
+  {
+    id: 'doc-porter', title: 'Entity: Porter', category: 'entity', unlockedAt: 0,
+    body: 'It works the lintels, quiet as a coat-stand, waiting for a head that never tilts up. Look up at every threshold. If the dust sifts down onto you, you are already under it.',
+  },
+  {
+    id: 'doc-warden', title: 'Entity: Warden', category: 'entity', unlockedAt: 0,
+    body: 'A whistle that paces the corridor between its doors, reading the sign you leave — scuffed floors, spent marks, heavy breaths. Break its sightline and the scent goes; the floor forgets you only if you stop writing on it.',
+  },
+  {
+    id: 'doc-groundswell', title: 'Entity: Groundswell', category: 'entity', unlockedAt: 0,
+    body: 'The floor itself, traveling as a hump of boards and dust. Read the wake — raised dust, rattling frames — and sidestep the hump. It cannot turn its own wave.',
+  },
+  {
+    id: 'doc-inspector', title: 'Entity: Inspector', category: 'entity', unlockedAt: 0,
+    body: 'It opens every lid in the room, methodically, on a route you can hear coming two checks early. Bail out before it reaches yours — or hold the lid shut through the rattle and do not breathe.',
+  },
+  {
+    id: 'doc-commissionaire', title: 'Entity: Commissionaire', category: 'entity', unlockedAt: 0,
+    body: 'It holds the doors and checks papers that do not exist. Cross on its blind arc, or bait it off its post with a sound it cannot file away. Its key ring is not for sale — not in any currency you carry.',
+  },
+  {
+    id: 'doc-auditor', title: 'Entity: Auditor', category: 'entity', unlockedAt: 0,
+    body: 'A clerk in the under-offices who keeps the tally of everything you take. Settle the ledger at his desk, or carry clean hands — he only collects what the books say you owe.',
+  },
+  {
+    id: 'doc-swamper', title: 'Entity: Swamper', category: 'entity', unlockedAt: 0,
+    body: 'It lives in the flooded halls and hears every ripple you make. Crouch-wade, or open the drain and let the water leave ahead of you.',
+  },
+  {
+    id: 'doc-hauler', title: 'Entity: Hauler', category: 'entity', unlockedAt: 0,
+    body: 'It rams whatever sounds off near its sledge line. Making noise by the haul line is the mistake — work quiet, or stay loud and keep moving.',
+  },
+  {
+    id: 'doc-laundress', title: 'Entity: Laundress', category: 'entity', unlockedAt: 0,
+    body: 'She keeps her basin and wrings whatever the water brings her. Pull her off the drain with a thrown sound before you touch the crank.',
+  },
+  {
+    id: 'doc-lurker', title: 'Entity: Lurker', category: 'entity', unlockedAt: 0,
+    body: 'A dark that stands in dark rooms. It only exists where you cannot see — hold your beam on the shape until it thins, or keep to the lit path and never look back.',
+  },
+  {
+    id: 'doc-behemoth', title: 'Entity: Behemoth', category: 'entity', unlockedAt: 0,
+    body: 'The house itself rolling down the corridor — a wall of doors and debris. You do not fight weather. Be somewhere it is not.',
+  },
+  {
+    id: 'doc-collector', title: 'Entity: Collector', category: 'entity', unlockedAt: 0,
+    body: 'It wants a toll, not a life. Pay the tin, or take the long way around its pitch. It only chases what it has already counted.',
+  },
+  {
+    id: 'doc-singer', title: 'Entity: Singer', category: 'entity', unlockedAt: 0,
+    body: 'Its song is a leash — while the note holds, it knows exactly where you are. Move between phrases. It cannot hear you over itself.',
+  },
+  {
+    id: 'doc-grafter', title: 'Entity: Grafter', category: 'entity', unlockedAt: 0,
+    body: 'Rubble with a grudge. It stands only when you give it room to — give the pile its berth, and never let it stand between you and the door.',
+  },
+  {
+    id: 'doc-orrery', title: 'Entity: Orrery', category: 'entity', unlockedAt: 0,
+    body: 'The Lens Hall’s beams sweep the low floor on fixed rings. Crouch under the paths and time the gaps — the mechanism is honest. It repeats.',
+  },
+  {
+    id: 'doc-detective', title: 'Entity: Detective', category: 'entity', unlockedAt: 0,
+    body: 'He settles the book the house keeps on you. Pay the claim at his desk, or learn which shelves make you a debtor before you touch them.',
+  },
+  {
+    id: 'doc-husk', title: 'Entity: Husk', category: 'entity', unlockedAt: 0,
+    body: 'A guest the house kept too long — asleep in its own dry shell. Keep the beam off it, keep your distance, go quiet. It wakes to warmth.',
+  },
+  {
+    id: 'doc-hazard', title: 'Entity: The House', category: 'entity', unlockedAt: 0,
+    body: 'Not all of it is staffed. Wired drawers, tripwire seals, drop glass, snares in the floorboards — the building sets its own traps. Watch the floor the way you watch the doors.',
+  },
 ];

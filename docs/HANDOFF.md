@@ -2601,3 +2601,20 @@ vend prices after sprint 286 roughly balance a looter's income, so the
 **Trap**: any tell/host-find that injects props must respect mount
 conventions — check WALL_MOUNT_Y membership before placing at y=0.
 
+
+## sprint 296 — the archive keeps score
+
+**What**: the death screen promises "a new document may be unlocked" but
+the newer cast (~19 kill sources) had no `doc-*` entry at all — the
+promise was empty for half the roster. Filled the shelf:
+
+- `documents.ts` — 'Entity: X' codex entries for bellman, porter, warden,
+  groundswell, inspector, commissionaire, auditor, swamper, hauler,
+  laundress, lurker, behemoth, collector, singer, grafter, orrery,
+  detective, husk, and hazard ('the House'). Codex voice: what it is +
+  the counterplay rule, matched to DEATH_HINTS intent.
+- `generation.test.ts` — 'the cause reads' now also asserts every
+  ENTITY_TUNING key + 'hazard' has a `doc-${id}` in DOCUMENTS.
+
+**Tuning**: none. Documentation-only sprint; all new docs are category
+'entity', unlockedAt 0 (unlocked by the kill that names them).
