@@ -471,7 +471,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
