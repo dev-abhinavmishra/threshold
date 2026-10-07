@@ -585,6 +585,15 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
     }
     const heldAfterSettle = ga.unpaidHeld;
     const filedCue = caps.some((t) => /face is filed/.test(t));
+    // the register talks back — still moving in-cone while marked, the
+    // network warns once that the eyes now have your description
+    for (let f = 0; f < 60; f++) {
+      g.player.teleport(sx + Math.sin(f * 0.6) * 0.05, 0, sz + Math.cos(f * 0.5) * 0.05);
+      g.frame();
+      if (caps.some((t) => /register talks back/.test(t))) break;
+    }
+    const talksBack = caps.some((t) => /register talks back/.test(t));
+    const talksCount = caps.filter((t) => /register talks back/.test(t)).length;
     // still feet — it loses you
     const stillBefore = caps.length;
     for (let f = 0; f < 200; f++) g.frame();
@@ -628,7 +637,7 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       darkReport = caps.slice(dc).filter((t) => /settles on you/.test(t)).length;
     }
     return { stage: 'done', warns, settled, stillReports, focused,
-      heldAfterSettle, filedCue, heldAfterSecond,
+      heldAfterSettle, filedCue, heldAfterSecond, talksBack, talksCount,
       blinded: live.dead, darkFound: !!darkWatcher, darkTapeVerb, darkReport };
   });
 
@@ -639,6 +648,9 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
   expect(result.heldAfterSettle, JSON.stringify(result)).toBe(1);
   expect(result.filedCue, JSON.stringify(result)).toBe(true);
   expect(result.heldAfterSecond, JSON.stringify(result)).toBe(1);
+  // sprint 314 — the register talks back: marked, the network warns once
+  expect(result.talksBack, JSON.stringify(result)).toBe(true);
+  expect(result.talksCount, JSON.stringify(result)).toBe(1);
   expect(result.stillReports, JSON.stringify(result)).toBe(0);
   expect(result.focused).toMatch(/Tape the eye|Smother the beam/);
   expect(result.blinded, 'felt blinds the eye').toBe(true);

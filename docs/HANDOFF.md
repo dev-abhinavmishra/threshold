@@ -3147,3 +3147,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, 230 vitest (+1 once-per-eye spec), 5-seed sim,
   e2e hazards — 'the watched hall' leg extended (heldAfterSettle===1,
   filedCue, heldAfterSecond===1), build.
+
+## sprint 314 — the register talks back (devin/1791395297-threshold-s314)
+
+- The watch network is two-way now: while `ctx.heldOwed() > 0` (the
+  Detective's book holds a line on you — eyeFiled/witnessed/wordFiled/
+  lineCut all feed it) every watcher settles ~1.6x faster:
+  `w.settle + dt * (marked ? 1.6 : 1)`. One warn per marking via
+  `markedWarned` (clears when unmarked): '[the register talks back —
+  the eyes have your description]', gated on a LIVE watcher in the
+  current room. No ctx changes — `heldOwed` already existed for the
+  Detective.
+- Trap/log: the pan warn is severity 'info', not 'warn' — check the
+  actual literal before editing nearby cue calls (an edit batch failed
+  mid-apply on that mismatch). Struct-field adds to `watchers` must
+  init in the push block (~line 940) — `filed`/`markedWarned` live
+  there, not on the prop spec.
+- Gates: tsc, lint, 231 vitest (+1 marked-A/B spec: frames-to-settle
+  < stranger*0.85, warn exactly once), 5-seed sim, e2e hazards — the
+  watched-hall leg asserts talksBack fires exactly once after filing,
+  build.
