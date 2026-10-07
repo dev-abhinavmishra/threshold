@@ -2493,3 +2493,25 @@ promise was empty for half the roster. Filled the shelf:
 
 **Tuning**: none. Documentation-only sprint; all new docs are category
 'entity', unlockedAt 0 (unlocked by the kill that names them).
+
+
+## sprint 297 — the subfloor counts too (under playtest legs)
+
+**What**: `e2e/playtest.spec.ts` never measured the Underscript — half
+the game had zero balance data. The spec now runs 6 legs: the three
+main styles + `under-<style>` on `route.underRooms` via
+`enterUnderscript()` (private in TS, runtime-callable).
+
+**Numbers** (BALANCE.md): under walker 23/23/24 deaths, hider 17/16/16,
+looter 11/9/13 + marg +18..+30 — the subfloor is ~1.5-2x main-route
+pressure, deaths concentrated on redline (~50%) + grafter/returner.
+Hider residue beyond alarms is ~3-5/121.
+
+**Harness traps** (cost ~2h to learn, don't relearn):
+- Back-to-back under seeds in ONE playwright page slow to a crawl and
+  wedge the renderer (~45min stall, CPU flat). The under legs `boot()`
+  a fresh page per seed — keep that or legs die on timeout-retry loops.
+- Under patrol entities never vacate, so walker+hider use budget 150
+  under (no pass to outlast); looter keeps 240 for socket loops.
+- `PLAYTEST_SEEDS` env narrows the sweep for smoke runs.
+- `page.on('crash')` is logged on under legs for future stalls.
