@@ -1307,6 +1307,20 @@ export class Game {
           holdTime: 0.5, enabled: true, priority: 1,
           data: { roomIndex },
         });
+        // The purse's other direction — the clerk changes marginalia
+        // into imprints at the counter's near end (mirror of the
+        // Broker's: the spread between the two counters is the cut).
+        this.interaction.add({
+          kind: 'purse', id: `purse-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX - (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ - (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Change the purse — 8 marginalia',
+          holdTime: 0.8, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
       }
     }
     // Cut the seal — an armed paper wire is a quiet thing you can cut;
@@ -1934,6 +1948,32 @@ export class Game {
         return;
       }
       case 'purse': {
+        if (this.space !== 'under') {
+          // The clerk changes the other way — 8 marginalia for
+          // imprints. A rifled counter folds its hands; a filed face
+          // pays the register's sour rate (the house reads ITS book —
+          // the register, not the under's tallies).
+          const cRoom = (it.data as { roomIndex: number }).roomIndex;
+          if (this.closedCounters.has(cRoom)) {
+            this.cue('door-locked', it.pos,
+              "[the clerk folds its hands — the counter is closed to you]", 'warn');
+            return;
+          }
+          if (this.marginalia < 8) {
+            this.cue('door-locked', it.pos,
+              `[the purse wants 8 marginalia — you're ${8 - this.marginalia} short]`, 'warn');
+            return;
+          }
+          const filed = this.unpaidHeld > 0;
+          const gain = filed ? 4 : 6;
+          this.marginalia -= 8;
+          this.imprints += gain;
+          this.stats.imprintsEarned += gain;
+          this.cue('purchase', it.pos, filed
+            ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
+            : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
+          return;
+        }
         // The Broker changes coin — 6 imprints for marginalia. The only
         // bridge between the two currencies; his rate sours when your
         // ledgers show (any of the three books open reads as risk).
