@@ -890,7 +890,8 @@ export class HazardField {
    *  earshot. Dead mains kill them; a felt wrap blinds them. */
   watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
     arc: number; half: number; range: number; cycle: number; phase0: number;
-    dead: boolean; settle: number; lastReport: number; warnT: number }[] = [];
+    dead: boolean; settle: number; lastReport: number; warnT: number;
+    filed: boolean }[] = [];
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -934,7 +935,7 @@ export class HazardField {
         arc: cam ? 0.95 : 0.5, half: cam ? 0.42 : 0.34,
         range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
         phase0: hsh * 20,
-        dead: false, settle: 0, lastReport: -10, warnT: -10,
+        dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false,
       });
     }
   }
@@ -1024,6 +1025,13 @@ export class HazardField {
         w.lastReport = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye settles on you — it has your position]', { severity: 'warn' });
         ctx.sound.emit({ x: p.pos.x, y: p.pos.y, z: p.pos.z, intensity: 0.5, category: 'machine', caption: '' });
+        // the house's eye and the crew's lamp file the same statement —
+        // once per eye: a held settle is a witness line upstairs
+        if (!w.filed) {
+          w.filed = true;
+          ctx.eyeFiled?.();
+          ctx.cue('steam-hiss', w.pos, '[the eye\'s report goes in the register — your face is filed]', { severity: 'warn' });
+        }
       }
     }
     // Old sign the PLAYER can read: a sprung wire or a bled line from

@@ -560,12 +560,14 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       hazard: { watchers: { pos: { x: number; y: number; z: number }; yaw: number;
         room: number; dead: boolean }[] };
       currentRoom: number; godMode: boolean; keys: Set<string>;
+      unpaidHeld: number;
       giveItem(id: string, n: number): void;
       interaction: { focused?: { prompt?: string };
         interactables: { kind: string; prompt: string }[] };
       sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void };
     };
     ga.godMode = true;
+    ga.unpaidHeld = 0;
     const live = ga.hazard.watchers.find((w) => !w.dead && !g.route.rooms[w.room]?.darkRoom);
     if (!live) return { stage: 'no-live-watcher' } as const;
     const fx = Math.sin(live.yaw), fz = Math.cos(live.yaw);
@@ -581,10 +583,19 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       g.frame();
       settled = caps.some((t) => /settles on you/.test(t));
     }
+    const heldAfterSettle = ga.unpaidHeld;
+    const filedCue = caps.some((t) => /face is filed/.test(t));
     // still feet — it loses you
     const stillBefore = caps.length;
     for (let f = 0; f < 200; f++) g.frame();
     const stillReports = caps.slice(stillBefore).filter((t) => /settles on you/.test(t)).length;
+    // move again — it can report you a second time but files no new line
+    for (let f = 0; f < 500 && stillReports < 1; f++) {
+      g.player.teleport(sx + Math.sin(f * 0.6) * 0.05, 0, sz + Math.cos(f * 0.5) * 0.05);
+      g.frame();
+      if (caps.slice(stillBefore).some((t) => /settles on you/.test(t))) break;
+    }
+    const heldAfterSecond = ga.unpaidHeld;
     // tape the eye — feltWrap at the mount, aim at the focus point (pos.y + 0.6)
     ga.giveItem('feltWrap', 1);
     const wy = live.pos.y + 0.6;
@@ -617,12 +628,17 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
       darkReport = caps.slice(dc).filter((t) => /settles on you/.test(t)).length;
     }
     return { stage: 'done', warns, settled, stillReports, focused,
+      heldAfterSettle, filedCue, heldAfterSecond,
       blinded: live.dead, darkFound: !!darkWatcher, darkTapeVerb, darkReport };
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.warns, 'the eye must name its rule').toBeGreaterThan(0);
   expect(result.settled, JSON.stringify(result)).toBe(true);
+  // sprint 313 — the eye files too: a held settle is a witness line, once per eye
+  expect(result.heldAfterSettle, JSON.stringify(result)).toBe(1);
+  expect(result.filedCue, JSON.stringify(result)).toBe(true);
+  expect(result.heldAfterSecond, JSON.stringify(result)).toBe(1);
   expect(result.stillReports, JSON.stringify(result)).toBe(0);
   expect(result.focused).toMatch(/Tape the eye|Smother the beam/);
   expect(result.blinded, 'felt blinds the eye').toBe(true);

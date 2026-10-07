@@ -2388,6 +2388,21 @@ describe('the watched hall (sprint 285)', () => {
     expect(Math.hypot(reports[0][0].x - 0, reports[0][0].z - 2)).toBeLessThan(0.2);
   });
 
+  it('a held settle files a witness line — once per eye, however often it reports', async () => {
+    const { h, ctx } = await pinCam(false);
+    const eyeFiled = vi.fn();
+    ctx.eyeFiled = eyeFiled;
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05);
+    step(h, ctx, 0, 2, 170); // ~8.5s — long enough for two reports (5s cooldown)
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    const reports = emit.mock.calls.filter((c) => c[0].category === 'machine');
+    expect(reports.length, 'the eye reported more than once').toBeGreaterThanOrEqual(2);
+    expect(eyeFiled, 'one line per eye — a re-report is not a new witness').toHaveBeenCalledTimes(1);
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('your face is filed'), expect.anything());
+  });
+
   it('still feet pass it — no settle, no report', async () => {
     const { h, ctx } = await pinCam(false);
     ctx.player.pos.x = 0; ctx.player.pos.z = 2;
