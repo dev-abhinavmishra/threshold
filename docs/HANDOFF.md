@@ -2618,3 +2618,32 @@ promise was empty for half the roster. Filled the shelf:
 
 **Tuning**: none. Documentation-only sprint; all new docs are category
 'entity', unlockedAt 0 (unlocked by the kill that names them).
+
+
+## e2e harness — the RAF-death flake (viewmodel:77)
+
+**What**: `viewmodel.spec.ts:77` ('lit lamp takes the hand while its beam
+is on') starved for multiple full runs under machine load — diagnosed as
+the runner's `requestAnimationFrame` dying outright: `lastFrameNow`
+froze at boot+4.5s while the page's event loop stayed live (KeyF still
+bound, `lampOn` toggled). Not a pause, not decode-starve — zero RAF
+callbacks for 150s+.
+
+**Fix**: the leg now steps the sim manually — `g.frame()` is called
+inside `waitForFunction` polls, so a dead RAF can't wedge the leg:
+
+- Gate before key presses: `clock.time` only advances when the sim
+  actually ticks (phase PLAYING/MINIGAME) — poll `g.clock.time > bootT`
+  with `g.frame()` inside the predicate. This replaces fixed-cadence
+  presses racing the PLAYING gate (keydowns in non-PLAYING phases are
+  silently discarded — `useLamp`/`useActiveSlot` bind only while running).
+- Beam build needs one sim tick after `lampOn` — same `g.frame()` step
+  inside the beam wait.
+- `frame()` is private but runtime-callable; each manual call
+  re-schedules one RAF — bounded and self-healing when RAF revives.
+
+**Trap**: `.hud` visible does NOT mean PLAYING — it renders for
+PLAYING|MINIGAME|PAUSED. `phase` is not on `window`; `clock.time`
+advancing is the only reliable "sim is running" signal, and `g.resume()`
+exists if a PAUSED verdict ever needs breaking (the pointerlockchange
+listener pauses on lock loss).
