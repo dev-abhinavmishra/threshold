@@ -58,7 +58,17 @@ beats a teleporter can't fight fairly.
 |--------|------------------|------------------------------------------------------|---------|
 | walker | 16 / 15 / 17     | sweep×3-4, witness×3-4, pursuer×2, reprise, grafter, warden, maelstrom, whisper | — |
 | hider  | 8 / 10 / 9       | sweep×2-3, reprise×1-3, maelstrom, whisper, husk×2 (wax-bell), hazard×3 (wax-bell) | — |
-| looter | 7 / 6 / 8        | same shape as hider minus un-hideable entries        | imp +121 / +33 / +103, inv 10 / 4 / 8 items |
+| looter | 8 / 8 / 7        | same shape as hider minus un-hideable entries        | imp net +5 / +23 / +0 (after vend/toll spend) |
+
+Re-measured after the harness fixes (review on PR #12): the looter now
+holds E through hold-verbs — 'Feed the machine' included — and economy
+earned before a death is banked past the checkpoint restore, so income
+no longer depends on death timing. The sprint-286 looter row (+121/+33/+103)
+over-read: it never fed a machine and dropped loot earned since the last
+checkpoint. Net-of-spend is the honest figure — vend prices int(12,20)/
+int(14,24) now roughly balance a full-route looter's income (≈0-25 net),
+so the old '~5x coverage' read was inflated by unspent wealth, not just
+cheap prices.
 
 ### Read
 

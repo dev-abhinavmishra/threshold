@@ -95,7 +95,7 @@ function defaultLights(w: number, d: number, h: number): LightSpec[] {
 
 // Common prop scatter helpers
 // Wall-hung kinds sit flush on the surface and mount at eye height.
-const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
+export const WALL_MOUNT_Y: Partial<Record<PropKind, number>> = {
   painting: 1.6, wallSconce: 2.05, mirror: 1.55, wallClock: 2.25, sign: 2.1, curtain: 1.25,
   ductCirc: 2.3, ductRect: 2.35, gutter: 2.4, indPipes: 1.8, cableTray: 2.3, lifebuoy: 1.7,
   keyRack: 1.5, exitSign: 2.35, wallVent: 2.25, extinguisher: 1.15, fireAlarm: 1.9,
