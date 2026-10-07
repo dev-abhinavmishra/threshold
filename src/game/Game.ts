@@ -1186,6 +1186,17 @@ export class Game {
     }
     // Entity-registered points (the Collector's toll) survive rebuilds.
     for (const it of this.dynamicInteractables) this.interaction.add(it);
+    // The Broker's fix — a staffed service on the man himself, a second
+    // anchor beside 'Trade wares': he makes a call and one line comes
+    // off your deepest ledger, priced by how deep it runs.
+    for (const [roomIndex, fig] of this.brokerFigs) {
+      this.interaction.add({
+        kind: 'fix', id: `fix-${this.space}:${roomIndex}`,
+        pos: { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z },
+        prompt: 'Ask the Broker for a fix',
+        holdTime: 1.2, enabled: true, priority: 3,
+      });
+    }
     // Cut the seal — an armed paper wire is a quiet thing you can cut;
     // under live floodwater the wire only shows itself to a wader
     // crouched low enough to feel for it.
@@ -1635,6 +1646,37 @@ export class Game {
         } else {
           this.cue('door-locked', it.pos,
             marked ? `[the marked rate is ${effPrice} marginalia — settle the tally or pay the crew]` : `[${effPrice} marginalia required]`, 'warn');
+        }
+        return;
+      }
+      case 'fix': {
+        // The Broker is a fixer: he makes a call and one line comes off
+        // your deepest ledger — priced by depth, shuttered with the floor.
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const worst = Math.max(this.unpaidTheft, this.unpaidHeld, this.paperTrail);
+        if (worst <= 0) {
+          this.cue('door-locked', it.pos, '[your slate is clean — nothing to fix]', 'info');
+          return;
+        }
+        const price = Math.min(6 + worst * 3, 18);
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos,
+            `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        if (this.unpaidTheft >= this.unpaidHeld && this.unpaidTheft >= this.paperTrail) {
+          this.unpaidTheft -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the tally · ${price} marginalia]`, 'info');
+        } else if (this.unpaidHeld >= this.paperTrail) {
+          this.unpaidHeld -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the register · ${price} marginalia]`, 'info');
+        } else {
+          this.paperTrail -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off your file · ${price} marginalia]`, 'info');
         }
         return;
       }
