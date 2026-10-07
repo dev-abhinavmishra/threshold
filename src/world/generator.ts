@@ -597,7 +597,7 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
         room.sockets.push({
           kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
-          meta: { vend: true, price: lootRng.int(5, 11), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
+          meta: { vend: true, price: lootRng.int(14, 24), vendItem: vendItemsU[lootRng.int(0, vendItemsU.length - 1)] },
         });
         // The machine is real now — vend sockets hang on a milled unit
         // (skipped where a door lane claims the footprint).
@@ -978,7 +978,7 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
     const p = localToWorld(room.origin, room.yaw, lx, 0, lz);
     room.sockets.push({
       kind: 'loot', pos: v3(p.x, 0.7, p.z), yaw: room.yaw - Math.PI / 2, filled: true,
-      meta: { vend: true, price: lootRng.int(4, 9), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
+      meta: { vend: true, price: lootRng.int(12, 20), vendItem: vendItems[lootRng.int(0, vendItems.length - 1)] },
     });
     // The machine is real now — vend sockets hang on a milled unit
     // (skipped where a door lane claims the footprint).

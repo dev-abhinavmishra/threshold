@@ -235,6 +235,8 @@ export class Game {
   private documents: Document[] = [];
   private meta = loadMeta();
   private deathCount: Record<string, number> = {};
+  /** Source of the most recent kill — read by playtest/debug harnesses. */
+  lastDeathCause = '';
   private checkpoint: CheckpointSave | null = null;
   private stabilize: { needle: number; dir: number; zone: number; timeLeft: number; failT: number } | null = null;
   private roomBounds = new Map<number, Aabb>();
@@ -3076,6 +3078,7 @@ export class Game {
   private killPlayer(source: EntityId, hint: string): void {
     if (this.player.dead) return;
     this.player.dead = true;
+    this.lastDeathCause = source;
     this.deathCount[source] = (this.deathCount[source] ?? 0) + 1;
     this.deathEcho = { room: this.currentRoom, space: this.space, fired: false };
     this.stats.deaths++;
