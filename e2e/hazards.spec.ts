@@ -389,6 +389,61 @@ test('the sign goes cold — the warden only believes fresh work', async ({ page
   expect(errors).toEqual([]);
 });
 
+// The second read teaches: a warden that has weighed two marks knows the
+// floor is worked — it announces it once and the line runs faster.
+test('the second read teaches — the warden quickens on a worked floor', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // two marks, read across separate scent cycles — the second teaches
+    const mk = (dx: number, dz: number) => ga.hazard.evidence.push({
+      pos: { x: wardenRoom.origin.x + dx, y: 0, z: wardenRoom.origin.z + dz },
+      room: wardenRoom.index, kind: 'line', t: g.clock.time, readBy: [],
+    });
+    mk(0.8, 0);
+    for (let f = 0; f < 60; f++) g.frame(); // one scent cycle reads mark one
+    mk(-1.2, 1.2);
+    for (let f = 0; f < 500; f++) g.frame();
+    return { stage: 'done',
+      learned: caps.some((c) => /floor is worked/.test(c)),
+      learnOnce: caps.filter((c) => /floor is worked/.test(c)).length === 1,
+      caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.learned, JSON.stringify(result)).toBe(true);
+  expect(result.learnOnce, 'the lesson announces once').toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));

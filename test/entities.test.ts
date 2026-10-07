@@ -557,6 +557,57 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('the second read teaches — two marks and the pace quickens (sprint 293)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const records = [
+      { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] },
+      { pos: v3(mid.x - 1.5, 0, mid.z + 1), room: 28, kind: 'wire', t: 0, readBy: [] as string[] },
+    ];
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        // one mark per read, as they arrive in play — the live callback
+        // marks everything returned, and the warden only weighs to the
+        // first in-room mark, so a second would burn unseen anyway
+        const out = records.filter((e) => !e.readBy.includes(key)
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { pos: { x: number; z: number }; signReads: number; investigate: unknown };
+    // two marks land across cycles; it weighs both (spends the reads)
+    let t = 0;
+    for (let i = 0; i < 600; i++) { t = step(warden, ctx, 0.05, t); if (w.signReads >= 2) break; }
+    expect(w.signReads, 'it weighs both marks').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((s) => /floor is worked/.test(s)), 'the second read teaches — once').toBe(true);
+    // let any investigation finish, then run both a learned warden and a
+    // fresh one on the same line for the same window — the learned one
+    // covers more ground (1.18 speed + shorter end pauses).
+    for (let i = 0; i < 300 && w.investigate; i++) t = step(warden, ctx, 0.05, t);
+    const baseline = new Warden();
+    baseline.spawn(ctx); // same key — records already read, it learns nothing
+    const wb = baseline as unknown as { pos: { x: number; z: number } };
+    let dLearned = 0, dBase = 0;
+    for (let i = 0; i < 240; i++) {
+      const lx = w.pos.x, lz = w.pos.z, bx = wb.pos.x, bz = wb.pos.z;
+      t = step(warden, ctx, 0.05, t); baseline.update(0.05);
+      dLearned += Math.hypot(w.pos.x - lx, w.pos.z - lz);
+      dBase += Math.hypot(wb.pos.x - bx, wb.pos.z - bz);
+    }
+    expect(dLearned, `learned ${dLearned.toFixed(1)} vs baseline ${dBase.toFixed(1)}`)
+      .toBeGreaterThan(dBase * 1.1);
+    warden.dispose();
+    baseline.dispose();
+  });
+
   it('whistles and charges a player caught in the open', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });

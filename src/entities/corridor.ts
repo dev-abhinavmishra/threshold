@@ -428,7 +428,14 @@ export class Warden extends Entity {
   private investigate: Vec3 | null = null;   // a heard noise it walks to check
   private investigateScan = 0;
   private scentT = 0;                          // evidence polling
+  private signReads = 0;                       // marks it has weighed in its room
+  private learnedCued = false;                 // the second read teaches — once
   private noiseUnsub: (() => void) | null = null;
+
+  /** The second read teaches: a warden that has weighed two marks knows
+   *  the floor is worked — faster line, shorter pauses, a longer scan
+   *  at whatever it does check. */
+  private get learned(): boolean { return this.signReads >= 2; }
 
   constructor() { super('warden', ENTITY_TUNING.warden); }
 
@@ -604,7 +611,7 @@ export class Warden extends Entity {
       } else {
         this.investigateScan += dt;
         if (this.mesh) this.mesh.rotation.y += dt * 2.4;
-        if (this.investigateScan > 1.8) this.investigate = null;
+        if (this.investigateScan > (this.learned ? 2.6 : 1.8)) this.investigate = null;
       }
       return;
     }
@@ -620,6 +627,7 @@ export class Warden extends Entity {
       for (const ev of evs) {
         if (ev.wiped) continue; // a wipe is a filter on the sign, not a target
         if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
+        this.signReads += 1; // weighed in-room — believed or doubted, it learns
         // Sign in smelling range of a wiped floor — it could be a lie. The
         // warden doubts and stays on the line (the mark is already spent:
         // hazardEvidence marked it read when it returned it).
@@ -632,6 +640,10 @@ export class Warden extends Entity {
         c.cue('floor-creak', this.pos, '[it reads the sign — someone has been here]', { severity: 'warn' });
         this.rig?.play('move', 0.1);
         break;
+      }
+      if (this.learned && !this.learnedCued) {
+        this.learnedCued = true;
+        c.cue('floor-creak', this.pos, '[it knows this floor is worked — the pace quickens]', { severity: 'warn' });
       }
       if (this.investigate) return;
     }
@@ -647,10 +659,10 @@ export class Warden extends Entity {
     const len = Math.hypot(dx, dz);
     if (len < 0.35) {
       this.towardB = !this.towardB;
-      this.pauseT = 1.6;
+      this.pauseT = this.learned ? 0.9 : 1.6;
       return;
     }
-    const step = Math.min(len, this.tuning.speed * dt);
+    const step = Math.min(len, this.tuning.speed * (this.learned ? 1.18 : 1) * dt);
     this.pos.x += (dx / len) * step;
     this.pos.z += (dz / len) * step;
     if (this.mesh) {

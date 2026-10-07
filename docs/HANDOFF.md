@@ -2502,3 +2502,34 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - The shared-anchor double-verb flag is open with Abhinav.
   - The Auditor wanted-poster stays a design call.
   - 'Seen'-record echo — half-baked, logged skip.
+
+## sprint 293 — the second read teaches ('seen'-record echo)
+
+What:
+- The warden counts in-room marks it weighs: `signReads`. Doubted marks
+  count too — reading enough sign, believed or not, teaches it the
+  floor is worked.
+- At 2+, `learned`: patrol speed ×1.18, end-pauses 1.6s→0.9s, the
+  arrive-and-scan lingers 1.8s→2.6s. One cue: `[it knows this floor is
+  worked — the pace quickens]`. State lives on the warden instance —
+  it un-learns when it despawns.
+- The first kill marks you; the SECOND makes you a pattern. Loud work
+  in a warden's room now escalates the hunter, not just the paper.
+Traps:
+- The live hazardEvidence marks readBy on ALL returned records; the
+  warden weighs only to the first in-room mark (`break`). Two
+  simultaneous marks → the second burns unseen, never counted.
+  Vitest stubs must feed marks one per call (`.slice(0,1)`), as they
+  arrive in play.
+- Patrol speed comparisons need PATH length, not net displacement —
+  the a–b line is back-and-forth; |end-start| ≈ 0 regardless of pace.
+- A second warden spawned on the same hostRoom shares key
+  `warden:N` — same-ctx baselines read nothing (readBy already full):
+  useful for A/B pacing tests.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - The learned-pace could extend to the charge (a learned warden
+    charges 1.4× too?) — currently only the line quickens.
