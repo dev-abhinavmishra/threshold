@@ -4588,9 +4588,14 @@ export class Game {
       if (o.userData.figureParts) {
         tickFigure(o, t);
         // Broker figures track the player with their head.
-        if (o.userData.broker) {
+        if (o.userData.broker || o.userData.clerk) {
           const head = (o.userData.figureParts as Record<string, THREE.Object3D>).head;
-          if (head) {
+          // The clerk only turns its head after the rifle — a cold
+          // counter's face finds your hands. Before that it attends
+          // the till like furniture.
+          const watches = o.userData.broker === true
+            || this.closedCounters.has(o.userData.clerkRoomIndex as number);
+          if (head && watches) {
             const dx = this.player.pos.x - o.position.x;
             const dz = this.player.pos.z - o.position.z;
             const dist = Math.hypot(dx, dz);
@@ -5391,6 +5396,7 @@ export class Game {
     fig.position.set(wx, room.origin.y, wz);
     fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
     fig.userData.clerk = true;
+    fig.userData.clerkRoomIndex = roomIndex;
     this.entityGroup.add(fig);
     this.clerkFigs.set(roomIndex, fig);
     // first sighting — the house has staff too, and they wear the same face
