@@ -10,6 +10,15 @@
 import type { Rng } from '../engine/rng';
 import type { RoomInstance } from '../game/types';
 import { inDoorLane, type PropKind } from './spec';
+import { WALL_MOUNT_Y } from './templates';
+
+// Wall-hung tells mount at eye height on the wall face — a keyRack or
+// transom window at y=0 reads as a bug, not a sign. securityCam and
+// transomWindow have no WALL_MOUNT_Y entry (their templates mount them
+// explicitly) — 2.3 matches the template convention.
+const TELL_MOUNT_Y: Partial<Record<PropKind, number>> = {
+  ...WALL_MOUNT_Y, transomWindow: 2.3, securityCam: 2.3,
+};
 
 export const TELLS: Record<string, PropKind[][]> = {
   // two candidate sets per entity: nearer rooms pull from later sets
@@ -67,12 +76,16 @@ export function applyForeshadowing(rooms: RoomInstance[], rng: Rng): void {
         for (const kind of set) {
           // hug the side walls so the prop reads at the door but never blocks
           const side = rng.bool(0.5) ? 1 : -1;
-          const x = side * rng.range(hw * 0.55, hw * 0.9);
+          const mountY = TELL_MOUNT_Y[kind];
+          const x = mountY !== undefined
+            ? side * (spec.width / 2 - 0.15)
+            : side * rng.range(hw * 0.55, hw * 0.9);
           const z = rng.range(-hh * 0.6, hh * 0.75);
           if (inDoorLane(spec, x, z)) continue;
           spec.props.push({
             kind,
             x, z,
+            y: mountY,
             yaw: side > 0 ? -Math.PI / 2 : Math.PI / 2,
             meta: { foreshadow: sch.entity },
           });
