@@ -720,7 +720,7 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
         ?.find((i) => i.kind === 'purse');
       let pursePaid = false, purseSour = false, purseShortCap = '',
         purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '',
-        purseWashCap = '', purseWashed = false;
+        purseWashCap = '', purseWashed = false, fenceCap = '', fencePaid = false;
       if (purse) {
         g.imprints = 20; // marginalia still 30 — the clean fix never charged
         standAt(lobby, { x: purse.pos.x, z: purse.pos.z }, 0.7);
@@ -740,7 +740,8 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
         // sprint 329/330 — the wash: feed the purse the till's marked
         // coin; the under takes it without asking (hot dies silent) but
         // its own book opens a line — the wash files a question.
-        const gh = g as unknown as { hotImprints: number; paperTrail: number };
+        const gh = g as unknown as { hotImprints: number; paperTrail: number;
+          hotItems: Set<string> };
         gh.hotImprints = 6;
         const trailBeforeWash = gh.paperTrail;
         g.imprints = Math.max(g.imprints, 6);
@@ -749,11 +750,29 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
         purseWashCap = caps.find((t) => /weighs the marked coin/.test(t)) ?? '';
         purseWashed = purseWashCap !== '' && gh.hotImprints === 0
           && gh.paperTrail === trailBeforeWash + 1;
+        // sprint 331 — the fence: the Broker takes marked stock off
+        // your hands at an insult rate, the under's book opens a line.
+        const fence = (g.interaction as { interactables?: { kind: string;
+          pos: { x: number; y: number; z: number } }[] }).interactables
+          ?.find((i) => i.kind === 'fence');
+        if (fence) {
+          gh.hotItems.add('bandage');
+          g.giveItem('bandage', 2);
+          const trail2 = gh.paperTrail;
+          const mFence = g.marginalia;
+          standAt(lobby, { x: fence.pos.x, z: fence.pos.z }, 0.7);
+          drive(fence.pos, /fence|take/i, () => g.marginalia === mFence + 8, 50);
+          fenceCap = caps.find((t) => /takes the marked stock/.test(t)) ?? '';
+          fencePaid = g.marginalia === mFence + 8 && gh.hotItems.size === 0
+            && gh.paperTrail === trail2 + 1
+            && !g.inventory.some((s) => s.id === 'bandage');
+        }
       }
       return {
         stage: 'done', refused, refuseCap, price, item,
         purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap,
         purseShortCap, margAfterPurse, purseWashCap, purseWashed,
+        fenceCap, fencePaid,
         purseSeen, pursePos: purse ? { x: purse.pos.x, y: purse.pos.y, z: purse.pos.z } : null,
         bsockPos: lobby.sockets.filter((s) => s.meta?.broker !== undefined)
           .map((s) => ({ x: Math.round(s.pos.x * 10) / 10, y: s.pos.y, z: Math.round(s.pos.z * 10) / 10 })),
@@ -807,6 +826,9 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   // book opens a line for it (paperTrail +1 asserted in purseWashed)
   expect(result.purseWashed, JSON.stringify(result)).toBe(true);
   expect(result.purseWashCap).toMatch(/weighs the marked coin/);
+  // sprint 331 — the fence: marked stock out at the insult rate, a line
+  expect(result.fencePaid, JSON.stringify(result)).toBe(true);
+  expect(result.fenceCap).toMatch(/takes the marked stock/);
   expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });
@@ -825,6 +847,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
     const ga = g as unknown as { unpaidHeld: number; hotImprints?: number;
+      hotItems?: Set<string>;
       clerkFigs?: Map<number, unknown>;
       hazard: { evidence: { pos: { x: number; z: number }; kind: string;
         weak?: boolean }[] };
@@ -1082,6 +1105,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     let unfiledLocal = '', unfiledSeen = '', ring2Ok = false;
     let unfiledStand: { x: number; z: number } | null = null, unfiledDist = -1;
     let till2Pos: { x: number; z: number } | null = null;
+    let stockCue = '', stockYaw = -1;
     let gateProbe: { enabled: boolean; dist: number; align: number; prox: number; eyeY: number } | null = null;
     let ejectProbe: { pre: { x: number; z: number }; post: { x: number; z: number };
       origin: { x: number; z: number } } | null = null;
@@ -1093,6 +1117,22 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       g.player.teleport(clerked2.origin.x, 0, clerked2.origin.z);
       g.currentRoom = clerked2.index;
       for (let f = 0; f < 20; f++) g.frame();
+      // sprint 331 — the till's stock testifies: carry marked goods past
+      // a warm clerk and its own stock tells — the eye finds the take.
+      const figB = ga.clerkFigs?.get(idxB) as
+        { position: { x: number; z: number }; rotation: { y: number };
+          userData?: { figureParts?: { head?: { rotation: { y: number } } } } } | undefined;
+      const headB = figB?.userData?.figureParts?.head;
+      if (figB && headB) {
+        ga.hotItems?.add('doorChock');
+        g.giveItem('doorChock', 1);
+        g.player.teleport(figB.position.x + Math.sin(figB.rotation.y + 1.0) * 2.0, 0,
+          figB.position.z + Math.cos(figB.rotation.y + 1.0) * 2.0);
+        for (let f = 0; f < 24; f++) g.frame();
+        stockYaw = headB.rotation.y;
+        stockCue = caps.find((t) => /reads its own stock/.test(t)) ?? '';
+        ga.hotItems?.clear();
+      }
       // interactables mint per-room on approach — find room B's once inside
       const local = () => (g.interaction as { interactables?: { kind: string;
         pos: { x: number; y: number; z: number }; enabled?: boolean;
@@ -1159,6 +1199,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       unfiledCap, unfiledHeld, unfiledCold, unfiledRoom,
       unfiledLocal, unfiledSeen, ring2Ok, unfiledStand, unfiledDist, till2Pos, gateProbe, ejectProbe,
+      stockCue, stockYaw,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
       purseSeen, pursePos: purse ? { x: Math.round(purse.pos.x*10)/10, y: purse.pos.y, z: Math.round(purse.pos.z*10)/10 } : null,
       pursePlayer: { x: Math.round(g.player.pos.x*10)/10, z: Math.round(g.player.pos.z*10)/10 },
@@ -1212,6 +1253,10 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.bellRang).toBe(1);
   expect(result.bellDist).toBeLessThan(0.6);
   expect(result.bellTiredCap).toMatch(/tired click/);
+  // sprint 331 — the till's stock testifies: warm clerk reads the
+  // take on you — head yaw tracks the carrier + the stock cue pings
+  expect(result.stockCue, JSON.stringify(result)).toMatch(/reads its own stock/);
+  expect(Math.abs(result.stockYaw ?? 0), JSON.stringify(result)).toBeGreaterThan(0.25);
   // sprint 328 — the unfiled hands: rifled inside the bell's look window
   // the register never writes you, but the counter still goes cold
   expect(result.unfiledRoom, 'second clerked room needed for the unfiled phase').toBeGreaterThan(-1);

@@ -3526,3 +3526,33 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `purseWashed`. Caption renamed 'washes' → 'weighs'.
 - Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.
 
+
+### sprint 331 — the till's stock is marked (goods testify too)
+- The goods side of the marked family: rifled ITEMS pool into
+  `hotItems = Set<ItemId>` (per-id, not per-unit — ~15 count--
+  consumption sites make unit marks untraceable; fiction: you can't
+  tell which wrap is the till's). Rifle caption gains '— the stock
+  is marked'; a carried hot id testifies at any WARM clerk: the
+  head-track gains a third case (after broker + cold-counter
+  tracking) — `hotItems ∩ inventory` → watches + a per-room
+  (`stockSeen`) 'distraction' ping 0.4 at the player + warn cue
+  '[the clerk reads its own stock on you — the till wares tell]' +
+  quiet emit caption '[the till's stock answers for itself]'.
+  Ring-window precedence is untouched (bell > cold > stock).
+- The fence: the Broker's counter gets a third anchor — 'Fence
+  the take' (+1.2·lateral flank, the purse's mirror — broker
+  counters have no bell). Flat 4 marginalia per marked stack,
+  `paperTrail +1` (the under's book opens a line), clears the hot
+  ids AND strips them from the bag ('[the broker takes the marked
+  stock without a word — the under's book opens a line · +N
+  marginalia]'). No marks → free shrug. The checker-shutter covers
+  it ('the floor is closed for the count'). The heist chain is now
+  two-sided: launder the coin at the purse, fence the goods.
+- Wire-up trap: a new InteractKind needs THREE spots — the union
+  (interaction.ts), the case dispatch, and hazardContract.test's
+  kind list ('fence' appended to all three).
+- e2e: broker leg fence phase (bandage×2 hot → +8 marginalia,
+  hotItems cleared, trail +1, bag stripped); clerk leg stock-read
+  phase (warm figB + hot doorChock → head yaw >0.25 + 'reads its
+  own stock' cue).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
