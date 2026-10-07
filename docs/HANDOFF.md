@@ -2954,3 +2954,29 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   suite's dies with its runner → new tabs land on chrome-error://).
 - Gates: tsc, lint, 218 vitest (+2), 5-seed sim, economy+undercast 13/13
   (+the count leg), build.
+
+## sprint 306 — the checker (the count sends a lamp)
+
+- `src/entities/crewChecker.ts` — a Game-managed walker (NOT an Entity;
+  the count is reactive so the responder must be too). A rung count now
+  also dispatches a hooded checker with a live PointLight lamp who walks
+  the under spine (corridorPath reversed — the crew comes from deeper),
+  sweeps the rung socket ~26s, and walks on.
+- The find: exposed player in the socket room for >1.4s of sweep → a
+  0.75 'impact' emit AT THE PLAYER — the building learns where you are
+  NOW, same trick as the detective's phone. Non-damaging, crew-style:
+  the word, not the wound. Vacated/hidden = clean sweep, it moves on.
+- One walker at a time (dispatch returns false while out — the rings
+  still emit, the books don't send a crowd). Player-facing chain:
+  `[the count is answered — somebody walks the row with a lamp]` →
+  `[the checker's lamp finds you — the count stands]` or
+  `[the checker counts the till and moves on]`.
+- Fixed a latent sprint-305 bug found while wiring: crewCount losses
+  survived startRun — a queued report would ring in the NEXT run at a
+  stale socket. `CrewCount.reset()` + `checker.reset(hooks)` now run in
+  startRun beside `this.hazard = new HazardField()`.
+- Tests: roomOf is exported from crewChecker (entities have their own
+  private copies — this one takes (rooms, p) args for headless driving).
+  e2e: `ga.checker.stage` is runtime-reachable (TS private ≠ #private).
+- Gates: tsc, lint, 218 vitest (+4), undercast count/index/audit/checker
+  legs 4/4, build pending.

@@ -815,3 +815,78 @@ test('the count — the till rings late where your hands were (sprint 305)', asy
   expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
   expect(errors).toEqual([]);
 });
+
+test('the checker — the count sends a lamp down the row (sprint 306)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      checker: { stage: string };
+      sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
+    };
+    const heard: { x: number; z: number; caption: string; intensity: number }[] = [];
+    ga.sound.on((e) => { if (e.caption && /count stands/.test(e.caption)) heard.push(e as never); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // linger exposed in the pilfered room — the count rings ~75s out, then
+    // the checker walks. Stay put: this is the losing play, on purpose.
+    let dispatched = false;
+    for (let f = 0; f < 170 * 30 && heard.length === 0; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      g.frame();
+      if (ga.checker.stage !== 'idle') dispatched = true;
+    }
+    const found = heard[0];
+    // let it close the count and leave
+    for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
+    return { stage: 'done', paid, dispatched, found: heard.length > 0,
+      fx: found?.x, fz: found?.z, intensity: found?.intensity,
+      finalStage: ga.checker.stage,
+      px: tag.pos.x + 0.4, pz: tag.pos.z,
+      cueSeen: caps.some((c) => /walks the row/.test(c)),
+      closeSeen: caps.some((c) => /closes the count|counts the till/.test(c)),
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.cueSeen, JSON.stringify(result)).toBe(true); // the answer went out
+  expect(result.dispatched, JSON.stringify(result)).toBe(true);
+  expect(result.found, JSON.stringify(result)).toBe(true); // the lamp found the lingerer
+  // the find rings at YOU — the building learns where you are now
+  expect(Math.abs((result.fx ?? 99) - (result.px ?? 0)) + Math.abs((result.fz ?? 99) - (result.pz ?? 0)), JSON.stringify(result)).toBeLessThan(1.0);
+  expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
+  expect(result.closeSeen, JSON.stringify(result)).toBe(true);
+  expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
+  expect(errors).toEqual([]);
+});
