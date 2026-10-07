@@ -13,6 +13,7 @@ import { buildRoomMesh } from '../src/world/builder';
 import { MAT } from '../src/world/materials';
 import * as THREE from 'three';
 import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
+import { DOCUMENTS } from '../src/game/documents';
 
 import { SeedStreams } from '../src/engine/rng';
 
@@ -1150,6 +1151,15 @@ describe('the cause reads (sprint 289)', () => {
   it('every kill source has a curated advice line', () => {
     for (const id of SOURCES) {
       expect(DEATH_HINTS[id], `no death hint for ${id}`).toBeTruthy();
+    }
+  });
+
+  it('every kill source unlocks an archive document (sprint 296)', () => {
+    // The death screen promises "a new document may be unlocked" — a
+    // source with no doc-id makes the promise empty for its victim.
+    const docIds = new Set(DOCUMENTS.map((d) => d.id));
+    for (const id of SOURCES) {
+      expect(docIds.has(`doc-${id}`), `no archive document for ${id}`).toBe(true);
     }
   });
 });
