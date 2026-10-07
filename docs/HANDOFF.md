@@ -2394,6 +2394,14 @@ What:
   keep them in sync).
 Traps: none new — the record lands at +0.4/+0.4 off the player so the
   grafter's room-of check still resolves inside the same room.
+- Resume decodes the full route's GLB set on the main thread: first cold
+  run can starve RAF for >60s (CDP stack samples show continuous
+  GLTFLoader.loadBufferView/traverse). viewmodel:77 now stubs renderFrame
+  and waits on an INTERVAL poll (RAF polling starves with the loop);
+  the remaining flake is a cold-decode timeout, retry-warm passes ~5s.
+  Manual g.frame() evaluates also queue behind decode — never trust a
+  90s evaluate hang to mean a frame loop; sample the stack via CDP
+  Debugger.pause first.
 
 NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-set hearing remains a design call (needs Abhinav).

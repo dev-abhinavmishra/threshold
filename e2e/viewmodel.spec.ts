@@ -110,15 +110,15 @@ test('lit lamp takes the hand while its beam is on', async ({ page }) => {
   await page.keyboard.press('Digit1');
   await page.waitForTimeout(1500);
   await page.keyboard.press('KeyF');
-  // the beam flag and the held-item swap only apply on a game frame —
-  // drive frames directly (headless RAF can starve for >30s; every other
-  // leg steps the loop manually for the same reason)
-  await page.evaluate(() => {
+  // the beam flag and the held-item swap only apply on a sim frame, and the
+  // resume floods the main thread with GLB decode — poll on an interval
+  // (RAF polling would starve with the same loop) until a frame lands
+  await page.waitForFunction(() => {
     const g = (window as unknown as {
-      __thresholdGame: { lampOn: boolean; beamGroup: { visible: boolean } | null; frame(): void };
+      __thresholdGame: { lampOn: boolean; beamGroup: { visible: boolean } | null };
     }).__thresholdGame;
-    for (let f = 0; f < 10 && !(g.lampOn && g.beamGroup?.visible); f++) g.frame();
-  });
+    return g.lampOn && g.beamGroup?.visible === true;
+  }, null, { timeout: 60_000, polling: 500 });
 
   const s = await page.evaluate(() => {
     const g = (window as unknown as {
