@@ -586,6 +586,33 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     delete caseSocks[i].sock.meta.amount;
   }
 
+  // The affidavit — the held ledger's relief valve, the upstairs twin of
+  // the counter-claim and return slip. A sworn statement that the held
+  // goods reached their owner: the detective's register loses two lines,
+  // the filing itself enters his book — net −1, imprints, the only relief
+  // priced in the main purse. Own 'affidavit' stream; placed last of the
+  // filings so it defers to every other paper (one filing per room).
+  {
+    const afRng = streams.stream('affidavit');
+    for (const room of mainRooms) {
+      if (room.authored || !room.spec) continue;
+      if (room.biome !== 'records' && room.biome !== 'maintenance' && room.biome !== 'lobby' && room.biome !== 'guest') continue;
+      const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk' || p.kind === 'consoleTable');
+      if (!desk) continue;
+      if (room.sockets.some((s) => s.meta.register || s.meta.roster || s.meta.complaint || s.meta.watchSheet)) continue;
+      if (!afRng.bool(0.5)) continue;
+      const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+      const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+      const tcL = Math.hypot(toC.x, toC.z) || 1;
+      room.sockets.push({
+        kind: 'loot',
+        pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+        yaw: 0, filled: true,
+        meta: { affidavit: true, price: afRng.int(4, 9) },
+      });
+    }
+  }
+
   // The forged page — a book near a forger of doors can be rewritten. A
   // ledger within sight of a redactor's door (inside the book's own
   // +10 read window) omits that filing — the first lie the books tell,

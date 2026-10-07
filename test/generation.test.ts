@@ -1271,6 +1271,37 @@ describe('the counter-claim (sprint 299)', () => {
   });
 });
 
+describe('the affidavit (sprint 302)', () => {
+  it('sworn filings sit on main-route desks, imprint-priced, one paper per room', () => {
+    const BIOMES = new Set(['records', 'maintenance', 'lobby', 'guest']);
+    const HOSTS = new Set(['desk', 'writingDesk', 'consoleTable']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.underRooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.affidavit),
+          `affidavit on the underscript ${seed}`).toBe(false);
+      }
+      for (const r of route.rooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.affidavit) continue;
+          count++;
+          expect(r.authored, `affidavit on an authored room ${seed}`).toBeFalsy();
+          expect(BIOMES.has(r.biome), `affidavit in ${r.biome} ${seed}`).toBe(true);
+          expect(typeof s.meta.price, `affidavit unpriced ${seed}`).toBe('number');
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `affidavit on a desk-less room ${seed} r-${r.index}`).toBe(true);
+          // one paper per room — the affidavit defers to every other filing
+          const papers = (r.sockets ?? []).filter((x) =>
+            x.meta?.register || x.meta?.roster || x.meta?.complaint || x.meta?.watchSheet || x.meta?.affidavit);
+          expect(papers.length, `two filings in room ${r.index} ${seed}`).toBe(1);
+        }
+      }
+      expect(count, `no affidavits on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe('the return slip (sprint 301)', () => {
   it('return forms sit on under cage furniture, marginalia-priced', () => {
     const HOSTS = new Set(['recordsCage', 'keyCabinet', 'locker', 'filing', 'cabinet']);

@@ -46,32 +46,88 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     ga.keys.delete('KeyE');
     if (!cage.meta.taken) return { stage: 'claim-failed' } as const;
 
-    // --- 2. walk into his room — he clocks you ---
+    // --- 1.5 the affidavit — swearing the goods home, in imprints ---
+    (ga as unknown as { unpaidHeld: number }).unpaidHeld = 3; // more held work behind you
+    const afRoom = g.route.rooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.affidavit && !s.meta?.taken));
+    if (afRoom) {
+      g.player.teleport(afRoom.origin.x, 0, afRoom.origin.z);
+      ga.currentRoom = afRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const af = (afRoom.sockets ?? []).find((s) => s.meta?.affidavit && !s.meta?.taken);
+      for (let f = 0; f < 60 && af?.meta && !af.meta.taken; f++) {
+        const ax = afRoom.origin.x - af.pos.x, az = afRoom.origin.z - af.pos.z;
+        const al = Math.hypot(ax, az) || 1;
+        g.player.teleport(af.pos.x + (ax / al) * 0.9, 0, af.pos.z + (az / al) * 0.9);
+        g.player.yaw = Math.atan2(af.pos.x - g.player.pos.x, af.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((af.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const heldAfterAf = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
+
+    // --- 2. into his room with a CLEAN book — rifle the register drawer
+    //    under his nose: owed>0 starts his slow look and the settle point
+    //    could steal the drawer's focus; the rifle itself must be what
+    //    files your face. +2 lines AND an instant clock.
     const dRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'detective'));
     if (!dRoom) return { stage: 'no-detective' } as const;
+    (ga as unknown as { unpaidHeld: number }).unpaidHeld = 0;
     const prev = g.route.rooms[dRoom.index - 1];
     if (prev) { g.player.teleport(prev.origin.x, 0, prev.origin.z); for (let f = 0; f < 25; f++) g.frame(); }
     g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
     let det: { clocked?: boolean; warranted?: boolean } | undefined;
-    for (let f = 0; f < 200; f++) {
+    for (let f = 0; f < 60; f++) {
       g.frame();
       det = ga.entities.find((e) => e.id === 'detective') ?? det;
-      if (det?.clocked) break;
+      if (det) break;
     }
     if (!det) return { stage: 'no-det-spawn', ents: ga.entities.map((e) => e.id) } as const;
-    const clocked = caps.some((c) => /has your face|goes on the wire/.test(c));
+    const reg = g.interaction.interactables.find((i) => i.kind === 'registerDrawer' && i.enabled);
+    if (reg) {
+      // rotate through candidate sides until focus locks on the drawer —
+      // a neighbouring socket can outrank the naive stand, and an
+      // out-of-bounds stand focuses 'none' and rotates on by itself
+      for (let f = 0, ci = 0; f < 120 && (reg.data as { stock?: number }).stock !== 0; f++) {
+        const ang = ci * Math.PI / 4;
+        g.player.teleport(reg.pos.x + Math.sin(ang) * 0.9, 0, reg.pos.z + Math.cos(ang) * 0.9);
+        g.player.yaw = Math.atan2(reg.pos.x - g.player.pos.x, reg.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((reg.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        // only hold E when the drawer has focus — mid-rotation a
+        // neighbouring socket must not get the hold instead
+        if (g.interaction.focused?.id === reg.id) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+        if (g.interaction.focused?.id !== reg.id) ci++; // wrong side — rotate
+      }
+      ga.keys.delete('KeyE');
+    }
+    const heldAfterDrawer = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
+    for (let f = 0; f < 40 && !det.clocked; f++) g.frame();
+    const clocked = caps.some((c) => /has your face|goes on the wire|face files itself/.test(c));
 
     // --- 3. slip a room without settling — the wire rings ahead ---
+    //    keep the slip SHORT: the ring wakes nxt's listeners, and a grab
+    //    drags the player >10 rooms out — the warrant cools, settle gone
     const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
     if (!nxt) return { stage: 'no-neighbor' } as const;
     const ringCap = caps.length;
     g.player.teleport(nxt.origin.x, 0, nxt.origin.z);
-    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 6; f++) g.frame();
     const rang = caps.slice(ringCap).some((c) => /house phone rings ahead/.test(c));
+    // straight back to his room before anything woken can reach us
+    g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
+    for (let f = 0; f < 5; f++) g.frame();
 
     // --- 4. back to his desk — settle ---
     const settle = g.interaction.interactables.find((i) => i.kind === 'settle' && i.enabled);
-    if (!settle) return { stage: 'no-settle' } as const;
+    if (!settle) return { stage: 'no-settle' as const, clocked, heldAfterDrawer,
+      roused: caps.some((c) => /lifts the house phone/.test(c)),
+      cooled: caps.some((c) => /wire ahead of you goes quiet/.test(c)) } as const;
     const i0 = ga.imprints;
     let settlePrompt = '';
     for (let f = 0; f < 70; f++) {
@@ -90,12 +146,14 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
-    return { stage: 'done' as const, clocked, rang, settlePrompt, paid,
+    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterDrawer, settlePrompt, paid,
       spent: ga.imprints < i0, warranted: det?.warranted === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.clocked, JSON.stringify(result)).toBe(true);
+  expect(result.heldAfterAf, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself enters his book
+  expect(result.heldAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book file your face
   expect(result.rang, JSON.stringify(result)).toBe(true);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
   expect(result.paid, JSON.stringify(result)).toBe(true);

@@ -2816,6 +2816,82 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   3 → 2 (−2, +1) before the settle still closes the book.
 
 
+
+## sprint 302 — the affidavit (held ledger's relief valve)
+
+- The triad closes: 'File an affidavit — N imprints' on records/
+  maintenance/lobby/guest desks — a sworn statement the held goods
+  reached their owner. Strikes 2 off `unpaidHeld`, the filing itself
+  enters his book (+1): net −1. Blank register shrugs free. The ONLY
+  relief valve priced in imprints — the under twins run on marginalia.
+  Every ledger now has entity desk (full settle) + paper valve (−1).
+- Own 'affidavit' stream + salt; placed at generateRoute scope AFTER
+  every filing pass (streams aren't in fillSockets' scope — the
+  confiscate pass shows the pattern). Exclusion checks register too —
+  lobby rooms can hold counter + frontDesk and would otherwise take
+  two papers; 'frontDesk' isn't a template prop kind (compile error),
+  lobby/guest desks resolve as consoleTable/desk/writingDesk.
+- e2e detective leg seeds held 3 → files the affidavit → 2 (−2, +1),
+  then the clock/ring/settle arc still runs.
+
+
+## sprint 303 — the word goes upstairs (ledger coupling)
+
+- `escaped()` now files: the courier that gets past you carries the card
+  to the house register — `wordFiled` ctx callback → `unpaidHeld += 1`,
+  cue '[the card reaches the stairs — the house register gains your
+  name]'. The runner heads down-spine toward the egress, so an escape
+  was always "bound for the stairs" — now it's mechanically true.
+- Cutting buys silence below AND above (a torn card never files);
+  escape brands you in the Detective's book — the under ask-ledger
+  feeds the upstairs claim-ledger. First MUTATING ctx callback
+  (all prior hooks were `*Owed` getters) — `wordFiled?: () => void`,
+  optional like the rest for headless ctxs.
+- e2e 'the index' now runs BOTH courier endings in one leg: cut the
+  first (word dead), let the second run out after she re-files
+  (`unpaidHeld === 1`), then square. vitest asserts `wordFiled` fires
+  exactly once on escape and never on a cut.
+
+
+
+## sprint 304 — the last two drawers (entity-drawer rouse + pRoom=-1 trap)
+
+- The Filer's docket is riflable (s298); the Auditor's tally and the
+  Detective's register weren't — you could pick the SLEDGE under him but
+  not the book he guards. Both now add their drawer at onSpawn:
+  'tallyDrawer' / 'registerDrawer', one-shot, 0.9s, priority 3 —
+  MUST outrank the desk's own loot sockets (priority 1); the settle
+  point (4) outranks them once the rouse fires, so the rummage is a
+  one-shot surprise, not a repeatable trick.
+  Game case prices its own ledger (+2 theft / +2 held) and calls
+  keeper.rifledTally()/.rifledRegister() — the book slaps open / your
+  face files itself, on the spot, no slow look.
+- REAL PRODUCT FIX — the rouse guards: entity rouse checks used
+  `roomOf(player.pos) !== spawnRoom`, but `roomOf` returns the FIRST
+  bounds match, and room rects overlap at borders — a stand inside the
+  desk room resolved to a NEIGHBOUR's index and the guard skipped the
+  rouse entirely. All rifledX() now use proximity to the drawer
+  (dx²+dz² > 2.6² → return): hands in the drawer mean you ARE at his
+  desk.
+- REAL PRODUCT FIX — the -1 cool gap: Detective's `cool()` read
+  `Math.abs(pRoom - spawnRoom) > 10` unguarded; `roomOf` returns -1
+  BETWEEN bounds (desk-edge niche, door threshold) → |−1−26| = 27 →
+  the warrant cooled the instant it opened. Same gap existed in the
+  Auditor's pursuit-end and the Filer's posted-cool — all three now
+  `pRoom >= 0 &&`. Between-bounds is "still here", not "outrun".
+- e2e traps: entity drawers can't be driven on a CLEAN ledger via the
+  usual entry — owed>0 auto-rouses (his demand beats your rummage:
+  priority-4 settle steals the drawer's focus mid-hold). Reseed the
+  ledger to 0 before entering so the RIFLE is the rouse under test.
+  Adaptive-stand idiom for crowded desks: rotate an 8-angle stand list,
+  hold E only while `focused?.id === drawer.id` — neighbours (loot
+  socks, prop drawers, affidavits) share the 1.9m prox gate and steal
+  holds mid-rotation. Warranted slips must be SHORT (6 frames out,
+  5 back): the wire's ring wakes the neighbour's listeners and a grab
+  drags the player >10 rooms — the cool is then legitimate.
+
+
+
 ## sprint 302b — review debt: wall-eject exits, honest docs, echoskin fix
 
 - Devin Review triage on merged PRs #17/#18/#20 — all findings real, all fixed:
