@@ -3429,3 +3429,19 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   without reader changes).
 - Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
   work mark lands at the till pos on rifle), build.
+
+## Sprint 326 — the clerk watches your hands (the cold counter's face)
+
+- Clerk figs now track the player by the head — but only AFTER the
+  rifle: `fig.userData.clerkRoomIndex` set at mint, and the
+  entity-anim traverse's broker head-track gained a clerk branch
+  gated on `closedCounters.has(roomIndex)`. Before the rifle the
+  fig attends the till like furniture; after, its masked face finds
+  your hands from any angle in the room (±1.1 rad clamp, dt*4 lerp
+  — the Broker's own convention).
+- The counter arc's horror beat, free: 'the clerk watches your
+  hands' was already the rifle caption — now it's physical.
+- e2e clerk leg asserts both halves: head yaw ~0 pre-rifle
+  (untracked), >0.25 rad post-rifle standing ~52° off the fig's
+  facing.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.

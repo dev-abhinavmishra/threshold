@@ -913,10 +913,16 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       pos: { x: number; y: number; z: number } }[] }).interactables
       ?.find((i) => i.kind === 'till');
     let tillPaid = false, tillHeld = 0, rifleCap = '', tillGone = false, tillSeen = '';
-    let workMark = false;
+    let workMark = false, headPre = 0, headPost = 0;
+    const clerkFig = ga.clerkFigs?.get(g.route.rooms.indexOf(clerked)) as
+      { position: { x: number; z: number }; rotation: { y: number };
+        userData?: { figureParts?: { head?: { rotation: { y: number } } } } } | undefined;
+    const clerkHead = clerkFig?.userData?.figureParts?.head;
     if (till) {
       ga.unpaidHeld = 0;
       g.imprints = 0;
+      // pre-rifle: the clerk attends the till — its head never tracks
+      headPre = clerkHead ? Math.abs(clerkHead.rotation.y) : -1;
       // stand close (0.7m): from the default 1.0m stand the unsold
       // front-edge wares out-score the mid-counter till on proximity —
       // inside the align band the nearer candidate wins regardless of aim
@@ -936,6 +942,15 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       for (let f = 0; f < 12; f++) g.frame();
       tillGone = !(g.interaction as { interactables?: { kind: string }[] })
         .interactables?.some((i) => i.kind === 'till');
+      // post-rifle: the cold counter's face finds your hands — stand
+      // ~52° off the fig's facing and its head turns to keep you
+      if (clerkFig && clerkHead) {
+        g.player.teleport(
+          clerkFig.position.x + Math.sin(clerkFig.rotation.y + 0.9) * 2.0, 0,
+          clerkFig.position.z + Math.cos(clerkFig.rotation.y + 0.9) * 2.0);
+        for (let f = 0; f < 40; f++) g.frame();
+        headPost = clerkHead.rotation.y;
+      }
     }
     // Ring the desk bell — the house's only positional lure: noise at
     // the counter, not at you, then a cooldown the tired click names.
@@ -992,7 +1007,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
-      workMark,
+      workMark, headPre, headPost,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
@@ -1027,6 +1042,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.tillHeld).toBe(2);
   expect(result.tillGone).toBe(true);
   expect(result.workMark, JSON.stringify(result)).toBe(true); // fresh 'work' sign at the counter
+  expect(result.headPre).toBeLessThan(0.15); // untracked before the rifle
+  expect(result.headPost, JSON.stringify(result)).toBeGreaterThan(0.25); // the clerk watches your hands
   // sprint 321 — the desk bell: noise at the counter, a spent tool inside 25s
   expect(result.bellFound, JSON.stringify(result)).toBe(true);
   expect(result.bellCap).toMatch(/note rolls/);
