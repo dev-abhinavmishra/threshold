@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "THRESHOLD — an original first-person browser horror game set in The Meridian.",
+  "description": "THRESHOLD \u2014 an original first-person browser horror game set in The Meridian.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.build.json && vite build",
@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "sim": "tsx scripts/simulate.ts",
-    "buildcheck": "tsx scripts/buildcheck.ts"
+    "buildcheck": "tsx scripts/buildcheck.ts",
+    "balance": "tsx scripts/balance.ts"
   },
   "dependencies": {
     "react": "18.3.1",
