@@ -26,6 +26,9 @@ export interface CheckerHooks {
   removeMesh: (o: THREE.Object3D) => void;
   cue: (name: string, at: Vec3 | null, caption: string, opts?: { severity?: 'info' | 'warn' | 'danger' }) => void;
   emit: (e: SoundEvent) => void;
+  /** The lamp held your face through a full spot — a witness line lands
+   *  in the house register upstairs. Fires once per dispatch, on the find. */
+  witnessed?: () => void;
 }
 
 export interface CheckerPlayer {
@@ -165,6 +168,8 @@ export class CrewChecker {
             intensity: FOUND_INTENSITY, category: 'impact',
             caption: "[the checker's lamp finds you — the count stands]",
           });
+          // a face in the lamp is a witness statement — it lands upstairs
+          hooks.witnessed?.();
         }
       } else {
         this.spotT = 0;

@@ -12,13 +12,15 @@ function underRooms(): RoomInstance[] {
 function hooks() {
   const emitted: SoundEvent[] = [];
   const cues: string[] = [];
+  const witnessed = vi.fn();
   const h: CheckerHooks = {
     addMesh: vi.fn(),
     removeMesh: vi.fn(),
     cue: vi.fn((_n, _a, caption: string) => { cues.push(caption); }),
     emit: vi.fn((e: SoundEvent) => { emitted.push(e); }),
+    witnessed,
   };
-  return { h, emitted, cues };
+  return { h, emitted, cues, witnessed };
 }
 
 function step(c: CrewChecker, rooms: RoomInstance[], h: CheckerHooks, seconds: number, player = { pos: v3(9e9, 0, 9e9), room: -1, exposed: false }) {
@@ -28,7 +30,7 @@ function step(c: CrewChecker, rooms: RoomInstance[], h: CheckerHooks, seconds: n
 describe('CrewChecker (the count answered)', () => {
   it('walks to the rung socket and cries the find to the room when it catches an exposed lingerer', () => {
     const rooms = underRooms();
-    const { h, emitted } = hooks();
+    const { h, emitted, witnessed } = hooks();
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
@@ -45,6 +47,8 @@ describe('CrewChecker (the count answered)', () => {
     expect(found!.x).toBeCloseTo(socket.x, 1);
     expect(found!.z).toBeCloseTo(socket.z, 1);
     expect(found!.intensity).toBeGreaterThanOrEqual(0.55); // over the rouse threshold
+    // the find enters the house book — a witness line, once per dispatch
+    expect(witnessed).toHaveBeenCalledTimes(1);
     // then it finishes its count and walks out
     step(c, rooms, h, 30, player);
     expect(c.stage).toBe('outbound');
@@ -87,7 +91,7 @@ describe('CrewChecker (the count answered)', () => {
 describe('CrewChecker — strip the lamp', () => {
   it('a stripped lamp sweeps blind and cries the theft on the spot', () => {
     const rooms = underRooms();
-    const { h, emitted, cues } = hooks();
+    const { h, emitted, cues, witnessed } = hooks();
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
@@ -105,6 +109,7 @@ describe('CrewChecker — strip the lamp', () => {
     step(c, rooms, h, 300, player);
     expect(c.stage).toBe('idle');
     expect(emitted.filter((e) => /count stands/.test(e.caption))).toHaveLength(0);
+    expect(witnessed, 'a blind lamp holds no face — no witness line').not.toHaveBeenCalled();
     expect(cues.some((t) => /counts blind/.test(t))).toBe(true);
   });
 
