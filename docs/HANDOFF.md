@@ -3206,3 +3206,29 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   5-seed sim, e2e hazards — the watched-hall leg asserts the recover
   prompt, wrap refund, relight, and that the blind mark persists,
   build.
+
+## sprint 317 — the fix (devin/1791396501-threshold-s317)
+
+- The Broker gains a second anchor on the man himself: 'Ask the
+  Broker for a fix' (kind 'fix', 1.2s hold, priority 3 — on the
+  brokerFigs figure at pos.y+1.4, NOT the pedestal socket — the
+  shared-anchor double-verb stays a design call). He makes a call and
+  one line comes off your DEEPEST ledger (tie order: tally > register
+  > file) priced by depth: `min(6 + worst*3, 18)` marginalia. Clean
+  slate → '[your slate is clean — nothing to fix]' (free shrug);
+  short → 'the crew does not write on credit'; checker walking →
+  'the floor is closed for the count' (sprint 311's shutter covers
+  the fix too). Per-ledger captions name the book: tally / register /
+  your file.
+- Trap/log: the fix anchor MUST out-priority the pedestal 'shop'
+  (priority 2) or 'Trade wares' steals focus at every stand point
+  that can see the figure — 3 is the floor. Stand ~1.4m off the fig
+  in e2e; the pedestal anchor is off-axis there.
+- Trap/log: prompt text is static ('Ask the Broker for a fix') —
+  the real price is computed in the press case; a price baked into
+  the prompt at rebuildInteractables time goes stale the moment a
+  ledger moves.
+- Gates: tsc, lint, 231 vitest (contract kind list += 'fix'), 5-seed
+  sim, e2e economy — the broker leg now drives the full arc: refuse →
+  pay → marked rate → fix (held 5→4, call caption) → clean refusal
+  uncharged, build.

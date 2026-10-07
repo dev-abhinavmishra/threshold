@@ -668,6 +668,41 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
       markedPaid = sock2.meta.sold === true && g.marginalia === 0;
       markedCap = caps.find((t) => /marked rate/.test(t)) ?? '';
     }
+    // The fix: a second anchor on the Broker himself — he makes a call and
+    // one line comes off your DEEPEST ledger, priced by depth. State here:
+    // unpaidTheft=3 (the marked ledger), marginalia=0 after the trade.
+    const fix = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'fix');
+    let fixPrompt = '', fixPaid = false, fixCap = '', heldAfterFix = -1;
+    if (fix) {
+      const ga = g as unknown as { unpaidTheft: number; unpaidHeld: number; paperTrail: number };
+      ga.unpaidHeld = 5; // the register outruns the tally — the fix hits it
+      g.marginalia = 18;
+      standAt(lobby, { x: fix.pos.x, z: fix.pos.z }, 1.4);
+      fixPrompt = (() => { let p = ''; for (let f = 0; f < 8; f++) { g.frame(); p = g.interaction.focused?.prompt ?? p; } return p; })();
+      drive({ x: fix.pos.x, y: fix.pos.y, z: fix.pos.z }, /fix/i,
+        () => ga.unpaidHeld === 4, 60);
+      heldAfterFix = ga.unpaidHeld;
+      fixPaid = heldAfterFix === 4 && g.marginalia === 0;
+      fixCap = caps.find((t) => /makes a call/.test(t)) ?? '';
+      // clean slate → nothing to fix
+      ga.unpaidTheft = 0; ga.unpaidHeld = 0; ga.paperTrail = 0;
+      g.marginalia = 30;
+      drive({ x: fix.pos.x, y: fix.pos.y, z: fix.pos.z }, /fix/i,
+        () => caps.some((t) => /slate is clean/.test(t)), 40);
+      const cleanCap = caps.find((t) => /slate is clean/.test(t)) ?? '';
+      return {
+        stage: 'done', refused, refuseCap, price, item,
+        sold: sock.meta.sold === true,
+        paid: markedPaid || g.marginalia === 0,
+        hasItem: g.inventory.some((s) => s.id === item),
+        traded: caps.some((t) => /traded/.test(t)),
+        twoPedestals: !!sock2, markedPaid, markedCap, expected2,
+        fixFound: true, fixPrompt, fixPaid, fixCap, heldAfterFix,
+        cleanCap, cleanUncharged: g.marginalia === 30,
+      };
+    }
     return {
       stage: 'done', refused, refuseCap, price, item,
       sold: sock.meta.sold === true,
@@ -675,6 +710,7 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
       hasItem: g.inventory.some((s) => s.id === item),
       traded: caps.some((t) => /traded/.test(t)),
       twoPedestals: !!sock2, markedPaid, markedCap, expected2,
+      fixFound: false,
     };
   });
 
@@ -688,6 +724,14 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(result.twoPedestals, JSON.stringify(result)).toBe(true);
   expect(result.markedPaid, JSON.stringify(result)).toBe(true);
   expect(result.markedCap).toMatch(/marked rate/);
+  // sprint 317 — the fix: deepest ledger struck, priced by depth, clean refuses
+  expect(result.fixFound, JSON.stringify(result)).toBe(true);
+  expect(result.fixPrompt).toMatch(/fix/i);
+  expect(result.fixPaid, JSON.stringify(result)).toBe(true);
+  expect(result.heldAfterFix).toBe(4);
+  expect(result.fixCap).toMatch(/makes a call/);
+  expect(result.cleanCap).toMatch(/slate is clean/);
+  expect(result.cleanUncharged).toBe(true);
   expect(errors).toEqual([]);
 });
 
