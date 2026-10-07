@@ -753,6 +753,27 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           meta: { workOrder: true, price: lootRng.int(3, 8) },
         });
       }
+      // The counter-claim — the under library's sixth paper, on its own
+      // 'countersign' stream so the roll can't reseat the loot consumers
+      // around it. Where the register files claims, this files YOUR file:
+      // it buys lines off the consult ledger the Filer keeps. Same desk
+      // family as the register — a clerk's form, not a crew notice.
+      const csRng = streams.stream('countersign');
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !csRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind) && !p.meta?.foreshadow);
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { counterClaim: true, price: csRng.int(4, 8) },
+        });
+      }
+
       const entranceRoom = mainRooms.find((r) => r.templateId === 'ms-under-entrance');
       const exitRoom = underRooms[underRooms.length - 1];
       const returnRoom = mainRooms[Math.min(underReturn, mainRooms.length - 1)];

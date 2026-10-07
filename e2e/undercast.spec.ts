@@ -546,9 +546,29 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     ga.enterUnderscript();
     ga.godMode = true;
     ga.marginalia = 40;
-    // One consult on the books — beneath notice until the docket rifling
-    // pushes the trail over her threshold (1 + 2 = 3).
-    ga.paperTrail = 1;
+    // Four consults on the books — heavy enough to lighten with paper.
+    ga.paperTrail = 4;
+
+    // --- 0. the counter-claim — a paid line off your own file ---
+    const csRoom = g.route.underRooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.counterClaim && !s.meta?.taken));
+    if (csRoom) {
+      g.player.teleport(csRoom.origin.x, 0, csRoom.origin.z);
+      ga.currentRoom = csRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const csSock = (csRoom.sockets ?? []).find((s) => s.meta?.counterClaim && !s.meta?.taken);
+      for (let f = 0; f < 60 && csSock && csSock.meta && !csSock.meta.taken; f++) {
+        const sx = csRoom.origin.x - csSock.pos.x, sz = csRoom.origin.z - csSock.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(csSock.pos.x + (sx / sl) * 0.9, 0, csSock.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(csSock.pos.x - g.player.pos.x, csSock.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((csSock.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const trailAfterClaim = ga.paperTrail;
 
     // --- 1. rifle her drawer — the loudest question in the under ---
     const fRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'filer'));
@@ -617,14 +637,15 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
-    return { stage: 'done' as const, rifled, trailAfterRifle, docketPaid,
+    return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
       filed, wordOut, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
 
   if (result.stage !== 'done') test.skip();
+  expect(result.trailAfterClaim, JSON.stringify(result)).toBe(3); // 4 − 2 + 1: the asking is logged too
   expect(result.rifled, JSON.stringify(result)).toBe(true);
-  expect(result.trailAfterRifle, JSON.stringify(result)).toBe(3);
+  expect(result.trailAfterRifle, JSON.stringify(result)).toBe(5);
   expect(result.docketPaid, JSON.stringify(result)).toBe(true);
   expect(result.filed, JSON.stringify(result)).toBe(true);
   expect(result.wordOut, JSON.stringify(result)).toBe(true);

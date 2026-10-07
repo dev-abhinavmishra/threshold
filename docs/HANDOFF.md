@@ -2684,3 +2684,15 @@ listener pauses on lock loss).
   station: square anchors 1.15m toward room center, the docket sits ON the
   deskPos (y=0.9). Focus scoring separates them by ~1.1m; same aim-pitch
   idiom (`pos.y + 0.6`) drives both.
+
+## sprint 299 — the counter-claim (the paper that files YOUR file)
+
+- Sixth under paper: 'File a counter-claim — N marginalia' (4–8, desk hosts —
+  the register family). Strikes 2 lines off `paperTrail`, then logs the
+  asking as a consult (+1): **net −1**. At trail 0 it shrugs and charges
+  nothing; at trail 1 it nets 0. It can lighten a file, never clean it —
+  only the Filer's desk squares the card.
+- Generator: post-pass on the new 'countersign' stream (isolated from every
+  lootRng consumer around it), placed after the work-order block.
+- e2e 'the index' now drives the full ledger arc: counter-claim (4→3) →
+  rifle the docket (3→5) → filed → runner → square (→0).

@@ -2094,6 +2094,29 @@ export class Game {
         this.cue('whisper', it.pos, text);
         return;
       }
+      case 'counterClaim': {
+        // The counter-claim — the paper that files YOUR file. Strikes two
+        // lines off the consult ledger... but the asking is itself a paid
+        // consult, so the clerk logs it right back: net −1. It can lighten
+        // a file, never empty it cleanly — only her desk squares the card.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.paperTrail <= 0) {
+          this.cue('door-locked', it.pos, '[your file is already blank — the clerk shrugs]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the counter-claim wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.paperTrail = Math.max(0, this.paperTrail - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[the clerk strikes two lines from your file — and logs the asking]');
+        return;
+      }
       case 'watchSheet': {
         // The inspection sheet — the security wing's paper. Where the fault
         // book files what BITES, this files what WATCHES: which doors ahead

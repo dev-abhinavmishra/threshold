@@ -1189,6 +1189,31 @@ describe('the sealed warrant (sprint 290)', () => {
   });
 });
 
+describe('the counter-claim (sprint 299)', () => {
+  it('clerk forms sit on under desk furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.counterClaim),
+          `counter-claim on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.counterClaim) continue;
+          count++;
+          expect(r.index % 20, `counter-claim on a safe landing ${seed}`).not.toBe(0);
+          expect(typeof s.meta.price, `counter-claim unpriced ${seed}`).toBe('number');
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `counter-claim on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        }
+      }
+      expect(count, `no counter-claims on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
 describe('the Filer (sprint 297)', () => {
   it('clerks work dry index rooms below, never the main route', () => {
     const STATIONS = new Set(['filing', 'recordsCage', 'keyCabinet']);
