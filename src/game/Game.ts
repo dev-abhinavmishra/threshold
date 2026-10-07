@@ -1711,6 +1711,15 @@ export class Game {
         // register's rate: the same reading the Detective's desk makes.
         if (sock.meta.clerk !== undefined) {
           if (sock.meta.sold) return;
+          // The counter goes cold: a clerk that watched you rifle its
+          // till folds its hands — no wares, no page, not at any rate.
+          const cRoom = this.activeRooms().findIndex((r) =>
+            r.sockets.includes(sock));
+          if (cRoom >= 0 && this.closedCounters.has(cRoom)) {
+            this.cue('door-locked', it.pos,
+              "[the clerk folds its hands — the counter is closed to you]", 'warn');
+            return;
+          }
           const cItem = sock.meta.clerkItem as ItemId | undefined;
           const cPrice = (sock.meta.clerkPrice as number) ?? 12;
           if (!cItem) return;
@@ -1795,6 +1804,12 @@ export class Game {
         const room = this.activeRooms()[roomIndex];
         const page = room?.sockets.find((s) => s.meta.clerk === 'slot0');
         if (!room || !page || page.meta.clerkQ === undefined) return;
+        // A rifled counter serves nothing — the clerk watched your hands.
+        if (this.closedCounters.has(roomIndex)) {
+          this.cue('door-locked', it.pos,
+            "[the clerk folds its hands — the counter is closed to you]", 'warn');
+          return;
+        }
         if (this.clerkAsked.has(roomIndex)) {
           this.cue('door-locked', it.pos, '[the clerk has said what it knows]', 'info');
           return;
@@ -1872,6 +1887,7 @@ export class Game {
         const till = room?.sockets.find((s) => s.meta.clerk === 'slot0');
         if (!till || till.meta.tillTaken === true) { it.enabled = false; return; }
         till.meta.tillTaken = true;
+        this.closedCounters.add(roomIndex);
         this.unpaidHeld += 2;
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
@@ -5260,6 +5276,8 @@ export class Game {
   private readonly clerkAsked = new Set<number>();
   /** Desk-bell cooldowns: roomIndex -> clock.time of the last ring. */
   private readonly bellRung = new Map<number, number>();
+  /** Staffed counters that watched you rifle the till — closed to you. */
+  private readonly closedCounters = new Set<number>();
 
   private ensureClerk(roomIndex: number): void {
     if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;
