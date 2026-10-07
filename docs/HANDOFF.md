@@ -2527,9 +2527,25 @@ Traps:
   `warden:N` — same-ctx baselines read nothing (readBy already full):
   useful for A/B pacing tests.
 
+## sprint 294 — the whistle dies quick
+
+What:
+- The learned escalation reaches the strike: a learned warden's
+  whistle grace drops 0.35s→0.12s and its charge runs 4.3 (was 3.5).
+  The whistle caption changes — `[a whistle — the Warden already
+  knows you]` — the tell that the worked floor armed the strike.
+Traps:
+- Whistle-timing assertions: leave slack for an LOS blink — `seenT`
+  decays on a missed frame (pin-ahead ordering cost one frame).
+- Charge speed needs a path-length measure while pinning the player
+  ahead of live heading — a static target ends the charge early
+  (strike at <1.0m) and caps `walked` at the gap, not the speed.
+- Keep walked measurement under the 1.5s lost-scent grace — a stray
+  LOS drop mid-measure ends the charge.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-set hearing remains a design call (needs Abhinav).
   - The shared-anchor double-verb flag is open with Abhinav.
   - The Auditor wanted-poster stays a design call.
-  - The learned-pace could extend to the charge (a learned warden
-    charges 1.4× too?) — currently only the line quickens.
+  - The grafter has no escalation analog — a grafter that has read
+    N marks could drag FASTER (learned grafter) for asymmetry.

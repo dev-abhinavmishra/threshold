@@ -547,7 +547,7 @@ export class Warden extends Entity {
     const dx = this.lastSeen.x - this.pos.x, dz = this.lastSeen.z - this.pos.z;
     const len = Math.hypot(dx, dz);
     if (len > 0.01) {
-      const step = Math.min(len, 3.5 * dt);
+      const step = Math.min(len, (this.learned ? 4.3 : 3.5) * dt);
       this.pos.x += (dx / len) * step;
       this.pos.z += (dz / len) * step;
     }
@@ -577,11 +577,13 @@ export class Warden extends Entity {
 
     if (this.canSee()) {
       this.seenT += dt;
-      if (this.seenT > 0.35) {
+      if (this.seenT > (this.learned ? 0.12 : 0.35)) {
         this.charging = true;
         this.lostT = 0;
         v3copy(this.lastSeen, p.pos);
-        c.cue('alarm-ring', this.pos, '[a whistle — the Warden has you]', { severity: 'danger' });
+        c.cue('alarm-ring', this.pos, this.learned
+          ? '[a whistle — the Warden already knows you]'
+          : '[a whistle — the Warden has you]', { severity: 'danger' });
         c.sound.emit({ x: this.pos.x, y: 1.6, z: this.pos.z, intensity: 1.0, category: 'entity-cue', caption: '[whistle blast]', source: this.id });
         this.rig?.play('move', 0.05);
         return;
