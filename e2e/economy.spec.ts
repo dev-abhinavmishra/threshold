@@ -484,17 +484,37 @@ test('vend machine refuses on short funds, sells on exact pay', async ({ page })
     const refused = sock.meta.taken !== true && g.imprints === price - 1;
 
     // Exact pay: feed again — charged, item granted, socket spent.
+    // sprint 329 — the whole spend is marked coin: it rings where it lands.
+    const gh = g as unknown as { hotImprints: number };
+    gh.hotImprints = price;
+    const snd = (g as unknown as { sound: { emit: (e: never) => void } }).sound;
+    const origEmit = snd.emit.bind(snd);
+    const rings: { cap?: string; x?: number; z?: number }[] = [];
+    snd.emit = (e: { category?: string; caption?: string; x?: number; z?: number }) => {
+      if (e.category === 'distraction') rings.push({ cap: e.caption, x: e.x, z: e.z });
+      return origEmit(e as never);
+    };
     g.imprints = price;
     standAt(room, sock.pos);
     drive(sock.pos, /feed the machine/i, () => sock.meta.taken === true, 70);
+    snd.emit = origEmit;
+    const markedRang = rings.some((r) => /marked coin/.test(r.cap ?? ''));
+    const markedAt = rings.length
+      ? Math.hypot((rings[0].x ?? 0) - sock.pos.x, (rings[0].z ?? 0) - sock.pos.z) : -1;
+    const hotAfter = gh.hotImprints;
     const inv = g.inventory.find((s) => s.id === item);
     const sold = sock.meta.taken === true && g.imprints === 0 && !!inv;
-    return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints, inv: g.inventory.map((s) => s.id) };
+    return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints,
+      inv: g.inventory.map((s) => s.id), markedRang, markedAt, hotAfter };
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   expect(result.refused, result.promptsA).toBe(true);
   expect(result.sold, JSON.stringify(result.inv)).toBe(true);
+  // sprint 329 — the marked coin testifies: one ring at the till, then spent
+  expect(result.markedRang, JSON.stringify(result)).toBe(true);
+  expect(result.markedAt).toBeLessThan(0.8);
+  expect(result.hotAfter).toBe(0);
   expect(errors).toEqual([]);
 });
 
@@ -699,7 +719,8 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
         pos: { x: number; y: number; z: number } }[] }).interactables
         ?.find((i) => i.kind === 'purse');
       let pursePaid = false, purseSour = false, purseShortCap = '',
-        purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '';
+        purseCleanCap = '', purseSourCap = '', margAfterPurse = -1, purseSeen = '',
+        purseWashCap = '', purseWashed = false;
       if (purse) {
         g.imprints = 20; // marginalia still 30 — the clean fix never charged
         standAt(lobby, { x: purse.pos.x, z: purse.pos.z }, 0.7);
@@ -716,11 +737,20 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
           () => caps.some((t) => /purse wants/.test(t)), 40);
         purseShortCap = caps.find((t) => /purse wants/.test(t)) ?? '';
         margAfterPurse = g.marginalia;
+        // sprint 329 — the wash: feed the purse the till's marked coin;
+        // the under takes hot imprints without asking — they die silent.
+        const gh = g as unknown as { hotImprints: number };
+        gh.hotImprints = 6;
+        g.imprints = Math.max(g.imprints, 6);
+        drive(purse.pos, /purse|change/i,
+          () => caps.some((t) => /washes the marked coin/.test(t)), 50);
+        purseWashCap = caps.find((t) => /washes the marked coin/.test(t)) ?? '';
+        purseWashed = purseWashCap !== '' && gh.hotImprints === 0;
       }
       return {
         stage: 'done', refused, refuseCap, price, item,
         purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap,
-        purseShortCap, margAfterPurse,
+        purseShortCap, margAfterPurse, purseWashCap, purseWashed,
         purseSeen, pursePos: purse ? { x: purse.pos.x, y: purse.pos.y, z: purse.pos.z } : null,
         bsockPos: lobby.sockets.filter((s) => s.meta?.broker !== undefined)
           .map((s) => ({ x: Math.round(s.pos.x * 10) / 10, y: s.pos.y, z: Math.round(s.pos.z * 10) / 10 })),
@@ -770,6 +800,9 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(result.purseSour, JSON.stringify(result)).toBe(true);
   expect(result.purseSourCap).toMatch(/rate sours/);
   expect(result.purseShortCap).toMatch(/purse wants/);
+  // sprint 329 — the wash: marked coin dies in the under's till
+  expect(result.purseWashed, JSON.stringify(result)).toBe(true);
+  expect(result.purseWashCap).toMatch(/washes the marked coin/);
   expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });
@@ -787,7 +820,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     g.renderFrame = () => {};
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
-    const ga = g as unknown as { unpaidHeld: number;
+    const ga = g as unknown as { unpaidHeld: number; hotImprints?: number;
       clerkFigs?: Map<number, unknown>;
       hazard: { evidence: { pos: { x: number; z: number }; kind: string;
         weak?: boolean }[] };
@@ -915,6 +948,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       pos: { x: number; y: number; z: number } }[] }).interactables
       ?.find((i) => i.kind === 'till');
     let tillPaid = false, tillHeld = 0, rifleCap = '', tillGone = false, tillSeen = '';
+    let hotAfterRifle = -1;
     let workMark = false, headPre = 0, headPost = 0;
     const clerkFig = ga.clerkFigs?.get(g.route.rooms.indexOf(clerked)) as
       { position: { x: number; z: number }; rotation: { y: number };
@@ -953,6 +987,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       rifleCap = caps.find((t) => /off the till/.test(t)) ?? '';
       tillPaid = rifleCap !== '' && (g.imprints > 0 || g.inventory.length > 0);
       tillHeld = ga.unpaidHeld;
+      // sprint 329 — imprints paid off the till are marked coin
+      hotAfterRifle = ga.hotImprints ?? -1;
       // the till smells of hands — the rifle leaves fresh 'work' sign at
       // the counter (kind-agnostic readers pull it; the warden weighs it)
       workMark = ga.hazard.evidence
@@ -1113,6 +1149,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
+      hotAfterRifle,
       workMark, headPre, headPost, bellLookWarm, relBellN, bellLookCold, relPlayerN,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
@@ -1150,6 +1187,9 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.tillHeld).toBe(2);
   expect(result.tillGone).toBe(true);
   expect(result.workMark, JSON.stringify(result)).toBe(true); // fresh 'work' sign at the counter
+  // sprint 329 — the till's coin is marked: hot iff it paid imprints
+  expect((result.hotAfterRifle ?? -1) > 0 === (result.tillRifleCap ?? '').includes('marked'),
+    JSON.stringify(result)).toBe(true);
   expect(result.headPre).toBeLessThan(0.15); // untracked before the rifle
   expect(result.headPost, JSON.stringify(result)).toBeGreaterThan(0.25); // the clerk watches your hands
   // sprint 327 — the bell draws its eye: warm clerk turns toward its own
