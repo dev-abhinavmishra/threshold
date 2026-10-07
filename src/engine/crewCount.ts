@@ -31,4 +31,9 @@ export class CrewCount {
   get pending(): number {
     return this.losses.length;
   }
+
+  /** Run teardown — a queued report must not ring in the next run. */
+  reset(): void {
+    this.losses = [];
+  }
 }

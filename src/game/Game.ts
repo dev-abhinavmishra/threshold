@@ -17,6 +17,7 @@ import { GameClock } from '../engine/clock';
 import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
 import { CrewCount } from '../engine/crewCount';
+import { CrewChecker, roomOf as underRoomOf, type CheckerHooks } from '../entities/crewChecker';
 import { pointInRoom } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
@@ -227,6 +228,16 @@ export class Game {
   private milestones = new Map<number, Milestone>();
   private hazard = new HazardField();
   private crewCount = new CrewCount();
+  private checker = new CrewChecker();
+
+  private checkerHooks(): CheckerHooks {
+    return {
+      addMesh: (o) => this.entityGroup.add(o),
+      removeMesh: (o) => this.entityGroup.remove(o),
+      cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
+      emit: (e) => this.sound.emit(e),
+    };
+  }
   private canvas: HTMLCanvasElement;
   private input = { interactPressed: false };
   private inventory: { id: ItemId; count: number }[] = [];
@@ -519,6 +530,8 @@ export class Game {
     this.milestones.clear();
     this.doorStates.clear();
     this.hazard = new HazardField();
+    this.crewCount.reset();
+    this.checker.reset(this.checkerHooks());
     for (const r of [...this.route.rooms, ...this.route.underRooms]) this.hazard.addFromRoom(r);
     this.roomBounds.clear();
     // the prop layer holds no memory across runs — every one-time
@@ -6166,8 +6179,20 @@ export class Game {
     this.hazard.update(this.entityCtx(), dt);
     // the count — due loss-reports ring where the crew property stood:
     // loud enough to rouse the dormant AND pull the room's own listeners
-    this.crewCount.tick(this.clock.time, (l) =>
-      this.sound.emit({ x: l.x, y: 0.6, z: l.z, intensity: 0.6, category: 'item', caption: l.caption }));
+    this.crewCount.tick(this.clock.time, (l) => {
+      this.sound.emit({ x: l.x, y: 0.6, z: l.z, intensity: 0.6, category: 'item', caption: l.caption });
+      // ...and the books send somebody to look
+      if (this.route) this.checker.dispatch(this.route.underRooms, l, this.checkerHooks());
+    });
+    // the checker walks: inbound → sweep the rung socket → outbound
+    if (this.checker.active && this.route) {
+      const p = this.player.pos;
+      this.checker.update(dt, this.route.underRooms, {
+        pos: p,
+        room: this.space === 'under' ? underRoomOf(this.route.underRooms, p) : -1,
+        exposed: !this.player.hiddenSpot && this.player.protection !== 'hidden',
+      }, this.checkerHooks());
+    }
     for (const e of [...this.entities]) {
       e.update(dt);
       if (e.state === 'done') {
