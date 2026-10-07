@@ -3646,3 +3646,19 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `g.victory()`, asserts the reckoning text in the DOM.
 - Readout only — no ending gating (that would be a design call).
 - Gates: tsc, lint, 233 vitest, 5-seed sim, runflow victory leg, build.
+
+## sprint 337 — the mark dies with the goods
+- `hotItems` only left the pool via fence/restock — a mark outlived
+  its last unit, so a stack at count 0 still testified and a fresh
+  CLEAN ware of that id witnessed falsely (false-witness bug).
+  `pruneHotMarks()` runs per frame in `frame()` (post-refreshProtection):
+  an id leaves the pool when no carried stack has count > 0. The three
+  read sites (traverse stock-read, fence take, restock take) also
+  tighten to `i.count > 0` so a just-emptied stack never witnesses
+  in the gap before the prune.
+- e2e: the clerk leg zeroes the marked chock's count → prunes → then
+  gives a CLEAN chock — head must NOT chase it. Assert shape: an
+  unwatched head has NO decay path (`if (head && watches)` is the
+  only writer) — it holds its last bearing, so the proof is drift
+  vs the old yaw < 0.15, not decay to ~0.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.

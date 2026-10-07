@@ -1173,7 +1173,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     let unfiledLocal = '', unfiledSeen = '', ring2Ok = false;
     let unfiledStand: { x: number; z: number } | null = null, unfiledDist = -1;
     let till2Pos: { x: number; z: number } | null = null;
-    let stockCue = '', stockYaw = -1;
+    let stockCue = '', stockYaw = -1, markPruned = false, cleanYaw = -1,
+      cleanDrift = -1;
     let gateProbe: { enabled: boolean; dist: number; align: number; prox: number; eyeY: number } | null = null;
     let ejectProbe: { pre: { x: number; z: number }; post: { x: number; z: number };
       origin: { x: number; z: number } } | null = null;
@@ -1204,6 +1205,21 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         for (let f = 0; f < 24; f++) g.frame();
         stockYaw = headB.rotation.y;
         stockCue = caps.find((t) => /reads its own stock/.test(t)) ?? '';
+        // sprint 337 — the mark dies with the goods: zero the last
+        // marked unit and the pool prunes it; a fresh clean ware of
+        // the same id is not the take and no eye finds it
+        const chockStack = g.inventory.find((i) => i.id === 'doorChock');
+        if (chockStack) chockStack.count = 0;
+        for (let f = 0; f < 30; f++) g.frame(); // prune + head decay
+        markPruned = !(ga.hotItems?.has('doorChock') ?? true);
+        g.giveItem('doorChock', 1);
+        g.player.teleport(figB.position.x + Math.sin(figB.rotation.y - 1.0) * 2.0, 0,
+          figB.position.z + Math.cos(figB.rotation.y - 1.0) * 2.0);
+        for (let f = 0; f < 30; f++) g.frame();
+        cleanYaw = headB.rotation.y;
+        // an unwatched head holds its last bearing (no decay path) — the
+        // proof is it does NOT chase the clean carrier to this side
+        cleanDrift = Math.abs(cleanYaw - stockYaw);
         ga.hotItems?.clear();
       }
       // interactables mint per-room on approach — find room B's once inside
@@ -1274,7 +1290,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       unfiledCap, unfiledHeld, unfiledCold, unfiledRoom,
       unfiledLocal, unfiledSeen, ring2Ok, unfiledStand, unfiledDist, till2Pos, gateProbe, ejectProbe,
-      stockCue, stockYaw,
+      stockCue, stockYaw, markPruned, cleanYaw, cleanDrift,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
       purseSeen, pursePos: purse ? { x: Math.round(purse.pos.x*10)/10, y: purse.pos.y, z: Math.round(purse.pos.z*10)/10 } : null,
       pursePlayer: { x: Math.round(g.player.pos.x*10)/10, z: Math.round(g.player.pos.z*10)/10 },
@@ -1339,6 +1355,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   // take on you — head yaw tracks the carrier + the stock cue pings
   expect(result.stockCue, JSON.stringify(result)).toMatch(/reads its own stock/);
   expect(Math.abs(result.stockYaw ?? 0), JSON.stringify(result)).toBeGreaterThan(0.25);
+  // sprint 337 — the mark dies with the goods: consumed units prune the
+  // pool and a clean re-acquired ware of the same id doesn't witness
+  expect(result.markPruned, JSON.stringify(result)).toBe(true);
+  expect(result.cleanDrift, JSON.stringify(result)).toBeGreaterThan(-1);
+  expect(result.cleanDrift, JSON.stringify(result)).toBeLessThan(0.15);
   // sprint 328 — the unfiled hands: rifled inside the bell's look window
   // the register never writes you, but the counter still goes cold
   expect(result.unfiledRoom, 'second clerked room needed for the unfiled phase').toBeGreaterThan(-1);

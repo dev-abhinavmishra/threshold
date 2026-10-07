@@ -2031,7 +2031,7 @@ export class Game {
         // file — the register's witness doesn't unwrite for a wrap.
         const cIdx = (it.data as { roomIndex: number }).roomIndex;
         if (!this.closedCounters.has(cIdx)) { it.enabled = false; return; }
-        const take = this.inventory.filter((i) => this.hotItems.has(i.id));
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0) {
           it.enabled = false;
           this.cue('drawer', it.pos, '[the drawer is empty — nothing of his on you]', 'info');
@@ -2135,7 +2135,7 @@ export class Game {
           this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
           return;
         }
-        const take = this.inventory.filter((i) => this.hotItems.has(i.id));
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0) {
           this.cue('whisper', it.pos,
             "[the broker glances at your bag — nothing he'd touch]", 'info');
@@ -4774,7 +4774,7 @@ export class Game {
             if (rung && this.clock.time - rung.t < 3.5) {
               tx = rung.x; tz = rung.z; watches = true;
             } else if (this.hotItems.size > 0
-                && this.inventory.some((i) => this.hotItems.has(i.id))) {
+                && this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0)) {
               // sprint 331 — the till's stock testifies: carried goods
               // still read as the clerk's own shelf — its eye finds the
               // take on you, and the first read pings where you stand.
@@ -5603,6 +5603,16 @@ export class Game {
       '[the till knows its own coin — the register files the hands that fed it]', 'warn');
   }
 
+  /** The marked-stock pool only testifies while its units are still
+   *  carried — the last unit consumed drops the mark, so a fresh clean
+   *  ware of that id is never the take. Pruned per frame; the pool is
+   *  a handful of ids, the scan is trivial. */
+  private pruneHotMarks(): void {
+    for (const id of this.hotItems) {
+      if (!this.inventory.some((i) => i.id === id && i.count > 0)) this.hotItems.delete(id);
+    }
+  }
+
   private ensureClerk(roomIndex: number): void {
     if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;
     const room = this.activeRooms()[roomIndex];
@@ -6200,6 +6210,7 @@ export class Game {
     const blockers = this.collectBlockers();
     this.player.update(dt, moveIn, blockers, this.settings, this.sound, this.activeRooms()[this.currentRoom] ?? null, this.clock.time);
     this.player.refreshProtection(this.activeRooms()[this.currentRoom]?.safeZones ?? []);
+    this.pruneHotMarks();
 
     // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
     // The Bellman (and anything else that trails you) reads these.
