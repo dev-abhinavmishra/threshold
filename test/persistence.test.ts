@@ -58,6 +58,33 @@ describe('checkpoint', () => {
     clearCheckpoint();
     expect(loadCheckpoint()).toBeNull();
   });
+
+  it('the ledgers outlive you — debts and marks round-trip', () => {
+    // sprint 332 — a death must not launder the books: the checkpoint
+    // carries the five ledger fields so a reload keeps your name.
+    saveCheckpoint({
+      seedText: 'cp-seed', roomIndex: 12, underIndex: 0, inUnderscript: false, difficulty: 'standard',
+      health: 60, inventory: [{ id: 'bandage', count: 2 }], imprints: 9, marginalia: 3,
+      stats: { roomsEntered: 12, deaths: 0, kills: 0, hidesUsed: 0, itemsUsed: 0, imprintsFound: 9, marginaliaFound: 3, timePlayed: 40, entitiesSurvived: 1, secretsFound: 0 },
+      unpaidTheft: 3, unpaidHeld: 2, paperTrail: 4, hotImprints: 6,
+      hotItems: ['bandage', 'tonic'],
+    });
+    const cp = loadCheckpoint();
+    expect(cp!.unpaidTheft).toBe(3);
+    expect(cp!.unpaidHeld).toBe(2);
+    expect(cp!.paperTrail).toBe(4);
+    expect(cp!.hotImprints).toBe(6);
+    expect(cp!.hotItems).toEqual(['bandage', 'tonic']);
+    // pre-332 saves (no ledger fields) restore as a clean slate, not NaN
+    saveCheckpoint({
+      seedText: 'old-save', roomIndex: 3, underIndex: 0, inUnderscript: false, difficulty: 'standard',
+      health: 100, inventory: [], imprints: 0, marginalia: 0,
+      stats: { roomsEntered: 3, deaths: 0, kills: 0, hidesUsed: 0, itemsUsed: 0, imprintsFound: 0, marginaliaFound: 0, timePlayed: 10, entitiesSurvived: 0, secretsFound: 0 },
+    });
+    const old = loadCheckpoint()!;
+    expect(old.unpaidTheft ?? 0).toBe(0);
+    expect(old.hotItems ?? []).toEqual([]);
+  });
 });
 
 describe('store phases', () => {

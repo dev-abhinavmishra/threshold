@@ -3556,3 +3556,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   phase (warm figB + hot doorChock → head yaw >0.25 + 'reads its
   own stock' cue).
 - Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 332 — the ledgers outlive you (death can't launder the books)
+- Real hole found in `CheckpointSave`: it carried imprints/marginalia/
+  inventory but NOT `unpaidTheft`/`unpaidHeld`/`paperTrail`/`hotImprints`/
+  `hotItems` — a checkpoint RELOAD (fresh Game) forgot every debt and
+  every mark, so dying was a free full launder for the whole marked
+  economy. Worse, `startRun` never reset the ledger fields at all: a
+  same-instance fresh run LEAKED the previous run's debts.
+- Fix: the five fields are now optional on `CheckpointSave` (old saves
+  parse as a clean slate via `?? 0`); `makeCheckpoint` writes them
+  (`hotItems` → array); `startRun` restores `cp?.x ?? 0` — which both
+  restores a reload AND zeroes a fresh run (the leak closes for free).
+  `stockSeen` clears per run (rooms re-read the take once — fine).
+  Semantics: debts accrued after the checkpoint are forgiven on retry,
+  same as loot (consistent with the honest-replay prop rule).
+- e2e broker leg: `cpLedger` asserts a live `makeCheckpoint` mirrors
+  paperTrail/hotImprints/hotItems/unpaidTheft. vitest persistence spec
+  round-trips all five + the old-save `?? 0` path.
+- Trap: `hotItems` is `readonly` — rebuild via clear()+add, never assign.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg, build.
