@@ -3074,3 +3074,28 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `unpaidHeld = 0` pre-run and asserts `=== 1` after the find.
 - Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
   checker leg asserts the witness line + cue), build.
+
+## sprint 311 — the floor closes for the count
+
+- While the checker walks (`checker.active` — inbound, sweep, or
+  outbound), every broker pedestal in the under refuses trade:
+  '[the floor is closed for the count]' (warn cue on the attempt). The
+  prompt stays up; the refusal is the tell. When he despawns the floor
+  reopens — same pedestal sells normally.
+- Design: a pilfered under goes market-dead for exactly the dangerous
+  window — you cannot spend marginalia while the crew audits your
+  theft, so the count's 75s-delayed walk now prices TIME as well as
+  noise. Scoped to the Broker deliberately: he is the only STAFFED
+  marginalia point (same scoping rule as sprint 282's marked rate);
+  cages and papers are unattended reads, not staff you can shutter.
+- The gate sits in Game.tryInteract's 'shop' case after the
+  broker/sold guards — non-broker 'shop' sockets unchanged.
+- Traps/log: post-found shutter window is safe by construction — the
+  find lands ~1.4s into a 26s sweep, so ≥24 sim-s of active time
+  remains before outbound can end (≫ the e2e leg's 90-frame attempt).
+  's' seed u-lobby pedestals stock reliably; the leg picks an unsold
+  one and sets marginalia=99 so refusal reads as the shutter, not the
+  purse.
+- Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
+  checker leg now asserts closed-cue + refusal + reopening sale),
+  build.

@@ -1605,6 +1605,12 @@ export class Game {
         const sock = it.data as Socket;
         if (sock.meta.broker === undefined) return;
         if (sock.meta.sold) return;
+        // the floor shutters while the count walks — the Broker will not
+        // trade under the crew's own lamp
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
         const item = sock.meta.brokerItem as ItemId;
         const price = (sock.meta.brokerPrice as number) ?? 20;
         // the clerks' score is on your hands — an unpaid tally trades at
