@@ -16,6 +16,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { GameClock } from '../engine/clock';
 import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { CrewCount } from '../engine/crewCount';
 import { pointInRoom } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
@@ -225,6 +226,7 @@ export class Game {
   private spawned = new Set<string>();
   private milestones = new Map<number, Milestone>();
   private hazard = new HazardField();
+  private crewCount = new CrewCount();
   private canvas: HTMLCanvasElement;
   private input = { interactPressed: false };
   private inventory: { id: ItemId; count: number }[] = [];
@@ -1818,6 +1820,10 @@ export class Game {
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
         it.enabled = false;
+        // under cages are crew property — the books below count them on a
+        // slow cycle, and the till rings ~75s later where the tag hung
+        if (cur) this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[a tag reads drawn early — the count is short]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         const contains = sock.meta.contains as string | undefined;
         if (contains === 'marginalia') {
@@ -2498,6 +2504,9 @@ export class Game {
           this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the sledge]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        // the drag's cargo is crew property — the count finds it short later
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the drag reads light — the count is short]');
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
       }
@@ -2608,6 +2617,9 @@ export class Game {
         this.giveItem('handLamp', scavenged ? 30 : 55);
         this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        // its lamp is crew property too — stripped or scavenged, it counts
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the drag\'s lamp is marked gone — the count is short]');
         return;
       }
       case 'forge': {
@@ -6152,6 +6164,10 @@ export class Game {
     // entities + director
     this.spawnScheduled();
     this.hazard.update(this.entityCtx(), dt);
+    // the count — due loss-reports ring where the crew property stood:
+    // loud enough to rouse the dormant AND pull the room's own listeners
+    this.crewCount.tick(this.clock.time, (l) =>
+      this.sound.emit({ x: l.x, y: 0.6, z: l.z, intensity: 0.6, category: 'item', caption: l.caption }));
     for (const e of [...this.entities]) {
       e.update(dt);
       if (e.state === 'done') {

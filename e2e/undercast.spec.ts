@@ -753,3 +753,65 @@ test('the index — the filer files your questions, the halls listen', async ({ 
   expect(result.posted, JSON.stringify(result)).toBe(false);
   expect(errors).toEqual([]);
 });
+
+test('the count — the till rings late where your hands were (sprint 305)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>; clock: { time: number };
+      sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    const heard: { x: number; z: number; caption: string; intensity: number }[] = [];
+    ga.sound.on((e) => { if (e.caption && /count is short/.test(e.caption)) heard.push(e as never); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    // pilfer the tag — a real claim, paid and taken
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // let the books catch up — the report is queued ~75 sim-seconds out
+    for (let f = 0; f < 80 * 30 && heard.length === 0; f++) g.frame();
+    const ring = heard[0];
+    const dx = ring ? Math.abs(ring.x - tag.pos.x) : 99;
+    const dz = ring ? Math.abs(ring.z - tag.pos.z) : 99;
+    return { stage: 'done', paid, counted: heard.length > 0, dx, dz,
+      intensity: ring?.intensity, heard: heard.slice(0, 4) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.counted, JSON.stringify(result)).toBe(true);
+  // the ring lands at the pilfered socket, not on you
+  expect((result.dx ?? 9) + (result.dz ?? 9), JSON.stringify(result)).toBeLessThan(0.6);
+  // loud enough to rouse the dormant and pull the room's listeners
+  expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
+  expect(errors).toEqual([]);
+});
