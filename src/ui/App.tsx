@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore, loadCheckpoint } from '../game/store';
 import { Game } from '../game/Game';
-import { ITEM_DEFS, DEFAULT_KEYBINDS } from '../game/config';
+import { ITEM_DEFS, DEFAULT_KEYBINDS, DEATH_NAMES } from '../game/config';
 import type { SettingsData, Difficulty } from '../game/types';
 import { DOCUMENTS } from '../game/documents';
 
@@ -155,7 +155,7 @@ function DeathScreen() {
     <div className="overlay death">
       <div className="menu-inner">
         <h2 className="death-title">The threshold keeps you</h2>
-        <p className="death-cause">{death?.cause}</p>
+        <p className="death-cause">{death ? (DEATH_NAMES[death.cause] ?? death.cause) : null}</p>
         <p className="death-hint">{death?.hint}</p>
         <p className="death-note">The Archive remembers: a new document may be unlocked.</p>
         <div className="menu-buttons">

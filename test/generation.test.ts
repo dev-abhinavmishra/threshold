@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generateRoute } from '../src/world/generator';
-import { SAFE_ROOM_TEMPLATES, ENTITY_TUNING } from '../src/game/config';
+import { SAFE_ROOM_TEMPLATES, ENTITY_TUNING, DEATH_NAMES, DEATH_HINTS } from '../src/game/config';
 import { TELLS } from '../src/world/foreshadow';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
@@ -1128,6 +1128,25 @@ describe('the marked approach (sprint 288)', () => {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       const marked = mainRooms(route).filter((r) => (r.spec?.props ?? []).some((p) => p.meta?.foreshadow));
       expect(marked.length, `no main foreshadow props on ${seed}`).toBeGreaterThanOrEqual(5);
+    }
+  });
+});
+
+describe('the cause reads (sprint 289)', () => {
+  // Every schedulable entity — plus the environmental sources — needs a
+  // fiction name and a curated advice line, or the death screen falls back
+  // to a raw id for some killers and a proper name for others.
+  const SOURCES = [...Object.keys(ENTITY_TUNING), 'hazard'];
+
+  it('every kill source has a fiction name', () => {
+    for (const id of SOURCES) {
+      expect(DEATH_NAMES[id], `no death name for ${id}`).toBeTruthy();
+    }
+  });
+
+  it('every kill source has a curated advice line', () => {
+    for (const id of SOURCES) {
+      expect(DEATH_HINTS[id], `no death hint for ${id}`).toBeTruthy();
     }
   });
 });
