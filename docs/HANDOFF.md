@@ -2174,6 +2174,32 @@ Trap logged for future specs: **aim at it.pos.y + 0.6, not the prop**,
 and always compute pitch from live horizontal distance — collision can
 push a teleported stand point ~0.25m off.
 
+## Sprint 286 — the counted run (scripted balance playtest)
+`e2e/playtest.spec.ts` is the first real playtest: sim-drives the game
+(renderFrame stubbed, dt=1/30 fixed clock — the runflow pattern) through
+all 101 rooms of a 'standard' route × 3 seeds × 3 styles (walker/hider/
+looter). Mechanics: `g.currentRoom=idx` + teleport to entryPos+1.3 toward
+exitPos triggers spawnScheduled on entry; milestone/authored rooms run
+under `g.godMode` (scripted fights a teleporter can't fairly run); hider
+enters `room.hidingSpots[0]` via `player.enterHiding(spot,g.clock.time)`
+and exits before the next room (`exitHiding` — teleport does NOT clear
+hiddenSpot). New instrumentation: `g.lastDeathCause` stamps the killer.
+Reports land in test-results/playtest-<style>.json. Numbers + the tune
+(vend price bands int(4,9)→int(12,20) main, int(5,11)→int(14,24) under —
+economy was ~5x coverage) are in docs/BALANCE.md.
+Traps:
+- `player.dead` freezes the frame loop — after a death you must
+  `g.retryFromCheckpoint()` AND re-stub renderFrame/clock.tick (startRun
+  rebuilds them).
+- hider still dies 8-10×/run — all from sources that bypass hiding BY
+  DESIGN (maelstrom reads spots, witness sight-holds, spotless corridor
+  rooms, hazards mid-loot). Not a tune.
+- pursuer×2 deaths in EVERY report are the scripted chases — noise, not a
+  signal. Exclude milestone deaths from any tuning math.
+- Loot income: looter pulls +33..+121 of the sim's 379-592 possible —
+  sockets are sparse on some seeds (gilt-spine-777: 33) but still
+  out-earn vend spend.
+
 ## Sprint 285 — the watched hall (the eye reads motion)
 The hazard family's sixth axis — and the first that isn't touch, time,
 or posture: `securityCam` (wall-mount dressing: lobby/records/gallery/
