@@ -253,6 +253,18 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('underscript never strands a 5-room stretch without cover (sprint 299)', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let run = 0;
+      for (const room of route.underRooms) {
+        if (room.hidingSpots.length || room.safeZones.length) run = 0;
+        else run++;
+        expect(run, `${seed} U-${room.index}: ${run}-room stretch without hiding cover`).toBeLessThan(5);
+      }
+    }
+  });
+
   it('vending machines carry a price and a stocked item', () => {
     let anyVend = false;
     for (const seed of SEEDS) {

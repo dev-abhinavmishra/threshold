@@ -38,6 +38,7 @@ interface RunReport {
   roomsReached: number;
   deaths: Record<string, number>;
   deathsTotal: number;
+  deathsHidden: number;
   panics: number;
   farthestRoom: number;
   encounters: number;
@@ -113,7 +114,7 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
       const rooms = space === 'under' ? g.route.underRooms : g.route.rooms;
 
       const rep: RunReport = {
-        seed, style, rooms: rooms.length, roomsReached: 0, deaths: {}, deathsTotal: 0,
+        seed, style, rooms: rooms.length, roomsReached: 0, deaths: {}, deathsTotal: 0, deathsHidden: 0,
         panics: 0, farthestRoom: 0, encounters: 0, socketsTouched: 0,
         stats: null as unknown as RunReport['stats'], inventory: [], errors: [],
       };
@@ -128,14 +129,38 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         const dx = ex.x - en.x, dz = ex.z - en.z, L = Math.hypot(dx, dz) || 1;
         g.player.teleport(en.x + (dx / L) * 1.3, 0, en.z + (dz / L) * 1.3, Math.atan2(dx, dz));
       };
+      // Corridor runners are what cover is for. Patrol entities (hauler,
+      // auditor, margin, grafter, stillframe) never vacate and don't demand
+      // a locker — hiding from them is the over-use that buys lockout.
+      const RUNNERISH = new Set(['sweep', 'reprise', 'maelstrom', 'redline', 'returner', 'pursuer', 'orrery']);
+      const runnerLive = () => g.entities.some((e) => RUNNERISH.has(e.id));
       for (let i = 0; i < rooms.length; i++) {
         const room = rooms[i];
-        if (g.player.hiddenSpot) g.player.exitHiding(g.clock.time);
+        // A real hider waits out a live pass inside the locker instead of
+        // stepping out into it — wait for the pass to end (patience cap for
+        // the rare stacked runner) before moving on.
+        if (g.player.hiddenSpot) {
+          let w = 0;
+          while (runnerLive() && w++ < 600 && !g.player.dead) g.frame();
+          g.player.exitHiding(g.clock.time);
+        }
         // Scripted milestone/set-piece deaths aren't ambient balance —
         // a teleporter can't fight them fairly, so godMode there only.
         g.godMode = !!(room.spec?.special || room.authored);
         g.currentRoom = room.index;
         standIn(room);
+        // Cautious entry: if a runner is mid-pass, duck into the nearest
+        // cover at the threshold rather than standing exposed for a frame.
+        if (style !== 'walker' && runnerLive() && !g.player.hiddenSpot) {
+          for (let j = i; j >= Math.max(0, i - 2); j--) {
+            if (rooms[j].hidingSpots.length) {
+              const spot = rooms[j].hidingSpots[0];
+              g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z, 0);
+              g.player.enterHiding(spot, g.clock.time);
+              break;
+            }
+          }
+        }
         g.frame(); // room-entry: spawnScheduled + streamer window
 
         // Under rooms hold patrol entities that never vacate — longer waits
@@ -143,15 +168,32 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         // spend a shorter fixed window; looter keeps 240 for socket loops.
         const budget = room.spec?.special ? 90 : (space === 'under' && style !== 'looter' ? 150 : 240);
         let sawEntities = false;
+        // Cover may live a room or two back — generation only guarantees a
+        // survival option within ±2 of a lethal trigger room, and a real
+        // player backtracks. The hider does too (nearest spot behind it).
+        const nearestCover = () => {
+          for (let j = i; j >= Math.max(0, i - 2); j--) {
+            if (rooms[j].hidingSpots.length) return rooms[j].hidingSpots[0];
+          }
+          return null;
+        };
         for (let f = 0; f < budget && !g.player.dead; f++) {
-          // hider: retreat into the first spot while anything live is around
-          if (style !== 'walker' && g.entities.length && room.hidingSpots.length && !g.player.hiddenSpot) {
-            const spot = room.hidingSpots[0];
-            g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z, 0);
-            g.player.enterHiding(spot, g.clock.time);
+          // hider: retreat into cover while a runner is live; with no
+          // cover within reach a real player flees onward, not stand still.
+          if (style !== 'walker' && runnerLive() && !g.player.hiddenSpot) {
+            const spot = nearestCover();
+            if (spot) {
+              g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z, 0);
+              g.player.enterHiding(spot, g.clock.time);
+            } else {
+              break;
+            }
           }
           if (g.player.hiddenSpot) g.keys.clear();
           g.frame();
+          // Un-hide the moment the pass is over — lingering in the locker is
+          // what makes the next room's transit cost a lockout wait.
+          if (g.player.hiddenSpot && !runnerLive()) g.player.exitHiding(g.clock.time);
           // loot pass mid-room
           if (style === 'looter' && f === 30) {
             const LOOT_PROMPT = /search|loot|take|open|drawer|pry|claim|feed|vend|register|read/i;
@@ -185,7 +227,9 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
 
         if (g.player.dead) {
           const cause = g.lastDeathCause || 'unknown';
-          deaths.push(`${room.index}:${cause}`);
+          const live = g.entities.map((e) => e.id).join('+');
+          deaths.push(`${room.index}:${cause}~${live || '-'}${g.player.hiddenSpot ? '^' : ''}`);
+          if (g.player.hiddenSpot) rep.deathsHidden++;
           // retry restores checkpoint currency — bank earned counters so
           // income doesn't depend on death timing.
           for (const k of Object.keys(banked) as (keyof typeof banked)[]) {
@@ -204,10 +248,11 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
       rep.style = `${style}-${space}`;
 
       for (const d of deaths) {
-        const c = d.split(':').slice(1).join(':') || 'unknown';
+        const c = (d.split(':').slice(1).join(':') || 'unknown').split('~')[0];
         rep.deaths[c] = (rep.deaths[c] ?? 0) + 1;
       }
       rep.deathsTotal = deaths.length;
+      (rep as RunReport & { deathsSeq?: string }).deathsSeq = deaths.join(' ');
       rep.stats = {
         ...g.stats,
         imprintsEarned: banked.imprintsEarned + g.stats.imprintsEarned - econBase.imprintsEarned,
@@ -276,6 +321,7 @@ for (const style of ['walker', 'hider', 'looter']) {
     for (const r of out) {
       console.log(
         `PLAYTEST ${r.style} ${r.seed}: rooms=${r.roomsReached}/${r.rooms} deaths=${r.deathsTotal}` +
+        ` (hidden ${r.deathsHidden}) seq=${(r as RunReport & { deathsSeq?: string }).deathsSeq ?? ''}` +
         ` [${Object.entries(r.deaths).map(([k, v]) => `${k}x${v}`).join(' ') || '-'}]` +
         ` imp+${r.stats.imprintsEarned} marg+${r.stats.marginaliaEarned} inv=${r.inventory.length}`,
       );

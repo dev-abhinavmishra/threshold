@@ -122,3 +122,34 @@ the renderer (~45min stall observed); solo walks are ~30s each.
   shopping trip — the under's papers are affordable, not free.
 - inv=0 on all legs: under caches resolve to currency/lore/consumables
   that don't sit in the inventory list — expected, not a loot failure.
+
+### Sprint-299 correction — the redline read was a harness artifact
+
+The hider model above hid from ANY live entity and never waited out a pass.
+Under patrol entities never vacate, so it stayed in lockers, hit the panic
+re-entry lockout on every room hop, and spent ~1.6s exposed per transition —
+that exposed window is where every "redline kill" actually landed. The fixed
+model hides only for corridor runners, waits passes out inside the locker,
+and un-hides when quiet — i.e. how a person plays.
+
+Re-measured (same seeds, same build):
+
+| leg          | deaths         | causes |
+|--------------|----------------|--------|
+| hider-main   | 9 / 8 / 12     | witness×3-2, warden×3-1, bellman, grafter, whisper, reprise×1, maelstrom×1, echoskin, husk, commissionaire |
+| hider-under  | 8 / 7 / 9      | grafter×4-6, margin×2, editor×1 — **redline 0, returner 0** |
+
+So under competent cover play the under's lethal runners are fully
+survivable (0 runner deaths in 363 rooms): the ±2-room trigger guarantee
+plus waiting out passes is enough. The residual is room-entity counterplay
+— the Grafter grabs a player who walks through its rubble blind (its
+fiction teaches you not to), Margin reads cover, and the Editor is the
+authored climax the sim can't fight. The "subfloor is ~2x for the hider"
+claim retracts — hider pressure is now main-parity; the under's extra edge
+lives in room hazards, not the corridors.
+
+Also measured: under hiding coverage was 48-60% of rooms with dead
+stretches to 7 rooms (main guarantees ≤2 by density pass). Sprint 299 adds
+the under's own cover-density pass — same "no 5-room dead stretch" bound
+(worstGap ≤4 measured across seeds), landing rooms skipped, mid-wall
+lockers for corridor-width templates whose corners sit in door lanes.

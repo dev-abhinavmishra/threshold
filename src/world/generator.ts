@@ -1209,11 +1209,51 @@ function fillSockets(rooms: RoomInstance[], branches: RoomInstance[], lootRng: i
 
 /* ==================== HIDING DENSITY ==================== */
 
-/**
- * Guarantees a usable survival option every few rooms by injecting a cabinet
- * hiding spot into rooms that lack one when their neighbors don't either.
- * Deterministic — uses the dressing stream.
- */
+/** Drops a corner cabinet hiding spot + its locker prop into a room — the
+ *  props push mirrors instantiate's spec.hiding→furniture pass, which has
+ *  already run by the time the density passes inject (without it the spot
+ *  works mechanically but hides inside nothing). */
+function injectCornerCabinet(r: RoomInstance, rng: import('../engine/rng').Rng): void {
+  const w = r.spec?.width ?? 6;
+  const d = r.spec?.depth ?? 8;
+  const corners = [
+    { x: -w / 2 + 0.9, z: -d / 2 + 0.9, yaw: 0 },
+    { x: w / 2 - 0.9, z: -d / 2 + 0.9, yaw: Math.PI / 2 },
+    { x: -w / 2 + 0.9, z: d / 2 - 0.9, yaw: -Math.PI / 2 },
+    // Corridor-width rooms put every corner in a door lane — door approach
+    // zones are shallow, so a mid-wall locker against a long wall is the
+    // honest cover there (utility corridors have them).
+    { x: -w / 2 + 0.9, z: 0, yaw: Math.PI / 2 },
+    { x: w / 2 - 0.9, z: 0, yaw: -Math.PI / 2 },
+  ];
+  const clear = r.spec ? corners.filter((c) => !inDoorLane(r.spec!, c.x, c.z)) : corners;
+  if (!clear.length) return;
+  const corner = rng.pick(clear);
+  const center = localToWorld(r.origin, r.yaw, corner.x, 0, corner.z);
+  const dYaw = r.yaw + corner.yaw;
+  const dir = { x: Math.sin(dYaw), z: Math.cos(dYaw) };
+  r.hidingSpots.push({
+    id: `hide-${r.index}-inj`,
+    kind: 'cabinet',
+    volume: aabb(center.x, 1.0, center.z, 0.55, 1.05, 0.55),
+    viewPos: v3(center.x, 1.15, center.z),
+    viewYaw: dYaw,
+    exitPos: v3(center.x + dir.x * 1.0, 0, center.z + dir.z * 1.0),
+    roomIndex: r.index,
+    trapClues: [],
+  });
+  if (r.spec) {
+    r.spec.hiding.push({ kind: 'cabinet', x: corner.x, z: corner.z, yaw: corner.yaw, propKind: 'locker' });
+    const hasFurniture = r.spec.props.some(
+      (p) => Math.hypot(p.x - corner.x, p.z - corner.z) <= 1.3 && (p.y ?? 0) < 0.2,
+    );
+    if (!hasFurniture) r.spec.props.push({ kind: 'locker', x: corner.x, z: corner.z, yaw: corner.yaw });
+  }
+}
+
+/** Guarantees a usable survival option every few rooms by injecting a cabinet
+ *  hiding spot into rooms that lack one when their neighbors don't either.
+ *  Deterministic — uses the dressing stream. */
 function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng').Rng): void {
   for (let i = 8; i < rooms.length; i++) {
     const r = rooms[i];
@@ -1223,31 +1263,23 @@ function ensureHidingDensity(rooms: RoomInstance[], rng: import('../engine/rng')
       if (rooms[j].hidingSpots.length > 0 || rooms[j].safeZones.length > 0) { covered = true; break; }
     }
     if (covered) continue;
-    const w = r.spec?.width ?? 6;
-    const d = r.spec?.depth ?? 8;
-    const corners = [
-      { x: -w / 2 + 0.9, z: -d / 2 + 0.9, yaw: 0 },
-      { x: w / 2 - 0.9, z: -d / 2 + 0.9, yaw: Math.PI / 2 },
-      { x: -w / 2 + 0.9, z: d / 2 - 0.9, yaw: -Math.PI / 2 },
-    ];
-    const clear = r.spec ? corners.filter((c) => !inDoorLane(r.spec!, c.x, c.z)) : corners;
-    const corner = rng.pick(clear.length ? clear : corners);
-    const center = localToWorld(r.origin, r.yaw, corner.x, 0, corner.z);
-    const dYaw = r.yaw + corner.yaw;
-    const dir = { x: Math.sin(dYaw), z: Math.cos(dYaw) };
-    r.hidingSpots.push({
-      id: `hide-${r.index}-inj`,
-      kind: 'cabinet',
-      volume: aabb(center.x, 1.0, center.z, 0.55, 1.05, 0.55),
-      viewPos: v3(center.x, 1.15, center.z),
-      viewYaw: dYaw,
-      exitPos: v3(center.x + dir.x * 1.0, 0, center.z + dir.z * 1.0),
-      roomIndex: r.index,
-      trapClues: [],
-    });
-    if (r.spec) {
-      r.spec.hiding.push({ kind: 'cabinet', x: corner.x, z: corner.z, yaw: corner.yaw, propKind: 'locker' });
+    injectCornerCabinet(r, rng);
+  }
+}
+
+/** The Underscript's version: sparser cover than the main route by design,
+ *  but never a 5-room dead stretch — the subfloor is meaner, not unfair.
+ *  Authored landings are skipped (the pacing already protects them). */
+function ensureUnderCoverDensity(rooms: RoomInstance[], rng: import('../engine/rng').Rng): void {
+  for (let i = 1; i < rooms.length; i++) {
+    const r = rooms[i];
+    if (r.authored) continue;
+    let covered = false;
+    for (let j = Math.max(0, i - 2); j <= Math.min(rooms.length - 1, i + 2); j++) {
+      if (rooms[j].hidingSpots.length > 0 || rooms[j].safeZones.length > 0) { covered = true; break; }
     }
+    if (covered) continue;
+    injectCornerCabinet(r, rng);
   }
 }
 
@@ -1543,6 +1575,11 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
   // The Editor authored climax at the final stair landing.
   const last = rooms[rooms.length - 1];
   if (last) last.scheduled.push({ entity: 'editor', triggerRoom: last.index, seed: encRng.int(0, 0x7fffffff) });
+
+  // Cover density runs AFTER scheduling so spawn counts don't move — this
+  // only adds places to survive, never more patrols. The under stays sparser
+  // than the main route (no hollow traps either), but no 5-room dead stretch.
+  ensureUnderCoverDensity(rooms, streams.roomStream('dressing', 790));
 
   // The under marks its approach too — the decal layer was always built
   // for these entities but no pass ever set under rooms' foreshadow.
