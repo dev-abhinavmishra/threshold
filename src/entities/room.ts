@@ -863,10 +863,12 @@ export class HazardField {
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
     cycle: number; dead: boolean; hitT?: number; warnT?: number }[] = [];
   /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
-   *  scent a posted hunter can read — quiet work is marked work. */
+   *  scent a posted hunter can read — quiet work is marked work. A `wipe`
+   *  record is the felt-wrap's shadow: the floor was worked clean, and only
+   *  the warden's nose bothers to doubt sign planted near it. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water' | 'fan'; t: number; readBy: string[];
-    old?: boolean; weak?: boolean }[] = [];
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe'; t: number; readBy: string[];
+    old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles

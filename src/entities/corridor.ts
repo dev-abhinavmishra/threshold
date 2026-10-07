@@ -616,8 +616,17 @@ export class Warden extends Entity {
       this.scentT = 1.4;
       const evs = c.hazardEvidence?.(`warden:${this.hostRoom}`, this.pos.x, this.pos.z, 30) ?? [];
       const room0 = c.rooms[this.hostRoom];
+      const wipes = evs.filter((e) => e.wiped);
       for (const ev of evs) {
+        if (ev.wiped) continue; // a wipe is a filter on the sign, not a target
         if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
+        // Sign in smelling range of a wiped floor — it could be a lie. The
+        // warden doubts and stays on the line (the mark is already spent:
+        // hazardEvidence marked it read when it returned it).
+        if (wipes.some((w) => Math.hypot(w.pos.x - ev.pos.x, w.pos.z - ev.pos.z) < 3.5)) {
+          c.cue('floor-creak', this.pos, '[it doubts the mark — the floor smells wiped]', { severity: 'info' });
+          continue;
+        }
         this.investigate = v3(ev.pos.x, 0, ev.pos.z);
         this.investigateScan = 0;
         c.cue('floor-creak', this.pos, '[it reads the sign — someone has been here]', { severity: 'warn' });

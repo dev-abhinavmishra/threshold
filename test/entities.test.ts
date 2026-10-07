@@ -527,6 +527,36 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    // a wiped floor 2m from the sign — inside the 3.5m doubt radius
+    const wipe = { pos: v3(mid.x + 1.2, 0, mid.z - 2), room: 28, kind: 'wipe', t: 0, readBy: [] as string[], wiped: true };
+    const evidence = { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] };
+    const records = [wipe, evidence];
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = records.filter((e) => (e.wiped || !e.readBy.includes(key))
+          && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
+        for (const e of out) if (!e.wiped) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    for (let i = 0; i < 400; i++) step(warden, ctx, 0.05);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /the floor smells wiped/.test(t)), 'it sniffs the wipe and doubts').toBe(true);
+    expect(cues.some((t) => /reads the sign/.test(t)), 'it never believes the wiped-floor mark').toBe(false);
+    expect((warden as unknown as { investigate: unknown }).investigate, 'it stays on the line').toBeNull();
+    expect(evidence.readBy).toContain('warden:28'); // the doubt still consumed the mark
+    warden.dispose();
+  });
+
   it('whistles and charges a player caught in the open', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });

@@ -2447,3 +2447,38 @@ NEXT SPRINT IDEAS (pick the biggest first)
     they know you) — half-baked, logged skip.
   - A scrub that removes the lie leaves the ash? (Scrub radius 2.6m
     already takes both — no work needed; verify in play.)
+
+## sprint 291 — the warden doubts (the wipe's shadow)
+
+What:
+- Scrubbing sign now leaves a permanent `wiped` evidence record
+  (`kind:'wipe'`) where the mark stood — the floor smells worked.
+- `hazardEvidence` returns wipes ONLY to `warden:` keys and never marks
+  them read (`e.wiped || !e.readBy.includes(key)`; wiped records skip
+  the readBy push) — a wiped floor poisons that hunter's reads in the
+  zone permanently. Grafter keys never see them (its dumb nose doesn't
+  smell cleaned floor).
+- The warden partitions its scent list: wipes are a filter, not a
+  target. Sign within 3.5m of a wipe → `[it doubts the mark — the floor
+  smells wiped]`, no investigation; the mark is still consumed
+  (readBy-marked on return, like every sign).
+- The tradeoff: scrub twice and the floor betrays your LATER lies —
+  a forge or real kill beside a wipe is doubted, never believed.
+  Scrub is now both cleanup AND inoculation for a spot you control.
+- Scrub offers skip wiped records (nothing to rub); a re-scrub still
+  erases wipes within 2.6m like any record.
+Traps:
+- 's' warden patrol line passes ~0.8m from its room origin — e2e can't
+  assert "never approaches" as proof of no-investigation; assert the
+  `investigate` field stays null (runtime-readable on the entity).
+- vitest ctx stubs must mirror the callback contract: wipes return
+  unmarked for warden keys — the doubt test's stub replicates
+  `e.wiped || !e.readBy.includes(key)`.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - 'Seen'-record echo — half-baked, logged skip.
+  - A wipe could decay ('the smell fades after N minutes') if permanent
+    zone-poison proves too strong in play.

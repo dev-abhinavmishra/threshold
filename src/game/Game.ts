@@ -821,10 +821,16 @@ export class Game {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
         // OLD sign still pulls a grafter (a spent-wire room is free bait),
         // and only it bothers with weak sign (the ash a rubbed wrap leaves).
+        // Wipes (a scrubbed floor's shadow) show only to warden keys and are
+        // never marked read — a wiped floor stays wiped, so the zone keeps
+        // poisoning that hunter's reads permanently.
         const staleOk = key.startsWith('grafter:');
-        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && (staleOk || !e.weak) && !e.readBy.includes(key)
+        const wardenOk = key.startsWith('warden:');
+        const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && (staleOk || !e.weak)
+          && (wardenOk || !e.wiped)
+          && (e.wiped || !e.readBy.includes(key))
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
-        for (const e of out) e.readBy.push(key);
+        for (const e of out) if (!e.wiped) e.readBy.push(key);
         return out;
       },
     };
@@ -1217,6 +1223,7 @@ export class Game {
     // the mark erases what a hunter could read. Quiet AND clean.
     if (this.player.crouching) {
       for (const ev of this.hazard.evidence) {
+        if (ev.wiped) continue; // a wiped floor is not sign — nothing to rub
         const dx = ev.pos.x - this.player.pos.x, dz = ev.pos.z - this.player.pos.z;
         if (dx * dx + dz * dz > 2.6 * 2.6) continue;
         this.interaction.add({
@@ -2301,6 +2308,10 @@ export class Game {
         // Every sign within the rub's reach goes — one wrap, one clean floor.
         this.hazard.evidence = this.hazard.evidence.filter((e) =>
           Math.hypot(e.pos.x - ev.pos.x, e.pos.z - ev.pos.z) > 2.6);
+        // ...but the felt itself leaves a shadow: the floor smells wiped.
+        // Only the warden's nose reads it — and only to doubt the next mark.
+        this.hazard.evidence.push({ pos: v3(ev.pos.x, 0, ev.pos.z), room: ev.room,
+          kind: 'wipe', t: this.clock.time, readBy: [], wiped: true });
         this.cue('item', it.pos, '[the sign rubs out under the felt — nothing left to read]');
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt on stone]' });
         return;

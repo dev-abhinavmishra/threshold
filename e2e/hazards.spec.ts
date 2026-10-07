@@ -272,6 +272,62 @@ test('scent — a killed hazard signs the room, the Warden reads it', async ({ p
   expect(errors).toEqual([]);
 });
 
+// The wipe is the scrub's shadow: the warden smells a cleaned floor and
+// doubts any mark planted beside it — it never leaves the line.
+test('the warden doubts — sign beside a wiped floor is not investigated', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[]; wiped?: boolean }[] };
+      entities: { id: string; state: string; threatPos?(): { x: number; y: number; z: number } | null }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // a wiped floor + fresh sign 2m inside its doubt radius
+    const sign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: 0, readBy: [] as string[] };
+    ga.hazard.evidence.push({ pos: { x: sign.pos.x + 0.4, y: 0, z: sign.pos.z - 2 }, room: wardenRoom.index, kind: 'wipe', t: 0, readBy: [], wiped: true });
+    ga.hazard.evidence.push(sign);
+    let read = false, investigated = false;
+    for (let f = 0; f < 700; f++) {
+      g.frame();
+      if ((w as unknown as { investigate: unknown }).investigate) investigated = true;
+      if (caps.some((c) => /reads the sign/.test(c))) read = true;
+    }
+    return { stage: 'done', investigated, read, doubted: caps.some((c) => /floor smells wiped/.test(c)),
+      marked: sign.readBy.some((r) => r.startsWith('warden')), caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.doubted, JSON.stringify(result)).toBe(true);
+  expect(result.read, `the wiped-floor mark must not be believed: ${JSON.stringify(result.caps)}`).toBe(false);
+  expect(result.marked, 'the doubt still consumes the mark').toBe(true);
+  expect(result.investigated, 'it never leaves the line for a doubted mark').toBe(false);
+  expect(errors).toEqual([]);
+});
+
 test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
