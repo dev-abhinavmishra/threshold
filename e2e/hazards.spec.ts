@@ -464,7 +464,7 @@ test('the confiscated case — the eyes guard a prize', async ({ page }) => {
       sawPry, taken: caze.meta!.taken === true,
       contains: caze.meta!.contains as string | undefined,
       gained: (purse.imprints - imp0) + (purse.inventory.reduce((a, i) => a + i.count, 0) - items0),
-      openCaption: caps.some((c) => /case breaks open|case held a purse|case cracks|warrant files/.test(c)),
+      openCaption: caps.some((c) => /case breaks open|case held a purse|case cracks|warrant lists/.test(c)),
       pryGone: !ga.interaction.interactables.some((i) => i.kind === 'pry' && i.enabled) };
   });
 

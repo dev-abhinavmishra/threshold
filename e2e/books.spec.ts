@@ -487,7 +487,6 @@ test("the inspection sheet marks which doors the house watches", async ({ page }
   expect(errors).toEqual([]);
 });
 
-
 // The sealed warrant — a confiscated case that holds paperwork instead of
 // goods: the seizure ledger. Prying it reads which cases ahead are held.
 test('the sealed warrant reads the seizure ledger for rooms ahead', async ({ page }) => {
