@@ -4102,7 +4102,19 @@ export class Game {
     this.audio.play('victory', null, '', 'info');
     this.audio.setMood('menu');
     this.audio.setRoomTone('off');
-    useGameStore.setState({ phase: 'COMPLETE', victoryInfo: { stats: this.stats }, paused: true });
+    useGameStore.setState({ phase: 'COMPLETE', victoryInfo: {
+      stats: this.stats,
+      // sprint 336 — the books close at the door: the ledgers accrue
+      // all run and the exit reads them back. Nothing forgives at the
+      // threshold — what you leave owing leaves with you as text.
+      books: {
+        thefts: this.unpaidTheft,
+        held: this.unpaidHeld,
+        asks: this.paperTrail,
+        hotCoin: this.hotImprints,
+        hotGoods: this.hotItems.size,
+      },
+    }, paused: true });
     document.exitPointerLock?.();
     this.clock.stop();
   }

@@ -3633,3 +3633,16 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   fig stealing a press-cycle) spends hot coin and files +1. The
   unfiled phase zeroes both.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 336 — the books close at the door
+- The five ledgers accrued all run and `victory()` reported only
+  stats — the exit never read the books. `victoryInfo` now carries
+  `books?: BooksClosed { thefts, held, asks, hotCoin, hotGoods }`
+  (store.ts; optional — any other setState writer stays valid).
+  `VictoryScreen` renders a `.stats.books` reckoning block: bracketed
+  epitaph lines per open ledger, or 'every book closed before the
+  door did' when all five are zero.
+- e2e: the runflow victory leg sets all five ledgers via cast, calls
+  `g.victory()`, asserts the reckoning text in the DOM.
+- Readout only — no ending gating (that would be a design call).
+- Gates: tsc, lint, 233 vitest, 5-seed sim, runflow victory leg, build.
