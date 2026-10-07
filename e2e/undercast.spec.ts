@@ -524,3 +524,134 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
   expect(errors).toEqual([]);
 });
 
+
+test('the index — the filer files your questions, the halls listen', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>; paperTrail: number;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      entities: { id: string; filed?: boolean; posted?: boolean }[];
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 40;
+    // Four consults on the books — heavy enough to lighten with paper.
+    ga.paperTrail = 4;
+
+    // --- 0. the counter-claim — a paid line off your own file ---
+    const csRoom = g.route.underRooms.find((r) => (r.sockets ?? []).some((s) => s.meta?.counterClaim && !s.meta?.taken));
+    if (csRoom) {
+      g.player.teleport(csRoom.origin.x, 0, csRoom.origin.z);
+      ga.currentRoom = csRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const csSock = (csRoom.sockets ?? []).find((s) => s.meta?.counterClaim && !s.meta?.taken);
+      for (let f = 0; f < 60 && csSock && csSock.meta && !csSock.meta.taken; f++) {
+        const sx = csRoom.origin.x - csSock.pos.x, sz = csRoom.origin.z - csSock.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(csSock.pos.x + (sx / sl) * 0.9, 0, csSock.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(csSock.pos.x - g.player.pos.x, csSock.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((csSock.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const trailAfterClaim = ga.paperTrail;
+
+    // --- 1. rifle her drawer — the loudest question in the under ---
+    const fRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'filer'));
+    if (!fRoom) return { stage: 'no-filer' } as const;
+    g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
+    ga.currentRoom = fRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    const docket = g.interaction.interactables.find((i) => i.kind === 'docket' && i.enabled);
+    if (!docket) return { stage: 'no-docket', ents: ga.entities.map((e) => e.id) } as const;
+    const mDocket = ga.marginalia;
+    for (let f = 0; f < 60 && (docket.data as { stock?: number }).stock !== 0; f++) {
+      const sx = fRoom.origin.x - docket.pos.x, sz = fRoom.origin.z - docket.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(docket.pos.x + (sx / sl) * 0.9, 0, docket.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(docket.pos.x - g.player.pos.x, docket.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((docket.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const rifled = (docket.data as { stock?: number }).stock === 0;
+    const trailAfterRifle = ga.paperTrail;
+    const docketPaid = ga.marginalia > mDocket || caps.some((c) => /off the index/.test(c));
+
+    // --- 2. the rummage itself filed you — the slow look lands ---
+    let clerk: { filed?: boolean; posted?: boolean } | undefined;
+    for (let f = 0; f < 160; f++) {
+      g.frame();
+      clerk = ga.entities.find((e) => e.id === 'filer') ?? clerk;
+      if (clerk?.posted) break;
+    }
+    if (!clerk) return { stage: 'no-filer-spawn', ents: ga.entities.map((e) => e.id), rifled } as const;
+    const filed = caps.some((c) => /the filer has your name/.test(c));
+
+    // --- 2. into the next room — the word travels ahead ---
+    const next = g.route.underRooms.find((r) => r.index > fRoom.index);
+    if (!next) return { stage: 'no-next' } as const;
+    const capMark = caps.length;
+    g.player.teleport(next.origin.x, 0, next.origin.z);
+    ga.currentRoom = next.index;
+    for (let f = 0; f < 12; f++) g.frame();
+    const wordOut = caps.slice(capMark).some((c) => /the word arrives before you/.test(c));
+
+    // --- 3. back to the drawer — square the index ---
+    g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
+    ga.currentRoom = fRoom.index;
+    for (let f = 0; f < 8; f++) g.frame();
+    const square = g.interaction.interactables.find((i) => i.kind === 'square' && i.enabled);
+    if (!square) return { stage: 'no-square' } as const;
+    const m0 = ga.marginalia;
+    let squarePrompt = '';
+    for (let f = 0; f < 60; f++) {
+      const sx = fRoom.origin.x - square.pos.x, sz = fRoom.origin.z - square.pos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(square.pos.x + (sx / sl) * 0.9, 0, square.pos.z + (sz / sl) * 0.9);
+      g.player.yaw = Math.atan2(square.pos.x - g.player.pos.x, square.pos.z - g.player.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2((square.pos.y + 0.6) - eyeY, 0.95);
+      g.frame();
+      if (!squarePrompt) {
+        const fp = ga.interaction.focused?.prompt;
+        if (fp && /Square the index/.test(fp)) squarePrompt = fp;
+      }
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
+    return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
+      filed, wordOut, squarePrompt, paid,
+      trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.trailAfterClaim, JSON.stringify(result)).toBe(3); // 4 − 2 + 1: the asking is logged too
+  expect(result.rifled, JSON.stringify(result)).toBe(true);
+  expect(result.trailAfterRifle, JSON.stringify(result)).toBe(5);
+  expect(result.docketPaid, JSON.stringify(result)).toBe(true);
+  expect(result.filed, JSON.stringify(result)).toBe(true);
+  expect(result.wordOut, JSON.stringify(result)).toBe(true);
+  expect(result.squarePrompt, JSON.stringify(result)).toMatch(/Square the index/);
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.trail, JSON.stringify(result)).toBe(0);
+  expect(result.posted, JSON.stringify(result)).toBe(false);
+  expect(errors).toEqual([]);
+});

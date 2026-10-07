@@ -17,7 +17,9 @@ export type RngStream =
   | 'scare'
   | 'uscare'
   | 'pacing'
-  | 'confiscate';
+  | 'confiscate'
+  | 'filer'
+  | 'countersign';
 
 const STREAM_SALTS: Record<RngStream, number> = {
   structure: 0x517ac0de,
@@ -31,6 +33,8 @@ const STREAM_SALTS: Record<RngStream, number> = {
   uscare: 0x05ca4e00,
   pacing: 0x9ac1e000,
   confiscate: 0xc0514cae,
+  filer: 0xf11e4ce2,
+  countersign: 0xc04e51d0,
 };
 
 /** FNV-1a 32-bit string hash — used to derive seeds from player-entered text. */

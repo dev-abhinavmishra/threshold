@@ -483,7 +483,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -1197,6 +1197,56 @@ describe('the sealed warrant (sprint 290)', () => {
       for (const w of warrantRooms) {
         expect(caseRooms.some((ci) => ci > w), `warrant at ${w} has no later case on ${seed}`).toBe(true);
       }
+    }
+  });
+});
+
+describe('the counter-claim (sprint 299)', () => {
+  it('clerk forms sit on under desk furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.counterClaim),
+          `counter-claim on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.counterClaim) continue;
+          count++;
+          expect(r.index % 20, `counter-claim on a safe landing ${seed}`).not.toBe(0);
+          expect(typeof s.meta.price, `counter-claim unpriced ${seed}`).toBe('number');
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `counter-claim on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        }
+      }
+      expect(count, `no counter-claims on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('the Filer (sprint 297)', () => {
+  it('clerks work dry index rooms below, never the main route', () => {
+    const STATIONS = new Set(['filing', 'recordsCage', 'keyCabinet']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.rooms) {
+        expect(r.scheduled?.some((s) => s.entity === 'filer') ?? false,
+          `filer on the main route ${seed}`).toBe(false);
+      }
+      const clerks = route.underRooms.filter((r) => r.scheduled?.some((s) => s.entity === 'filer'));
+      for (const r of clerks) {
+        expect(r.flooded, `filer in a flooded room ${seed} u-${r.index}`).not.toBe(true);
+        expect((r.spec?.props ?? []).some((p) => STATIONS.has(p.kind)),
+          `filer on an index-less room ${seed} u-${r.index}`).toBe(true);
+        expect(r.index % 20, `filer on a safe landing ${seed}`).not.toBe(0);
+        expect(r.scheduled!.length, `filer shares a room ${seed} u-${r.index}`).toBe(1);
+      }
+      // her pass is a post-roll on its own stream — approach marks still land
+      const tells = route.underRooms.filter((r) =>
+        (r.spec?.props ?? []).some((p) => p.meta?.foreshadow === 'filer'));
+      expect(tells.length, `no filer foreshadow on ${seed}`).toBeGreaterThanOrEqual(clerks.length > 0 ? 1 : 0);
     }
   });
 });

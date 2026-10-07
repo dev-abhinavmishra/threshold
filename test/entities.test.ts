@@ -2082,6 +2082,146 @@ describe('the House Detective (sprint 278)', () => {
   });
 });
 
+describe('the Filer (sprint 297)', () => {
+  const fileRoom = {
+    index: 0, templateId: 'under-records', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'keyCabinet', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const hallRoom = {
+    index: 1, templateId: 'corridor', origin: { x: 0, y: 0, z: 12 }, yaw: 0,
+    width: 6, depth: 12,
+    entryPos: { x: 0, y: 0, z: 7 }, exitPos: { x: 0, y: 0, z: 17 }, navNodes: [],
+    spec: { width: 6, depth: 12, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('files your name over the slow look — the card comes out', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.filed, 'no card yet').toBe(false);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.filed, 'the slow look lands').toBe(true);
+    expect(f.posted, 'the runner is out').toBe(true);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'square'), 'the square point registers').toBe(true);
+    f.dispose();
+  });
+
+  it('sends a runner — each fresh room you enter listens for your step', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 4,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 60 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.posted).toBe(true);
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    emit.mockClear();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'filer'),
+      'the room ahead already listens').toBe(true);
+    f.dispose();
+  });
+
+  it('the word only travels so far — past its reach it goes quiet', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const rooms = [fileRoom, hallRoom];
+    for (let i = 2; i <= 10; i++) {
+      rooms.push({ ...hallRoom, index: i, origin: { x: 0, y: 0, z: i * 12 },
+        entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 } } as unknown as RoomInstance);
+    }
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 60 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.posted).toBe(true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 10 * 12; // room 10 — past the 8-room reach
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.posted, 'the word goes quiet past its reach').toBe(false);
+    f.dispose();
+  });
+
+  it('squared strikes your card — runner recalled, point down', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 60 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.posted).toBe(true);
+    f.squared();
+    expect(f.filed).toBe(false);
+    expect(f.posted).toBe(false);
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    expect(rm.mock.calls.length, 'the square point comes down').toBeGreaterThan(0);
+    f.dispose();
+  });
+
+  it('a light trail is beneath notice — under 3 the drawer stays shut', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 90; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.filed, 'two questions never reach the index').toBe(false);
+    f.dispose();
+  });
+
+  it('the docket registers at her station — pilferable, and outlives a square', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([fileRoom, hallRoom], {
+      currentRoomIndex: 0,
+      trailOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'docket'),
+      'the drawer is on the station from the start').toBe(true);
+    for (let i = 0; i < 60 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
+    f.squared();
+    const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
+    const removed = rm.mock.calls.map((c) => c[0] as string);
+    expect(removed.some((id) => id.startsWith('square-')), 'the square point comes down').toBe(true);
+    expect(removed.some((id) => id.startsWith('docket-')), 'the drawer survives a square').toBe(false);
+    f.dispose();
+    const removed2 = rm.mock.calls.map((c) => c[0] as string);
+    expect(removed2.some((id) => id.startsWith('docket-')), 'the drawer comes down with her').toBe(true);
+  });
+});
+
 describe('the watched hall (sprint 285)', () => {
   const camRoom = (dark: boolean) => ({
     index: 0, templateId: 'corr-straight', origin: { x: 0, y: 0, z: 0 }, yaw: 0,

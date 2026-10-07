@@ -162,6 +162,10 @@ export const ENTITY_TUNING: Record<EntityId, EntityTuning> = {
     warningTime: 0, speed: 0.75, damage: 10, killRange: 1.3, seeRange: 0,
     cooldown: 22, spawnChance: 0.45, minRoom: 1,
   },
+  filer: {
+    warningTime: 0, speed: 0.7, damage: 0, killRange: 0, seeRange: 0,
+    cooldown: 26, spawnChance: 0.4, minRoom: 1,
+  },
   detective: {
     warningTime: 0, speed: 0.8, damage: 0, killRange: 0, seeRange: 0,
     cooldown: 20, spawnChance: 0.35, minRoom: 18,
@@ -318,6 +322,7 @@ export const DEATH_NAMES: Record<string, string> = {
   margin: 'the Margin', editor: 'the Editor', grafter: 'the Grafter',
   swamper: 'the Swamper', hauler: 'the Hauler', laundress: 'the Laundress',
   auditor: 'the Auditor', detective: 'the Detective', husk: 'the Husk',
+  filer: 'the Filer',
   bellman: 'the Bellman', porter: 'the Porter', hazard: 'the house',
   orrery: 'the Orrery', collector: 'the Collector', singer: 'the Singer',
 };
@@ -353,6 +358,7 @@ export const DEATH_HINTS: Record<string, string> = {
   laundress: 'She keeps her basin — pull her off the drain with a thrown sound before the crank.',
   auditor: 'It collects in kind — settle the ledger at the desk, or carry clean hands.',
   detective: 'He settles the book — pay the claim, or keep your hands off the shelves.',
+  filer: 'It never strikes — it files. Square the index at her station, or ask fewer questions of the under.',
   husk: 'It sleeps. Keep the beam off it, keep your distance, go quiet.',
   bellman: 'It walks your steps — break your own trail and it has nothing to follow.',
   porter: 'It waits above the lintel — look up before crossing.',
