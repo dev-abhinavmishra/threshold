@@ -3616,3 +3616,20 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   should assert `xSeen` contains the target prompt, not just the cap.
 - Verb wiring: interaction.ts union + hazardContract kind list.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg green, build.
+
+## sprint 335 — the marked coin testifies twice
+- `chargedImprints` (the single funnel for every imprint spend) now
+  writes `unpaidHeld += 1` when any hot coin lands — the till that
+  takes marked coin files the hands that fed it. Cue text:
+  '[the till knows its own coin — the register files the hands that
+  fed it]'. The marked-coin dilemma is complete: spend upstairs and
+  every transaction files +1 held, or carry it below and launder at
+  the purse for the asking's price (+1 trail per wash).
+- e2e: the clerk leg's paid buy runs with `hotImprints=1` — asserts
+  hot drains, held +1, 'files the hands' cue; restores held after.
+- Trap: phases that reset `unpaidHeld` for an assertion (e.g. the
+  unfiled phase's `ga.unpaidHeld = 0`) must now ALSO drain
+  `hotImprints` — a stray priced press mid-drive (a warm 'ask' on a
+  fig stealing a press-cycle) spends hot coin and files +1. The
+  unfiled phase zeroes both.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.

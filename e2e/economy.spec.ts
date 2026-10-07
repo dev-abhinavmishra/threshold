@@ -930,11 +930,21 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     const refused = sock.meta.sold !== true && g.imprints === Math.max(0, price - 3);
     const refuseCap = caps.find((t) => /imprints required/.test(t)) ?? '';
 
-    // Pay: the till rings.
+    // Pay: the till rings — with marked coin in the pool, so the spend
+    // testifies twice: the ring AND the register files the hands.
+    const gHot = g as unknown as { hotImprints: number };
+    gHot.hotImprints = 1;
+    const heldHot = ga.unpaidHeld;
     g.imprints = price;
     drive(sock.pos, () => sock.meta.sold === true, 50);
     const sold = sock.meta.sold === true;
     const tillCap = caps.find((t) => /till rings/.test(t)) ?? '';
+    // sprint 335 — the marked coin testifies twice: hot drained by the
+    // spend, the register filed the hands that fed it
+    const hotFiled = sold && gHot.hotImprints === 0
+      && ga.unpaidHeld === heldHot + 1;
+    const hotFileCap = caps.find((t) => /files the hands/.test(t)) ?? '';
+    ga.unpaidHeld = heldHot; // the rifle's +2 reads against a clean book
 
     // The register's rate: a filed face pays more on the second pedestal.
     const sock2 = clerked.sockets.find((s) => s.meta?.clerk !== undefined
@@ -1172,6 +1182,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       const idxB = g.route.rooms.indexOf(clerked2);
       unfiledRoom = clerked2.index;
       ga.unpaidHeld = 0;
+      // sprint 335 — drain the hot pool too: this phase asserts ONLY
+      // the bell-window +0, and room A's rifle left marked coin that any
+      // stray priced press in room B (e.g. the warm ask on the fig)
+      // would spend into a +1 register file
+      (g as unknown as { hotImprints: number }).hotImprints = 0;
       g.player.teleport(clerked2.origin.x, 0, clerked2.origin.z);
       g.currentRoom = clerked2.index;
       for (let f = 0; f < 20; f++) g.frame();
@@ -1247,6 +1262,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       }
     }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
+      hotFiled, hotFileCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
@@ -1275,6 +1291,10 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.refuseCap).toMatch(/imprints required/);
   expect(result.sold).toBe(true);
   expect(result.tillCap).toMatch(/till rings/);
+  // sprint 335 — the marked coin testifies twice: the spend drains the
+  // hot pool and the register files the hands that fed it
+  expect(result.hotFiled, JSON.stringify(result)).toBe(true);
+  expect(result.hotFileCap).toMatch(/files the hands/);
   expect(result.hasItem).toBe(true);
   expect(result.twoSocks, JSON.stringify(result)).toBe(true);
   expect(result.ratePaid, JSON.stringify(result)).toBe(true);
