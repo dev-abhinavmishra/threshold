@@ -3128,3 +3128,22 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   5-seed sim, undercast **12/12** (the leg pilfers a second cage tag —
   's' has tills at under-rooms 1/26/53/56/71/73/90 — asserts the wide
   cue + walk-continues + found at the linger room), build.
+
+## sprint 313 — the eye files too (devin/1791394439-threshold-s313)
+
+- The house's watchers now rhyme with the checker's lamp: a HELD
+  settle (w.settle > 0.9 report) fires ctx.eyeFiled?.() ONCE per eye
+  (new `filed` flag on the watcher struct) — Game's entityCtx wires it
+  to unpaidHeld + 1, same register the lamp's witness mark lands in.
+  New cue beside the settle: '[the eye's report goes in the register —
+  your face is filed]'. A re-report (still feet → moving again) rings
+  noise but files no second line.
+- Trap/log: watchers are on HazardField (ctx callbacks fine), built
+  from room.spec.props kinds securityCam/searchlight — not sockets.
+  Spec: pinCam + `eyeFiled = vi.fn()` on ctx; step ~8.5s to force two
+  reports and assert eyeFiled called exactly once. The e2e leg zeroes
+  ga.unpaidHeld first, then asserts +1 after settle and still +1 after
+  a second report — measures the ledger, not the caption.
+- Gates: tsc, lint, 230 vitest (+1 once-per-eye spec), 5-seed sim,
+  e2e hazards — 'the watched hall' leg extended (heldAfterSettle===1,
+  filedCue, heldAfterSecond===1), build.

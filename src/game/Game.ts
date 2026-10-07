@@ -841,6 +841,7 @@ export class Game {
       heldOwed: () => this.unpaidHeld,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
+      eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
