@@ -3576,3 +3576,22 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   round-trips all five + the old-save `?? 0` path.
 - Trap: `hotItems` is `readonly` — rebuild via clear()+add, never assign.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg, build.
+
+### sprint 333 — the take goes back (the emptied till reaccepts its own)
+- The marked-goods triangle closes: rifled tills mint a 'restock'
+  verb ('Slip the take back — it never left', 0.9s, the till's own
+  anchor) at rifle time, pushed to `dynamicInteractables` so a room
+  rebuild replays the offer while the counter stays cold. It takes
+  back every carried `hotItems` stack — free, no profit, no ledger
+  relief: the register's witness doesn't unwrite for a returned
+  wrap ('[the till takes its own back — the wrap never left the
+  shelf]'). The decision tree is now: carry (warm clerks read the
+  stock), fence (4/stack + trail below), return (free upstairs).
+- Empty-handed shrug ('[the drawer is empty — nothing of his on
+  you]'); checker-shutter irrelevant (main-route counters).
+- e2e clerk leg: restock at the rifled till clears hotItems +
+  strips the goods + `unpaidHeld` unchanged. Trap: the till anchor
+  sits mid-counter — the drive needs the close 0.7m stand (the
+  1.0m default lands inside the counter flank collider → eject →
+  '' samples; same class as the s324 purse fix).
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.

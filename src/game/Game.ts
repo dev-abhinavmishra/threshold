@@ -1963,6 +1963,20 @@ export class Game {
         const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5;
         if (!unfiled) this.unpaidHeld += 2;
         it.enabled = false;
+        // sprint 333 — the take goes back: the emptied till takes its
+        // own stock back — a free, quiet return that clears your marks
+        // while the register's file stays written. Minted on rifle and
+        // replayed via dynamicInteractables so a room rebuild keeps the
+        // offer while the counter stays cold.
+        const restock = {
+          kind: 'restock' as const, id: `restock-${this.space}:${roomIndex}`,
+          pos: { x: it.pos.x, y: it.pos.y, z: it.pos.z },
+          prompt: 'Slip the take back — it never left',
+          holdTime: 0.9, priority: 1, enabled: true,
+          data: { roomIndex },
+        };
+        this.dynamicInteractables.push(restock);
+        this.interaction.add(restock);
         // the till smells of hands — hands in a staffed register leave
         // fresh sign at the counter: substantive work, not ash, so the
         // warden pulls to it like any kill or mounted wrap (and weighs
@@ -1992,6 +2006,26 @@ export class Game {
         this.cue('drawer', it.pos, unfiled
           ? '[it was watching the bell — your hands go unfiled]'
           : '[the clerk watches your hands — the register writes you twice]', 'warn');
+        return;
+      }
+      case 'restock': {
+        // sprint 333 — the take goes back: slip the marked goods into
+        // the emptied till. Free, no profit, and the books keep your
+        // file — the register's witness doesn't unwrite for a wrap.
+        const cIdx = (it.data as { roomIndex: number }).roomIndex;
+        if (!this.closedCounters.has(cIdx)) { it.enabled = false; return; }
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id));
+        if (take.length === 0) {
+          it.enabled = false;
+          this.cue('drawer', it.pos, '[the drawer is empty — nothing of his on you]', 'info');
+          return;
+        }
+        for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        it.enabled = false;
+        this.cue('drawer', it.pos, take.length === 1
+          ? '[the till takes its own back — the wrap never left the shelf]'
+          : `[the till takes its own back — ${take.length} wraps never left the shelf]`);
         return;
       }
       case 'purse': {

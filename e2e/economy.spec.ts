@@ -989,6 +989,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     let tillPaid = false, tillHeld = 0, rifleCap = '', tillGone = false, tillSeen = '';
     let hotAfterRifle = -1;
     let workMark = false, headPre = 0, headPost = 0;
+    let restockCap = '', restockDone = false;
     const clerkFig = ga.clerkFigs?.get(g.route.rooms.indexOf(clerked)) as
       { position: { x: number; z: number }; rotation: { y: number };
         userData?: { figureParts?: { head?: { rotation: { y: number } } } } } | undefined;
@@ -1044,6 +1045,28 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
           clerkFig.position.z + Math.cos(clerkFig.rotation.y + 0.9) * 2.0);
         for (let f = 0; f < 40; f++) g.frame();
         headPost = clerkHead.rotation.y;
+      }
+      // sprint 333 — the take goes back: the emptied till reaccepts
+      // its own marked stock — free, quiet, and the file stays written
+      const restock = (g.interaction as { interactables?: { kind: string;
+        pos: { x: number; y: number; z: number } }[] }).interactables
+        ?.find((i) => i.kind === 'restock');
+      if (restock) {
+        ga.hotItems?.add('tonic');
+        g.giveItem('tonic', 1);
+        const heldAtRestock = ga.unpaidHeld;
+        // the till anchor sits mid-counter — drive from the close 0.7m
+        // stand (1.0m lands inside the counter flank collider: eject
+        // fires after the aim, lookDir misses ~60°, focus stays null)
+        const rdx = clerked.origin.x - restock.pos.x, rdz = clerked.origin.z - restock.pos.z;
+        const rdl = Math.hypot(rdx, rdz) || 1;
+        drive({ x: restock.pos.x - (rdx / rdl) * 0.3, y: restock.pos.y,
+          z: restock.pos.z - (rdz / rdl) * 0.3 },
+          () => caps.some((t) => /takes its own back/.test(t)), 50);
+        restockCap = caps.find((t) => /takes its own back/.test(t)) ?? '';
+        restockDone = restockCap !== '' && (ga.hotItems?.size ?? -1) === 0
+          && !g.inventory.some((s) => s.id === 'tonic')
+          && ga.unpaidHeld === heldAtRestock;
       }
     }
     // Ring the desk bell — the house's only positional lure: noise at
@@ -1207,6 +1230,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
       hotAfterRifle,
       workMark, headPre, headPost, bellLookWarm, relBellN, bellLookCold, relPlayerN,
+      restockCap, restockDone,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       unfiledCap, unfiledHeld, unfiledCold, unfiledRoom,
@@ -1249,6 +1273,9 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     JSON.stringify(result)).toBe(true);
   expect(result.headPre).toBeLessThan(0.15); // untracked before the rifle
   expect(result.headPost, JSON.stringify(result)).toBeGreaterThan(0.25); // the clerk watches your hands
+  // sprint 333 — the take goes back: marks clear, goods stripped, file stays
+  expect(result.restockDone, JSON.stringify(result)).toBe(true);
+  expect(result.restockCap).toMatch(/takes its own back/);
   // sprint 327 — the bell draws its eye: warm clerk turns toward its own
   // ring (when the bell isn't dead-ahead), cold clerk keeps watching you
   if (Math.abs(result.relBellN ?? 0) > 0.3) {
