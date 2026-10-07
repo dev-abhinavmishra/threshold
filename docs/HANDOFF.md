@@ -2930,3 +2930,27 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - HANDOFF retitle: my PR #23 entry renumbered 302 → 302b (sibling's
   sprint 302 = the affidavit). Parent/child numbering is now disjoint:
   child keeps 3xx, parent takes 400+.
+
+## sprint 305 — the count (the till rings late)
+
+- The under's trace axis: pilfering CREW property (marginalia `claim`
+  cages, sledge `pick`, lamp `strip`) queues a loss-report in
+  `src/engine/crewCount.ts` that `sound.emit`s at the socket ~75s later —
+  intensity 0.6 'item', so it ROUSES dormant encounters through doors and
+  pulls the room's own listeners. Delayed heat that lands where you WERE:
+  pilfer-and-move misleads (the count hunts your shadow), pilfer-and-linger
+  and it finds you. The laundress's keen generalized — the books wail too.
+- Entity desks are NOT crew property (they keep their own books — the
+  drawer rouses are their count). The wash isn't queued either: her keen
+  IS the count for her load.
+- Traps/log: `emitCaption` displays every captioned event regardless of
+  distance — the player "hears" the count anywhere, which is the intended
+  tell. Sound events for listeners need NO `source` field (sourced events
+  are self-noise, filtered by noiseCanBeHeard/noiseCanRouse).
+- Harness: `scripts/soak-cdp-raw.mjs` + `scripts/soak-eval.js` — when
+  playwright's fresh launches enter the `trap int3` Compositor crash state
+  (dmesg; NOT OOM), drive the same playOnce evaluate on the desktop Chrome
+  at :29229 via raw CDP. Needs a self-started `vite preview :4173` (the
+  suite's dies with its runner → new tabs land on chrome-error://).
+- Gates: tsc, lint, 218 vitest (+2), 5-seed sim, economy+undercast 13/13
+  (+the count leg), build.
