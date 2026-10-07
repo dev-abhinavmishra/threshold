@@ -776,7 +776,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
         const prompt = g.interaction.focused?.prompt ?? '';
         if (f % 10 === 0) seen.push(prompt);
-        if (/counter|buy|wares|take|ask|clerk/i.test(prompt)) {
+        if (/counter|buy|wares|take|ask|clerk|rifle|till/i.test(prompt)) {
           if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
         } else { g.keys.delete('KeyE'); g.input.interactPressed = false; }
         g.frame();
@@ -833,10 +833,28 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         askPrompt = g.interaction.focused?.prompt ?? askPrompt;
       }
     }
+    // Rifle the till — the staffed-register rummage: pays once, files
+    // your face twice, and the till never re-offers.
+    const till = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'till');
+    let tillPaid = false, tillHeld = 0, rifleCap = '', tillGone = false, tillSeen = '';
+    if (till) {
+      ga.unpaidHeld = 0;
+      g.imprints = 0;
+      tillSeen = drive(till.pos, () => caps.some((t) => /off the till/.test(t)), 80);
+      rifleCap = caps.find((t) => /off the till/.test(t)) ?? '';
+      tillPaid = rifleCap !== '' && (g.imprints > 0 || g.inventory.length > 0);
+      tillHeld = ga.unpaidHeld;
+      for (let f = 0; f < 12; f++) g.frame();
+      tillGone = !(g.interaction as { interactables?: { kind: string }[] })
+        .interactables?.some((i) => i.kind === 'till');
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
+      tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
       clerkQ: sock.meta.clerkQ as string };
   });
 
@@ -856,6 +874,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.askCap, JSON.stringify(result)).toMatch(/duty sheet|ledger of faults|held-file/);
   expect(result.askPaid).toBe(true);
   expect(result.askTwice).toMatch(/said what it knows/);
+  // sprint 320 — rifle the till: pays once, files your face twice, never re-offers
+  expect(result.tillFound, JSON.stringify(result)).toBe(true);
+  expect(result.tillPaid, JSON.stringify(result)).toBe(true);
+  expect(result.tillHeld).toBe(2);
+  expect(result.tillGone).toBe(true);
   expect(errors).toEqual([]);
 });
 

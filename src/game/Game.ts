@@ -1236,6 +1236,31 @@ export class Game {
         holdTime: 1.0, enabled: true, priority: 3,
         data: { roomIndex },
       });
+      // The till sits mid-counter, between the wares laterally but a
+      // half-step back toward the clerk — inside the focus band an
+      // interactable needs ~0.86 aim-alignment, and a same-line anchor
+      // 0.55m off a ware stays in-band at counter standoff. Offsetting
+      // the till back onto the counter surface puts it ~40° off either
+      // ware, so aim picks cleanly.
+      const tillRoom = this.activeRooms()[roomIndex];
+      const tillSocks = tillRoom?.sockets.filter((s) => s.meta.clerk !== undefined) ?? [];
+      if (tillSocks.length === 2 && tillSocks[0].meta.tillTaken !== true) {
+        const midX = (tillSocks[0].pos.x + tillSocks[1].pos.x) / 2;
+        const midZ = (tillSocks[0].pos.z + tillSocks[1].pos.z) / 2;
+        const bx = fig.position.x - midX, bz = fig.position.z - midZ;
+        const bl = Math.hypot(bx, bz) || 1;
+        this.interaction.add({
+          kind: 'till', id: `till-${this.space}:${roomIndex}`,
+          pos: { x: midX + (bx / bl) * 0.5, y: 1.05, z: midZ + (bz / bl) * 0.5 },
+          prompt: 'Rifle the till',
+          // priority 1 — same tier as the wares; priority dominates inside
+          // the focus band, so a higher rank would shadow 'Buy at the
+          // counter' even when aimed dead at a ware. At par, the 0.55m
+          // offset (~20°) lets aim pick cleanly between them.
+          holdTime: 0.9, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+      }
     }
     // Cut the seal — an armed paper wire is a quiet thing you can cut;
     // under live floodwater the wire only shows itself to a wader
@@ -1817,6 +1842,32 @@ export class Game {
             ? `[the clerk's held-file: ${entries.join(' · ')}]`
             : '[the clerk\'s held-file — the house holds nothing ahead]');
         }
+        return;
+      }
+      case 'till': {
+        // Hands in the staffed register — the loudest claim the house
+        // books: two lines of held-goods while the clerk watches.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const room = this.activeRooms()[roomIndex];
+        const till = room?.sockets.find((s) => s.meta.clerk === 'slot0');
+        if (!till || till.meta.tillTaken === true) { it.enabled = false; return; }
+        till.meta.tillTaken = true;
+        this.unpaidHeld += 2;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 8);
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} imprints — off the till]`);
+        } else {
+          const pool = ['bandage', 'doorChock', 'feltWrap', 'latchpick'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the till]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
       case 'exitHide': {

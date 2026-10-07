@@ -3291,3 +3291,34 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   slot0 carries a valid clerkQ + 4-9 price; hazardContract += 'ask'),
   5-seed sim, e2e economy leg extended (ask anchor found → paid at
   list price → page answered → second ask says what it knows), build.
+
+## Sprint 320 — rifle the till (the staffed counter's rummage)
+
+- 'Rifle the till' (kind 'till', 0.9s hold, one-shot) anchors mid-
+  counter — between the wares laterally and 0.5m back toward the
+  clerk (computed from the two clerk sockets + the fig's position).
+  Pays imprints 4-8 (60%) or one of the clerk's stock pool (40%) on
+  the 'loot' stream; costs `unpaidHeld += 2` — the register-drawer
+  parity: hands in a staffed register file your face twice. The
+  clerk's own rate climbs emergently after (register's rate reads
+  unpaidHeld). `tillTaken` on slot0's meta both disables the press
+  and stops the interactable re-adding on rebuild.
+- REAL BUG the leg surfaced — sold sockets re-minted enabled
+  interactables: `enabled: !sock.meta.taken` ignored `meta.sold`, so
+  'Buy at the counter' re-offered focus after the sale and its press
+  silently hit the sold-guard. Worse, the front-edge wares stand
+  between the player and the counter surface: at 1.0m standoff a
+  same-line anchor 0.55m off a ware is only ~20-29° off-aim, inside
+  the ~0.86 align band, and proximity wins — a sold ware out-scored
+  every counter-surface verb forever. Fix: socket interactables now
+  mint `enabled: !taken && sold !== true`, and the till sits 0.5m
+  back on the counter (~40° off each ware) so aim picks cleanly even
+  before the sale.
+- Focus math for the log: `score = dist - align - priority*0.3` —
+  priority dominates inside the band, but at equal priority the
+  nearer candidate wins even at a 20°+ aim offset. Anchors sharing a
+  line need ≥0.9m lateral separation or a depth offset to separate
+  cleanly at counter standoff.
+- Gates: tsc, lint, vitest (contract += 'till'), 5-seed sim, e2e
+  economy leg extended (rifle → off-the-till pay → held 0→2 → till
+  never re-offers), build.
