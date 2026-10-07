@@ -830,7 +830,7 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       enterUnderscript(): void; godMode: boolean; currentRoom: number;
-      marginalia: number; keys: Set<string>;
+      marginalia: number; keys: Set<string>; unpaidHeld: number;
       checker: { stage: string };
       sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
     };
@@ -839,6 +839,7 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     ga.enterUnderscript();
     ga.godMode = true;
     ga.marginalia = 30;
+    ga.unpaidHeld = 0;
     const cageRoom = g.route.underRooms.find((r) =>
       (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
     if (!cageRoom) return { stage: 'none' } as const;
@@ -875,6 +876,8 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
       px: tag.pos.x + 0.4, pz: tag.pos.z,
       cueSeen: caps.some((c) => /walks the row/.test(c)),
       closeSeen: caps.some((c) => /closes the count|counts the till/.test(c)),
+      witSeen: caps.some((c) => /register gains a witness/.test(c)),
+      heldAfter: ga.unpaidHeld,
       caps: caps.slice(-10) } as const;
   });
 
@@ -883,6 +886,8 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
   expect(result.cueSeen, JSON.stringify(result)).toBe(true); // the answer went out
   expect(result.dispatched, JSON.stringify(result)).toBe(true);
   expect(result.found, JSON.stringify(result)).toBe(true); // the lamp found the lingerer
+  expect(result.heldAfter, JSON.stringify(result)).toBe(1); // the witness line landed
+  expect(result.witSeen, JSON.stringify(result)).toBe(true);
   // the find rings at YOU — the building learns where you are now
   expect(Math.abs((result.fx ?? 99) - (result.px ?? 0)) + Math.abs((result.fz ?? 99) - (result.pz ?? 0)), JSON.stringify(result)).toBeLessThan(1.0);
   expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);

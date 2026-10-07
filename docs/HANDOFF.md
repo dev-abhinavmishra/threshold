@@ -3051,3 +3051,26 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   (entity interactable, not a socket — no generation allowlist needed).
 - Gates: tsc, lint, 228 vitest (+3), 5-seed sim, economy **6/6** (+dead
   line leg; the phone-ahead leg still passes unchanged), build.
+
+## sprint 310 — the witness mark (the find joins the ledgers)
+
+- The checker's lamp find used to cost only a noise emit — the cry to
+  the room and nothing else. Now `CheckerHooks.witnessed` fires once
+  per dispatch on the find and Game writes it into the house book:
+  `unpaidHeld += 1` + '[the lamp holds your face — the register gains
+  a witness]' (warn cue).
+- Design: the counterparty's light holding your face IS a statement —
+  the under's count and the upstairs register now bind through one
+  mechanic. Get seen by the crew's sweep and the Detective's desk grows
+  a line you must settle (or escape via affidavit / paying the held
+  balance).
+- Asymmetry kept: strip the lamp and the blind sweep still files
+  nothing — the witness mark is exactly what the light buys the crew.
+- The hook lives on CheckerHooks (not entityCtx) because the checker is
+  a Game-managed walker, not a RoomEntity — same one-shot-per-dispatch
+  contract as the emit itself.
+- Traps/log: hooks() test helper gains the `witnessed` vi.fn — a
+  blind-sweep spec asserts it never fires. The e2e checker leg sets
+  `unpaidHeld = 0` pre-run and asserts `=== 1` after the find.
+- Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
+  checker leg asserts the witness line + cue), build.

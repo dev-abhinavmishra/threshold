@@ -236,6 +236,11 @@ export class Game {
       removeMesh: (o) => this.entityGroup.remove(o),
       cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
       emit: (e) => this.sound.emit(e),
+      // the lamp held a face — the find enters the house book as a witness
+      witnessed: () => {
+        this.unpaidHeld += 1;
+        this.cue('chalk-mark', this.player.pos, '[the lamp holds your face — the register gains a witness]', 'warn');
+      },
     };
   }
   private canvas: HTMLCanvasElement;
