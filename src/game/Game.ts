@@ -2528,6 +2528,58 @@ export class Game {
         this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
         return;
       }
+      case 'tallyDrawer': {
+        // Rifling the Auditor's own drawer — the loudest claim in the
+        // under: two lines in his book, and he's standing at the desk —
+        // the rummage opens the ledger at your name on the spot.
+        const h = it.data as unknown as { stock: number; keeper?: { rifledTally?: () => void } };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidTheft += 2;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the tally]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the tally]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the tally notes your hands — the book slaps open]', 'warn');
+        h.keeper?.rifledTally?.();
+        return;
+      }
+      case 'registerDrawer': {
+        // Rifling the Detective's register — imprints off the house book,
+        // two lines onto yours, and he doesn't need the slow look: your
+        // face files itself while your hands are in his drawer.
+        const h = it.data as unknown as { stock: number; keeper?: { rifledRegister?: () => void } };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidHeld += 2;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(6, 10);
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} imprints — off the register]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the register]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the register notes your hands — your face files itself]', 'warn');
+        h.keeper?.rifledRegister?.();
+        return;
+      }
       case 'cutWord': {
         // Tearing the courier's message — the word dies mid-delivery.
         // Not theft: the card is yours, and the Filer closes it torn.

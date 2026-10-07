@@ -1977,6 +1977,28 @@ describe('the Auditor (sprint 277)', () => {
     expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
     a.dispose();
   });
+
+  it('rifle the tally drawer — hands in HIS book open it on the spot (sprint 304)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 0, // a clean ledger — the rummage itself is the crime
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 2.5; ctx.player.pos.z = 3.2; // hands at his desk
+    const a = new Auditor();
+    a.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'tallyDrawer'),
+      'the drawer registers at spawn').toBe(true);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded, 'no demand on clean hands').toBe(false);
+    a.rifledTally();
+    expect(a.demanded, 'the book slaps open at your name').toBe(true);
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'audit'),
+      'the settle point comes up').toBe(true);
+    a.dispose();
+  });
 });
 
 describe('the House Detective (sprint 278)', () => {
@@ -2013,6 +2035,27 @@ describe('the House Detective (sprint 278)', () => {
     expect(d.warranted, 'the wire is live').toBe(true);
     const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
     expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'), 'the settle point registers').toBe(true);
+    d.dispose();
+  });
+
+  it('rifle the register drawer — your face files itself, no slow look (sprint 304)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 0, // a clean register — the rummage itself is the crime
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 2.5; ctx.player.pos.z = 3.2; // hands at his counter
+    const d = new Detective();
+    d.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'registerDrawer'),
+      'the drawer registers at spawn').toBe(true);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'no clock on clean hands').toBe(false);
+    d.rifledRegister();
+    expect(d.clocked, 'your face files itself').toBe(true);
+    expect(d.warranted, 'the wire is live already').toBe(true);
     d.dispose();
   });
 

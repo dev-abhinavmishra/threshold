@@ -2851,3 +2851,41 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   (`unpaidHeld === 1`), then square. vitest asserts `wordFiled` fires
   exactly once on escape and never on a cut.
 
+
+
+## sprint 304 — the last two drawers (entity-drawer rouse + pRoom=-1 trap)
+
+- The Filer's docket is riflable (s298); the Auditor's tally and the
+  Detective's register weren't — you could pick the SLEDGE under him but
+  not the book he guards. Both now add their drawer at onSpawn:
+  'tallyDrawer' / 'registerDrawer', one-shot, 0.9s, priority 3 —
+  MUST outrank the desk's own loot sockets (priority 1); the settle
+  point (4) outranks them once the rouse fires, so the rummage is a
+  one-shot surprise, not a repeatable trick.
+  Game case prices its own ledger (+2 theft / +2 held) and calls
+  keeper.rifledTally()/.rifledRegister() — the book slaps open / your
+  face files itself, on the spot, no slow look.
+- REAL PRODUCT FIX — the rouse guards: entity rouse checks used
+  `roomOf(player.pos) !== spawnRoom`, but `roomOf` returns the FIRST
+  bounds match, and room rects overlap at borders — a stand inside the
+  desk room resolved to a NEIGHBOUR's index and the guard skipped the
+  rouse entirely. All rifledX() now use proximity to the drawer
+  (dx²+dz² > 2.6² → return): hands in the drawer mean you ARE at his
+  desk.
+- REAL PRODUCT FIX — the -1 cool gap: Detective's `cool()` read
+  `Math.abs(pRoom - spawnRoom) > 10` unguarded; `roomOf` returns -1
+  BETWEEN bounds (desk-edge niche, door threshold) → |−1−26| = 27 →
+  the warrant cooled the instant it opened. Same gap existed in the
+  Auditor's pursuit-end and the Filer's posted-cool — all three now
+  `pRoom >= 0 &&`. Between-bounds is "still here", not "outrun".
+- e2e traps: entity drawers can't be driven on a CLEAN ledger via the
+  usual entry — owed>0 auto-rouses (his demand beats your rummage:
+  priority-4 settle steals the drawer's focus mid-hold). Reseed the
+  ledger to 0 before entering so the RIFLE is the rouse under test.
+  Adaptive-stand idiom for crowded desks: rotate an 8-angle stand list,
+  hold E only while `focused?.id === drawer.id` — neighbours (loot
+  socks, prop drawers, affidavits) share the 1.9m prox gate and steal
+  holds mid-rotation. Warranted slips must be SHORT (6 frames out,
+  5 back): the wire's ring wakes the neighbour's listeners and a grab
+  drags the player >10 rooms — the cool is then legitimate.
+

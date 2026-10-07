@@ -497,21 +497,42 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     const theftAfterSlip = ga.unpaidTheft;
 
-    // --- 2. walk into his room — the ledger opens ---
+    // --- 2. into his room with a CLEAN book — rifle the tally drawer
+    //    under his nose: owed>0 would auto-demand on entry and the settle
+    //    point would steal the drawer's focus; the rifle itself must be
+    //    what slaps the book open. +2 lines AND an instant demand.
     const aRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'auditor')
       && r.index !== cageRoom.index);
     if (!aRoom) return { stage: 'no-clerk' } as const;
+    ga.unpaidTheft = 0;
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
     const demandCap = caps.length;
     let clerk: { demanded?: boolean; pursuing?: boolean } | undefined;
-    for (let f = 0; f < 80; f++) {
+    for (let f = 0; f < 60; f++) {
       g.frame();
       clerk = ga.entities.find((e) => e.id === 'auditor') ?? clerk;
-      if (clerk?.demanded) break;
+      if (clerk) break;
     }
     if (!clerk) return { stage: 'no-clerk-spawn', ents: ga.entities.map((e) => e.id) } as const;
-    const demanded = caps.slice(demandCap).some((c) => /hands are in his book/.test(c));
+    const tally = g.interaction.interactables.find((i) => i.kind === 'tallyDrawer' && i.enabled);
+    if (tally) {
+      for (let f = 0; f < 60 && (tally.data as { stock?: number }).stock !== 0; f++) {
+        const sx = aRoom.origin.x - tally.pos.x, sz = aRoom.origin.z - tally.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(tally.pos.x + (sx / sl) * 0.9, 0, tally.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(tally.pos.x - g.player.pos.x, tally.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((tally.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const theftAfterDrawer = ga.unpaidTheft;
+    for (let f = 0; f < 40 && !clerk.demanded; f++) g.frame();
+    const demanded = caps.slice(demandCap).some((c) => /hands are in his book|book slaps open/.test(c));
+    if (ga.marginalia < 14) ga.marginalia = 14; // purse floor for the settle
 
     // --- 3. settle at his desk ---
     const settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled);
@@ -534,13 +555,14 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
-    return { stage: 'done' as const, demanded, theftAfterSlip, settlePrompt, paid,
+    return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, settlePrompt, paid,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.demanded, JSON.stringify(result)).toBe(true);
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
+  expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);
