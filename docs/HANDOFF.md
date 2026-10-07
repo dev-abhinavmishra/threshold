@@ -3322,3 +3322,27 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, vitest (contract += 'till'), 5-seed sim, e2e
   economy leg extended (rifle → off-the-till pay → held 0→2 → till
   never re-offers), build.
+
+## Sprint 321 — the desk bell (the house's only positional lure)
+
+- 'Ring the desk bell' (kind 'bell', 0.5s hold) anchors at the
+  counter's far end — 1.5× the slot axis past mid + 0.45 back toward
+  the clerk, computed from the two clerk sockets so it never shadows
+  'Rifle the till' (mid-counter) or the wares. Free, 25s per-room
+  cooldown (`bellRung` map on clock.time); inside it the bell answers
+  '[the bell gives a tired click]' with no noise.
+- The ring emits 'distraction' at 0.8 intensity AT THE BELL — every
+  other noise source in the house sits at the player's position
+  (watcher reports, filer posts, strides); the bell is the first
+  lure you can place and walk away from. ~11m reach through the
+  noiseRouse radius — in-room listeners + the room beyond.
+- Trap: keep counter-verb guards independent — the bell add lived
+  inside `!tillTaken` until it didn't (a rifled till would've
+  deleted the bell). One `tillSocks.length === 2` gate, separate
+  one-shot guards inside.
+- Trap: 'distraction' IS the rouse category — a lure verb doesn't
+  need a new SoundEvent kind, only a position that isn't the player.
+- Gates: tsc, lint, vitest (contract += 'bell'), 5-seed sim, e2e leg
+  extended (ring → distraction emitted AT the bell pos, verified by
+  wrapping g.sound.emit → second ring inside 25s gives the tired
+  click and emits nothing), build.

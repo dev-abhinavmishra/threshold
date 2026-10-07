@@ -1244,20 +1244,40 @@ export class Game {
       // ware, so aim picks cleanly.
       const tillRoom = this.activeRooms()[roomIndex];
       const tillSocks = tillRoom?.sockets.filter((s) => s.meta.clerk !== undefined) ?? [];
-      if (tillSocks.length === 2 && tillSocks[0].meta.tillTaken !== true) {
+      if (tillSocks.length === 2) {
         const midX = (tillSocks[0].pos.x + tillSocks[1].pos.x) / 2;
         const midZ = (tillSocks[0].pos.z + tillSocks[1].pos.z) / 2;
         const bx = fig.position.x - midX, bz = fig.position.z - midZ;
         const bl = Math.hypot(bx, bz) || 1;
+        if (tillSocks[0].meta.tillTaken !== true) {
+          this.interaction.add({
+            kind: 'till', id: `till-${this.space}:${roomIndex}`,
+            pos: { x: midX + (bx / bl) * 0.5, y: 1.05, z: midZ + (bz / bl) * 0.5 },
+            prompt: 'Rifle the till',
+            // priority 1 — same tier as the wares; priority dominates inside
+            // the focus band, so a higher rank would shadow 'Buy at the
+            // counter' even when aimed dead at a ware. At par, the 0.55m
+            // offset (~20°) lets aim pick cleanly between them.
+            holdTime: 0.9, enabled: true, priority: 1,
+            data: { roomIndex },
+          });
+        }
+        // The desk bell — a positional lure on the counter's far end:
+        // the only noise in the house that isn't at your position.
+        // Offset past slot1 (~0.9m lateral + back onto the counter) so
+        // its aim never shadows the till or the wares.
+        const lx = tillSocks[1].pos.x - tillSocks[0].pos.x;
+        const lz = tillSocks[1].pos.z - tillSocks[0].pos.z;
+        const ll = Math.hypot(lx, lz) || 1;
         this.interaction.add({
-          kind: 'till', id: `till-${this.space}:${roomIndex}`,
-          pos: { x: midX + (bx / bl) * 0.5, y: 1.05, z: midZ + (bz / bl) * 0.5 },
-          prompt: 'Rifle the till',
-          // priority 1 — same tier as the wares; priority dominates inside
-          // the focus band, so a higher rank would shadow 'Buy at the
-          // counter' even when aimed dead at a ware. At par, the 0.55m
-          // offset (~20°) lets aim pick cleanly between them.
-          holdTime: 0.9, enabled: true, priority: 1,
+          kind: 'bell', id: `bell-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX + (lx / ll) * 1.5 + (bx / bl) * 0.45,
+            y: 1.05,
+            z: midZ + (lz / ll) * 1.5 + (bz / bl) * 0.45,
+          },
+          prompt: 'Ring the desk bell',
+          holdTime: 0.5, enabled: true, priority: 1,
           data: { roomIndex },
         });
       }
@@ -1868,6 +1888,23 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, '[the clerk watches your hands — the register writes you twice]', 'warn');
+        return;
+      }
+      case 'bell': {
+        // The desk bell — the house's only noise that isn't at your
+        // position. One ring rolls down the hall as a 'distraction'
+        // (rouse category, intensity 0.8 ≈ 11m reach): anything
+        // listening answers the counter, not you. Per-room cooldown
+        // keeps a rung-out bell a spent tool, not a spammable siren.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const last = this.bellRung.get(roomIndex) ?? -Infinity;
+        if (this.clock.time - last < 25) {
+          this.cue('door-locked', it.pos, '[the bell gives a tired click — the house has heard enough]', 'info');
+          return;
+        }
+        this.bellRung.set(roomIndex, this.clock.time);
+        this.sound.emit({ x: it.pos.x, y: it.pos.y, z: it.pos.z, intensity: 0.8, category: 'distraction', caption: '' });
+        this.cue('phone-ring', it.pos, "[the bell's note rolls down the hall]", 'info');
         return;
       }
       case 'exitHide': {
@@ -5221,6 +5258,8 @@ export class Game {
   private readonly clerkFigs = new Map<number, THREE.Object3D>();
   /** Counters that already read you their page — one ask per clerk. */
   private readonly clerkAsked = new Set<number>();
+  /** Desk-bell cooldowns: roomIndex -> clock.time of the last ring. */
+  private readonly bellRung = new Map<number, number>();
 
   private ensureClerk(roomIndex: number): void {
     if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;
