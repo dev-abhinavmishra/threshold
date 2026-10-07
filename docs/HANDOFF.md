@@ -3369,3 +3369,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, vitest, 5-seed sim, economy leg extended (cold
   ware refuses at any price + stays unsold · cold ask folds · bell
   unaffected), build.
+
+## Sprint 323 — the purse (the two currencies finally bridge)
+
+- 'Change the purse — 6 imprints' anchors off the Broker counter's
+  near end: pays 6 imprints for 8 marginalia on clean books, 6 on
+  dirty (any of the three ledgers open sours the rate — the Broker
+  reads you). Repeatable — an exchange, not a sale. Shuttered with
+  the floor while the checker walks, like the fix.
+- First bridge between the currencies: imprints now have a path into
+  every marginalia-priced relief valve (fix, square, slips, claims).
+- Trap (fig-proximity): the clerk figs stand ~2m+ behind their
+  counter, so a mid-counter anchor separates from the priority-3
+  fig verb — but the Broker's fig stands only ~0.7m behind his
+  socks. A mid anchor lands on the fig's own line and 'Ask the
+  Broker for a fix' holds focus dead-aimed. Rule of thumb: before
+  placing a counter verb, check the fig's standoff — close-fig
+  counters need the lateral (bell-style) offset, not the mid one.
+- Gates: tsc, lint, vitest (contract += 'purse'), 5-seed sim, e2e
+  broker leg extended (clean 6→8 · sour 6→6 · short refuse · the
+  fixed anchor verified via purseSeen diagnostics), build.

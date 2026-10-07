@@ -1223,6 +1223,33 @@ export class Game {
         prompt: 'Ask the Broker for a fix',
         holdTime: 1.2, enabled: true, priority: 3,
       });
+      // The purse — the Broker changes coin: imprints into marginalia.
+      // Anchored off the counter's near end, NOT mid-counter: the
+      // Broker's fig stands ~0.7m behind the socks, so a mid anchor
+      // sits on the fig's own line and the priority-3 fix shadows it.
+      // A lateral offset gives ~40°+ separation from every anchor.
+      const bRoom = this.activeRooms()[roomIndex];
+      const bSocks = bRoom?.sockets.filter((s) => s.meta.broker !== undefined) ?? [];
+      if (bSocks.length >= 2) {
+        const midX = (bSocks[0].pos.x + bSocks[1].pos.x) / 2;
+        const midZ = (bSocks[0].pos.z + bSocks[1].pos.z) / 2;
+        const bx = fig.position.x - midX, bz = fig.position.z - midZ;
+        const bl = Math.hypot(bx, bz) || 1;
+        const lx = bSocks[1].pos.x - bSocks[0].pos.x;
+        const lz = bSocks[1].pos.z - bSocks[0].pos.z;
+        const ll = Math.hypot(lx, lz) || 1;
+        this.interaction.add({
+          kind: 'purse', id: `purse-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX - (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ - (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Change the purse — 6 imprints',
+          holdTime: 0.8, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+      }
     }
     // The clerk's page — a question desk on the figure itself: each
     // clerk holds one seeded query (staff on duty, faults on file, or
@@ -1904,6 +1931,29 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, '[the clerk watches your hands — the register writes you twice]', 'warn');
+        return;
+      }
+      case 'purse': {
+        // The Broker changes coin — 6 imprints for marginalia. The only
+        // bridge between the two currencies; his rate sours when your
+        // ledgers show (any of the three books open reads as risk).
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        if (this.imprints < 6) {
+          this.cue('door-locked', it.pos,
+            `[the purse wants 6 imprints — you're ${6 - this.imprints} short]`, 'warn');
+          return;
+        }
+        const dirty = this.unpaidTheft > 0 || this.unpaidHeld > 0 || this.paperTrail > 0;
+        const gain = dirty ? 6 : 8;
+        this.imprints -= 6;
+        this.marginalia += gain;
+        this.stats.marginaliaEarned += gain;
+        this.cue('purchase', it.pos, dirty
+          ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
+          : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
         return;
       }
       case 'bell': {
