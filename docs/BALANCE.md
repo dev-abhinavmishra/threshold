@@ -90,3 +90,35 @@ cheap prices.
   prices untouched (crew economy has its own books + test pins).
 - Open: looted vendables also drop free at decent rates — if playtests
   still read rich, trim loot weights next, not payouts.
+
+## Underscript legs (sprint 297 — "the subfloor counts too")
+
+The same spec now walks `route.underRooms` (121 rooms) after calling
+`enterUnderscript()` — the subfloor had never been measured. Fresh page
+per seed: back-to-back under runs in one page slow to a crawl and wedge
+the renderer (~45min stall observed); solo walks are ~30s each.
+
+### Measured (ash-vault-101 / gilt-spine-777 / wax-bell-256)
+
+| style  | deaths           | top killers                                                | economy |
+|--------|------------------|------------------------------------------------------------|---------|
+| walker | 23 / 23 / 24     | redline×11-12, grafter×6-7, returner×2-4, editor, pursuer×2 | — |
+| hider  | 17 / 16 / 16     | redline×11-12, grafter×1-2, returner×1-2, margin, editor    | — |
+| looter | 11 / 9 / 13      | redline×4-5, grafter×2-3, margin×2-3, stillframe, editor    | marg +30 / +18 / +24; imp +0 / +5 / +17 |
+
+### Read
+
+- The subfloor is ~1.5x the main route's ambient pressure for the walker
+  (23-24 vs 15-17) and ~2x for the hider (16-17 vs 8-9). Intended — the
+  optional floor is meaner by design — but the margin is worth watching.
+- Deaths concentrate on redline (~50% of all under deaths): a persistent
+  alarm line that hiding cannot solve — you must not cross it. That's
+  consistent pressure, not un-hideable luck; the hider's margin/returner
+  deaths are the real "hid and still died" residue (~3-5/121).
+- Editor deaths (1/seed) = the marginalia-ledger tax on looting under —
+  reads as intended pressure.
+- Marginalia flows: +18-30 per full looter walk against register/work-
+  order/crew-board/claim prices of int(3-16). Income out-earns a full
+  shopping trip — the under's papers are affordable, not free.
+- inv=0 on all legs: under caches resolve to currency/lore/consumables
+  that don't sit in the inventory list — expected, not a loot failure.

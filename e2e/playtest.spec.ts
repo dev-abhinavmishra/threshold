@@ -21,6 +21,11 @@ import { join } from 'node:path';
  *     take/search/vend/claim prompts — hold verbs included. Measures
  *     economy income against toll/vend spend.
  *
+ * The under leg (space='under') teleports into the Underscript via
+ * `enterUnderscript()` and walks `route.underRooms` — the subfloor has
+ * never been measured before; it carries its own entity roster, marginalia
+ * economy, flooded halls, and authored safe landings (index % 20).
+ *
  * Each run writes test-results/playtest-<seed>-<style>.json; BALANCE.md
  * carries the interpreted numbers. Assertions are structural only — this
  * leg measures; it doesn't tune.
@@ -50,7 +55,8 @@ interface RunReport {
   errors: string[];
 }
 
-const SEEDS = ['ash-vault-101', 'gilt-spine-777', 'wax-bell-256'];
+// PLAYTEST_SEEDS env narrows the sweep for smoke runs (comma-separated).
+const SEEDS = (process.env.PLAYTEST_SEEDS ?? 'ash-vault-101,gilt-spine-777,wax-bell-256').split(',');
 
 interface G {
   renderFrame(): void;
@@ -76,19 +82,25 @@ interface G {
   keys: Set<string>;
   startRun(o: { seedText: string; difficulty: string }): void;
   retryFromCheckpoint(): void;
-  route: { rooms: {
-    index: number; authored: boolean;
-    entryPos: { x: number; y: number; z: number };
-    exitPos: { x: number; y: number; z: number };
-    spec?: { special?: string; sockets: { kind: string; pos?: { x: number; y: number; z: number }; x?: number; z?: number }[] };
-    hidingSpots: { exitPos: { x: number; z: number } }[];
-    sockets: { kind: string; pos: { x: number; y: number; z: number }; filled?: boolean; meta?: Record<string, unknown> }[];
-  }[] };
+  enterUnderscript(): void;
+  route: {
+    rooms: RouteRooms;
+    underRooms: RouteRooms;
+  };
 }
-async function playOnce(page: import('@playwright/test').Page, seed: string, style: string): Promise<RunReport> {
+
+type RouteRooms = {
+  index: number; authored: boolean;
+  entryPos: { x: number; y: number; z: number };
+  exitPos: { x: number; y: number; z: number };
+  spec?: { special?: string; sockets: { kind: string; pos?: { x: number; y: number; z: number }; x?: number; z?: number }[] };
+  hidingSpots: { exitPos: { x: number; z: number } }[];
+  sockets: { kind: string; pos: { x: number; y: number; z: number }; filled?: boolean; meta?: Record<string, unknown> }[];
+}[];
+async function playOnce(page: import('@playwright/test').Page, seed: string, style: string, space: 'main' | 'under' = 'main'): Promise<RunReport> {
   const errors: string[] = [];
   const report = await page.evaluate(
-    ({ seed, style }) => {
+    ({ seed, style, space }) => {
       const g = (window as unknown as { __thresholdGame: {
         renderFrame(): void;
         clock: { tick(): boolean; dt: number; time: number };
@@ -97,9 +109,11 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
       g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
       g.startRun({ seedText: seed, difficulty: 'standard' });
       g.renderFrame = () => {};
+      if (space === 'under') g.enterUnderscript();
+      const rooms = space === 'under' ? g.route.underRooms : g.route.rooms;
 
       const rep: RunReport = {
-        seed, style, rooms: g.route.rooms.length, roomsReached: 0, deaths: {}, deathsTotal: 0,
+        seed, style, rooms: rooms.length, roomsReached: 0, deaths: {}, deathsTotal: 0,
         panics: 0, farthestRoom: 0, encounters: 0, socketsTouched: 0,
         stats: null as unknown as RunReport['stats'], inventory: [], errors: [],
       };
@@ -114,8 +128,8 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         const dx = ex.x - en.x, dz = ex.z - en.z, L = Math.hypot(dx, dz) || 1;
         g.player.teleport(en.x + (dx / L) * 1.3, 0, en.z + (dz / L) * 1.3, Math.atan2(dx, dz));
       };
-      for (let i = 0; i < g.route.rooms.length; i++) {
-        const room = g.route.rooms[i];
+      for (let i = 0; i < rooms.length; i++) {
+        const room = rooms[i];
         if (g.player.hiddenSpot) g.player.exitHiding(g.clock.time);
         // Scripted milestone/set-piece deaths aren't ambient balance —
         // a teleporter can't fight them fairly, so godMode there only.
@@ -124,7 +138,10 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         standIn(room);
         g.frame(); // room-entry: spawnScheduled + streamer window
 
-        const budget = room.spec?.special ? 90 : 240;
+        // Under rooms hold patrol entities that never vacate — longer waits
+        // measure nothing (there is no pass to outlast), so walker+hider
+        // spend a shorter fixed window; looter keeps 240 for socket loops.
+        const budget = room.spec?.special ? 90 : (space === 'under' && style !== 'looter' ? 150 : 240);
         let sawEntities = false;
         for (let f = 0; f < budget && !g.player.dead; f++) {
           // hider: retreat into the first spot while anything live is around
@@ -184,6 +201,7 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
         rep.farthestRoom = Math.max(rep.farthestRoom, i);
         rep.roomsReached = i + 1;
       }
+      rep.style = `${style}-${space}`;
 
       for (const d of deaths) {
         const c = d.split(':').slice(1).join(':') || 'unknown';
@@ -198,7 +216,7 @@ async function playOnce(page: import('@playwright/test').Page, seed: string, sty
       rep.inventory = g.inventory.map((x) => ({ ...x }));
       return rep;
     },
-    { seed, style },
+    { seed, style, space },
   );
   report.errors = errors;
   return report;
@@ -230,5 +248,42 @@ for (const style of ['walker', 'hider', 'looter']) {
     for (const r of out) {
       expect(r.roomsReached, `${r.seed}: run covered the route`).toBeGreaterThanOrEqual(90);
     }
+  });
+
+  test(`playtest under-${style} — subfloor pressure across seeds`, async ({ page }) => {
+    // 121 under rooms at the looter's full frame budget run past 20min.
+    test.setTimeout(3_600_000);
+    page.on('pageerror', (e) => console.log('pageerror:', e));
+    page.on('crash', () => console.log('PAGE CRASHED'));
+    const boot = async () => {
+      await page.goto('/?debug');
+      await page.getByRole('button', { name: 'New Run' }).click({ force: true });
+      await expect(page.locator('.hud')).toBeVisible({ timeout: 20_000 });
+      await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
+    };
+    await boot();
+
+    const out: RunReport[] = [];
+    for (const seed of SEEDS) {
+      out.push(await playOnce(page, seed, style, 'under'));
+      // The under run leaves ~2x a main run's state behind — back-to-back
+      // seeds in one page slow to a crawl and can wedge the renderer.
+      // A fresh page per seed keeps each walk at its solo ~30s.
+      await boot();
+    }
+    mkdirSync('test-results', { recursive: true });
+    writeFileSync(join('test-results', `playtest-under-${style}.json`), JSON.stringify(out, null, 2));
+    for (const r of out) {
+      console.log(
+        `PLAYTEST ${r.style} ${r.seed}: rooms=${r.roomsReached}/${r.rooms} deaths=${r.deathsTotal}` +
+        ` [${Object.entries(r.deaths).map(([k, v]) => `${k}x${v}`).join(' ') || '-'}]` +
+        ` imp+${r.stats.imprintsEarned} marg+${r.stats.marginaliaEarned} inv=${r.inventory.length}`,
+      );
+    }
+    // Structural guards only — the numbers are the deliverable, not a gate.
+    for (const r of out) {
+      expect(r.roomsReached, `${r.seed}: run covered the subfloor`).toBeGreaterThanOrEqual(90);
+    }
+    expect(out.length, 'every seed ran').toBe(SEEDS.length);
   });
 }

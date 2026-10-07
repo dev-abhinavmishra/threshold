@@ -2648,6 +2648,7 @@ advancing is the only reliable "sim is running" signal, and `g.resume()`
 exists if a PAUSED verdict ever needs breaking (the pointerlockchange
 listener pauses on lock loss).
 
+
 ## sprint 297 — the Filer (the index files your questions)
 
 - The under's third ledger entity: a hooded clerk at an index drawer who keeps
@@ -2696,3 +2697,43 @@ listener pauses on lock loss).
   lootRng consumer around it), placed after the work-order block.
 - e2e 'the index' now drives the full ledger arc: counter-claim (4→3) →
   rifle the docket (3→5) → filed → runner → square (→0).
+||||||| 11d94a7
+
+
+
+## sprint 297 — the subfloor counts too (under playtest legs)
+
+**What**: `e2e/playtest.spec.ts` never measured the Underscript — half
+the game had zero balance data. The spec now runs 6 legs: the three
+main styles + `under-<style>` on `route.underRooms` via
+`enterUnderscript()` (private in TS, runtime-callable).
+
+**Numbers** (BALANCE.md): under walker 23/23/24 deaths, hider 17/16/16,
+looter 11/9/13 + marg +18..+30 — the subfloor is ~1.5-2x main-route
+pressure, deaths concentrated on redline (~50%) + grafter/returner.
+Hider residue beyond alarms is ~3-5/121.
+
+**Harness traps** (cost ~2h to learn, don't relearn):
+- Back-to-back under seeds in ONE playwright page slow to a crawl and
+  wedge the renderer (~45min stall, CPU flat). The under legs `boot()`
+  a fresh page per seed — keep that or legs die on timeout-retry loops.
+- Under patrol entities never vacate, so walker+hider use budget 150
+  under (no pass to outlast); looter keeps 240 for socket loops.
+- `PLAYTEST_SEEDS` env narrows the sweep for smoke runs.
+- `page.on('crash')` is logged on under legs for future stalls.
+
+
+## docs — the open calls, decision-ready
+
+**What**: the three Abhinav-blocked backlog items (milestone-set
+hearing, shared-anchor double-verb, Auditor wanted-poster) are written
+up in `docs/DESIGN_CALLS.md` — status quo, options, and a
+recommendation each. When he answers, delete the doc's settled section
+and build the pick.
+
+**Recommendations recorded**: milestone hearing → light touch (primed
+opening tell only, fights stay authored); double-verb → yaw-window on
+`strip` (~10 lines, matches pry's shared-anchor disambiguation);
+wanted poster → poster-as-evidence on downstream boards, suspicion
+tier only, or skip to keep the under's threat texture physical.
+
