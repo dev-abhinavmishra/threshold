@@ -788,7 +788,9 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     g.godMode = true;
     const ga = g as unknown as { unpaidHeld: number;
-      clerkFigs?: Map<number, unknown> };
+      clerkFigs?: Map<number, unknown>;
+      hazard: { evidence: { pos: { x: number; z: number }; kind: string;
+        weak?: boolean }[] } };
 
     const clerked = g.route.rooms.find((r) =>
       r.sockets.some((s) => s.meta?.clerk !== undefined && s.meta?.clerkItem !== undefined));
@@ -911,6 +913,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       pos: { x: number; y: number; z: number } }[] }).interactables
       ?.find((i) => i.kind === 'till');
     let tillPaid = false, tillHeld = 0, rifleCap = '', tillGone = false, tillSeen = '';
+    let workMark = false;
     if (till) {
       ga.unpaidHeld = 0;
       g.imprints = 0;
@@ -925,6 +928,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       rifleCap = caps.find((t) => /off the till/.test(t)) ?? '';
       tillPaid = rifleCap !== '' && (g.imprints > 0 || g.inventory.length > 0);
       tillHeld = ga.unpaidHeld;
+      // the till smells of hands — the rifle leaves fresh 'work' sign at
+      // the counter (kind-agnostic readers pull it; the warden weighs it)
+      workMark = ga.hazard.evidence
+        .some((e) => e.kind === 'work' && e.weak !== true
+          && Math.hypot(e.pos.x - till.pos.x, e.pos.z - till.pos.z) < 0.6);
       for (let f = 0; f < 12; f++) g.frame();
       tillGone = !(g.interaction as { interactables?: { kind: string }[] })
         .interactables?.some((i) => i.kind === 'till');
@@ -984,6 +992,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
+      workMark,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
@@ -1017,6 +1026,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.tillPaid, JSON.stringify(result)).toBe(true);
   expect(result.tillHeld).toBe(2);
   expect(result.tillGone).toBe(true);
+  expect(result.workMark, JSON.stringify(result)).toBe(true); // fresh 'work' sign at the counter
   // sprint 321 — the desk bell: noise at the counter, a spent tool inside 25s
   expect(result.bellFound, JSON.stringify(result)).toBe(true);
   expect(result.bellCap).toMatch(/note rolls/);
