@@ -171,7 +171,7 @@ export const DOCUMENTS: Document[] = [
   },
   {
     id: 'doc-singer', title: 'Entity: Singer', category: 'entity', unlockedAt: 0,
-    body: 'Its song is a leash — while the note holds, it knows exactly where you are. Move between phrases. It cannot hear you over itself.',
+    body: 'It walks your steps five seconds behind, singing them back in your own cadence. Stop and it stops. Turn and look, and it bolts — it was never hunting you. Its footsteps are real noise, though: let it sing while something that hunts by ear is listening.',
   },
   {
     id: 'doc-grafter', title: 'Entity: Grafter', category: 'entity', unlockedAt: 0,

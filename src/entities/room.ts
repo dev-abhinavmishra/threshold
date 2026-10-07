@@ -343,8 +343,11 @@ export class Inkling extends Entity {
 export class EchoSkin extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
+  private pos = v3();
+  override threatPos(): Vec3 { return this.pos; }
   private behind = 0;
   private dispelT = 0;
+  private stepT = 0;
   private approachD = 8;
 
   constructor() { super('echoskin', ENTITY_TUNING.echoskin); }
@@ -361,16 +364,33 @@ export class EchoSkin extends Entity {
     this.mesh = g;
     this.ctx.addEntityMesh(g);
     this.approachD = 9;
+    this.pos = v3(this.ctx.player.pos.x, 0, this.ctx.player.pos.z - this.approachD);
   }
 
   protected override onUpdate(dt: number): void {
     const c = this.ctx;
     const p = c.player;
-    // It positions behind the player's facing.
-    const backYaw = p.yaw + Math.PI;
-    const bx = p.pos.x + Math.sin(backYaw) * this.approachD;
-    const bz = p.pos.z + Math.cos(backYaw) * this.approachD;
     this.rig?.update(dt);
+    // Is the player looking back at it? (checked before it treads so a
+    // fast spin can catch it standing in the open)
+    const dir = v3();
+    p.lookDir(dir);
+    const toE = v3(this.pos.x - p.pos.x, 1.0 - 1.6, this.pos.z - p.pos.z);
+    const dn = Math.hypot(toE.x, toE.z) || 1;
+    const facing = (dir.x * toE.x + dir.z * toE.z) / dn;
+    // It treads to stay behind the player's facing — but only in steps,
+    // and never while it's being watched. Unseen it re-seats a few times
+    // a second; caught in view it stands, which is how a look-back
+    // actually lands on it (it used to re-seat every frame, so it could
+    // never be faced and never dispelled).
+    this.stepT -= dt;
+    if (facing <= 0.7 && this.stepT <= 0) {
+      this.stepT = 0.35;
+      const backYaw = p.yaw + Math.PI;
+      this.pos.x = p.pos.x + Math.sin(backYaw) * this.approachD;
+      this.pos.z = p.pos.z + Math.cos(backYaw) * this.approachD;
+    }
+    const bx = this.pos.x, bz = this.pos.z;
     if (this.mesh) {
       this.mesh.position.set(bx, 0, bz);
       this.mesh.rotation.y = Math.atan2(p.pos.x - bx, p.pos.z - bz);
@@ -379,12 +399,6 @@ export class EchoSkin extends Entity {
     if (p.lastMoveSpeed > 0.5 && Math.random() < dt * 6) {
       c.cue('echoskin-step', v3(bx, 0, bz), '', { severity: 'info' });
     }
-    // Is the player looking back at it?
-    const dir = v3();
-    p.lookDir(dir);
-    const toE = v3(bx - p.pos.x, 1.0 - 1.6, bz - p.pos.z);
-    const dn = Math.hypot(toE.x, toE.z) || 1;
-    const facing = (dir.x * toE.x + dir.z * toE.z) / dn;
     if (facing > 0.7 && this.approachD < 12) {
       this.dispelT += dt;
       if (this.dispelT > 0.7) {
