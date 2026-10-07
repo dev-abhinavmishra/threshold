@@ -776,7 +776,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
         const prompt = g.interaction.focused?.prompt ?? '';
         if (f % 10 === 0) seen.push(prompt);
-        if (/counter|buy|wares|take/i.test(prompt)) {
+        if (/counter|buy|wares|take|ask|clerk/i.test(prompt)) {
           if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
         } else { g.keys.delete('KeyE'); g.input.interactPressed = false; }
         g.frame();
@@ -811,9 +811,33 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       ratePaid = sock2.meta.sold === true && g.imprints === 0;
       rateCap = caps.find((t) => /register's rate/.test(t)) ?? '';
     }
+    // Ask the clerk — a second anchor on the figure: one seeded page,
+    // priced in imprints at the register's rate, one-shot per clerk.
+    const ask = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'ask');
+    let askPrompt = '', askPaid = false, askCap = '', askTwice = '';
+    if (ask) {
+      ga.unpaidHeld = 0; // clean face — the page sells at list price
+      g.imprints = 40;
+      const capMark = caps.length;
+      drive(ask.pos, () => caps.slice(capMark).some((t) =>
+        /duty sheet|ledger of faults|held-file/.test(t)), 60);
+      askCap = caps.slice(capMark).find((t) => /duty sheet|ledger of faults|held-file/.test(t)) ?? '';
+      askPaid = askCap !== '' && g.imprints === 40 - ((sock.meta.clerkQPrice as number) ?? 6);
+      // one-shot: a second ask reads nothing more
+      drive(ask.pos, () => caps.some((t) => /said what it knows/.test(t)), 80);
+      askTwice = caps.find((t) => /said what it knows/.test(t)) ?? '';
+      for (let f = 0; f < 6; f++) {
+        g.frame();
+        askPrompt = g.interaction.focused?.prompt ?? askPrompt;
+      }
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
-      twoSocks: !!sock2, ratePaid, rateCap, expected2 };
+      twoSocks: !!sock2, ratePaid, rateCap, expected2,
+      askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
+      clerkQ: sock.meta.clerkQ as string };
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
@@ -826,6 +850,12 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.twoSocks, JSON.stringify(result)).toBe(true);
   expect(result.ratePaid, JSON.stringify(result)).toBe(true);
   expect(result.rateCap).toMatch(/register's rate/);
+  // sprint 319 — ask the clerk: the page answers once, at the register's rate
+  expect(result.askFound, JSON.stringify(result)).toBe(true);
+  expect(result.askPrompt).toMatch(/clerk/i);
+  expect(result.askCap, JSON.stringify(result)).toMatch(/duty sheet|ledger of faults|held-file/);
+  expect(result.askPaid).toBe(true);
+  expect(result.askTwice).toMatch(/said what it knows/);
   expect(errors).toEqual([]);
 });
 

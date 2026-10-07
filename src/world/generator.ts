@@ -635,6 +635,14 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           meta: { clerk: `slot${slot}` },
         });
       }
+      // And one question each: the clerk keeps a page it will read to
+      // you for imprints — staff on duty, faults on file, or who the
+      // house is holding. Data lives on slot0's meta; the verb anchors
+      // on the figure, not the socket, so 'Ask' never shadows 'Buy'.
+      const queries = ['staff', 'hazard', 'claims'] as const;
+      const sock0 = room.sockets[room.sockets.length - 2];
+      sock0.meta.clerkQ = queries[clRng.int(0, queries.length - 1)];
+      sock0.meta.clerkQPrice = clRng.int(4, 9);
       clerked = true;
     }
   }

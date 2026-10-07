@@ -240,6 +240,13 @@ describe('sprint mechanics coverage', () => {
         expect(r.spec?.props.some((p) => p.kind === 'counter'), `${seed}/${r.index}: clerk only at a counter`).toBe(true);
         const peds = r.sockets.filter((s) => s.meta.clerk !== undefined);
         expect(peds.length, `${seed}/${r.index}: two wares on the counter`).toBe(2);
+        // sprint 319 — slot0 also carries the clerk's one seeded page
+        const page = r.sockets.find((s) => s.meta.clerk === 'slot0');
+        expect(page, `${seed}/${r.index}: the clerk's page`).toBeTruthy();
+        expect(['staff', 'hazard', 'claims'], `${seed}/${r.index}: a known question`)
+          .toContain(page!.meta.clerkQ);
+        const price = page!.meta.clerkQPrice as number;
+        expect(price >= 4 && price <= 9, `${seed}/${r.index}: page priced 4-9`).toBe(true);
       }
     }
   });

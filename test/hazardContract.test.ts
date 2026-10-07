@@ -43,7 +43,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const hazardSrc = readFileSync('src/entities/room.ts', 'utf8');
     // defuse verbs: snip (snare), bleed (steam), coax (wired drawer),
     // valve/drain (puddle), trap (floor trap pry)
-    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'", "'tape'", "'untape'", "'fix'"]) {
+    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'", "'tape'", "'untape'", "'fix'", "'ask'"]) {
       expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
       expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
     }
