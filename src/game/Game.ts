@@ -824,10 +824,15 @@ export class Game {
         // Wipes (a scrubbed floor's shadow) show only to warden keys and are
         // never marked read — a wiped floor stays wiped, so the zone keeps
         // poisoning that hunter's reads permanently.
+        // And sign goes cold: a mark older than ~6 minutes has dried —
+        // the warden stops believing it (the grafter still chases the cold
+        // trail; its whole diet is ghosts).
         const staleOk = key.startsWith('grafter:');
         const wardenOk = key.startsWith('warden:');
+        const cold = this.clock.time - 360;
         const out = this.hazard.evidence.filter((e) => (staleOk || !e.old) && (staleOk || !e.weak)
           && (wardenOk || !e.wiped)
+          && (staleOk || e.wiped || e.t >= cold)
           && (e.wiped || !e.readBy.includes(key))
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
         for (const e of out) if (!e.wiped) e.readBy.push(key);

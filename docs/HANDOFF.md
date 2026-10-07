@@ -2482,3 +2482,23 @@ NEXT SPRINT IDEAS (pick the biggest first)
   - 'Seen'-record echo — half-baked, logged skip.
   - A wipe could decay ('the smell fades after N minutes') if permanent
     zone-poison proves too strong in play.
+
+## sprint 292 — the sign goes cold
+
+What:
+- `hazardEvidence` gains a time axis: `e.t >= clock.time - 360` for
+  non-grafter keys — a mark older than ~6 sim-minutes has dried and the
+  warden stops believing it (grafter keys exempt: `staleOk` — the grafter's
+  whole diet is ghosts anyway). Wipes bypass the clock (`e.wiped ||`)
+  so the doubt-zone never ages out.
+- Fresh sign now has a shelf life: kill a hazard early and by the time
+  you backtrack the warden shrugs — loud work is marked work, but only
+  RECENT work. Your forge's lie dries too (~6 min per planted bait).
+- e2e 'the sign goes cold': a `t = now-400` mark never reads (readBy
+  stays empty — not even consumed), a fresh mark same room pulls.
+
+NEXT SPRINT IDEAS (pick the biggest first)
+  - Milestone-set hearing remains a design call (needs Abhinav).
+  - The shared-anchor double-verb flag is open with Abhinav.
+  - The Auditor wanted-poster stays a design call.
+  - 'Seen'-record echo — half-baked, logged skip.

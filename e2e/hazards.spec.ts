@@ -328,6 +328,67 @@ test('the warden doubts — sign beside a wiped floor is not investigated', asyn
   expect(errors).toEqual([]);
 });
 
+// Sign goes cold: a mark older than ~6 sim-minutes has dried — the warden
+// never picks it up; a fresh mark in the same room still pulls it.
+test('the sign goes cold — the warden only believes fresh work', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's' carries warden @33
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string; state: string }[];
+    };
+    const wardenRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'warden'));
+    if (!wardenRoom) return { stage: 'no-warden' } as const;
+    g.player.teleport(wardenRoom.origin.x, 0, wardenRoom.origin.z);
+    (g as unknown as { currentRoom: number }).currentRoom = wardenRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    const w = ga.entities.find((e) => e.id === 'warden');
+    if (!w) return { stage: 'no-spawn' } as const;
+    const spot = wardenRoom.hidingSpots.find((sp) => !sp.trappedBy) ?? wardenRoom.hidingSpots[0];
+    if (spot) {
+      g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+      (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    } else {
+      g.player.teleport(wardenRoom.origin.x - 40, 0, wardenRoom.origin.z);
+    }
+    for (let f = 0; f < 10; f++) g.frame();
+    // a cold mark: dried 400s before the frame's sim-time
+    const coldSign = { pos: { x: wardenRoom.origin.x + 0.8, y: 0, z: wardenRoom.origin.z }, room: wardenRoom.index, kind: 'line', t: g.clock.time - 400, readBy: [] as string[] };
+    ga.hazard.evidence.push(coldSign);
+    let coldRead = false;
+    for (let f = 0; f < 400 && !coldRead; f++) {
+      g.frame();
+      coldRead = caps.some((c) => /reads the sign/.test(c));
+    }
+    // sanity: fresh work in the same room still pulls it
+    const freshSign = { pos: { x: wardenRoom.origin.x - 1.2, y: 0, z: wardenRoom.origin.z + 1.2 }, room: wardenRoom.index, kind: 'wire', t: g.clock.time, readBy: [] as string[] };
+    ga.hazard.evidence.push(freshSign);
+    let freshRead = false;
+    for (let f = 0; f < 400 && !freshRead; f++) {
+      g.frame();
+      freshRead = caps.some((c) => /reads the sign/.test(c));
+    }
+    return { stage: 'done', coldRead, coldMarked: coldSign.readBy.length > 0,
+      freshRead, caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.coldRead, `cold sign must be ignored: ${JSON.stringify(result.caps)}`).toBe(false);
+  expect(result.coldMarked, 'the warden never even reads it').toBe(false);
+  expect(result.freshRead, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('ghosts — stale sign still pulls the Grafter, the caption says so', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
