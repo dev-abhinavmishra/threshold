@@ -333,6 +333,11 @@ export class Grafter extends Entity {
   private noiseUnsub: (() => void) | null = null;
   private noiseDriftCd = 0;
   private scentT = 0;
+  // sprint 295 — appetite: every in-room mark it drags to teaches it
+  // the room is alive; at 2+ it hunts in earnest (faster, longer-lived)
+  private markReads = 0;
+  private eagerCued = false;
+  private get eager() { return this.markReads >= 2; }
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
 
@@ -413,8 +418,8 @@ export class Grafter extends Entity {
     const d = v3dist(this.pos, p.pos);
     // it notices the living within its range — hidden reads as furniture
     const notices = d < this.tuning.seeRange && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
-    let speed = this.tuning.speed;
-    if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= 1.4; }
+    let speed = this.tuning.speed * (this.eager ? 1.15 : 1);
+    if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= this.eager ? 1.75 : 1.4; }
 
     const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
     const dd = Math.hypot(dx, dz);
@@ -438,10 +443,15 @@ export class Grafter extends Entity {
       const evs = c.hazardEvidence?.(`grafter:${this.spawnRoom}`, this.pos.x, this.pos.z, 40) ?? [];
       for (const ev of evs) {
         if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
+        this.markReads += 1;
         this.target = v3(ev.pos.x, 0, ev.pos.z);
         this.roamT = 0;
         c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]' : ev.weak ? '[stone snuffles the ash — it smells hands]' : '[stone drags to the fresh sign]', { severity: 'warn' });
         break;
+      }
+      if (this.eager && !this.eagerCued) {
+        this.eagerCued = true;
+        c.cue('grafter-grind', this.pos, '[stone has tasted too much — it hunts in earnest]', { severity: 'warn' });
       }
     }
     this.grindT += dt;
@@ -459,7 +469,7 @@ export class Grafter extends Entity {
     }
     // it settles back into the floor when the living move on, or when it has
     // wandered itself apart
-    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2 || this.lifeT > 75) this.done();
+    if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2 || this.lifeT > (this.eager ? 120 : 75)) this.done();
   }
 
   private roomOf(p: Vec3): number {
