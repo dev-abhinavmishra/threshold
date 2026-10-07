@@ -3513,3 +3513,16 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   rifle caption reads '— the coin is marked' (item branch = clean).
 - Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
 
+### sprint 330 — the wash files a question (the launder isn't free)
+- The purse's wash now costs the under's own book: `washed > 0` →
+  `paperTrail +1`. The marked coin stays silent to the HOUSE (no
+  emit — the under doesn't testify), but the Broker's book reads
+  coin as carefully as the register reads faces: '[the purse weighs
+  the marked coin — the under's book opens a line · 6 imprints →
+  ${gain} marginalia]'. The heist chain now prices both ledgers:
+  rifle = the house's book (witness + work sign unless the eye is
+  on the bell), wash = the under's book (+1 trail toward her 3+).
+- e2e broker leg: wash phase asserts hot 6→0 AND trail +1 inside
+  `purseWashed`. Caption renamed 'washes' → 'weighs'.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.
+

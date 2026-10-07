@@ -737,15 +737,18 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
           () => caps.some((t) => /purse wants/.test(t)), 40);
         purseShortCap = caps.find((t) => /purse wants/.test(t)) ?? '';
         margAfterPurse = g.marginalia;
-        // sprint 329 — the wash: feed the purse the till's marked coin;
-        // the under takes hot imprints without asking — they die silent.
-        const gh = g as unknown as { hotImprints: number };
+        // sprint 329/330 — the wash: feed the purse the till's marked
+        // coin; the under takes it without asking (hot dies silent) but
+        // its own book opens a line — the wash files a question.
+        const gh = g as unknown as { hotImprints: number; paperTrail: number };
         gh.hotImprints = 6;
+        const trailBeforeWash = gh.paperTrail;
         g.imprints = Math.max(g.imprints, 6);
         drive(purse.pos, /purse|change/i,
-          () => caps.some((t) => /washes the marked coin/.test(t)), 50);
-        purseWashCap = caps.find((t) => /washes the marked coin/.test(t)) ?? '';
-        purseWashed = purseWashCap !== '' && gh.hotImprints === 0;
+          () => caps.some((t) => /weighs the marked coin/.test(t)), 50);
+        purseWashCap = caps.find((t) => /weighs the marked coin/.test(t)) ?? '';
+        purseWashed = purseWashCap !== '' && gh.hotImprints === 0
+          && gh.paperTrail === trailBeforeWash + 1;
       }
       return {
         stage: 'done', refused, refuseCap, price, item,
@@ -800,9 +803,10 @@ test('broker pedestal: short marginalia refuses, paid trade grants the ware', as
   expect(result.purseSour, JSON.stringify(result)).toBe(true);
   expect(result.purseSourCap).toMatch(/rate sours/);
   expect(result.purseShortCap).toMatch(/purse wants/);
-  // sprint 329 — the wash: marked coin dies in the under's till
+  // sprint 329/330 — the wash: marked coin dies silent, the under's
+  // book opens a line for it (paperTrail +1 asserted in purseWashed)
   expect(result.purseWashed, JSON.stringify(result)).toBe(true);
-  expect(result.purseWashCap).toMatch(/washes the marked coin/);
+  expect(result.purseWashCap).toMatch(/weighs the marked coin/);
   expect(result.margAfterPurse).toBe(44);
   expect(errors).toEqual([]);
 });

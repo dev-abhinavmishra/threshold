@@ -2011,13 +2011,16 @@ export class Game {
         const gain = dirty ? 6 : 8;
         this.imprints -= 6;
         // sprint 329 — the under launders: the Broker takes the till's
-        // marked coin without asking — hot imprints die here, silent
+        // marked coin without asking — hot imprints die here, silent.
+        // sprint 330 — but the wash isn't free: the under's book reads
+        // the marked coin too, and the purse files the question.
         const washed = Math.min(6, this.hotImprints);
         this.hotImprints -= washed;
+        if (washed > 0) this.paperTrail += 1;
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
         this.cue('purchase', it.pos, washed > 0
-          ? `[the purse washes the marked coin — the under doesn't ask · 6 imprints → ${gain} marginalia]`
+          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia]`
           : dirty
             ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
             : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
