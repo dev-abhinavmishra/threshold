@@ -2543,9 +2543,30 @@ Traps:
 - Keep walked measurement under the 1.5s lost-scent grace — a stray
   LOS drop mid-measure ends the charge.
 
+## sprint 295 — the rubble hungers (learned grafter)
+
+What:
+- The grafter's escalation is appetite, not pace: `markReads` counts
+  in-room marks it drags to (old/weak/fresh all count — its diet is
+  ghosts). At 2+, eager: base drag ×1.15, the notice multiplier
+  1.4→1.75, lifeT cap 75→120 (it lingers feasting). One cue:
+  `[stone has tasted too much — it hunts in earnest]`.
+- Asymmetry on purpose: the warden quickens; the grafter hungers.
+Traps:
+- Grafter A/B roam measures DON'T work: pickRoam seeds off
+  `lifeT` — two instances at different ages pick different targets.
+  Measure drag speed instead: same spot, fresh mark, frames-to-mark.
+- makeCtx's stub player is `protection: 'exposed'` — a hiddenSpot
+  field alone does NOT hide them; `notices` outranks the scent target
+  within seeRange (9m). Set `protection = 'hidden'` explicitly or the
+  grafter chases the player, not the mark.
+- Grafter kill is instant at killRange once `rising` ends — keep the
+  player 'hidden' in drag-measure tests.
+
 NEXT SPRINT IDEAS (pick the biggest first)
   - Milestone-set hearing remains a design call (needs Abhinav).
   - The shared-anchor double-verb flag is open with Abhinav.
   - The Auditor wanted-poster stays a design call.
-  - The grafter has no escalation analog — a grafter that has read
-    N marks could drag FASTER (learned grafter) for asymmetry.
+  - Counter-learning: a player could OVERFEED a room's hunter
+    (plant cheap forged marks to... nothing — learning only helps the
+    hunter; the feed is pure cost. Skip.)

@@ -1463,6 +1463,58 @@ describe('Grafter (sprint 256)', () => {
     expect(cues.some((t) => /old mark/.test(t)), 'stale sign smells like stale sign').toBe(true);
     g.dispose();
   });
+
+  it('the rubble hungers — two marks and it hunts in earnest (sprint 295)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    ctx.player.protection = 'hidden'; // hidden reads as furniture — the drag must win, not the notice
+    const records = [
+      { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] },
+      { pos: v3(-1.5, 0, 3.0), room: 0, kind: 'line' as const, t: 0, readBy: [] as string[] },
+    ];
+    ctx.hazardEvidence = (key, x, z, r) => {
+      // one mark per call — see sprint 293's note about burn-unseen
+      const out = records.filter((e) => !e.readBy.includes(key)
+        && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { pos: { x: number; z: number }; markReads: number };
+    for (let i = 0; i < 900 && gi.markReads < 2; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(gi.markReads, 'it weighed both marks').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /hunts in earnest/.test(t)), 'appetite announces once').toBe(true);
+    // drag speed is the fair measure: roam picks are lifeT-seeded and
+    // diverge between instances. Same spot, same mark, count frames.
+    const b = new Grafter();
+    b.spawn(ctx); // grafter:0 already read both marks — it learns nothing
+    const bi = b as unknown as { pos: { x: number; z: number }; markReads: number };
+    const drag = (hunter: Grafter, hp: { x: number; z: number }) => {
+      hp.x = 0; hp.z = 0;
+      const mark = { pos: v3(0, 0, -4), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] };
+      records.push(mark);
+      (hunter as unknown as { scentT: number }).scentT = 0; // poll next frame, not in 1.6s
+      let frames = 0;
+      while (frames++ < 800 && Math.hypot(hp.x - mark.pos.x, hp.z - mark.pos.z) > 0.4) {
+        ctx.now += 0.05; hunter.update(0.05);
+      }
+      return frames;
+    };
+    const fE = drag(g, gi.pos);
+    const fB = drag(b, bi.pos);
+    expect(fE, `eager drag ${fE}f vs baseline ${fB}f`).toBeLessThan(fB * 0.95);
+    g.dispose();
+    b.dispose();
+  });
 });
 
 

@@ -496,6 +496,54 @@ test('ghosts — stale sign still pulls the Grafter, the caption says so', async
 });
 
 
+// The rubble hungers: a grafter that has dragged to two marks turns
+// eager — it announces once and hunts faster/longer (sprint 295).
+test('the rubble hungers — two marks and the grafter hunts in earnest', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's' grafter @6
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entities: { id: string }[];
+    };
+    const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'grafter'));
+    if (!gRoom) return { stage: 'none-scheduled' } as const;
+    const spot = gRoom.hidingSpots?.find((sp) => !sp.trappedBy);
+    if (!spot) return { stage: 'no-spot' } as const;
+    g.player.teleport(spot.exitPos.x, 0, spot.exitPos.z);
+    (g.player as unknown as { hiddenSpot: unknown }).hiddenSpot = spot;
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    if (!ga.entities.some((e) => e.id === 'grafter')) return { stage: 'no-spawn' } as const;
+    // two marks, read across separate scent cycles — the second feeds it
+    const mk = (dx: number, dz: number) => ga.hazard.evidence.push({
+      pos: { x: gRoom.origin.x + dx, y: 0, z: gRoom.origin.z + dz },
+      room: gRoom.index, kind: 'wire', t: g.clock.time, readBy: [],
+    });
+    mk(1.5, 0.5);
+    for (let f = 0; f < 90; f++) g.frame(); // one scent cycle eats mark one
+    mk(-1.5, 1.5);
+    for (let f = 0; f < 500; f++) g.frame();
+    const learned = caps.filter((c) => /hunts in earnest/.test(c)).length;
+    return { stage: 'done', learned, caps: caps.slice(-8) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.learned, JSON.stringify(result)).toBe(1);
+  expect(errors).toEqual([]);
+});
+
+
 test('the watched hall — the eye reads motion, felt blinds it', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
