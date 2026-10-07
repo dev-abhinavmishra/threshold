@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { generateRoute } from '../src/world/generator';
-import { SAFE_ROOM_TEMPLATES } from '../src/game/config';
+import { SAFE_ROOM_TEMPLATES, ENTITY_TUNING } from '../src/game/config';
+import { TELLS } from '../src/world/foreshadow';
 import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
@@ -1096,6 +1097,37 @@ describe('the House Detective (sprint 278)', () => {
           `detective on a desk-less room ${seed} r-${r.index}`).toBe(true);
         expect(r.index, `detective too early ${seed}`).toBeGreaterThanOrEqual(18);
       }
+    }
+  });
+});
+
+describe('the marked approach (sprint 288)', () => {
+  it('every schedulable entity marks its approach rooms', () => {
+    // pursuer/hazard/orrery are milestone- or environment-triggered — no
+    // approach rooms to mark. Anything else the scheduler can place needs
+    // a prop tell set, or its rooms arrive unsigned.
+    const EXEMPT = new Set(['pursuer', 'hazard', 'orrery']);
+    for (const id of Object.keys(ENTITY_TUNING)) {
+      if (EXEMPT.has(id)) continue;
+      expect(TELLS[id], `no foreshadow prop tells for ${id}`).toBeTruthy();
+    }
+  });
+
+  it('under approach rooms carry foreshadow marks too', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const marked = route.underRooms.filter((r) => (r.spec?.props ?? []).some((p) => p.meta?.foreshadow));
+      expect(marked.length, `no under foreshadow props on ${seed}`).toBeGreaterThanOrEqual(5);
+      const decalMarked = route.underRooms.filter((r) => r.foreshadow);
+      expect(decalMarked.length, `no under foreshadow decals on ${seed}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it('main approach rooms still carry foreshadow marks', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const marked = mainRooms(route).filter((r) => (r.spec?.props ?? []).some((p) => p.meta?.foreshadow));
+      expect(marked.length, `no main foreshadow props on ${seed}`).toBeGreaterThanOrEqual(5);
     }
   });
 });
