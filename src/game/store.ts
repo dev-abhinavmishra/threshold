@@ -37,7 +37,7 @@ export interface GameUi {
   difficulty: Difficulty;
   documents: Document[];
   deathInfo: { cause: string; hint: string; entity: string } | null;
-  victoryInfo: { stats: RunStats } | null;
+  victoryInfo: { stats: RunStats; books?: BooksClosed } | null;
   shopItems: { id: ItemId; price: number; slot: number; sold: boolean }[];
   shopOpen: boolean;
   menuPage: 'title' | 'settings' | 'documents' | 'death' | 'victory' | 'pause' | 'seeds';
@@ -130,6 +130,15 @@ export function saveMeta(m: MetaSave): void {
   } catch {
     /* ignore */
   }
+}
+
+/** The ledgers as the door left them — read aloud on the victory screen. */
+export interface BooksClosed {
+  thefts: number;
+  held: number;
+  asks: number;
+  hotCoin: number;
+  hotGoods: number;
 }
 
 export interface CheckpointSave {
