@@ -806,10 +806,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     const item = sock.meta.clerkItem as string;
     const figPresent = ga.clerkFigs?.has(clerked.index) === true;
 
-    const drive = (at: { x: number; y: number; z: number }, done: () => boolean, cap: number): string => {
+    const drive = (at: { x: number; y: number; z: number }, done: () => boolean, cap: number,
+      toward: { x: number; z: number } = clerked.origin): string => {
       const seen: string[] = [];
       for (let f = 0; f < cap && !done(); f++) {
-        const dx = clerked.origin.x - at.x, dz = clerked.origin.z - at.z;
+        const dx = toward.x - at.x, dz = toward.z - at.z;
         const L = Math.hypot(dx, dz) || 1;
         g.player.teleport(at.x + (dx / L) * 1.0, 0, at.z + (dz / L) * 1.0);
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
@@ -1031,6 +1032,82 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       const folds = caps.filter((t) => /folds its hands/.test(t));
       coldPurseCap = folds[folds.length - 1] ?? '';
     }
+    // sprint 328 — the unfiled hands: at a second warm counter, ring the
+    // bell then rifle inside its look window (~3.5s) — the eye is on the
+    // bell, not your hands: the register never writes you, though the
+    // till still opens, still smells, and the counter still goes cold.
+    const clerked2 = g.route.rooms.find((r) => r !== clerked
+      && r.sockets.some((s) => s.meta?.clerk === 'slot0'));
+    let unfiledCap = '', unfiledHeld = -1, unfiledCold = false, unfiledRoom = -1;
+    let unfiledLocal = '', unfiledSeen = '', ring2Ok = false;
+    let unfiledStand: { x: number; z: number } | null = null, unfiledDist = -1;
+    let till2Pos: { x: number; z: number } | null = null;
+    let gateProbe: { enabled: boolean; dist: number; align: number; prox: number; eyeY: number } | null = null;
+    let ejectProbe: { pre: { x: number; z: number }; post: { x: number; z: number };
+      origin: { x: number; z: number } } | null = null;
+    const closedCounters = (g as unknown as { closedCounters?: Set<number> }).closedCounters;
+    if (clerked2) {
+      const idxB = g.route.rooms.indexOf(clerked2);
+      unfiledRoom = clerked2.index;
+      ga.unpaidHeld = 0;
+      g.player.teleport(clerked2.origin.x, 0, clerked2.origin.z);
+      g.currentRoom = clerked2.index;
+      for (let f = 0; f < 20; f++) g.frame();
+      // interactables mint per-room on approach — find room B's once inside
+      const local = () => (g.interaction as { interactables?: { kind: string;
+        pos: { x: number; y: number; z: number }; enabled?: boolean;
+        data?: { roomIndex?: number } }[] }).interactables;
+      const bell2 = local()?.find((i) => i.kind === 'bell' && i.data?.roomIndex === idxB);
+      const till2 = local()?.find((i) => i.kind === 'till' && i.data?.roomIndex === idxB);
+      unfiledLocal = local()?.map((i) => `${i.kind}@${i.data?.roomIndex}`).join('|') ?? '';
+      if (bell2 && till2) {
+        const rollsBefore = caps.filter((t) => /note rolls/.test(t)).length;
+        drive(bell2.pos, () => caps.filter((t) => /note rolls/.test(t)).length > rollsBefore, 60,
+          clerked2.origin);
+        ring2Ok = caps.filter((t) => /note rolls/.test(t)).length > rollsBefore;
+        // inside the eye's window — reach the till before ~3.5s passes
+        const t2dx = clerked2.origin.x - till2.pos.x, t2dz = clerked2.origin.z - till2.pos.z;
+        const t2dl = Math.hypot(t2dx, t2dz) || 1;
+        const tillsBefore = caps.filter((t) => /off the till/.test(t)).length;
+        unfiledSeen = drive({ x: till2.pos.x + (t2dx / t2dl) * 0.4, y: till2.pos.y,
+          z: till2.pos.z + (t2dz / t2dl) * 0.4 },
+          () => caps.filter((t) => /off the till/.test(t)).length > tillsBefore, 80, clerked2.origin);
+        // probe the gate: dist/align/prox of the till candidate as focus() sees it
+        const liveTill = local()?.find((i) => i.kind === 'till' && i.data?.roomIndex === idxB) as
+          { pos: { x: number; y: number; z: number }; enabled?: boolean } | undefined;
+        if (liveTill) {
+          const ld = (g.player as unknown as { lookDir(out: { x: number; y: number; z: number }):
+            { x: number; y: number; z: number } }).lookDir({ x: 0, y: 0, z: 0 });
+          const eye = { x: g.player.pos.x, y: g.player.pos.y + g.player.eyeHeight, z: g.player.pos.z };
+          const ddx = liveTill.pos.x - eye.x, ddy = (liveTill.pos.y + 0.6) - eye.y, ddz = liveTill.pos.z - eye.z;
+          const dd = Math.hypot(ddx, ddy, ddz) || 1;
+          gateProbe = {
+            enabled: liveTill.enabled === true, dist: Math.round(dd * 100) / 100,
+            align: Math.round(((ddx * ld.x + ddy * ld.y + ddz * ld.z) / dd) * 100) / 100,
+            prox: Math.round(Math.hypot(liveTill.pos.x - g.player.pos.x,
+              liveTill.pos.y - g.player.pos.y, liveTill.pos.z - g.player.pos.z) * 100) / 100,
+            eyeY: Math.round(eye.y * 100) / 100,
+          };
+        }
+        // is the planned stand itself inside a collider? teleport there
+        // bare and diff pre/post-frame positions
+        const planX = till2.pos.x + (t2dx / t2dl) * 1.4, planZ = till2.pos.z + (t2dz / t2dl) * 1.4;
+        g.player.teleport(planX, 0, planZ);
+        ejectProbe = {
+          pre: { x: Math.round(g.player.pos.x * 10) / 10, z: Math.round(g.player.pos.z * 10) / 10 },
+          post: { x: 0, z: 0 },
+          origin: { x: Math.round(clerked2.origin.x * 10) / 10, z: Math.round(clerked2.origin.z * 10) / 10 },
+        };
+        g.frame();
+        ejectProbe.post = { x: Math.round(g.player.pos.x * 10) / 10, z: Math.round(g.player.pos.z * 10) / 10 };
+        till2Pos = { x: Math.round(till2.pos.x * 10) / 10, z: Math.round(till2.pos.z * 10) / 10 };
+        unfiledStand = { x: Math.round(g.player.pos.x * 10) / 10, z: Math.round(g.player.pos.z * 10) / 10 };
+        unfiledDist = Math.hypot(g.player.pos.x - till2.pos.x, g.player.pos.z - till2.pos.z);
+        unfiledCap = caps.find((t) => /unfiled/.test(t)) ?? '';
+        unfiledHeld = ga.unpaidHeld;
+        unfiledCold = closedCounters?.has(idxB) === true;
+      }
+    }
     return { stage: 'done', figPresent, refused, refuseCap, sold, tillCap,
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
@@ -1039,6 +1116,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       workMark, headPre, headPost, bellLookWarm, relBellN, bellLookCold, relPlayerN,
       bellFound: !!bell, bellRang, bellDist, bellCap, bellTiredCap,
       coldWareCap, coldWareSold, coldImprints, coldAskCap, coldBellCap, coldPurseCap,
+      unfiledCap, unfiledHeld, unfiledCold, unfiledRoom,
+      unfiledLocal, unfiledSeen, ring2Ok, unfiledStand, unfiledDist, till2Pos, gateProbe, ejectProbe,
       purseFound: !!purse, pursePaid, purseSour, purseCleanCap, purseSourCap, purseShortCap,
       purseSeen, pursePos: purse ? { x: Math.round(purse.pos.x*10)/10, y: purse.pos.y, z: Math.round(purse.pos.z*10)/10 } : null,
       pursePlayer: { x: Math.round(g.player.pos.x*10)/10, z: Math.round(g.player.pos.z*10)/10 },
@@ -1089,6 +1168,12 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.bellRang).toBe(1);
   expect(result.bellDist).toBeLessThan(0.6);
   expect(result.bellTiredCap).toMatch(/tired click/);
+  // sprint 328 — the unfiled hands: rifled inside the bell's look window
+  // the register never writes you, but the counter still goes cold
+  expect(result.unfiledRoom, 'second clerked room needed for the unfiled phase').toBeGreaterThan(-1);
+  expect(result.unfiledCap, JSON.stringify(result)).toMatch(/unfiled/);
+  expect(result.unfiledHeld, JSON.stringify(result)).toBe(0);
+  expect(result.unfiledCold, JSON.stringify(result)).toBe(true);
   // sprint 322 — the counter goes cold: a rifled till ends the clerk's service
   expect(result.coldWareCap).toMatch(/folds its hands/);
   expect(result.coldWareSold).toBe(false);

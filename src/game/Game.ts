@@ -1929,7 +1929,13 @@ export class Game {
         if (!room || !till || till.meta.tillTaken === true) { it.enabled = false; return; }
         till.meta.tillTaken = true;
         this.closedCounters.add(roomIndex);
-        this.unpaidHeld += 2;
+        // sprint 328 — the unfiled hands: rifled inside the bell's look
+        // window (~3.5s), the clerk's eye is on the ringing bell, not
+        // your hands — the till still opens and still smells, but the
+        // register never writes you. The lure is a real steal-window.
+        const rung = this.bellRung.get(roomIndex);
+        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5;
+        if (!unfiled) this.unpaidHeld += 2;
         it.enabled = false;
         // the till smells of hands — hands in a staffed register leave
         // fresh sign at the counter: substantive work, not ash, so the
@@ -1951,7 +1957,9 @@ export class Game {
           this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the till]`);
         }
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
-        this.cue('drawer', it.pos, '[the clerk watches your hands — the register writes you twice]', 'warn');
+        this.cue('drawer', it.pos, unfiled
+          ? '[it was watching the bell — your hands go unfiled]'
+          : '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
       case 'purse': {
