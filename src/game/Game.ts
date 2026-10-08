@@ -1587,6 +1587,24 @@ export class Game {
     if (door.deep) return { sfx: 'margin-edge', text: '[a draught, far too cold — a breath held]', sev: 'warn' };
     const target = this.roomBeyondDoor(door);
     if (!target) return { sfx: 'floor-creak', text: '[dead air — nothing behind it]' };
+    const roam = this.activeRooms();
+    // sprint 468 — the breath at the crack: a live watcher pressed
+    // against THIS leaf is the most door-specific fact the ear can
+    // give — it outranks whatever else the room holds. The ear hears
+    // the camp your own call created, before you call twice into it.
+    let atLeaf = Infinity;
+    for (const e of this.entities) {
+      if (e.state === 'done') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const ri = underRoomOf(roam, tp);
+      if (ri < 0 || roam[ri] !== target) continue;
+      const d = v3dist(tp, door.pos);
+      if (d < atLeaf) atLeaf = d;
+    }
+    if (atLeaf <= 1.5) {
+      return { sfx: 'floor-creak', text: '[breath at the crack — it is listening back]', sev: 'danger' as const };
+    }
     const sched = target.scheduled[0];
     if (sched) {
       const base = LISTEN_CUES[sched.entity] ?? { sfx: 'floor-creak', text: '[something moves beyond]', sev: 'warn' as const };
@@ -1623,7 +1641,6 @@ export class Game {
     // answer by tread before you ever see them; the loudest wins
     let roverBest: { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } | null = null;
     let roverRank = 0;
-    const roam = this.activeRooms();
     for (const e of this.entities) {
       if (e.state === 'done') continue;
       const tp = e.threatPos();

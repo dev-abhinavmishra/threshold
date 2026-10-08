@@ -453,4 +453,14 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('private seamAnswer');
     expect(game).toContain("category: 'entity-cue'");
   });
+
+  it('the breath at the crack — a camped watcher reads through the ear too (sprint 468)', () => {
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    const listen = game.slice(game.indexOf('private listenThrough'), game.indexOf("const sched = target.scheduled[0]"));
+    // a live watcher pressed against the leaf outranks the room's
+    // other reads — the ear hears your own call's camp before you
+    // call twice into it
+    expect(listen).toContain('atLeaf');
+    expect(game).toContain('it is listening back');
+  });
 });
