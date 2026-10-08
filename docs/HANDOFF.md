@@ -3723,6 +3723,26 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   sheets up (wantedActive, 5 rooms) → read a sheet → settle lowers it.
 - Gates: tsc, lint, 237 vitest (+wanted contract kind), 5-seed sim,
   undercast 11/11, build.
+
+## sprint 340 — the seam carries the hum
+
+- A primed milestone now answers a door-listen: `listenThrough` gains a
+  branch after the scheduled-entity check —
+  `milestones.get(target.index)?.primed && primedAudible` →
+  `[a mechanism already mid-count — it heard you]` (danger). The s401
+  primed-opening mechanic was only readable after the door swung; the
+  ear now closes the loop BEFORE you cross.
+- `Milestone.primedAudible` (default false, override true) marks the set
+  pieces that actually answer prime(): Index, Custodian, LensHall,
+  Engine. Chase reads its own clock and the gate ignores primed — a
+  danger line on those would be a lie.
+- Ordering: scheduled entities still outrank (their listen cue is more
+  specific); the milestone check sits before the safe/dark fallbacks.
+- e2e: doors.spec leg 3 primes the first primedAudible milestone with a
+  clean `scheduled`, reuses `listenAt`, asserts the mid-count line, and
+  un-primes after.
+- Gates: tsc, lint, 237 vitest, 5-seed sim, doors 1/1 (+primed leg),
+  build.
   undercast 11/11 (tallySign + docketSign), build.
 ## sprint 402 — calls closed, host pick extracted (sheet verb → s339)
 
@@ -3736,3 +3756,4 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, vitest scoped (10/10) — green.
 ||||||| 949df78
   undercast 11/11 (tallySign + docketSign), build.
+||||||| f7fea37

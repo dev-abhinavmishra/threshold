@@ -36,6 +36,10 @@ export abstract class Milestone {
    *  the same mechanics, but the room is already up when the door swings. */
   primed = false;
   prime(): void { this.primed = true; }
+  /** Set pieces that actually answer prime() — their work is audible
+   *  through the door seam. (The gate ignores primed; Chase reads its
+   *  own clock, so neither hums.) */
+  primedAudible = false;
   constructor(protected room: RoomInstance, protected ev: MilestoneEvents) {}
   abstract update(dt: number): void;
   /** Return true if this milestone consumed the interaction. */
@@ -51,6 +55,7 @@ export abstract class Milestone {
 const GLYPHS = ['Archive', 'Suture', 'Lantern', 'Orrery', 'Seal', 'Choir', 'Ledger', 'Hollow', 'Meridian', 'Index', 'Gate'];
 
 export class IndexEncounter extends Milestone {
+  override primedAudible = true;
   private curator: Curator;
   private cardsTaken = 0;
   private cardsNeeded = 5;
@@ -167,6 +172,7 @@ export class IndexEncounter extends Milestone {
 
 /* ============================ CUSTODIAN'S COUNTER (Room 51) ============================ */
 export class CustodianEncounter extends Milestone {
+  override primedAudible = true;
   /** shop sockets on 'itemPedestal' with meta.shop = slot index. */
   private keeper: THREE.Object3D | null = null;
   private keeperHead: THREE.Object3D | null = null;
@@ -306,6 +312,7 @@ export class ChaseEncounter extends Milestone {
 
 /* ============================ LENS HALL (Room ~75) ============================ */
 export class LensHallEncounter extends Milestone {
+  override primedAudible = true;
   private orrery: Orrery;
   private entered = false;
 
@@ -358,6 +365,7 @@ export class LensHallEncounter extends Milestone {
 type EnginePhase = 'breach' | 'relays' | 'routing' | 'escape';
 
 export class EngineEncounter extends Milestone {
+  override primedAudible = true;
   private curator: Curator;
   private phase: EnginePhase = 'breach';
   private relaysNeeded = 5;
