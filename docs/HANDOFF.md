@@ -6159,3 +6159,10 @@ as the cue reads a pre-mint array; settle ~4-6 frames before
 looking for a coilDrop/wedgeDrop. The doorBetween dead spot is
 why every door-scan needs the held-bypass: any entity that ends
 its approach ON the leaf is inside the span, not behind it.
+  Also landed here: `playerExposed` now sweeps shut-leaf panels into its
+  LOS test — the 1.0x2.2 leaf is a physical panel that can't ride the
+  static `losBlockers` list, so touch-kills could reach *through* a shut
+  door (found when the bellman, spawned on the leaf, touched a bracing
+  player standing at the leaf's lateral edge — inside its infinite-plane
+  'between' tolerance but outside the panel). Every kill verdict now
+  treats a closed leaf as cover; open/mid-swing leaves don't.

@@ -256,6 +256,17 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
     for (let f = 0; f < 8; f++) g.frame();
     const bell = gi.entities.find((e) => e.id === 'bellman');
     if (!bell) return { stage: 'no-bellman-spawn', caps: caps.slice(-8) } as const;
+    let killTried = '';
+    let killGeo = '';
+    const gAny = g as unknown as { killPlayer(src: string, hint: string): void };
+    const origKill = gAny.killPlayer.bind(gAny);
+    gAny.killPlayer = (src: string, hint: string) => {
+      killTried = `${src}:${hint}`;
+      const bp = (bell as unknown as { pos: { x: number; z: number } }).pos;
+      const pp = g.player.pos;
+      killGeo = `bell(${bp.x.toFixed(2)},${bp.z.toFixed(2)}) player(${pp.x.toFixed(2)},${pp.z.toFixed(2)}) leaf(${door.pos.x.toFixed(2)},${door.pos.z.toFixed(2)}) yaw=${door.yaw.toFixed(2)}`;
+      origKill(src, hint);
+    };
 
     const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
     if (!door) return { stage: 'no-door' } as const;
@@ -299,18 +310,18 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
       if (f % 30 === 0) {
         const tp = bell.threatPos();
         const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
-        trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy}`);
+        trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} ht=${(bell as unknown as { doorHoldT?: number }).doorHoldT?.toFixed(1)} st=${bell.state} o=${door.opening ? 'open' : (door.openT ?? 0).toFixed(2)}`);
       }
     }
     g.keys.delete('KeyC');
-    return { stage: 'done', faded, opened, bellState: bell.state, dead: g.player.dead, trace, caps: caps.slice(-14), allCaps: caps } as const;
+    return { stage: 'done', faded, opened, bellState: bell.state, dead: g.player.dead, trace, caps: caps.slice(-14), allCaps: caps, killTried, killGeo } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { faded: boolean; opened: boolean; bellState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[] };
-  const tail = r.allCaps.join(' | ');
-  expect(r.caps.some((c) => /tests the bar|strains|palm flat/.test(c)), `caps: ${tail} trace: ${r.trace.join(' ; ')}`).toBe(true);
+  const r = result as { faded: boolean; opened: boolean; bellState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[]; killTried: string; killGeo: string };
+  const tail = r.allCaps.join(' | ') + ' trace: ' + r.trace.join(' ; ') + ' killTried: ' + r.killTried + ' geo: ' + r.killGeo;
+  expect(r.caps.some((c) => /tests the bar|strains|palm flat/.test(c)), `caps: ${tail}`).toBe(true);
   expect(r.faded, `caps: ${tail}`).toBe(true);
   expect(r.opened, 'the brace leaked — a cluster leaf swung').toBe(false);
   expect(r.bellState).toBe('done');
