@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2534,6 +2534,31 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       dd.rotation.z = port.wall === 'e' || port.wall === 'w' ? Math.PI / 2 : 0;
       dd.position.set(hit.x + inx * 0.3, 0.0096, hit.z + inz * 0.3);
       group.add(dd);
+    }
+
+    // The battens left ghosts — pale strips and nail pits on the
+    // glass where boards crossed it shut.
+    for (const p of spec.props) {
+      if ((p.kind !== 'window' && p.kind !== 'windowArch' && p.kind !== 'transomWindow' && p.kind !== 'traceryWindow') || rng.float() >= 0.3) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const bw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = bw === 'e' || bw === 'w' ? p.z : p.x;
+      wallDecal(bw, battenGhost(rng), 0.8 + rng.float() * 0.15, 0.8 + rng.float() * 0.15, along, 1.6 + rng.float() * 0.2);
+      const bg = group.children[group.children.length - 1];
+      if (bg && !bg.name) bg.name = 'batten-ghost';
+    }
+
+    // The jug wept rings — a stubborn ring and one dried drip
+    // wherever the vessels have stood unmoved.
+    for (const p of spec.props) {
+      if ((p.kind !== 'jug' && p.kind !== 'gallonJug' && p.kind !== 'vase' && p.kind !== 'woodenBowl' && p.kind !== 'brassPot' && p.kind !== 'enamelPot') || rng.float() >= 0.4) continue;
+      const jr = decalQuad(jugRing(rng), 0.5 + rng.float() * 0.1, 0.5 + rng.float() * 0.1);
+      jr.name = 'jug-ring';
+      jr.rotation.x = -Math.PI / 2;
+      jr.rotation.z = rng.float() * Math.PI * 2;
+      jr.position.set(p.x, 0.0097, p.z);
+      group.add(jr);
     }
 
     // The water line — a room that flooded once keeps the tide mark:
