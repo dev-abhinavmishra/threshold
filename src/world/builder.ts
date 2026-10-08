@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2679,6 +2679,32 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wr.rotation.z = rng.float() * Math.PI * 2;
       wr.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.009, p.z + (rng.float() - 0.5) * 0.4 + 0.5);
       group.add(wr);
+    }
+
+    // The plants died standing — shed-leaf rings and spilled soil
+    // around pots and planters nobody watered.
+    for (const p of spec.props) {
+      if (p.kind !== 'plant' && p.kind !== 'planter') continue;
+      if (rng.float() >= 0.5) continue;
+      const pd = decalQuad(plantDeath(rng), 0.9 + rng.float() * 0.25, 0.9 + rng.float() * 0.25);
+      pd.name = 'plant-death';
+      pd.rotation.x = -Math.PI / 2;
+      pd.rotation.z = rng.float() * Math.PI * 2;
+      pd.position.set(p.x, 0.009, p.z);
+      group.add(pd);
+    }
+
+    // The stools scraped arcs — pivot gouges and kick drags around
+    // seats that get pulled and shoved.
+    for (const p of spec.props) {
+      if (p.kind !== 'stool' && p.kind !== 'bench') continue;
+      if (rng.float() >= 0.45) continue;
+      const sd = decalQuad(stoolDrag(rng), 1.0 + rng.float() * 0.2, 1.0 + rng.float() * 0.2);
+      sd.name = 'stool-drag';
+      sd.rotation.x = -Math.PI / 2;
+      sd.rotation.z = rng.float() * Math.PI * 2;
+      sd.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.0086, p.z + (rng.float() - 0.5) * 0.3);
+      group.add(sd);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

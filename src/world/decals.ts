@@ -7660,3 +7660,149 @@ export function wheelRuts(rng: Rng): THREE.Texture | null {
     g.fill();
   });
 }
+
+/** The plants died standing — a shed-leaf ring and stem scuff
+ *  where the pot kept a green thing that nobody watered. */
+export function plantDeath(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The leaf-fall ring — dropped fronds scattered in a halo.
+    for (let i = 0; i < 22; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 16 + rng.float() * 18;
+      g.fillStyle = `rgba(${96 + Math.floor(rng.float() * 40)},${64 + Math.floor(rng.float() * 24)},${28 + Math.floor(rng.float() * 14)},${0.35 + rng.float() * 0.3})`;
+      g.save();
+      g.translate(48 + Math.cos(a) * r, 48 + Math.sin(a) * r);
+      g.rotate(rng.float() * Math.PI);
+      g.beginPath();
+      g.ellipse(0, 0, 2.2 + rng.float() * 1.6, 0.9 + rng.float() * 0.7, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    // One curled leaf kept its curl — a brighter crescent.
+    g.strokeStyle = `rgba(140,104,52,${0.4 + rng.float() * 0.2})`;
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(48 + rng.range(-18, 18), 48 + rng.range(-18, 18), 4 + rng.float() * 2, 0, Math.PI * 1.4);
+    g.stroke();
+    // Pot-shadow ring — the soil line where the pot sits.
+    g.strokeStyle = 'rgba(64,50,34,0.4)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(48, 48, 11 + rng.float() * 2, 0, Math.PI * 2);
+    g.stroke();
+    // Spilled soil — a fan of grit out one side.
+    const sa = rng.float() * Math.PI * 2;
+    for (let i = 0; i < 12; i++) {
+      const d = 12 + rng.float() * 12;
+      const spread = rng.range(-0.35, 0.35);
+      g.fillStyle = `rgba(56,44,30,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(48 + Math.cos(sa + spread) * d, 48 + Math.sin(sa + spread) * d, 0.9 + rng.float() * 0.7, 0.8 + rng.float() * 0.6);
+    }
+    // Water-ring ghost — the saucer that overflowed once.
+    g.strokeStyle = `rgba(120,100,72,${0.18 + rng.float() * 0.14})`;
+    g.lineWidth = 0.9;
+    g.beginPath();
+    g.arc(48, 48, 16 + rng.float() * 3, rng.float() * 3, rng.float() * 3 + 3.5);
+    g.stroke();
+  });
+}
+
+/** The jars kept their dust — a shoulder ring where the dust sits
+ *  on the curve and a wipe streak where a hand reached once. */
+export function jarDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The shoulder band — dust that settles where the glass curves.
+    const band = g.createLinearGradient(0, 12, 0, 26);
+    band.addColorStop(0, 'rgba(120,108,88,0)');
+    band.addColorStop(0.5, `rgba(120,108,88,${0.35 + rng.float() * 0.15})`);
+    band.addColorStop(1, 'rgba(120,108,88,0)');
+    g.fillStyle = band;
+    g.fillRect(16, 12, 64, 14);
+    // Dust caps the lid — a soft pale pad.
+    const cap = g.createRadialGradient(48, 12, 1, 48, 12, 12);
+    cap.addColorStop(0, 'rgba(150,140,116,0.45)');
+    cap.addColorStop(1, 'rgba(150,140,116,0)');
+    g.fillStyle = cap;
+    g.beginPath();
+    g.ellipse(48, 12, 16, 6, 0, 0, Math.PI * 2);
+    g.fill();
+    // The wipe — one clean swipe through the film.
+    g.strokeStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.2})`;
+    g.lineWidth = 3.5;
+    g.beginPath();
+    const wy = 30 + rng.range(-4, 4);
+    g.moveTo(20, wy);
+    g.quadraticCurveTo(48, wy + rng.range(-4, 4), 76, wy + rng.range(-3, 3));
+    g.stroke();
+    // Fingertip commas at the wipe's start.
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = `rgba(56,50,40,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.arc(22 + i * 3, wy - 2 + rng.range(-1, 1), 1.6, 0, Math.PI * 1.2);
+      g.stroke();
+    }
+    // Settled specks — flyspecks and flour motes across the film.
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(70,62,50,${0.14 + rng.float() * 0.2})`;
+      g.fillRect(18 + rng.float() * 60, 14 + rng.float() * 38, 0.7, 0.7);
+    }
+    // The label's edge — a pale strip where glue held paper once.
+    if (rng.bool(0.5)) {
+      g.strokeStyle = 'rgba(170,160,136,0.3)';
+      g.lineWidth = 1;
+      g.strokeRect(36 + rng.range(-6, 6), 36 + rng.range(-4, 4), 18 + rng.float() * 6, 10 + rng.float() * 4);
+    }
+  });
+}
+
+/** The stools scraped arcs — quarter-moon gouges where the legs
+ *  drag around a pivot, scuffs where they're kicked straight. */
+export function stoolDrag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 44 + rng.range(-8, 8);
+    const cy = 46 + rng.range(-8, 8);
+    // Pivot arcs — the front legs swung and the back legs held.
+    for (let i = 0; i < 4; i++) {
+      const r = 12 + i * 5 + rng.float() * 3;
+      const a0 = rng.float() * Math.PI * 2;
+      const sweep = 0.7 + rng.float() * 0.9;
+      g.strokeStyle = `rgba(${140 + Math.floor(rng.float() * 30)},${124 + Math.floor(rng.float() * 24)},${98 + Math.floor(rng.float() * 20)},${0.3 + rng.float() * 0.2})`;
+      g.lineWidth = 0.9 + rng.float() * 0.6;
+      g.beginPath();
+      g.arc(cx, cy, r, a0, a0 + sweep);
+      g.stroke();
+    }
+    // The gouge — one deep arc where a leg dug in.
+    g.strokeStyle = 'rgba(90,74,54,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(cx, cy, 16 + rng.float() * 6, rng.float() * 4, rng.float() * 4 + 1.1);
+    g.stroke();
+    // Kick scuffs — straight drags where the stool was shoved.
+    for (let i = 0; i < 3; i++) {
+      const sx = cx + rng.range(-22, 22);
+      const sy = cy + rng.range(-22, 22);
+      g.save();
+      g.translate(sx, sy);
+      g.rotate(rng.float() * Math.PI);
+      g.fillStyle = `rgba(120,104,80,${0.2 + rng.float() * 0.2})`;
+      g.fillRect(-4, -0.8, 8 + rng.float() * 5, 1.6);
+      g.restore();
+    }
+    // Leg dimples — small pits where the stool stands now.
+    for (const [dx, dy] of [[-5, -5], [5, -5], [-5, 5], [5, 5]] as const) {
+      if (!rng.bool(0.75)) continue;
+      g.fillStyle = 'rgba(66,54,40,0.4)';
+      g.beginPath();
+      g.arc(cx + dx + rng.range(-1, 1), cy + dy + rng.range(-1, 1), 0.8 + rng.float() * 0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Dust pushed to the rest position — a faint settle ring.
+    g.strokeStyle = `rgba(120,106,84,${0.2 + rng.float() * 0.14})`;
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.ellipse(cx, cy, 9 + rng.float() * 2, 8 + rng.float() * 2, 0, 0, Math.PI * 2);
+    g.stroke();
+  });
+}
