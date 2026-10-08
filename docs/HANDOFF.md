@@ -4714,3 +4714,27 @@ Game.die() from the same five fields.
   the tag rots and the count keeps it).
 - Gates: tsc, lint, vitest (+1 auditor collect-seize spec), sim,
   build. Locker leg untouched — mechanic sits upstream of it.
+
+## sprint 384 — the shelf holds your take / the tag outranks the cage
+
+- `buyback` predated s373's deep tier — the fenced shelf sold back
+  at any tally. `unpaidTheft >= 6` now refuses there too:
+  'the shelf holds your take · the desk is the only answer'
+  (fenced take is his stock now; purse/fence/fix/book still stay
+  open — laundering and settling aren't commerce).
+- Real focus-ordering bug the leg surfaced: seized verbs minted at
+  priority 1 while a cage's own 'Reclaim the effects' verb sits at
+  priority 2 — YOUR tag lost focus to a stranger's bag at the same
+  anchor, and with the cut at 0.3m off, claim vs cut raced frame
+  to frame (holds reset on target change — the drive never
+  completes). seizedClaim/seizedCut now mint at priority 3: your
+  name outranks the cage's wares.
+- e2e trap: twin verbs 0.3m apart at one anchor — stand on the
+  target's side OPPOSITE its twin so the other sits ~15° behind
+  the aim axis; the room-side stand leaves them near-aligned and
+  `interaction.focused` flips every frame (score dist−align−p·0.3).
+  Focus on the minted verb's `prompt` field for price asserts —
+  focus samples race.
+- Gates: tsc, lint, vitest 262, sim 5/5, locker leg green
+  (itemize → join → named → cut → rot → shelf-refuse → buyback),
+  build.

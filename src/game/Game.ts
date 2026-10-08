@@ -1158,7 +1158,9 @@ export class Game {
       kind: 'seizedClaim', id,
       pos: { x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z },
       prompt: `Claim your seized take — ${8 + this.seizedCoin} marginalia`,
-      holdTime: 0.8, enabled: true, priority: 1, data: {},
+      // priority 3 — YOUR tag outranks the cage's own claim wares
+      // under aim; a stranger's bag shouldn't shadow your name
+      holdTime: 0.8, enabled: true, priority: 3, data: {},
     });
     // the cut hangs beside the tag — offset along the cage's front
     // tangent (perpendicular to the tag's roomward face)
@@ -1174,7 +1176,7 @@ export class Game {
       kind: 'seizedCut', id: cutId,
       pos: { x: this.seizedAt.x + px * 0.3, y: this.seizedAt.y, z: this.seizedAt.z + pz * 0.3 },
       prompt: 'Cut the tag free — your take comes back marked',
-      holdTime: 0.6, enabled: true, priority: 1, data: {},
+      holdTime: 0.6, enabled: true, priority: 3, data: {},
     });
   }
 
@@ -2426,6 +2428,13 @@ export class Game {
         if (this.space !== 'under') return;
         if (this.checker.active) {
           this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        // sprint 384 — the tally's deep tier reaches the shelf too:
+        // fenced take is his stock now, and his stock stays held at six
+        if (this.unpaidTheft >= 6) {
+          this.cue('door-locked', it.pos,
+            '[he reads the tally — the shelf holds your take · the desk is the only answer]', 'warn');
           return;
         }
         const units = this.fencedTake.reduce((n, s) => n + s.count, 0);
