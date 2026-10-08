@@ -5206,3 +5206,10 @@ Game.die() from the same five fields.
   Game.ts animates dist=(t*speed+phase*0.55)%0.55 along dir + lateral
   sway perpendicular. draftMat: additive 0xc4ccd8 size 0.035.
 - Vitest 288: 'the seam breathes'. Gates: tsc, lint, 104/104.
+
+## sprint 443 — the vigil still burns
+
+- 22% of votive decals get a tiny emissive flame chip (unitBox 0.012 sq)
+  with anim='flame' + baseEm ~0.6 — a few vigils are fresh.
+  Named 'votive-flame'.
+- Vitest 289: 'the vigil still burns'. Gates: tsc, lint, 105/105.

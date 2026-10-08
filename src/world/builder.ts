@@ -1834,6 +1834,25 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         m.rotation.z = rng.float() * Math.PI;
         m.position.set(lx, 0.0074, lz);
         group.add(m);
+        // a few vigils are fresh — the stub still gutters a weak flame
+        if (rng.float() < 0.22) {
+          const flameMat = new THREE.MeshStandardMaterial({
+            color: 0x1a1408,
+            emissive: 0xffa64d,
+            emissiveIntensity: 0.6,
+            transparent: true,
+            opacity: 0.9,
+          });
+          flameMat.userData.decalMat = true;
+          const flame = new THREE.Mesh(unitBox, flameMat);
+          flame.name = 'votive-flame';
+          flame.scale.set(0.012, 0.03 + rng.float() * 0.012, 0.012);
+          flame.position.set(lx, 0.05, lz);
+          flame.userData.anim = 'flame';
+          flame.userData.animSeed = rng.float() * 10;
+          flame.userData.baseEm = 0.55 + rng.float() * 0.2;
+          group.add(flame);
+        }
       }
     }
 

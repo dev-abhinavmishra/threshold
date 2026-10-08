@@ -1963,3 +1963,18 @@ describe('the seam breathes (sprint 442)', () => {
     expect(drafts, 'no seam drafts').toBeGreaterThan(4);
   });
 });
+
+describe('the vigil still burns (sprint 443)', () => {
+  it('some votives keep a guttering flame', () => {
+    let flames = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'votive-flame') flames++; });
+      }
+    }
+    expect(flames, 'no votive flames').toBeGreaterThan(1);
+  });
+});
