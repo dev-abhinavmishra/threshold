@@ -47,14 +47,14 @@ test('the bellman trails your steps — knock, follow, yield to a held gaze', as
     // Distance travelled while we walked the next two rooms.
     let travelled = 0;
     for (let i = 1; i < marks.length; i++) travelled += Math.hypot(marks[i].x - marks[i - 1].x, marks[i].z - marks[i - 1].z);
-    // Now hold it in your gaze — it must freeze, then yield. Teleport to a
-    // spot ~4m from its head so it's in gaze range, then keep facing it.
-    const tp = ent.threatPos();
-    if (tp) {
-      const dir = Math.atan2(tp.x - g.player.pos.x, tp.z - g.player.pos.z);
-      g.player.teleport(tp.x - Math.sin(dir) * 4, 0, tp.z - Math.cos(dir) * 4);
-      g.player.yaw = dir;
-    }
+    // Now hold it in your gaze — it must freeze, then yield. Park it and
+    // yourself on the same open floor: a leaf it knocked open and swung shut
+    // behind it (or a wander through a wall's span) can break the stare for
+    // good — the gaze yield is what's under test, not door positioning.
+    const ox = bellmanRoom.origin.x, oz = bellmanRoom.origin.z;
+    (ent as { pos?: { x: number; y: number; z: number } }).pos!.x = ox;
+    (ent as { pos?: { x: number; y: number; z: number } }).pos!.z = oz;
+    g.player.teleport(ox + 4, 0, oz);
     for (let f = 0; f < 1200; f++) {
       const tp2 = ent.threatPos();
       if (ent.state === 'done' || !g.entities.includes(ent as never)) { outcome = 'yielded'; break; }

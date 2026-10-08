@@ -5619,3 +5619,20 @@ The tug-of-war is two-handed now: he re-lays, you interrupt, the
 wipe shadow still poisons his reads.
 
 Gates: tsc, lint, contract spec (all batched — s412-416 arc).
+
+## Sprint 417 — the two-ways repair
+The two-ways arc (s404-411) broke three e2e premises on main: a roamer
+can cut your test wire before you reach it, the seed's only lit eye is
+a wide-arc cam (±0.95 pan vs ±0.42 cone — a center stand's settle
+bleeds between passes and never reaches 0.9), and the bellman's
+knocked-open leaves swing shut behind him — a shut leaf now blocks
+the gaze (s399), so a fixed stare spot ends up blind forever.
+Leg repairs, no product change: 'cut the seal' clears spawned walkers
+before the drive + hunts a focus-holding stand (economy standFor
+pattern); 'the watched hall' stands near the pan's dwell extreme
+(arc*0.6 off center) so the cone's long pause lands the settle;
+'bellman trails' parks him and the player on the same open floor for
+the yield phase — the gaze yield is under test, not door positioning.
+Probe-observed: cam watcher maxSettle 0.87 center → 0.93 off-center.
+
+Gates: hazards 13/13, entities 11/11 (one designed skip).
