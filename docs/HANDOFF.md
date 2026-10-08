@@ -3794,3 +3794,25 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   same math as pointInRoom), assert the boards caption. The grafter's
   face-band is the same hook shape, not separately driven.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 343 — tear the sheet down
+
+- 'Tear the sheet down' mints beside 'Read the wanted sheet' on each
+  posted board (priority 3, 1.1s, one-shot, offset 0.55m along the
+  board line so 'read' keeps the center aim — papers are priority 3,
+  so anything lower than the tear loses to a neighbor desk).
+- The reach now reads the boards, not the flag: `ctx.wanted` →
+  `wantedActive && wantedRooms.size > 0`. Each tear removes that
+  room's map entry + decal; the last one ends the ×1.5 extension
+  everywhere — `[the last sheet comes down — the boards forget your
+  face]`. The ledger is untouched: `wantedActive` still holds until
+  the tally settles (settle still mints; lowerWanted still sweeps).
+  Pulling paper is 'work' sign at the host.
+- This is additive on the sibling's s401 semantics, not a narrowing:
+  the sheets physically carry the word — none up, no wider ear.
+- e2e: audit leg phase 2.85 tears every sheet room-by-room (perp-side
+  stand, focus-gated hold) → torn === sheets, reach dead, last-sheet
+  caption, 'work' sign at a host. Diagnostics (tearDbg) record minted
+  flag + focused-prompt samples per room — room 6's counter-claim
+  (priority 3) stole focus until the tear went to 3.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
