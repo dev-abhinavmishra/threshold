@@ -4440,3 +4440,24 @@ Game.die() from the same five fields.
 - `bookLines` adds 'N seized wares still hang in the count's locker'
   — the reclaim path has its reckoning on both end screens.
 - Gates: tsc, lint, vitest, sim, build (batched with the sprint).
+
+## sprint 376 — one locker, and the tag files double under the sheets
+
+- `stashSeized` no longer re-anchors on a second catch: while a tag
+  still hangs, a fresh seize just joins the same locker (previously
+  `seizedAt` moved to the nearer cage while the minted verb stayed
+  at the first — the tag and the goods disagreed, and a checkpoint
+  restore re-minted at the wrong spot). One locker per run.
+- Under `wantedActive` the seized-claim files `unpaidTheft +2` (the
+  tag is written in your name while the sheets are up — same rule
+  `fileQuestion` follows for asks). Cue reads '... · the sheets
+  write your name twice'.
+- e2e traps logged: (1) `wantedActive` is frame-synced — lowered
+  when `unpaidTheft <= 0`, raised while any Auditor `demanded`.
+  Setting the flag directly gets stomped; hold `demanded` + owed
+  instead (his openLedger tick gates on `!demanded`, so the desk's
+  priority-4 'Settle' verb never re-mints mid-loop). (2) 'Settle
+  the ledger' outprioritizes a cage tag under aim outright — owed
+  tally beside an Auditor room means the tag can't be pressed.
+- Gates: tsc, lint, vitest 255, sim 5/5, the locker leg extended
+  (join + named-double phases), build.
