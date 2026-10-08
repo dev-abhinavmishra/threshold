@@ -4019,3 +4019,8 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
   harder AND every counter reads the boards until the count settles' —
   so the s351–354 taxes are legible at the sheet, not just felt at
   each counter.
+- Leg fix worth keeping: the strip-lamp leg's `pending >= 1` asserted
+  the ring is ALWAYS still queued — s352's fast ring (~4s while named)
+  fires mid-leg when the leg's earlier pilfers raised wanted. The leg
+  now counts `pending + rung` (queued OR already rung) via a
+  `ga.sound.on` capture of the 'marked gone' emit.

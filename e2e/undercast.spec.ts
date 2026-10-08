@@ -1170,7 +1170,11 @@ test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 
       sound: { on(fn: (e: { caption?: string }) => void): unknown };
     };
     const cried: string[] = [];
-    ga.sound.on((e) => { if (e.caption && /dies in your hands/.test(e.caption)) cried.push(e.caption); });
+    const rung: string[] = [];
+    ga.sound.on((e) => {
+      if (e.caption && /dies in your hands/.test(e.caption)) cried.push(e.caption);
+      if (e.caption && /marked gone — the count is short/.test(e.caption)) rung.push(e.caption);
+    });
     ga.enterUnderscript();
     ga.godMode = true;
     ga.marginalia = 30;
@@ -1214,7 +1218,7 @@ test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 
     // let it finish counting blind and leave
     for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
     return { stage: 'done', stripped, cried: cried.length > 0,
-      charge: lamp?.count ?? 0, pending: ga.crewCount.pending,
+      charge: lamp?.count ?? 0, pending: ga.crewCount.pending, rung: rung.length,
       blindSeen: caps.some((c) => /counts blind/.test(c)),
       pickupSeen: caps.some((c) => /count's lamp comes free/.test(c)),
       finalStage: ga.checker.stage,
@@ -1225,7 +1229,9 @@ test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 
   expect(result.stripped, JSON.stringify(result)).toBe(true);
   expect(result.cried, JSON.stringify(result)).toBe(true); // it felt the light die
   expect(result.charge, JSON.stringify(result)).toBe(45); // warm, still swinging
-  expect(result.pending, JSON.stringify(result)).toBeGreaterThanOrEqual(1); // the lamp files another count
+  // the lamp files another count — still queued, or (s352: while the
+  // boards name you the ring lands ~4s in) already fired mid-leg
+  expect(result.pending + result.rung, JSON.stringify(result)).toBeGreaterThanOrEqual(1);
   expect(result.blindSeen, JSON.stringify(result)).toBe(true); // swept blind, count stays open
   expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
   expect(errors).toEqual([]);
