@@ -5733,3 +5733,11 @@ so a spill restores as dead work — silent, no face, no re-signed mark
 (the splice signs a live laying, never a rehydration).
 
 Gates: tsc, lint, contract spec +1 (batched).
+
+## Sprint 420 — the coil drags loud
+A carrying grafter advertises itself: every ~2.4s the dragged coil
+emits a real 'item' scrape at its position — '[wire scraping stone]' —
+so the player hears the splice economy coming a room early. Sourced +
+under the hear floor, so the house can't borrow its own worker's noise.
+
+Gates: tsc, lint (batched).

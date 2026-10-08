@@ -358,6 +358,7 @@ export class Grafter extends Entity {
    *  fresh when it reaches the living's room. */
   private carrying = 0;
   private carryCued = false;
+  private dragT = 0;
   private get eager() { return this.markReads >= 2; }
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
@@ -475,6 +476,15 @@ export class Grafter extends Entity {
       if (!this.carryCued) {
         this.carryCued = true;
         c.cue('grafter-grind', this.pos, '[it drags a coil behind it]', { severity: 'info' });
+      }
+      // sprint 420 — the drag is loud on stone: a carrier advertises
+      // itself. Sourced, player-facing whisper — under the hear floor
+      // so the house can't borrow its own worker's noise.
+      this.dragT -= dt;
+      if (this.dragT <= 0) {
+        this.dragT = 2.4;
+        c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.35,
+          category: 'item', caption: '[wire scraping stone]', source: this.id });
       }
       const pr = this.roomOf(this.pos);
       if (pr >= 0 && pr === c.currentRoomIndex) {
