@@ -938,3 +938,31 @@ export function ashPile(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Count kept in scratches — clusters of four strokes crossed by a fifth,
+ * like something tallied the times it checked. */
+export function tallyMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const clusters = 1 + Math.floor(rng.float() * 2);
+    for (let c = 0; c < clusters; c++) {
+      const cx = 14 + c * 34 + rng.float() * 8, cy = 30 + rng.float() * 30;
+      const h = 26 + rng.float() * 10;
+      for (let i = 0; i < 4; i++) {
+        const x = cx + i * 7 + (rng.float() - 0.5) * 2;
+        ctx.strokeStyle = `rgba(30,25,22,${0.55 + rng.float() * 0.25})`;
+        ctx.lineWidth = 1.4 + rng.float() * 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x, cy);
+        ctx.lineTo(x + (rng.float() - 0.5) * 3, cy + h);
+        ctx.stroke();
+      }
+      // the crossing fifth, drag angle varies
+      ctx.strokeStyle = `rgba(28,23,20,${0.6 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy + h * (0.55 + rng.float() * 0.2));
+      ctx.lineTo(cx + 26, cy + h * (0.25 + rng.float() * 0.2));
+      ctx.stroke();
+    }
+  });
+}

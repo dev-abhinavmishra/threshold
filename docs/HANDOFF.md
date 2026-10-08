@@ -5093,3 +5093,13 @@ Game.die() from the same five fields.
   y 0.05). Both named 'fallen-frame'. Door-lane cleared.
 - Vitest 275: 'the fallen'. Gates: tsc, lint, generation 91/91. Dressing
   only — no e2e leg.
+
+## sprint 430 — the inspector's tally
+
+- Beside a trapped spot (`spot.trappedBy`), 60% roll puts a `tallyMarks`
+  decal on the nearest wall at the spot's along-position — scratch
+  clusters of four strokes + crossing fifth, counting the checks.
+  Named 'inspector-tally'. World→local via R(-yaw) on the volume
+  center, nearest-wall pick by min distance.
+- Vitest 277: 'the inspector tally'. Gates: tsc, lint, generation 93/93.
+  Dressing only — no e2e leg.

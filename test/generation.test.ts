@@ -1781,3 +1781,20 @@ describe('the cold hearth (sprint 429)', () => {
     expect(nanGuard, 'cold-hearth decal at NaN').toBe(true);
   });
 });
+
+describe("the inspector tally (sprint 430)", () => {
+  it("scratch counts gather beside the hollow seats", () => {
+    let trapped = 0, tallies = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        trapped += room.hidingSpots.filter((s) => s.trappedBy).length;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'inspector-tally') tallies++; });
+      }
+    }
+    expect(trapped, 'no trapped seats on any seed').toBeGreaterThan(5);
+    expect(tallies, 'no tallies').toBeGreaterThan(4);
+  });
+});
