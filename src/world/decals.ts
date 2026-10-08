@@ -1163,3 +1163,32 @@ export function oldNumber(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The nail row — where the coat hooks hung: a run of small nail holes
+ * with a sag shadow under each, and torn plaster where one was ripped. */
+export function nailRow(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    const n = 5 + Math.floor(rng.float() * 4);
+    const x0 = 14 + rng.float() * 10, y = 40 + rng.float() * 16;
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * (14 + rng.float() * 4);
+      // sag shadow — grime dragged down under the old hook
+      ctx.fillStyle = 'rgba(52,47,40,0.28)';
+      ctx.fillRect(x - 1, y, 2, 14 + rng.float() * 14);
+      // the hole itself
+      ctx.fillStyle = 'rgba(38,34,29,0.6)';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      // one hook ripped out: ragged plaster tear
+      if (i === 2 && rng.bool(0.7)) {
+        ctx.fillStyle = 'rgba(168,160,142,0.35)';
+        ctx.beginPath();
+        ctx.arc(x + 4, y + 2, 5 + rng.float() * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(60,55,48,0.4)';
+        ctx.stroke();
+      }
+    }
+  });
+}

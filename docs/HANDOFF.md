@@ -5165,3 +5165,10 @@ Game.die() from the same five fields.
   beneath — the hotel renumbered once. cy 2.42 above the frame.
   Named 'old-number'.
 - Vitest 284: 'the numbers changed'. Gates: tsc, lint, 100/100.
+
+## sprint 438 — the wall kept the hooks
+
+- Nail-row dressing: a run of nail holes + sag shadows at coat-rail
+  height on lobby/corridor/guest walls (30% per room), one hook ripped
+  through the plaster. Named 'nail-row'.
+- Vitest 285: 'the wall kept the hooks'. Gates: tsc, lint, 101/101.
