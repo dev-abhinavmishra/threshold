@@ -6677,3 +6677,134 @@ export function seatWipe(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 494 — the book dried open: warped cover wings and a page fan that never went back. */
+export function pageFan(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    const cx = 48;
+    // warped cover — the two boards sprung open like wings
+    for (const s of [-1, 1]) {
+      g.save();
+      g.translate(cx, 44);
+      g.rotate(s * (0.5 + rng.float() * 0.2));
+      g.fillStyle = 'rgba(70,58,44,0.85)';
+      g.fillRect(s * 4, -26, s * 30, 12);
+      // gilt edge on the cover lip
+      g.fillStyle = 'rgba(180,150,80,0.4)';
+      g.fillRect(s * 4, s * -1 - 15, s * 30, 1.4);
+      g.restore();
+    }
+    // the page fan — leaves sprung up from the spine in a dead arc
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
+      const a = -0.7 + t * 1.4;
+      g.save();
+      g.translate(cx, 42);
+      g.rotate(a + rng.range(-0.03, 0.03));
+      g.fillStyle = `rgba(196,188,170,${0.5 + t * 0.3})`;
+      g.fillRect(-0.8, -34, 1.6, 34);
+      g.restore();
+    }
+    // spine shadow
+    g.fillStyle = 'rgba(30,24,20,0.7)';
+    g.beginPath(); g.ellipse(cx, 44, 6, 3, 0, 0, Math.PI * 2); g.fill();
+    // damp tide along the lower page edges
+    g.strokeStyle = 'rgba(120,104,80,0.4)';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(cx - 22, 30);
+    g.quadraticCurveTo(cx, 26 + rng.range(-2, 3), cx + 22, 30);
+    g.stroke();
+    // foxing spots — the rust of old paper
+    g.fillStyle = 'rgba(120,90,50,0.45)';
+    for (let i = 0; i < 8; i++) {
+      g.beginPath(); g.arc(cx + rng.range(-16, 16), 14 + rng.range(-6, 16), rng.range(0.7, 1.6), 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 494 — the pages curled: damp pulled the corners up, the ink ran a little. */
+export function paperCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // the sheet — a pale quadrilateral, corners lifting
+    g.fillStyle = 'rgba(198,190,172,0.85)';
+    g.beginPath();
+    g.moveTo(16, 18); g.lineTo(80, 14); g.lineTo(84, 78); g.lineTo(20, 82);
+    g.closePath(); g.fill();
+    // corner curls — dark scoops where each corner rolls up
+    for (const [cx0, cy0] of [[20, 20], [78, 16], [20, 78], [82, 76]] as const) {
+      const curl = g.createRadialGradient(cx0, cy0, 1, cx0, cy0, 10);
+      curl.addColorStop(0, 'rgba(60,52,44,0.55)');
+      curl.addColorStop(1, 'rgba(60,52,44,0)');
+      g.fillStyle = curl;
+      g.fillRect(cx0 - 11, cy0 - 11, 22, 22);
+    }
+    // text lines — faded, wavering where the damp warped the sheet
+    g.strokeStyle = 'rgba(70,62,54,0.45)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 9; i++) {
+      const y = 26 + i * 6;
+      g.beginPath();
+      g.moveTo(24, y);
+      g.quadraticCurveTo(48, y + rng.range(-1.5, 1.5), 76 - rng.float() * 12, y + rng.range(-1, 1));
+      g.stroke();
+    }
+    // the ink that ran — one line bled into a bloom
+    g.fillStyle = 'rgba(50,56,80,0.4)';
+    g.beginPath(); g.ellipse(52 + rng.range(-6, 6), 44 + rng.range(-6, 6), 5, 3.4, rng.range(-0.4, 0.4), 0, Math.PI * 2); g.fill();
+    // edge stains — the damp came from below
+    g.strokeStyle = 'rgba(120,104,80,0.4)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(20, 82); g.lineTo(84, 78); g.stroke();
+    // a single fingerprint in the margin
+    g.fillStyle = 'rgba(60,52,44,0.3)';
+    g.beginPath(); g.ellipse(70, 60, 2.2, 3, 0.3, 0, Math.PI * 2); g.fill();
+  });
+}
+
+/** Sprint 494 — the ceiling bloomed: a water ring, stain map and blistered plaster overhead. */
+export function plasterBloom(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48 + rng.range(-10, 10), cy = 48 + rng.range(-8, 8);
+    // concentric tide rings — the leak came and went in seasons
+    for (let i = 0; i < 3; i++) {
+      const r = 12 + i * 11 + rng.range(-2, 2);
+      g.strokeStyle = `rgba(96,78,56,${0.5 - i * 0.12})`;
+      g.lineWidth = 2.2 - i * 0.5;
+      g.beginPath();
+      // wobbly ring — not a true circle
+      for (let a = 0; a <= 32; a++) {
+        const t = (a / 32) * Math.PI * 2;
+        const rr = r + Math.sin(t * 3 + i) * 2.4;
+        const x = cx + Math.cos(t) * rr, y = cy + Math.sin(t) * rr * 0.8;
+        if (a) g.lineTo(x, y); else g.moveTo(x, y);
+      }
+      g.closePath(); g.stroke();
+    }
+    // the stain's heart — darkest where the drip stood longest
+    const heart = g.createRadialGradient(cx, cy, 2, cx, cy, 14);
+    heart.addColorStop(0, 'rgba(84,66,44,0.55)');
+    heart.addColorStop(1, 'rgba(84,66,44,0)');
+    g.fillStyle = heart;
+    g.fillRect(cx - 16, cy - 16, 32, 32);
+    // plaster blisters — small raised dots inside the oldest ring
+    g.fillStyle = 'rgba(150,140,124,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(4, 13);
+      g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, 1.1, 0, Math.PI * 2); g.fill();
+    }
+    // one blister burst — a bright pit
+    g.fillStyle = 'rgba(180,170,156,0.6)';
+    g.beginPath(); g.arc(cx + rng.range(-8, 8), cy + rng.range(-6, 6), 1.6, 0, Math.PI * 2); g.fill();
+    // crack tails leaving the bloom
+    g.strokeStyle = 'rgba(58,50,42,0.4)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 34, cy + Math.sin(a) * 27);
+      g.lineTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 38);
+      g.stroke();
+    }
+  });
+}
