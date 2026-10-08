@@ -5595,3 +5595,27 @@ snare's seed prop face stays on the floor — wire visuals never change
 on death anywhere in the game; the captions carry the truth.
 
 Gates: tsc, lint, contract spec (batched).
+
+## Sprint 415 — the fall is heard
+`Entity.stagger()` was fiction: a body going down made no noise.
+Now every stagger (glass drop, sprung wire, steam, wet floor, belt
+wheel, charge hit) emits a real positional 'impact' at intensity 0.5 —
+heard in-room (above the 0.42 hear floor), muffled through walls
+(below the 0.55 rouse floor — a fall is loud where it lands, quiet
+one room over). No source tag: entity listeners skip sourced events,
+and the faller isn't exempt — a tripped warden can wake and read the
+very sign its own fall answered. A stagger you cause on purpose is a
+positional lure that also removes a threat briefly.
+
+Gates: tsc, lint (batched with next).
+
+## Sprint 416 — caught mid-tying
+The re-lay scan is a vulnerable window: slip within 1.8m while the
+warden's hands are in the wires and the read breaks — the work stays
+dead, he turns on you instead. Visible slip → the whistle answers
+like any sighting; a hidden slip aborts the re-lay for free (the
+abort respects protection — hidden hands are undetectable hands).
+The tug-of-war is two-handed now: he re-lays, you interrupt, the
+wipe shadow still poisons his reads.
+
+Gates: tsc, lint, contract spec (all batched — s412-416 arc).

@@ -168,6 +168,18 @@ export abstract class Entity {
 
   stagger(seconds: number): void {
     this.staggerUntil = this.ctx.now + seconds;
+    // sprint 415 — the fall is heard: a body going down is a real
+    // sound in the house, not fiction — what listens drifts to the
+    // crash. No source tag: entity listeners skip sourced events, and
+    // the faller isn't exempt — a tripped warden can wake and read the
+    // very sign its own fall answered.
+    const tp = this.threatPos();
+    if (tp) {
+      this.ctx.sound.emit({
+        x: tp.x, y: 0.3, z: tp.z, intensity: 0.5,
+        category: 'impact', caption: '[something heavy goes down]',
+      });
+    }
   }
 
   update(dt: number): void {

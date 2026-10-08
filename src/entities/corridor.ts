@@ -639,6 +639,26 @@ export class Warden extends Entity {
       } else {
         this.investigateScan += dt;
         if (this.mesh) this.mesh.rotation.y += dt * 2.4;
+        // sprint 416 — caught mid-tying: slip close while his hands are
+        // in the wires and the read breaks — the work stays dead, he
+        // turns on the interruption instead. (The far louder option —
+        // getting seen — was already checked above this block; a hidden
+        // slip still aborts the re-lay, it just doesn't pull the whistle.)
+        if (v3dist(this.pos, p.pos) < 1.8) {
+          const kind = this.investigateKind;
+          this.investigate = null;
+          this.investigateKind = null;
+          this.investigateScan = 0;
+          if (kind === 'wire' || kind === 'line' || kind === 'fan' || kind === 'blind') {
+            c.cue('floor-creak', this.pos,
+              '[it stops mid-tying — your footfall reaches it; the work lies half-fast]',
+              { severity: 'warn' });
+          }
+          // a close face in his hands answers like any sighting —
+          // he turns on you; hidden means the abort is the whole cost
+          if (p.protection !== 'hidden') this.seenT = Math.max(this.seenT, 0.1);
+          return;
+        }
         if (this.investigateScan > (this.learned ? 2.6 : 1.8)) {
           // sprint 410-411 — the house re-lays its work: a read that
           // ends on a dead hazard's sign brings it back — wire re-tied,
