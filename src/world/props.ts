@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1415,6 +1415,21 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     dd.position.set((rng.float() - 0.5) * 0.4, dustY, (rng.float() - 0.5) * 0.2);
     prop.group.add(dd);
     if (!prop.group.name) prop.group.name = 'dust-date';
+  }
+  // The chairs kept the heads — a pomade sheen on the back of a seat
+  // someone leaned into for years.
+  const BACKED: ReadonlySet<PropSpec['kind']> = new Set(['armchair', 'chair', 'diningChair', 'bench', 'bedBench', 'schoolChair', 'streetSeat', 'chapelPew', 'pewRow']);
+  if (BACKED.has(spec.kind) && rng.bool(0.22)) {
+    const dc = modelCollider(spec.kind);
+    const ch = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.3),
+      new THREE.MeshStandardMaterial({ map: chairHalo(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    ch.name = 'chair-halo';
+    ch.userData.decalMat = true;
+    ch.position.set(0, (dc?.[1] ?? 0.9) * 0.82, -((dc?.[2] ?? 0.5) * 0.38));
+    prop.group.add(ch);
+    if (!prop.group.name) prop.group.name = 'chair-halo';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

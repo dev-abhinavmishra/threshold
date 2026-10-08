@@ -2752,3 +2752,100 @@ export function waxSheen(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Vent dust — the breath a grille never stops exhaling: a dark halo
+ * around the fixture and a down-drift of sooty air. */
+export function ventDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // halo — dust settled around the frame
+    const g = ctx.createRadialGradient(48, 34, 6, 48, 34, 40);
+    g.addColorStop(0, 'rgba(30,26,22,0.4)');
+    g.addColorStop(0.7, 'rgba(30,26,22,0.18)');
+    g.addColorStop(1, 'rgba(30,26,22,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // down-drift — the soft column of carried dust under the vent
+    const dd = ctx.createLinearGradient(48, 40, 48, 92);
+    dd.addColorStop(0, 'rgba(30,26,22,0.22)');
+    dd.addColorStop(1, 'rgba(30,26,22,0)');
+    ctx.fillStyle = dd;
+    const dw = 16 + rng.float() * 12;
+    ctx.fillRect(48 - dw / 2, 40, dw, 52);
+    // streak teeth — separate faint fingers in the drift
+    for (let i = 0; i < 6; i++) {
+      const sx = 42 + rng.float() * 14;
+      ctx.fillStyle = `rgba(30,26,22,${0.1 + rng.float() * 0.12})`;
+      ctx.fillRect(sx, 44, 1.4 + rng.float(), 40 + rng.float() * 10);
+    }
+    // settled grit in the halo band
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(34,30,26,${0.15 + rng.float() * 0.2})`;
+      const a = rng.float() * Math.PI * 2;
+      const r = 22 + rng.float() * 18;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * r, 34 + Math.sin(a) * r * 0.6, 0.5 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Heel scuff — the black arcs boots leave along a baseboard when
+ * feet swing close: clustered crescents at toe height. */
+export function heelScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 48, (ctx) => {
+    const marks = 4 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < marks; i++) {
+      const hx = 12 + rng.float() * 104;
+      const hy = 20 + rng.float() * 14;
+      const swing = rng.float() * 0.9 + 0.4;
+      ctx.strokeStyle = `rgba(24,20,18,${0.35 + rng.float() * 0.3})`;
+      ctx.lineWidth = 1.6 + rng.float() * 1.4;
+      ctx.beginPath();
+      ctx.arc(hx, hy + 8, 7 + rng.float() * 4, Math.PI * (1.1 + rng.float() * 0.2), Math.PI * (1.1 + rng.float() * 0.2) + swing);
+      ctx.stroke();
+      // the smear tail — rubber dragged off the toe
+      ctx.fillStyle = `rgba(24,20,18,${0.15 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(hx + 4 + rng.float() * 6, hy + 10, 3 + rng.float() * 4, 1.4, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust disturbed at the board's feet
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(150,140,120,${0.06 + rng.float() * 0.1})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 112, 30 + rng.float() * 14, 0.6 + rng.float() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Chair halo — the pomade sheen a headrest keeps: a soft grease
+ * ellipse where a thousand heads leaned back. */
+export function chairHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32 + (rng.float() - 0.5) * 8;
+    // the shine — warm grease bloom, brighter at the crown
+    const g = ctx.createRadialGradient(cx, 30, 2, cx, 30, 18 + rng.float() * 6);
+    g.addColorStop(0, 'rgba(180,160,120,0.32)');
+    g.addColorStop(0.55, 'rgba(160,140,104,0.16)');
+    g.addColorStop(1, 'rgba(160,140,104,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // the crown ring — fabric polished hardest where the head sat
+    ctx.strokeStyle = 'rgba(190,170,130,0.3)';
+    ctx.lineWidth = 2 + rng.float();
+    ctx.beginPath();
+    ctx.ellipse(cx, 30, 10 + rng.float() * 4, 12 + rng.float() * 4, 0, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+    // hair-line runs down the fabric
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(150,132,100,${0.12 + rng.float() * 0.12})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      const hx = cx - 10 + rng.float() * 20;
+      ctx.moveTo(hx, 34);
+      ctx.lineTo(hx + (rng.float() - 0.5) * 3, 44 + rng.float() * 10);
+      ctx.stroke();
+    }
+  });
+}
