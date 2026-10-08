@@ -705,6 +705,12 @@ export class Game {
     }
     this.stockSeen.clear();
     for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
+    // the count's locker keeps its tag — seized goods stay claimable
+    // at the cage across a reload (a fresh run mints nothing)
+    this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
+    this.seizedAt = cp?.seizedTake
+      ? { x: cp.seizedTake.x, y: cp.seizedTake.y, z: cp.seizedTake.z } : null;
+    this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -978,9 +984,13 @@ export class Game {
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0) return false;
+        const seized = take.map((i) => ({ id: i.id, count: i.count }));
         for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
         this.inventory = this.inventory.filter((i) => i.count > 0);
         this.hotImprints = 0;
+        // the take doesn't vanish — the count locks it in the nearest
+        // claim cage under a fresh tag, claimable back like any bag
+        this.stashSeized(seized);
         return true;
       },
       trailOwed: () => this.paperTrail,
@@ -1028,6 +1038,11 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** The count's locker — goods a named catch stripped hang under a
+   *  fresh tag at the nearest claim cage. Taking them back is a fresh
+   *  claim on crew-held effects: priced, filed, counted like any bag. */
+  private seizedTake: { id: ItemId; count: number }[] = [];
+  private seizedAt: { x: number; y: number; z: number } | null = null;
   /** Boards the player tore mid-episode — the clerk re-pins THESE
    *  slots, so a partial tear is answered like a clean sweep. */
   private bareBoards = new Map<number, { x: number; z: number }>();
@@ -1050,6 +1065,48 @@ export class Game {
    *  boards name you, every ask counts double: the wanted sheets
    *  carry your face to the index too. */
   private fileQuestion() { this.paperTrail += this.wantedActive ? 2 : 1; }
+
+  /** The count's locker — seized goods hang under a fresh claim tag at
+   *  the nearest under claim cage instead of vanishing. A seed with no
+   *  cage keeps the take (the count swallowed it whole). */
+  private stashSeized(items: { id: ItemId; count: number }[]): void {
+    if (items.length === 0) return;
+    let cage: { x: number; y: number; z: number } | null = null;
+    let best = Infinity;
+    for (const r of this.route?.underRooms ?? []) {
+      for (const s of r.sockets) {
+        if (s.meta.claim === undefined || s.meta.marginalia !== true) continue;
+        const d = Math.hypot(s.pos.x - this.player.pos.x, s.pos.z - this.player.pos.z);
+        if (d < best) {
+          best = d;
+          // the fresh tag hangs on the cage's FRONT edge — toward the
+          // room's approach — so it's always the nearer claim verb and
+          // never hidden behind the cage's own tag under aim
+          const rx = r.origin.x - s.pos.x, rz = r.origin.z - s.pos.z;
+          const rl = Math.hypot(rx, rz) || 1;
+          cage = { x: s.pos.x + (rx / rl) * 0.45, y: s.pos.y, z: s.pos.z + (rz / rl) * 0.45 };
+        }
+      }
+    }
+    if (!cage) return;
+    this.seizedTake.push(...items);
+    this.seizedAt = cage;
+    this.mintSeizedClaim();
+  }
+
+  /** Mint the claim-back verb at the tag — replayed like restock so a
+   *  room rebuild keeps it, removed on claim. */
+  private mintSeizedClaim(): void {
+    if (!this.seizedAt || this.seizedTake.length === 0) return;
+    const id = `seized-claim-${this.space}`;
+    if (this.dynamicInteractables.some((x) => x.id === id)) return;
+    this.dynamicInteractables.push({
+      kind: 'seizedClaim', id,
+      pos: { x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z },
+      prompt: 'Claim your seized take — 8 marginalia',
+      holdTime: 0.8, enabled: true, priority: 1, data: {},
+    });
+  }
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -2691,6 +2748,33 @@ export class Game {
           const name = ITEM_DEFS[contains as ItemId]?.name.toLowerCase() ?? contains;
           this.cue('pickup', it.pos, `[inside the bag — ${name}]`);
         }
+        return;
+      }
+      case 'seizedClaim': {
+        // The count's locker — what a named catch stripped hangs under
+        // a fresh tag at this cage. Claiming it back is a fresh claim
+        // on crew-held effects: priced, filed, and the till rings late.
+        const sPrice = 8;
+        if (this.marginalia < sPrice) {
+          this.cue('door-locked', it.pos,
+            `[the tag reads ${sPrice} marginalia — your own take costs what any bag costs]`, 'warn');
+          return;
+        }
+        this.marginalia -= sPrice;
+        this.unpaidTheft += 1;
+        this.queueLoss(it.pos.x, it.pos.z,
+          '[a tag reads drawn early — the count is short]');
+        const back = this.seizedTake
+          .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
+          .join(' · ');
+        for (const s of this.seizedTake) this.giveItem(s.id, s.count);
+        this.seizedTake = [];
+        this.seizedAt = null;
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => x.id !== it.id);
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
+        this.cue('pickup', it.pos,
+          `[the tag tears — your take hangs on your back again · ${back}]`, 'info');
         return;
       }
       case 'register': {
@@ -4507,6 +4591,10 @@ export class Game {
       taught: [...this.taught],
       deadLines: [...this.deadLines],
       wardArmed: this.wardArmed,
+      seizedTake: this.seizedAt && this.seizedTake.length > 0
+        ? { items: this.seizedTake.map((s) => ({ ...s })),
+            x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z }
+        : undefined,
       chalkMarks: [...this.chalkMarks].map(
         ([k, v]): [string, { x: number; y: number; z: number; yaw: number; label: string }] =>
           [k, { x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, label: v.label }]),

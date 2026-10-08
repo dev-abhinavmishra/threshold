@@ -175,6 +175,9 @@ export interface CheckpointSave {
     t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
   // an armed ward seal is paid protection — a reload can't strip it
   wardArmed?: boolean;
+  // the count's locker — goods a named catch stripped hang claimable
+  // at a cage under a fresh tag; a reload keeps the tag, not the loss
+  seizedTake?: { items: { id: ItemId; count: number }[]; x: number; y: number; z: number };
   // chalk tally marks the player left on doors — authored state, not
   // a consumable: reloading shouldn't erase what they drew
   chalkMarks?: [string, { x: number; y: number; z: number; yaw: number; label: string }][];

@@ -1539,3 +1539,95 @@ test('the deep tier — the machines read the boards, the index closes', async (
   expect(errors).toEqual([]);
 });
 
+// sprint 374 — the count's locker: a named catch's seize locks your
+// take in the nearest claim cage under a fresh tag — claimable back
+// priced + filed like any bag, and the tag rides the checkpoint.
+test("the count's locker — seized goods hang claimable at the cage", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; unpaidTheft: number; keys: Set<string>;
+      inventory: { id: string; count: number }[];
+      hotItems: Set<string>; hotImprints: number;
+      entityCtx(): { seizeMarked(): boolean };
+      dynamicInteractables: { id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      input: { interactPressed: boolean };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 40;
+    // a marked take on your back + one clean item the seize must spare
+    ga.inventory.push({ id: 'feltWrap', count: 2 }, { id: 'latchpick', count: 1 });
+    ga.hotItems = new Set(['feltWrap']);
+    ga.hotImprints = 5;
+    const didSeize = ga.entityCtx().seizeMarked();
+    const spared = ga.inventory.find((i) => i.id === 'latchpick')?.count === 1;
+    const stripped = !ga.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+      && ga.hotItems.size === 0 && ga.hotImprints === 0;
+    const verb = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
+    let prompt = '', claimed = false, filed = 0, cap = '';
+    const seen: string[] = [];
+    if (verb) {
+      // the tag hangs at the nearest cage — stand on the room-center
+      // side of it (the 0.9m convention; a raw offset lands in the
+      // cage prop's collider and the eject spoils the aim)
+      const room = g.route.underRooms.find((r) => {
+        const L = 6;
+        return Math.abs(r.origin.x - verb.pos.x) < L && Math.abs(r.origin.z - verb.pos.z) < L;
+      });
+      if (room) ga.currentRoom = room.index;
+      const cx = (room?.origin.x ?? verb.pos.x + 1) - verb.pos.x;
+      const cz = (room?.origin.z ?? verb.pos.z + 1) - verb.pos.z;
+      const cl = Math.hypot(cx, cz) || 1;
+      const sx = verb.pos.x + (cx / cl) * 0.9, sz = verb.pos.z + (cz / cl) * 0.9;
+      const t0 = ga.unpaidTheft;
+      for (let f = 0; f < 60 && !claimed; f++) {
+        g.player.teleport(sx, 0, sz);
+        const ax = verb.pos.x - g.player.pos.x, az = verb.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(verb.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        g.frame();
+        const fp = ga.interaction.focused?.prompt ?? '';
+        if (fp && !seen.includes(fp)) seen.push(fp);
+        if (f < 5) prompt = fp || prompt;
+        // hold verbs need the key HELD through the hold — the edge
+        // (interactPressed) only fires instant verbs
+        if (/claim your seized take/i.test(fp)) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+        claimed = ga.inventory.some((i) => i.id === 'feltWrap' && i.count === 2);
+      }
+      ga.keys.delete('KeyE');
+      filed = ga.unpaidTheft - t0;
+      cap = caps.find((c) => /tag tears/.test(c)) ?? '';
+    }
+    return { stage: 'done' as const, didSeize, spared, stripped,
+      minted: !!verb, prompt, seen, claimed, filed, cap,
+      spentMarg: ga.marginalia,
+      caps: caps.slice(-6) };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.didSeize, JSON.stringify(result)).toBe(true);
+  expect(result.stripped).toBe(true);   // every marked stack + the marked coin stripped
+  expect(result.spared).toBe(true);     // clean goods untouched
+  expect(result.minted, JSON.stringify(result)).toBe(true); // the tag hangs at a cage
+  expect(result.prompt).toMatch(/Claim your seized take/);
+  expect(result.claimed, JSON.stringify(result)).toBe(true);
+  expect(result.filed).toBe(1);         // claiming back files a fresh line
+  expect(result.spentMarg).toBe(32);    // 40 − 8 — priced like a bag
+  expect(result.cap).toMatch(/hangs on your back again/);
+  expect(errors).toEqual([]);
+});
+

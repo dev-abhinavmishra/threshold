@@ -4408,3 +4408,26 @@ Game.die() from the same five fields.
   shutter leg, not blind-held.
 - Gates: tsc, lint, vitest 255, sim 5/5, undercast deep-tier leg
   green, build.
+
+## sprint 374 — the count's locker
+
+- `seizeMarked` no longer vanishes the take: stripped stacks stash
+  into `seizedTake` + hang under a fresh tag at the nearest under
+  claim cage (`stashSeized`). 'Claim your seized take — 8 marginalia'
+  mints via `dynamicInteractables`; claiming pays like a bag, files
+  `unpaidTheft +1`, and queues the late till-ring like any draw. The
+  whole seize→locker→reclaim loop now has a price and a place — a
+  named catch costs the goods once, not forever.
+- The tag hangs on the cage's FRONT edge (0.45m toward room center):
+  first attempt put it on top of the cage's own claim verb (aim
+  shadowed — 'Reclaim the effects tagged X' won every focus frame);
+  a lateral offset could still sit BEHIND the authored tag. Anchoring
+  along (roomCenter − socket) makes it the nearer verb by
+  construction.
+- `seizedTake` rides `CheckpointSave` (optional — old saves parse
+  clean) and re-mints on restore.
+- e2e note: hold verbs need the key HELD — `interactPressed` edges
+  only fire instant verbs. The locker's leg holds `KeyE` gated on the
+  focused prompt.
+- Gates: tsc, lint, vitest 255, sim 5/5, undercast 'the count's
+  locker' leg green, build.
