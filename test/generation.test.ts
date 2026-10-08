@@ -1657,3 +1657,18 @@ describe('the lodge keeps watch (sprint 421)', () => {
     expect(dressed).toBe(found);
   });
 });
+
+describe('the drag (sprint 422)', () => {
+  it('heel-trails end at hiding spots across seeds', () => {
+    let trails = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drag-trail') trails++; });
+      }
+    }
+    expect(trails, 'no drag trails anywhere').toBeGreaterThan(8);
+  });
+});
