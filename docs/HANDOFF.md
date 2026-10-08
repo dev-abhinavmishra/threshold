@@ -5514,6 +5514,34 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 470–472 — the rockers swung, the grease hung & the wardrobe kept the dark
+
+Sprint 470: `rockerArcs` — twin runner crescents under armchair/
+chair props at ~25% (floor decal, named `rocker-arcs`); `cordWear` —
+pull-cord drags beside ~35% of windows (named `cord-wear`);
+`nightGlow` — amber bloom behind nightstand/deskLamp/lamp/
+washStand at ~35% (named `night-glow`).
+
+Sprint 471: `laceShadow` — net-lattice dapple beside lived-in
+windows at ~30% (named `lace-shadow`); `flourDust` — pale film on
+kitchen tops at ~16% (buildProp overlay, named `flour-dust`);
+`greaseCloud` — oily ceiling bloom above stove/kitchenRange/
+stoveRange at ~50% (named `grease-cloud`).
+
+Sprint 472: `rugCurl` — lifted rug edges with trapped grit at ~40%
+(named `rug-curl`); `bathRing` — mineral tide lines on basinSink/
+washStand at ~45% (named `bath-ring`); `wardrobeDark` — absolute
+door-crack darkness on wardrobe/cabinet kinds at ~30% (named
+`wardrobe-dark`).
+
+Gotcha: PropKind comparisons must name real kinds — a made-up kind
+('rockingChair', 'bathTub') compiles in builder.ts conditions but
+tsc flags it as an unintentional comparison with no overlap; check
+spec.ts's union first.
+
+Gates: tsc, lint, generation tests (9 new cases). Full suite + sim
+before push. No e2e leg — dressing only.
+
 ## Sprint 467–469 — the treads wore thin, the grout darkened & the sun bleached the boards
 
 Sprint 467: `stairWear` — polished tread centers on stairs/
