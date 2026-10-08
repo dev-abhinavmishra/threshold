@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1498,6 +1498,20 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sm.position.set((rng.float() - 0.5) * 0.1, 0.26, 0.043);
     prop.group.add(sm);
     if (!prop.group.name) prop.group.name = 'shaver-smear';
+  }
+  // The treads wore thin — polished centers and ground noses on
+  // steps that carried a million feet.
+  if ((spec.kind === 'stairs' || spec.kind === 'stairLanding' || spec.kind === 'grandStair') && rng.bool(0.5)) {
+    const sw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.85),
+      new THREE.MeshStandardMaterial({ map: stairWear(rng) ?? undefined, transparent: true, roughness: 0.92, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    sw.name = 'stair-wear';
+    sw.userData.decalMat = true;
+    sw.rotation.x = -Math.PI / 2;
+    sw.position.set(0, 0.36, 0);
+    prop.group.add(sw);
+    if (!prop.group.name) prop.group.name = 'stair-wear';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

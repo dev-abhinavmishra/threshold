@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2010,6 +2010,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       dg2.rotation.z = (port.wall === 'n' ? 0 : port.wall === 's' ? Math.PI : port.wall === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.3;
       dg2.position.set(lp.x + inx, 0.0085, lp.z + inz);
       group.add(dg2);
+    }
+
+    // The hooks kept the coats — greasy halos and swing arcs behind
+    // the pegs that still stand.
+    for (const p of spec.props) {
+      if ((p.kind !== 'keyRack' && p.kind !== 'ceilingHook') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, hookWear(rng), 0.55 + rng.float() * 0.15, 0.85 + rng.float() * 0.15, along, 1.6 + rng.float() * 0.15);
+      const hwk = group.children[group.children.length - 1];
+      if (hwk && !hwk.name) hwk.name = 'hook-wear';
+    }
+    // The ceiling keeps its hairlines — a plaster crack that wandered
+    // and set, pale dust along its lip.
+    if (rng.float() < 0.25) {
+      const ch = decalQuad(ceilingHair(rng), 1.4 + rng.float() * 0.5, 1.0 + rng.float() * 0.3);
+      ch.name = 'ceiling-hair';
+      ch.rotation.x = Math.PI / 2;
+      ch.rotation.z = rng.float() * Math.PI * 2;
+      ch.position.set((rng.float() - 0.5) * (w - 3), h - 0.056, (rng.float() - 0.5) * (d - 3));
+      group.add(ch);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

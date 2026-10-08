@@ -3417,3 +3417,128 @@ export function shaverSmear(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Stair wear — the tread centers a million steps polished: pale
+ * crescents stacked like riser faces, darker noses where the edge
+ * bit. */
+export function stairWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // tread bands — horizontal wear crescents, center-biased
+    const treads = 5 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < treads; i++) {
+      const ty = 12 + i * (72 / treads);
+      const tw = 30 + rng.float() * 26;
+      const tx = 48 + (rng.float() - 0.5) * 14;
+      const g = ctx.createRadialGradient(tx, ty, 1, tx, ty, tw / 2);
+      g.addColorStop(0, `rgba(212,200,170,${0.24 + rng.float() * 0.12})`);
+      g.addColorStop(1, 'rgba(212,200,170,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, tw / 2, 4.5 + rng.float() * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // the nose — dark grind on the riser lip
+      ctx.strokeStyle = 'rgba(70,60,48,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(tx - tw / 2, ty + 3);
+      ctx.quadraticCurveTo(tx, ty + 5 + rng.float() * 2, tx + tw / 2, ty + 3);
+      ctx.stroke();
+    }
+    // dragged heel marks between treads
+    for (let i = 0; i < 8; i++) {
+      ctx.strokeStyle = `rgba(88,78,64,${0.15 + rng.float() * 0.15})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      const hx = 20 + rng.float() * 56;
+      const hy = 14 + rng.float() * 68;
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx + (rng.float() - 0.5) * 8, hy + 4 + rng.float() * 5);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Hook wear — the greasy halo a coat peg earns: swung arcs where
+ * the hook's load knocked the paint, lint below it. */
+export function hookWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // halo — hand-height smudge around the peg
+    const g = ctx.createRadialGradient(cx, 30, 3, cx, 30, 22);
+    g.addColorStop(0, 'rgba(60,52,40,0.38)');
+    g.addColorStop(0.6, 'rgba(60,52,40,0.15)');
+    g.addColorStop(1, 'rgba(60,52,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 96);
+    // swung marks — the coat's weight arcing the plaster
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(76,66,52,${0.24 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      const a0 = Math.PI * (0.4 + rng.float() * 0.3);
+      ctx.arc(cx, 30, 9 + rng.float() * 7, a0, a0 + 0.5 + rng.float() * 0.5);
+      ctx.stroke();
+    }
+    // the peg pit — dark bite where the hook screws sit
+    ctx.fillStyle = 'rgba(40,34,28,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, 28, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, 36, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // lint drift — fibers dusted down under the hang
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(150,140,120,${0.1 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(22 + rng.float() * 20, 44 + rng.float() * 40, 0.7, 1.6, (rng.float() - 0.5) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Ceiling hair — a plaster hairline that wandered: one branching
+ * crack, forks thinning as they run, a pale dust line along it. */
+export function ceilingHair(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // the run — a wandering hairline
+    let x = 10 + rng.float() * 20;
+    let y = 20 + rng.float() * 20;
+    ctx.strokeStyle = 'rgba(52,46,38,0.55)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    const segs = 6 + Math.floor(rng.float() * 5);
+    const pts: [number, number][] = [[x, y]];
+    for (let i = 0; i < segs; i++) {
+      x += 14 + rng.float() * 10;
+      y += (rng.float() - 0.5) * 14;
+      ctx.lineTo(x, y);
+      pts.push([x, y]);
+    }
+    ctx.stroke();
+    // forks — thinner splits off the main run
+    for (const [fx, fy] of pts.slice(1, -1)) {
+      if (!rng.bool(0.5)) continue;
+      ctx.strokeStyle = 'rgba(52,46,38,0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + (rng.float() - 0.5) * 16, fy + (rng.float() - 0.5) * 22);
+      ctx.stroke();
+    }
+    // pale dust settled along the crack's lip
+    ctx.strokeStyle = 'rgba(200,190,168,0.2)';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1] + 1.4);
+    for (const [px, py] of pts.slice(1)) ctx.lineTo(px, py + 1.4);
+    ctx.stroke();
+    // the pale stain spot the crack grew from
+    const g = ctx.createRadialGradient(pts[0][0], pts[0][1], 1, pts[0][0], pts[0][1], 14);
+    g.addColorStop(0, 'rgba(180,168,144,0.22)');
+    g.addColorStop(1, 'rgba(180,168,144,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 96);
+  });
+}
