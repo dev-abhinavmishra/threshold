@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -843,6 +843,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       kw.name = 'keyhole-wear';
       kw.position.set(port.width / 2 - 0.14, 0.16, 0.053);
       leaf.add(kw);
+    }
+    // The claws raked low — three furrows gouged at the door's foot
+    // where something wanted through and was refused.
+    if (!industrial && rng.float() < 0.14) {
+      const cm = decalQuad(clawMarks(rng), 0.5, 0.5);
+      cm.name = 'claw-marks';
+      cm.position.set(0, -0.78, 0.053);
+      leaf.add(cm);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -2559,6 +2567,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       jr.rotation.z = rng.float() * Math.PI * 2;
       jr.position.set(p.x, 0.0097, p.z);
       group.add(jr);
+    }
+
+    // The lamps smoked the ceiling — a soot ring and leaning smudge
+    // above the hanging flames that burned for years.
+    for (const p of spec.props) {
+      if ((p.kind !== 'chainBulb' && p.kind !== 'lamp' && p.kind !== 'ceilingLamp') || rng.float() >= 0.45) continue;
+      const ls = decalQuad(lampSoot(rng), 0.8 + rng.float() * 0.2, 0.8 + rng.float() * 0.2);
+      ls.name = 'lamp-soot';
+      ls.rotation.x = Math.PI / 2;
+      ls.rotation.z = rng.float() * Math.PI * 2;
+      ls.position.set(p.x, h - 0.057, p.z);
+      group.add(ls);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

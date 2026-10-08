@@ -6550,3 +6550,130 @@ export function panelBow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 493 — the claws raked low: three-furrow scratches at the door's foot, something wanted through. */
+export function clawMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // three parallel furrows — gouged deep, brighter where the wood split
+    for (let f = 0; f < 3; f++) {
+      const x0 = cx - 16 + f * 16 + rng.range(-3, 3);
+      const lean = rng.range(-0.15, 0.15);
+      // the gouge
+      g.strokeStyle = 'rgba(30,24,18,0.85)';
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.moveTo(x0, 70);
+      g.quadraticCurveTo(x0 + lean * 30, 46, x0 + lean * 48, 20 + rng.range(-4, 6));
+      g.stroke();
+      // the splintered edge — bright torn grain beside the gouge
+      g.strokeStyle = 'rgba(170,152,124,0.6)';
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.moveTo(x0 + 2.4, 68);
+      g.quadraticCurveTo(x0 + lean * 30 + 2, 46, x0 + lean * 48 + 2, 24);
+      g.stroke();
+      // torn fibers fanning at the top of each rake
+      g.strokeStyle = 'rgba(120,104,84,0.5)';
+      for (let i = 0; i < 3; i++) {
+        g.beginPath();
+        g.moveTo(x0 + lean * 48, 22);
+        g.lineTo(x0 + lean * 48 + rng.range(-6, 6), 12 + rng.range(-3, 4));
+        g.stroke();
+      }
+    }
+    // smeared pad-drag below the rakes
+    g.fillStyle = 'rgba(44,36,28,0.35)';
+    g.beginPath(); g.ellipse(cx, 78, 22, 6, 0, 0, Math.PI * 2); g.fill();
+    // wood splinters dropped at the foot
+    g.fillStyle = 'rgba(140,124,100,0.55)';
+    for (let i = 0; i < 10; i++) {
+      g.save();
+      g.translate(cx + rng.range(-24, 24), 84 + rng.range(-3, 6));
+      g.rotate(rng.range(0, Math.PI));
+      g.fillRect(-2.5, -0.5, rng.range(3, 7), 1);
+      g.restore();
+    }
+  });
+}
+
+/** Sprint 493 — the lamp smoked the ceiling: a soot ring and smoke smudge above the hanging light. */
+export function lampSoot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // the ring — soot halo where the flame's heat bloomed upward
+    const ring = g.createRadialGradient(cx, cy, 8, cx, cy, 38);
+    ring.addColorStop(0, 'rgba(30,26,22,0.15)');
+    ring.addColorStop(0.55, 'rgba(34,28,24,0.55)');
+    ring.addColorStop(1, 'rgba(34,28,24,0)');
+    g.fillStyle = ring;
+    g.fillRect(0, 0, 96, 96);
+    // the core — a dense disc right above the mantle
+    const core = g.createRadialGradient(cx, cy, 1, cx, cy, 12);
+    core.addColorStop(0, 'rgba(22,18,15,0.75)');
+    core.addColorStop(1, 'rgba(22,18,15,0)');
+    g.fillStyle = core;
+    g.fillRect(cx - 14, cy - 14, 28, 28);
+    // the lean — smoke smudge drifting off-axis toward the room's draft
+    const la = rng.range(0, Math.PI * 2);
+    g.strokeStyle = 'rgba(38,32,26,0.35)';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(la) * 10, cy + Math.sin(la) * 10);
+    g.quadraticCurveTo(
+      cx + Math.cos(la) * 26 + rng.range(-4, 4), cy + Math.sin(la) * 26 + rng.range(-4, 4),
+      cx + Math.cos(la) * 42, cy + Math.sin(la) * 42);
+    g.stroke();
+    // flyspecks caught in the soot
+    g.fillStyle = 'rgba(20,16,14,0.6)';
+    for (let i = 0; i < 18; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(8, 34);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.9, 0.9);
+    }
+    // plaster heat-crackle — hairlines at the ring's edge
+    g.strokeStyle = 'rgba(50,44,38,0.4)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30);
+      g.lineTo(cx + Math.cos(a) * rng.range(36, 44), cy + Math.sin(a) * rng.range(36, 44));
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 493 — someone sat: seat dust with one clean wipe where a body last landed. */
+export function seatWipe(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // the dust field — thick, undisturbed except for the wipe
+    g.fillStyle = 'rgba(156,146,130,0.5)';
+    g.fillRect(8, 8, 80, 80);
+    // edge drifts
+    g.fillStyle = 'rgba(166,156,140,0.55)';
+    g.beginPath(); g.ellipse(14, 20, 12, 8, 0.3, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(80, 74, 13, 9, -0.2, 0, Math.PI * 2); g.fill();
+    // dust speckle texture
+    g.fillStyle = 'rgba(120,110,96,0.4)';
+    for (let i = 0; i < 60; i++) {
+      g.fillRect(rng.range(10, 86), rng.range(10, 86), 1, 0.9);
+    }
+    // THE WIPE — the clean oval where someone sat down: the cushion
+    // shows through in a body-shaped absence of dust
+    const wx = cx + rng.range(-6, 6), wy = cy + rng.range(-4, 4);
+    g.fillStyle = 'rgba(58,48,38,0.75)';
+    g.beginPath(); g.ellipse(wx, wy, 22, 17, rng.range(-0.15, 0.15), 0, Math.PI * 2); g.fill();
+    // wipe fringe — dust pushed outward at the oval's lip
+    g.strokeStyle = 'rgba(140,130,114,0.55)';
+    g.lineWidth = 2.4;
+    g.beginPath(); g.ellipse(wx, wy, 23.5, 18.5, 0, 0, Math.PI * 2); g.stroke();
+    // hand-drag at the wipe's edge — they steadied themselves sitting
+    g.strokeStyle = 'rgba(70,58,46,0.5)';
+    g.lineWidth = 1.4;
+    for (let i = 0; i < 4; i++) {
+      const hx = wx + 20 + rng.range(-2, 3);
+      g.beginPath(); g.moveTo(hx, wy - 8 + i * 3.4); g.lineTo(hx + 7 + rng.float() * 4, wy - 9 + i * 3.4); g.stroke();
+    }
+  });
+}
