@@ -1192,3 +1192,29 @@ export function nailRow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The fan sheds — a dust ring on the floor under the blades: what the
+ * spin throws off collects in a halo at the drop point. */
+export function dustFall(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // faint full halo
+    ctx.strokeStyle = 'rgba(140,130,112,0.20)';
+    ctx.lineWidth = 10 + rng.float() * 6;
+    ctx.beginPath();
+    ctx.arc(48, 48, 30 + rng.float() * 8, 0, Math.PI * 2);
+    ctx.stroke();
+    // heavier flecks where dust settled
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2, rr = 24 + rng.float() * 18;
+      ctx.fillStyle = `rgba(120,112,96,${0.2 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * rr, 48 + Math.sin(a) * rr, 1 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // pale drift center (dust walks inward)
+    ctx.fillStyle = 'rgba(150,140,122,0.12)';
+    ctx.beginPath();
+    ctx.arc(48, 48, 14, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

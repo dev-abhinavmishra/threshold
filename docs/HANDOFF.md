@@ -5172,3 +5172,10 @@ Game.die() from the same five fields.
   height on lobby/corridor/guest walls (30% per room), one hook ripped
   through the plaster. Named 'nail-row'.
 - Vitest 285: 'the wall kept the hooks'. Gates: tsc, lint, 101/101.
+
+## sprint 439 — the fan sheds
+
+- Dust-fall rings under ceilingFan/vent props (50% roll, lane-cleared):
+  faint halo + heavier settled flecks + pale drift center.
+  Named 'fan-sheds'.
+- Vitest 286: 'the fan sheds'. Gates: tsc, lint, 102/102.
