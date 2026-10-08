@@ -1858,3 +1858,18 @@ describe('the votive (sprint 434)', () => {
     expect(votives, 'no votives').toBeGreaterThan(4);
   });
 });
+
+describe('the house was hurt before (sprint 435)', () => {
+  it('walls carry plaster plug repairs', () => {
+    let patches = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'patch-plug') patches++; });
+      }
+    }
+    expect(patches, 'no patch plugs').toBeGreaterThan(8);
+  });
+});
