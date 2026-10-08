@@ -5379,3 +5379,115 @@ export function treadShine(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Moth bites — the holes moths eat in hanging wool and silk: small
+ * chewed voids, frayed edges, shed scales dusting below. */
+export function mothBites(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the bites — irregular voids chewed through the fabric
+    const bites = 6 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < bites; i++) {
+      const bx = 14 + rng.float() * 68;
+      const by = 16 + rng.float() * 64;
+      const bs = 2 + rng.float() * 3.5;
+      ctx.fillStyle = `rgba(26,22,18,${0.55 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, bs, bs * (0.6 + rng.float() * 0.5), rng.float() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+      // frayed threads at the hole's rim
+      ctx.strokeStyle = `rgba(150,138,118,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.5;
+      for (let f = 0; f < 3; f++) {
+        const a = rng.float() * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(bx + Math.cos(a) * bs, by + Math.sin(a) * bs * 0.7);
+        ctx.lineTo(bx + Math.cos(a) * (bs + 1.5 + rng.float() * 2), by + Math.sin(a) * (bs + 2 + rng.float() * 2));
+        ctx.stroke();
+      }
+    }
+    // shed scales — moth dust drifts below the damage
+    for (let i = 0; i < 18; i++) {
+      ctx.fillStyle = `rgba(190,180,158,${0.2 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 56, 56 + rng.float() * 36, 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a web pull — one thread still holding the fabric
+    ctx.strokeStyle = 'rgba(180,172,152,0.3)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(30 + rng.float() * 30, 14);
+    ctx.quadraticCurveTo(48, 40, 34 + rng.float() * 30, 70);
+    ctx.stroke();
+  });
+}
+
+/** Valance dust — the dust a curtain top collects: a grey film on
+ * the header, a swept lane where hands ran it back. */
+export function valanceDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the film — heavy dust along the header
+    const g = ctx.createLinearGradient(0, 0, 0, 30);
+    g.addColorStop(0, `rgba(150,142,124,${0.4 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(150,142,124,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 32);
+    // the folds — vertical gathers shaded in the dust
+    for (let i = 0; i < 8; i++) {
+      const fx = 8 + i * 11;
+      ctx.fillStyle = `rgba(110,102,88,${0.18 + rng.float() * 0.12})`;
+      ctx.fillRect(fx, 0, 2.5, 30 + rng.float() * 6);
+    }
+    // the swept lane — a hand wiped it once
+    ctx.fillStyle = `rgba(180,170,148,${0.3 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.moveTo(20, 8);
+    ctx.quadraticCurveTo(48, 4 + rng.float() * 4, 76, 10 + rng.float() * 4);
+    ctx.lineTo(76, 14 + rng.float() * 4);
+    ctx.quadraticCurveTo(48, 10 + rng.float() * 4, 20, 14);
+    ctx.fill();
+    // dust lumps at the rod line
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(160,152,134,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 2 + rng.float() * 8, 0.7 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Curtain shadow — the silhouette a curtain throws on the wall
+ * behind it: soft vertical folds in dark shade, a light slit at
+ * the window's edge. */
+export function curtainShade(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // the shade — soft vertical folds
+    for (let i = 0; i < 6; i++) {
+      const fx = 12 + i * 13;
+      const gw = 8 + rng.float() * 4;
+      const g = ctx.createLinearGradient(fx, 0, fx + gw, 0);
+      g.addColorStop(0, 'rgba(60,52,44,0)');
+      g.addColorStop(0.5, `rgba(60,52,44,${0.2 + rng.float() * 0.12})`);
+      g.addColorStop(1, 'rgba(60,52,44,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(fx, 8, gw, 112);
+    }
+    // the slit — bright knife-edge where the window light leaked
+    const sx = 8 + rng.float() * 6;
+    const g2 = ctx.createLinearGradient(sx, 0, sx + 8, 0);
+    g2.addColorStop(0, `rgba(210,200,176,${0.3 + rng.float() * 0.15})`);
+    g2.addColorStop(1, 'rgba(210,200,176,0)');
+    ctx.fillStyle = g2;
+    ctx.fillRect(sx, 8, 8, 110);
+    // hem shadow — the bottom edge's darker line
+    ctx.fillStyle = 'rgba(50,44,36,0.28)';
+    ctx.fillRect(10, 116, 76, 3);
+    // sway ghost — one fold bent outward by a breeze
+    ctx.strokeStyle = 'rgba(70,60,50,0.22)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(30, 8);
+    ctx.quadraticCurveTo(38 + rng.float() * 8, 60, 32 + rng.float() * 6, 116);
+    ctx.stroke();
+  });
+}
