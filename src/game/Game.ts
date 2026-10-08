@@ -1022,6 +1022,11 @@ export class Game {
         ? { sfx: base.sfx, text: ROUSED_LINES[sched.entity] ?? '[pacing — it heard you]', sev: 'danger' as const }
         : base;
     }
+    // a primed set piece runs already — its work carries through the seam
+    const ms = this.milestones.get(target.index);
+    if (ms?.primed && ms.primedAudible) {
+      return { sfx: 'floor-creak', text: '[a mechanism already mid-count — it heard you]', sev: 'danger' as const };
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };

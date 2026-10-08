@@ -108,7 +108,27 @@ test('ear to the seam: listen reports what waits beyond a door', async ({ page }
       return { none: true };
     })();
 
-    return { withEnt, quiet, heardTotal: rec[HEARD].size };
+    // 3) a primed set piece hums through the seam — loud work three doors
+    //    back means it never opened cold (s340)
+    const primed = (() => {
+      const ms = (g as unknown as { milestones: Map<number, { primed: boolean; primedAudible: boolean; prime(): void }> }).milestones;
+      for (const [idx, m] of ms) {
+        if (!m.primedAudible) continue;
+        const mPos = main.findIndex((r) => r.index === idx);
+        if (mPos <= 0) continue;
+        const next = main[mPos], host = main[mPos - 1];
+        if ((next.scheduled?.length ?? 0) > 0) continue; // an entity's tell outranks
+        m.prime();
+        caps.length = 0;
+        const r = listenAt(host, next);
+        m.primed = false;
+        if ('none' in r) continue;
+        return { ...r, room: idx, cap: r.caps.find((c) => /mid-count/.test(c)) };
+      }
+      return { none: true };
+    })();
+
+    return { withEnt, quiet, primed, heardTotal: rec[HEARD].size };
   });
 
   const ent = result.withEnt;
@@ -122,6 +142,11 @@ test('ear to the seam: listen reports what waits beyond a door', async ({ page }
   expect('none' in q ? 'none' : `quiet @${q.room} prompts[${q.prompts}]`).not.toBe('none');
   if (!('none' in q)) {
     expect(q.quietCap ?? `no quiet caption — caps[${q.caps}] dark ${q.dark} tpl ${q.tpl}`).toBeTruthy();
+  }
+  const p = result.primed;
+  expect('none' in p ? 'none' : `primed @${p.room} prompts[${p.prompts}]`).not.toBe('none');
+  if (!('none' in p)) {
+    expect(p.cap ?? `no primed caption — caps[${p.caps}]`).toMatch(/mid-count — it heard you/);
   }
   expect(errors).toEqual([]);
 });
