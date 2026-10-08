@@ -4051,3 +4051,36 @@ Game.die() from the same five fields.
   fires mid-leg when the leg's earlier pilfers raised wanted. The leg
   now counts `pending + rung` (queued OR already rung) via a
   `ga.sound.on` capture of the 'marked gone' emit.
+
+## sprint 356 — the repost walks — cut the reposter
+
+- s344's bare-board recovery was an instant global flip — every sheet
+  reappeared at once, unreachable. `entities/reposter.ts` is a
+  `CrewChecker`-pattern walker: when the repost arms, a clerk walks
+  the under spine hi→lo (WALK 1.6 — an amble, catchable) and pins a
+  fresh sheet at each bare board in person (PIN_T 2.2). Cues: 'the
+  clerk walks out with fresh paper', 'a sheet goes back up' per pin,
+  'the boards stand re-sheeted'. `raiseWanted(true)` stays as the
+  no-path fallback (empty hosts).
+- Counterplay, honest both ways: 'cutRepost' (1.0s hold, ≤1.9m) grabs
+  the bundle — the walk dies, 'the paper spills', and the boards it
+  never reached stay bare. Cutting doesn't forgive you: the repost
+  re-arms (`wantedRepostT = clock + 30`) — the clerk reaches for more
+  paper. Mirrors the runner's cut: silence is bought, not the ledger.
+- The tear/repost tug-of-war is now spatial: tear all 5 → 30s window →
+  a physical walker re-pins one room at a time. Tearing while he walks
+  is still free.
+- e2e: the audit leg's repost phase updated — accepts the walker
+  captions ('fresh paper'/'a sheet goes back up'), exposes
+  `reposter.active/position`, drives to the walker and holds E for
+  the cut, asserts un-pinned boards stay bare. vitest reposter.test.ts
+  covers dispatch→pin-order(hi→lo)→idle, mid-walk cut, single-walk
+  dispatch refusal.
+- Traps worth keeping: repost hosts come from `pickWantedHosts` at
+  arm-time — rooms torn AFTER dispatch still get pinned if they were
+  bare at pick; the walker's `pinAt` is nearest-path-point, so a host
+  off the spine pins at its closest corridor point (the sheet still
+  lands at the host's room — `repost()` writes `wantedRooms[roomIdx]`
+  with the HOST's coords, not the walker's).
+- Gates: tsc, lint, vitest 249 (3 new reposter specs), sim 5/5,
+  undercast audit leg (in flight), build.

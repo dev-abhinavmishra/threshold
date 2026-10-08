@@ -677,9 +677,33 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       // the last torn board does
       g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
       ga.currentRoom = aRoom.index;
-      for (let f = 0; f < 1100 && wG.wantedRooms.size === 0; f++) g.frame();
+      for (let f = 0; f < 1400 && wG.wantedRooms.size === 0; f++) g.frame();
     }
-    const reposted = wG.wantedRooms.size > 0 && caps.some((c) => /fresh sheets go up/.test(c));
+    // sprint 356 — the repost is a walk now: a clerk carries fresh paper
+    // to each bare board in person ('fresh paper' dispatch cue, one pin
+    // at a time); 'fresh sheets go up' is only the no-path fallback.
+    const reposted = wG.wantedRooms.size > 0
+      && caps.some((c) => /fresh paper|fresh sheets go up|sheet goes back up/.test(c));
+    // grab the bundle mid-walk — the boards it never reached stay bare
+    const rG = ga as unknown as { reposter: { active: boolean; position: { x: number; z: number } } };
+    const walkerSeen = rG.reposter.active === true
+      || caps.some((c) => /walks out with fresh paper/.test(c));
+    const sheetsAtPin = wG.wantedRooms.size;
+    let cutDone = false;
+    if (rG.reposter.active) {
+      for (let f = 0; f < 1500 && !cutDone; f++) {
+        const rp = rG.reposter.position;
+        g.player.teleport(rp.x - 0.3, 0, rp.z);
+        g.player.yaw = Math.atan2(rp.x - g.player.pos.x, rp.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(0.9 - eyeY, 0.4);
+        g.frame();
+        if (f === 4) ga.keys.add('KeyE');
+        if (!rG.reposter.active) { cutDone = true; break; }
+      }
+      ga.keys.delete('KeyE');
+    }
+    const stillBare = cutDone && wG.wantedRooms.size < (torn || 0);
     // a checkpoint after the repost carries the refilled board map
     const cpAfter = cpAt();
     const cpWanted = !reposted || (!!cpAfter && cpAfter.wantedActive === true
@@ -712,7 +736,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
       wantedUp, sheets, sheetRead, stepNamed, torn, reachDead, lastDown, tearSign, tearDbg, reposted,
-      cpArmed, cpWanted,
+      cpArmed, cpWanted, walkerSeen, sheetsAtPin, cutDone, stillBare,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -730,6 +754,12 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     expect(result.lastDown, JSON.stringify(result)).toBe(true);
     expect(result.tearSign, JSON.stringify(result)).toBe(true); // pulling paper is work sign
     expect(result.reposted, JSON.stringify(result)).toBe(true); // the clerk has more paper
+    expect(result.walkerSeen, JSON.stringify(result)).toBe(true); // the repost walks out with fresh paper
+    if ((result.sheetsAtPin ?? 0) < (result.sheets ?? 0)) {
+      // caught him mid-route: the bundle spills, un-reached boards stay bare
+      expect(result.cutDone, JSON.stringify(result)).toBe(true);
+      expect(result.stillBare, JSON.stringify(result)).toBe(true);
+    }
     expect(result.cpArmed, JSON.stringify(result)).toBe(true); // the armed repost rides the checkpoint
     expect(result.cpWanted, JSON.stringify(result)).toBe(true); // the board map rides the checkpoint
   }
