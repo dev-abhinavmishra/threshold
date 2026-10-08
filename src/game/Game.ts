@@ -3385,7 +3385,7 @@ export class Game {
       case 'wanted': {
         // the sheet prints what the tally says about you — the boards'
         // readout of the clerk's book, free to read, still named
-        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder and every counter reads the boards until the count settles]`, 'warn');
         return;
       }
       case 'wantedTear': {

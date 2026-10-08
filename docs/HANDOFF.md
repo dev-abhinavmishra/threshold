@@ -4012,3 +4012,10 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
   perverse. Main-route prices untouched (the house reads the
   register, not the under's boards).
 - Gates: tsc, lint (batched verify follows).
+
+## sprint 355 — the sheet warns of the taxes
+
+- The wanted readout now announces the whole price: 'the crew listens
+  harder AND every counter reads the boards until the count settles' —
+  so the s351–354 taxes are legible at the sheet, not just felt at
+  each counter.
