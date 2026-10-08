@@ -259,6 +259,12 @@ test('the dead line — pull the house wire and the broadcast never starts (spri
     const deadCue = caps.some((c) => /comes off the wall|dead in his hand/.test(c));
     const clocked = det.clocked === true;
     const warranted = det.warranted === true;
+    // sprint 347 — a pulled line stays dead past the checkpoint: the
+    // box never hangs again on a reload (assert via the saved state)
+    const cpL = (g as { makeCheckpoint?: (n: number) => unknown })
+      .makeCheckpoint?.(0) as { deadLines?: number[] } | undefined;
+    const cpDeadLine = !!cpL && Array.isArray(cpL.deadLines)
+      && cpL.deadLines.includes(dRoom.index);
 
     // slip the next room — a dead wire cannot ring
     const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
@@ -288,7 +294,7 @@ test('the dead line — pull the house wire and the broadcast never starts (spri
       paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
     }
     return { stage: 'done' as const, linePrompt, dead, deadCue, clocked, warranted,
-      rang, heldAfterPull, paid };
+      rang, heldAfterPull, paid, cpDeadLine };
   });
 
   if (result.stage !== 'done') test.skip();
@@ -299,6 +305,7 @@ test('the dead line — pull the house wire and the broadcast never starts (spri
   expect(result.clocked, JSON.stringify(result)).toBe(true); // he files whoever stood in the room
   expect(result.warranted, JSON.stringify(result)).toBe(false); // the wire never starts
   expect(result.rang, JSON.stringify(result)).toBe(false);
+  expect(result.cpDeadLine, JSON.stringify(result)).toBe(true); // the dead line rides the checkpoint
   expect(result.paid, JSON.stringify(result)).toBe(true); // the book still settles
   expect(errors).toEqual([]);
 });

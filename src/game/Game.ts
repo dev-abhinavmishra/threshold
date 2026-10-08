@@ -638,6 +638,36 @@ export class Game {
     this.wantedRooms = new Map(cp?.wantedRooms ?? []);
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
+    this.deadLines = new Set(cp?.deadLines ?? []);
+    // the sign stays written — fresh marks the hunters already smelled
+    // ride the checkpoint; authored 'old' sign re-derives from sockets
+    for (const e of cp?.evidence ?? []) {
+      this.hazard.evidence.push({
+        pos: v3(e.x, 0, e.z), room: e.room, kind: e.kind, t: e.t,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+      });
+    }
+    // the dead stay dead — disarmed/bled/choked/killed hazards don't
+    // resurrect; positions key the match within a room
+    for (const h of cp?.deadHazards ?? []) {
+      const near = (p: { x: number; z: number }) =>
+        Math.hypot(p.x - h.x, p.z - h.z) < 0.35;
+      if (h.kind === 'snare') {
+        const s = this.hazard.snares.find((x) => x.room === h.room && near(x.pos));
+        if (s) s.armed = false;
+      } else if (h.kind === 'steam') {
+        const s = this.hazard.steams.find((x) => x.room === h.room && near(x.pos));
+        if (s) s.dead = true;
+      } else if (h.kind === 'fan') {
+        const f = this.hazard.fans.find((x) => x.room === h.room && near(x.pos));
+        if (f) f.dead = true;
+      } else {
+        const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
+        if (w) { if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true; }
+      }
+    }
+    this.drainedRooms = new Set(cp?.drainedRooms ?? []);
+    this.stockFiled = new Set(cp?.stockFiled ?? []);
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -895,8 +925,13 @@ export class Game {
       wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
+      lineDeadFor: (r) => this.deadLines.has(r), // a pulled box stays pulled past a checkpoint
       eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
-      stockSighted: () => { this.unpaidHeld += 1; }, // he knows marked stock — the manifest is his
+      stockSighted: (r) => { // he knows marked stock — once per register, even past a checkpoint
+        if (this.stockFiled.has(r)) return;
+        this.stockFiled.add(r);
+        this.unpaidHeld += 1;
+      },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -943,12 +978,22 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** Detective rooms whose house line was pulled — the dead wire is a
+   *  physical state (box gone, no re-mint) and it rides the checkpoint. */
+  private deadLines = new Set<number>();
+  /** Detective rooms whose register already filed a marked-stock
+   *  sighting — the once-per-detective flag survives a reload. */
+  private stockFiled = new Set<number>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
    *  index logs. Squared at her station; carrying questions into her
    *  room puts your name on a card. */
   private paperTrail = 0;
+  /** A consult of the under's paper files a question — while the
+   *  boards name you, every ask counts double: the wanted sheets
+   *  carry your face to the index too. */
+  private fileQuestion() { this.paperTrail += this.wantedActive ? 2 : 1; }
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -2133,7 +2178,7 @@ export class Game {
           return;
         }
         this.marginalia -= bPrice;
-        this.paperTrail += 1;
+        this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
         this.cue('whisper', it.pos, t === 1 && th === 0
           ? '[the book holds one line on you — this one]'
@@ -2188,7 +2233,7 @@ export class Game {
         // the marked coin too, and the purse files the question.
         const washed = Math.min(6, this.hotImprints);
         this.hotImprints -= washed;
-        if (washed > 0) this.paperTrail += 1;
+        if (washed > 0) this.fileQuestion();
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
         this.cue('purchase', it.pos, washed > 0
@@ -2223,7 +2268,7 @@ export class Game {
         this.inventory = this.inventory.filter((i) => i.count > 0);
         this.marginalia += pay;
         this.stats.marginaliaEarned += pay;
-        this.paperTrail += 1;
+        this.fileQuestion();
         this.cue('purchase', it.pos,
           `[the broker takes the marked stock without a word — the under's book opens a line · +${pay} marginalia]`);
         return;
@@ -2679,7 +2724,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2719,7 +2764,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2760,7 +2805,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -3314,10 +3359,11 @@ export class Game {
         // Pulling the Detective's junction box — the broadcast dies on the
         // spot (or never starts), but the dead wire is damages he files
         // in his book. Sabotage is a price, not a trick.
-        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean } };
+        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean }; roomIdx?: number };
         if (d.keeper?.lineDead) { it.enabled = false; return; }
         it.enabled = false;
         d.keeper?.pulledLine();
+        if (d.roomIdx !== undefined) this.deadLines.add(d.roomIdx);
         return;
       }
       case 'strip': {
@@ -4275,6 +4321,21 @@ export class Game {
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
+      deadLines: [...this.deadLines],
+      deadHazards: [
+        ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
+        ...this.hazard.steams.filter((s) => s.dead).map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z })),
+        ...this.hazard.fans.filter((f) => f.dead).map((f) => ({ room: f.room, kind: 'fan' as const, x: f.pos.x, z: f.pos.z })),
+        ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
+          room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
+          dead: w.dead || undefined, filed: w.filed || undefined })),
+      ],
+      drainedRooms: [...this.drainedRooms],
+      stockFiled: [...this.stockFiled],
+      evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
+        room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+      })),
     };
   }
 

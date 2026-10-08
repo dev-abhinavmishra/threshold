@@ -85,6 +85,33 @@ describe('checkpoint', () => {
     expect(old.unpaidTheft ?? 0).toBe(0);
     expect(old.hotItems ?? []).toEqual([]);
   });
+
+  it('the house keeps what you spent — wanted, lines, hazards, marks round-trip', () => {
+    // sprints 346–350 — the checkpoint carries the wanted episode,
+    // pulled junction boxes, fresh sign marks, hazard kill-state,
+    // drained halls, and filed stock manifests.
+    saveCheckpoint({
+      seedText: 'cp-seed', roomIndex: 20, underIndex: 0, inUnderscript: false, difficulty: 'standard',
+      health: 70, inventory: [], imprints: 4, marginalia: 2,
+      stats: { roomsEntered: 20, deaths: 0, kills: 0, hidesUsed: 0, itemsUsed: 0, imprintsFound: 4, marginaliaFound: 2, timePlayed: 60, entitiesSurvived: 2, secretsFound: 0 },
+      wantedActive: true, wantedRooms: [[7, { x: 1, z: 2 }]], wantedRepostS: 0,
+      deadLines: [5, 9],
+      evidence: [{ room: 3, kind: 'work', t: 42, x: 1.5, z: 2.5, readBy: ['warden:33'], wiped: false }],
+      deadHazards: [{ room: 4, kind: 'snare', x: 0, z: 1 }, { room: 6, kind: 'eye', x: 2, z: 3, filed: true }],
+      drainedRooms: ['main:8'],
+      stockFiled: [11],
+    });
+    const cp = loadCheckpoint()!;
+    expect(cp.wantedActive).toBe(true);
+    expect(cp.wantedRooms).toEqual([[7, { x: 1, z: 2 }]]);
+    expect(cp.deadLines).toEqual([5, 9]);
+    expect(cp.evidence).toHaveLength(1);
+    expect(cp.evidence![0].readBy).toEqual(['warden:33']);
+    expect(cp.deadHazards).toHaveLength(2);
+    expect(cp.deadHazards![1].filed).toBe(true);
+    expect(cp.drainedRooms).toEqual(['main:8']);
+    expect(cp.stockFiled).toEqual([11]);
+  });
 });
 
 describe('store phases', () => {

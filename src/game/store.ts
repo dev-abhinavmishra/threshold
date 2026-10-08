@@ -163,6 +163,23 @@ export interface CheckpointSave {
   wantedActive?: boolean;
   wantedRooms?: [number, { x: number; z: number }][];
   wantedRepostS?: number;
+  // a pulled junction box stays off the wall — detective rooms that lost
+  // their house line don't grow it back on a reload
+  deadLines?: number[];
+  // the sign stays written — fresh work/kill/wipe marks the hunters read
+  // (authored 'old' sign re-derives from sockets, so it isn't carried)
+  evidence?: { room: number;
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work';
+    t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
+  // the dead stay dead — hazards you spent a tool or a risk on don't
+  // resurrect on a reload (positions key the match within a room)
+  deadHazards?: { room: number; kind: 'snare' | 'steam' | 'fan' | 'eye';
+    x: number; z: number; dead?: boolean; filed?: boolean }[];
+  // drained flooded halls — physical water state, same class as deadLines
+  drainedRooms?: string[];
+  // registers that already filed a marked-stock sighting — a reload
+  // can't bill the same manifest twice
+  stockFiled?: number[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {
