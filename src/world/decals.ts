@@ -7086,3 +7086,137 @@ export function drawerScars(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The range kept its grease — spatter burst and drip runs down the
+ *  oven door where decades of fat came off the pans. */
+export function ovenGrease(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The heat-darkened zone — a broad amber-brown film.
+    const film = g.createRadialGradient(48, 26, 4, 48, 26, 34);
+    film.addColorStop(0, 'rgba(112,76,38,0.42)');
+    film.addColorStop(0.7, 'rgba(96,64,32,0.2)');
+    film.addColorStop(1, 'rgba(96,64,32,0)');
+    g.fillStyle = film;
+    g.fillRect(14, 4, 68, 52);
+    // Spatter — the burst where a lid came off mid-fry.
+    for (let i = 0; i < 26; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 4 + rng.float() * 22;
+      g.fillStyle = `rgba(70,46,20,${0.14 + rng.float() * 0.26})`;
+      g.beginPath();
+      g.arc(48 + Math.cos(a) * r, 24 + Math.sin(a) * r * 0.7, 0.4 + rng.float() * 1.3, 0, Math.PI * 2);
+      g.fill();
+    }
+    // The drips — fat that ran and stayed, darker at the head.
+    for (let i = 0; i < 5; i++) {
+      const dx = 26 + rng.float() * 44;
+      const len = 14 + rng.float() * 26;
+      g.fillStyle = `rgba(84,54,24,${0.22 + rng.float() * 0.18})`;
+      g.fillRect(dx, 28, 1.4 + rng.float() * 1.2, len);
+      g.fillStyle = 'rgba(64,40,16,0.4)';
+      g.beginPath();
+      g.arc(dx + 0.9, 28, 1.6 + rng.float() * 1, 0, Math.PI * 2);
+      g.fill();
+    }
+    // The bottom lip holds a polish where a rag wiped once.
+    g.fillStyle = 'rgba(150,120,80,0.22)';
+    g.fillRect(20, 56 + rng.range(-1, 1), 56, 2.4);
+    // Crumbs of old carbon along the edge.
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = `rgba(40,28,14,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(18 + rng.float() * 60, 54 + rng.float() * 6, 0.8 + rng.float() * 1.2, 0.7 + rng.float());
+    }
+  });
+}
+
+/** The dial kept the thumb — a polish halo around the tuner where
+ *  one hand always landed, dust film broken by fingertip arcs. */
+export function dialRubs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // Dust film across the face.
+    g.fillStyle = 'rgba(96,88,74,0.34)';
+    g.fillRect(10, 8, 76, 48);
+    // The dial glow — a rubbed-clean halo where the thumb rides.
+    const dx = 44 + rng.range(-8, 8);
+    const halo = g.createRadialGradient(dx, 32, 2, dx, 32, 15);
+    halo.addColorStop(0, 'rgba(180,168,144,0.5)');
+    halo.addColorStop(0.6, 'rgba(180,168,144,0.2)');
+    halo.addColorStop(1, 'rgba(180,168,144,0)');
+    g.fillStyle = halo;
+    g.beginPath();
+    g.arc(dx, 32, 15, 0, Math.PI * 2);
+    g.fill();
+    // The dial ring itself — a worn-bright circle.
+    g.strokeStyle = 'rgba(200,190,168,0.5)';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(dx, 32, 8 + rng.float(), 0, Math.PI * 2);
+    g.stroke();
+    // Fingertip arcs — the wiping motion broken out of the dust.
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = `rgba(186,174,150,${0.14 + rng.float() * 0.16})`;
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.arc(dx + rng.range(-2, 2), 32 + rng.range(-2, 2), 11 + rng.float() * 6, rng.float() * 3, rng.float() * 3 + 0.9 + rng.float() * 0.8);
+      g.stroke();
+    }
+    // The station numbers gone ghost — faint tick row under the dial.
+    for (let i = 0; i < 9; i++) {
+      g.fillStyle = `rgba(150,140,120,${0.1 + rng.float() * 0.14})`;
+      g.fillRect(24 + i * 5, 48 + rng.range(-0.5, 0.5), 0.8, 2.4 + rng.float());
+    }
+    // Dust that drifted back into the wipe's wake.
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(88,80,66,${0.1 + rng.float() * 0.16})`;
+      g.fillRect(12 + rng.float() * 72, 10 + rng.float() * 44, 0.8, 0.8);
+    }
+  });
+}
+
+/** The boiler shed its skin — rust flakes and scale on the floor
+ *  under the tank, orange dust in the drip line. */
+export function boilerFlake(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The shed zone — a soft arc of oxide dust around the drip line.
+    const arc = rng.range(-0.4, 0.4);
+    for (let i = 0; i < 40; i++) {
+      const a = Math.PI * (0.15 + rng.float() * 0.7) + arc;
+      const r = 20 + rng.float() * 22;
+      const fx = 48 + Math.cos(a) * r;
+      const fy = 60 + Math.sin(a) * r * 0.55;
+      g.fillStyle = `rgba(${120 + Math.floor(rng.float() * 60)},${52 + Math.floor(rng.float() * 26)},${18 + Math.floor(rng.float() * 12)},${0.2 + rng.float() * 0.4})`;
+      g.save();
+      g.translate(fx, fy);
+      g.rotate(rng.float() * Math.PI);
+      g.fillRect(-0.6 - rng.float() * 1.4, -0.4 - rng.float() * 0.8, 1.2 + rng.float() * 2.8, 0.8 + rng.float() * 1.6);
+      g.restore();
+    }
+    // Fresh flakes — brighter chips that just let go.
+    for (let i = 0; i < 8; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 16 + rng.float() * 20;
+      g.fillStyle = `rgba(196,96,32,${0.3 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.arc(48 + Math.cos(a) * r, 58 + Math.sin(a) * r * 0.5, 0.7 + rng.float() * 1, 0, Math.PI * 2);
+      g.fill();
+    }
+    // The drip rings — mineral ghost where condensate always lands.
+    for (const rx of [-14, 6, 22]) {
+      if (!rng.bool(0.7)) continue;
+      g.strokeStyle = `rgba(140,80,36,${0.16 + rng.float() * 0.16})`;
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.ellipse(48 + rx, 66 + rng.range(-3, 3), 4 + rng.float() * 3, 1.6 + rng.float() * 1.4, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    // The sweep pile — scale pushed to one side by an old brush.
+    const px = 48 + rng.range(-24, 24);
+    const pile = g.createRadialGradient(px, 78, 1, px, 78, 9);
+    pile.addColorStop(0, 'rgba(110,58,22,0.5)');
+    pile.addColorStop(1, 'rgba(110,58,22,0)');
+    g.fillStyle = pile;
+    g.beginPath();
+    g.arc(px, 78, 9, 0, Math.PI * 2);
+    g.fill();
+  });
+}

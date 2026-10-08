@@ -4229,3 +4229,48 @@ describe('the drawers kept the scratches (sprint 496)', () => {
     expect(n, 'no drawer scars').toBeGreaterThan(0);
   });
 });
+
+describe('the boiler shed its skin (sprint 497)', () => {
+  it('rust flakes and scale scatter in the drip line', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'boiler-flake') n++; });
+      }
+    }
+    expect(n, 'no boiler flakes').toBeGreaterThan(0);
+  });
+});
+
+describe('the range kept its grease (sprint 497)', () => {
+  it('spatter and fat drips mark the oven face', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'oven-grease') n++; });
+      }
+    }
+    expect(n, 'no oven grease').toBeGreaterThan(0);
+  });
+});
+
+describe('the dial kept the thumb (sprint 497)', () => {
+  it('a polish halo breaks the dust where the tuner lives', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'dial-rubs') n++; });
+      }
+    }
+    expect(n, 'no dial rubs').toBeGreaterThan(0);
+  });
+});

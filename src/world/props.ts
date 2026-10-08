@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2089,6 +2089,36 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ds.position.set(0, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'drawer-scars';
+  }
+  // The range kept its grease — spatter burst and fat drips on the
+  // oven door face.
+  const RANGE_KINDS = new Set(['stove', 'stoveRange', 'kitchenRange']);
+  if (RANGE_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const og = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.44),
+      new THREE.MeshStandardMaterial({ map: ovenGrease(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    og.name = 'oven-grease';
+    og.userData.decalMat = true;
+    og.position.set(0, (dc?.[1] ?? 0.9) * 0.5, (dc?.[2] ?? 0.6) / 2 + 0.006);
+    prop.group.add(og);
+    if (!prop.group.name) prop.group.name = 'oven-grease';
+  }
+  // The dial kept the thumb — a polish halo broken out of the dust
+  // where one hand always found the tuner.
+  const DIAL_KINDS = new Set(['radio', 'boombox', 'cassettePlayer']);
+  if (DIAL_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const dr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: dialRubs(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    dr.name = 'dial-rubs';
+    dr.userData.decalMat = true;
+    dr.position.set(0, (dc?.[1] ?? 0.35) * 0.55, (dc?.[2] ?? 0.25) / 2 + 0.005);
+    prop.group.add(dr);
+    if (!prop.group.name) prop.group.name = 'dial-rubs';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
