@@ -213,6 +213,15 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // the listen reads the live lures list, lowest precedence — below every tread
     expect(gameSrc).toMatch(/this\.lures\.find\(\(l\) => \{\s*const ri = underRoomOf\(roam, l\.pos\)/);
   });
+
+  it('the fallen coil lies there — spilled and restored wire wear the slack face', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a spilled splice rebuilds its face like every dead snare keeps
+    expect(gameSrc).toMatch(/spillSnare\(pos: Vec3, room: number\)[\s\S]*?snare\.mesh = this\.buildSnareProp/);
+    expect(gameSrc).toContain('a coil of wire drops');
+    // dead grafts restore wearing it too — no faceless wire anywhere
+    expect(gameSrc).toMatch(/gw\.armed === false[\s\S]*?dead\.mesh = this\.buildSnareProp/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

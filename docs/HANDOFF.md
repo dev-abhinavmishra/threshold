@@ -5884,3 +5884,12 @@ it pays out '[an alarm rings beyond — the clock you wound]'. Same info
 tier as the armed-line hum — below every tread, above the room-type
 reads. The ear-to-the-seam family: sched > lamp > paper > primed >
 tread > armed line > your tick > template.
+
+## Sprint 427 — the fallen coil lies there
+
+`spillSnare` now rebuilds the slack face (dead wire looks like dead
+wire everywhere — seeded trips, planted pulls, spills alike) and emits
+the drop clatter (0.3 item, real sound — the room hears the coil slip).
+Dead grafts restoring from `graftedWires` rebuild the face too, and
+planted wires restore their face regardless of armed — the face is the
+wire's look, not its state. No faceless wire anywhere.

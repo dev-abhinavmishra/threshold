@@ -780,14 +780,17 @@ export class Game {
         const snare = { pos: v3(gw.x, 0, gw.z), room: gw.room, armed: gw.armed, planted: true,
           mesh: undefined as THREE.Object3D | undefined };
         this.hazard.snares.push(snare);
-        if (gw.armed) snare.mesh = this.buildSnareProp(snare.pos, gw.room);
+        snare.mesh = this.buildSnareProp(snare.pos, gw.room);
         continue;
       }
       if (gw.armed === false) {
-        // a spilled coil restores as dead work — no face, no fresh sign;
-        // its mark was written when it dropped (the splice signs a live
-        // laying, never a rehydration)
-        this.hazard.snares.push({ pos: v3(gw.x, 0, gw.z), room: gw.room, armed: false, grafted: true });
+        // a spilled coil restores as dead work — same slack face dead
+        // snares keep, no fresh sign; its mark was written when it
+        // dropped (the splice signs a live laying, never a rehydration)
+        const dead = { pos: v3(gw.x, 0, gw.z), room: gw.room, armed: false, grafted: true,
+          mesh: undefined as THREE.Object3D | undefined };
+        this.hazard.snares.push(dead);
+        dead.mesh = this.buildSnareProp(dead.pos, gw.room);
         continue;
       }
       this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
@@ -1408,13 +1411,20 @@ export class Game {
     snare.mesh = this.buildSnareProp(pos, room);
   }
 
-  /** sprint 419 — a dropped coil is dead wire again: no arm, no prop
-   *  face (a live-looking wire would lie), just the splice-sign a
-   *  tripped one would leave — reclaimable by the next scavenger. */
+  /** sprint 419 — a dropped coil is dead wire again: the splice-sign a
+   *  tripped one would leave, reclaimable by the next scavenger.
+   *  sprint 427 — and it lies there visible like every fallen wire:
+   *  same slack face dead snares keep, plus the small clatter of the
+   *  drop so the room knows the coil slipped. */
   private spillSnare(pos: Vec3, room: number): void {
-    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: false, grafted: true });
+    const snare = { pos: v3(pos.x, 0, pos.z), room, armed: false, grafted: true,
+      mesh: undefined as THREE.Object3D | undefined };
+    this.hazard.snares.push(snare);
+    snare.mesh = this.buildSnareProp(pos, room);
     this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'wire',
       t: this.clock.time, readBy: [] });
+    this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.3,
+      category: 'item', caption: '[a coil of wire drops]' });
   }
 
   private spawnEntity(e: Entity): void {
