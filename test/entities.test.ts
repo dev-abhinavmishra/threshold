@@ -1375,7 +1375,7 @@ describe('Swamper (sprint 255)', () => {
     expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
     expect(ctx.seizeMarked).toHaveBeenCalled();
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
-    expect(captions.some((c) => /goes? to the count|to the count/.test(c))).toBe(true);
+    expect(captions.some((c) => /tag hangs on the nearest cage/.test(c))).toBe(true);
     sw.dispose();
     // a stranger keeps his pockets — no seize while the boards don't name him
     const rooms2 = [floodRoom()];
