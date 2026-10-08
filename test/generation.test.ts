@@ -3553,3 +3553,49 @@ describe('the webs veiled the tops (sprint 481)', () => {
     expect(n, 'no web drapes').toBeGreaterThan(0);
   });
 });
+
+describe('the keyholes kept the fumbles (sprint 482)', () => {
+  it('polish rings sit around the key slots', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'keyhole-wear') n++; });
+      }
+    }
+    expect(n, 'no keyhole wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the candles shed their skins (sprint 482)', () => {
+  it('collapsed shells stand on the holders', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'candle-skin') n++; });
+      }
+    }
+    expect(n, 'no candle skins').toBeGreaterThan(0);
+  });
+});
+
+describe('the treads kept the shine (sprint 482)', () => {
+  it('polished lanes mark the stairs', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'tread-shine') n++; });
+      }
+    }
+    expect(n, 'no tread shines').toBeGreaterThan(0);
+  });
+});
+

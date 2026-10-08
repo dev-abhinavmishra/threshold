@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1759,6 +1759,35 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wb.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 1.8) - 0.05, -(dc?.[2] ?? 0.4) / 2 - 0.004);
     prop.group.add(wb);
     if (!prop.group.name) prop.group.name = 'web-drape';
+  }
+  // The candles shed their skins — collapsed wax shells on the
+  // holders that burned all the way down.
+  const BURNED_CANDLES: ReadonlySet<PropSpec['kind']> = new Set(['candle', 'candelabra', 'candelabrum', 'lantern', 'wallLantern']);
+  if (BURNED_CANDLES.has(spec.kind) && rng.bool(0.35)) {
+    const cs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.18, 0.36),
+      new THREE.MeshStandardMaterial({ map: candleSkin(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cs.name = 'candle-skin';
+    cs.userData.decalMat = true;
+    cs.position.set(0, 0, (modelCollider(spec.kind)?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(cs);
+    if (!prop.group.name) prop.group.name = 'candle-skin';
+  }
+  // The treads kept the shine — polished lanes and heel chips on
+  // the stairs that carried the house's weight.
+  if ((spec.kind === 'stairs' || spec.kind === 'stairLanding' || spec.kind === 'grandStair') && rng.bool(0.5)) {
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.4),
+      new THREE.MeshStandardMaterial({ map: treadShine(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ts.name = 'tread-shine';
+    ts.userData.decalMat = true;
+    ts.rotation.x = -Math.PI / 2;
+    ts.rotation.z = rng.float() * Math.PI * 2;
+    ts.position.set((rng.float() - 0.5) * 0.4, 0.38, (rng.float() - 0.5) * 0.4);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'tread-shine';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

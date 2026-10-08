@@ -5248,3 +5248,134 @@ export function webDrape(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Keyhole wear — the polish ring a keyhole gets from a lifetime of
+ * fumbled keys: a bright worn ellipse, scratch fan, oil smudge. */
+export function keyholeWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 34;
+    // the fumble fan — short scratches where the key missed
+    for (let i = 0; i < 8; i++) {
+      const a = Math.PI * (0.3 + rng.float() * 0.4);
+      const r = 6 + rng.float() * 14;
+      ctx.strokeStyle = `rgba(120,104,84,${0.3 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 4);
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6);
+      ctx.stroke();
+    }
+    // the polish ring — metal grease worked into the plate edge
+    ctx.strokeStyle = `rgba(176,160,128,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 7 + rng.float(), 9 + rng.float(), 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // the keyhole itself — near-black slot
+    ctx.fillStyle = 'rgba(16,12,10,0.8)';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(cx - 1.4, cy - 2, 2.8, 7);
+    // oil smear — the dark dab under the slot
+    ctx.fillStyle = `rgba(40,34,28,${0.3 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 12, 5 + rng.float() * 3, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // brass glints — where the plate's edge caught light
+    for (let i = 0; i < 5; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.fillStyle = `rgba(196,168,110,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * 7, cy + Math.sin(a) * 9, 0.6 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Candle skin — the wax jacket a burnt candle sheds: collapsed
+ * shell walls, a dripped skirt, wick stub. */
+export function candleSkin(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // the skirt — pooled wax where the shell collapsed
+    ctx.fillStyle = `rgba(214,200,168,${0.45 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 80, 12 + rng.float() * 3, 5 + rng.float() * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // shell walls — the hollow cylinder standing where it burned down
+    ctx.strokeStyle = `rgba(208,194,160,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 9, 78);
+    ctx.quadraticCurveTo(cx - 11, 40, cx - 8 + rng.float() * 3, 14 + rng.float() * 6);
+    ctx.moveTo(cx + 9, 78);
+    ctx.quadraticCurveTo(cx + 11, 40, cx + 8 - rng.float() * 3, 14 + rng.float() * 6);
+    ctx.stroke();
+    // the slump — a melted lip sagged sideways
+    ctx.strokeStyle = `rgba(214,200,168,${0.55 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, 16);
+    ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 6, 10 + rng.float() * 8, cx + 8, 18 + rng.float() * 4);
+    ctx.stroke();
+    // wick stub — the black thread still standing
+    ctx.strokeStyle = 'rgba(20,16,14,0.7)';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(cx, 20);
+    ctx.quadraticCurveTo(cx + 2, 14, cx + 1, 9);
+    ctx.stroke();
+    // drips down the shell
+    for (let i = 0; i < 4; i++) {
+      const dx = cx - 8 + rng.float() * 16;
+      ctx.strokeStyle = `rgba(218,206,178,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(dx, 20 + rng.float() * 10);
+      ctx.lineTo(dx + (rng.float() - 0.5) * 3, 30 + rng.float() * 30);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Stair shine — the polish a tread wears at the lane: a worn bright
+ * band mid-tread, darkened edges, heel chips on the nose. */
+export function treadShine(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the lane — a polished band mid-tread where feet land
+    const g = ctx.createLinearGradient(0, 0, 0, 48);
+    g.addColorStop(0, 'rgba(140,130,110,0)');
+    g.addColorStop(0.45, `rgba(176,166,142,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(0.75, `rgba(176,166,142,${0.2 + rng.float() * 0.1})`);
+    g.addColorStop(1, 'rgba(140,130,110,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 48);
+    // the dull lane edges — grime either side of the worn band
+    ctx.fillStyle = 'rgba(50,44,36,0.14)';
+    ctx.fillRect(0, 0, 96, 8);
+    ctx.fillRect(0, 42, 96, 6);
+    // heel chips — nicks along the tread nose
+    for (let i = 0; i < 7; i++) {
+      const nx = 12 + rng.float() * 72;
+      ctx.fillStyle = `rgba(96,84,64,${0.4 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.ellipse(nx, 44, 1.8 + rng.float(), 1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the nose itself — a bright worn edge
+    ctx.strokeStyle = `rgba(196,186,164,${0.4 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(4, 45);
+    ctx.lineTo(92, 45);
+    ctx.stroke();
+    // dust at the tread's back corner
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(130,120,102,${0.16 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 80, 2 + rng.float() * 8, 0.6 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
