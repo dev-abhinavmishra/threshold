@@ -1067,6 +1067,18 @@ export class HazardField {
           ? '[a bled line, long cold — somebody worked here]'
           : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
     }
+    // sprint 421 — fresh sign reads too: 'work' marks are hands at
+    // hand-height — a grafted splice, the rubble's maintenance — and
+    // the dust testifies while it's still warm. Your own work comes
+    // pre-read so the floor doesn't narrate your hands back to you.
+    for (const ev of this.evidence) {
+      if (ev.old || ev.room !== ctx.currentRoomIndex || ev.kind !== 'work'
+        || ev.readBy.includes('player')) continue;
+      if (v3dist(p.pos, ev.pos) > 2.6) continue;
+      ev.readBy.push('player');
+      ctx.cue('floor-creak', ev.pos,
+        '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+    }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {
       this.lastTick = 0;

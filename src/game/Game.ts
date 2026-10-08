@@ -2696,7 +2696,7 @@ export class Game {
         // it toward learning). The rifle's third price after the file
         // and the cold counter: scent.
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: room.index,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 8);
@@ -4145,7 +4145,7 @@ export class Game {
         // till — the rifle's third price after the ledgers: sign the
         // under's own scent-reader drags to.
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 9);
@@ -4177,7 +4177,7 @@ export class Game {
         // hands in a staffed book leave the same smell as hands in a
         // till — sign the under's scent-reader drags to.
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 9);
@@ -4211,7 +4211,7 @@ export class Game {
         // till — a main-route pilfer in warden territory; the warden
         // pulls to it like any kill or mounted wrap.
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(6, 10);
@@ -4239,7 +4239,7 @@ export class Game {
         r.reposter.cutBy(this.reposterHooks());
         it.enabled = false;
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'distraction',
           caption: '[paper scattering in the corridor]' });
         this.wantedRepostT = this.clock.time + 30;
@@ -4308,7 +4308,7 @@ export class Game {
         const notice = built?.group.getObjectByName('wanted-notice');
         if (built && notice) built.group.remove(notice);
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
-          kind: 'work', t: this.clock.time, readBy: [] });
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
           ? '[the last sheet comes down — the boards forget your face]'
           : '[the sheet comes down — the boards have one fewer name for you]', 'warn');

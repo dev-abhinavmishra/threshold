@@ -153,6 +153,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // a dropped coil is dead wire: unarmed, unpropped, signed like a kill
     expect(gameSrc).toMatch(/spillSnare[\s\S]*armed: false[\s\S]*kind: 'wire'/);
   });
+
+  it('the dust keeps a hand — fresh work sign reads to the player, their own stays silent', () => {
+    const roomSrc = readFileSync(new URL('../src/entities/room.ts', import.meta.url), 'utf8');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the fresh-read loop watches for 'work' marks the player didn't make
+    expect(roomSrc).toContain('the dust keeps a hand');
+    // every player-caused work push comes pre-read under 'player'
+    const pushes = gameSrc.match(/kind: 'work', t: this\.clock\.time, readBy: \['player'\]/g) ?? [];
+    expect(pushes.length).toBeGreaterThanOrEqual(6);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

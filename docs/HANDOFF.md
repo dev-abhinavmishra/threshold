@@ -5741,3 +5741,14 @@ so the player hears the splice economy coming a room early. Sourced +
 under the hear floor, so the house can't borrow its own worker's noise.
 
 Gates: tsc, lint (batched).
+
+## Sprint 421 — the dust keeps a hand
+Fresh 'work' sign now reads to the player — hands at hand-height,
+worked here, recently (a graft, the rubble's maintenance) — mirroring
+the long-dry reads for seeded sign. Your own acts come pre-read:
+every player-caused 'work' push is tagged readBy:['player'] at write
+time so the floor doesn't narrate your hands back to you. 'player' in
+readBy blocks nothing for warden/grafter keys — the mark still pulls
+its hunters.
+
+Gates: tsc, lint, contract spec +1 (batched).
