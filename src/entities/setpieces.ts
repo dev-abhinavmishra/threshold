@@ -121,6 +121,11 @@ export class Orrery extends Entity {
   private rig: THREE.Group | null = null;
   private beams: THREE.Mesh[] = [];
   private beamAngle = 0;
+
+  /** A primed lens — the beams are already mid-sweep when the door opens. */
+  prime(): void {
+    this.beamAngle += 2.4;
+  }
   /** pylon progress 0..1, each needs 2.5s of held interact within beam cycles */
   pylonProgress = [0, 0, 0, 0];
   solved = false;
@@ -417,7 +422,9 @@ export class Grafter extends Entity {
 
     const d = v3dist(this.pos, p.pos);
     // it notices the living within its range — hidden reads as furniture
-    const notices = d < this.tuning.seeRange && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
+    // your face on the crew boards reads a tier harder — the rubble
+    // marks the wanted at half again its usual reach
+    const notices = d < this.tuning.seeRange * (this.ctx.wanted?.() ? 1.5 : 1) && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
     let speed = this.tuning.speed * (this.eager ? 1.15 : 1);
     if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= this.eager ? 1.75 : 1.4; }
 
@@ -779,7 +786,8 @@ export class Hauler extends Entity {
     if (e.source || !noiseCanBeHeard(e)) return;
     const room = c.rooms[this.spawnRoom];
     if (!room || !pointInRoom(room, e.x, e.z, 0.4)) return;
-    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 7) return;
+    // the wanted get a wider ear — the boards told it to listen
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 7 * (this.ctx.wanted?.() ? 1.5 : 1)) return;
     this.alerted = v3(e.x, 0, e.z);
     this.struck = false;
     c.cue('grafter-grind', this.pos, '[the scrape halts — it sets the sledge down]', { severity: 'warn' });
@@ -950,7 +958,8 @@ export class Laundress extends Entity {
     if (this.state !== 'engage' || e.source || !noiseCanBeHeard(e)) return;
     const room = this.ctx.rooms[this.spawnRoom];
     if (!pointInRoom(room, e.x, e.z, 0.4)) return;
-    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 6) return;
+    // the wanted get a wider ear — the boards told her to listen
+    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 6 * (this.ctx.wanted?.() ? 1.5 : 1)) return;
     this.alerted = v3(e.x, 0, e.z);
     this.sniffUntil = this.ctx.now + 5;
   }

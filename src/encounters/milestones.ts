@@ -32,6 +32,10 @@ export interface MilestoneEvents {
 
 export abstract class Milestone {
   done = false;
+  /** The approach was loud — this set piece opens on a hotter tell:
+   *  the same mechanics, but the room is already up when the door swings. */
+  primed = false;
+  prime(): void { this.primed = true; }
   constructor(protected room: RoomInstance, protected ev: MilestoneEvents) {}
   abstract update(dt: number): void;
   /** Return true if this milestone consumed the interaction. */
@@ -79,7 +83,12 @@ export class IndexEncounter extends Milestone {
 
   enter(): void {
     this.ev.spawnEntity(this.curator);
-    this.ev.cue('curator-enter', null, '[collect five catalog cards — quietly]', 'warn');
+    if (this.primed) {
+      this.curator.prime(this.room.entryPos);
+      this.ev.cue('curator-enter', null, '[it heard you three doors back]', 'danger');
+    } else {
+      this.ev.cue('curator-enter', null, '[collect five catalog cards — quietly]', 'warn');
+    }
   }
 
   override update(dt: number): void {
@@ -204,7 +213,8 @@ export class CustodianEncounter extends Milestone {
     // greet when the player first notices it within the room
     if (!this.greeted && dist < 12) {
       this.greeted = true;
-      this.ev.cue('custodian-bell', this.keeper.position as unknown as Vec3, '[a figure behind the counter — it watches]', 'info');
+      this.ev.cue('custodian-bell', this.keeper.position as unknown as Vec3,
+        this.primed ? '[it heard you three doors back — it watches the door]' : '[a figure behind the counter — it watches]', 'info');
     }
     // head tracks the player while they're in the room
     if (this.keeperHead && dist < 16) {
@@ -308,7 +318,12 @@ export class LensHallEncounter extends Milestone {
     if (this.entered) return;
     this.entered = true;
     this.ev.spawnEntity(this.orrery);
-    this.ev.cue('orrery-wake', null, '[four pylons — tune each while the beams sweep]', 'warn');
+    if (this.primed) {
+      this.orrery.prime();
+      this.ev.cue('orrery-wake', null, '[it heard you three doors back — the beams already sweep]', 'danger');
+    } else {
+      this.ev.cue('orrery-wake', null, '[four pylons — tune each while the beams sweep]', 'warn');
+    }
   }
 
   get solved(): boolean {
@@ -369,8 +384,13 @@ export class EngineEncounter extends Milestone {
   enter(): void {
     if (this.entered) return;
     this.entered = true;
-    this.ev.cue('engine-hum', null, '[the Engine stalls — recover the relays]', 'danger');
+    if (this.primed) {
+      this.ev.cue('engine-hum', null, '[it heard you three doors back — the Engine is already up]', 'danger');
+    } else {
+      this.ev.cue('engine-hum', null, '[the Engine stalls — recover the relays]', 'danger');
+    }
     this.ev.spawnEntity(this.curator);
+    if (this.primed) this.curator.prime(this.room.entryPos);
     this.phase = 'relays';
   }
 
