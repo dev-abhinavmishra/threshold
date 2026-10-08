@@ -4155,7 +4155,6 @@ Game.die() from the same five fields.
   FICTION (every hear gate rejects `e.source`) — the spill carries no
   `source` so the crew physically hears the paper hit the floor.
 - Gates: tsc, lint, vitest 249.
->>>>>>> devin/1791426766-threshold-s356
 
 ## sprint 359 — the window is for strangers
 
