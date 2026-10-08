@@ -7682,6 +7682,21 @@ export class Game {
         this.player.panic = Math.min(1, this.player.panic + 0.2);
         const pdx = d.x - this.player.pos.x, pdz = d.z - this.player.pos.z;
         if (pdx * pdx + pdz * pdz < 2.25) this.damagePlayer(18, 'hazard', 'The glass fell.');
+        // sprint 395 — the glass answers both ways: any walker under the
+        // fall staggers mid-stride while it gathers itself. Bait a threat
+        // under a live chain, ring the room, and dodge the 0.35s beat —
+        // you share the same glass if you're still beneath it.
+        let glassed = 0;
+        for (const ent of this.entities) {
+          if (ent.state === 'done') continue;
+          const tp = ent.threatPos();
+          if (!tp) continue;
+          const edx = tp.x - d.x, edz = tp.z - d.z;
+          if (edx * edx + edz * edz >= 2.25) continue;
+          ent.stagger(5);
+          glassed++;
+        }
+        if (glassed > 0) this.cue('chandelier-fall', v3(d.x, 1.4, d.z), "[the house's own glass finds him]", 'warn');
         for (const b of this.streamer.builtIndices) {
           const bd = this.streamer.get(b);
           if (bd) this.ensureChandelier(b, bd);

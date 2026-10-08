@@ -764,6 +764,30 @@ describe('Warden (sprint 234)', () => {
     expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
     warden.dispose();
   });
+
+  it('holds mid-stride under the house’s own glass — the stagger freezes every clock (sprint 395)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const room = rooms[28];
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object; // hidden far off — pure patrol
+    let t = step(warden, ctx, 6);
+    const p0 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const frozen = { x: p0.x, z: p0.z };
+    warden.stagger(4); // the glass lands — the world holds still for him
+    t = step(warden, ctx, 4, t); // the full stagger window
+    const p1 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    // the staggerUntil boundary frame may run one update — a single step
+    // at most, not a walk
+    expect(Math.hypot(p1.x - frozen.x, p1.z - frozen.z)).toBeLessThan(0.15);
+    step(warden, ctx, 6, t); // gathers himself — the pace resumes
+    const p2 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    expect(Math.hypot(p2.x - frozen.x, p2.z - frozen.z)).toBeGreaterThan(0.5);
+    warden.dispose();
+  });
 });
 
 describe('Groundswell (sprint 235)', () => {

@@ -4969,3 +4969,26 @@ Game.die() from the same five fields.
 - e2e: the fan leg now drives jam → dead → unchock mint → hold →
   blades live + chock back (spent chock returned to pocket).
 - Gates: tsc, lint, vitest 270, sim 5/5, props leg e2e, build.
+
+## sprint 395 — the glass answers both ways
+
+- The armed chandelier was player-only hazard: loud emit + you within
+  1.6m → 0.35s later the glass falls on whoever's beneath — but "whoever"
+  only meant you. Now the same fall staggers any walker inside the 1.5m
+  drop zone for 5s: bait a threat under a live chain, ring the room
+  (door slam, trap snap, alarm — emit must be ≥0.6), and dodge the beat.
+  The price is structural, not ledged: the drop needs you standing
+  within 1.6m when the sound lands (shared glass), the crash is a 1.0
+  positional emit that draws the next hunter, and the chain is spent.
+- New surface: `Entity.stagger(seconds)` on the base — a now-gated
+  early-return in `update()` freezes stateT and every timer that rides
+  it (warn wind-ups, walks, strikes). `threatPos()`-bearing entities are
+  eligible; done entities skipped. Chosen over per-entity plumbing so
+  every walker — bellman, warden, checker, reposter, hauler team —
+  staggers by the same rule.
+- Boundary note: `staggerUntil = ctx.now + sec` is exclusive — the tick
+  landing exactly on the boundary runs one update; specs should allow
+  ~one step of drift, not 0.001.
+- vitest: Warden 'holds mid-stride under the house's own glass' — frozen
+  through the window, paces after. e2e batched per pace directive.
+- Gates: tsc, lint, vitest 271, sim 5/5, build.

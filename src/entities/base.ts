@@ -144,7 +144,18 @@ export abstract class Entity {
     return this.stateT < 1.4;
   }
 
+  /** The house's own glass: a falling fixture staggers the walker under
+   *  it — every timer (stateT-driven warns, wind-ups, walks) holds where
+   *  it was until the stagger ends. Any walker is fair game; the glass
+   *  does not discriminate between the player's and the house's feet. */
+  private staggerUntil = -1;
+
+  stagger(seconds: number): void {
+    this.staggerUntil = this.ctx.now + seconds;
+  }
+
   update(dt: number): void {
+    if (this.ctx.now < this.staggerUntil) return; // under the glass — the world holds still
     this.stateT += dt;
     this.onUpdate(dt);
   }
