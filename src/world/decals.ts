@@ -4985,3 +4985,126 @@ export function porcelainCraze(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Hook sag — the plaster a ceiling hook pulls down over years:
+ * a shadow halo under the mount, sag cracks, rust from the bolt. */
+export function hookSag(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // the pull halo — a dim ring where the mount plate rocks
+    ctx.strokeStyle = `rgba(60,52,42,${0.35 + rng.float() * 0.15})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // sag cracks — downward stress lines under the plate
+    for (let i = 0; i < 4; i++) {
+      const a = Math.PI * (0.15 + i * 0.22) + rng.float() * 0.1;
+      ctx.strokeStyle = `rgba(50,42,34,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9);
+      ctx.lineTo(cx + Math.cos(a) * (13 + rng.float() * 7), cy + Math.sin(a) * (14 + rng.float() * 8));
+      ctx.stroke();
+    }
+    // bolt rust — a rust pool where the bolt sits
+    ctx.fillStyle = `rgba(110,64,36,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.2 + rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    // the drip — one rust run straight down
+    ctx.strokeStyle = 'rgba(110,64,36,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 3);
+    ctx.lineTo(cx + (rng.float() - 0.5) * 2, cy + 12 + rng.float() * 10);
+    ctx.stroke();
+    // plaster dust that fell off
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(170,162,144,${0.2 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 14 + rng.float() * 28, cy + 12 + rng.float() * 12, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Chain shine — the polish a dragged chain leaves: a bright worn
+ * line through grime, link dimples, dark grease tails. */
+export function chainShine(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    const cy = 24;
+    // grease tail — a dark bed the chain lay in
+    const g = ctx.createLinearGradient(8, cy, 88, cy);
+    g.addColorStop(0, 'rgba(30,26,22,0.4)');
+    g.addColorStop(0.8, `rgba(30,26,22,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(30,26,22,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(8, cy - 4, 80, 9);
+    // the shine — worn bright line where links rode
+    ctx.strokeStyle = `rgba(190,180,160,${0.35 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(10, cy);
+    ctx.quadraticCurveTo(46, cy + (rng.float() - 0.5) * 6, 84, cy + (rng.float() - 0.5) * 3);
+    ctx.stroke();
+    // link dimples — evenly spaced pits along the shine
+    const links = 7 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < links; i++) {
+      const lx = 14 + i * (68 / links);
+      ctx.fillStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.ellipse(lx, cy + (rng.float() - 0.5) * 2, 1.6, 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // grease smudges flaking off
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(36,30,24,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(12 + rng.float() * 72, cy - 8 + rng.float() * 18, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Rope fray — the fiber a rope rubs off: loose strands curling out
+ * of the lay, snapped hairs, a chafe shade where it runs. */
+export function ropeFray(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // the chafe band — a worn shade where the rope runs tight
+    const g = ctx.createLinearGradient(0, 34, 0, 58);
+    g.addColorStop(0, 'rgba(140,124,98,0)');
+    g.addColorStop(0.5, `rgba(140,124,98,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(140,124,98,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 34, 48, 24);
+    // snapped hairs — fibers curling off the lay
+    for (let i = 0; i < 14; i++) {
+      const hy = 30 + rng.float() * 34;
+      const side = rng.bool(0.5) ? -1 : 1;
+      ctx.strokeStyle = `rgba(170,154,120,${0.4 + rng.float() * 0.3})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx + side * 3, hy);
+      ctx.quadraticCurveTo(cx + side * (6 + rng.float() * 5), hy + (rng.float() - 0.5) * 4, cx + side * (9 + rng.float() * 6), hy + (rng.float() - 0.5) * 8);
+      ctx.stroke();
+    }
+    // lay lines — the twisted strands still holding
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,106,80,${0.3 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4 + i * 3.5, 6);
+      ctx.lineTo(cx - 6 + i * 3.5, 92);
+      ctx.stroke();
+    }
+    // fiber dust below the fray
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(150,134,104,${0.24 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 8 + rng.float() * 16, 60 + rng.float() * 28, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

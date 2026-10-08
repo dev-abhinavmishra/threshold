@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1716,6 +1716,34 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pc.position.set(0, (dc?.[1] ?? 0.9) - 0.02, 0);
     prop.group.add(pc);
     if (!prop.group.name) prop.group.name = 'porcelain-craze';
+  }
+  // The chains shone — worn bright lines through the grime where
+  // dragged chains rode.
+  const CHAINS: ReadonlySet<PropSpec['kind']> = new Set(['chainBulb', 'chainFence', 'ropeBarrier']);
+  if (CHAINS.has(spec.kind) && rng.bool(0.4)) {
+    const cs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.22),
+      new THREE.MeshStandardMaterial({ map: chainShine(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cs.name = 'chain-shine';
+    cs.userData.decalMat = true;
+    cs.position.set(0, (modelCollider(spec.kind)?.[1] ?? 0.4) * 0.4, (modelCollider(spec.kind)?.[2] ?? 0.3) / 2 + 0.006);
+    prop.group.add(cs);
+    if (!prop.group.name) prop.group.name = 'chain-shine';
+  }
+  // The rope frayed — snapped fibers curling off the lay on the
+  // barrier ropes that held the line.
+  if ((spec.kind === 'ropeBarrier' || spec.kind === 'chainFence') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const rf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.5),
+      new THREE.MeshStandardMaterial({ map: ropeFray(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    rf.name = 'rope-fray';
+    rf.userData.decalMat = true;
+    rf.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.005);
+    prop.group.add(rf);
+    if (!prop.group.name) prop.group.name = 'rope-fray';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
