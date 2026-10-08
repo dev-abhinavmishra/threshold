@@ -1562,3 +1562,42 @@ describe('the under drifts too (sprint 417)', () => {
     expect(camp, 'under carries none of its camp kinds').toBe(true);
   });
 });
+
+describe('the lamps take sides (sprint 419)', () => {
+  it('dead fixtures favor locked leaves, lit favor open — imperfectly', () => {
+    let litOpen = 0, litLocked = 0, deadOpen = 0, deadLocked = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec || !room.doors.length) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        const c = Math.cos(-room.yaw), s = Math.sin(-room.yaw);
+        const locals = room.doors.map((d) => {
+          const dx = d.pos.x - room.origin.x, dz = d.pos.z - room.origin.z;
+          return { locked: d.locked, x: dx * c + dz * s, z: -dx * s + dz * c };
+        });
+        built.group.traverse((o) => {
+          if (!o.name.startsWith('door-lamp-')) return;
+          const state = o.name.slice(10);
+          let best: (typeof locals)[number] | undefined, bd = Infinity;
+          for (const lp of locals) {
+            const dd = (o.position.x - lp.x) ** 2 + (o.position.z - lp.z) ** 2;
+            if (dd < bd) { bd = dd; best = lp; }
+          }
+          if (!best) return;
+          if (state === 'lit') (best.locked ? litLocked++ : litOpen++);
+          else if (state === 'dead' || state === 'smoke') (best.locked ? deadLocked++ : deadOpen++);
+        });
+      }
+    }
+    const fixtures = litOpen + litLocked + deadOpen + deadLocked;
+    expect(fixtures, 'no door lamps anywhere').toBeGreaterThan(60);
+    // the channel is a rate: locked leaves go dead ~85%, open ~30%
+    const deadRateLocked = deadLocked / (deadLocked + litLocked);
+    const deadRateOpen = deadOpen / (deadOpen + litOpen);
+    expect(deadRateLocked, 'locked leaves never dark').toBeGreaterThan(deadRateOpen * 1.5);
+    // imperfect on purpose — open leaves still go dark sometimes
+    expect(deadOpen, 'open never misleads — too honest').toBeGreaterThan(10);
+    expect(litOpen, 'open leaves never lit').toBeGreaterThan(10);
+  });
+});

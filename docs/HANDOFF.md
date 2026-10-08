@@ -4624,3 +4624,17 @@ Game.die() from the same five fields.
   dominant pick, safe opening decile holds, editor still pinned at 1.
   Numbers appended to BALANCE.md. No tuning needed.
 - Gates: balance output only — docs sprint.
+
+## sprint 419 — the lamps take sides
+
+- Per-door sconce fixtures read the leaf: `wallSconce` (residential) or
+  `cagedSconce` (maintenance/underscript/unlit) placed above each leaf at
+  y 2.35, 75% of doors marked. Lit rate: open doors 70%, locked 15%.
+  Lit adds a PointLight into the governed `lights` pool (cap holds);
+  dead gets a `door-lamp-smoke` grime stain. Named 'door-lamp-lit' /
+  'door-lamp-dead' / 'door-lamp-smoke'.
+- The channel is deliberately imperfect — dark lamps over working doors
+  and live ones over locked exist, so it teaches rather than trivializes.
+- Vitest 261: 'the lamps take sides' — attributes fixtures to nearest
+  leaf; dead-rate over locked > 1.5× dead-rate over open, leaks exist.
+- Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
