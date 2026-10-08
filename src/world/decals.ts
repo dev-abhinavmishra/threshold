@@ -1244,3 +1244,36 @@ export function wornLane(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The inspection stamp — a faded ink seal beside the door frame: ring,
+ * tick, and a year nobody remembers. The house's last clean bill. */
+export function inspectionStamp(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    ctx.strokeStyle = 'rgba(70,80,110,0.35)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(48, 46, 26 + rng.float() * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(48, 46, 20 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // the tick
+    ctx.strokeStyle = 'rgba(70,80,110,0.45)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(38, 46);
+    ctx.lineTo(45, 54);
+    ctx.lineTo(60, 36);
+    ctx.stroke();
+    // year line beneath
+    ctx.fillStyle = 'rgba(70,80,110,0.3)';
+    ctx.font = '11px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`19${40 + Math.floor(rng.float() * 50)}`, 48, 88);
+    // ink blur wear
+    for (let i = 0; i < 18; i++) {
+      ctx.clearRect(22 + rng.float() * 52, 16 + rng.float() * 60, 3, 1 + rng.float() * 2);
+    }
+  });
+}

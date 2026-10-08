@@ -5213,3 +5213,10 @@ Game.die() from the same five fields.
   with anim='flame' + baseEm ~0.6 — a few vigils are fresh.
   Named 'votive-flame'.
 - Vitest 289: 'the vigil still burns'. Gates: tsc, lint, 105/105.
+
+## sprint 444 — the inspection stamp
+
+- Faded ink seal beside a random door frame in records/maintenance/
+  lobby (35% per room): ring + tick + 1940s year line, clamped to the
+  wall span. Named 'inspection-stamp'.
+- Vitest 290: 'the inspection stamp'. Gates: tsc, lint, 106/106.
