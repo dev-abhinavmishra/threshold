@@ -1543,3 +1543,22 @@ describe('the ones before you (sprint 416)', () => {
     expect(marks, 'chalk outnumbers the cover it marks').toBeLessThan(spots);
   });
 });
+
+describe('the under drifts too (sprint 417)', () => {
+  it('underscript rooms carry service-camp clutter, not just litter', () => {
+    const kinds = new Set<string>();
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name.startsWith('clutter-')) kinds.add(o.name.slice(8)); });
+      }
+    }
+    // camp vocabulary — cartons/papers plus ration + rubble kinds the
+    // upper floors never get under this name
+    expect(kinds.has('carton') || kinds.has('papers'), 'no under clutter laid').toBe(true);
+    const camp = ['wineBottles', 'foodCans', 'rubblePile'].some((k) => kinds.has(k));
+    expect(camp, 'under carries none of its camp kinds').toBe(true);
+  });
+});
