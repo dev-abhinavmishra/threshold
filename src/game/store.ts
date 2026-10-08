@@ -199,6 +199,9 @@ export interface CheckpointSave {
   // registers that already filed a marked-stock sighting — a reload
   // can't bill the same manifest twice
   stockFiled?: number[];
+  // the kicked wedge rode under the leaf — chocks the bellman booted
+  // loose lie as gatherable loot; a reload keeps them on the floor
+  kickedWedges?: { x: number; z: number }[];
   // counters gone cold — a rifled till doesn't re-warm its clerk on a
   // reload (sold wares still restock: you paid for those)
   closedCounters?: number[];

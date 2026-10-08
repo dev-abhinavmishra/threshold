@@ -597,6 +597,8 @@ export class Game {
     this.deepSeen.clear();
     this.playedPianos.clear();
     this.litTVs.clear();
+    this.deadTVs.clear();
+    this.tvAnswerQueue.length = 0;
     this.woundClocks.clear();
     this.crackedVents.clear();
     this.litHearths.clear();
@@ -728,6 +730,10 @@ export class Game {
     // the count's running tally of swallowed coin persists too
     this.coinKept = cp?.coinKept ?? 0;
     this.mintSeizedClaim();
+    // kicked wedges stay kicked — floor loot doesn't respawn in your
+    // pocket on a reload any more than the till does
+    this.kickedWedges = cp?.kickedWedges?.map((w) => ({ ...w })) ?? [];
+    this.mintWedgeDrops();
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -1012,6 +1018,10 @@ export class Game {
         this.hotImprints = 0;
         return true;
       },
+      // sprint 393 — the kicked wedge rides under the leaf: the bellman's
+      // boot doesn't eat the chock, it slides to the player's side of the
+      // seam and waits as gatherable loot.
+      wedgeKicked: (doorPos, fromPos) => this.dropKickedWedge(doorPos, fromPos),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1040,6 +1050,10 @@ export class Game {
   /** Interactable points registered by living entities (e.g. the
    *  Collector's toll) — re-applied after every stream rebuild. */
   private dynamicInteractables: import('../player/interaction').Interactable[] = [];
+
+  /** Door chocks the bellman kicked loose — they slid under the leaf
+   *  and lie as gatherable loot until walked back for. */
+  private kickedWedges: { x: number; z: number }[] = [];
 
   /** The Auditor's tally — each marginalia claim drawn, sledge pick, and
    *  basket steal below is pilferage the under's clerks can read. Settled
@@ -1180,6 +1194,32 @@ export class Game {
     });
   }
 
+  /** The kicked wedge lands on the player's side of the seam — the boot
+   *  sends it skidding under the leaf toward the room it was guarding. */
+  private dropKickedWedge(doorPos: Vec3, fromPos: Vec3): void {
+    const dx = doorPos.x - fromPos.x, dz = doorPos.z - fromPos.z;
+    const dl = Math.hypot(dx, dz) || 1;
+    this.kickedWedges.push({ x: doorPos.x + (dx / dl) * 0.45, z: doorPos.z + (dz / dl) * 0.45 });
+    this.mintWedgeDrops();
+  }
+
+  /** Mint the gather verbs for kicked wedges — rebuilt like restock so a
+   *  room rebuild keeps the drops; indices stay in `data.i`. The filter
+   *  is space-agnostic: `this.space` may still carry the dead run's floor
+   *  at checkpoint-restore time, and a mismatched prefix would strand
+   *  stale verbs alongside fresh ones. */
+  private mintWedgeDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wedge-drop-'));
+    this.kickedWedges.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'wedgeDrop', id: `wedge-drop-${this.space}-${i}`, 
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the kicked wedge',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+    });
+  }
+
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
     this.entities.push(e);
@@ -1270,11 +1310,48 @@ export class Game {
         ? { sfx: base.sfx, text: ROUSED_LINES[sched.entity] ?? '[pacing — it heard you]', sev: 'danger' as const }
         : base;
     }
+    // the count's lamp carries through the seam too — ears tell you
+    // which room the sweep is in before you ever see the glow
+    if (this.space === 'under') {
+      if (this.checker.active) {
+        const ci = underRoomOf(this.route?.underRooms ?? [], this.checker.position);
+        if (ci >= 0 && this.route?.underRooms[ci] === target) {
+          return { sfx: 'floor-creak', text: this.checker.lampLit
+            ? '[the count’s lamp is lit in there — the sweep is inside]'
+            : '[the count walks blind in there — stripped, but still sweeping]', sev: 'danger' as const };
+        }
+      }
+      // and its paper-runner: hearing fresh sheets move tells you which
+      // boards get re-pinned before you round the corner on him
+      if (this.reposter.active) {
+        const ri = underRoomOf(this.route?.underRooms ?? [], this.reposter.position);
+        if (ri >= 0 && this.route?.underRooms[ri] === target) {
+          return { sfx: 'floor-creak', text: '[paper moves beyond — a runner carries the count’s fresh sheets]', sev: 'warn' as const };
+        }
+      }
+    }
     // a primed set piece runs already — its work carries through the seam
     const ms = this.milestones.get(target.index);
     if (ms?.primed && ms.primedAudible) {
       return { sfx: 'floor-creak', text: '[a mechanism already mid-count — it heard you]', sev: 'danger' as const };
     }
+    // roving threats carry through the seam too — the spine's walkers
+    // answer by tread before you ever see them; the loudest wins
+    let roverBest: { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } | null = null;
+    let roverRank = 0;
+    const roam = this.activeRooms();
+    for (const e of this.entities) {
+      if (e.state === 'done') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const ri = underRoomOf(roam, tp);
+      if (ri < 0 || roam[ri] !== target) continue;
+      const cue = LISTEN_CUES[e.id];
+      if (!cue) continue;
+      const rank = cue.sev === 'danger' ? 3 : cue.sev === 'warn' ? 2 : 1;
+      if (rank > roverRank) { roverRank = rank; roverBest = cue; }
+    }
+    if (roverBest) return roverBest;
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
@@ -1787,10 +1864,23 @@ export class Game {
     // beside any closed one (see addCrouchedDoorInteracts).
     // Standing at a live belt-wheel: 'Chock the blades' — a door chock
     // dropped in the wheel stills it quiet (and leaves readable sign).
+    // A jammed wheel offers the way back instead: work the chock free
+    // and the blades remember how to spin — the recovery is priced in
+    // the live hazard, not the tool.
     for (const f of this.hazard.fans) {
-      if (f.dead || !this.streamer.builtIndices.includes(f.room)) continue;
+      if (!this.streamer.builtIndices.includes(f.room)) continue;
       const dx = f.pos.x - this.player.pos.x, dz = f.pos.z - this.player.pos.z;
       if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+      if (f.dead) {
+        this.interaction.add({
+          kind: 'unchock', id: `unchock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+          pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
+          prompt: 'Work the chock free — the wheel spins up',
+          holdTime: 1.4, enabled: true, priority: 4,
+          data: f,
+        });
+        continue;
+      }
       this.interaction.add({
         kind: 'chock', id: `chock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
         pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
@@ -1879,6 +1969,25 @@ export class Game {
           data: this.checker as unknown as Record<string, unknown>,
         });
       }
+    }
+    // Cut the keyring — while the bellman stands yielded under a close
+    // stare, the ring on his belt is reachable (sprint 396). The close
+    // gaze holds him — the fold clock only runs at range — and the cut
+    // scatters the house's keys for good, then staggers him: your one
+    // beat to be gone.
+    for (const ent of this.entities) {
+      if (ent.id !== 'bellman') continue;
+      const b = ent as unknown as { cuttable: boolean; pos: Vec3; cutKeys: () => void };
+      if (!b.cuttable) continue;
+      const dx = b.pos.x - this.player.pos.x, dz = b.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.7 * 1.7) continue;
+      this.interaction.add({
+        kind: 'keyring', id: `keyring-${this.space}`,
+        pos: { x: b.pos.x, y: 1.0, z: b.pos.z },
+        prompt: 'Cut the keyring — hold the gaze',
+        holdTime: 1.8, enabled: true, priority: 5,
+        data: ent as unknown as Record<string, unknown>,
+      });
     }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
@@ -1992,7 +2101,18 @@ export class Game {
               pos: { x: wx, y: 1, z: wz },
               prompt: 'Play the piano', holdTime: 0.9, enabled: true, priority: 2,
             });
-          } else if (p.kind === 'television' && !this.litTVs.has(key)) {
+          } else if (p.kind === 'television' && this.litTVs.has(key)) {
+            // sprint 397 — a lit set is yours to kill. The prompt tells the
+            // truth: if the channel already flagged this room, the off is
+            // your only out — kill the set before it answers back.
+            const flagged = this.tvAnswerQueue.some((q) => Math.hypot(q.pos.x - wx, q.pos.z - wz) < 0.6);
+            this.interaction.add({
+              kind: 'tvoff', id: `tvoff-${key}`,
+              pos: { x: wx, y: 1, z: wz },
+              prompt: flagged ? 'Turn the set off — the channel knows you are here' : 'Turn the set off',
+              holdTime: 0.6, enabled: true, priority: 2,
+            });
+          } else if (p.kind === 'television' && !this.deadTVs.has(key)) {
             this.interaction.add({
               kind: 'tv', id: `tv-${key}`,
               pos: { x: wx, y: 1, z: wz },
@@ -2401,6 +2521,18 @@ export class Game {
             : '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
+      case 'wedgeDrop': {
+        // sprint 393 — walk the chock back: the kicked wedge returns to
+        // the pocket, free — the price was the leaf it stopped holding.
+        const wi = (it.data as { i?: number }).i ?? -1;
+        if (wi >= 0) this.kickedWedges.splice(wi, 1);
+        it.enabled = false;
+        this.mintWedgeDrops();   // re-index the survivors
+        this.giveItem('doorChock', 1);
+        this.cue('pickup', it.pos, '[door chock — it slid under the leaf to you]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
       case 'restock': {
         // sprint 333 — the take goes back: slip the marked goods into
         // the emptied till. Free, no profit, and the books keep your
@@ -2478,9 +2610,14 @@ export class Game {
         const lockerBit = (locker > 0 || this.seizedCoin > 0)
           ? ` · a tag keeps ${locker > 0 ? `${locker} of yours` : 'your coin'} at the cages${this.seizedCoin > 0 ? ` — ${this.seizedCoin} coin itemized` : ''}${this.seizedFuse <= SEIZED_FADE_S ? ' · the ink is fading' : ''}`
           : '';
-        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
+        // sprint 385 — and the book knows the tag's tail ends: the
+        // shelf a rotted tag fed, and the coin the count keeps outright
+        const fenced = this.fencedTake.reduce((n, s) => n + s.count, 0);
+        const shelfBit = fenced > 0 ? ` · the shelf keeps ${fenced} of yours` : '';
+        const tillBit = this.coinKept > 0 ? ` · ${this.coinKept} of your coin sits in the count's till` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
         return;
       }
       case 'purse': {
@@ -2839,7 +2976,7 @@ export class Game {
         }
         if (cur) this.marginalia -= price;
         else this.chargedImprints(price, it.pos.x, it.pos.z);
-        if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
+        if (cur) this.unpaidTheft += this.wantedActive ? 2 : 1; // a claim on somebody else's effects — the crew keeps score; named, the tag writes double
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
         it.enabled = false;
@@ -3579,11 +3716,28 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
         return;
       }
+      case 'unchock': {
+        // sprint 394 — the jam isn't welded: work the chock free and the
+        // wheel spins back up. The blades' wake is a real sound — the
+        // recovery prices the noise and the live hazard, not the tool.
+        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        f.dead = false;
+        it.enabled = false;
+        this.giveItem('doorChock', 1);
+        this.cue('item', it.pos, '[the chock works free — the blades remember how to spin]');
+        this.sound.emit({ x: f.pos.x, y: 1.1, z: f.pos.z, intensity: 0.45, category: 'machine', caption: '[the wheel grinds back to life]' });
+        return;
+      }
+      case 'keyring': {
+        it.enabled = false;
+        (it.data as unknown as { cutKeys?: () => void }).cutKeys?.();
+        return;
+      }
       case 'basket': {
         const w = it.data as unknown as { basketFull: boolean };
         if (!w.basketFull) { it.enabled = false; return; }
         w.basketFull = false;
-        this.unpaidTheft += 1; // her wash, your pockets — the clerks mark it
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // her wash, your pockets — the clerks mark it, double while the boards name you
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
@@ -3604,7 +3758,7 @@ export class Game {
         const h = it.data as unknown as { stock: number; sledgePos: Vec3 };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 1; // off the sledge, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the sledge, into the tally — double while the boards name you
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
@@ -3633,7 +3787,7 @@ export class Game {
         const h = it.data as unknown as { stock: number };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 1; // out of her drawer, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // out of her drawer, into the tally — double while the boards name you
         this.paperTrail += 2;  // the index logs the rummage as two questions
         it.enabled = false;
         // hands in a staffed book leave the same smell as hands in a
@@ -3664,7 +3818,9 @@ export class Game {
         const h = it.data as unknown as { stock: number; keeper?: { rifledTally?: () => void } };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 2;
+        // While the boards name you the book slaps open twice as hard —
+        // same named-filing rule the index asks and the seize tag follow.
+        this.unpaidTheft += this.wantedActive ? 4 : 2;
         it.enabled = false;
         // hands in a staffed book leave the same smell as hands in a
         // till — sign the under's scent-reader drags to.
@@ -3683,7 +3839,9 @@ export class Game {
           this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the tally]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
-        this.cue('drawer', it.pos, '[the tally notes your hands — the book slaps open]', 'warn');
+        this.cue('drawer', it.pos, this.wantedActive
+          ? '[the tally writes four — the boards make hands cost double]'
+          : '[the tally notes your hands — the book slaps open]', 'warn');
         h.keeper?.rifledTally?.();
         return;
       }
@@ -3764,7 +3922,7 @@ export class Game {
         if (!h.lampLit) { it.enabled = false; return; }
         const scavenged = h.relit;
         h.stripLamp();
-        this.unpaidTheft += 1; // off the sledge, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the sledge, into the tally — double while the boards name you
         it.enabled = false;
         // the lamp IS the loot — a hooded hand lamp at half battery, or a
         // top-up for the one you carry (count is charge). A scavenged bulb
@@ -3811,7 +3969,7 @@ export class Game {
         const ch = it.data as unknown as { lampLit: boolean; stripLamp(h: CheckerHooks): number };
         if (!ch.lampLit) { it.enabled = false; return; }
         const charge = ch.stripLamp(this.checkerHooks());
-        this.unpaidTheft += 1; // off the crew's hands, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the crew's hands, into the tally — double while the boards name you
         it.enabled = false;
         this.giveItem('handLamp', charge);
         this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
@@ -4084,6 +4242,25 @@ export class Game {
         if (scare.bool(0.32)) {
           this.tvAnswerQueue.push({ at: this.clock.time + 14 + scare.range(0, 12), pos: at });
         }
+        return;
+      }
+      case 'tvoff': {
+        // sprint 397 — kill the set. Going dark is terminal (the channel got
+        // your attention once), and it cancels the answer-back if the channel
+        // flagged this room but hasn't spoken yet. The light and hiss die too.
+        it.enabled = false;
+        const offKey = it.id.replace(/^tvoff-/, '');
+        this.litTVs.delete(offKey);
+        this.deadTVs.add(offKey);
+        this.untuneTVAt(this.currentRoom, Number(offKey.split(':')[2] ?? 0));
+        const at = { x: it.pos.x, y: 1.2, z: it.pos.z };
+        const flagged = this.tvAnswerQueue.some((q) => Math.hypot(q.pos.x - at.x, q.pos.z - at.z) < 0.6);
+        if (flagged) {
+          this.tvAnswerQueue = this.tvAnswerQueue.filter((q) => Math.hypot(q.pos.x - at.x, q.pos.z - at.z) >= 0.6);
+        }
+        this.cue('trap-click', at, flagged
+          ? '[the set goes dark — the channel forgets the room]'
+          : '[the set goes dark]');
         return;
       }
       case 'piano': {
@@ -4773,6 +4950,8 @@ export class Game {
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
+      kickedWedges: this.kickedWedges.length > 0
+        ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
@@ -4806,6 +4985,7 @@ export class Game {
   }
 
   private killPlayer(source: EntityId, hint: string): void {
+    if (this.godMode) return; // insta-kills obey the flag too — entity kills bypass damagePlayer
     if (this.player.dead) return;
     this.player.dead = true;
     this.lastDeathCause = source;
@@ -5930,6 +6110,16 @@ export class Game {
     });
   }
 
+  /** Kill the n-th television group in room i — the channel goes dark. */
+  private untuneTVAt(i: number, n: number): void {
+    let seen = -1;
+    this.worldGroup.traverse((o) => {
+      if (o.name !== `tv-${i}`) return;
+      seen += 1;
+      if (seen === n) o.traverse((x) => { if (x.userData.anim === 'tv-live') x.userData.anim = 'screen'; });
+    });
+  }
+
   private ensureCoffin(_i: number, built: { group: THREE.Group }): void {
     if (!this.coffinOpened) return;
     const g = built.group.getObjectByName(`coffin-${_i}`);
@@ -5950,6 +6140,7 @@ export class Game {
   private coffinOpened = false;
   private playedPianos = new Set<string>();
   private litTVs = new Set<string>();
+  private deadTVs = new Set<string>();
   private woundClocks = new Set<string>();
   private crackedVents = new Set<string>();
   private steamMasks: { pos: Vec3; until: number }[] = [];
@@ -7558,6 +7749,21 @@ export class Game {
         this.player.panic = Math.min(1, this.player.panic + 0.2);
         const pdx = d.x - this.player.pos.x, pdz = d.z - this.player.pos.z;
         if (pdx * pdx + pdz * pdz < 2.25) this.damagePlayer(18, 'hazard', 'The glass fell.');
+        // sprint 395 — the glass answers both ways: any walker under the
+        // fall staggers mid-stride while it gathers itself. Bait a threat
+        // under a live chain, ring the room, and dodge the 0.35s beat —
+        // you share the same glass if you're still beneath it.
+        let glassed = 0;
+        for (const ent of this.entities) {
+          if (ent.state === 'done') continue;
+          const tp = ent.threatPos();
+          if (!tp) continue;
+          const edx = tp.x - d.x, edz = tp.z - d.z;
+          if (edx * edx + edz * edz >= 2.25) continue;
+          ent.stagger(5);
+          glassed++;
+        }
+        if (glassed > 0) this.cue('chandelier-fall', v3(d.x, 1.4, d.z), "[the house's own glass finds him]", 'warn');
         for (const b of this.streamer.builtIndices) {
           const bd = this.streamer.get(b);
           if (bd) this.ensureChandelier(b, bd);

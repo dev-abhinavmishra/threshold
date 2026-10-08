@@ -320,6 +320,10 @@ describe('Bellman (sprint 232)', () => {
     const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
     const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
     player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    // sprint 393 — the kick doesn't eat the chock: wedgeKicked reports
+    // the boot so the Game drops it as loot on the far side of the leaf
+    const kicked = vi.fn();
+    ctx.wedgeKicked = kicked;
     const b = new Bellman();
     b.spawn(ctx);
     let t = step(b, ctx, 4);
@@ -327,6 +331,12 @@ describe('Bellman (sprint 232)', () => {
     expect(entry.heldBy).toBe('wedge');
     t = step(b, ctx, 6, t);
     expect(entry.heldBy).toBe(undefined); // the chock gave — kicked loose
+    expect(kicked).toHaveBeenCalledTimes(1);
+    const [doorPos, fromPos] = kicked.mock.calls[0];
+    expect(Math.hypot(doorPos.x - entry.pos.x, doorPos.z - entry.pos.z)).toBeLessThan(0.01);
+    // fromPos is the kick side — the bellman stood ~at the leaf when it gave
+    const bp = (b as unknown as { pos: { x: number; z: number } }).pos;
+    expect(Math.hypot(fromPos.x - bp.x, fromPos.z - bp.z)).toBeLessThan(0.5);
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /wedge skids loose/.test(c))).toBe(true);
     step(b, ctx, 3, t);
@@ -392,6 +402,60 @@ describe('Bellman (sprint 232)', () => {
     expect(captions.some((c) => /lock turns for it/.test(c))).toBe(true);
     expect(entry.opening).toBeFalsy();        // the leaf never swung
     expect(entry.locked).toBe(true);          // still locked for you
+    b.dispose();
+  });
+
+  it('holds under a close stare — the fold clock only runs at range (sprint 396)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x, 0, room.origin.z);
+    player.yaw = Math.atan2(entry.x - room.origin.x, entry.z - room.origin.z); // face the entry he comes through
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 60; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('engage');
+    // step into arm's reach with the gaze held — the stare pins him now:
+    // the fold clock only accrues at range, so the 2.6s fold never lands
+    player.pos = v3(pos.x - Math.sin(player.yaw) * 1.4, 0, pos.z - Math.cos(player.yaw) * 1.4);
+    for (let i = 0; i < 80; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; } // 4s — past any fold
+    expect(b.state).toBe('engage');
+    expect((b as unknown as { cuttable: boolean }).cuttable).toBe(true);
+    // step back to range — the stare still holds, the clock resumes, he folds
+    player.pos = v3(pos.x - Math.sin(player.yaw) * 6, 0, pos.z - Math.cos(player.yaw) * 6);
+    let steps = 0;
+    while (b.state !== 'done' && steps++ < 400) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('done');
+    b.dispose();
+  });
+
+  it('a cut ring turns a locked leaf into a wall (sprint 396)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.locked = true;
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    b.cutKeys(); // the ring scatters before he ever reaches the seam
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const nx = Math.sin(entry.yaw), nz = Math.cos(entry.yaw);
+    const side = (p: { x: number; z: number }) => (p.x - entry.pos.x) * nx + (p.z - entry.pos.z) * nz;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 500) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('done');
+    expect(Math.abs(side(pos))).toBeLessThan(0.2); // never through the seam
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lost interest/.test(c))).toBe(true);
+    expect(captions.every((c) => !/keys works the lock|lock turns for it/.test(c))).toBe(true);
+    expect(entry.locked).toBe(true); // still locked for you too — the keys are spent, not yours
     b.dispose();
   });
 });
@@ -754,6 +818,30 @@ describe('Warden (sprint 234)', () => {
     expect((ctx.damagePlayer as ReturnType<typeof vi.fn>).mock.calls.length).toBe(0);
     warden.dispose();
   });
+
+  it('holds mid-stride under the house’s own glass — the stagger freezes every clock (sprint 395)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const room = rooms[28];
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object; // hidden far off — pure patrol
+    let t = step(warden, ctx, 6);
+    const p0 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    const frozen = { x: p0.x, z: p0.z };
+    warden.stagger(4); // the glass lands — the world holds still for him
+    t = step(warden, ctx, 4, t); // the full stagger window
+    const p1 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    // the staggerUntil boundary frame may run one update — a single step
+    // at most, not a walk
+    expect(Math.hypot(p1.x - frozen.x, p1.z - frozen.z)).toBeLessThan(0.15);
+    step(warden, ctx, 6, t); // gathers himself — the pace resumes
+    const p2 = (warden as unknown as { pos: { x: number; z: number } }).pos;
+    expect(Math.hypot(p2.x - frozen.x, p2.z - frozen.z)).toBeGreaterThan(0.5);
+    warden.dispose();
+  });
 });
 
 describe('Groundswell (sprint 235)', () => {
@@ -789,10 +877,16 @@ describe('Groundswell (sprint 235)', () => {
 
   it('leaves the wall strips calm', () => {
     const rooms = routeRooms();
-    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    // the wave needs a long run — pick a room with a ≥14m entry→exit
+    // axis so the swell is still traveling at step 30 (index drifted
+    // when new templates joined the seeded pool)
+    const gi = rooms.findIndex((r, i) => i > 15 &&
+      Math.hypot(r.exitPos.x - r.entryPos.x, r.exitPos.z - r.entryPos.z) >= 14);
+    expect(gi).toBeGreaterThanOrEqual(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: gi });
     const gs = new Groundswell();
     gs.spawn(ctx);
-    const room = rooms[28];
+    const room = rooms[gi];
     const ax = room.exitPos.x - room.entryPos.x, az = room.exitPos.z - room.entryPos.z;
     const len = Math.hypot(ax, az);
     const nx = ax / len, nz = az / len;
@@ -1026,7 +1120,10 @@ describe('Hearing the cast (sprint 238)', () => {
     const w = new Warden();
     w.spawn(ctx);
     const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
-    const np = v3(pos.x + 2.5, 0, pos.z + 2.5);
+    // in-room target — room 20's shape drifts with the template pool;
+    // midpoint of origin→exit is always inside
+    const np = v3((rooms[20].origin.x + rooms[20].exitPos.x) / 2, 0,
+      (rooms[20].origin.z + rooms[20].exitPos.z) / 2);
     emit(np.x, np.z);
     expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
     const arrived = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, w, 600);
@@ -1038,7 +1135,7 @@ describe('Hearing the cast (sprint 238)', () => {
 
   it('commissionaire pins its lantern on a heard noise', () => {
     const rooms = routeRooms();
-    const idx = rooms.findIndex((r) => r.index >= 20 && r.doors.length >= 2);
+    const idx = rooms.findIndex((r) => (r.doors?.length ?? 0) >= 2);
     const { ctx, emit } = hearingCtx(rooms, idx);
     const comm = new Commissionaire();
     comm.spawn(ctx);
@@ -1098,12 +1195,13 @@ describe('Hearing the cast (sprint 238)', () => {
     const { ctx, emit } = hearingCtx(rooms, 20);
     const w = new Warden();
     w.spawn(ctx);
-    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
-    // Breath-quiet (0.3 < 0.42 floor): ignored.
-    emit(pos.x + 2, pos.z + 2, 0.3, 'distraction');
+    // Breath-quiet (0.3 < 0.42 floor): ignored. Emit in-room — room
+    // 20's footprint drifts with the template pool; origin is always inside.
+    const ip = rooms[20].origin;
+    emit(ip.x, ip.z, 0.3, 'distraction');
     expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
     // Pebble loudness (0.45): below the door-rouse floor but inside hearing.
-    emit(pos.x + 2, pos.z + 2, 0.45, 'distraction');
+    emit(ip.x, ip.z, 0.45, 'distraction');
     expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
     w.dispose();
   });
@@ -1147,6 +1245,38 @@ describe('Hearing the cast (sprint 238)', () => {
       ctxMut.now = t; w.update(0.05); t += 0.05;
     }
     expect(door.opening).toBe(false);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns from the held door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('a wedged leaf in the same seam still turns it — the shove skips held leaves', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Cluster doors stack in the seam: two registrations of one aperture.
+    // No generated seed produces pairs <0.7m apart, so synthesize them —
+    // a wedged leaf beside a merely-closed twin. Iteration order must not
+    // decide: pre-fix, the free twin could answer first and the cluster
+    // shove swung the wedged leaf open for free.
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    const twin = { ...door, id: `${door.id}-twin` };
+    twin.pos = { ...door.pos, x: door.pos.x + 0.4 };
+    next.doors.push(twin);
+    door.heldBy = 'wedge';
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && (w as unknown as { investigate: unknown }).investigate; i++) {
+      ctxMut.now = t; w.update(0.05); t += 0.05;
+    }
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    expect(door.opening).toBe(false);
+    expect(twin.opening).toBe(false);
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /turns from the held door/.test(c))).toBe(true);
     w.dispose();

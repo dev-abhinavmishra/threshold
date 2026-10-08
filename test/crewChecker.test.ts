@@ -62,6 +62,23 @@ describe('CrewChecker (the count answered)', () => {
     expect(h.removeMesh).toHaveBeenCalled();
   });
 
+  it('the lamp reads the walk too — an exposed room it only passes through finds you inbound', () => {
+    const rooms = underRooms();
+    const { h, emitted, witnessed } = hooks();
+    const c = new CrewChecker();
+    // dispatch to a mid-route till; stand exposed in the deepest room the
+    // walk crosses — the lamp should see you long before its socket.
+    const socket = { x: rooms[30].origin.x, z: rooms[30].origin.z };
+    c.dispatch(rooms, [socket], h);
+    const ri = 34; // inside the walk's hi window (30+6), crossed long before the till
+    const player = { pos: v3(rooms[ri].origin.x, 0, rooms[ri].origin.z), room: ri, exposed: true };
+    for (let t = 0; t < 60 && emitted.length === 0 && c.stage !== 'idle'; t += 0.1) c.update(0.1, rooms, player, h);
+    const found = emitted.find((e) => /count stands/.test(e.caption));
+    expect(found).toBeTruthy();
+    expect(c.stage).not.toBe('sweep'); // the find landed on the walk, not the till
+    expect(witnessed).toHaveBeenCalledTimes(1);
+  });
+
   it('a vacated room sweeps clean — no find, and it moves on', () => {
     const rooms = underRooms();
     const { h, emitted, cues } = hooks();

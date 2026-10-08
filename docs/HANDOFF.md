@@ -4752,7 +4752,6 @@ Game.die() from the same five fields.
   streaks at cy 1.9-2.6 (fixture height). Named 'rust-streak'.
 - Vitest 266: 'the rust keeps score' (main + under rooms). Gates:
   tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
-||||||| 4147f5b
 
 ## sprint 384 — the shelf holds your take / the tag outranks the cage
 
@@ -4778,6 +4777,21 @@ Game.die() from the same five fields.
   (itemize → join → named → cut → rot → shelf-refuse → buyback),
   build.
 
+## sprint 385 — the book knows the shelf and the till
+
+- The Broker's book readout knew the live tag but not the tag's
+  tail ends: a rotted tag's goods on the shelf and the coin the
+  count keeps outright. Now `the shelf keeps M of yours` and
+  `C of your coin sits in the count's till` append to the paid
+  readout — his book knows everything his house holds of yours.
+- Gates: tsc, lint, vitest, sim, build. Readout only.
+- Bundled repair — sibling s420-423 left main's vitest red:
+  porter-lodge's chair sat in the entry lane (moved z 2.3→1.55),
+  and the new pool member drifted seed-pinned specs: two count
+  guards re-pinned (conn>=2, fans>=3), four entity specs made
+  geometry-resilient (any multi-door room, in-room emit points,
+  axis>=14 groundswell room).
+
 ## sprint 425 — the wiring shows
 
 - Ceiling depth in the service bones: 40% of maintenance/underscript/
@@ -4788,6 +4802,7 @@ Game.die() from the same five fields.
   exits}) — pass `spec` directly, not doorPositions.
 - Vitest 267: 'the wiring shows' (main + under). Gates: tsc, lint,
   sim 5/5. Visual dressing only — no e2e leg.
+<<<<<<< HEAD
 
 ## sprint 426 — the ledger audit (verification leg)
 
@@ -4815,3 +4830,236 @@ Game.die() from the same five fields.
 - playtest legs: walker-main green on retry in run A (deaths/seed 16-17,
   purse deltas 0 — same envelope as the last count); run B hung 20m x2
   and crashed — load-bound, not a code signal.
+||||||| 8953d96
+=======
+
+## sprint 386 — the seam carries the lamp too
+
+- A door-listen now answers the sweep: under doors into the room the
+  checker currently walks return '[the count's lamp is lit in there —
+  the sweep is inside]' (danger), or '[the count walks blind in there
+  — stripped, but still sweeping]' when the lamp's been stripped.
+  Ears give the lamp's position before the glow does — the last piece
+  of the count readable only by sight.
+- Sits below a scheduled entity's own read (permanent wins over
+  transient), above the primed-milestone/nothing-moves fall-through.
+- Gates: tsc, lint, vitest 266, sim 5/5, build. e2e leg deferred to
+  the next batched verification pass.
+
+## sprint 387 — the seam carries the paper too
+
+- The repost walk answers a door-listen now: under doors into the
+  room the reposter currently walks return '[paper moves beyond —
+  a runner carries the count's fresh sheets]' (warn). Hearing the
+  sheets move tells you which boards get re-pinned before you round
+  the corner on him — cut or shadow, your call.
+- The lamp still outranks the runner when both walk the same room
+  (danger over warn); scheduled entities outrank both.
+- Gates: tsc, lint, vitest, sim, build.
+
+## sprint 388 — the seam carries the tread too
+
+- A door-listen now answers roving threats, not just room-stationary
+  ones: entities whose `threatPos()` resolves inside the room beyond
+  the leaf answer with their LISTEN_CUES read (warden's 'measured
+  pacing', hauler's 'sledge scrape', etc.) — loudest severity wins
+  when several share a room.
+- Order: scheduled occupants > under walkers (lamp > paper-runner) >
+  primed milestone > rovers > safe/dark/nothing. Primed stays above
+  rovers — the one-shot mechanism read outranks a passing tread.
+- Gates: tsc, lint, vitest, sim, build.
+
+## sprint 389 — the boards tax every filing
+
+- The named-doubling rule only reached the index asks, the seize
+  tag's claim/cut, and the fix's price — every other tally filing
+  still wrote flat while the sheets were up. Now every `unpaidTheft`
+  filing obeys it: the tally's own drawer +4/+2 (with its cue
+  'the tally writes four — the boards make hands cost double'),
+  the porter's claim, the laundress's basket and drawer, both
+  sledge pilfers, and the lamp strip all +2/+1.
+- The house book stays flat by design — the register answers to
+  its own jurisdiction, not the crew's boards.
+- Gates: tsc, lint, vitest, sim, build.
+
+## sprint 390 — the lamp reads the walk too
+
+- The checker's find gated on the sweep stop's room — a lit lamp
+  walked the whole inbound/outbound blind: stand exposed in any
+  room it passed through and it saw nothing. `update` had `rooms`
+  plumbed and unused. The find now reads the room the walker is
+  IN (`roomOf(rooms, this.pos)`) for the walk states; the sweep
+  still reads its marked till. Stripped lamps still walk blind;
+  hiding still protects; found stays once-per-dispatch.
+- vitest +1: stand exposed in a mid-path room, the find lands
+  while `stage` is still 'inbound'.
+- Gates: tsc, lint, vitest 269, sim, build.
+
+## sprint 391 — e2e repair + two real bugs the suite found
+
+- The sibling flagged three failing e2e legs; root causes were drift and
+  fragility, not the 374–384 batch — plus two real product bugs:
+  - 'collector counts your purse': generation drift removed the
+    collector from seed 's' (it's not in the guaranteed-schedule list).
+    The spec now schedules it itself into a picked room via the real
+    `spawnScheduled` path instead of relying on the seeded pool.
+  - "porter's cage sells held bags": sibling claim sockets hang ~0.3m
+    apart and the nearer one wins focus on `dist`, so `focused?.id ===
+    pt.id` never matched. Disabling rivals is futile — interactables
+    re-mint every frame. The spec now steers until ANY claim holds
+    focus and takes that bag (both are valid sale targets).
+  - 'the door chock holds': one product bug + one spec bug. (1) `killPlayer`
+    ignored `godMode` — entity touch-kills call it directly and bypassed
+    the flag `damagePlayer` honored, so the debug flag didn't protect
+    specs (player died mid-hold: `dead=true` at f0). (2) The post-wedge
+    teleport faced the player AT the door (`atan2(-toC,-toC)` is the
+    to-door bearing, not the into-room one) — a held gaze then froze the
+    bellman via `underGaze`, which returns before ALL door progress:
+    no rattle, no kick, static forever at the seam. Fixed yaw into the
+    room + a per-frame `unwatch` reset (the leg tests the wedge, not
+    the gaze counterplay). Latent hardening folded in: `blockingDoorNear`
+    now prefers held leaves over merely-closed ones (first-match order
+    used to decide; no generated seed actually produces door pairs
+    <1.2m, so this was never the observed failure).
+  - Harness: `aimHold` gained an `each` per-frame hook (resets
+    `bell.watchT` — the leg tests the wedge, not the gaze counterplay)
+    and the post-wedge teleport now faces INTO the room (the
+    atan2(-toC,-toC) form stares AT the door — frozen forever, no
+    rattle). Also 'the sealed warrant': 'gilt-spine-777' drifts to one
+    case → no warrant possible; re-pinned to 'warrant-2'
+    (warrants @18,@27, live case @39).
+- Traps worth keeping: spec-file tsc errors break the playwright
+  webServer's `npm run build` — it silently serves the STALE dist and
+  you test old code (re-verify build after touching spec types).
+  Multiple `-g` args to playwright can match only one test — run spec
+  files separately for a batch check.
+- Gates: tsc, lint, vitest 269, sim 5/5, books 9/9 + doors 4/4 e2e,
+  build.
+
+## sprint 392 — the door helpers answer held leaves
+
+- The bellman fix-up audit for the same class: entity "which door blocks
+  me" helpers picked leaves by first-match iteration order.
+- `Warden.doorOnPath` (corridor.ts): now scans every leaf on the path
+  across all rooms before deciding — a braced or locked leaf turns it
+  back even when a merely-closed twin of the same aperture iterates
+  first — and the cluster shove (`d2.opening = true` within 0.7m)
+  skips held/locked/false leaves: a shoulder used to swing a chocked
+  leaf open for free because `updateDoors` doesn't gate `opening` on
+  `heldBy`. Player-side 'door' already guarded the cluster.
+- `Bellman`: the wait-for-swing branch had no `doorHoldT` accumulation —
+  a leaf that swung open then auto-shut behind it stays in `knocked`
+  and never re-knocks, parking the walk forever on a leaf that never
+  answers. Bounded at 8s → 'lost interest', same idiom as the braced
+  branch's 14s.
+- Honesty note: no generated seed produces door pairs closer than
+  ~2m (min observed 2.01m), so these are latent-correctness fixes —
+  the s391 chock failure itself was the godMode/gaze pair, not leaf
+  selection.
+- vitest +1: synthetic seam twin (wedged + closed) — the warden turns
+  from the held door and neither leaf opens.
+- Gates: tsc, lint, vitest 270, sim, build.
+
+## sprint 393 — the kicked wedge rides to your side
+
+- The bellman's boot no longer eats the chock: kicking a 'wedge' hold
+  loose now reports `ctx.wedgeKicked(doorPos, fromPos)` and the Game
+  drops the spent chock as gatherable loot ~0.45m off the leaf on the
+  player's side of the seam — 'Gather the kicked wedge' (0.6s,
+  priority 1) returns it to the pocket. The price was already paid
+  (the leaf stands free and he is through it); the walk-back just
+  reclaims a 6–14-imprint resource.
+- `kickedWedges` rides the checkpoint — floor loot doesn't respawn in
+  your pocket on a reload, same class as cold counters.
+- Trap logged: `this.space` still carries the dead run's floor at
+  checkpoint-restore time — wedge-drop verb ids are rebuilt with a
+  space-agnostic filter or a stale 'under' prefix would strand old
+  verbs beside fresh ones.
+- vitest (same spec, +asserts): wedgeKicked fires once with the door
+  pos and the bellman's own pos at the kick.
+- e2e: the existing chock leg now drives the whole arc — kick → drop
+  minted on the player's side → gather → chock back at 2. First run
+  hit the known 300s browser-newContext infra flake; green on retry.
+- Gates: tsc, lint, vitest 270, sim 5/5, doors 4/4 e2e, build.
+
+## sprint 394 — the jam isn't welded
+
+- The belt-wheel jam was a one-way trip: 'Chock the blades' spent the
+  chock and `f.dead` was forever. A dead wheel now offers 'Work the
+  chock free — the wheel spins up' (1.4s, same anchor/priority): the
+  chock returns to the pocket AND `f.dead = false` — the blades come
+  back alive. The recovery is priced in the live hazard and its wake
+  sound (0.45 'machine' — a real rouse ~6m), not the tool. A live fan
+  simply doesn't deadHazard-match on a reload, so an un-jammed wheel
+  stays spinning across checkpoints for free.
+- Trap logged (harness): a 'Hide in cabinet' verb out-scored the
+  unchock verb at the leg's stand — prop-leg presses near props must
+  pin focus to the minted id (the doors.spec aimHold pattern), not
+  trust blind pose + KeyE, or a nearer hide verb eats the press.
+- e2e: the fan leg now drives jam → dead → unchock mint → hold →
+  blades live + chock back (spent chock returned to pocket).
+- Gates: tsc, lint, vitest 270, sim 5/5, props leg e2e, build.
+
+## sprint 395 — the glass answers both ways
+
+- The armed chandelier was player-only hazard: loud emit + you within
+  1.6m → 0.35s later the glass falls on whoever's beneath — but "whoever"
+  only meant you. Now the same fall staggers any walker inside the 1.5m
+  drop zone for 5s: bait a threat under a live chain, ring the room
+  (door slam, trap snap, alarm — emit must be ≥0.6), and dodge the beat.
+  The price is structural, not ledged: the drop needs you standing
+  within 1.6m when the sound lands (shared glass), the crash is a 1.0
+  positional emit that draws the next hunter, and the chain is spent.
+- New surface: `Entity.stagger(seconds)` on the base — a now-gated
+  early-return in `update()` freezes stateT and every timer that rides
+  it (warn wind-ups, walks, strikes). `threatPos()`-bearing entities are
+  eligible; done entities skipped. Chosen over per-entity plumbing so
+  every walker — bellman, warden, checker, reposter, hauler team —
+  staggers by the same rule.
+- Boundary note: `staggerUntil = ctx.now + sec` is exclusive — the tick
+  landing exactly on the boundary runs one update; specs should allow
+  ~one step of drift, not 0.001.
+- vitest: Warden 'holds mid-stride under the house's own glass' — frozen
+  through the window, paces after. e2e batched per pace directive.
+- Gates: tsc, lint, vitest 271, sim 5/5, build.
+
+## sprint 396 — cut the keyring
+
+- The gaze counterplay only ever bought safety: hold the stare 2.6s and
+  he folds away. Now the yield has a second layer — a CLOSE stare pins
+  him: `watchT` only accrues at d>=1.7, so at arm's reach he cannot
+  fold, and while `cuttable` (frozen + uncut + engage) the Game mints
+  'Cut the keyring — hold the gaze' at his chest (1.8s, priority 5).
+  The fiction: distant gaze buys retreat, close gaze buys the theft.
+- The reward is his hobbling, not your pocket — the keys scatter, gone:
+  `keysCut` flips his locked-door branch to the generic blocked path,
+  so a locked leaf becomes the same wall it is for you (bounded 8s,
+  'lost interest'). It stays locked for you too — you cut his ring,
+  you don't gain one.
+- The escape window is the chime: `cutKeys()` staggers him 1.6s
+  (sprint 395's surface, first reuse) — he looks down at the fallen
+  ring while you're already moving. Price: the approach itself —
+  closing to 1.7m of a killer under unbroken gaze; any aim break
+  un-mints the verb and unfroze at that range is death-adjacent.
+- vitest: pin spec (no fold at close range, folds when you step back)
+  + keyless spec (never through the seam, 'lost interest', leaf stays
+  locked). e2e batched per pace directive — the existing bellman legs
+  are unaffected (they drive at range / pin watchT=0).
+- Gates: tsc, lint, vitest 273, sim 5/5, build.
+
+## sprint 397 — the set goes dark
+
+- The tuned TV was the only tool with a deferred threat and no out:
+  ~1/3 of sets schedule 'the channel knows you are here' 14-26s later,
+  uncancellable. Lit sets now mint 'Turn the set off' (0.6s, priority 2)
+  — kills the light + hiss, and drops that set's pending answer.
+- The prompt tells the truth — when the channel already flagged the
+  room it reads 'Turn the set off — the channel knows you are here',
+  so the decision is inspectable: tune, see the flag, kill it before
+  it speaks. Going dark is terminal (deadTVs; no re-tune, no re-off —
+  the channel got your attention once) and the press answers honestly:
+  '[the set goes dark — the channel forgets the room]' vs plain dark.
+- Also closed a pre-existing hole: tvAnswerQueue never cleared on
+  restart — a queued answer could fire into a dead run's stale pos.
+- Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
+>>>>>>> origin/main

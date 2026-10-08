@@ -2910,7 +2910,7 @@ const roomPorter: RoomTemplate = {
       { kind: 'deskLamp', x: 0.75, z: 1.15, y: 0.8 },
       { kind: 'paperStack', x: -0.3, z: 1.15, y: 0.8 },
       { kind: 'books', x: 0.15, z: 1.45, y: 0.8 },
-      { kind: 'chair', x: 0.3, z: 2.3, yaw: Math.PI },
+      { kind: 'chair', x: 0.3, z: 1.55, yaw: Math.PI },
       { kind: 'keyRack', x: -2.9, z: 1.0, y: 1.55, yaw: Math.PI / 2 },
       { kind: 'hallTree', x: 2.5, z: 2.5, yaw: -0.4 },
       { kind: 'umbrellaStand', x: 2.9, z: 2.0 },

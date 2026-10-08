@@ -21,8 +21,14 @@ test('the collector counts your purse — the toll scales with what you carry', 
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const purse = g as unknown as { imprints: number };
 
-    const cRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'collector'));
-    if (!cRoom) return { stage: 'no-collector' } as const;
+    let cRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'collector'));
+    if (!cRoom) {
+      // Generation drift can push the toll-taker out of the pool entirely —
+      // schedule one on an unclaimed room through the real spawn path.
+      cRoom = g.route.rooms.find((r) => !(r.scheduled?.length) && r.index > 5 && r.index < 80);
+      if (!cRoom) return { stage: 'no-collector' } as const;
+      (cRoom.scheduled ??= []).push({ entity: 'collector', triggerRoom: cRoom.index, seed: 1 });
+    }
     const prev = g.route.rooms[cRoom.index - 1];
     g.player.teleport(prev.origin.x, 0, prev.origin.z);
     for (let f = 0; f < 30; f++) g.frame();
@@ -83,8 +89,23 @@ test("the porter's cage sells held bags — the tag is priced, the contents are 
     g.player.teleport(room.origin.x, 0, room.origin.z);
     for (let f = 0; f < 30; f++) g.frame();
 
-    const pt = g.interaction.interactables.find((i) => i.kind === 'claim');
+    let pt = g.interaction.interactables.find((i) => i.kind === 'claim');
     if (!pt) return { stage: 'no-claim-point' } as const;
+    // A cage hangs several bags a hand's breadth apart — sibling claim
+    // sockets can outscore the aimed one on proximity (disabling is futile:
+    // interactables re-mint every frame). Whichever claim the gaze lands is
+    // a fair sale target — steer until a claim holds focus, then take it.
+    for (let f = 0; f < 60 && g.interaction.focused?.kind !== 'claim'; f++) {
+      const ax = pt.pos.x - g.player.pos.x, az = pt.pos.z - g.player.pos.z;
+      const al = Math.hypot(ax, az) || 1;
+      if (al > 1.4) g.player.teleport(pt.pos.x - (ax / al) * 1.1, 0, pt.pos.z - (az / al) * 1.1);
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = Math.atan2(pt.pos.y + 0.6 - g.player.eyeHeight, al);
+      g.frame();
+    }
+    const focus = g.interaction.focused;
+    if (focus?.kind !== 'claim') return { stage: 'no-claim-focus', focused: focus?.kind ?? null } as const;
+    pt = focus;
     const prompt = pt.prompt;
     const sock = pt.data!;
     const meta = sock.meta as Record<string, number | string | boolean>;
@@ -493,7 +514,7 @@ test('the sealed warrant reads the seizure ledger for rooms ahead', async ({ pag
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-  await seededRun(page, 'gilt-spine-777'); // warrant case @22, live case @55
+  await seededRun(page, 'warrant-2'); // warrant cases @18,@27, live case @39
 
   const result = await page.evaluate(() => {
     const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;

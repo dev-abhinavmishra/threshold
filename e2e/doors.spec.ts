@@ -360,7 +360,7 @@ test('the door chock holds while you walk away — until something worries it lo
     // below-floor wedge point past 'Listen at Door N' on the focus score.
     // Real players pitch down — here we hand lookDir the exact bearing.
     // Match by id: every closed leaf in the window carries a wedge point.
-    const aimHold = (id: string, done: () => boolean, frames = 90): boolean => {
+    const aimHold = (id: string, done: () => boolean, frames = 90, each?: () => void): boolean => {
       const lp = g.player as unknown as { lookDir(out: { x: number; y: number; z: number }): void };
       const orig = lp.lookDir.bind(lp);
       // Real players pitch down to the below-floor anchor; the harness can't
@@ -373,6 +373,7 @@ test('the door chock holds while you walk away — until something worries it lo
       const origFocus = sys.focus.bind(sys);
       let seen = false;
       for (let f = 0; f < frames && !done(); f++) {
+        each?.();
         const pt = g.interaction.interactables.find((i) => i.id === id);
         if (!pt) { g.frame(); continue; }
         seen = true;
@@ -415,7 +416,11 @@ test('the door chock holds while you walk away — until something worries it lo
     g.player.teleport(door.pos.x + (toC.x / L) * 0.9, 0, door.pos.z + (toC.z / L) * 0.9);
     g.keys.add('KeyC');
     for (let f = 0; f < 4; f++) g.frame();
-    aimHold(`wedge-${door.id}`, () => door.heldBy === 'wedge');
+    // The aim stares down the door it stands at — held gaze (2.6s) makes it
+    // fold back into the hall before it can rattle the chock. This leg tests
+    // the wedge, not the gaze counterplay: keep its watch clock empty.
+    const unwatch = () => { (bell as { watchT?: number }).watchT = 0; };
+    aimHold(`wedge-${door.id}`, () => door.heldBy === 'wedge', 90, unwatch);
     g.keys.delete('KeyC');
     const wedged = door.heldBy === 'wedge';
     if (!wedged) return { stage: 'wedge-failed', prompt: g.interaction.focused?.prompt, crouch: g.player.crouching, hasChock: gi.inventory.find((i) => i.id === 'doorChock')?.count } as const;
@@ -423,11 +428,16 @@ test('the door chock holds while you walk away — until something worries it lo
     // Then walk away — the whole point vs the brace. The bellman rattles it,
     // kicks the chock loose, knocks the freed leaf, and comes through.
     g.player.teleport(door.pos.x + (toC.x / L) * 2.4, 0, door.pos.z + (toC.z / L) * 2.4);
+    // Face the room, not the door — a held gaze makes it fold back into the
+    // hall before it ever rattles the chock loose.
+    g.player.yaw = Math.atan2(toC.x, toC.z);
+    g.player.pitch = 0;
     const cluster = [...prev.doors, ...bRoom.doors]
       .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
     let loose = false, opened = false, openedAt = -1;
     const trace: string[] = [];
     for (let f = 0; f < 700 && !opened; f++) {
+      unwatch();
       g.frame();
       if (caps.some((c) => /wedge skids loose/.test(c))) loose = true;
       if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) { opened = true; openedAt = f; }
@@ -437,12 +447,23 @@ test('the door chock holds while you walk away — until something worries it lo
         trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} loose=${loose}`);
       }
     }
-    return { stage: 'done', wedgedRehearsal, countAfterSet, unwedged, countAfterPull, loose, opened, openedAt, heldAfter: door.heldBy, dead: g.player.dead, trace, caps: caps.slice(-14) } as const;
+    // sprint 393 — the kick doesn't eat the chock: it slides under the
+    // leaf to the player's side and lies there as gatherable loot.
+    let dropSeen = false, gathered = false;
+    const drop = g.interaction.interactables.find((i) => i.kind === 'wedgeDrop');
+    if (drop) {
+      dropSeen = true;
+      g.player.teleport(drop.pos.x + (toC.x / L) * 0.9, 0, drop.pos.z + (toC.z / L) * 0.9);
+      const before = gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1;
+      aimHold(drop.id, () => (gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1) > before, 90, unwatch);
+      gathered = (gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1) > before;
+    }
+    return { stage: 'done', wedgedRehearsal, countAfterSet, unwedged, countAfterPull, loose, opened, openedAt, dropSeen, gathered, heldAfter: door.heldBy, dead: g.player.dead, trace, caps: caps.slice(-14) } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { wedgedRehearsal: boolean; countAfterSet: number; unwedged: boolean; countAfterPull: number; loose: boolean; opened: boolean; openedAt: number; dead: boolean; trace: string[]; caps: string[] };
+  const r = result as { wedgedRehearsal: boolean; countAfterSet: number; unwedged: boolean; countAfterPull: number; loose: boolean; opened: boolean; openedAt: number; dropSeen: boolean; gathered: boolean; dead: boolean; trace: string[]; caps: string[] };
   const tail = r.caps.join(' | ') + ' trace: ' + r.trace.join(' ; ');
   expect(r.wedgedRehearsal, 'the wedge never set').toBe(true);
   expect(r.countAfterSet).toBe(1);
@@ -450,5 +471,7 @@ test('the door chock holds while you walk away — until something worries it lo
   expect(r.countAfterPull).toBe(2);   // the chock comes back to your pocket
   expect(r.loose, `bellman never kicked the wedge — ${tail}`).toBe(true);
   expect(r.opened, `leaf never swung after the chock gave — ${tail}`).toBe(true);
+  expect(r.dropSeen, `the kicked wedge never landed as loot — ${tail}`).toBe(true);
+  expect(r.gathered, `gathering the kicked wedge didn't return the chock — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });

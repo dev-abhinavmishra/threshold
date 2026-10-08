@@ -619,7 +619,35 @@ test('the wheel chews — fan warns, bites a stander, and dies on the chock', as
     for (let f = 0; f < 8; f++) g.frame();
     const spent = (ga.inventory.find((i) => i.id === 'doorChock')?.count ?? 0) < chocks0;
     const signLeft = ga.hazard.evidence.some((e) => e.kind === 'fan' && e.room === fan.room);
-    return { stage: 'done', warned, bitten, dead: fan.dead, spent, signLeft, chockPrompt, caps } as const;
+    const jammed = fan.dead;
+    // sprint 394 — the jam isn't welded: the dead wheel offers 'Work the
+    // chock free'; pulling it back returns the tool and the blades live.
+    // A cabinet near the stand out-scores the verb at this aim, so pin
+    // focus to the minted unchock id (the doors.spec aimHold pattern) —
+    // hold+interact still run the real pipeline.
+    for (let f = 0; f < 12; f++) g.frame();
+    const unchock = g.interaction.interactables.find((i) => i.kind === 'unchock');
+    const unchockPrompt = unchock?.prompt ?? '';
+    if (unchock) {
+      const sys = g.interaction as unknown as {
+        focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+        focused: typeof g.interaction.focused;
+        interactables: typeof g.interaction.interactables;
+      };
+      const origFocus = sys.focus.bind(sys);
+      sys.focus = (eye, look, pos) => {
+        const here = sys.interactables.find((i) => i.id === unchock.id);
+        const r = here ?? origFocus(eye, look, pos);
+        sys.focused = r ?? null;
+        return r;
+      };
+      for (let f = 0; f < 80 && fan.dead; f++) { if (g.interaction.focused?.id === unchock.id) g.keys.add('KeyE'); g.frame(); }
+      sys.focus = origFocus;
+      g.keys.delete('KeyE');
+    }
+    const back = (ga.inventory.find((i) => i.id === 'doorChock')?.count ?? 0) > (chocks0 - 1);
+    const spun = !fan.dead;
+    return { stage: 'done', warned, bitten, dead: jammed, spent, signLeft, chockPrompt, unchockPrompt, back, spun, caps } as const;
   });
 
   if (result.stage !== 'done') test.skip();
@@ -629,6 +657,9 @@ test('the wheel chews — fan warns, bites a stander, and dies on the chock', as
   expect(result.dead, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);
   expect(result.signLeft, JSON.stringify(result)).toBe(true);
+  expect(result.unchockPrompt, JSON.stringify(result)).toMatch(/Work the chock free/);
+  expect(result.back, JSON.stringify(result)).toBe(true);
+  expect(result.spun, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
 
