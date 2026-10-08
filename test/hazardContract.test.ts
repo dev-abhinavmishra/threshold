@@ -297,6 +297,15 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/1\.6 \* wantedPull/);
     expect(gameSrc).toMatch(/0\.85 \* wantedPull/);
   });
+
+  it('the seam reads your own bind — holds report, strains warn', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a wired leaf answers the listen at the lowest tier: quiet when
+    // it holds, warn when the house is mid-strain on it
+    expect(gameSrc).toMatch(/door\.heldBy === 'wired'[\s\S]*?wireStrains\.get/);
+    expect(gameSrc).toContain('the bind strains');
+    expect(gameSrc).toContain('your wire still holds');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

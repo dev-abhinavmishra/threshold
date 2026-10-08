@@ -6012,3 +6012,12 @@ the alarm tick (0.9), the ring (1.6), and the phone bursts (0.85)
 all take `wantedPull`. The boards' tax reaches the lure layer too:
 a lure works better and betrays you harder — same double-edge rule
 the named filings follow (asks count double, claims count double).
+
+## Sprint 435 — the seam reads your own bind
+
+A wired leaf answers the door-listen at the lowest tier (below every
+tread, the armed line, and your own tick): '[your wire still holds —
+nothing else moves]' when quiet, and '[hands work your wire beyond —
+the bind strains]' at warn while `wireStrains` has a first-contact
+count on that leaf. You hear your denial being dismantled before it
+parts — the ear-to-the-seam family now covers the player's own work.

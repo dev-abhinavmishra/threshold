@@ -1649,6 +1649,16 @@ export class Game {
         text: ticking.rang ? '[an alarm rings beyond — the clock you wound]'
           : '[a small clock counts down beyond — the lure you planted]' };
     }
+    // sprint 435 — and the seam reads your own bind: a leaf you wired
+    // reports its hold at the lowest tier, warn when the house is
+    // mid-strain on it — you hear your denial being dismantled
+    if (door.heldBy === 'wired') {
+      const strained = (this.wireStrains.get(
+        `wire:${Math.round(door.pos.x * 7)}x${Math.round(door.pos.z * 7)}`) ?? 0) > 0;
+      return { sfx: 'floor-creak', sev: strained ? 'warn' as const : 'info' as const,
+        text: strained ? '[hands work your wire beyond — the bind strains]'
+          : '[your wire still holds — nothing else moves]' };
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
