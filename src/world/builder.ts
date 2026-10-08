@@ -1954,6 +1954,41 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       shafts.push(fpool);
     }
   }
+
+  // The lamps take sides — a fixture over each leaf reads the door: lit
+  // sconces favor open leaves, dead ones favor the locked. A readable
+  // channel the house keeps imperfect — dark lamps over working doors.
+  for (const door of room.doors) {
+    if (rng.float() >= 0.75) continue; // a quarter of leaves go unmarked
+    const ddx = door.pos.x - room.origin.x, ddz = door.pos.z - room.origin.z;
+    const dc = Math.cos(-room.yaw), dsn = Math.sin(-room.yaw);
+    const dp = { x: ddx * dc + ddz * dsn, z: -ddx * dsn + ddz * dc };
+    const dil = Math.hypot(dp.x, dp.z) || 1;
+    const inx = -dp.x / dil, inz = -dp.z / dil;
+    const service = spec.biome === 'maintenance' || spec.biome === 'underscript' || spec.biome === 'unlit';
+    const kind: PropKind = service ? 'cagedSconce' : 'wallSconce';
+    const lit = door.locked ? rng.float() < 0.15 : rng.float() < 0.7;
+    try {
+      const f = buildProp({ kind, x: dp.x + inx * 0.07, z: dp.z + inz * 0.07, y: 2.35, yaw: Math.atan2(inx, inz) }, rng.fork(7700 + door.pos.x * 3 | 0));
+      f.group.name = lit ? 'door-lamp-lit' : 'door-lamp-dead';
+      group.add(f.group);
+      if (lit && !room.darkRoom) {
+        const dl = new THREE.PointLight(0xffc878, 0.4, 3.2, 2);
+        dl.position.set(dp.x + inx * 0.3, 2.3, dp.z + inz * 0.3);
+        dl.userData.baseIntensity = dl.intensity;
+        dl.userData.origBaseIntensity = dl.intensity;
+        group.add(dl);
+        lights.push(dl);
+      } else if (!lit) {
+        // smoke stain above a fixture that burned out trying to warn you
+        const sm = decalQuad(grimeStreak(rng), 0.4, 0.7);
+        sm.name = 'door-lamp-smoke';
+        sm.position.set(dp.x + inx * 0.04, 2.75, dp.z + inz * 0.04);
+        sm.rotation.y = Math.atan2(inx, inz);
+        group.add(sm);
+      }
+    } catch { /* dressing only */ }
+  }
   const maxLights = quality === 'low' ? 1 : quality === 'medium' ? 2 : 3;
   const sorted = [...spec.lights].sort((a, b) => b.intensity - a.intensity);
   for (const ls of spec.lights) {
