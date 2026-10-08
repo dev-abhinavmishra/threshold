@@ -4512,7 +4512,6 @@ Game.die() from the same five fields.
   set piece.
 - Gates: tsc, lint, vitest 256, sim 5/5. Visual dressing only — no
   e2e leg.
-||||||| 86c3548
 
 
 ## sprint 378 — the lamp reads the marks on you
@@ -4564,7 +4563,6 @@ Game.die() from the same five fields.
   maintenance carries a bulky kind paper biomes never get.
 - Gates: tsc, lint, vitest 258, sim 5/5. Visual dressing only —
   no e2e leg.
-||||||| 2dc32b1
 
 
 ## sprint 379 — the tag rots
@@ -4580,7 +4578,6 @@ Game.die() from the same five fields.
 - e2e: the locker leg's new rot phase seizes, shortens the fuse past
   the fade line, asserts fading→fenced→verb-gone.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
-<<<<<<< HEAD
 
 
 ## sprint 416 — the ones before you
@@ -4625,8 +4622,6 @@ Game.die() from the same five fields.
   dominant pick, safe opening decile holds, editor still pinned at 1.
   Numbers appended to BALANCE.md. No tuning needed.
 - Gates: balance output only — docs sprint.
-||||||| e84761c
-=======
 
 ## sprint 380 — cut the tag free
 
@@ -4641,4 +4636,3 @@ Game.die() from the same five fields.
   of a marked id, so re-marking 'feltWrap' mid-leg strips the
   claimed-back count too. Assert count>=1 on returns.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
->>>>>>> devin/1791437388-threshold-s380
