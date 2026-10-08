@@ -103,6 +103,7 @@ describe('checkpoint', () => {
       stockFiled: [11],
       closedCounters: [3],
       stockSeen: [3, 7],
+      taught: ['crouch', 'hide'],
     });
     const cp = loadCheckpoint()!;
     expect(cp.wantedActive).toBe(true);
@@ -117,6 +118,7 @@ describe('checkpoint', () => {
     expect(cp.stockFiled).toEqual([11]);
     expect(cp.closedCounters).toEqual([3]);
     expect(cp.stockSeen).toEqual([3, 7]);
+    expect(cp.taught).toEqual(['crouch', 'hide']);
   });
 });
 

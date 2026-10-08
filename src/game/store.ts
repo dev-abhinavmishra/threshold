@@ -187,6 +187,9 @@ export interface CheckpointSave {
   closedCounters?: number[];
   // rooms whose stock-read already testified — same once-flag class
   stockSeen?: number[];
+  // the house only teaches once — first-exposure captions already shown
+  // stay shown across a death, same once-flag class as stockSeen
+  taught?: string[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {
