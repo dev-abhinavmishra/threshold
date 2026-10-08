@@ -1,5 +1,5 @@
 import type { Door } from '../game/types';
-import type { Vec3 } from './math';
+import { v3dist, type Vec3, type Aabb } from './math';
 
 /** A door's leaf runs along (cos yaw, −sin yaw); its through-direction is the
  *  wall normal (sin yaw, cos yaw). `from` clearly off the leaf plane is blocked
@@ -12,6 +12,38 @@ export function doorBetween(d: Door, from: Vec3, to: Vec3): boolean {
   const tSide = (to.x - d.pos.x) * nx + (to.z - d.pos.z) * nz;
   if (Math.abs(pSide) > 0.45) return pSide * tSide < 0;
   return Math.abs(tSide) > 0.45;
+}
+
+/** Shut-leaf panels between two points, as LOS blockers. Doors don't ride a
+ *  room's losBlockers (that list is static room geometry; leaves move), so
+ *  every sight test has to sweep them itself — a shut leaf is a physical
+ *  1.0×2.2 panel and sight can't pass it, including at its lateral edge
+ *  where the infinite-plane `doorBetween` test loses the player. Open or
+ *  mid-swing leaves and false doors don't block; far leaves whose planes
+ *  merely straddle the endpoints are pruned so a leaf truly between is the
+ *  only candidate. Shared by every entity/player sight rule — kill verdicts,
+ *  whistles, gazes, lenses — so "a shut leaf is cover" means one thing
+ *  everywhere. */
+export function shutLeafBlockers(rooms: { doors: Door[] }[], a: Vec3, b: Vec3): Aabb[] {
+  const out: Aabb[] = [];
+  const d = v3dist(a, b);
+  for (const r of rooms) {
+    for (const dr of r.doors) {
+      if (dr.opening || (dr.openT ?? 0) > 0.5 || dr.falseDoor) continue;
+      if (v3dist(dr.pos, a) > d + 0.6 && v3dist(dr.pos, b) > d + 0.6) continue;
+      const nx = Math.sin(dr.yaw), nz = Math.cos(dr.yaw);
+      const tx = nz, tz = -nx; // the leaf's lateral axis
+      out.push({
+        minX: dr.pos.x - 0.55 * Math.abs(tx) - 0.06 * Math.abs(nx),
+        minY: 0,
+        minZ: dr.pos.z - 0.55 * Math.abs(tz) - 0.06 * Math.abs(nz),
+        maxX: dr.pos.x + 0.55 * Math.abs(tx) + 0.06 * Math.abs(nx),
+        maxY: 2.2,
+        maxZ: dr.pos.z + 0.55 * Math.abs(tz) + 0.06 * Math.abs(nz),
+      });
+    }
+  }
+  return out;
 }
 
 /** A door belonging to `room` within `reach` of pos — "the entity is standing

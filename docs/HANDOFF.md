@@ -6192,3 +6192,28 @@ its approach ON the leaf is inside the span, not behind it.
   player standing at the leaf's lateral edge — inside its infinite-plane
   'between' tolerance but outside the panel). Every kill verdict now
   treats a closed leaf as cover; open/mid-swing leaves don't.
+
+## Sprint 441 — the leaf is cover everywhere sight is checked
+
+The s440 `playerExposed` leaf sweep was one fix of one class: every
+sight test had the same hole. The warden's whistle-charge, the
+curator's spot, the Commissionaire's throw/chase trackers all checked
+only `room.losBlockers` — furniture and wall boxes — so each could
+see you through a shut door. The cameras had no LOS test at all:
+an adjacent room's lens reported you through the party wall.
+`doorGeo.shutLeafBlockers(rooms, a, b)` now builds the shut-leaf
+panels once (open/mid-swing/false leaves don't count, far leaves
+pruned, panel top at 2.2 so header-height gazes still clear it);
+every sight rule concats it over its own losBlockers — kills,
+whistles, gazes, chases, the lens. The bellman's stare moved off
+`doorBetween` onto the panels too: the plane test wrongly blocked
+stares that clear the leaf's lateral edge, so an edge peek couldn't
+hold his gaze. One convention, one helper — "a shut leaf is cover"
+now means the same thing to every eye in the house.
+**Notes:** `losBlockers` already includes wall boxes (generator
+pushes them per room) — walls were cover all along; only leaves
+were missing. The camera needed the wall test too, not just leaves.
+The edge-peek semantics are the right read: a leaf is a finite
+panel — `doorBetween` stays the tool for "is the door in the way
+of your walk" (knock/keying), `shutLeafBlockers` for "can sight
+pass" (LOS tests).

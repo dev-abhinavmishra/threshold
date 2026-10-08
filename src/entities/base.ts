@@ -7,6 +7,7 @@
 import type { Vec3, Aabb } from '../engine/math';
 import { v3, v3dist, hasLineOfSight, distToSegment2D } from '../engine/math';
 import type { EntityId, RoomInstance, EntityTuning } from '../game/types';
+import { shutLeafBlockers } from '../engine/doorGeo';
 import type { PlayerController } from '../player/controller';
 import type { SoundEventBus } from '../engine/events';
 import type { SeedStreams } from '../engine/rng';
@@ -258,30 +259,10 @@ export function playerExposed(ctx: EntityCtx, entPos: Vec3): 'safe' | 'kill' {
   const entEye = v3(entPos.x, 1.6, entPos.z);
   const colliders: Aabb[] = room ? room.losBlockers : [];
   if (!hasLineOfSight(entEye, eye, colliders)) return 'safe';
-  // A shut leaf is a physical panel — sight can't pass it. Doors don't
-  // ride losBlockers (the room list is static; leaves move), so sweep
-  // every shut leaf's 1.0×2.2 panel into the test — the entity sight
-  // rules already treat a closed leaf as blocking; the kill verdict
-  // has to, or a touch lands through the door the player is holding.
-  const leafBlockers: Aabb[] = [];
-  for (const r of ctx.rooms) {
-    for (const dr of r.doors) {
-      if (dr.opening || (dr.openT ?? 0) > 0.5 || dr.falseDoor) continue;
-      // a leaf truly between can't lie beyond the segment — prune far
-      // ones whose planes happen to straddle the two points
-      if (v3dist(dr.pos, entPos) > d + 0.6 && v3dist(dr.pos, p.pos) > d + 0.6) continue;
-      const nx = Math.sin(dr.yaw), nz = Math.cos(dr.yaw);
-      const tx = nz, tz = -nx; // the leaf's lateral axis
-      leafBlockers.push({
-        minX: dr.pos.x - 0.55 * Math.abs(tx) - 0.06 * Math.abs(nx),
-        minY: 0,
-        minZ: dr.pos.z - 0.55 * Math.abs(tz) - 0.06 * Math.abs(nz),
-        maxX: dr.pos.x + 0.55 * Math.abs(tx) + 0.06 * Math.abs(nx),
-        maxY: 2.2,
-        maxZ: dr.pos.z + 0.55 * Math.abs(tz) + 0.06 * Math.abs(nz),
-      });
-    }
-  }
+  // A shut leaf is a physical panel — sight can't pass it. The kill
+  // verdict has to treat it as blocking, or a touch lands through the
+  // door the player is holding.
+  const leafBlockers = shutLeafBlockers(ctx.rooms, entPos, p.pos);
   if (leafBlockers.length && !hasLineOfSight(entEye, eye, leafBlockers)) return 'safe';
   if (d > 40) return 'safe';
   return 'kill';

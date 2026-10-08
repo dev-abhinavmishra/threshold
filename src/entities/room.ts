@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
 import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
+import { shutLeafBlockers } from '../engine/doorGeo';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -1208,7 +1209,7 @@ export class Porter extends Entity {
       // upward pitch so the counterplay is always a deliberate look-up.
       if (dot > 0.62 && dir.y > 0.1) {
         const room = c.rooms[c.currentRoomIndex];
-        gazing = hasLineOfSight(eye, this.header, room ? room.losBlockers : []);
+        gazing = hasLineOfSight(eye, this.header, (room ? room.losBlockers : []).concat(shutLeafBlockers(c.rooms, eye, this.header)));
       }
     }
     if (gazing) {
@@ -1812,7 +1813,7 @@ export class Commissionaire extends Entity {
     const eye = v3(this.pos.x, 1.62, this.pos.z);
     const pe = v3();
     p.eyePos(pe);
-    return hasLineOfSight(eye, pe, room ? room.losBlockers : []);
+    return hasLineOfSight(eye, pe, (room ? room.losBlockers : []).concat(shutLeafBlockers(c.rooms, this.pos, p.pos)));
   }
 
   /** Thrown back toward the sealed door — the price of the light. */
@@ -1873,7 +1874,7 @@ export class Commissionaire extends Entity {
         const eye = v3(this.pos.x, 1.62, this.pos.z);
         const pe = v3();
         p.eyePos(pe);
-        if (hasLineOfSight(eye, pe, room2 ? room2.losBlockers : [])) {
+        if (hasLineOfSight(eye, pe, (room2 ? room2.losBlockers : []).concat(shutLeafBlockers(c.rooms, this.pos, p.pos)))) {
           v3copy(this.lastSeen, p.pos);
           this.chaseLose = 0;
         } else this.chaseLose += dt;

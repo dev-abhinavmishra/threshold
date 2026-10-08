@@ -14,7 +14,7 @@ import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import type { EntityId } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
-import { doorBetween, atRoomDoor, pointInRoom } from '../engine/doorGeo';
+import { doorBetween, atRoomDoor, pointInRoom, shutLeafBlockers } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 import { MAT } from '../world/materials';
 import { tallFigure } from './figure';
@@ -558,7 +558,7 @@ export class Warden extends Entity {
     if (!room) return false;
     const eyeW = v3(this.pos.x, 1.7, this.pos.z);
     const eyeP = v3(p.pos.x, p.pos.y + 1.5, p.pos.z);
-    if (!hasLineOfSight(eyeW, eyeP, room.losBlockers)) return false;
+    if (!hasLineOfSight(eyeW, eyeP, room.losBlockers.concat(shutLeafBlockers(c.rooms, this.pos, p.pos)))) return false;
     if (!this.charging && d > 1.6 && this.mesh) {
       const hx = Math.sin(this.mesh.rotation.y), hz = Math.cos(this.mesh.rotation.y);
       if ((hx * (p.pos.x - this.pos.x) / d + hz * (p.pos.z - this.pos.z) / d) < 0.3) return false;

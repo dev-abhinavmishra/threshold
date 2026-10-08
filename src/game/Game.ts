@@ -18,9 +18,9 @@ import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
 import { CrewCount } from '../engine/crewCount';
 import { CrewChecker, roomOf as underRoomOf, type CheckerHooks } from '../entities/crewChecker';
-import { pointInRoom } from '../engine/doorGeo';
+import { pointInRoom, shutLeafBlockers } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
-import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
+import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, hasLineOfSight, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { wantedNotice, thresholdSpill } from '../world/decals';
@@ -8690,6 +8690,18 @@ export class Game {
         if (dist > 8 || dist < 0.4) { cm.expo = 0; continue; }
         // desired local yaw: world direction minus the room's own yaw
         const room = this.activeRooms()[cm.i];
+        // sprint 441 — the lens is in the room, not the walls: a shut leaf
+        // (or the wall itself) between it and you is cover. Cameras never
+        // sight-checked before — an adjacent room's eye reported you
+        // through the party wall.
+        {
+          const camFrom = v3(this.tmpV3.x, this.tmpV3.y, this.tmpV3.z);
+          const pEye = v3();
+          this.player.eyePos(pEye);
+          const blockers = (room ? room.losBlockers : []).concat(
+            shutLeafBlockers(this.activeRooms(), camFrom, pEye));
+          if (!hasLineOfSight(camFrom, pEye, blockers)) { cm.expo = 0; continue; }
+        }
         const yawOff = room ? room.yaw : 0;
         const want = Math.atan2(dx, dz) - yawOff - Math.PI / 2;
         let d = want - cm.o.rotation.y;
