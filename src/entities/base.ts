@@ -75,6 +75,12 @@ export interface EntityCtx {
    *  the register: +1 line in the Detective's book. Fires once per eye.
    *  Optional for headless ctxs. */
   eyeFiled?: () => void;
+  /** The Detective sighted marked stock on the player — the register
+   *  wrote that manifest; the sighting files +1 line. Optional. */
+  stockSighted?: () => void;
+  /** True while the player carries marked wares (a hotItems stack with
+   *  count > 0). Optional for headless ctxs. */
+  carriesMarked?: () => boolean;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */

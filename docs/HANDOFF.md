@@ -3743,3 +3743,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   un-primes after.
 - Gates: tsc, lint, 237 vitest, 5-seed sim, doors 1/1 (+primed leg),
   build.
+
+## sprint 341 — he knows marked stock
+
+- The Detective's slow look now feeds on marked wares, not just debt:
+  `pRoom === spawnRoom && (owed > 0 || carriesMarked())` — carrying
+  rifled goods into his room on a clean ledger clocks him anyway. His
+  register wrote the manifest of what was rifled, so the sighting
+  files itself: `stockSighted()` → unpaidHeld +1, once per detective
+  (`stockNoted`), cue `[he knows marked stock — the register gains a
+  line]`.
+- Two new ctx hooks, same witness-filing shape as eyeFiled/wordFiled/
+  lineCut: `carriesMarked` (inventory has a hotItems id with count > 0
+  — respects s337's pruned-mark semantics) and `stockSighted` (+1 line).
+- Emergent completeness: the marked-goods carry now prices everywhere —
+  warm clerks read stock on you (s331), the Broker fences it, and the
+  Detective sight-files it. The carry is testimony on all three floors.
+- e2e: detective leg phase 0 marks 'tonic' + carries it in clean →
+  asserts the stock caption + held 0→1 → then the register rifle still
+  lands +2 (heldAfterDrawer 3 — sighting stacks with the pilfer).
+- Gates: tsc, lint, 237 vitest, 5-seed sim, economy 7/7, build.

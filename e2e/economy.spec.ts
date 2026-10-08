@@ -78,6 +78,12 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     (ga as unknown as { unpaidHeld: number }).unpaidHeld = 0;
     const prev = g.route.rooms[dRoom.index - 1];
     if (prev) { g.player.teleport(prev.origin.x, 0, prev.origin.z); for (let f = 0; f < 25; f++) g.frame(); }
+    // sprint 341 — marked wares on your person feed the same slow look on
+    // a clean ledger: the register wrote that manifest, so the sighting
+    // files itself as a line.
+    const gaHot = ga as unknown as { hotItems: Set<string>; giveItem(id: string, n: number): void };
+    gaHot.hotItems.add('tonic');
+    gaHot.giveItem('tonic', 1);
     g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
     let det: { clocked?: boolean; warranted?: boolean } | undefined;
     for (let f = 0; f < 60; f++) {
@@ -86,6 +92,10 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
       if (det) break;
     }
     if (!det) return { stage: 'no-det-spawn', ents: ga.entities.map((e) => e.id) } as const;
+    const stockCap = caps.length;
+    for (let f = 0; f < 120 && !det.clocked; f++) g.frame();
+    const stockCapHit = caps.slice(stockCap).some((c) => /knows marked stock/.test(c));
+    const heldAfterStock = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
     const reg = g.interaction.interactables.find((i) => i.kind === 'registerDrawer' && i.enabled);
     let drawerSign = false;
     if (reg) {
@@ -116,7 +126,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     const heldAfterDrawer = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
     for (let f = 0; f < 40 && !det.clocked; f++) g.frame();
-    const clocked = caps.some((c) => /has your face|goes on the wire|face files itself/.test(c));
+    const clocked = caps.some((c) => /has your face|goes on the wire|face files itself|knows marked stock/.test(c));
 
     // --- 3. slip a room without settling — the wire rings ahead ---
     //    keep the slip SHORT: the ring wakes nxt's listeners, and a grab
@@ -154,14 +164,16 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
-    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterDrawer, drawerSign, settlePrompt, paid,
+    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterStock, stockCapHit, heldAfterDrawer, drawerSign, settlePrompt, paid,
       spent: ga.imprints < i0, warranted: det?.warranted === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.clocked, JSON.stringify(result)).toBe(true);
   expect(result.heldAfterAf, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself enters his book
-  expect(result.heldAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book file your face
+  expect(result.stockCapHit, JSON.stringify(result)).toBe(true); // he knows marked stock
+  expect(result.heldAfterStock, JSON.stringify(result)).toBe(1); // the sighting files a line
+  expect(result.heldAfterDrawer, JSON.stringify(result)).toBe(3); // 1 + 2: sighting, then hands in HIS book
   expect(result.drawerSign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.rang, JSON.stringify(result)).toBe(true);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);

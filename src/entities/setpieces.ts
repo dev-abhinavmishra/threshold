@@ -1302,6 +1302,8 @@ export class Detective extends Entity {
   clocked = false;
   /** Your face is on the wire — rooms ahead ring for you. */
   warranted = false;
+  /** Marked-stock sighting already filed — the register notes it once. */
+  private stockNoted = false;
   /** His phone line — a junction box on the wall by the entry door.
    *  Pulled, the wire dies; the damages go in his book. */
   lineDead = false;
@@ -1484,12 +1486,22 @@ export class Detective extends Entity {
       if (dd > 0.2) { this.pos.x += (dx / dd) * this.tuning.speed * 0.4 * dt; this.pos.z += (dz / dd) * this.tuning.speed * 0.4 * dt; }
     }
 
-    // the slow look — he clocks a debtor in his room over ~2.5s, then the wire
-    if (pRoom === this.spawnRoom && owed > 0 && !this.clocked && !this.homebound) {
+    // the slow look — he clocks a debtor in his room over ~2.5s, then the
+    // wire. And he knows his own stock: marked wares on your person feed
+    // the same look on a clean ledger — the register wrote that manifest,
+    // so the sighting files itself as a line.
+    const marked = c.carriesMarked?.() === true;
+    if (pRoom === this.spawnRoom && (owed > 0 || marked) && !this.clocked && !this.homebound) {
       this.lookT += dt;
       if (this.lookT > 2.5) {
         this.openRegister();
-        c.cue('chalk-mark', this.pos, '[he has your face — settle, or be known]', { severity: 'warn' });
+        if (marked && !this.stockNoted) {
+          this.stockNoted = true;
+          c.stockSighted?.();
+          c.cue('chalk-mark', this.pos, '[he knows marked stock — the register gains a line]', { severity: 'warn' });
+        } else {
+          c.cue('chalk-mark', this.pos, '[he has your face — settle, or be known]', { severity: 'warn' });
+        }
       }
     } else if (pRoom !== this.spawnRoom) {
       this.lookT = 0;
