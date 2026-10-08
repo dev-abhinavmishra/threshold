@@ -4636,7 +4636,6 @@ Game.die() from the same five fields.
 - Vitest 261: 'the lamps take sides' — attributes fixtures to nearest
   leaf; dead-rate over locked > 1.5× dead-rate over open, leaks exist.
 - Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
-||||||| f10c481
 
 ## sprint 380 — cut the tag free
 
@@ -4665,7 +4664,6 @@ Game.die() from the same five fields.
 - Vitest 262: 'the house remembers routes' — both variants exist across
   seeds, >90% of arrows aim within ~30° of a real port.
 - Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
-||||||| 972d1a1
 
 ## sprint 381 — the count's shelf
 
@@ -4710,7 +4708,6 @@ Game.die() from the same five fields.
   `room.spec.props` kinds + a mesh count.
 - Vitest 263: 'the lodge keeps watch'. Gates: tsc, lint, sim 5/5.
   Content addition, single template — no e2e leg.
-||||||| 31fdb2e
 
 ## sprint 383 — the clerk's hands take it too / the till keeps count
 
@@ -4755,3 +4752,28 @@ Game.die() from the same five fields.
   streaks at cy 1.9-2.6 (fixture height). Named 'rust-streak'.
 - Vitest 266: 'the rust keeps score' (main + under rooms). Gates:
   tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
+||||||| 4147f5b
+
+## sprint 384 — the shelf holds your take / the tag outranks the cage
+
+- `buyback` predated s373's deep tier — the fenced shelf sold back
+  at any tally. `unpaidTheft >= 6` now refuses there too:
+  'the shelf holds your take · the desk is the only answer'
+  (fenced take is his stock now; purse/fence/fix/book still stay
+  open — laundering and settling aren't commerce).
+- Real focus-ordering bug the leg surfaced: seized verbs minted at
+  priority 1 while a cage's own 'Reclaim the effects' verb sits at
+  priority 2 — YOUR tag lost focus to a stranger's bag at the same
+  anchor, and with the cut at 0.3m off, claim vs cut raced frame
+  to frame (holds reset on target change — the drive never
+  completes). seizedClaim/seizedCut now mint at priority 3: your
+  name outranks the cage's wares.
+- e2e trap: twin verbs 0.3m apart at one anchor — stand on the
+  target's side OPPOSITE its twin so the other sits ~15° behind
+  the aim axis; the room-side stand leaves them near-aligned and
+  `interaction.focused` flips every frame (score dist−align−p·0.3).
+  Focus on the minted verb's `prompt` field for price asserts —
+  focus samples race.
+- Gates: tsc, lint, vitest 262, sim 5/5, locker leg green
+  (itemize → join → named → cut → rot → shelf-refuse → buyback),
+  build.

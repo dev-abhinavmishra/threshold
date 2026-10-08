@@ -1605,19 +1605,25 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     let prompt = '', claimed = false, filed = 0, cap = '', impGain = 0;
     const seen: string[] = [];
     if (verb) {
-      // the tag hangs at the nearest cage — stand on the room-center
-      // side of it (the 0.9m convention; a raw offset lands in the
-      // cage prop's collider and the eject spoils the aim)
+      // the tag hangs at the nearest cage. Claim and cut mint ~0.3m
+      // apart — stand on the claim side opposite the cut so the cut
+      // sits ~15° behind the aim axis and can't steal focus frames
+      const cutVerb0 = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-cut'));
       const room = g.route.underRooms.find((r) => {
         const L = 6;
         return Math.abs(r.origin.x - verb.pos.x) < L && Math.abs(r.origin.z - verb.pos.z) < L;
       });
       if (room) ga.currentRoom = room.index;
-      const cx = (room?.origin.x ?? verb.pos.x + 1) - verb.pos.x;
-      const cz = (room?.origin.z ?? verb.pos.z + 1) - verb.pos.z;
+      let cx = (room?.origin.x ?? verb.pos.x + 1) - verb.pos.x;
+      let cz = (room?.origin.z ?? verb.pos.z + 1) - verb.pos.z;
+      if (cutVerb0) {
+        cx = verb.pos.x - cutVerb0.pos.x;
+        cz = verb.pos.z - cutVerb0.pos.z;
+      }
       const cl = Math.hypot(cx, cz) || 1;
       const sx = verb.pos.x + (cx / cl) * 0.9, sz = verb.pos.z + (cz / cl) * 0.9;
       const t0 = ga.unpaidTheft;
+      prompt = verb.prompt; // the minted verb's own prompt carries the itemized price
       for (let f = 0; f < 60 && !claimed; f++) {
         g.player.teleport(sx, 0, sz);
         const ax = verb.pos.x - g.player.pos.x, az = verb.pos.z - g.player.pos.z;
@@ -1627,7 +1633,6 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
         g.frame();
         const fp = ga.interaction.focused?.prompt ?? '';
         if (fp && !seen.includes(fp)) seen.push(fp);
-        if (f < 5) prompt = fp || prompt;
         // hold verbs need the key HELD through the hold — the edge
         // (interactPressed) only fires instant verbs
         if (/claim your seized take/i.test(fp)) ga.keys.add('KeyE');
@@ -1686,8 +1691,12 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       if (!ga.wantedActive) namedCap = 'wanted never raised';
       if (pos2) {
         lockerPos = `${pos2.x.toFixed(1)},${pos2.z.toFixed(1)}`;
-        const dx2 = (roomA?.origin.x ?? pos2.x + 1) - pos2.x;
-        const dz2 = (roomA?.origin.z ?? pos2.z + 1) - pos2.z;
+        // same stand rule — claim side opposite the cut, or the cut's
+        // focus frames starve the claim's hold (holds reset on focus)
+        const cutVerb2 = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-cut'));
+        let dx2 = (roomA?.origin.x ?? pos2.x + 1) - pos2.x;
+        let dz2 = (roomA?.origin.z ?? pos2.z + 1) - pos2.z;
+        if (cutVerb2) { dx2 = pos2.x - cutVerb2.pos.x; dz2 = pos2.z - cutVerb2.pos.z; }
         const dl2 = Math.hypot(dx2, dz2) || 1;
         const sx2 = pos2.x + (dx2 / dl2) * 0.9, sz2 = pos2.z + (dz2 / dl2) * 0.9;
         const t2 = ga.unpaidTheft;
@@ -1726,8 +1735,12 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
         return d < (best?.d ?? Infinity) ? { d, r } : best;
       }, null as { d: number; r: (typeof g.route.underRooms)[number] } | null)?.r;
       if (cRoom) ga.currentRoom = cRoom.index;
-      const cdx = (cRoom?.origin.x ?? cutVerb.pos.x + 1) - cutVerb.pos.x;
-      const cdz = (cRoom?.origin.z ?? cutVerb.pos.z + 1) - cutVerb.pos.z;
+      // stand on the cut side opposite the claim — the twin verbs
+      // mint 0.3m apart and a shared stand races them under aim
+      const claimVerb3 = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
+      let cdx = (cRoom?.origin.x ?? cutVerb.pos.x + 1) - cutVerb.pos.x;
+      let cdz = (cRoom?.origin.z ?? cutVerb.pos.z + 1) - cutVerb.pos.z;
+      if (claimVerb3) { cdx = cutVerb.pos.x - claimVerb3.pos.x; cdz = cutVerb.pos.z - claimVerb3.pos.z; }
       const cdl = Math.hypot(cdx, cdz) || 1;
       const csx = cutVerb.pos.x + (cdx / cdl) * 0.9, csz = cutVerb.pos.z + (cdz / cdl) * 0.9;
       const tc = ga.unpaidTheft;
@@ -1773,6 +1786,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     // sprint 381 — what the count kept reaches the Broker's shelf:
     // buy back your own take at the house's margin, laundered clean
     let fencedHeld = false, boughtBack = false, buySpent = 0, buyClean = false, fencedUnits = 0;
+    let shelfRefused = false, heldDeep = false;
     fencedHeld = ga.fencedTake.length > 0;
     fencedUnits = ga.fencedTake.reduce((n, s) => n + s.count, 0);
     const lobbyR = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
@@ -1792,6 +1806,24 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
         const dx = lobbyR.origin.x - vpos.x, dz = lobbyR.origin.z - vpos.z;
         const dl = Math.hypot(dx, dz) || 1;
         const sx = vpos.x + (dx / dl) * 0.9, sz = vpos.z + (dz / dl) * 0.9;
+        // sprint 384 — the tally's deep tier reaches the shelf too:
+        // at six thefts the fenced take stays his, the desk is the answer
+        ga.unpaidTheft = 6;
+        for (let f = 0; f < 60 && !shelfRefused; f++) {
+          g.player.teleport(sx, 0, sz);
+          const ax = vpos.x - g.player.pos.x, az = vpos.z - g.player.pos.z;
+          g.player.yaw = Math.atan2(ax, az);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          g.player.pitch = Math.atan2(vpos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+          g.frame();
+          const fp = ga.interaction.focused?.prompt ?? '';
+          if (/buy back the fenced take/i.test(fp)) ga.keys.add('KeyE');
+          else ga.keys.delete('KeyE');
+          shelfRefused = caps.some((c) => /shelf holds your take/.test(c));
+        }
+        ga.keys.delete('KeyE');
+        heldDeep = ga.fencedTake.length > 0;
+        ga.unpaidTheft = 0;
         const m0 = ga.marginalia;
         for (let f = 0; f < 80 && !boughtBack; f++) {
           g.player.teleport(sx, 0, sz);
@@ -1814,6 +1846,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     }
     return { stage: 'done' as const, didSeize, spared, stripped,
       fencedHeld, boughtBack, buySpent, buyClean, fencedUnits,
+      shelfRefused, heldDeep,
       minted: !!verb, prompt, seen, claimed, filed, cap,
       coinItemized, impGain,
       joined, namedFiled, namedCap, lockerPos, seen2,
@@ -1849,6 +1882,9 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   // sprint 382 — the tag itemizes: coin under the tag, back at par
   expect(result.coinItemized, JSON.stringify(result)).toBe(true);
   expect(result.impGain).toBe(5);
+  // sprint 384 — the tally's deep tier holds the shelf too
+  expect(result.shelfRefused, JSON.stringify(result)).toBe(true);
+  expect(result.heldDeep).toBe(true);
   // sprint 381 — the count's shelf: fenced goods sell back at margin
   expect(result.fencedHeld, JSON.stringify(result)).toBe(true);
   expect(result.boughtBack, JSON.stringify(result)).toBe(true);
