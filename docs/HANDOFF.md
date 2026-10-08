@@ -5142,6 +5142,13 @@ Game.die() from the same five fields.
   (first cut had it backwards).
 - Vitest 281: 'the votive'. Gates: tsc, lint, generation 97/97.
 
+## sprint 435 — the house was hurt before
+
+- Plaster plug repairs on walls (28% per room, 1-2 clusters): pale patch
+  + hairline crack ring + stress crack run in lived-in biomes.
+  Named 'patch-plug'.
+- Vitest 282: 'the house was hurt before'. Gates: tsc, lint, 98/98.
+
 ## sprint 436 — the runners slide
 
 - Crescent scuff arcs in room corners (30% per corner, corridor/lobby/
@@ -5150,10 +5157,3 @@ Game.die() from the same five fields.
   the walls inward — same-sign corners map U to the x-wall, opposite to
   z. Named 'corner-scuff'.
 - Vitest 283: 'the runners slide'. Gates: tsc, lint, 99/99.
-
-## sprint 435 — the house was hurt before
-
-- Plaster plug repairs on walls (28% per room, 1-2 clusters): pale patch
-  + hairline crack ring + stress crack run in lived-in biomes.
-  Named 'patch-plug'.
-- Vitest 282: 'the house was hurt before'. Gates: tsc, lint, 98/98.
