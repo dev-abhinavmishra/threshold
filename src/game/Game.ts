@@ -1121,16 +1121,36 @@ export class Game {
   }
 
   /** Mint the claim-back verb at the tag — replayed like restock so a
-   *  room rebuild keeps it, removed on claim. */
+   *  room rebuild keeps it, removed on claim. Sprint 380: the tag
+   *  offers a second way back — cutting is free but the count's paper
+   *  had already claimed them: your take returns marked and filed
+   *  deeper. The cut hangs a hand's breadth off the honest tag. */
   private mintSeizedClaim(): void {
     if (!this.seizedAt || this.seizedTake.length === 0) return;
     const id = `seized-claim-${this.space}`;
-    if (this.dynamicInteractables.some((x) => x.id === id)) return;
+    const cutId = `seized-cut-${this.space}`;
+    if (this.dynamicInteractables.some((x) => x.id === id || x.id === cutId)) return;
     this.dynamicInteractables.push({
       kind: 'seizedClaim', id,
       pos: { x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z },
       prompt: 'Claim your seized take — 8 marginalia',
       holdTime: 0.8, enabled: true, priority: 1, data: {},
+    });
+    // the cut hangs beside the tag — offset along the cage's front
+    // tangent (perpendicular to the tag's roomward face)
+    let d = { x: 1, z: 0 };
+    let bd = Infinity;
+    for (const r of this.route?.underRooms ?? []) {
+      const dd = Math.hypot(r.origin.x - this.seizedAt.x, r.origin.z - this.seizedAt.z);
+      if (dd < bd) { bd = dd; d = { x: r.origin.x - this.seizedAt.x, z: r.origin.z - this.seizedAt.z }; }
+    }
+    const dl = Math.hypot(d.x, d.z) || 1;
+    const px = -(d.z / dl), pz = d.x / dl;
+    this.dynamicInteractables.push({
+      kind: 'seizedCut', id: cutId,
+      pos: { x: this.seizedAt.x + px * 0.3, y: this.seizedAt.y, z: this.seizedAt.z + pz * 0.3 },
+      prompt: 'Cut the tag free — your take comes back marked',
+      holdTime: 0.6, enabled: true, priority: 1, data: {},
     });
   }
 
@@ -2806,11 +2826,34 @@ export class Game {
         this.seizedAt = null;
         this.seizedFuse = 0;
         this.seizedFading = false;
-        this.dynamicInteractables = this.dynamicInteractables.filter((x) => x.id !== it.id);
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-'));
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         this.cue('pickup', it.pos,
           `[the tag tears — your take hangs on your back again · ${back}${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'info');
+        return;
+      }
+      case 'seizedCut': {
+        // The tag's second answer — cut it free: no price, but the
+        // count's paper had claimed them. Your take returns marked in
+        // the count's hand (warm clerks read it like rifled stock) and
+        // the book files the theft deeper — the brazen road back.
+        this.unpaidTheft += this.wantedActive ? 4 : 2;
+        this.queueLoss(it.pos.x, it.pos.z,
+          '[a cut tag swings empty — the count is short]');
+        const back = this.seizedTake
+          .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
+          .join(' · ');
+        for (const s of this.seizedTake) { this.giveItem(s.id, s.count); this.hotItems.add(s.id); }
+        this.seizedTake = [];
+        this.seizedAt = null;
+        this.seizedFuse = 0;
+        this.seizedFading = false;
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-'));
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.5, category: 'machine', caption: '' });
+        this.cue('chalk-mark', it.pos,
+          `[the tag's paper tears — your take hangs on your back, marked in the count's hand · ${back}${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'warn');
         return;
       }
       case 'register': {
@@ -5158,7 +5201,7 @@ export class Game {
         this.seizedTake = [];
         this.seizedAt = null;
         this.seizedFading = false;
-        this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-claim'));
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-'));
         this.cue('chalk-mark', null, '[the tag reads settled — the count keeps the goods]', 'warn');
       }
     }

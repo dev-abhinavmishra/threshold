@@ -4512,7 +4512,6 @@ Game.die() from the same five fields.
   set piece.
 - Gates: tsc, lint, vitest 256, sim 5/5. Visual dressing only — no
   e2e leg.
-||||||| 86c3548
 
 
 ## sprint 378 — the lamp reads the marks on you
@@ -4564,7 +4563,6 @@ Game.die() from the same five fields.
   maintenance carries a bulky kind paper biomes never get.
 - Gates: tsc, lint, vitest 258, sim 5/5. Visual dressing only —
   no e2e leg.
-||||||| 2dc32b1
 
 
 ## sprint 379 — the tag rots
@@ -4638,3 +4636,18 @@ Game.die() from the same five fields.
 - Vitest 261: 'the lamps take sides' — attributes fixtures to nearest
   leaf; dead-rate over locked > 1.5× dead-rate over open, leaks exist.
 - Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
+||||||| f10c481
+
+## sprint 380 — cut the tag free
+
+- The count's locker now has a second way back: `seizedCut` mints
+  beside the honest tag (0.3m along the cage's front tangent) —
+  'Cut the tag free — your take comes back marked'. No price, but
+  the count's paper had claimed them: the take returns marked
+  (`hotItems.add`) — warm clerks read it like rifled stock — and
+  the theft files deeper (+2, +4 under sheets vs the claim's +1/+2).
+- Both verbs sweep together (prefix `seized-`) on claim, cut, or rot.
+- e2e trap: `hotItems` is a Set of IDS — a seize strips EVERY stack
+  of a marked id, so re-marking 'feltWrap' mid-leg strips the
+  claimed-back count too. Assert count>=1 on returns.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.

@@ -1706,6 +1706,45 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       ga.wantedActive = false;
       ga.unpaidTheft = 0;
     }
+    // sprint 380 — the tag's second answer: cut it free. No price —
+    // but the take returns marked in the count's hand and filed deeper
+    let cutWorked = false, cutFiled = 0, cutMarked = false, cutVerbsGone = false;
+    ga.inventory.push({ id: 'feltWrap', count: 1 });
+    ga.hotItems = new Set(['feltWrap']);
+    ga.entityCtx().seizeMarked();
+    const cutVerb = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-cut'));
+    if (cutVerb) {
+      const cRoom = g.route.underRooms.reduce((best, r) => {
+        const d = Math.hypot(r.origin.x - cutVerb.pos.x, r.origin.z - cutVerb.pos.z);
+        return d < (best?.d ?? Infinity) ? { d, r } : best;
+      }, null as { d: number; r: (typeof g.route.underRooms)[number] } | null)?.r;
+      if (cRoom) ga.currentRoom = cRoom.index;
+      const cdx = (cRoom?.origin.x ?? cutVerb.pos.x + 1) - cutVerb.pos.x;
+      const cdz = (cRoom?.origin.z ?? cutVerb.pos.z + 1) - cutVerb.pos.z;
+      const cdl = Math.hypot(cdx, cdz) || 1;
+      const csx = cutVerb.pos.x + (cdx / cdl) * 0.9, csz = cutVerb.pos.z + (cdz / cdl) * 0.9;
+      const tc = ga.unpaidTheft;
+      let doneC = false;
+      for (let f = 0; f < 60 && !doneC; f++) {
+        g.player.teleport(csx, 0, csz);
+        const ax = cutVerb.pos.x - g.player.pos.x, az = cutVerb.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(cutVerb.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        g.frame();
+        const fp = ga.interaction.focused?.prompt ?? '';
+        if (/cut the tag/i.test(fp)) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+        doneC = ga.seizedTake.length === 0;
+      }
+      ga.keys.delete('KeyE');
+      // the seize strips EVERY stack of the marked id (the earlier
+      // claimed-back feltWrap went too), so the take comes back whole
+      cutWorked = doneC && ga.inventory.some((i) => i.id === 'feltWrap' && i.count >= 1);
+      cutMarked = ga.hotItems.has('feltWrap');
+      cutFiled = ga.unpaidTheft - tc;
+      cutVerbsGone = !ga.dynamicInteractables.some((x) => x.id.startsWith('seized-'));
+    }
     // sprint 379 — the tag rots: a third catch whose ink dries is
     // fenced by the count — fading told while it can still be answered
     let rotted = false, fadingSeen = false, fencedSeen = false;
@@ -1723,11 +1762,12 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       fencedSeen = caps.some((c) => /count keeps the goods/.test(c));
     }
     rotted = ga.seizedTake.length === 0 && ga.seizedAt === null
-      && !ga.dynamicInteractables.some((x) => x.id.startsWith('seized-claim'));
+      && !ga.dynamicInteractables.some((x) => x.id.startsWith('seized-'));
     return { stage: 'done' as const, didSeize, spared, stripped,
       minted: !!verb, prompt, seen, claimed, filed, cap,
       joined, namedFiled, namedCap, lockerPos, seen2,
       rotted, fadingSeen, fencedSeen,
+      cutWorked, cutMarked, cutFiled, cutVerbsGone,
       seizedN: ga.seizedTake.length,
       spentMarg: ga.marginalia,
       caps: caps.slice(-6) };
@@ -1746,6 +1786,11 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.joined, JSON.stringify(result)).toBe(true); // second catch joins the tag, no re-hang
   expect(result.namedFiled).toBe(2);    // the sheets name you — the tag files double
   expect(result.namedCap).toMatch(/name twice/);
+  // sprint 380 — the cut: free but the take returns marked, filed deeper
+  expect(result.cutWorked, JSON.stringify(result)).toBe(true);
+  expect(result.cutMarked, JSON.stringify(result)).toBe(true);
+  expect(result.cutFiled, JSON.stringify(result)).toBe(2);
+  expect(result.cutVerbsGone, JSON.stringify(result)).toBe(true);
   // sprint 379 — the rot: fading told, then the count keeps the goods
   expect(result.fadingSeen, JSON.stringify(result)).toBe(true);
   expect(result.fencedSeen, JSON.stringify(result)).toBe(true);
