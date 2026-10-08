@@ -626,6 +626,12 @@ export class Game {
     this.hotImprints = cp?.hotImprints ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
+    // the wanted episode rides the checkpoint too — torn boards stay
+    // torn, an armed repost keeps its remaining seconds on this clock
+    this.wantedActive = cp?.wantedActive ?? false;
+    this.wantedRooms = new Map(cp?.wantedRooms ?? []);
+    const repostS = cp?.wantedRepostS ?? 0;
+    this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -4200,6 +4206,9 @@ export class Game {
       paperTrail: this.paperTrail,
       hotImprints: this.hotImprints,
       hotItems: [...this.hotItems],
+      wantedActive: this.wantedActive,
+      wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
+      wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
     };
   }
 

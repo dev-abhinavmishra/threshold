@@ -158,6 +158,11 @@ export interface CheckpointSave {
   paperTrail?: number;
   hotImprints?: number;
   hotItems?: ItemId[];
+  // the wanted episode outlives you too — torn boards stay torn, an
+  // armed repost keeps its remaining seconds
+  wantedActive?: boolean;
+  wantedRooms?: [number, { x: number; z: number }][];
+  wantedRepostS?: number;
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {
