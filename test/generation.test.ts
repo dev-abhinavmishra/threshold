@@ -1978,3 +1978,18 @@ describe('the vigil still burns (sprint 443)', () => {
     expect(flames, 'no votive flames').toBeGreaterThan(1);
   });
 });
+
+describe('the inspection stamp (sprint 444)', () => {
+  it('doors carry a faded ink seal beside the frame', () => {
+    let stamps = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'inspection-stamp') stamps++; });
+      }
+    }
+    expect(stamps, 'no inspection stamps').toBeGreaterThan(6);
+  });
+});

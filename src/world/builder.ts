@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1770,6 +1770,22 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'nail-row';
       }
+    }
+
+    // The inspection stamp — a faded ink seal beside the frame, the
+    // house's last clean bill of health. Records and the service bones.
+    if (['records', 'maintenance', 'lobby'].includes(spec.biome) && rng.float() < 0.35) {
+      const port = spec.exits.length > 0 ? spec.exits[Math.floor(rng.float() * spec.exits.length)] : spec.entry;
+      const side = rng.bool() ? 1 : -1;
+      const span = (port.wall === 'e' || port.wall === 'w' ? d : w) / 2 - 0.4;
+      const off = Math.max(-span, Math.min(span, port.offset + side * (port.width / 2 + 0.35)));
+      const m2 = decalQuad(inspectionStamp(rng), 0.3 + rng.float() * 0.12, 0.3 + rng.float() * 0.12);
+      m2.name = 'inspection-stamp';
+      if (port.wall === 'e') { m2.rotation.y = -Math.PI / 2; m2.position.set(w / 2 - 0.013, 1.35 + rng.float() * 0.5, off); }
+      else if (port.wall === 'w') { m2.rotation.y = Math.PI / 2; m2.position.set(-w / 2 + 0.013, 1.35 + rng.float() * 0.5, off); }
+      else if (port.wall === 'n') { m2.rotation.y = Math.PI; m2.position.set(off, 1.35 + rng.float() * 0.5, d / 2 - 0.013); }
+      else { m2.position.set(off, 1.35 + rng.float() * 0.5, -d / 2 + 0.013); }
+      group.add(m2);
     }
 
     // The numbers changed — a painted room numeral over the frame, the
