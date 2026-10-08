@@ -4608,3 +4608,127 @@ export function dustShaft(rng: Rng): THREE.Texture | null {
     ctx.fillRect(30, 6, 44, 4);
   });
 }
+
+/** Flue stain — the soot column a fireplace breathes up the wall:
+ * a dark rising plume, thumb-width streaks, a hot lip at the
+ * mantel shelf. */
+export function flueStain(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 8;
+    // the plume — a soft soot bloom widening upward
+    const g = ctx.createRadialGradient(cx, 96, 8, cx, 96, 64);
+    g.addColorStop(0, `rgba(46,38,30,${0.4 + rng.float() * 0.15})`);
+    g.addColorStop(0.55, 'rgba(46,38,30,0.18)');
+    g.addColorStop(1, 'rgba(46,38,30,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 128);
+    // rising streaks — smoke paths drafted up the plaster
+    for (let i = 0; i < 6; i++) {
+      const bx = cx - 16 + rng.float() * 32;
+      ctx.strokeStyle = `rgba(50,42,34,${0.24 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.4 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(bx, 96);
+      ctx.quadraticCurveTo(bx + (rng.float() - 0.5) * 10, 60 - rng.float() * 20, bx + (rng.float() - 0.5) * 16, 30 + rng.float() * 16);
+      ctx.stroke();
+    }
+    // the lip — dense soot right at the opening top
+    ctx.fillStyle = 'rgba(34,28,22,0.55)';
+    ctx.fillRect(cx - 16, 96, 32, 8);
+    // grit carried up with the smoke
+    for (let i = 0; i < 14; i++) {
+      const gy = 90 - rng.float() * 60;
+      const a = Math.pow(rng.float(), 0.6) * (100 - gy) * 0.35;
+      ctx.fillStyle = `rgba(52,44,36,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(cx + (rng.float() - 0.5) * 2 * a, gy, 0.5 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Label ghost — the pale rectangles a pharmacy shelf keeps where
+ * paper labels peeled off: ghost grids, curled corners, paste. */
+export function labelGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the grid — rows of pale label rectangles on dark shelf wood
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (!rng.bool(0.75)) continue;
+        const lx = 10 + c * 20;
+        const ly = 14 + r * 26;
+        ctx.fillStyle = `rgba(196,186,160,${0.3 + rng.float() * 0.18})`;
+        ctx.fillRect(lx, ly, 12, 9);
+        // the scribed line inside — old handwriting bars
+        ctx.strokeStyle = 'rgba(80,70,56,0.3)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(lx + 2, ly + 4);
+        ctx.lineTo(lx + 10, ly + 4);
+        ctx.moveTo(lx + 2, ly + 6);
+        ctx.lineTo(lx + 8, ly + 6);
+        ctx.stroke();
+        // one curled corner
+        if (rng.bool(0.3)) {
+          ctx.fillStyle = 'rgba(90,80,66,0.4)';
+          ctx.beginPath();
+          ctx.moveTo(lx + 10, ly);
+          ctx.lineTo(lx + 12, ly + 2);
+          ctx.lineTo(lx + 12, ly);
+          ctx.fill();
+        }
+      }
+    }
+    // paste smears — glue residue where labels failed
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(170,158,132,${0.16 + rng.float() * 0.12})`;
+      ctx.beginPath();
+      ctx.ellipse(16 + rng.float() * 64, 16 + rng.float() * 64, 4 + rng.float() * 3, 2.4 + rng.float() * 1.6, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Candle drip — the wax trails a candle throws down its holder:
+ * white drips off the rim, a pool at the base, a tall wick smear. */
+export function candleDrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // wax pool at the holder's base
+    ctx.fillStyle = `rgba(212,200,170,${0.35 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 78, 14 + rng.float() * 4, 6 + rng.float() * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // rim drips — wax running off the lip
+    const drips = 4 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < drips; i++) {
+      const dx = cx - 9 + rng.float() * 18;
+      const dlen = 10 + rng.float() * 26;
+      ctx.strokeStyle = `rgba(216,204,176,${0.5 + rng.float() * 0.25})`;
+      ctx.lineWidth = 1.6 + rng.float() * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(dx, 30);
+      ctx.quadraticCurveTo(dx + (rng.float() - 0.5) * 3, 30 + dlen * 0.6, dx + (rng.float() - 0.5) * 4, 30 + dlen);
+      ctx.stroke();
+      // the tear drop at the end
+      ctx.fillStyle = 'rgba(220,208,180,0.6)';
+      ctx.beginPath();
+      ctx.arc(dx + (rng.float() - 0.5) * 3, 30 + dlen, 1.4 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // smoke kiss — a soot column off the wick top
+    ctx.strokeStyle = 'rgba(60,54,46,0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx, 26);
+    ctx.quadraticCurveTo(cx + 3, 14, cx + 1, 4);
+    ctx.stroke();
+    // wax specks sprayed when lit
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(212,200,170,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 10 + rng.float() * 20, 50 + rng.float() * 30, 0.5 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
