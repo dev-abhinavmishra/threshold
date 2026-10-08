@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1935,6 +1935,36 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wr.position.set(0, (dc?.[1] ?? 0.75) + 0.006, 0);
     prop.group.add(wr);
     if (!prop.group.name) prop.group.name = 'wax-rings';
+  }
+  // The clock stopped — dust film and frozen hands on the faces
+  // that haven't counted an hour in years.
+  const CLOCK_FACES = new Set(['grandfatherClock', 'wallClock', 'mantelClock', 'clock', 'alarmClock']);
+  if (CLOCK_FACES.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const cs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.55),
+      new THREE.MeshStandardMaterial({ map: clockStopped(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cs.name = 'clock-stopped';
+    cs.userData.decalMat = true;
+    cs.position.set(0, (dc?.[1] ?? 1.6) * 0.72, (dc?.[2] ?? 0.3) / 2 + 0.006);
+    prop.group.add(cs);
+    if (!prop.group.name) prop.group.name = 'clock-stopped';
+  }
+  // The shelf lip kept the dust — a grey line on the front edge,
+  // broken by the finger wipes of whoever last reached past.
+  const SHELF_KINDS = new Set(['shelf', 'bookshelf', 'shelfWood', 'stackShelf', 'linenShelf', 'pantryShelf']);
+  if (SHELF_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const sl = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.3),
+      new THREE.MeshStandardMaterial({ map: shelfLip(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sl.name = 'shelf-lip';
+    sl.userData.decalMat = true;
+    sl.position.set(0, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.35) / 2 + 0.006);
+    prop.group.add(sl);
+    if (!prop.group.name) prop.group.name = 'shelf-lip';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

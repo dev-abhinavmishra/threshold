@@ -6198,3 +6198,120 @@ export function basketShed(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 490 — the clock stopped: dust film, a frozen-hand shadow and the pendulum's rest mark. */
+export function clockStopped(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 40;
+    // the face — a pale disc dulled by film
+    g.fillStyle = 'rgba(200,192,174,0.5)';
+    g.beginPath(); g.arc(cx, cy, 26, 0, Math.PI * 2); g.fill();
+    // dust film heaviest at the rim
+    g.strokeStyle = 'rgba(140,130,116,0.5)';
+    g.lineWidth = 3;
+    g.beginPath(); g.arc(cx, cy, 25, 0, Math.PI * 2); g.stroke();
+    // tick ghosts
+    g.fillStyle = 'rgba(60,52,44,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      g.fillRect(cx + Math.cos(a) * 21 - 0.6, cy + Math.sin(a) * 21 - 0.6, 1.3, 1.3);
+    }
+    // the hands — frozen at the hour it died, plus their soot shadow
+    const ha = rng.range(0, Math.PI * 2), ma = rng.range(0, Math.PI * 2);
+    for (const [ang, len, w0] of [[ha, 13, 2.4], [ma, 19, 1.4]] as const) {
+      g.strokeStyle = 'rgba(30,26,22,0.75)';
+      g.lineWidth = w0;
+      g.beginPath(); g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(ang - Math.PI / 2) * len, cy + Math.sin(ang - Math.PI / 2) * len);
+      g.stroke();
+      // sun-bleach shadow each hand left on the face
+      g.strokeStyle = 'rgba(90,80,68,0.3)';
+      g.lineWidth = w0 + 1.4;
+      g.beginPath(); g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(ang - Math.PI / 2 + 0.12) * len, cy + Math.sin(ang - Math.PI / 2 + 0.12) * len);
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(28,24,20,0.8)';
+    g.beginPath(); g.arc(cx, cy, 1.8, 0, Math.PI * 2); g.fill();
+    // pendulum rest-mark — the arc it swept until it slowed
+    g.strokeStyle = 'rgba(96,84,70,0.4)';
+    g.lineWidth = 1.2;
+    g.beginPath(); g.arc(cx, cy + 34, 18, Math.PI * 0.6, Math.PI * 0.9); g.stroke();
+    // dust speckle
+    g.fillStyle = 'rgba(150,140,126,0.35)';
+    for (let i = 0; i < 30; i++) {
+      g.fillRect(rng.range(14, 82), rng.range(8, 78), 0.9, 0.9);
+    }
+  });
+}
+
+/** Sprint 490 — the shelf lip kept the dust: a grey line on the front edge, broken by finger wipes. */
+export function shelfLip(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust line along the front lip
+    const lip = g.createLinearGradient(0, 6, 0, 22);
+    lip.addColorStop(0, 'rgba(168,158,142,0.6)');
+    lip.addColorStop(1, 'rgba(168,158,142,0.08)');
+    g.fillStyle = lip;
+    g.fillRect(2, 6, 92, 16);
+    // finger wipes — clear swipes where hands reached past the lip
+    g.fillStyle = 'rgba(52,46,40,0.4)';
+    for (let i = 0; i < 4; i++) {
+      const x = 14 + i * 20 + rng.range(-4, 4);
+      g.fillRect(x, 8, 3.5, 11 + rng.float() * 4);
+    }
+    // dust drifts piling at the ends
+    g.fillStyle = 'rgba(176,166,150,0.5)';
+    g.beginPath(); g.ellipse(10, 12, 9, 4, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(86, 13, 8, 3.6, 0, 0, Math.PI * 2); g.fill();
+    // moth specks and shelf-edge crumbs
+    g.fillStyle = 'rgba(46,40,34,0.55)';
+    for (let i = 0; i < 18; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(7, 18), 0.8, 0.7);
+    }
+    // the edge line itself — shadow under the lip
+    g.strokeStyle = 'rgba(40,34,28,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(2, 23); g.lineTo(94, 23); g.stroke();
+  });
+}
+
+/** Sprint 490 — the boards kept the grime: a dirt line and splash marks along the baseboard. */
+export function baseGrime(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the grime tide — darkest right at the board
+    const tide = g.createLinearGradient(0, 44, 0, 14);
+    tide.addColorStop(0, 'rgba(44,38,32,0.6)');
+    tide.addColorStop(1, 'rgba(44,38,32,0)');
+    g.fillStyle = tide;
+    g.fillRect(0, 14, 96, 30);
+    // splash marks rising off the floor — mop slops and spills
+    g.fillStyle = 'rgba(56,48,40,0.4)';
+    for (let i = 0; i < 9; i++) {
+      const x = rng.range(6, 90);
+      const h = 4 + rng.float() * 12;
+      g.beginPath();
+      g.ellipse(x, 42 - h / 2, 2 + rng.float() * 3, h / 2, rng.range(-0.2, 0.2), 0, Math.PI * 2);
+      g.fill();
+    }
+    // scuff kicks — heel marks along the board
+    g.strokeStyle = 'rgba(30,26,22,0.6)';
+    g.lineWidth = 1.8;
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 86);
+      g.beginPath();
+      g.moveTo(x, 40);
+      g.quadraticCurveTo(x + rng.range(-2, 4), 36, x + rng.range(2, 8), 40 - rng.float() * 5);
+      g.stroke();
+    }
+    // dust line caught in the seam between board and floor
+    g.strokeStyle = 'rgba(140,130,116,0.5)';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, 44); g.lineTo(96, 44); g.stroke();
+    // nail shadows where the board is pinned
+    g.fillStyle = 'rgba(36,30,26,0.5)';
+    for (let i = 0; i < 4; i++) {
+      g.fillRect(12 + i * 22 + rng.range(-3, 3), 42.5, 1, 2);
+    }
+  });
+}
