@@ -4051,3 +4051,18 @@ Game.die() from the same five fields.
   fires mid-leg when the leg's earlier pilfers raised wanted. The leg
   now counts `pending + rung` (queued OR already rung) via a
   `ga.sound.on` capture of the 'marked gone' emit.
+
+## sprint 408 — the undertow
+
+- Rooms flanking an under-passage pick up its damp: the two rooms
+  either side of the entry gate (ms-under-entrance ~index 61) and the
+  return gate (~index 70) carry ceiling damp blooms, grime runs low on
+  the walls, and standing floor stains — graded by distance.
+- New `RoomInstance.underSeep?: number` — generator marks it (0 = the
+  gate itself, ±2 the fade edge; a room in reach of both gates keeps
+  the nearer grade), builder reads it and dresses the seep on its own
+  rng draws (no new stream — the room-build rng is already per-room).
+- Test: 'the undertow' asserts every gate-adjacent main room is marked
+  and no far room is.
+- Gates: tsc, lint, 247 tests, sim 5/5, build. Dressing-only change —
+  no e2e leg per the tempo rule.

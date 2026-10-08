@@ -881,6 +881,18 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
         entranceRoom.sockets.push({ kind: 'key', pos: v3(entranceRoom.entryPos.x, 0, entranceRoom.entryPos.z), yaw: 0, filled: true, meta: { underEntrance: true } });
         exitRoom.sockets.push({ kind: 'key', pos: v3(exitRoom.exitPos.x, 0, exitRoom.exitPos.z), yaw: 0, filled: true, meta: { underExit: true, returnTo: returnRoom.index } });
       }
+      // The undertow — the under breathes through its passages: the two
+      // rooms either side of each gate pick up its damp. Stored as a
+      // distance grade (0 = the gate) so the builder can thin it out;
+      // a room in reach of both gates keeps the nearer grade.
+      for (const gate of [entranceRoom?.index, returnRoom?.index]) {
+        if (gate === undefined) continue;
+        for (const room of mainRooms) {
+          const dist = Math.abs(room.index - gate);
+          if (dist > 2) continue;
+          room.underSeep = Math.min(room.underSeep ?? dist, dist);
+        }
+      }
     }
   }
 
