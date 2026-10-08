@@ -22,6 +22,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
       imprints: number; currentRoom: number; keys: Set<string>;
       interaction: { focused?: { prompt?: string; kind?: string } };
       entities: { id: string; clocked?: boolean; warranted?: boolean }[];
+      sound: { on(cb: (e: { caption?: string; source?: string }) => void): () => void };
     };
     ga.imprints = 80;
 
@@ -131,12 +132,25 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     // --- 3. slip a room without settling — the wire rings ahead ---
     //    keep the slip SHORT: the ring wakes nxt's listeners, and a grab
     //    drags the player >10 rooms out — the warrant cools, settle gone
+    // sprint 345 — the ring is a real sound now (no entity tag): every
+    // ear hears it, and the seam's machinery primes on it.
     const nxt = g.route.rooms.find((r) => r.index === dRoom.index + 1) ?? g.route.rooms[dRoom.index - 1];
     if (!nxt) return { stage: 'no-neighbor' } as const;
     const ringCap = caps.length;
+    let ringSourced = true;
+    const unsub = ga.sound.on((e) => { if (/house phone rings/.test(e.caption ?? '')) ringSourced = e.source !== undefined; });
+    const msGet = ga as unknown as { milestones?: Map<number, { primed?: boolean }> };
+    const primedBefore = msGet.milestones ? [...msGet.milestones.values()].filter((m) => m.primed).length : -1;
+    // the ring primes milestones within +3 of the room entered — only a
+    // real assertion when one actually sits in that window
+    const msInReach = msGet.milestones
+      ? [...msGet.milestones.keys()].filter((k) => k > nxt.index && k <= nxt.index + 3).length : 0;
     g.player.teleport(nxt.origin.x, 0, nxt.origin.z);
     for (let f = 0; f < 6; f++) g.frame();
+    unsub();
     const rang = caps.slice(ringCap).some((c) => /house phone rings ahead/.test(c));
+    const primedAfter = msGet.milestones ? [...msGet.milestones.values()].filter((m) => m.primed).length : -1;
+    const wirePrimed = msInReach === 0 || primedAfter > primedBefore;
     // straight back to his room before anything woken can reach us
     g.player.teleport(dRoom.origin.x, 0, dRoom.origin.z);
     for (let f = 0; f < 5; f++) g.frame();
@@ -164,7 +178,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
-    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterStock, stockCapHit, heldAfterDrawer, drawerSign, settlePrompt, paid,
+    return { stage: 'done' as const, clocked, rang, ringOpen: !ringSourced, wirePrimed, heldAfterAf, heldAfterStock, stockCapHit, heldAfterDrawer, drawerSign, settlePrompt, paid,
       spent: ga.imprints < i0, warranted: det?.warranted === true };
   });
 
@@ -176,6 +190,8 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
   expect(result.heldAfterDrawer, JSON.stringify(result)).toBe(3); // 1 + 2: sighting, then hands in HIS book
   expect(result.drawerSign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.rang, JSON.stringify(result)).toBe(true);
+  expect(result.ringOpen, JSON.stringify(result)).toBe(true); // the wire's own voice — every ear hears it
+  expect(result.wirePrimed, JSON.stringify(result)).toBe(true); // the ring primes the seams ahead
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);

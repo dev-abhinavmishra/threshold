@@ -3836,3 +3836,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   stand — his room has more route after it), assert `wantedRooms`
   refills + the fresh-sheets caption.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 345 — the wire betrays you
+
+- The wire ring was `source: 'detective'`, and every hear gate in the
+  codebase rejects sourced events (`noiseCanBeHeard`/`noiseCanRouse`
+  both `!e.source`) — the phone rang *fictionally* but the house could
+  not physically hear it. Dropped the tag: the ring is the wire's own
+  voice at your position — a real 0.55 'impact', so whatever stands
+  within ~7.7m walks to where it rang, and `onRouseNoise` primes the
+  seam's milestones +1..+3 and rattles closed doors in reach.
+- The under's wanted sheets widen entity bands by a flag; the wire is
+  the main-route mirror — no flag, just positional sound at you on
+  every fresh room entry while `warranted`. Counterplay unchanged:
+  pull the line (s309) and `warranted` never sets, outrun +10 rooms,
+  or settle. "They know your face" is now mechanically true.
+- e2e: detective leg phase 3 subscribes `ga.sound.on` — asserts the
+  ring carries no `source` (every ear hears it) and that the
+  milestones within +3 of the entered room primed (assert only binds
+  when a milestone sits in reach). The s278 vitest now asserts the
+  emitted ring itself has no source.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, economy 7/7, build.
