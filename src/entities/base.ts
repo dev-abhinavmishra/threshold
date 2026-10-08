@@ -114,6 +114,10 @@ export interface EntityCtx {
    *  Returns what it restored, or null. Optional for headless ctxs. */
   rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind', x: number, z: number)
     => 'snare' | 'steam' | 'fan' | 'eye' | null;
+  /** sprint 433 — a walker reaching a coil-bound leaf works the wire:
+   *  'strained' on first contact, 'freed' once the bind parts (the
+   *  coil drops where it was worked loose), null when nothing wired. */
+  strainWire?: (x: number, z: number) => 'strained' | 'freed' | null;
   /** Confiscation isn't deletion — it's carried: a staggered
    *  floorkeeper scatters the felt it pocketed as floor loot. */
   dropWraps?: (pos: Vec3, n: number) => void;

@@ -519,6 +519,15 @@ export class Warden extends Entity {
       for (const d of r.doors) {
         if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.1 || !doorBetween(d, this.pos, this.investigate)) continue;
+        if (d.heldBy === 'wired') {
+          // sprint 433 — wire yields slower than a chock: he works the
+          // bind over two contacts, then it parts and the coil drops
+          if (this.ctx.strainWire?.(d.pos.x, d.pos.z) === 'freed') {
+            free ??= d;
+            continue;
+          }
+          return 'blocked';
+        }
         if (d.heldBy || d.locked) return 'blocked';
         free ??= d;
       }

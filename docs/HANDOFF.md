@@ -5994,3 +5994,13 @@ nobody kicks wire loose, it takes a blade. 'Cut the wired leaf free'
 hands the coil back (un-plant symmetry). The bind signs 'work' on
 the leaf like every hands-on the floor. Releases on reload like the
 wedge — a held leaf never rode the checkpoint.
+
+## Sprint 433 — the house works wire free
+
+A walker reaching a coil-bound leaf doesn't just bounce: the warden
+works the bind over two contacts (a kicked chock is seconds; wire is
+work — the denial's real price), cued on the first strain. When it
+parts, `heldBy` clears and the coil drops as gatherable loot
+(`droppedCoils` + 'Gather the wire', pos-keyed like alarmDrop —
+checkpointed like the kicked chock). Wire outranks the wedge as
+denial: chock = seconds, wire = two visits of hands-on work.

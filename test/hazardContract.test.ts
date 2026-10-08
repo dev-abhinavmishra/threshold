@@ -272,6 +272,21 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toContain('the wire binds it — cut it free first');
     expect(gameSrc).toMatch(/unwireDoor[\s\S]*?giveItem\('wireCoil', 1\)/);
   });
+
+  it('the house works wire free — two contacts, and the coil drops', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const corSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    // the warden doesn't kick wire loose — a bound leaf strains first,
+    // parts on the next contact, and the coil lands as gatherable loot
+    expect(corSrc).toMatch(/heldBy === 'wired'[\s\S]*?strainWire/);
+    expect(gameSrc).toMatch(/strainWire: \(x, z\)/);
+    expect(gameSrc).toContain('the wire parts under its hands');
+    expect(gameSrc).toMatch(/droppedCoils\.push/);
+    expect(storeSrc).toContain('droppedCoils');
+    // the drop is pos-keyed — the list shifts on gather, the pos doesn't
+    expect(gameSrc).toMatch(/coilDrop[\s\S]*?findIndex[\s\S]*?wireCoil/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

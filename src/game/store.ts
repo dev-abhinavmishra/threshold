@@ -207,6 +207,9 @@ export interface CheckpointSave {
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
+  // coils the house worked off a bound leaf — wire isn't destroyed
+  // by the strain, it lands as gatherable loot like the kicked chock
+  droppedCoils?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean }[];
