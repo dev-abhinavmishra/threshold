@@ -6004,3 +6004,11 @@ parts, `heldBy` clears and the coil drops as gatherable loot
 (`droppedCoils` + 'Gather the wire', pos-keyed like alarmDrop —
 checkpointed like the kicked chock). Wire outranks the wedge as
 denial: chock = seconds, wire = two visits of hands-on work.
+
+## Sprint 434 — the boards listen for your noise
+
+While `wantedActive`, every sound the player planted pulls ×1.5 —
+the alarm tick (0.9), the ring (1.6), and the phone bursts (0.85)
+all take `wantedPull`. The boards' tax reaches the lure layer too:
+a lure works better and betrays you harder — same double-edge rule
+the named filings follow (asks count double, claims count double).

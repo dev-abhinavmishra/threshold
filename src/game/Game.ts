@@ -8212,16 +8212,21 @@ export class Game {
     }
 
     // Wind-up alarms — tick loud enough to pull sound-hunters, then ring once.
+    // sprint 434 — the boards listen for YOUR noise too: while the
+    // sheets name you, every sound you planted pulls half again as
+    // far — a lure works better and betrays you harder, same tax the
+    // filings take.
+    const wantedPull = this.wantedActive ? 1.5 : 1;
     for (const lure of this.lures) {
       if (tA < lure.nextTick) continue;
       lure.nextTick = tA + 1.2;
       if (tA < lure.until) {
         this.cue('alarm-tick', lure.pos, '', 'info');
-        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 0.9, category: 'distraction', caption: '' });
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 0.9 * wantedPull, category: 'distraction', caption: '' });
       } else if (!lure.rang) {
         lure.rang = true;
         this.cue('alarm-ring', lure.pos, '[the alarm rings — somewhere else]', 'info');
-        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 1.6, category: 'distraction', caption: '[alarm ringing]' });
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 1.6 * wantedPull, category: 'distraction', caption: '[alarm ringing]' });
       } else {
         this.entityGroup.remove(lure.mesh);
       }
@@ -8803,7 +8808,7 @@ export class Game {
       hr.lastRing = tA + 1.05;
       this.audio.play('phone-ring', hr.pos,
         tA - hr.at < 0.2 ? '[a phone rings — somebody left it off the hook]' : '');
-      this.sound.emit({ x: hr.pos.x, y: hr.pos.y, z: hr.pos.z, intensity: 0.85, category: 'distraction', caption: '' });
+      this.sound.emit({ x: hr.pos.x, y: hr.pos.y, z: hr.pos.z, intensity: 0.85 * wantedPull, category: 'distraction', caption: '' });
     }
     for (let i = this.hookRings.length - 1; i >= 0; i--) {
       if (tA < this.hookRings[i].until) continue;

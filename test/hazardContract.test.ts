@@ -287,6 +287,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // the drop is pos-keyed — the list shifts on gather, the pos doesn't
     expect(gameSrc).toMatch(/coilDrop[\s\S]*?findIndex[\s\S]*?wireCoil/);
   });
+
+  it('the boards listen for your noise — a named lure pulls half again as far', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // while the sheets name you, planted sounds reach further — the
+    // tick, the ring, and the phone bursts all take the same pull
+    expect(gameSrc).toContain('wantedPull');
+    expect(gameSrc).toMatch(/0\.9 \* wantedPull/);
+    expect(gameSrc).toMatch(/1\.6 \* wantedPull/);
+    expect(gameSrc).toMatch(/0\.85 \* wantedPull/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
