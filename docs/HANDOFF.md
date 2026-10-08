@@ -5752,3 +5752,12 @@ readBy blocks nothing for warden/grafter keys — the mark still pulls
 its hunters.
 
 Gates: tsc, lint, contract spec +1 (batched).
+
+## Sprint 422 — the splice's own leg + the wipe poisons the player too
+The graft family gets its e2e leg: injected graft + its 'work' sign →
+the dust reads 'worked here, recently', the verb mints 'Cut the splice'
+(not 'Cut the seal'), the cut disarms like any wire. One honesty fix
+riding along: wiped 'work' sign stays silent to the player's fresh-read
+— the felt's shadow poisons the reader the same as every hunter.
+
+Gates: tsc, lint, build, splice leg green (batched vitest+sim next).

@@ -1147,3 +1147,84 @@ test('the house re-lays, the under relocates, the fall is heard', async ({ page 
   expect(result.graftCue, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+// sprint 422 — the splice's own leg: a grafted wire mints 'Cut the splice'
+// (the under's work, not the house's weld), the cut disarms it like any
+// wire, and its fresh 'work' sign reads back to the player as warm dust.
+test('the splice reads as the under\'s work — cut it, and the dust keeps a hand', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      godMode: boolean; currentRoom: number; keys: Set<string>;
+      hazard: { snares: { room: number; armed: boolean; grafted?: boolean; pos: { x: number; y: number; z: number } }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string;
+          t: number; readBy: string[]; old?: boolean; wiped?: boolean }[] };
+    };
+    ga.godMode = true;
+    const room = g.route.rooms.find((r) => !r.flooded && !r.scheduled?.length)
+      ?? g.route.rooms.find((r) => !r.flooded);
+    if (!room) return { stage: 'no-room' } as const;
+    // plant the graft by hand — a live splice plus the sign it signed
+    const gx = room.origin.x + 0.5, gz = room.origin.z + 0.5;
+    ga.hazard.snares.push({ pos: { x: gx, y: 0, z: gz }, room: room.index, armed: true, grafted: true });
+    ga.hazard.evidence.push({ pos: { x: gx, y: 0, z: gz }, room: room.index,
+      kind: 'work', t: (g.clock as { time: number }).time, readBy: [] });
+    g.player.teleport(gx - 1.4, 0, gz - 1.4);
+    ga.currentRoom = room.index;
+    for (let f = 0; f < 25; f++) g.frame();
+    for (const e of (g.entities as unknown as { done?(): void }[])) e.done?.();
+    for (let f = 0; f < 20; f++) g.frame();
+    const dustRead = caps.some((c) => /dust keeps a hand/.test(c));
+    const spliceMinted = g.interaction.interactables.some(
+      (i) => i.kind === 'snip' && /splice/i.test(i.prompt ?? ''));
+    let lock: { x: number; z: number; dy: number } | null = null;
+    for (let k = 0; k < 12 && !lock; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const sx = gx + Math.sin(a) * 1.1, sz = gz + Math.cos(a) * 1.1;
+      for (const dy of [0.7, 0.45, 0.2, 0]) {
+        g.player.teleport(sx, 0, sz);
+        g.player.yaw = Math.atan2(gx - sx, gz - sz);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45,
+          Math.atan2(0.06 + dy - eyeY, Math.hypot(gx - sx, gz - sz) || 1)));
+        g.frame();
+        if (/cut the splice/i.test(g.interaction.focused?.prompt ?? '')) { lock = { x: sx, z: sz, dy }; break; }
+      }
+    }
+    let cut = false;
+    for (let f = 0; f < 160 && !cut && lock; f++) {
+      const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!it) break;
+      g.player.teleport(lock.x, 0, lock.z);
+      g.player.yaw = Math.atan2(it.pos.x - lock.x, it.pos.z - lock.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.max(-1.45, Math.min(1.45,
+        Math.atan2(it.pos.y + lock.dy - eyeY, Math.hypot(it.pos.x - lock.x, it.pos.z - lock.z) || 1)));
+      if (/cut the splice/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      g.frame();
+      cut = caps.some((c) => /splice parts|seal parts/.test(c));
+    }
+    ga.keys.delete('KeyE');
+    return { stage: 'done', dustRead, spliceMinted, hunted: !!lock, cut,
+      disarmed: !ga.hazard.snares.find((s) => s.grafted === true && s.room === room.index)?.armed,
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage === 'no-room') test.skip();
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.dustRead, JSON.stringify(result)).toBe(true);
+  expect(result.spliceMinted, JSON.stringify(result)).toBe(true);
+  expect(result.hunted, JSON.stringify(result)).toBe(true);
+  expect(result.cut, JSON.stringify(result)).toBe(true);
+  expect(result.disarmed, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});

@@ -1072,7 +1072,9 @@ export class HazardField {
     // the dust testifies while it's still warm. Your own work comes
     // pre-read so the floor doesn't narrate your hands back to you.
     for (const ev of this.evidence) {
-      if (ev.old || ev.room !== ctx.currentRoomIndex || ev.kind !== 'work'
+      // wiped sign reads as scrubbed dust — the felt's shadow poisons
+      // the player's fresh-read the same as every hunter's
+      if (ev.old || ev.wiped || ev.room !== ctx.currentRoomIndex || ev.kind !== 'work'
         || ev.readBy.includes('player')) continue;
       if (v3dist(p.pos, ev.pos) > 2.6) continue;
       ev.readBy.push('player');
