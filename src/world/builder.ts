@@ -1534,6 +1534,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // The wiring shows — drooping cable runs in the service bones,
+    // kept off the door lanes.
+    if (['maintenance', 'underscript', 'unlit'].includes(spec.biome) && rng.float() < 0.4) {
+      const runs = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < runs; i++) {
+        const cx = (rng.float() - 0.5) * (w - 2), cz = (rng.float() - 0.5) * (d - 2);
+        if (footprintInDoorLane(spec, cx, cz, 0.5, 0.5)) continue;
+        try {
+          const cb = buildProp({ kind: rng.float() < 0.3 ? 'conduitRun' : 'hangingCable', x: cx, z: cz, y: h - 0.28, yaw: rng.float() * Math.PI }, rng.fork(6600 + i));
+          cb.group.name = 'ceiling-cable';
+          group.add(cb.group);
+        } catch { /* dressing only */ }
+      }
+    }
+
     // The notices — the building's paperwork pinned beside its doors.
     if (['corridor', 'records', 'lobby', 'unlit', 'guest'].includes(spec.biome) && rng.float() < 0.3) {
       const port = [spec.entry, ...spec.exits][Math.floor(rng.float() * (1 + spec.exits.length))];
