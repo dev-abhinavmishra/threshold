@@ -2951,7 +2951,8 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Test: test/priming.test.ts covers primed/unprimed Index, Lens Hall
   primed caption, prime idempotency.
 - Gates: tsc, lint, 217 vitest — green.
-||||||| c4a2c0c
+## sprint 305 — the count (the till rings late)
+
 - The under's trace axis: pilfering CREW property (marginalia `claim`
   cages, sledge `pick`, lamp `strip`) queues a loss-report in
   `src/engine/crewCount.ts` that `sound.emit`s at the socket ~75s later —
@@ -3876,3 +3877,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `cpWanted` asserts one written after the repost mirrors the refilled
   board map 1:1. Both bind only when their phase held.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, undercast audit leg, build.
+
+## sprint 403 — the fixes the review earned (s401 review debt)
+
+- **Primed Curator froze** (review BUG_0001): `prime()` aimed `target` at
+  the door but left no path — patrol only builds one when already near.
+  prime() now calls `pathTo(target)` so it actually walks to the door.
+- **Primed Lens Hall beams never moved** (BUG_0002): `prime()` added to
+  `beamAngle`, which nothing reads — the sweep lives on pivot
+  `rotation.y`. prime() now queues `beamOffset`, folded into every
+  beam pivot on the next update (works pre-build too).
+- **Wanted state leaked across runs** (BUG_0003): `startRun` restored
+  `unpaidTheft` (by design — the books outlive you) but never reset
+  `wantedActive`/`wantedRooms`, so stale sheet-pins named rooms on a
+  fresh route. Both reset now; the next Auditor demand re-posts.
+- **Decals placed world-into-local** (BUG_0004, plus 3 older): children
+  added to a built room group live in the room's yaw frame —
+  ensureWanted/GateMark/DeepVoid/ChalkMarks all set world coords and
+  floated metres off. Shared `roomLocal()` (worldToLocal) + yaw−room.yaw
+  at all four sites; test/roomLocal.test.ts pins the frame math.
+- Bonus guard: `pathTo` no longer crashes on rooms without `navNodes`.
+- Gates: tsc, lint, vitest scoped (12/12) — green.

@@ -121,10 +121,14 @@ export class Orrery extends Entity {
   private rig: THREE.Group | null = null;
   private beams: THREE.Mesh[] = [];
   private beamAngle = 0;
+  /** Pending primed-sweep offset — folded into the pivots on the next
+   *  update so priming works even before the beams are built. */
+  private beamOffset = 0;
 
   /** A primed lens — the beams are already mid-sweep when the door opens. */
   prime(): void {
     this.beamAngle += 2.4;
+    this.beamOffset += 2.4;
   }
   /** pylon progress 0..1, each needs 2.5s of held interact within beam cycles */
   pylonProgress = [0, 0, 0, 0];
@@ -176,6 +180,10 @@ export class Orrery extends Entity {
     if (this.solved || !this.rig) return;
     const c = this.ctx;
     this.beamAngle += dt * 0.5;
+    if (this.beamOffset !== 0) {
+      for (const b of this.beams) (b.parent as THREE.Group).rotation.y += this.beamOffset;
+      this.beamOffset = 0;
+    }
     for (const b of this.beams) {
       const p = b.parent as THREE.Group;
       p.rotation.y += dt * (0.4 + this.beams.indexOf(b) * 0.13);
