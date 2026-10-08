@@ -6686,3 +6686,56 @@ threatPos within 2.6m of the leaf under the seeded 0.22/door roll).
 Entities that can't plausibly watch (Swamper — submerged, Hollow —
 it IS the trap, Orrery — ceiling fixture, staged/ms entities) stay
 silent on purpose: the crack shows nothing that isn't there.
+
+## Sprints 465-469 — the seam speaks
+
+The crack lattice gains a voice: 'Call through the crack' (hold 1.2,
+mirrored hinge from 'slip', p5) puts a whisper under the leaf. The
+call is a PULL to the seam itself — the emit lands a hand's-depth
+under the far lip (`door.pos - n*side*0.3`, 0.6×wantedPull) plus a
+quieter your-side echo (0.45×), so room-gated hearers in the far room
+answer the door, not a ghost point. Shares `nextToss` (8s) with the
+pebble.
+
+- **s465 the call pulls** — watchers in the far room walk to the
+  leaf their hearing already owns; no new intake needed.
+- **s466 the voice tells** — a watcher already camped within 1.4m of
+  the leaf turns your whisper into a sighting (`eyeTell` un-seeded —
+  a whisper in the ear is a tell, not a roll).
+- **s467 it mouths back** — a far-room watcher within hearing
+  schedules `seamAnswer` (+1.2-2.1s): a `whisper` cue + 'entity-cue'
+  emit at the door, so the answer confirms the pull landed without
+  re-rousing anything.
+- **s468 the breath read** — `listenThrough` gains an atLeaf check
+  above `sched`: a live watcher within 1.5m of the leaf reads
+  '[breath at the crack — it is listening back]' at danger.
+- **s469 the e2e legs** — doors.spec drives call→pull→mouth-back→
+  camp→breath-read→told; hazards.spec closes the wire-cut-mid-patrol
+  hole: a warden mid-strain on a wired leaf loses the bind to
+  'Cut the wired leaf free' — the leaf frees under his hands and he
+  shoulders through (parts-cue never fires; the coil returns to hand).
+
+- **s469 the lattice lifts** — the seam verbs leave the floor: stoop
+  anchors at `pos.y + 0.95`, slip/call at `±0.28 lat, pos.y + 1.05`.
+  At `crouchEyeHeight` 0.9 the old +0.42 anchors sat AT eye level —
+  the nearer flank always beat the centre on dist and the prox<1.1
+  `nearEnough` gate let it focus un-aimed. Above the gate, only aim
+  separates LOOK at the seam (centre) from REACH through its edges
+  (~33° lateral separation at 0.7m).
+
+**Traps:** `roomOf`/`underRoomOf` first-match owns an emit at
+`door.pos` to the EARLIER-indexed room — emits meant for the far
+side land a hand's-depth past the leaf, not on it. A bare pos
+teleport roams off before a hold completes — pin a camper with its
+own `crackCampUntil` (+ target + roamT=0). A seeded same-id entity
+on another floor shadows `entities.find` — slice `entities.length`
+before `spawnById` and take the new tail. `atRoomDoor` cross-room
+hearing isn't guaranteed on every boundary shape — for mid-investigate
+legs, set `investigate` directly (the field `hear` writes).
+Any e2e aim in a crouched context MUST take the eye from
+`player.eyePos(out)` — `pos.y + eyeHeight` is 1.62, the crouched eye
+is 0.9, and the ~48° miss drops align under 0.86 so the verb is
+filtered even when it wins the score. On a ~1.3m doorway lane the
+collider eject only lands you at an edge (±0.67 lat) — three
+co-planar equal-priority verbs can't all have pockets when dist
+dominates; separate them vertically instead.

@@ -427,4 +427,41 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('this.nextToss');
     expect(game).toContain("category: 'distraction'");
   });
+
+  it('the seam speaks — the call lands at the shared leaf itself (sprint 465)', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'call'");
+    expect(interaction).toContain('Call through the crack');
+    expect(game).toContain("case 'call'");
+    // the voice emits under the far lip — room-gated hearing owns an emit
+    // to one room — plus a quieter tell on your side; shares the
+    // free-lure channel's breath with the pebble
+    expect(game).toContain('fx, y: 0.15, z: fz');
+    expect(game).toContain('this.nextToss');
+  });
+
+  it('the voice tells + mouths back — a camped leaf answers the whisper (sprints 466-467)', () => {
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    const callCase = game.slice(game.indexOf("case 'call'"), game.indexOf("case 'brace'"));
+    // sprint 466: a watcher already at the leaf hears the whisper as a
+    // sighting — same eyeTell intake the crack's watching eye uses
+    expect(callCase).toContain('eyeTell');
+    expect(callCase).toContain('threatPos');
+    // sprint 467: a far-room watcher in earshot mouths back a breath later
+    expect(callCase).toContain('seamAnswer');
+    expect(callCase).toContain('withinRouseRadius');
+    expect(game).toContain('private seamAnswer');
+    expect(game).toContain("category: 'entity-cue'");
+  });
+
+  it('the breath at the crack — a camped watcher reads through the ear too (sprint 468)', () => {
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    const listen = game.slice(game.indexOf('private listenThrough'), game.indexOf("const sched = target.scheduled[0]"));
+    // a live watcher pressed against the leaf outranks the room's
+    // other reads — the ear hears your own call's camp before you
+    // call twice into it
+    expect(listen).toContain('atLeaf');
+    expect(game).toContain('it is listening back');
+  });
 });
