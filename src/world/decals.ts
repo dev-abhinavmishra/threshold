@@ -3765,3 +3765,105 @@ export function lampGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Rocker arcs — the twin crescents a rocking chair carves into the
+ * floor under its runners: polished arcs, ground at the extremes. */
+export function rockerArcs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    for (const side of [-1, 1]) {
+      const rx = 48 + side * 16;
+      // the runner's crescent — a long shallow arc, worn bright
+      for (let i = 0; i < 3; i++) {
+        ctx.strokeStyle = `rgba(206,194,166,${0.22 - i * 0.05})`;
+        ctx.lineWidth = 2.4 - i * 0.5;
+        ctx.beginPath();
+        ctx.arc(rx, 48, 26 + i * 3 + rng.float() * 4, Math.PI * 1.2, Math.PI * 1.8);
+        ctx.stroke();
+      }
+      // the pitch dents — ground bites at each swing's end
+      for (const a of [Math.PI * 1.25, Math.PI * 1.75]) {
+        ctx.fillStyle = 'rgba(72,62,50,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(rx + Math.cos(a) * 27, 48 + Math.sin(a) * 27, 2.6, 1.6, a, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // grit thrown off the runners
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(88,78,64,${0.12 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 56, 14 + rng.float() * 28, 0.5 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Cord wear — the vertical smear a window's pull-cord painted on
+ * the reveal: a dragged line, frayed knots, a swing scuff at reach. */
+export function cordWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 128, (ctx) => {
+    const cx = 24;
+    // the drag line — greasy vertical where the cord hung
+    const g = ctx.createLinearGradient(cx - 4, 0, cx + 4, 0);
+    g.addColorStop(0, 'rgba(60,52,42,0)');
+    g.addColorStop(0.5, `rgba(60,52,42,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(60,52,42,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 5, 6, 10, 104);
+    // knot dents — the cord's knots bumped the paint at intervals
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(48,42,34,${0.34 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + (rng.float() - 0.5) * 4, 18 + i * 24 + rng.float() * 8, 1.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the swing scuff — where the cord's end swayed at pull height
+    ctx.strokeStyle = 'rgba(64,56,44,0.32)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, 96, 10 + rng.float() * 6, Math.PI * 1.3, Math.PI * 1.9);
+    ctx.stroke();
+    // fray flecks — cord fibers dusted off along the run
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(160,148,124,${0.18 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 4 + rng.float() * 10, 10 + rng.float() * 96, 0.5 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Night glow — the warm halo a bedside lamp breathed onto the wall
+ * every night: a soft amber bloom behind the table. */
+export function nightGlow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    const cy = 40 + rng.float() * 8;
+    // the bloom — warm amber, brightest at the shade's mouth
+    const g = ctx.createRadialGradient(cx, cy, 3, cx, cy, 38);
+    g.addColorStop(0, 'rgba(220,180,110,0.3)');
+    g.addColorStop(0.55, 'rgba(220,180,110,0.14)');
+    g.addColorStop(1, 'rgba(220,180,110,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the shade's shadow — a darker cut where the lamp itself stood
+    ctx.fillStyle = 'rgba(50,40,30,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 4, 7, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // soot point — the bulb's kiss on the plaster
+    ctx.fillStyle = 'rgba(60,48,32,0.3)';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 8, 2 + rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    // moth specks drawn to the warm
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(140,120,90,${0.2 + rng.float() * 0.2})`;
+      const a = rng.float() * Math.PI * 2;
+      const r = 12 + rng.float() * 20;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.5 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

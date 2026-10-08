@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2092,6 +2092,45 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         lg.position.set(lp.x + ix, 0.009, lp.z + iz);
         group.add(lg);
       }
+    }
+
+    // The rockers swung — twin crescents carved under the runners of
+    // chairs that rocked a decade of nights.
+    for (const p of spec.props) {
+      if ((p.kind !== 'armchair' && p.kind !== 'chair' && p.kind !== 'rockingChair')
+        || rng.float() >= 0.25) continue;
+      const ra = decalQuad(rockerArcs(rng), 0.9 + rng.float() * 0.15, 0.85 + rng.float() * 0.15);
+      ra.name = 'rocker-arcs';
+      ra.rotation.x = -Math.PI / 2;
+      ra.rotation.z = rng.float() * Math.PI;
+      ra.position.set(p.x + (rng.float() - 0.5) * 0.2, 0.0085, p.z + (rng.float() - 0.5) * 0.2);
+      group.add(ra);
+    }
+    // The cords wore thin — greasy drags down the reveals where pull
+    // cords hung for decades. In the window loop instead of a wall pick.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const cww: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = cww === 'e' || cww === 'w' ? p.z : p.x;
+      wallDecal(cww, cordWear(rng), 0.35 + rng.float() * 0.1, 1.3 + rng.float() * 0.3,
+        along + (rng.float() < 0.5 ? -1 : 1) * (0.68 + rng.float() * 0.15), 1.5);
+      const cw = group.children[group.children.length - 1];
+      if (cw && !cw.name) cw.name = 'cord-wear';
+    }
+    // The nightstands kept the glow — a warm amber bloom on the wall
+    // behind the bedside light that burned every night.
+    for (const p of spec.props) {
+      if ((p.kind !== 'nightstand' && p.kind !== 'deskLamp' && p.kind !== 'lamp' && p.kind !== 'washStand')
+        || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const nw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = nw === 'e' || nw === 'w' ? p.z : p.x;
+      wallDecal(nw, nightGlow(rng), 0.85 + rng.float() * 0.2, 0.85 + rng.float() * 0.2, along, 1.4 + rng.float() * 0.15);
+      const ng = group.children[group.children.length - 1];
+      if (ng && !ng.name) ng.name = 'night-glow';
     }
 
     // The water line — a room that flooded once keeps the tide mark:
