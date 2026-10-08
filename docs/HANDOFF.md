@@ -4651,3 +4651,17 @@ Game.die() from the same five fields.
   of a marked id, so re-marking 'feltWrap' mid-leg strips the
   claimed-back count too. Assert count>=1 on returns.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
+## sprint 420 — the house remembers routes
+
+- Dragged chalk arrows (`wayArrow` decal, points +X) on junction floors
+  aim the way on: `spec.exits.length >= 2` → 20% lie (aims a branch),
+  70% honest (aims `exits[0]`); single-exit rooms get an honest arrow
+  at 30%. Stands just past the entry port. Named 'way-arrow' /
+  'way-arrow-false'. Direction via `rotation.z = atan2(-tz, tx)` —
+  floor decal +X axis maps to (cos a, −sin a) in xz.
+- `room.doors` only holds entry + branch Door objects — the onward leaf
+  is the NEXT room's entry door. Aim via `spec.exits`/`portLocalPos`.
+- Vitest 262: 'the house remembers routes' — both variants exist across
+  seeds, >90% of arrows aim within ~30° of a real port.
+- Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
