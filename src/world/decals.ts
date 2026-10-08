@@ -1046,3 +1046,32 @@ export function dustShadow(rng: Rng): THREE.Texture | null {
     ctx.fillRect(12, 10 + rng.float() * 6, 72, 3);
   });
 }
+
+/** The votive — a guttered candle stub in a wax pool with scattered
+ * petals or paper flecks, left where something waited. */
+export function votiveWax(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // wax pool, irregular edge
+    ctx.fillStyle = 'rgba(196,188,164,0.42)';
+    ctx.beginPath();
+    ctx.ellipse(48, 50, 26 + rng.float() * 8, 20 + rng.float() * 7, rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(210,202,178,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(48, 50, 14 + rng.float() * 5, 11 + rng.float() * 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // candle stub
+    ctx.fillStyle = 'rgba(214,205,180,0.85)';
+    ctx.fillRect(44, 38, 8, 14);
+    ctx.fillStyle = 'rgba(60,55,48,0.8)';
+    ctx.fillRect(47, 36, 2, 4);
+    // petals / flecks scattered outward
+    for (let i = 0; i < 9; i++) {
+      const a = rng.float() * Math.PI * 2, rr = 30 + rng.float() * 16;
+      ctx.fillStyle = rng.bool(0.5) ? 'rgba(140,70,60,0.4)' : 'rgba(190,180,160,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(48 + Math.cos(a) * rr, 50 + Math.sin(a) * rr, 2.5, 1.5, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

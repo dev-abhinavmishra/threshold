@@ -1843,3 +1843,18 @@ describe('the dust shadow (sprint 433)', () => {
     expect(shadows, 'no dust shadows').toBeGreaterThan(10);
   });
 });
+
+describe('the votive (sprint 434)', () => {
+  it('watched spots keep a guttered vigil at their feet', () => {
+    let votives = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'votive-watch') votives++; });
+      }
+    }
+    expect(votives, 'no votives').toBeGreaterThan(4);
+  });
+});
