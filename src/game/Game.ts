@@ -4852,6 +4852,7 @@ export class Game {
   }
 
   private killPlayer(source: EntityId, hint: string): void {
+    if (this.godMode) return; // insta-kills obey the flag too — entity kills bypass damagePlayer
     if (this.player.dead) return;
     this.player.dead = true;
     this.lastDeathCause = source;

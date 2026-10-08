@@ -156,14 +156,21 @@ export class Bellman extends Entity {
    *  knocked for, or holds (and eventually quits) at a braced one. Radius
    *  sits inside the 1.25 knock reach so a head-on approach knocks first. */
   private blockingDoorNear(target: Vec3): Door | null {
+    // Cluster doors stack in the seam — a held leaf is the real obstacle and
+    // must win over a merely-closed sibling, or the walk waits forever on a
+    // leaf nobody knocked (the wait-for-swing branch has no timeout).
+    let held: Door | null = null;
+    let closed: Door | null = null;
     for (const r of this.ctx.rooms) {
       for (const d of r.doors) {
         if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.2) continue;
-        if (doorBetween(d, this.pos, target)) return d;
+        if (!doorBetween(d, this.pos, target)) continue;
+        if (d.heldBy) held ??= d;
+        else closed ??= d;
       }
     }
-    return null;
+    return held ?? closed;
   }
 
   /** Rattle against a brace, on a cadence — felt through the leaf. */

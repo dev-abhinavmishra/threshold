@@ -360,7 +360,7 @@ test('the door chock holds while you walk away — until something worries it lo
     // below-floor wedge point past 'Listen at Door N' on the focus score.
     // Real players pitch down — here we hand lookDir the exact bearing.
     // Match by id: every closed leaf in the window carries a wedge point.
-    const aimHold = (id: string, done: () => boolean, frames = 90): boolean => {
+    const aimHold = (id: string, done: () => boolean, frames = 90, each?: () => void): boolean => {
       const lp = g.player as unknown as { lookDir(out: { x: number; y: number; z: number }): void };
       const orig = lp.lookDir.bind(lp);
       // Real players pitch down to the below-floor anchor; the harness can't
@@ -373,6 +373,7 @@ test('the door chock holds while you walk away — until something worries it lo
       const origFocus = sys.focus.bind(sys);
       let seen = false;
       for (let f = 0; f < frames && !done(); f++) {
+        each?.();
         const pt = g.interaction.interactables.find((i) => i.id === id);
         if (!pt) { g.frame(); continue; }
         seen = true;
@@ -415,7 +416,11 @@ test('the door chock holds while you walk away — until something worries it lo
     g.player.teleport(door.pos.x + (toC.x / L) * 0.9, 0, door.pos.z + (toC.z / L) * 0.9);
     g.keys.add('KeyC');
     for (let f = 0; f < 4; f++) g.frame();
-    aimHold(`wedge-${door.id}`, () => door.heldBy === 'wedge');
+    // The aim stares down the door it stands at — held gaze (2.6s) makes it
+    // fold back into the hall before it can rattle the chock. This leg tests
+    // the wedge, not the gaze counterplay: keep its watch clock empty.
+    const unwatch = () => { (bell as { watchT?: number }).watchT = 0; };
+    aimHold(`wedge-${door.id}`, () => door.heldBy === 'wedge', 90, unwatch);
     g.keys.delete('KeyC');
     const wedged = door.heldBy === 'wedge';
     if (!wedged) return { stage: 'wedge-failed', prompt: g.interaction.focused?.prompt, crouch: g.player.crouching, hasChock: gi.inventory.find((i) => i.id === 'doorChock')?.count } as const;
@@ -423,11 +428,16 @@ test('the door chock holds while you walk away — until something worries it lo
     // Then walk away — the whole point vs the brace. The bellman rattles it,
     // kicks the chock loose, knocks the freed leaf, and comes through.
     g.player.teleport(door.pos.x + (toC.x / L) * 2.4, 0, door.pos.z + (toC.z / L) * 2.4);
+    // Face the room, not the door — a held gaze makes it fold back into the
+    // hall before it ever rattles the chock loose.
+    g.player.yaw = Math.atan2(toC.x, toC.z);
+    g.player.pitch = 0;
     const cluster = [...prev.doors, ...bRoom.doors]
       .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
     let loose = false, opened = false, openedAt = -1;
     const trace: string[] = [];
     for (let f = 0; f < 700 && !opened; f++) {
+      unwatch();
       g.frame();
       if (caps.some((c) => /wedge skids loose/.test(c))) loose = true;
       if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) { opened = true; openedAt = f; }

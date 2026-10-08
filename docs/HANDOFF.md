@@ -4864,3 +4864,39 @@ Game.die() from the same five fields.
 - vitest +1: stand exposed in a mid-path room, the find lands
   while `stage` is still 'inbound'.
 - Gates: tsc, lint, vitest 269, sim, build.
+
+## sprint 391 — e2e repair + two real bugs the suite found
+
+- The sibling flagged three failing e2e legs; root causes were drift and
+  fragility, not the 374–384 batch — plus two real product bugs:
+  - 'collector counts your purse': generation drift removed the
+    collector from seed 's' (it's not in the guaranteed-schedule list).
+    The spec now schedules it itself into a picked room via the real
+    `spawnScheduled` path instead of relying on the seeded pool.
+  - "porter's cage sells held bags": sibling claim sockets hang ~0.3m
+    apart and the nearer one wins focus on `dist`, so `focused?.id ===
+    pt.id` never matched. Disabling rivals is futile — interactables
+    re-mint every frame. The spec now steers until ANY claim holds
+    focus and takes that bag (both are valid sale targets).
+  - 'the door chock holds': TWO real bugs. (1) `killPlayer` ignored
+    `godMode` — entity touch-kills call it directly and bypassed the
+    flag `damagePlayer` honored, so the debug flag didn't protect
+    specs. (2) `blockingDoorNear` returned the FIRST blocking leaf in
+    a cluster — a merely-closed unknocked sibling — and the
+    wait-for-swing branch has no timeout, so the walk parked at a
+    wedged door's seam forever and never rattled the chock. Held
+    leaves now outrank merely-closed ones.
+  - Harness: `aimHold` gained an `each` per-frame hook (resets
+    `bell.watchT` — the leg tests the wedge, not the gaze counterplay)
+    and the post-wedge teleport now faces INTO the room (the
+    atan2(-toC,-toC) form stares AT the door — frozen forever, no
+    rattle). Also 'the sealed warrant': 'gilt-spine-777' drifts to one
+    case → no warrant possible; re-pinned to 'warrant-2'
+    (warrants @18,@27, live case @39).
+- Traps worth keeping: spec-file tsc errors break the playwright
+  webServer's `npm run build` — it silently serves the STALE dist and
+  you test old code (re-verify build after touching spec types).
+  Multiple `-g` args to playwright can match only one test — run spec
+  files separately for a batch check.
+- Gates: tsc, lint, vitest 269, sim 5/5, books 9/9 + doors 4/4 e2e,
+  build.

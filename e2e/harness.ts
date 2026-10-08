@@ -37,7 +37,7 @@ export interface ThresholdG {
   spawned: Set<string>;
   doorTry: { id: string } | null;
   interaction: {
-    focused?: { prompt: string; holdTime?: number; id?: string } | null;
+    focused?: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; holdTime?: number; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } } | null;
     interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } }[];
   };
   entities: { id: string; state: string }[];
