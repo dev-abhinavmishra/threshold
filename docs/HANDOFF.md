@@ -3775,3 +3775,22 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   asserts the stock caption + held 0→1 → then the register rifle still
   lands +2 (heldAfterDrawer 3 — sighting stacks with the pilfer).
 - Gates: tsc, lint, 237 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 342 — the boards name your face
+
+- The wanted sheet's ×1.5 notice extension (s401) is now honest: a
+  catch in the EXTENDED band announces the boards bought it, once per
+  wanted episode per entity (`sheetNamed`, reset when wanted drops).
+  Grafter's gaze → '[the boards named your face — it reads you past
+  its reach]'; hauler/laundress ears → '[the boards named your step]'.
+  Normal-band catches keep their existing tells — the naming is only
+  for what the sheets sold.
+- No semantic change to ctx.wanted — the three callsites still widen
+  ×1.5; this sprint adds the readable tell, not counterplay. A per-room
+  'tear the sheet down' would need per-room deafen semantics (wanted
+  is a global flag) — still deferred.
+- e2e: audit leg phase 2.75 — with wanted up, teleport to the hauler's
+  room, emit a slam ~8.5m away (inside room bounds, yaw-aware — the
+  same math as pointInRoom), assert the boards caption. The grafter's
+  face-band is the same hook shape, not separately driven.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.

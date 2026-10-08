@@ -459,6 +459,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       marginalia: number; keys: Set<string>; unpaidTheft: number;
       interaction: { focused?: { prompt?: string; kind?: string } };
       entities: { id: string; demanded?: boolean; pursuing?: boolean }[];
+      sound: { emit(e: { x: number; y: number; z: number; intensity: number; category: string; caption: string }): void };
     };
     ga.enterUnderscript();
     ga.godMode = true;
@@ -582,6 +583,42 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       }
       ga.keys.delete('KeyE');
     }
+    // --- 2.75 the boards name your step — a catch the sheet bought ---
+    // sprint 342 — the wanted sheet's ×1.5 reach extension is honest:
+    // a hauler hearing in the 7..10.5m band announces the boards did it.
+    const hRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'hauler'));
+    let stepNamed = '';
+    if (wantedUp && hRoom) {
+      g.player.teleport(hRoom.origin.x, 0, hRoom.origin.z);
+      ga.currentRoom = hRoom.index;
+      let haulerEnt: { pos: { x: number; z: number } } | undefined;
+      for (let f = 0; f < 60; f++) {
+        g.frame();
+        haulerEnt = ga.entities.find((e) => e.id === 'hauler') as unknown as typeof haulerEnt;
+        if (haulerEnt) break;
+      }
+      if (haulerEnt?.pos) {
+        // emit a slam ~8.5m from it, kept inside its room (yaw-aware,
+        // same bounds math as pointInRoom)
+        const cyr = Math.cos(hRoom.yaw), syr = Math.sin(hRoom.yaw);
+        const hw = (hRoom.spec?.width ?? 10) / 2 - 0.4, hd = (hRoom.spec?.depth ?? 10) / 2 - 0.4;
+        for (const dir of [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]] as const) {
+          let done = false;
+          for (const dd of [8.5, 9, 9.5, 10, 8]) {
+            const ex = haulerEnt.pos.x + dir[0] * dd, ez = haulerEnt.pos.z + dir[1] * dd;
+            const lx = (ex - hRoom.origin.x) * cyr - (ez - hRoom.origin.z) * syr;
+            const lz = (ex - hRoom.origin.x) * syr + (ez - hRoom.origin.z) * cyr;
+            if (Math.abs(lx) > hw || Math.abs(lz) > hd) continue;
+            ga.sound.emit({ x: ex, y: 0.3, z: ez, intensity: 0.9, category: 'impact', caption: '[slam]' });
+            done = true;
+            break;
+          }
+          if (done) break;
+        }
+        for (let f = 0; f < 30; f++) g.frame();
+        stepNamed = caps.find((c) => /the boards named your step/.test(c)) ?? '';
+      }
+    }
     // back to his room — the settle point only mints at his desk
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
@@ -609,7 +646,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
-      wantedUp, sheets, sheetRead,
+      wantedUp, sheets, sheetRead, stepNamed,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -620,6 +657,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
   expect(result.tallySign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.wantedUp, JSON.stringify(result)).toBe(true); // the ledger named you — sheets up
   if ((result.sheets ?? 0) > 0) expect(result.sheetRead, JSON.stringify(result)).toMatch(/the sheet names your hands — 2 thefts/);
+  expect(result.stepNamed, JSON.stringify(result)).toMatch(/the boards named your step/);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);

@@ -342,6 +342,9 @@ export class Grafter extends Entity {
   // the room is alive; at 2+ it hunts in earnest (faster, longer-lived)
   private markReads = 0;
   private eagerCued = false;
+  /** The boards already named a face it read past its reach — once
+   *  per wanted episode. */
+  private sheetNamed = false;
   private get eager() { return this.markReads >= 2; }
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
@@ -423,8 +426,15 @@ export class Grafter extends Entity {
     const d = v3dist(this.pos, p.pos);
     // it notices the living within its range — hidden reads as furniture
     // your face on the crew boards reads a tier harder — the rubble
-    // marks the wanted at half again its usual reach
-    const notices = d < this.tuning.seeRange * (this.ctx.wanted?.() ? 1.5 : 1) && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
+    // marks the wanted at half again its usual reach. The sheet's
+    // extension is honest: a catch the boards bought says so aloud.
+    const wanted = this.ctx.wanted?.() === true;
+    if (!wanted) this.sheetNamed = false;
+    const notices = d < this.tuning.seeRange * (wanted ? 1.5 : 1) && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom;
+    if (notices && wanted && d >= this.tuning.seeRange && !this.sheetNamed) {
+      this.sheetNamed = true;
+      c.cue('chalk-mark', this.pos, '[the boards named your face — it reads you past its reach]', { severity: 'warn' });
+    }
     let speed = this.tuning.speed * (this.eager ? 1.15 : 1);
     if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= this.eager ? 1.75 : 1.4; }
 
@@ -689,6 +699,9 @@ export class Hauler extends Entity {
   private rig: RiggedFigure | null = null;
   private lampBulb: THREE.Mesh | null = null;
   private lampLight: THREE.PointLight | null = null;
+  /** The boards already named a step it heard past its ear — once per
+   *  wanted episode. */
+  private sheetNamed = false;
 
   /** The drag's world position — the interactable anchors here per frame. */
   sledgePos = v3();
@@ -786,8 +799,16 @@ export class Hauler extends Entity {
     if (e.source || !noiseCanBeHeard(e)) return;
     const room = c.rooms[this.spawnRoom];
     if (!room || !pointInRoom(room, e.x, e.z, 0.4)) return;
-    // the wanted get a wider ear — the boards told it to listen
-    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 7 * (this.ctx.wanted?.() ? 1.5 : 1)) return;
+    // the wanted get a wider ear — the boards told it to listen,
+    // and a step it only hears on their say-so says so aloud
+    const d = v3dist(this.pos, v3(e.x, 0, e.z));
+    const wanted = this.ctx.wanted?.() === true;
+    if (!wanted) this.sheetNamed = false;
+    if (d > 7 * (wanted ? 1.5 : 1)) return;
+    if (wanted && d > 7 && !this.sheetNamed) {
+      this.sheetNamed = true;
+      c.cue('chalk-mark', this.pos, '[the boards named your step — it heard past its ear]', { severity: 'warn' });
+    }
     this.alerted = v3(e.x, 0, e.z);
     this.struck = false;
     c.cue('grafter-grind', this.pos, '[the scrape halts — it sets the sledge down]', { severity: 'warn' });
@@ -909,6 +930,9 @@ export class Laundress extends Entity {
   private keened = false;
   /** The point she left the basin to inspect. */
   private alerted: Vec3 | null = null;
+  /** The boards already named a step she heard past the water — once
+   *  per wanted episode. */
+  private sheetNamed = false;
   get guarding(): boolean { return !this.alerted; }
 
   constructor() { super('laundress', ENTITY_TUNING.laundress); }
@@ -958,8 +982,16 @@ export class Laundress extends Entity {
     if (this.state !== 'engage' || e.source || !noiseCanBeHeard(e)) return;
     const room = this.ctx.rooms[this.spawnRoom];
     if (!pointInRoom(room, e.x, e.z, 0.4)) return;
-    // the wanted get a wider ear — the boards told her to listen
-    if (v3dist(this.pos, v3(e.x, 0, e.z)) > 6 * (this.ctx.wanted?.() ? 1.5 : 1)) return;
+    // the wanted get a wider ear — the boards told her to listen,
+    // and a step she only hears on their say-so says so aloud
+    const d = v3dist(this.pos, v3(e.x, 0, e.z));
+    const wanted = this.ctx.wanted?.() === true;
+    if (!wanted) this.sheetNamed = false;
+    if (d > 6 * (wanted ? 1.5 : 1)) return;
+    if (wanted && d > 6 && !this.sheetNamed) {
+      this.sheetNamed = true;
+      this.ctx.cue('chalk-mark', this.pos, '[the boards named your step — she heard past the water]', { severity: 'warn' });
+    }
     this.alerted = v3(e.x, 0, e.z);
     this.sniffUntil = this.ctx.now + 5;
   }
