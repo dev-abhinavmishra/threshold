@@ -5514,6 +5514,31 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 489–492 — the rail kept its dust, the clock stopped, the gap kept the drift & the battens left ghosts
+
+Sprint 489: `railDust` — picture-rail dust ledge + nail pits on
+lived-in walls (~35%); `waxRings` — glass rings + polish bloom on
+table tops (~40%); `basketShed` — wicker splinters under baskets/
+linen props (~40%).
+
+Sprint 490: `clockStopped` — dust film + frozen hands on clock
+faces (~45%); `shelfLip` — dust line + finger wipes on shelf
+fronts (~40%); `baseGrime` — grime tide + splash marks on wet-room
+baseboards (~50%).
+
+Sprint 491: `railGrime` — hand-darkened grip band on railings
+(~50%); `liftScuff` — heel scuffs + finger drags on lift/shutter
+doors (~50%); `doorDrift` — dust + grit combed under door gaps
+(~35%, doorPositions loop).
+
+Sprint 492: `battenGhost` — pale strips + nail pits on window
+glass (~30%); `jugRing` — stubborn rings + dried drips at vessels
+(~40%); `panelBow` — belly shadows + sprung nails on wall panels
+(~45%).
+
+Gates: tsc, lint, generation tests (12 new, 460 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 485–488 — the walls opened, the paper let go, the pegs kept the shapes & the feet wicked the damp
 
 Sprint 485: `lathExpose` — plaster wounds showing wood lath on

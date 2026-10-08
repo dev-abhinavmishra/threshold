@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1918,6 +1918,98 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ps.position.set(0, (dc?.[1] ?? 1.2) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
     prop.group.add(ps);
     if (!prop.group.name) prop.group.name = 'pin-scars';
+  }
+  // The table kept its rings — glass rings and a polish bloom on
+  // the tops that held glasses and plates for decades.
+  const TABLE_TOPS = new Set(['diningTable', 'consoleTable', 'roundTable', 'breakTable', 'coffeeTable', 'picnicTable']);
+  if (TABLE_TOPS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const wr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.9),
+      new THREE.MeshStandardMaterial({ map: waxRings(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    wr.name = 'wax-rings';
+    wr.userData.decalMat = true;
+    wr.rotation.x = -Math.PI / 2;
+    wr.rotation.z = rng.float() * Math.PI * 2;
+    wr.position.set(0, (dc?.[1] ?? 0.75) + 0.006, 0);
+    prop.group.add(wr);
+    if (!prop.group.name) prop.group.name = 'wax-rings';
+  }
+  // The clock stopped — dust film and frozen hands on the faces
+  // that haven't counted an hour in years.
+  const CLOCK_FACES = new Set(['grandfatherClock', 'wallClock', 'mantelClock', 'clock', 'alarmClock']);
+  if (CLOCK_FACES.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const cs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.55),
+      new THREE.MeshStandardMaterial({ map: clockStopped(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cs.name = 'clock-stopped';
+    cs.userData.decalMat = true;
+    cs.position.set(0, (dc?.[1] ?? 1.6) * 0.72, (dc?.[2] ?? 0.3) / 2 + 0.006);
+    prop.group.add(cs);
+    if (!prop.group.name) prop.group.name = 'clock-stopped';
+  }
+  // The shelf lip kept the dust — a grey line on the front edge,
+  // broken by the finger wipes of whoever last reached past.
+  const SHELF_KINDS = new Set(['shelf', 'bookshelf', 'shelfWood', 'stackShelf', 'linenShelf', 'pantryShelf']);
+  if (SHELF_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const sl = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.3),
+      new THREE.MeshStandardMaterial({ map: shelfLip(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sl.name = 'shelf-lip';
+    sl.userData.decalMat = true;
+    sl.position.set(0, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.35) / 2 + 0.006);
+    prop.group.add(sl);
+    if (!prop.group.name) prop.group.name = 'shelf-lip';
+  }
+  // The rail kept the hands — a darkened grip band worn into the
+  // handrail where decades of hands slid down.
+  if (spec.kind === 'railing' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const rgm = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.3),
+      new THREE.MeshStandardMaterial({ map: railGrime(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    rgm.name = 'rail-grime';
+    rgm.userData.decalMat = true;
+    rgm.rotation.x = -Math.PI / 2;
+    rgm.position.set(0, (dc?.[1] ?? 0.9) + 0.006, 0);
+    prop.group.add(rgm);
+    if (!prop.group.name) prop.group.name = 'rail-grime';
+  }
+  // The doors took the boots — heel scuffs and finger drags on the
+  // metal leaves of the lifts and shutters.
+  const METAL_DOORS = new Set(['liftDoors', 'dumbWaiterDoor', 'shutterDoor']);
+  if (METAL_DOORS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ls = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.8),
+      new THREE.MeshStandardMaterial({ map: liftScuff(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ls.name = 'lift-scuff';
+    ls.userData.decalMat = true;
+    ls.position.set(0, (dc?.[1] ?? 1.8) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(ls);
+    if (!prop.group.name) prop.group.name = 'lift-scuff';
+  }
+  // The panels bowed — a belly shadow and sprung nail heads where
+  // the boards pulled away from the frame.
+  const PANEL_KINDS = new Set(['wallPanel', 'woodPanel', 'screenPanels', 'hangingPanels']);
+  if (PANEL_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const pb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.8),
+      new THREE.MeshStandardMaterial({ map: panelBow(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pb.name = 'panel-bow';
+    pb.userData.decalMat = true;
+    pb.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
+    prop.group.add(pb);
+    if (!prop.group.name) prop.group.name = 'panel-bow';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

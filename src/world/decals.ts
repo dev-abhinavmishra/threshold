@@ -6087,3 +6087,466 @@ export function legRings(rng: Rng): THREE.Texture | null {
     g.fillRect(12, 78, 72, 18);
   });
 }
+
+/** Sprint 489 — the rail kept its dust: a grey ledge line on the picture rail, flyspecks and nail pits. */
+export function railDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust ledge — a soft band sitting on the rail's top edge
+    const ledge = g.createLinearGradient(0, 4, 0, 20);
+    ledge.addColorStop(0, 'rgba(170,160,146,0.55)');
+    ledge.addColorStop(1, 'rgba(170,160,146,0.05)');
+    g.fillStyle = ledge;
+    g.fillRect(4, 4, 88, 16);
+    // thicker drifts in the corners and at the ends
+    g.fillStyle = 'rgba(178,168,152,0.5)';
+    g.beginPath(); g.ellipse(12, 10, 10, 5, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(84, 9, 9, 4.5, 0, 0, Math.PI * 2); g.fill();
+    // flyspecks across the ledge
+    g.fillStyle = 'rgba(40,34,28,0.6)';
+    for (let i = 0; i < 26; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(5, 16), 0.8, 0.8);
+    }
+    // nail pits where hooks once bit the rail
+    g.fillStyle = 'rgba(36,30,24,0.65)';
+    for (let i = 0; i < 5; i++) {
+      const x = 16 + i * 16 + rng.range(-3, 3);
+      g.beginPath(); g.arc(x, 24 + rng.range(-2, 2), 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(x - 0.3, 24, 0.6, 4 + rng.float() * 3);
+    }
+    // paint line where the rail meets plaster — a shadow seam
+    g.strokeStyle = 'rgba(50,42,36,0.4)';
+    g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(2, 30); g.lineTo(94, 30); g.stroke();
+  });
+}
+
+/** Sprint 489 — the table kept its rings: glass rings, a polish bloom and crumbs under the plates. */
+export function waxRings(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // polish bloom — a broad soft sheen where the wax was last rubbed
+    const bloom = g.createRadialGradient(cx - 8, cy - 6, 4, cx - 8, cy - 6, 40);
+    bloom.addColorStop(0, 'rgba(200,190,168,0.28)');
+    bloom.addColorStop(1, 'rgba(200,190,168,0)');
+    g.fillStyle = bloom;
+    g.fillRect(0, 0, 96, 96);
+    // glass rings — three overlapping rings at different alphas
+    for (let i = 0; i < 3; i++) {
+      const x = cx + rng.range(-22, 22), y = cy + rng.range(-20, 20);
+      const r = 9 + rng.float() * 5;
+      g.strokeStyle = `rgba(60,50,40,${0.35 + rng.float() * 0.2})`;
+      g.lineWidth = 1.6 + rng.float();
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+      // the wet edge of the ring — a darker crescent
+      g.strokeStyle = 'rgba(40,32,26,0.4)';
+      g.lineWidth = 1;
+      g.beginPath(); g.arc(x, y, r, rng.range(0, 2), rng.range(2.5, 4.5)); g.stroke();
+    }
+    // crumb trail — a scatter line from the plate edge outward
+    g.fillStyle = 'rgba(140,120,90,0.55)';
+    const tx = rng.range(-1, 1), ty = rng.range(-1, 1);
+    const tl = Math.hypot(tx, ty) || 1;
+    for (let i = 0; i < 12; i++) {
+      const t = i / 11;
+      g.fillRect(cx + (tx / tl) * (8 + t * 30) + rng.range(-4, 4), cy + (ty / tl) * (8 + t * 30) + rng.range(-4, 4), 1.5, 1.2);
+    }
+    // knife score — fine parallel scratches in the sheen
+    g.strokeStyle = 'rgba(90,78,64,0.3)';
+    g.lineWidth = 0.6;
+    for (let i = 0; i < 5; i++) {
+      const x = cx + rng.range(-16, 16), y = cy + rng.range(-12, 12);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(6, 14), y + rng.range(-2, 3)); g.stroke();
+    }
+  });
+}
+
+/** Sprint 489 — the basket shed: wicker splinters and fiber wisps scattered under the weave. */
+export function basketShed(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // fiber halo — fine pale wisps spreading from the basket's foot
+    g.strokeStyle = 'rgba(160,146,118,0.35)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 22; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r0 = rng.range(10, 20), len = rng.range(12, 30);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      g.quadraticCurveTo(
+        cx + Math.cos(a) * (r0 + len * 0.5) + rng.range(-4, 4), cy + Math.sin(a) * (r0 + len * 0.5) + rng.range(-4, 4),
+        cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len));
+      g.stroke();
+    }
+    // wicker splinters — short straw slivers
+    g.fillStyle = 'rgba(148,130,100,0.6)';
+    for (let i = 0; i < 16; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(8, 42);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      g.save(); g.translate(x, y); g.rotate(rng.range(0, Math.PI));
+      g.fillRect(-rng.range(2, 5), -0.5, rng.range(4, 10), 1); g.restore();
+    }
+    // the shadow foot — where the basket always sits
+    const foot = g.createRadialGradient(cx, cy, 2, cx, cy, 16);
+    foot.addColorStop(0, 'rgba(46,38,30,0.45)');
+    foot.addColorStop(1, 'rgba(46,38,30,0)');
+    g.fillStyle = foot;
+    g.fillRect(cx - 18, cy - 18, 36, 36);
+    // dust between the splinters
+    g.fillStyle = 'rgba(120,110,94,0.3)';
+    for (let i = 0; i < 18; i++) {
+      g.fillRect(cx + rng.range(-30, 30), cy + rng.range(-30, 30), 1.1, 1);
+    }
+  });
+}
+
+/** Sprint 490 — the clock stopped: dust film, a frozen-hand shadow and the pendulum's rest mark. */
+export function clockStopped(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 40;
+    // the face — a pale disc dulled by film
+    g.fillStyle = 'rgba(200,192,174,0.5)';
+    g.beginPath(); g.arc(cx, cy, 26, 0, Math.PI * 2); g.fill();
+    // dust film heaviest at the rim
+    g.strokeStyle = 'rgba(140,130,116,0.5)';
+    g.lineWidth = 3;
+    g.beginPath(); g.arc(cx, cy, 25, 0, Math.PI * 2); g.stroke();
+    // tick ghosts
+    g.fillStyle = 'rgba(60,52,44,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      g.fillRect(cx + Math.cos(a) * 21 - 0.6, cy + Math.sin(a) * 21 - 0.6, 1.3, 1.3);
+    }
+    // the hands — frozen at the hour it died, plus their soot shadow
+    const ha = rng.range(0, Math.PI * 2), ma = rng.range(0, Math.PI * 2);
+    for (const [ang, len, w0] of [[ha, 13, 2.4], [ma, 19, 1.4]] as const) {
+      g.strokeStyle = 'rgba(30,26,22,0.75)';
+      g.lineWidth = w0;
+      g.beginPath(); g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(ang - Math.PI / 2) * len, cy + Math.sin(ang - Math.PI / 2) * len);
+      g.stroke();
+      // sun-bleach shadow each hand left on the face
+      g.strokeStyle = 'rgba(90,80,68,0.3)';
+      g.lineWidth = w0 + 1.4;
+      g.beginPath(); g.moveTo(cx, cy);
+      g.lineTo(cx + Math.cos(ang - Math.PI / 2 + 0.12) * len, cy + Math.sin(ang - Math.PI / 2 + 0.12) * len);
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(28,24,20,0.8)';
+    g.beginPath(); g.arc(cx, cy, 1.8, 0, Math.PI * 2); g.fill();
+    // pendulum rest-mark — the arc it swept until it slowed
+    g.strokeStyle = 'rgba(96,84,70,0.4)';
+    g.lineWidth = 1.2;
+    g.beginPath(); g.arc(cx, cy + 34, 18, Math.PI * 0.6, Math.PI * 0.9); g.stroke();
+    // dust speckle
+    g.fillStyle = 'rgba(150,140,126,0.35)';
+    for (let i = 0; i < 30; i++) {
+      g.fillRect(rng.range(14, 82), rng.range(8, 78), 0.9, 0.9);
+    }
+  });
+}
+
+/** Sprint 490 — the shelf lip kept the dust: a grey line on the front edge, broken by finger wipes. */
+export function shelfLip(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust line along the front lip
+    const lip = g.createLinearGradient(0, 6, 0, 22);
+    lip.addColorStop(0, 'rgba(168,158,142,0.6)');
+    lip.addColorStop(1, 'rgba(168,158,142,0.08)');
+    g.fillStyle = lip;
+    g.fillRect(2, 6, 92, 16);
+    // finger wipes — clear swipes where hands reached past the lip
+    g.fillStyle = 'rgba(52,46,40,0.4)';
+    for (let i = 0; i < 4; i++) {
+      const x = 14 + i * 20 + rng.range(-4, 4);
+      g.fillRect(x, 8, 3.5, 11 + rng.float() * 4);
+    }
+    // dust drifts piling at the ends
+    g.fillStyle = 'rgba(176,166,150,0.5)';
+    g.beginPath(); g.ellipse(10, 12, 9, 4, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(86, 13, 8, 3.6, 0, 0, Math.PI * 2); g.fill();
+    // moth specks and shelf-edge crumbs
+    g.fillStyle = 'rgba(46,40,34,0.55)';
+    for (let i = 0; i < 18; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(7, 18), 0.8, 0.7);
+    }
+    // the edge line itself — shadow under the lip
+    g.strokeStyle = 'rgba(40,34,28,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(2, 23); g.lineTo(94, 23); g.stroke();
+  });
+}
+
+/** Sprint 490 — the boards kept the grime: a dirt line and splash marks along the baseboard. */
+export function baseGrime(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the grime tide — darkest right at the board
+    const tide = g.createLinearGradient(0, 44, 0, 14);
+    tide.addColorStop(0, 'rgba(44,38,32,0.6)');
+    tide.addColorStop(1, 'rgba(44,38,32,0)');
+    g.fillStyle = tide;
+    g.fillRect(0, 14, 96, 30);
+    // splash marks rising off the floor — mop slops and spills
+    g.fillStyle = 'rgba(56,48,40,0.4)';
+    for (let i = 0; i < 9; i++) {
+      const x = rng.range(6, 90);
+      const h = 4 + rng.float() * 12;
+      g.beginPath();
+      g.ellipse(x, 42 - h / 2, 2 + rng.float() * 3, h / 2, rng.range(-0.2, 0.2), 0, Math.PI * 2);
+      g.fill();
+    }
+    // scuff kicks — heel marks along the board
+    g.strokeStyle = 'rgba(30,26,22,0.6)';
+    g.lineWidth = 1.8;
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 86);
+      g.beginPath();
+      g.moveTo(x, 40);
+      g.quadraticCurveTo(x + rng.range(-2, 4), 36, x + rng.range(2, 8), 40 - rng.float() * 5);
+      g.stroke();
+    }
+    // dust line caught in the seam between board and floor
+    g.strokeStyle = 'rgba(140,130,116,0.5)';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, 44); g.lineTo(96, 44); g.stroke();
+    // nail shadows where the board is pinned
+    g.fillStyle = 'rgba(36,30,26,0.5)';
+    for (let i = 0; i < 4; i++) {
+      g.fillRect(12 + i * 22 + rng.range(-3, 3), 42.5, 1, 2);
+    }
+  });
+}
+
+/** Sprint 491 — the rail kept the hands: a darkened grip band and polish sheen worn into the handrail. */
+export function railGrime(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the grip band — decades of hands darkened the wood along the top
+    const band = g.createLinearGradient(0, 8, 0, 26);
+    band.addColorStop(0, 'rgba(52,40,28,0.65)');
+    band.addColorStop(0.6, 'rgba(56,44,30,0.35)');
+    band.addColorStop(1, 'rgba(56,44,30,0)');
+    g.fillStyle = band;
+    g.fillRect(4, 8, 88, 18);
+    // polish sheen — the rubbed highlights between darker spans
+    g.fillStyle = 'rgba(190,170,140,0.3)';
+    for (let i = 0; i < 5; i++) {
+      const x = 10 + i * 18 + rng.range(-3, 3);
+      g.beginPath(); g.ellipse(x, 14, 6 + rng.float() * 4, 2.4, 0, 0, Math.PI * 2); g.fill();
+    }
+    // finger drag marks — short darker strokes across the band
+    g.strokeStyle = 'rgba(36,28,20,0.5)';
+    g.lineWidth = 1.1;
+    for (let i = 0; i < 8; i++) {
+      const x = rng.range(8, 86);
+      g.beginPath(); g.moveTo(x, 11); g.lineTo(x + rng.range(-3, 3), 20 + rng.float() * 4); g.stroke();
+    }
+    // ring dents where knuckles rapped the rail
+    g.fillStyle = 'rgba(28,22,18,0.5)';
+    for (let i = 0; i < 4; i++) {
+      g.beginPath(); g.ellipse(rng.range(12, 84), 13 + rng.range(-1, 3), 1.6, 0.9, 0, 0, Math.PI * 2); g.fill();
+    }
+    // dust in the underside shadow
+    g.fillStyle = 'rgba(150,140,124,0.3)';
+    for (let i = 0; i < 12; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(28, 40), 1, 0.8);
+    }
+  });
+}
+
+/** Sprint 491 — the doors took the boots: heel scuffs, finger drags and a kicked dent on the lift metal. */
+export function liftScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // heel scuffs — dark rubber arcs low on the door
+    g.strokeStyle = 'rgba(28,24,20,0.7)';
+    for (let i = 0; i < 5; i++) {
+      const x = cx + rng.range(-28, 28);
+      const y = 78 + rng.range(-6, 10);
+      g.lineWidth = 2 + rng.float() * 1.4;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + rng.range(4, 10), y - rng.range(3, 8), x + rng.range(10, 18), y - rng.range(2, 6));
+      g.stroke();
+    }
+    // the kicked dent — a shallow bright scrape
+    g.fillStyle = 'rgba(160,150,132,0.35)';
+    g.beginPath(); g.ellipse(cx + rng.range(-10, 10), 74, 6, 3, rng.range(-0.3, 0.3), 0, Math.PI * 2); g.fill();
+    // finger drags — greasy smears at push height
+    g.strokeStyle = 'rgba(48,40,32,0.45)';
+    g.lineWidth = 1.6;
+    for (let i = 0; i < 6; i++) {
+      const x = cx + rng.range(-24, 24);
+      g.beginPath(); g.moveTo(x, 46 + rng.range(-4, 4)); g.lineTo(x + rng.range(-2, 2), 60 + rng.range(-4, 8)); g.stroke();
+    }
+    // the seam shadow between the leaves
+    g.strokeStyle = 'rgba(22,18,16,0.65)';
+    g.lineWidth = 2.4;
+    g.beginPath(); g.moveTo(cx, 4); g.lineTo(cx, 92); g.stroke();
+    // oil crescents along the bottom track
+    g.fillStyle = 'rgba(30,26,22,0.5)';
+    for (let i = 0; i < 7; i++) {
+      g.beginPath(); g.ellipse(10 + i * 12, 91 + rng.range(-1, 2), 3, 1.4, 0, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 491 — the gap kept the drift: dust, grit and a dead leaf that blew under the door. */
+export function doorDrift(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the drift — a wind-combed ridge heaped against the door foot
+    const drift = g.createLinearGradient(0, 12, 0, 40);
+    drift.addColorStop(0, 'rgba(160,150,134,0.55)');
+    drift.addColorStop(0.7, 'rgba(150,140,124,0.3)');
+    drift.addColorStop(1, 'rgba(150,140,124,0)');
+    g.fillStyle = drift;
+    g.fillRect(6, 12, 84, 28);
+    // combed ripple lines — the draft shaped them
+    g.strokeStyle = 'rgba(120,110,96,0.4)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 5; i++) {
+      g.beginPath();
+      g.moveTo(8, 16 + i * 5);
+      g.quadraticCurveTo(48, 14 + i * 5 + rng.range(-2, 3), 88, 16 + i * 5);
+      g.stroke();
+    }
+    // a dead leaf pinned in the drift
+    g.fillStyle = 'rgba(96,80,50,0.6)';
+    const lx = 30 + rng.float() * 36;
+    g.beginPath(); g.ellipse(lx, 20, 4.5, 2.2, rng.range(-0.5, 0.5), 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(60,48,30,0.5)';
+    g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(lx - 4, 20); g.lineTo(lx + 4, 20); g.stroke();
+    // grit and splinters in the ridge
+    g.fillStyle = 'rgba(70,62,52,0.55)';
+    for (let i = 0; i < 16; i++) {
+      g.fillRect(rng.range(10, 86), rng.range(14, 34), 1.3, 1);
+    }
+    // the shadow seam under the door itself
+    g.strokeStyle = 'rgba(24,20,18,0.7)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(4, 10); g.lineTo(92, 10); g.stroke();
+  });
+}
+
+/** Sprint 492 — the battens left ghosts: pale strips and nail pits where boards crossed the glass. */
+export function battenGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // two crossed strips — the wood kept the light off the pane,
+    // so the glass stayed cleaner underneath
+    for (const [ang, len] of [[0.5, 70], [-0.45, 64]] as const) {
+      g.save();
+      g.translate(48, 48);
+      g.rotate(ang);
+      const strip = g.createLinearGradient(0, -5, 0, 5);
+      strip.addColorStop(0, 'rgba(190,184,168,0.1)');
+      strip.addColorStop(0.5, 'rgba(196,188,172,0.55)');
+      strip.addColorStop(1, 'rgba(190,184,168,0.1)');
+      g.fillStyle = strip;
+      g.fillRect(-len / 2, -5, len, 10);
+      g.restore();
+    }
+    // nail pits at each strip end — they were hammered hard
+    g.fillStyle = 'rgba(32,26,22,0.7)';
+    for (const [ang, len] of [[0.5, 70], [-0.45, 64]] as const) {
+      for (const s of [-1, 1]) {
+        const x = 48 + Math.cos(ang) * (len / 2) * s;
+        const y = 48 + Math.sin(ang) * (len / 2) * s;
+        g.beginPath(); g.arc(x, y, 1.3, 0, Math.PI * 2); g.fill();
+        // rust weep under each nail
+        g.fillRect(x - 0.4, y, 0.8, 4 + rng.float() * 3);
+      }
+    }
+    // grime in the pane's corners — where the boards couldn't shade it
+    g.fillStyle = 'rgba(60,52,44,0.3)';
+    for (const [cx0, cy0] of [[10, 10], [86, 12], [12, 84], [84, 86]] as const) {
+      g.beginPath(); g.ellipse(cx0, cy0, 8, 6, 0, 0, Math.PI * 2); g.fill();
+    }
+    // scratches where the board's edge swung and bit
+    g.strokeStyle = 'rgba(50,42,36,0.4)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const x = 30 + rng.range(-8, 30), y = 30 + rng.range(-8, 30);
+      g.beginPath(); g.arc(x, y, rng.range(10, 24), rng.range(0, 1), rng.range(1.5, 2.5)); g.stroke();
+    }
+  });
+}
+
+/** Sprint 492 — the jug wept rings: a sticky ring and drip tear under the vessels nobody moves. */
+export function jugRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // the ring — a stubborn stain where the base always stands
+    g.strokeStyle = 'rgba(72,56,38,0.6)';
+    g.lineWidth = 3.4;
+    g.beginPath(); g.arc(cx, cy, 16, 0, Math.PI * 2); g.stroke();
+    // doubled ghost where it stood once before
+    g.strokeStyle = 'rgba(84,66,44,0.3)';
+    g.lineWidth = 2.4;
+    g.beginPath(); g.arc(cx + rng.range(-8, 8), cy + rng.range(-6, 6), 15, 0, Math.PI * 2); g.stroke();
+    // the drip tear — one run that escaped down the side and dried
+    const da = rng.range(0, Math.PI * 2);
+    g.strokeStyle = 'rgba(78,60,40,0.5)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(da) * 16, cy + Math.sin(da) * 16);
+    g.quadraticCurveTo(
+      cx + Math.cos(da) * 22 + rng.range(-3, 3), cy + Math.sin(da) * 24,
+      cx + Math.cos(da) * 26 + rng.range(-4, 4), cy + Math.sin(da) * 30 + rng.range(0, 6));
+    g.stroke();
+    // the tear's bead
+    g.fillStyle = 'rgba(70,54,36,0.55)';
+    g.beginPath(); g.arc(cx + Math.cos(da) * 27, cy + Math.sin(da) * 31, 2.2, 0, Math.PI * 2); g.fill();
+    // dust pooled inside the ring — the dust found the rim but not the middle
+    g.fillStyle = 'rgba(150,140,124,0.25)';
+    for (let i = 0; i < 20; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(12, 18);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.2, 1);
+    }
+  });
+}
+
+/** Sprint 492 — the panels bowed: a belly shadow, sprung nail heads and a cracked seam. */
+export function panelBow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // belly shadow — the panel bows outward, darkest at its sprung edge
+    const belly = g.createRadialGradient(cx, 48, 6, cx, 48, 40);
+    belly.addColorStop(0, 'rgba(150,138,120,0.1)');
+    belly.addColorStop(0.75, 'rgba(46,38,30,0.35)');
+    belly.addColorStop(1, 'rgba(46,38,30,0.55)');
+    g.fillStyle = belly;
+    g.fillRect(0, 0, 96, 96);
+    // the sprung edge — a dark gap opening along one side
+    const se = rng.bool(0.5) ? 8 : 88;
+    const gap = g.createLinearGradient(se, 0, se === 8 ? 22 : 74, 0);
+    gap.addColorStop(0, 'rgba(20,16,13,0.75)');
+    gap.addColorStop(1, 'rgba(20,16,13,0)');
+    g.fillStyle = gap;
+    g.fillRect(Math.min(se, se === 8 ? 22 : 74), 0, 14, 96);
+    // sprung nail heads — bright dots popped proud of the face
+    g.fillStyle = 'rgba(170,158,140,0.7)';
+    for (let i = 0; i < 5; i++) {
+      const x = se === 8 ? rng.range(10, 24) : rng.range(72, 86);
+      const y = 14 + i * 16 + rng.range(-4, 4);
+      g.beginPath(); g.arc(x, y, 1.4, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(30,24,20,0.5)';
+      g.fillRect(x - 0.4, y + 1, 0.8, 2.5);
+      g.fillStyle = 'rgba(170,158,140,0.7)';
+    }
+    // the cracked seam — a hairline split following the grain
+    g.strokeStyle = 'rgba(34,28,22,0.6)';
+    g.lineWidth = 1;
+    g.beginPath();
+    let sx = cx + rng.range(-10, 10);
+    g.moveTo(sx, 8);
+    for (let i = 0; i < 5; i++) {
+      sx += rng.range(-4, 5);
+      g.lineTo(sx, 16 + i * 14);
+    }
+    g.stroke();
+    // dust trapped in the belly shadow
+    g.fillStyle = 'rgba(140,130,116,0.3)';
+    for (let i = 0; i < 20; i++) {
+      g.fillRect(rng.range(20, 76), rng.range(16, 80), 1, 0.9);
+    }
+  });
+}
