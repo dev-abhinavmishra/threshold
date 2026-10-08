@@ -147,10 +147,31 @@ function PauseMenu() {
   );
 }
 
+/* ==================== BOOKS ==================== */
+
+// the books are read back as epitaph lines — victory closes them,
+// death leaves them open on you
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number } | undefined): string[] {
+  const lines: string[] = [];
+  if (!books) return lines;
+  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods;
+  if (total === 0) {
+    lines.push('every book closed before the door did');
+  } else {
+    if (books.thefts > 0) lines.push(`the tally still reads ${books.thefts} ${books.thefts === 1 ? 'theft' : 'thefts'}`);
+    if (books.held > 0) lines.push(`the register holds your name in ${books.held} ${books.held === 1 ? 'line' : 'lines'}`);
+    if (books.asks > 0) lines.push(`the index keeps ${books.asks} of your questions`);
+    if (books.hotCoin > 0) lines.push(`${books.hotCoin} marked ${books.hotCoin === 1 ? 'coin' : 'coins'} left in your purse — they still ring`);
+    if (books.hotGoods > 0) lines.push(`${books.hotGoods} marked ${books.hotGoods === 1 ? 'ware' : 'wares'} went home on your back`);
+  }
+  return lines;
+}
+
 /* ==================== DEATH ==================== */
 
 function DeathScreen() {
   const death = useGameStore((s) => s.deathInfo);
+  const lines = bookLines(death?.books);
   return (
     <div className="overlay death">
       <div className="menu-inner">
@@ -158,6 +179,12 @@ function DeathScreen() {
         <p className="death-cause">{death ? (DEATH_NAMES[death.cause] ?? death.cause) : null}</p>
         <p className="death-hint">{death?.hint}</p>
         <p className="death-note">The Archive remembers: a new document may be unlocked.</p>
+        {lines.length > 0 && (
+          <div className="stats books">
+            <div>the books stay open on you:</div>
+            {lines.map((l, i) => <div key={i}>· {l}</div>)}
+          </div>
+        )}
         <div className="menu-buttons">
           <button className="btn primary" onClick={() => getGame()?.retryFromCheckpoint()}>Retry from checkpoint</button>
           <button className="btn" onClick={() => getGame()?.quitToMenu()}>Abandon run</button>
@@ -175,19 +202,7 @@ function VictoryScreen() {
   // the books close at the door — the ledgers accrue all run and the
   // exit reads them back as epitaph lines
   const books = v?.books;
-  const bookLines: string[] = [];
-  if (books) {
-    const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods;
-    if (total === 0) {
-      bookLines.push('every book closed before the door did');
-    } else {
-      if (books.thefts > 0) bookLines.push(`the tally still reads ${books.thefts} ${books.thefts === 1 ? 'theft' : 'thefts'}`);
-      if (books.held > 0) bookLines.push(`the register holds your name in ${books.held} ${books.held === 1 ? 'line' : 'lines'}`);
-      if (books.asks > 0) bookLines.push(`the index keeps ${books.asks} of your questions`);
-      if (books.hotCoin > 0) bookLines.push(`${books.hotCoin} marked ${books.hotCoin === 1 ? 'coin' : 'coins'} left in your purse — they still ring`);
-      if (books.hotGoods > 0) bookLines.push(`${books.hotGoods} marked ${books.hotGoods === 1 ? 'ware' : 'wares'} went home on your back`);
-    }
-  }
+  const lines = bookLines(books);
   return (
     <div className="overlay victory">
       <div className="menu-inner">
@@ -199,10 +214,10 @@ function VictoryScreen() {
           <div>Imprints earned: {v?.stats.imprintsEarned ?? 0}</div>
           <div>Underscript: {v?.stats.underscriptCompleted ? 'completed' : `${v?.stats.underscriptDeepest ?? 0} rooms deep`}</div>
         </div>
-        {bookLines.length > 0 && (
+        {lines.length > 0 && (
           <div className="stats books">
             <div>the books at your back:</div>
-            {bookLines.map((l, i) => <div key={i}>· {l}</div>)}
+            {lines.map((l, i) => <div key={i}>· {l}</div>)}
           </div>
         )}
         <div className="menu-buttons">
