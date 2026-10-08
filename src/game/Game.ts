@@ -5599,6 +5599,27 @@ export class Game {
         }
         pos.needsUpdate = true;
       }
+      // Draft motes — the seam blows cold air under a watched door:
+      // particles slide inward along the door's inward axis, wrapping a
+      // short run, swaying slightly across the gap.
+      if (built.draft) {
+        const pos = built.draft.geometry.getAttribute('position') as THREE.BufferAttribute;
+        const dirx = built.draft.userData.dirx as number;
+        const dirz = built.draft.userData.dirz as number;
+        const ox = built.draft.userData.ox as number;
+        const oz = built.draft.userData.oz as number;
+        const speeds = built.draft.userData.speeds as Float32Array;
+        const phases = built.draft.userData.phases as Float32Array;
+        const spread = built.draft.userData.spread as Float32Array;
+        const px = -dirz, pz = dirx;
+        for (let pi = 0; pi < pos.count; pi++) {
+          const dist = (t * speeds[pi] + phases[pi] * 0.55) % 0.55;
+          const lat = spread[pi] * (1 + 0.3 * Math.sin(t * 3 + pi));
+          pos.setX(pi, ox + dirx * dist + px * lat);
+          pos.setZ(pi, oz + dirz * dist + pz * lat);
+        }
+        pos.needsUpdate = true;
+      }
       if (this.dread < 0.55) this.clockT += this.clock.dt;
       // Powered devices (LEDs, monitors, tuned screens) share the room's
       // mains — they dim and die with its lights. Open flame does not.

@@ -1948,3 +1948,18 @@ describe('the route reads (sprint 441)', () => {
     expect(lanes, 'no worn lanes').toBeGreaterThan(8);
   });
 });
+
+describe('the seam breathes (sprint 442)', () => {
+  it('foreshadowed rooms blow a cold draft under the onward door', () => {
+    let drafts = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        if (built.draft) drafts++;
+      }
+    }
+    expect(drafts, 'no seam drafts').toBeGreaterThan(4);
+  });
+});

@@ -5196,3 +5196,13 @@ Game.die() from the same five fields.
   door pads. rotation.z=atan2(ux,uz) maps texture +v to the walk
   direction. Named 'worn-lane'.
 - Vitest 287: 'the route reads'. Gates: tsc, lint, 103/103.
+
+## sprint 442 — the seam breathes
+
+- New BuiltRoom.draft Points field: 22 cool-tinted motes slide through
+  the onward door's seam when the room carries room.foreshadow or
+  room.milestoneTell — the tell marks the wall, this marks the air.
+  userData dirx/dirz (inward), ox/oz (door center), speeds/phases/spread;
+  Game.ts animates dist=(t*speed+phase*0.55)%0.55 along dir + lateral
+  sway perpendicular. draftMat: additive 0xc4ccd8 size 0.035.
+- Vitest 288: 'the seam breathes'. Gates: tsc, lint, 104/104.
