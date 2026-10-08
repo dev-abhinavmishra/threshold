@@ -3979,3 +3979,127 @@ export function greaseCloud(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Rug curl — the shadow a curling rug edge throws and the grit
+ * trapped under it: a dark lip line with dust at the lift. */
+export function rugCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the lift shadow — a darkened line along the curling edge
+    const cy = 22 + rng.float() * 8;
+    ctx.strokeStyle = 'rgba(38,32,26,0.5)';
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(8, cy);
+    ctx.bezierCurveTo(30, cy - 6 - rng.float() * 6, 66, cy + 4 + rng.float() * 4, 88, cy - 2);
+    ctx.stroke();
+    // pale curl face — the rug's underside catching light
+    ctx.strokeStyle = `rgba(196,182,152,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(10, cy - 3);
+    ctx.bezierCurveTo(32, cy - 9 - rng.float() * 5, 64, cy + 1, 86, cy - 5);
+    ctx.stroke();
+    // trapped grit — dust clods the lip keeps
+    for (let i = 0; i < 12; i++) {
+      const t = rng.float();
+      const gx = 10 + t * 76;
+      const gy = cy + 3 + rng.float() * 8 + Math.sin(t * Math.PI) * 2;
+      ctx.fillStyle = `rgba(60,52,42,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 0.7 + rng.float() * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // pile crushed flat past the lift
+    ctx.strokeStyle = 'rgba(150,138,114,0.2)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(14 + i * 12, cy + 8);
+      ctx.lineTo(16 + i * 12, cy + 14 + rng.float() * 4);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Bath ring — the tide line a tub keeps: a grey-green mineral band
+ * running the rim, hair caught in the scum. */
+export function bathRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // the tide band — a horizontal grey-green seam along the tub wall
+    const ty = 24 + rng.float() * 6;
+    ctx.fillStyle = `rgba(96,98,80,${0.3 + rng.float() * 0.15})`;
+    ctx.fillRect(6, ty, 84, 4.5);
+    ctx.fillStyle = 'rgba(120,122,100,0.2)';
+    ctx.fillRect(6, ty + 4.5, 84, 2);
+    // scum film below the ring
+    const g = ctx.createLinearGradient(0, ty + 5, 0, 58);
+    g.addColorStop(0, 'rgba(96,98,80,0.12)');
+    g.addColorStop(1, 'rgba(96,98,80,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(6, ty + 5, 84, 22);
+    // drips down from the line
+    for (let i = 0; i < 5; i++) {
+      const dx = 12 + rng.float() * 72;
+      ctx.strokeStyle = `rgba(100,102,84,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(dx, ty + 4);
+      ctx.lineTo(dx + (rng.float() - 0.5) * 2, ty + 8 + rng.float() * 14);
+      ctx.stroke();
+    }
+    // hair caught in the scum — dark threads across the band
+    for (let i = 0; i < 6; i++) {
+      const hx = 14 + rng.float() * 68;
+      ctx.strokeStyle = `rgba(44,38,32,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(hx, ty - 1 + rng.float() * 5);
+      ctx.quadraticCurveTo(hx + 3 + rng.float() * 4, ty + 2, hx + 6 + rng.float() * 5, ty - 1 + rng.float() * 6);
+      ctx.stroke();
+    }
+    // rust spot at the drain end
+    ctx.fillStyle = 'rgba(110,66,38,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(80 + rng.float() * 8, ty + 10, 4, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Wardrobe dark — the deep untouched shadow behind a wardrobe that
+ * hasn't moved since it arrived: absolute darkness, dust at the
+ * crack, a thing the light never reached. */
+export function wardrobeDark(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // the crack — near-black vertical slit where the doors never
+    // quite met
+    const cx = 48 + (rng.float() - 0.5) * 4;
+    const g = ctx.createLinearGradient(cx - 6, 0, cx + 6, 0);
+    g.addColorStop(0, 'rgba(20,16,14,0)');
+    g.addColorStop(0.5, 'rgba(16,12,10,0.8)');
+    g.addColorStop(1, 'rgba(20,16,14,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 128);
+    // the slit itself — near absolute
+    ctx.fillStyle = 'rgba(10,8,7,0.85)';
+    ctx.fillRect(cx - 1.2, 10, 2.4 + rng.float(), 106);
+    // dust fuzz on the door edges — the only thing the slit gave up
+    for (let i = 0; i < 20; i++) {
+      const side = rng.bool(0.5) ? -1 : 1;
+      ctx.fillStyle = `rgba(170,160,140,${0.1 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(cx + side * (1.6 + rng.float() * 3), 12 + rng.float() * 100, 0.5 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // keyhole glint — one dark dot where the lock was
+    ctx.fillStyle = 'rgba(14,10,8,0.7)';
+    ctx.beginPath();
+    ctx.arc(cx, 66, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // escutcheon shadow ring
+    ctx.strokeStyle = 'rgba(60,50,40,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, 66, 3.4, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
