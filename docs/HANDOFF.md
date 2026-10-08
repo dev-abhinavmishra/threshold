@@ -5112,3 +5112,15 @@ Game.die() from the same five fields.
 - Kind check: pipe props are 'pipeRun'/'indPipes' (no 'pipes'/'pipeCluster').
 - Vitest 278: 'the drip keeps time'. Gates: tsc, lint, generation 94/94.
   Dressing only — no e2e leg.
+
+## sprint 432 — the leaf remembers (also repairs s431 break)
+
+- Door leaves polish their travel: quarter-arc swing-wear decal at each
+  door hinge in lobby/guest/corridor/records/gallery (45% roll).
+  Hinge pos + leaf-tip tangent computed per wall; texture +U rides the
+  tangent, +V falls on inward via rotate90 — rotation.z=atan2(-tz,tx).
+  Named 'swing-wear'.
+- FIX: s431's drip filter compared against 'pipeRun'/'pipeCluster' which
+  are NOT PropKind (model names, not kinds) — main was broken. Kinds are
+  hangingCable/conduitRun/indPipes/ductRun/ductCirc/ductRect.
+- Vitest 279: 'the leaf remembers'. Gates: tsc, lint, generation 95/95.

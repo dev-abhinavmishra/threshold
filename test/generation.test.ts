@@ -1813,3 +1813,18 @@ describe('the drip keeps time (sprint 431)', () => {
     expect(drips, 'no drip spots').toBeGreaterThan(8);
   });
 });
+
+describe('the leaf remembers (sprint 432)', () => {
+  it('door leaves polish swing arcs into lived-in floors', () => {
+    let arcs = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'swing-wear') arcs++; });
+      }
+    }
+    expect(arcs, 'no swing arcs').toBeGreaterThan(15);
+  });
+});
