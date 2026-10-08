@@ -5514,6 +5514,25 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 499–501 — the head kept its oil, the ribbon kept the words & the plants died standing
+
+Sprint 499: `headGrease` — hair-oil bloom on headboards (~40%);
+`frameRattle` — rub arcs + plaster chips behind beds (~40%);
+`seatSag` — settle-dips + pulled buttons on sofas/settees (~45%).
+
+Sprint 500: `platenInk` — ribbon smudge + ghost lines on
+typewriters (~50%); `sparkScorch` — carbon bloom on breaker
+panels (~50%); `wheelRuts` — twin track decals trailing
+wheelchairs/gurneys/carts (~45%).
+
+Sprint 501: `plantDeath` — shed-leaf rings + spilled soil at
+plants/planters (~50%); `jarDust` — shoulder film + lid cap on
+jars/bottles (~40%); `stoolDrag` — pivot gouges + kick scuffs
+around stools/benches (~45%).
+
+Gates: tsc, lint, generation tests (9 new, 503 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 496–498 — the ladder left its rub, the range kept its grease & the mirror crept
 
 Sprint 496: `ladderRub` — twin polish streaks + kicked feet where
