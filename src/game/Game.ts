@@ -1270,6 +1270,16 @@ export class Game {
         ? { sfx: base.sfx, text: ROUSED_LINES[sched.entity] ?? '[pacing — it heard you]', sev: 'danger' as const }
         : base;
     }
+    // the count's lamp carries through the seam too — ears tell you
+    // which room the sweep is in before you ever see the glow
+    if (this.space === 'under' && this.checker.active) {
+      const ci = underRoomOf(this.route?.underRooms ?? [], this.checker.position);
+      if (ci >= 0 && this.route?.underRooms[ci] === target) {
+        return { sfx: 'floor-creak', text: this.checker.lampLit
+          ? '[the count’s lamp is lit in there — the sweep is inside]'
+          : '[the count walks blind in there — stripped, but still sweeping]', sev: 'danger' as const };
+      }
+    }
     // a primed set piece runs already — its work carries through the seam
     const ms = this.milestones.get(target.index);
     if (ms?.primed && ms.primedAudible) {

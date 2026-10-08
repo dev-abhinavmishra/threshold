@@ -4767,3 +4767,16 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 262, sim 5/5, locker leg green
   (itemize → join → named → cut → rot → shelf-refuse → buyback),
   build.
+
+## sprint 386 — the seam carries the lamp too
+
+- A door-listen now answers the sweep: under doors into the room the
+  checker currently walks return '[the count's lamp is lit in there —
+  the sweep is inside]' (danger), or '[the count walks blind in there
+  — stripped, but still sweeping]' when the lamp's been stripped.
+  Ears give the lamp's position before the glow does — the last piece
+  of the count readable only by sight.
+- Sits below a scheduled entity's own read (permanent wins over
+  transient), above the primed-milestone/nothing-moves fall-through.
+- Gates: tsc, lint, vitest 266, sim 5/5, build. e2e leg deferred to
+  the next batched verification pass.
