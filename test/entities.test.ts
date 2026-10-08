@@ -1977,6 +1977,28 @@ describe('the Auditor (sprint 277)', () => {
     expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
     a.dispose();
   });
+
+  it('rifle the tally drawer — hands in HIS book open it on the spot (sprint 304)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 0, // a clean ledger — the rummage itself is the crime
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 2.5; ctx.player.pos.z = 3.2; // hands at his desk
+    const a = new Auditor();
+    a.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'tallyDrawer'),
+      'the drawer registers at spawn').toBe(true);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.demanded, 'no demand on clean hands').toBe(false);
+    a.rifledTally();
+    expect(a.demanded, 'the book slaps open at your name').toBe(true);
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'audit'),
+      'the settle point comes up').toBe(true);
+    a.dispose();
+  });
 });
 
 describe('the House Detective (sprint 278)', () => {
@@ -2013,6 +2035,27 @@ describe('the House Detective (sprint 278)', () => {
     expect(d.warranted, 'the wire is live').toBe(true);
     const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
     expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'), 'the settle point registers').toBe(true);
+    d.dispose();
+  });
+
+  it('rifle the register drawer — your face files itself, no slow look (sprint 304)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 0, // a clean register — the rummage itself is the crime
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 2.5; ctx.player.pos.z = 3.2; // hands at his counter
+    const d = new Detective();
+    d.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'registerDrawer'),
+      'the drawer registers at spawn').toBe(true);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'no clock on clean hands').toBe(false);
+    d.rifledRegister();
+    expect(d.clocked, 'your face files itself').toBe(true);
+    expect(d.warranted, 'the wire is live already').toBe(true);
     d.dispose();
   });
 
@@ -2078,6 +2121,92 @@ describe('the House Detective (sprint 278)', () => {
     expect(d.warranted).toBe(false);
     const rm = ctx.removeInteractable as ReturnType<typeof vi.fn>;
     expect(rm.mock.calls.length, 'the settle point comes down').toBeGreaterThan(0);
+    d.dispose();
+  });
+
+  it('pull the house line before the look — he files a face, but the wire never starts (sprint 309)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const lineCut = vi.fn();
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    const add = ctx.addInteractable as ReturnType<typeof vi.fn>;
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'houseLine'),
+      'the junction box registers at spawn').toBe(true);
+    d.pulledLine();
+    expect(lineCut, 'the dead wire is billed as damages').toHaveBeenCalledTimes(1);
+    expect(d.clocked, 'his phone dies on the desk — a face is filed on the spot').toBe(true);
+    expect(d.warranted, 'the broadcast never starts').toBe(false);
+    const cue = ctx.cue as ReturnType<typeof vi.fn>;
+    expect(cue.mock.calls.some((c) => /dead in his hand/.test(String(c[2]))),
+      'the dead-line tell').toBe(true);
+    // slip a fresh room — nothing rings
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    emit.mockClear();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'detective'),
+      'no ring on a dead line').toBe(false);
+    // still settleable — the book stays open
+    expect(add.mock.calls.some((c) => (c[0] as { kind: string }).kind === 'settle'),
+      'the settle point still registers').toBe(true);
+    d.settled();
+    expect(d.clocked).toBe(false);
+    d.dispose();
+  });
+
+  it('pull the house line mid-warrant — the broadcast dies, the book stays open', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const lineCut = vi.fn();
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 60 && !d.warranted; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.warranted).toBe(true);
+    d.pulledLine();
+    expect(d.warranted, 'the wire dies mid-run').toBe(false);
+    expect(d.clocked, 'he already had your face').toBe(true);
+    expect(lineCut).toHaveBeenCalledTimes(1);
+    // a second pull is a no-op — one-shot sabotage
+    d.pulledLine();
+    expect(lineCut).toHaveBeenCalledTimes(1);
+    d.dispose();
+  });
+
+  it('outrunning a dead line still cools the face-ledger', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const rooms = [deskRoom, hallRoom];
+    for (let i = 2; i <= 12; i++) {
+      rooms.push({ ...hallRoom, index: i, origin: { x: 0, y: 0, z: i * 12 },
+        entryPos: { x: 0, y: 0, z: i * 12 - 6 }, exitPos: { x: 0, y: 0, z: i * 12 + 6 } } as unknown as RoomInstance);
+    }
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+      lineCut: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    d.pulledLine();
+    expect(d.clocked).toBe(true);
+    expect(d.warranted).toBe(false);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12 * 12; // past the reach
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the register cools even with the wire dead').toBe(false);
     d.dispose();
   });
 });
@@ -2259,6 +2388,50 @@ describe('the watched hall (sprint 285)', () => {
     expect(Math.hypot(reports[0][0].x - 0, reports[0][0].z - 2)).toBeLessThan(0.2);
   });
 
+  it('a held settle files a witness line — once per eye, however often it reports', async () => {
+    const { h, ctx } = await pinCam(false);
+    const eyeFiled = vi.fn();
+    ctx.eyeFiled = eyeFiled;
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05);
+    step(h, ctx, 0, 2, 170); // ~8.5s — long enough for two reports (5s cooldown)
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    const reports = emit.mock.calls.filter((c) => c[0].category === 'machine');
+    expect(reports.length, 'the eye reported more than once').toBeGreaterThanOrEqual(2);
+    expect(eyeFiled, 'one line per eye — a re-report is not a new witness').toHaveBeenCalledTimes(1);
+    expect(ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('your face is filed'), expect.anything());
+  });
+
+  it('a marked face settles faster — the register talks back', async () => {
+    const framesToSettle = async (owed: number) => {
+      const { h, ctx } = await pinCam(false);
+      ctx.heldOwed = () => owed;
+      ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+      h.update(ctx, 0.05);
+      let f = 0;
+      for (; f < 600; f++) {
+        ctx.player.pos.x = Math.sin(f) * 0.02; ctx.player.pos.z = 2;
+        ctx.now += 0.05; h.update(ctx, 0.05);
+        if ((ctx.cue as ReturnType<typeof vi.fn>).mock.calls
+          .some((c) => String(c[2]).includes('settles on you'))) break;
+      }
+      return { f, ctx };
+    };
+    const stranger = await framesToSettle(0);
+    const marked = await framesToSettle(3);
+    expect(marked.f, 'a filed face settles ~1.6x faster')
+      .toBeLessThan(stranger.f * 0.85);
+    expect(marked.ctx.cue).toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('register talks back'), expect.anything());
+    expect(stranger.ctx.cue).not.toHaveBeenCalledWith('steam-hiss', expect.anything(),
+      expect.stringContaining('register talks back'), expect.anything());
+    // one warn per marking — the flag holds across many reports
+    const talks = (marked.ctx.cue as ReturnType<typeof vi.fn>).mock.calls
+      .filter((c) => String(c[2]).includes('register talks back')).length;
+    expect(talks).toBe(1);
+  });
+
   it('still feet pass it — no settle, no report', async () => {
     const { h, ctx } = await pinCam(false);
     ctx.player.pos.x = 0; ctx.player.pos.z = 2;
@@ -2295,16 +2468,18 @@ describe('the Filer’s runner (sprint 300)', () => {
   }
   async function filed() {
     const { Filer } = await import('../src/entities/setpieces');
+    const wordFiled = vi.fn();
     const ctx = makeCtx(chain, {
       currentRoomIndex: 0,
       trailOwed: () => 3,
+      wordFiled,
       addInteractable: vi.fn(), removeInteractable: vi.fn(),
     });
     ctx.player.pos.x = 0; ctx.player.pos.z = 0;
     const f = new Filer();
     f.spawn(ctx);
     for (let i = 0; i < 80 && !f.posted; i++) { ctx.now += 0.05; f.update(0.05); }
-    return { f, ctx };
+    return { f, ctx, wordFiled };
   }
 
   it('goes out on foot — the word travels the spine, catchable', async () => {
@@ -2319,10 +2494,11 @@ describe('the Filer’s runner (sprint 300)', () => {
   });
 
   it('cut the runner — the word dies with it, the card comes out torn', async () => {
-    const { f, ctx } = await filed();
+    const { f, ctx, wordFiled } = await filed();
     expect(f.runnerOut).toBe(true);
     f.cutRunner();
     expect(f.runnerOut).toBe(false);
+    expect(wordFiled, 'a torn card never reaches the stairs').not.toHaveBeenCalled();
     expect(f.posted, 'the word never lands').toBe(false);
     expect(f.filed, 'the card comes out torn').toBe(false);
     const removes = (ctx.removeEntityMesh as ReturnType<typeof vi.fn>).mock.calls;
@@ -2332,12 +2508,13 @@ describe('the Filer’s runner (sprint 300)', () => {
     f.dispose();
   });
 
-  it('let it run — the word is delivered, past recall', async () => {
-    const { f, ctx } = await filed();
+  it('let it run — the word is delivered, past recall, and files upstairs', async () => {
+    const { f, ctx, wordFiled } = await filed();
     expect(f.runnerOut).toBe(true);
     for (let i = 0; i < 900 && f.runnerOut; i++) { ctx.now += 0.05; f.update(0.05); }
     expect(f.runnerOut, 'the courier is gone').toBe(false);
     expect(f.posted, 'the word is out — the halls still listen').toBe(true);
+    expect(wordFiled, 'the card lands in the house register').toHaveBeenCalledTimes(1);
     f.dispose();
   });
 });

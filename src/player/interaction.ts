@@ -8,10 +8,10 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip'
-  | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile'
+  | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift' | 'houseLine'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'pry' | 'cutWord';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'clock' | 'valve' | 'hearth' | 'phone' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'stripCheck' | 'fix' | 'ask' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book';
 
 export interface Interactable {
   kind: InteractKind;
@@ -108,6 +108,7 @@ export class InteractionSystem {
         else if (contains) prompt = `Take ${contains.replace(/([A-Z])/g, ' $1').trim()}`;
         if (sock.meta.shop !== undefined) { kind = 'shop'; prompt = 'Inspect wares'; }
         if (sock.meta.broker !== undefined) { kind = 'shop'; prompt = 'Trade wares'; }
+        if (sock.meta.clerk !== undefined) { kind = 'shop'; prompt = 'Buy at the counter'; }
         if (sock.meta.puzzle) { kind = 'puzzle'; prompt = 'Examine mechanism'; }
         if (sock.meta.relay) { kind = 'relay'; prompt = 'Take Resonance Relay'; }
         if (sock.meta.board) { kind = 'board'; prompt = 'Use routing board'; }
@@ -165,6 +166,14 @@ export class InteractionSystem {
           kind = 'returnSlip';
           prompt = `File a return slip — ${sock.meta.price as number} marginalia`;
         }
+        if (sock.meta.affidavit !== undefined) {
+          kind = 'affidavit';
+          prompt = `File an affidavit — ${sock.meta.price as number} imprints`;
+        }
+        if (sock.meta.misfile !== undefined) {
+          kind = 'misfile';
+          prompt = `Misfile a line item — ${sock.meta.price as number} marginalia`;
+        }
         if (sock.meta.confiscated !== undefined) {
           kind = 'pry';
           prompt = 'Pry the confiscated case';
@@ -173,11 +182,15 @@ export class InteractionSystem {
         this.add({
           kind, id: `sock-${room.index}-${sock.pos.x.toFixed(1)}-${sock.pos.z.toFixed(1)}-${sock.kind}`,
           pos: sock.pos, prompt,
-          data: sock, enabled: !sock.meta.taken,
+          data: sock,
+          // sold sockets must not re-mint an offered verb — 'shop' cases
+          // set meta.sold, and a stale 'Buy at the counter' would keep
+          // focus and silently swallow presses near the counter
+          enabled: !sock.meta.taken && sock.meta.sold !== true,
           // crewBoard/claimRegister sit ~0.5 off their host, which often
           // carries its own loot socket — outrank it or the book never focuses
-          priority: kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' || kind === 'counterClaim' || kind === 'returnSlip' || kind === 'pry' ? 3 : kind === 'shop' ? 1 : 2,
-          holdTime: kind === 'pry' ? 2.2 : kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' || kind === 'counterClaim' || kind === 'returnSlip' ? 1.2 : 0,
+          priority: kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' || kind === 'counterClaim' || kind === 'returnSlip' || kind === 'affidavit' || kind === 'misfile' || kind === 'pry' ? 3 : kind === 'shop' ? 1 : 2,
+          holdTime: kind === 'pry' ? 2.2 : kind === 'pylon' || kind === 'seal' || kind === 'vend' || kind === 'claim' || kind === 'register' || kind === 'roster' || kind === 'complaint' || kind === 'workOrder' || kind === 'crewBoard' || kind === 'claimRegister' || kind === 'watchSheet' || kind === 'counterClaim' || kind === 'returnSlip' || kind === 'affidavit' || kind === 'misfile' ? 1.2 : 0,
         });
       }
     }

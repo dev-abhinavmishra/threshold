@@ -586,6 +586,67 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
     delete caseSocks[i].sock.meta.amount;
   }
 
+  // The affidavit — the held ledger's relief valve, the upstairs twin of
+  // the counter-claim and return slip. A sworn statement that the held
+  // goods reached their owner: the detective's register loses two lines,
+  // the filing itself enters his book — net −1, imprints, the only relief
+  // priced in the main purse. Own 'affidavit' stream; placed last of the
+  // filings so it defers to every other paper (one filing per room).
+  {
+    const afRng = streams.stream('affidavit');
+    for (const room of mainRooms) {
+      if (room.authored || !room.spec) continue;
+      if (room.biome !== 'records' && room.biome !== 'maintenance' && room.biome !== 'lobby' && room.biome !== 'guest') continue;
+      const desk = room.spec.props.find((p) => p.kind === 'desk' || p.kind === 'writingDesk' || p.kind === 'consoleTable');
+      if (!desk) continue;
+      if (room.sockets.some((s) => s.meta.register || s.meta.roster || s.meta.complaint || s.meta.watchSheet)) continue;
+      if (!afRng.bool(0.5)) continue;
+      const dp = localToWorld(room.origin, room.yaw, desk.x, 0, desk.z);
+      const toC = { x: room.origin.x - dp.x, z: room.origin.z - dp.z };
+      const tcL = Math.hypot(toC.x, toC.z) || 1;
+      room.sockets.push({
+        kind: 'loot',
+        pos: v3(dp.x + (toC.x / tcL) * 0.5, 0.9, dp.z + (toC.z / tcL) * 0.5),
+        yaw: 0, filled: true,
+        meta: { affidavit: true, price: afRng.int(4, 9) },
+      });
+    }
+  }
+
+  // The night clerk — a staffed counter on the main route: the house
+  // sells its own shelf for imprints. Any un-authored room with a
+  // counter can staff it — a till is a till; the first counter room is
+  // always staffed so every route answers the clerk at least once.
+  // Own 'clerk' stream.
+  {
+    const clRng = streams.stream('clerk');
+    let clerked = false;
+    for (const room of mainRooms) {
+      if (room.authored || !room.spec) continue;
+      const counter = room.spec.props.find((p) => p.kind === 'counter');
+      if (!counter) continue;
+      if (!clRng.bool(0.6) && clerked) continue;
+      for (const [slot, lx] of [[0, -0.55], [1, 0.55]] as const) {
+        const sp = localToWorld(room.origin, room.yaw, counter.x + lx, 0, counter.z - 0.55);
+        room.sockets.push({
+          kind: 'itemPedestal',
+          pos: v3(sp.x, 1.15, sp.z),
+          yaw: 0, filled: true,
+          meta: { clerk: `slot${slot}` },
+        });
+      }
+      // And one question each: the clerk keeps a page it will read to
+      // you for imprints — staff on duty, faults on file, or who the
+      // house is holding. Data lives on slot0's meta; the verb anchors
+      // on the figure, not the socket, so 'Ask' never shadows 'Buy'.
+      const queries = ['staff', 'hazard', 'claims'] as const;
+      const sock0 = room.sockets[room.sockets.length - 2];
+      sock0.meta.clerkQ = queries[clRng.int(0, queries.length - 1)];
+      sock0.meta.clerkQPrice = clRng.int(4, 9);
+      clerked = true;
+    }
+  }
+
   // The forged page — a book near a forger of doors can be rewritten. A
   // ledger within sight of a redactor's door (inside the book's own
   // +10 read window) omits that filing — the first lie the books tell,
@@ -790,6 +851,26 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
           pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
           yaw: room.yaw, filled: true,
           meta: { returnSlip: true, price: rsRng.int(3, 7) },
+        });
+      }
+      // The quiet amendment — the count axis's relief valve, on its own
+      // 'misfile' stream. The other filings settle LEDGERS; this buries
+      // the count itself: pending loss-reports never reach the books —
+      // no ring, no checker. Dearest paper below (silence costs more than
+      // answers), same desk family — a clerk's slip, not a crew notice.
+      const mfRng = streams.stream('misfile');
+      for (const room of underRooms) {
+        if (room.index % 20 === 0 || !room.spec || !mfRng.bool(0.08)) continue;
+        const host = room.spec.props.find((p) => REGISTER_HOSTS.has(p.kind) && !p.meta?.foreshadow);
+        if (!host) continue;
+        const hp = localToWorld(room.origin, room.yaw, host.x, 0, host.z);
+        const toC = { x: room.origin.x - hp.x, z: room.origin.z - hp.z };
+        const tcL = Math.hypot(toC.x, toC.z) || 1;
+        room.sockets.push({
+          kind: 'loot',
+          pos: v3(hp.x + (toC.x / tcL) * 0.5, 0.9, hp.z + (toC.z / tcL) * 0.5),
+          yaw: room.yaw, filled: true,
+          meta: { misfile: true, price: mfRng.int(6, 11) },
         });
       }
 

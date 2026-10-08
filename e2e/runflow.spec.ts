@@ -97,13 +97,28 @@ test('victory shows the completion screen and returns to menu', async ({ page })
   await page.waitForFunction(() => (window as unknown as { __thresholdGame?: unknown }).__thresholdGame);
 
   // Crossing the Engine threshold is a hundred-room walk — force the same
-  // code path the milestone calls.
+  // code path the milestone calls, with the ledgers owed so the exit
+  // reads them back (sprint 336 — the books close at the door).
   await page.evaluate(() => {
-    const g = (window as unknown as { __thresholdGame: { victory(): void } }).__thresholdGame;
+    const g = (window as unknown as { __thresholdGame: { victory(): void;
+      unpaidTheft: number; unpaidHeld: number; paperTrail: number;
+      hotImprints: number; hotItems: Set<string> } }).__thresholdGame;
+    g.unpaidTheft = 2;
+    g.unpaidHeld = 3;
+    g.paperTrail = 5;
+    g.hotImprints = 4;
+    g.hotItems.add('bandage');
     g.victory();
   });
   await expect(page.locator('.overlay.victory')).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('.victory-title')).toHaveText('The hundredth door closes behind you');
+  // the books close at the door — the reckoning block reads the ledgers
+  await expect(page.locator('.stats.books')).toBeVisible();
+  await expect(page.locator('.stats.books')).toContainText('the tally still reads 2 thefts');
+  await expect(page.locator('.stats.books')).toContainText('the register holds your name in 3 lines');
+  await expect(page.locator('.stats.books')).toContainText('the index keeps 5 of your questions');
+  await expect(page.locator('.stats.books')).toContainText('4 marked coins left in your purse');
+  await expect(page.locator('.stats.books')).toContainText('1 marked ware went home on your back');
 
   await page.getByRole('button', { name: 'Return to threshold' }).click({ force: true });
   await expect(page.locator('.menu-inner')).toBeVisible({ timeout: 10_000 });

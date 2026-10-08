@@ -881,7 +881,7 @@ export class HazardField {
    *  record is the felt-wrap's shadow: the floor was worked clean, and only
    *  the warden's nose bothers to doubt sign planted near it. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe'; t: number; readBy: string[];
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work'; t: number; readBy: string[];
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
@@ -890,7 +890,10 @@ export class HazardField {
    *  earshot. Dead mains kill them; a felt wrap blinds them. */
   watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
     arc: number; half: number; range: number; cycle: number; phase0: number;
-    dead: boolean; settle: number; lastReport: number; warnT: number }[] = [];
+    dead: boolean; settle: number; lastReport: number; warnT: number;
+    filed: boolean }[] = [];
+  /** One warn per marking: reset when the book no longer holds you. */
+  private markedWarned = false;
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -934,7 +937,7 @@ export class HazardField {
         arc: cam ? 0.95 : 0.5, half: cam ? 0.42 : 0.34,
         range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
         phase0: hsh * 20,
-        dead: false, settle: 0, lastReport: -10, warnT: -10,
+        dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false,
       });
     }
   }
@@ -1000,6 +1003,12 @@ export class HazardField {
     }
     // Wall eyes read MOTION, not presence — inside the cone you stand
     // still and let it pan past, or you move and it settles and tells.
+    // And the register talks back: once the book holds a line on you
+    // (unpaidHeld > 0 — a lamp's witness, an eye's report, a courier's
+    // card, a cut wire) every eye has your description and settles
+    // ~1.6x faster. Settle the book and they go back to strangers.
+    const marked = (ctx.heldOwed?.() ?? 0) > 0;
+    if (!marked) this.markedWarned = false;
     const wMoving = Number.isFinite(this.wPX)
       && Math.hypot(p.pos.x - this.wPX, p.pos.z - this.wPZ) > 0.004;
     this.wPX = p.pos.x; this.wPZ = p.pos.z;
@@ -1013,17 +1022,28 @@ export class HazardField {
         w.warnT = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye pans — still feet pass it]', { severity: 'info' });
       }
+      if (marked && live && !this.markedWarned) {
+        this.markedWarned = true;
+        ctx.cue('steam-hiss', w.pos, '[the register talks back — the eyes have your description]', { severity: 'warn' });
+      }
       if (!live || d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
       const facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       if (Math.abs(diff) > w.half) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
-      w.settle = wMoving ? w.settle + dt : Math.max(0, w.settle - dt * 2);
+      w.settle = wMoving ? w.settle + dt * (marked ? 1.6 : 1) : Math.max(0, w.settle - dt * 2);
       if (w.settle > 0.9 && ctx.now - w.lastReport > 5) {
         w.lastReport = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye settles on you — it has your position]', { severity: 'warn' });
         ctx.sound.emit({ x: p.pos.x, y: p.pos.y, z: p.pos.z, intensity: 0.5, category: 'machine', caption: '' });
+        // the house's eye and the crew's lamp file the same statement —
+        // once per eye: a held settle is a witness line upstairs
+        if (!w.filed) {
+          w.filed = true;
+          ctx.eyeFiled?.();
+          ctx.cue('steam-hiss', w.pos, '[the eye\'s report goes in the register — your face is filed]', { severity: 'warn' });
+        }
       }
     }
     // Old sign the PLAYER can read: a sprung wire or a bled line from

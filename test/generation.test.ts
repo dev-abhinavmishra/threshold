@@ -231,6 +231,26 @@ describe('sprint mechanics coverage', () => {
     }
   });
 
+  it('the night clerk: counter rooms carry two clerk pedestals, every seed answers one (sprint 318)', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const clerked = mainRooms(route).filter((r) => r.sockets.some((s) => s.meta.clerk !== undefined));
+      expect(clerked.length, `${seed}: at least one staffed counter`).toBeGreaterThanOrEqual(1);
+      for (const r of clerked) {
+        expect(r.spec?.props.some((p) => p.kind === 'counter'), `${seed}/${r.index}: clerk only at a counter`).toBe(true);
+        const peds = r.sockets.filter((s) => s.meta.clerk !== undefined);
+        expect(peds.length, `${seed}/${r.index}: two wares on the counter`).toBe(2);
+        // sprint 319 — slot0 also carries the clerk's one seeded page
+        const page = r.sockets.find((s) => s.meta.clerk === 'slot0');
+        expect(page, `${seed}/${r.index}: the clerk's page`).toBeTruthy();
+        expect(['staff', 'hazard', 'claims'], `${seed}/${r.index}: a known question`)
+          .toContain(page!.meta.clerkQ);
+        const price = page!.meta.clerkQPrice as number;
+        expect(price >= 4 && price <= 9, `${seed}/${r.index}: page priced 4-9`).toBe(true);
+      }
+    }
+  });
+
   it('trapped hiding spots always carry readable trap clues', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
@@ -484,7 +504,7 @@ describe('sprint mechanics coverage', () => {
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
       for (const r of route.underRooms) {
-        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && !x.meta.returnSlip && (x.kind === 'drawer' || x.kind === 'loot'))) {
+        for (const s of r.sockets.filter((x) => x.filled && !x.meta.vend && !x.meta.workOrder && !x.meta.crewBoard && !x.meta.claimRegister && !x.meta.counterClaim && !x.meta.returnSlip && !x.meta.misfile && (x.kind === 'drawer' || x.kind === 'loot'))) {
           expect(s.meta.contains).toBeTruthy();
           expect(r.index % 20).not.toBe(0);
           anyFilled = true;
@@ -1267,6 +1287,63 @@ describe('the counter-claim (sprint 299)', () => {
         }
       }
       expect(count, `no counter-claims on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('the affidavit (sprint 302)', () => {
+  it('sworn filings sit on main-route desks, imprint-priced, one paper per room', () => {
+    const BIOMES = new Set(['records', 'maintenance', 'lobby', 'guest']);
+    const HOSTS = new Set(['desk', 'writingDesk', 'consoleTable']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.underRooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.affidavit),
+          `affidavit on the underscript ${seed}`).toBe(false);
+      }
+      for (const r of route.rooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.affidavit) continue;
+          count++;
+          expect(r.authored, `affidavit on an authored room ${seed}`).toBeFalsy();
+          expect(BIOMES.has(r.biome), `affidavit in ${r.biome} ${seed}`).toBe(true);
+          expect(typeof s.meta.price, `affidavit unpriced ${seed}`).toBe('number');
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `affidavit on a desk-less room ${seed} r-${r.index}`).toBe(true);
+          // one paper per room — the affidavit defers to every other filing
+          const papers = (r.sockets ?? []).filter((x) =>
+            x.meta?.register || x.meta?.roster || x.meta?.complaint || x.meta?.watchSheet || x.meta?.affidavit);
+          expect(papers.length, `two filings in room ${r.index} ${seed}`).toBe(1);
+        }
+      }
+      expect(count, `no affidavits on ${seed}`).toBeGreaterThanOrEqual(1);
+    }
+  });
+});
+
+describe('the quiet amendment (sprint 308)', () => {
+  it('amendment forms sit on under desk furniture, marginalia-priced', () => {
+    const HOSTS = new Set(['filing', 'cubicle', 'schoolDesk', 'keyCabinet', 'recordsCage']);
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      let count = 0;
+      for (const r of route.rooms) {
+        expect((r.sockets ?? []).some((s) => s.meta?.misfile),
+          `quiet amendment on the main route ${seed}`).toBe(false);
+      }
+      for (const r of route.underRooms) {
+        for (const s of r.sockets ?? []) {
+          if (!s.meta?.misfile) continue;
+          count++;
+          expect(r.index % 20, `amendment on a safe landing ${seed}`).not.toBe(0);
+          expect(typeof s.meta.price, `amendment unpriced ${seed}`).toBe('number');
+          expect(s.meta.price as number, `amendment underpriced ${seed}`).toBeGreaterThanOrEqual(6);
+          expect((r.spec?.props ?? []).some((p) => HOSTS.has(p.kind)),
+            `amendment on a desk-less room ${seed} u-${r.index}`).toBe(true);
+        }
+      }
+      expect(count, `no quiet amendments on ${seed}`).toBeGreaterThanOrEqual(1);
     }
   });
 });

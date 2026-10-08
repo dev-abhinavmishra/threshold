@@ -172,6 +172,22 @@ function DeathScreen() {
 function VictoryScreen() {
   const v = useGameStore((s) => s.victoryInfo);
   const mins = v ? Math.max(0, (v.stats.endedAt - v.stats.startedAt) / 60000).toFixed(1) : '0';
+  // the books close at the door — the ledgers accrue all run and the
+  // exit reads them back as epitaph lines
+  const books = v?.books;
+  const bookLines: string[] = [];
+  if (books) {
+    const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods;
+    if (total === 0) {
+      bookLines.push('every book closed before the door did');
+    } else {
+      if (books.thefts > 0) bookLines.push(`the tally still reads ${books.thefts} ${books.thefts === 1 ? 'theft' : 'thefts'}`);
+      if (books.held > 0) bookLines.push(`the register holds your name in ${books.held} ${books.held === 1 ? 'line' : 'lines'}`);
+      if (books.asks > 0) bookLines.push(`the index keeps ${books.asks} of your questions`);
+      if (books.hotCoin > 0) bookLines.push(`${books.hotCoin} marked ${books.hotCoin === 1 ? 'coin' : 'coins'} left in your purse — they still ring`);
+      if (books.hotGoods > 0) bookLines.push(`${books.hotGoods} marked ${books.hotGoods === 1 ? 'ware' : 'wares'} went home on your back`);
+    }
+  }
   return (
     <div className="overlay victory">
       <div className="menu-inner">
@@ -183,6 +199,12 @@ function VictoryScreen() {
           <div>Imprints earned: {v?.stats.imprintsEarned ?? 0}</div>
           <div>Underscript: {v?.stats.underscriptCompleted ? 'completed' : `${v?.stats.underscriptDeepest ?? 0} rooms deep`}</div>
         </div>
+        {bookLines.length > 0 && (
+          <div className="stats books">
+            <div>the books at your back:</div>
+            {bookLines.map((l, i) => <div key={i}>· {l}</div>)}
+          </div>
+        )}
         <div className="menu-buttons">
           <button className="btn primary" onClick={() => getGame()?.quitToMenu()}>Return to threshold</button>
         </div>

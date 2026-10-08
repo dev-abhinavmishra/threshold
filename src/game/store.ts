@@ -37,7 +37,7 @@ export interface GameUi {
   difficulty: Difficulty;
   documents: Document[];
   deathInfo: { cause: string; hint: string; entity: string } | null;
-  victoryInfo: { stats: RunStats } | null;
+  victoryInfo: { stats: RunStats; books?: BooksClosed } | null;
   shopItems: { id: ItemId; price: number; slot: number; sold: boolean }[];
   shopOpen: boolean;
   menuPage: 'title' | 'settings' | 'documents' | 'death' | 'victory' | 'pause' | 'seeds';
@@ -132,6 +132,15 @@ export function saveMeta(m: MetaSave): void {
   }
 }
 
+/** The ledgers as the door left them — read aloud on the victory screen. */
+export interface BooksClosed {
+  thefts: number;
+  held: number;
+  asks: number;
+  hotCoin: number;
+  hotGoods: number;
+}
+
 export interface CheckpointSave {
   seedText: string;
   difficulty: Difficulty;
@@ -143,6 +152,12 @@ export interface CheckpointSave {
   marginalia: number;
   inventory: { id: ItemId; count: number }[];
   stats: RunStats;
+  // the ledgers outlive you — the books keep your name past a death
+  unpaidTheft?: number;
+  unpaidHeld?: number;
+  paperTrail?: number;
+  hotImprints?: number;
+  hotItems?: ItemId[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

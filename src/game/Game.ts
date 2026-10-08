@@ -16,6 +16,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { GameClock } from '../engine/clock';
 import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
+import { CrewCount } from '../engine/crewCount';
+import { CrewChecker, roomOf as underRoomOf, type CheckerHooks } from '../entities/crewChecker';
 import { pointInRoom } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
@@ -226,6 +228,22 @@ export class Game {
   private spawned = new Set<string>();
   private milestones = new Map<number, Milestone>();
   private hazard = new HazardField();
+  private crewCount = new CrewCount();
+  private checker = new CrewChecker();
+
+  private checkerHooks(): CheckerHooks {
+    return {
+      addMesh: (o) => this.entityGroup.add(o),
+      removeMesh: (o) => this.entityGroup.remove(o),
+      cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
+      emit: (e) => this.sound.emit(e),
+      // the lamp held a face — the find enters the house book as a witness
+      witnessed: () => {
+        this.unpaidHeld += 1;
+        this.cue('chalk-mark', this.player.pos, '[the lamp holds your face — the register gains a witness]', 'warn');
+      },
+    };
+  }
   private canvas: HTMLCanvasElement;
   private input = { interactPressed: false };
   private inventory: { id: ItemId; count: number }[] = [];
@@ -513,11 +531,15 @@ export class Game {
     this.phoneRing = null;
     for (const fig of this.brokerFigs.values()) this.entityGroup.remove(fig);
     this.brokerFigs.clear();
+    for (const fig of this.clerkFigs.values()) this.entityGroup.remove(fig);
+    this.clerkFigs.clear();
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
     this.doorStates.clear();
     this.hazard = new HazardField();
+    this.crewCount.reset();
+    this.checker.reset(this.checkerHooks());
     for (const r of [...this.route.rooms, ...this.route.underRooms]) this.hazard.addFromRoom(r);
     this.roomBounds.clear();
     // the prop layer holds no memory across runs — every one-time
@@ -595,6 +617,15 @@ export class Game {
     this.inventory = cp ? cp.inventory.map((i) => ({ ...i })) : [];
     this.imprints = cp?.imprints ?? 0;
     this.marginalia = cp?.marginalia ?? 0;
+    // the books keep your name past a death — restored from the
+    // checkpoint, zeroed for a fresh run (fields aren't implicit state)
+    this.unpaidTheft = cp?.unpaidTheft ?? 0;
+    this.unpaidHeld = cp?.unpaidHeld ?? 0;
+    this.paperTrail = cp?.paperTrail ?? 0;
+    this.hotImprints = cp?.hotImprints ?? 0;
+    this.hotItems.clear();
+    for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
+    this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
     this.wardArmed = false;
@@ -671,7 +702,10 @@ export class Game {
       victory: () => this.victory(),
       giveItem: (item, n = 1) => this.giveItem(item as ItemId, n),
       spendImprints: (n) => {
-        if (this.imprints >= n) { this.imprints -= n; return true; }
+        if (this.imprints >= n) {
+          this.chargedImprints(n, this.player.pos.x, this.player.pos.z);
+          return true;
+        }
         return false;
       },
       hasItem: (id) => this.inventory.some((i) => i.id === id && i.count > 0),
@@ -701,6 +735,7 @@ export class Game {
           this.milestones.set(r.index, new UnderscriptGate(r, events));
           break;
       }
+      if (r.sockets.some((s) => s.meta.clerk !== undefined)) this.populateClerk(r);
     }
     for (const r of this.route!.underRooms) {
       if (r.templateId === 'u-lobby') this.populateBroker(r);
@@ -728,6 +763,30 @@ export class Game {
       if (sock.meta.broker !== undefined && slot < picks.length) {
         sock.meta.brokerItem = picks[slot].id;
         sock.meta.brokerPrice = picks[slot].price;
+        slot++;
+      }
+    }
+  }
+
+  /** The night clerk sells the house's own shelf — priced in imprints,
+   *  not marginalia, the upstairs twin of the Broker's counter. */
+  private populateClerk(room: RoomInstance): void {
+    const rng = this.streams.roomStream('clerk', room.index + 733);
+    const stock: { id: ItemId; price: number }[] = [
+      { id: 'bandage', price: rng.int(8, 14) },
+      { id: 'doorChock', price: rng.int(6, 10) },
+      { id: 'latchpick', price: rng.int(16, 24) },
+      { id: 'feltWrap', price: rng.int(12, 20) },
+    ];
+    const first = rng.int(0, stock.length - 1);
+    let second = rng.int(0, stock.length - 2);
+    if (second >= first) second++;
+    const picks = [stock[first], stock[second]];
+    let slot = 0;
+    for (const sock of room.sockets) {
+      if (sock.meta.clerk !== undefined && slot < picks.length) {
+        sock.meta.clerkItem = picks[slot].id;
+        sock.meta.clerkPrice = picks[slot].price;
         slot++;
       }
     }
@@ -821,6 +880,9 @@ export class Game {
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
       wanted: () => this.wantedActive,
+      wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
+      lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
+      eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1174,6 +1236,147 @@ export class Game {
     }
     // Entity-registered points (the Collector's toll) survive rebuilds.
     for (const it of this.dynamicInteractables) this.interaction.add(it);
+    // The Broker's fix — a staffed service on the man himself, a second
+    // anchor beside 'Trade wares': he makes a call and one line comes
+    // off your deepest ledger, priced by how deep it runs.
+    for (const [roomIndex, fig] of this.brokerFigs) {
+      this.interaction.add({
+        kind: 'fix', id: `fix-${this.space}:${roomIndex}`,
+        pos: { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z },
+        prompt: 'Ask the Broker for a fix',
+        holdTime: 1.2, enabled: true, priority: 3,
+      });
+      // The purse — the Broker changes coin: imprints into marginalia.
+      // Anchored off the counter's near end, NOT mid-counter: the
+      // Broker's fig stands ~0.7m behind the socks, so a mid anchor
+      // sits on the fig's own line and the priority-3 fix shadows it.
+      // A lateral offset gives ~40°+ separation from every anchor.
+      const bRoom = this.activeRooms()[roomIndex];
+      const bSocks = bRoom?.sockets.filter((s) => s.meta.broker !== undefined) ?? [];
+      if (bSocks.length >= 2) {
+        const midX = (bSocks[0].pos.x + bSocks[1].pos.x) / 2;
+        const midZ = (bSocks[0].pos.z + bSocks[1].pos.z) / 2;
+        const bx = fig.position.x - midX, bz = fig.position.z - midZ;
+        const bl = Math.hypot(bx, bz) || 1;
+        const lx = bSocks[1].pos.x - bSocks[0].pos.x;
+        const lz = bSocks[1].pos.z - bSocks[0].pos.z;
+        const ll = Math.hypot(lx, lz) || 1;
+        this.interaction.add({
+          kind: 'purse', id: `purse-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX - (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ - (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Change the purse — 6 imprints',
+          holdTime: 0.8, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+        // The fence — the Broker takes marked stock off your hands on
+        // the counter's other flank (the purse's mirror). The under's
+        // second wash: goods out for a pittance, the book opens a line.
+        this.interaction.add({
+          kind: 'fence', id: `fence-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX + (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ + (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Fence the take',
+          holdTime: 0.9, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+        // The book — the under's book reads YOU back: a cheap consult
+        // on the man's own ledger, hung LOW on his flank (waist level
+        // at 0.8·lateral): the fix is a look-UP at the same fig and the
+        // counter's verbs own the mid line, so a chest-height anchor
+        // ~0.35m off the fix loses the in-band priority fight. Pitch
+        // down-left disambiguates. The asking is itself a filed question.
+        this.interaction.add({
+          kind: 'book', id: `book-${this.space}:${roomIndex}`,
+          pos: {
+            x: fig.position.x + (lx / ll) * 0.8,
+            y: fig.position.y + 0.55,
+            z: fig.position.z + (lz / ll) * 0.8,
+          },
+          prompt: 'Ask what the book says — 3 marginalia',
+          holdTime: 0.8, enabled: true, priority: 2,
+          data: { roomIndex },
+        });
+      }
+    }
+    // The clerk's page — a question desk on the figure itself: each
+    // clerk holds one seeded query (staff on duty, faults on file, or
+    // the house's held-file). priority 3 so facing the clerk outranks
+    // the counter's priority-1 wares.
+    for (const [roomIndex, fig] of this.clerkFigs) {
+      this.interaction.add({
+        kind: 'ask', id: `ask-${this.space}:${roomIndex}`,
+        pos: { x: fig.position.x, y: fig.position.y + 1.4, z: fig.position.z },
+        prompt: 'Ask the clerk',
+        holdTime: 1.0, enabled: true, priority: 3,
+        data: { roomIndex },
+      });
+      // The till sits mid-counter, between the wares laterally but a
+      // half-step back toward the clerk — inside the focus band an
+      // interactable needs ~0.86 aim-alignment, and a same-line anchor
+      // 0.55m off a ware stays in-band at counter standoff. Offsetting
+      // the till back onto the counter surface puts it ~40° off either
+      // ware, so aim picks cleanly.
+      const tillRoom = this.activeRooms()[roomIndex];
+      const tillSocks = tillRoom?.sockets.filter((s) => s.meta.clerk !== undefined) ?? [];
+      if (tillSocks.length === 2) {
+        const midX = (tillSocks[0].pos.x + tillSocks[1].pos.x) / 2;
+        const midZ = (tillSocks[0].pos.z + tillSocks[1].pos.z) / 2;
+        const bx = fig.position.x - midX, bz = fig.position.z - midZ;
+        const bl = Math.hypot(bx, bz) || 1;
+        if (tillSocks[0].meta.tillTaken !== true) {
+          this.interaction.add({
+            kind: 'till', id: `till-${this.space}:${roomIndex}`,
+            pos: { x: midX + (bx / bl) * 0.5, y: 1.05, z: midZ + (bz / bl) * 0.5 },
+            prompt: 'Rifle the till',
+            // priority 1 — same tier as the wares; priority dominates inside
+            // the focus band, so a higher rank would shadow 'Buy at the
+            // counter' even when aimed dead at a ware. At par, the 0.55m
+            // offset (~20°) lets aim pick cleanly between them.
+            holdTime: 0.9, enabled: true, priority: 1,
+            data: { roomIndex },
+          });
+        }
+        // The desk bell — a positional lure on the counter's far end:
+        // the only noise in the house that isn't at your position.
+        // Offset past slot1 (~0.9m lateral + back onto the counter) so
+        // its aim never shadows the till or the wares.
+        const lx = tillSocks[1].pos.x - tillSocks[0].pos.x;
+        const lz = tillSocks[1].pos.z - tillSocks[0].pos.z;
+        const ll = Math.hypot(lx, lz) || 1;
+        this.interaction.add({
+          kind: 'bell', id: `bell-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX + (lx / ll) * 1.5 + (bx / bl) * 0.45,
+            y: 1.05,
+            z: midZ + (lz / ll) * 1.5 + (bz / bl) * 0.45,
+          },
+          prompt: 'Ring the desk bell',
+          holdTime: 0.5, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+        // The purse's other direction — the clerk changes marginalia
+        // into imprints at the counter's near end (mirror of the
+        // Broker's: the spread between the two counters is the cut).
+        this.interaction.add({
+          kind: 'purse', id: `purse-${this.space}:${roomIndex}`,
+          pos: {
+            x: midX - (lx / ll) * 1.2 + (bx / bl) * 0.4,
+            y: 1.05,
+            z: midZ - (lz / ll) * 1.2 + (bz / bl) * 0.4,
+          },
+          prompt: 'Change the purse — 8 marginalia',
+          holdTime: 0.8, enabled: true, priority: 1,
+          data: { roomIndex },
+        });
+      }
+    }
     // Cut the seal — an armed paper wire is a quiet thing you can cut;
     // under live floodwater the wire only shows itself to a wader
     // crouched low enough to feel for it.
@@ -1330,6 +1533,21 @@ export class Game {
         data: ent as unknown as Record<string, unknown>,
       });
     }
+    // Beside the checker's lamp: 'Strip the lamp' — take its light mid-
+    // count. The boldest pilfer in the under: it is HOLDING the light.
+    if (this.checker.active && this.checker.lampLit) {
+      const cp = this.checker.position;
+      const dx = cp.x - this.player.pos.x, dz = cp.z - this.player.pos.z;
+      if (dx * dx + dz * dz <= 1.9 * 1.9) {
+        this.interaction.add({
+          kind: 'stripCheck', id: 'stripCheck',
+          pos: { x: cp.x, y: 0.9, z: cp.z },
+          prompt: 'Strip the lamp',
+          holdTime: 1.1, enabled: true, priority: 3,
+          data: this.checker as unknown as Record<string, unknown>,
+        });
+      }
+    }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
       if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
@@ -1464,13 +1682,20 @@ export class Game {
           } else if (isWatch) {
             // Wall eyes: tape/smother blinds the eye — only while it's live
             // (dead mains already killed it; a taped eye is furniture).
+            // A TAPED eye (w.dead — only felt sets that flag) offers the
+            // felt back: tape is a parked tool, not a consumed one.
             const wy = p.y ?? (p.kind === 'securityCam' ? 2.35 : 1.4);
-            const live = !pr.darkRoom && this.hazard.watchers.some((w) =>
-              !w.dead && w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
-            if (live) this.interaction.add({
+            const wHere = this.hazard.watchers.find((w) =>
+              w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
+            if (wHere && !wHere.dead && !pr.darkRoom) this.interaction.add({
               kind: 'tape', id: `tape-${key}`, pos: { x: wx, y: wy, z: wz },
               prompt: p.kind === 'securityCam' ? 'Tape the eye — felt wrap' : 'Smother the beam — felt wrap',
               holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
+            });
+            else if (wHere?.dead) this.interaction.add({
+              kind: 'untape', id: `untape-${key}`, pos: { x: wx, y: wy, z: wz },
+              prompt: 'Take the felt back — it wakes',
+              holdTime: 1.0, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
@@ -1581,8 +1806,45 @@ export class Game {
     switch (it.kind) {
       case 'shop': {
         const sock = it.data as Socket;
+        // The night clerk's till — imprints, and a filed face pays the
+        // register's rate: the same reading the Detective's desk makes.
+        if (sock.meta.clerk !== undefined) {
+          if (sock.meta.sold) return;
+          // The counter goes cold: a clerk that watched you rifle its
+          // till folds its hands — no wares, no page, not at any rate.
+          const cRoom = this.activeRooms().findIndex((r) =>
+            r.sockets.includes(sock));
+          if (cRoom >= 0 && this.closedCounters.has(cRoom)) {
+            this.cue('door-locked', it.pos,
+              "[the clerk folds its hands — the counter is closed to you]", 'warn');
+            return;
+          }
+          const cItem = sock.meta.clerkItem as ItemId | undefined;
+          const cPrice = (sock.meta.clerkPrice as number) ?? 12;
+          if (!cItem) return;
+          const filed = this.unpaidHeld > 0;
+          const cEff = filed ? cPrice + Math.min(3 + this.unpaidHeld * 2, 10) : cPrice;
+          if (this.imprints >= cEff) {
+            this.chargedImprints(cEff, it.pos.x, it.pos.z);
+            sock.meta.sold = true;
+            it.enabled = false;
+            this.giveItem(cItem, 1);
+            this.cue('purchase', it.pos,
+              filed ? `[traded at the register's rate — ${cEff} imprints]` : `[the clerk's till rings — ${cEff} imprints]`, 'info');
+          } else {
+            this.cue('door-locked', it.pos,
+              filed ? `[the register's rate is ${cEff} imprints — settle your claims]` : `[${cEff} imprints required]`, 'warn');
+          }
+          return;
+        }
         if (sock.meta.broker === undefined) return;
         if (sock.meta.sold) return;
+        // the floor shutters while the count walks — the Broker will not
+        // trade under the crew's own lamp
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
         const item = sock.meta.brokerItem as ItemId;
         const price = (sock.meta.brokerPrice as number) ?? 20;
         // the clerks' score is on your hands — an unpaid tally trades at
@@ -1600,6 +1862,329 @@ export class Game {
           this.cue('door-locked', it.pos,
             marked ? `[the marked rate is ${effPrice} marginalia — settle the tally or pay the crew]` : `[${effPrice} marginalia required]`, 'warn');
         }
+        return;
+      }
+      case 'fix': {
+        // The Broker is a fixer: he makes a call and one line comes off
+        // your deepest ledger — priced by depth, shuttered with the floor.
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const worst = Math.max(this.unpaidTheft, this.unpaidHeld, this.paperTrail);
+        if (worst <= 0) {
+          this.cue('door-locked', it.pos, '[your slate is clean — nothing to fix]', 'info');
+          return;
+        }
+        const price = Math.min(6 + worst * 3, 18);
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos,
+            `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        if (this.unpaidTheft >= this.unpaidHeld && this.unpaidTheft >= this.paperTrail) {
+          this.unpaidTheft -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the tally · ${price} marginalia]`, 'info');
+        } else if (this.unpaidHeld >= this.paperTrail) {
+          this.unpaidHeld -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the register · ${price} marginalia]`, 'info');
+        } else {
+          this.paperTrail -= 1;
+          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off your file · ${price} marginalia]`, 'info');
+        }
+        return;
+      }
+      case 'ask': {
+        // The clerk's page — one seeded question per staffed counter,
+        // priced in imprints at the register's rate, one-shot. The page
+        // lives on the room's slot0 socket; the verb anchors the figure.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const room = this.activeRooms()[roomIndex];
+        const page = room?.sockets.find((s) => s.meta.clerk === 'slot0');
+        if (!room || !page || page.meta.clerkQ === undefined) return;
+        // A rifled counter serves nothing — the clerk watched your hands.
+        if (this.closedCounters.has(roomIndex)) {
+          this.cue('door-locked', it.pos,
+            "[the clerk folds its hands — the counter is closed to you]", 'warn');
+          return;
+        }
+        if (this.clerkAsked.has(roomIndex)) {
+          this.cue('door-locked', it.pos, '[the clerk has said what it knows]', 'info');
+          return;
+        }
+        const price = (page.meta.clerkQPrice as number) ?? 6;
+        const filed = this.unpaidHeld > 0;
+        const eff = filed ? price + Math.min(2 + this.unpaidHeld, 6) : price;
+        if (this.imprints < eff) {
+          this.cue('door-locked', it.pos,
+            filed ? `[the clerk wants ${eff} imprints for the page — the register's rate, settle your claims]`
+              : `[the clerk wants ${eff} imprints for the page — ${eff - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.chargedImprints(eff, it.pos.x, it.pos.z);
+        this.clerkAsked.add(roomIndex);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        const q = page.meta.clerkQ as string;
+        const mains = this.route?.rooms ?? [];
+        const door = (i: number) => `Door ${String(i).padStart(3, '0')}`;
+        if (q === 'staff') {
+          const STAFF: Record<string, string> = {
+            bellman: 'a valet', warden: 'a watchman', inspector: 'a clerk',
+            commissionaire: 'a doorman', porter: 'a porter', detective: 'a detective',
+            redactor: 'a forger', collector: 'a toll-taker',
+          };
+          const marks: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || marks.length >= 4) continue;
+            for (const s of r.scheduled) {
+              const noun = STAFF[s.entity];
+              if (noun && marks.length < 4) marks.push(`${door(r.index)} — ${noun}`);
+            }
+          }
+          this.cue('whisper', it.pos, marks.length
+            ? `[the clerk turns the duty sheet: ${marks.join(' · ')}]`
+            : '[the clerk turns the duty sheet — the next stretch stands unstaffed]');
+        } else if (q === 'hazard') {
+          const FAULT: Record<string, string> = {
+            snare: 'a live wire', steamVent: 'a vent about to breathe', fan: 'a wheel that chews',
+            puddle: 'a floor standing wet', securityCam: 'the eye pans', searchlight: 'the light sweeps',
+          };
+          const marks: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 8 || marks.length >= 4) continue;
+            for (const p of r.spec?.props ?? []) {
+              const noun = FAULT[p.kind];
+              if (noun && marks.length < 4) marks.push(`${door(r.index)} — ${noun}`);
+            }
+          }
+          this.cue('whisper', it.pos, marks.length
+            ? `[the clerk's ledger of faults: ${marks.join(' · ')}]`
+            : '[the clerk\'s ledger of faults — nothing filed ahead]');
+        } else {
+          const entries: string[] = [];
+          for (const r of mains) {
+            if (r.index <= this.currentRoom || r.index > this.currentRoom + 10 || entries.length >= 5) continue;
+            for (const s of r.sockets ?? []) {
+              if (entries.length >= 5) break;
+              if (!s.meta.claim || s.meta.marginalia === true) continue;
+              const tag = (s.meta.claimTag as string) ?? 'unsigned';
+              entries.push(`${door(r.index)} — '${tag}' ${s.meta.taken ? 'drawn' : 'still held'}`);
+            }
+          }
+          this.cue('whisper', it.pos, entries.length
+            ? `[the clerk's held-file: ${entries.join(' · ')}]`
+            : '[the clerk\'s held-file — the house holds nothing ahead]');
+        }
+        return;
+      }
+      case 'till': {
+        // Hands in the staffed register — the loudest claim the house
+        // books: two lines of held-goods while the clerk watches.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const room = this.activeRooms()[roomIndex];
+        const till = room?.sockets.find((s) => s.meta.clerk === 'slot0');
+        if (!room || !till || till.meta.tillTaken === true) { it.enabled = false; return; }
+        till.meta.tillTaken = true;
+        this.closedCounters.add(roomIndex);
+        // sprint 328 — the unfiled hands: rifled inside the bell's look
+        // window (~3.5s), the clerk's eye is on the ringing bell, not
+        // your hands — the till still opens and still smells, but the
+        // register never writes you. The lure is a real steal-window.
+        const rung = this.bellRung.get(roomIndex);
+        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5;
+        if (!unfiled) this.unpaidHeld += 2;
+        it.enabled = false;
+        // sprint 333 — the take goes back: the emptied till takes its
+        // own stock back — a free, quiet return that clears your marks
+        // while the register's file stays written. Minted on rifle and
+        // replayed via dynamicInteractables so a room rebuild keeps the
+        // offer while the counter stays cold.
+        const restock = {
+          kind: 'restock' as const, id: `restock-${this.space}:${roomIndex}`,
+          pos: { x: it.pos.x, y: it.pos.y, z: it.pos.z },
+          prompt: 'Slip the take back — it never left',
+          holdTime: 0.9, priority: 1, enabled: true,
+          data: { roomIndex },
+        };
+        this.dynamicInteractables.push(restock);
+        this.interaction.add(restock);
+        // the till smells of hands — hands in a staffed register leave
+        // fresh sign at the counter: substantive work, not ash, so the
+        // warden pulls to it like any kill or mounted wrap (and weighs
+        // it toward learning). The rifle's third price after the file
+        // and the cold counter: scent.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: room.index,
+          kind: 'work', t: this.clock.time, readBy: [] });
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 8);
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          // sprint 329 — the till's coin is marked: every imprint it pays
+          // out testifies when it lands in a house till (the under washes)
+          this.hotImprints += amt;
+          this.cue('pickup', it.pos, `[+${amt} imprints — off the till — the coin is marked]`);
+        } else {
+          const pool = ['bandage', 'doorChock', 'feltWrap', 'latchpick'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          // sprint 331 — the till's stock is marked too: carry it past a
+          // warm clerk and its own stock tells (the Broker fences it)
+          this.hotItems.add(item as ItemId);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the till — the stock is marked]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, unfiled
+          ? '[it was watching the bell — your hands go unfiled]'
+          : '[the clerk watches your hands — the register writes you twice]', 'warn');
+        return;
+      }
+      case 'restock': {
+        // sprint 333 — the take goes back: slip the marked goods into
+        // the emptied till. Free, no profit, and the books keep your
+        // file — the register's witness doesn't unwrite for a wrap.
+        const cIdx = (it.data as { roomIndex: number }).roomIndex;
+        if (!this.closedCounters.has(cIdx)) { it.enabled = false; return; }
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
+        if (take.length === 0) {
+          it.enabled = false;
+          this.cue('drawer', it.pos, '[the drawer is empty — nothing of his on you]', 'info');
+          return;
+        }
+        for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        it.enabled = false;
+        this.cue('drawer', it.pos, take.length === 1
+          ? '[the till takes its own back — the wrap never left the shelf]'
+          : `[the till takes its own back — ${take.length} wraps never left the shelf]`);
+        return;
+      }
+      case 'book': {
+        // sprint 334 — the book answers back: the under's two ledgers
+        // read out loud for a pittance. The asking is itself a filed
+        // question — the numbers it reads already count this one.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const bPrice = 3;
+        if (this.marginalia < bPrice) {
+          this.cue('door-locked', it.pos, `[the book wants ${bPrice} marginalia — even questions have a price]`, 'warn');
+          return;
+        }
+        this.marginalia -= bPrice;
+        this.paperTrail += 1;
+        const t = this.paperTrail, th = this.unpaidTheft;
+        this.cue('whisper', it.pos, t === 1 && th === 0
+          ? '[the book holds one line on you — this one]'
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too]`);
+        return;
+      }
+      case 'purse': {
+        if (this.space !== 'under') {
+          // The clerk changes the other way — 8 marginalia for
+          // imprints. A rifled counter folds its hands; a filed face
+          // pays the register's sour rate (the house reads ITS book —
+          // the register, not the under's tallies).
+          const cRoom = (it.data as { roomIndex: number }).roomIndex;
+          if (this.closedCounters.has(cRoom)) {
+            this.cue('door-locked', it.pos,
+              "[the clerk folds its hands — the counter is closed to you]", 'warn');
+            return;
+          }
+          if (this.marginalia < 8) {
+            this.cue('door-locked', it.pos,
+              `[the purse wants 8 marginalia — you're ${8 - this.marginalia} short]`, 'warn');
+            return;
+          }
+          const filed = this.unpaidHeld > 0;
+          const gain = filed ? 4 : 6;
+          this.marginalia -= 8;
+          this.imprints += gain;
+          this.stats.imprintsEarned += gain;
+          this.cue('purchase', it.pos, filed
+            ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
+            : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
+          return;
+        }
+        // The Broker changes coin — 6 imprints for marginalia. The only
+        // bridge between the two currencies; his rate sours when your
+        // ledgers show (any of the three books open reads as risk).
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        if (this.imprints < 6) {
+          this.cue('door-locked', it.pos,
+            `[the purse wants 6 imprints — you're ${6 - this.imprints} short]`, 'warn');
+          return;
+        }
+        const dirty = this.unpaidTheft > 0 || this.unpaidHeld > 0 || this.paperTrail > 0;
+        const gain = dirty ? 6 : 8;
+        this.imprints -= 6;
+        // sprint 329 — the under launders: the Broker takes the till's
+        // marked coin without asking — hot imprints die here, silent.
+        // sprint 330 — but the wash isn't free: the under's book reads
+        // the marked coin too, and the purse files the question.
+        const washed = Math.min(6, this.hotImprints);
+        this.hotImprints -= washed;
+        if (washed > 0) this.paperTrail += 1;
+        this.marginalia += gain;
+        this.stats.marginaliaEarned += gain;
+        this.cue('purchase', it.pos, washed > 0
+          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia]`
+          : dirty
+            ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
+            : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
+        return;
+      }
+      case 'fence': {
+        // sprint 331 — the Broker takes marked stock off your hands:
+        // the goods-side wash. The take leaves your bag at an insult
+        // rate and the under's book opens a line for the question —
+        // the same price the purse charges for the coin.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
+        if (take.length === 0) {
+          this.cue('whisper', it.pos,
+            "[the broker glances at your bag — nothing he'd touch]", 'info');
+          return;
+        }
+        const count = take.reduce((n, i) => n + i.count, 0);
+        const pay = 4 * count;
+        for (const i of take) {
+          this.hotItems.delete(i.id);
+          i.count = 0;
+        }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.marginalia += pay;
+        this.stats.marginaliaEarned += pay;
+        this.paperTrail += 1;
+        this.cue('purchase', it.pos,
+          `[the broker takes the marked stock without a word — the under's book opens a line · +${pay} marginalia]`);
+        return;
+      }
+      case 'bell': {
+        // The desk bell — the house's only noise that isn't at your
+        // position. One ring rolls down the hall as a 'distraction'
+        // (rouse category, intensity 0.8 ≈ 11m reach): anything
+        // listening answers the counter, not you. Per-room cooldown
+        // keeps a rung-out bell a spent tool, not a spammable siren.
+        const roomIndex = (it.data as { roomIndex: number }).roomIndex;
+        const last = this.bellRung.get(roomIndex)?.t ?? -Infinity;
+        if (this.clock.time - last < 25) {
+          this.cue('door-locked', it.pos, '[the bell gives a tired click — the house has heard enough]', 'info');
+          return;
+        }
+        this.bellRung.set(roomIndex, { t: this.clock.time, x: it.pos.x, z: it.pos.z });
+        this.sound.emit({ x: it.pos.x, y: it.pos.y, z: it.pos.z, intensity: 0.8, category: 'distraction', caption: '' });
+        this.cue('phone-ring', it.pos, "[the bell's note rolls down the hall]", 'info');
         return;
       }
       case 'exitHide': {
@@ -1716,7 +2301,7 @@ export class Game {
           if (lockId === 'toll') {
             // The toll door — imprints, not keys, open it.
             if (this.imprints >= 3) {
-              this.imprints -= 3;
+              this.chargedImprints(3, it.pos.x, it.pos.z);
               for (const d of cluster) d.locked = false;
               this.cue('door-unlock', it.pos, '[the door takes its toll — 3 imprints]');
             } else {
@@ -1808,7 +2393,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the machine wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.cue('machine', it.pos, '[the machine coughs something up]');
@@ -1827,11 +2412,16 @@ export class Game {
             `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
           return;
         }
-        if (cur) this.marginalia -= price; else this.imprints -= price;
+        if (cur) this.marginalia -= price;
+        else this.chargedImprints(price, it.pos.x, it.pos.z);
         if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
         it.enabled = false;
+        // under cages are crew property — the books below count them on a
+        // slow cycle, and the till rings ~75s later where the tag hung
+        if (cur) this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[a tag reads drawn early — the count is short]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         const contains = sock.meta.contains as string | undefined;
         if (contains === 'marginalia') {
@@ -1873,7 +2463,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the ledger costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -1928,7 +2518,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the roster costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -1968,7 +2558,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the book costs ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2172,6 +2762,58 @@ export class Game {
         this.cue('whisper', it.pos, '[two thefts struck from the tally — the filing itself is claimed]');
         return;
       }
+      case 'misfile': {
+        // The quiet amendment — the count's relief valve. The other
+        // filings settle ledgers; this buries the count itself: every
+        // pending loss-report leaves the books — no ring, no checker.
+        // A timing play, not a pardon: file it BEFORE the ring lands,
+        // and a walker already out keeps walking. Dearest paper below.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 8;
+        if (this.crewCount.pending <= 0) {
+          this.cue('door-locked', it.pos, '[the tally is already honest — the clerk waves the slip away]', 'warn');
+          return;
+        }
+        if (this.marginalia < price) {
+          this.cue('door-locked', it.pos, `[the amendment wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
+          return;
+        }
+        this.marginalia -= price;
+        sock.meta.taken = true;
+        it.enabled = false;
+        const buried = this.crewCount.pending;
+        this.crewCount.reset();
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, buried === 1
+          ? '[a line item leaves the count — it never reaches the books]'
+          : `[${buried} line items leave the count — they never reach the books]`);
+        return;
+      }
+      case 'affidavit': {
+        // The affidavit — the held ledger's relief valve, priced in
+        // imprints on the main route (its under twins run on marginalia).
+        // A sworn statement that the held goods reached their owner:
+        // strikes two claims off the detective's register, then the
+        // filing itself enters his book — net −1. Only his desk settles
+        // for real. Blank register → shrug, like the under filings.
+        const sock = it.data as Socket;
+        const price = (sock.meta.price as number) ?? 6;
+        if (this.unpaidHeld <= 0) {
+          this.cue('door-locked', it.pos, '[your name is not in the register — the clerk waves the form away]', 'warn');
+          return;
+        }
+        if (this.imprints < price) {
+          this.cue('door-locked', it.pos, `[the affidavit asks ${price} imprints — ${price - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.chargedImprints(price, it.pos.x, it.pos.z);
+        sock.meta.taken = true;
+        it.enabled = false;
+        this.unpaidHeld = Math.max(0, this.unpaidHeld - 2) + 1;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, '[two claims sworn away — the filing itself enters his book]');
+        return;
+      }
       case 'watchSheet': {
         // The inspection sheet — the security wing's paper. Where the fault
         // book files what BITES, this files what WATCHES: which doors ahead
@@ -2183,7 +2825,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the sheet wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= price;
+        this.chargedImprints(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2290,7 +2932,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the register asks ${toll} imprints — ${toll - this.imprints} short]`, 'warn');
           return;
         }
-        this.imprints -= toll;
+        this.chargedImprints(toll, it.pos.x, it.pos.z);
         this.unpaidHeld = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2325,7 +2967,9 @@ export class Game {
         const d = it.data as { pay?: () => void; price?: number } | undefined;
         const price = d?.price ?? 2;
         let paid = false;
-        if (this.imprints >= price) { this.imprints -= price; paid = true; }
+        if (this.imprints >= price) {
+          this.chargedImprints(price, it.pos.x, it.pos.z); paid = true;
+        }
         else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;
@@ -2487,6 +3131,9 @@ export class Game {
           this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the sledge]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        // the drag's cargo is crew property — the count finds it short later
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the drag reads light — the count is short]');
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
       }
@@ -2517,6 +3164,58 @@ export class Game {
         this.cue('drawer', it.pos, '[the docket notes your hands — filed as two questions]', 'warn');
         return;
       }
+      case 'tallyDrawer': {
+        // Rifling the Auditor's own drawer — the loudest claim in the
+        // under: two lines in his book, and he's standing at the desk —
+        // the rummage opens the ledger at your name on the spot.
+        const h = it.data as unknown as { stock: number; keeper?: { rifledTally?: () => void } };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidTheft += 2;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(4, 9);
+          this.marginalia += amt;
+          this.stats.marginaliaEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} marginalia — off the tally]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the tally]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the tally notes your hands — the book slaps open]', 'warn');
+        h.keeper?.rifledTally?.();
+        return;
+      }
+      case 'registerDrawer': {
+        // Rifling the Detective's register — imprints off the house book,
+        // two lines onto yours, and he doesn't need the slow look: your
+        // face files itself while your hands are in his drawer.
+        const h = it.data as unknown as { stock: number; keeper?: { rifledRegister?: () => void } };
+        if (h.stock <= 0) { it.enabled = false; return; }
+        h.stock--;
+        this.unpaidHeld += 2;
+        it.enabled = false;
+        const roll = this.streams.stream('loot').range(0, 1);
+        if (roll < 0.6) {
+          const amt = this.streams.stream('loot').int(6, 10);
+          this.imprints += amt;
+          this.stats.imprintsEarned += amt;
+          this.cue('pickup', it.pos, `[+${amt} imprints — off the register]`);
+        } else {
+          const pool = ['latchpick', 'doorChock', 'feltWrap', 'handLamp', 'sparkFlash'] as const;
+          const item = pool[this.streams.stream('loot').int(0, pool.length - 1)];
+          this.giveItem(item as ItemId, 1);
+          this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the register]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.cue('drawer', it.pos, '[the register notes your hands — your face files itself]', 'warn');
+        h.keeper?.rifledRegister?.();
+        return;
+      }
       case 'cutWord': {
         // Tearing the courier's message — the word dies mid-delivery.
         // Not theft: the card is yours, and the Filer closes it torn.
@@ -2529,6 +3228,16 @@ export class Game {
         this.marginalia += amt;
         this.stats.marginaliaEarned += amt;
         this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
+        return;
+      }
+      case 'houseLine': {
+        // Pulling the Detective's junction box — the broadcast dies on the
+        // spot (or never starts), but the dead wire is damages he files
+        // in his book. Sabotage is a price, not a trick.
+        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean } };
+        if (d.keeper?.lineDead) { it.enabled = false; return; }
+        it.enabled = false;
+        d.keeper?.pulledLine();
         return;
       }
       case 'strip': {
@@ -2545,6 +3254,24 @@ export class Game {
         this.giveItem('handLamp', scavenged ? 30 : 55);
         this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        // its lamp is crew property too — stripped or scavenged, it counts
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the drag\'s lamp is marked gone — the count is short]');
+        return;
+      }
+      case 'stripCheck': {
+        // Stealing the light mid-count — it feels it die instantly, and
+        // the lamp is crew property: the strip files ANOTHER loss-report.
+        const ch = it.data as unknown as { lampLit: boolean; stripLamp(h: CheckerHooks): number };
+        if (!ch.lampLit) { it.enabled = false; return; }
+        const charge = ch.stripLamp(this.checkerHooks());
+        this.unpaidTheft += 1; // off the crew's hands, into the tally
+        it.enabled = false;
+        this.giveItem('handLamp', charge);
+        this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
+        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+          '[the count\'s lamp is marked gone — the count is short]');
         return;
       }
       case 'forge': {
@@ -2594,9 +3321,30 @@ export class Game {
         const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
         const w = wp && this.hazard.watchers.find((x) =>
           !x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
-        if (w) w.dead = true;
-        this.cue('item', it.pos, '[the eye goes blind under the felt]');
+        if (w) {
+          w.dead = true;
+          // the tape is testimony — a mounted felt patch reads as your
+          // work to every hunter that smells it. Fresh sign, not ash:
+          // unlike a forged lie this pulls both readers once.
+          this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+            kind: 'blind', t: this.clock.time, readBy: [] });
+        }
+        this.cue('item', it.pos, '[the eye goes blind under the felt — and the felt smells of your work]');
         this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
+        return;
+      }
+      case 'untape': {
+        // Take the felt back: the eye wakes, the wrap is yours again —
+        // and the sign the tape left stays smelled (it already went out).
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          x.dead && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (!w) return;
+        w.dead = false;
+        it.enabled = false;
+        this.giveItem('feltWrap', 1);
+        this.cue('item', it.pos, '[the felt is yours again — the eye blinks awake]', 'warn');
+        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.15, category: 'item', caption: '[felt pulled free]' });
         return;
       }
       case 'drain': {
@@ -3370,6 +4118,11 @@ export class Game {
       marginalia: this.marginalia,
       inventory: this.inventory.map((i) => ({ ...i })),
       stats: { ...this.stats, entityEncounters: { ...this.stats.entityEncounters } },
+      unpaidTheft: this.unpaidTheft,
+      unpaidHeld: this.unpaidHeld,
+      paperTrail: this.paperTrail,
+      hotImprints: this.hotImprints,
+      hotItems: [...this.hotItems],
     };
   }
 
@@ -3428,7 +4181,19 @@ export class Game {
     this.audio.play('victory', null, '', 'info');
     this.audio.setMood('menu');
     this.audio.setRoomTone('off');
-    useGameStore.setState({ phase: 'COMPLETE', victoryInfo: { stats: this.stats }, paused: true });
+    useGameStore.setState({ phase: 'COMPLETE', victoryInfo: {
+      stats: this.stats,
+      // sprint 336 — the books close at the door: the ledgers accrue
+      // all run and the exit reads them back. Nothing forgives at the
+      // threshold — what you leave owing leaves with you as text.
+      books: {
+        thefts: this.unpaidTheft,
+        held: this.unpaidHeld,
+        asks: this.paperTrail,
+        hotCoin: this.hotImprints,
+        hotGoods: this.hotItems.size,
+      },
+    }, paused: true });
     document.exitPointerLock?.();
     this.clock.stop();
   }
@@ -3823,6 +4588,7 @@ export class Game {
       const wrong = this.relabeled.get(i);
       if (wrong) this.applyWrongPlate(i, wrong);
       this.ensureBroker(i);
+      this.ensureClerk(i);
       this.tickDoorListening(i);
       const t = this.clock.time;
       const dead = this.blackedOut.has(i);
@@ -4083,11 +4849,39 @@ export class Game {
       if (o.userData.figureParts) {
         tickFigure(o, t);
         // Broker figures track the player with their head.
-        if (o.userData.broker) {
+        if (o.userData.broker || o.userData.clerk) {
           const head = (o.userData.figureParts as Record<string, THREE.Object3D>).head;
-          if (head) {
-            const dx = this.player.pos.x - o.position.x;
-            const dz = this.player.pos.z - o.position.z;
+          // The clerk only turns its head for the house's own sounds:
+          // a fresh ring draws its eye to the bell for ~3.5s (the lure
+          // landing visibly), and after the rifle it ignores the bell
+          // entirely — the cold counter's face finds your hands.
+          let tx = this.player.pos.x, tz = this.player.pos.z;
+          let watches = o.userData.broker === true
+            || this.closedCounters.has(o.userData.clerkRoomIndex as number);
+          if (o.userData.clerk === true && !watches) {
+            const rung = this.bellRung.get(o.userData.clerkRoomIndex as number);
+            if (rung && this.clock.time - rung.t < 3.5) {
+              tx = rung.x; tz = rung.z; watches = true;
+            } else if (this.hotItems.size > 0
+                && this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0)) {
+              // sprint 331 — the till's stock testifies: carried goods
+              // still read as the clerk's own shelf — its eye finds the
+              // take on you, and the first read pings where you stand.
+              watches = true;
+              const rIdx = o.userData.clerkRoomIndex as number;
+              if (!this.stockSeen.has(rIdx)) {
+                this.stockSeen.add(rIdx);
+                this.sound.emit({ x: this.player.pos.x, y: 1, z: this.player.pos.z,
+                  intensity: 0.4, category: 'distraction',
+                  caption: "[the till's stock answers for itself]" });
+                this.cue('drawer', this.player.pos,
+                  '[the clerk reads its own stock on you — the till wares tell]', 'warn');
+              }
+            }
+          }
+          if (head && watches) {
+            const dx = tx - o.position.x;
+            const dz = tz - o.position.z;
             const dist = Math.hypot(dx, dz);
             if (dist > 0.01 && dist < 16) {
               const rel = Math.atan2(Math.sin(Math.atan2(dx, dz) - o.rotation.y), Math.cos(Math.atan2(dx, dz) - o.rotation.y));
@@ -4860,6 +5654,80 @@ export class Game {
     }
   }
 
+  /** The night clerk — a masked house-staff figure behind reception
+   *  counters, the Broker's upstairs twin: porcelain service-face,
+   *  amber eyes, no hood. Spawned lazily when a clerked room builds. */
+  private readonly clerkFigs = new Map<number, THREE.Object3D>();
+  /** Counters that already read you their page — one ask per clerk. */
+  private readonly clerkAsked = new Set<number>();
+  /** Desk-bell cooldowns: roomIndex -> clock.time of the last ring. */
+  private readonly bellRung = new Map<number, { t: number; x: number; z: number }>();
+  /** Staffed counters that watched you rifle the till — closed to you. */
+  private readonly closedCounters = new Set<number>();
+  /** sprint 329 — the till's coin is marked: rifled imprints testify
+   *  each time a hot coin lands in a house till. The under's trades
+   *  (the Broker's purse) take marked coin without asking — a wash. */
+  private hotImprints = 0;
+  /** sprint 331 — the till's stock is marked too: the ids a rifled
+   *  till paid out in goods. A warm clerk reads its own stock on you
+   *  (the eye finds the take); the Broker fences it clean off. */
+  private readonly hotItems = new Set<ItemId>();
+  /** Rooms whose clerk already read the marked stock — one ping each. */
+  private readonly stockSeen = new Set<number>();
+
+  /** Spend imprints at a house service — the marked coin goes first,
+   *  and each hot coin that lands testifies twice: it rings where it
+   *  fell AND the till files the hands that fed it into the register.
+   *  Only the house's services testify; the under answers to different
+   *  books (the purse launders silently, for the asking's price). */
+  private chargedImprints(n: number, x: number, z: number): void {
+    this.imprints -= n;
+    const hot = Math.min(n, this.hotImprints);
+    if (hot <= 0) return;
+    this.hotImprints -= hot;
+    this.unpaidHeld += 1;
+    this.sound.emit({ x, y: 1, z, intensity: 0.5, category: 'distraction',
+      caption: '[a marked coin rings where it lands]' });
+    this.cue('machine', v3(x, 1, z),
+      '[the till knows its own coin — the register files the hands that fed it]', 'warn');
+  }
+
+  /** The marked-stock pool only testifies while its units are still
+   *  carried — the last unit consumed drops the mark, so a fresh clean
+   *  ware of that id is never the take. Pruned per frame; the pool is
+   *  a handful of ids, the scan is trivial. */
+  private pruneHotMarks(): void {
+    for (const id of this.hotItems) {
+      if (!this.inventory.some((i) => i.id === id && i.count > 0)) this.hotItems.delete(id);
+    }
+  }
+
+  private ensureClerk(roomIndex: number): void {
+    if (this.space !== 'main' || this.clerkFigs.has(roomIndex)) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room || !room.sockets.some((s) => s.meta.clerk !== undefined)) return;
+    const counter = room.spec?.props.find((p) => p.kind === 'counter');
+    if (!counter) return;
+    const fig = tallFigure({ height: 1.85, body: MAT.shadowFigure(), face: 'mask', eyes: 'amber' });
+    const yaw = room.yaw;
+    const cos = Math.cos(yaw), sin = Math.sin(yaw);
+    const lx = counter.x, lz = counter.z + 1.15;
+    const wx = room.origin.x + lx * cos + lz * sin;
+    const wz = room.origin.z - lx * sin + lz * cos;
+    fig.position.set(wx, room.origin.y, wz);
+    fig.rotation.y = Math.atan2(room.entryPos.x - wx, room.entryPos.z - wz);
+    fig.userData.clerk = true;
+    fig.userData.clerkRoomIndex = roomIndex;
+    this.entityGroup.add(fig);
+    this.clerkFigs.set(roomIndex, fig);
+    // first sighting — the house has staff too, and they wear the same face
+    const greet = this.streams.roomStream('scare', roomIndex + 883);
+    if (greet.bool(0.5)) {
+      this.cue('custodian-bell', fig.position as unknown as Vec3,
+        '[a clerk stands behind the counter — it was not there a moment ago]', 'info');
+    }
+  }
+
   /** Door listening — linger facing a closed door and the House may let you
    *  hear what waits beyond it. Real when a scheduled encounter or live
    *  threat sits near the far side; otherwise a seeded lie (~1/7 doors).
@@ -5431,6 +6299,7 @@ export class Game {
     const blockers = this.collectBlockers();
     this.player.update(dt, moveIn, blockers, this.settings, this.sound, this.activeRooms()[this.currentRoom] ?? null, this.clock.time);
     this.player.refreshProtection(this.activeRooms()[this.currentRoom]?.safeZones ?? []);
+    this.pruneHotMarks();
 
     // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
     // The Bellman (and anything else that trails you) reads these.
@@ -6163,6 +7032,27 @@ export class Game {
     // entities + director
     this.spawnScheduled();
     this.hazard.update(this.entityCtx(), dt);
+    // the count — due loss-reports ring where the crew property stood:
+    // loud enough to rouse the dormant AND pull the room's own listeners
+    this.crewCount.tick(this.clock.time, (l) => {
+      this.sound.emit({ x: l.x, y: 0.6, z: l.z, intensity: 0.6, category: 'item', caption: l.caption });
+      // ...and the books send somebody to look — at every till they marked
+      if (this.route) {
+        const extra = this.crewCount.pendingSockets();
+        const sent = this.checker.dispatch(this.route.underRooms, [l, ...extra], this.checkerHooks());
+        if (sent && extra.length)
+          this.cue('chalk-mark', null, '[the books marked them together — the lamp has more than one till]', 'warn');
+      }
+    });
+    // the checker walks: inbound → sweep the rung socket → outbound
+    if (this.checker.active && this.route) {
+      const p = this.player.pos;
+      this.checker.update(dt, this.route.underRooms, {
+        pos: p,
+        room: this.space === 'under' ? underRoomOf(this.route.underRooms, p) : -1,
+        exposed: !this.player.hiddenSpot && this.player.protection !== 'hidden',
+      }, this.checkerHooks());
+    }
     for (const e of [...this.entities]) {
       e.update(dt);
       if (e.state === 'done') {

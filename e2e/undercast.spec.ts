@@ -497,21 +497,42 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     const theftAfterSlip = ga.unpaidTheft;
 
-    // --- 2. walk into his room — the ledger opens ---
+    // --- 2. into his room with a CLEAN book — rifle the tally drawer
+    //    under his nose: owed>0 would auto-demand on entry and the settle
+    //    point would steal the drawer's focus; the rifle itself must be
+    //    what slaps the book open. +2 lines AND an instant demand.
     const aRoom = g.route.underRooms.find((r) => r.scheduled?.some((s) => s.entity === 'auditor')
       && r.index !== cageRoom.index);
     if (!aRoom) return { stage: 'no-clerk' } as const;
+    ga.unpaidTheft = 0;
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
     const demandCap = caps.length;
     let clerk: { demanded?: boolean; pursuing?: boolean } | undefined;
-    for (let f = 0; f < 80; f++) {
+    for (let f = 0; f < 60; f++) {
       g.frame();
       clerk = ga.entities.find((e) => e.id === 'auditor') ?? clerk;
-      if (clerk?.demanded) break;
+      if (clerk) break;
     }
     if (!clerk) return { stage: 'no-clerk-spawn', ents: ga.entities.map((e) => e.id) } as const;
-    const demanded = caps.slice(demandCap).some((c) => /hands are in his book/.test(c));
+    const tally = g.interaction.interactables.find((i) => i.kind === 'tallyDrawer' && i.enabled);
+    if (tally) {
+      for (let f = 0; f < 60 && (tally.data as { stock?: number }).stock !== 0; f++) {
+        const sx = aRoom.origin.x - tally.pos.x, sz = aRoom.origin.z - tally.pos.z;
+        const sl = Math.hypot(sx, sz) || 1;
+        g.player.teleport(tally.pos.x + (sx / sl) * 0.9, 0, tally.pos.z + (sz / sl) * 0.9);
+        g.player.yaw = Math.atan2(tally.pos.x - g.player.pos.x, tally.pos.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2((tally.pos.y + 0.6) - eyeY, 0.95);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+    }
+    const theftAfterDrawer = ga.unpaidTheft;
+    for (let f = 0; f < 40 && !clerk.demanded; f++) g.frame();
+    const demanded = caps.slice(demandCap).some((c) => /hands are in his book|book slaps open/.test(c));
+    if (ga.marginalia < 14) ga.marginalia = 14; // purse floor for the settle
 
     // --- 3. settle at his desk ---
     const settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled);
@@ -534,13 +555,14 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
-    return { stage: 'done' as const, demanded, theftAfterSlip, settlePrompt, paid,
+    return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, settlePrompt, paid,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
   if (result.stage !== 'done') test.skip();
   expect(result.demanded, JSON.stringify(result)).toBe(true);
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
+  expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);
@@ -563,7 +585,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       enterUnderscript(): void; godMode: boolean; currentRoom: number;
-      marginalia: number; keys: Set<string>; paperTrail: number;
+      marginalia: number; keys: Set<string>; paperTrail: number; unpaidHeld: number;
       interaction: { focused?: { prompt?: string; kind?: string } };
       entities: { id: string; filed?: boolean; posted?: boolean }[];
     };
@@ -676,6 +698,13 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     for (let f = 0; f < 200 && !crk.posted; f++) g.frame();
     const refiled = crk.posted === true;
 
+    // --- 3b. this time the courier gets away — the word files upstairs ---
+    // Don't chase: stay put and let it run the chain out. The card lands
+    // in the house register — a line in the Detective's book.
+    g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
+    for (let f = 0; f < 1600 && crk.runnerOut; f++) g.frame();
+    const wordUpstairs = ga.unpaidHeld;
+
     // --- 4. back to the drawer — square the index ---
     g.player.teleport(fRoom.origin.x, 0, fRoom.origin.z);
     ga.currentRoom = fRoom.index;
@@ -701,7 +730,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
     return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
-      filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, squarePrompt, paid,
+      filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, wordUpstairs, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
 
@@ -717,9 +746,399 @@ test('the index — the filer files your questions, the halls listen', async ({ 
   expect(result.courierPaid, JSON.stringify(result)).toBe(true);
   expect(result.wordDead, JSON.stringify(result)).toBe(true);
   expect(result.refiled, JSON.stringify(result)).toBe(true);
+  expect(result.wordUpstairs, JSON.stringify(result)).toBe(1); // the escaped courier's card lands in the register
   expect(result.squarePrompt, JSON.stringify(result)).toMatch(/Square the index/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.trail, JSON.stringify(result)).toBe(0);
   expect(result.posted, JSON.stringify(result)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test('the count — the till rings late where your hands were (sprint 305)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>; clock: { time: number };
+      sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    const heard: { x: number; z: number; caption: string; intensity: number }[] = [];
+    ga.sound.on((e) => { if (e.caption && /count is short/.test(e.caption)) heard.push(e as never); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    // pilfer the tag — a real claim, paid and taken
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // let the books catch up — the report is queued ~75 sim-seconds out
+    for (let f = 0; f < 80 * 30 && heard.length === 0; f++) g.frame();
+    const ring = heard[0];
+    const dx = ring ? Math.abs(ring.x - tag.pos.x) : 99;
+    const dz = ring ? Math.abs(ring.z - tag.pos.z) : 99;
+    return { stage: 'done', paid, counted: heard.length > 0, dx, dz,
+      intensity: ring?.intensity, heard: heard.slice(0, 4) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.counted, JSON.stringify(result)).toBe(true);
+  // the ring lands at the pilfered socket, not on you
+  expect((result.dx ?? 9) + (result.dz ?? 9), JSON.stringify(result)).toBeLessThan(0.6);
+  // loud enough to rouse the dormant and pull the room's listeners
+  expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
+  expect(errors).toEqual([]);
+});
+
+test('the checker — the count sends a lamp down the row (sprint 306)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>; unpaidHeld: number;
+      checker: { stage: string };
+      sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
+    };
+    const heard: { x: number; z: number; caption: string; intensity: number }[] = [];
+    ga.sound.on((e) => { if (e.caption && /count stands/.test(e.caption)) heard.push(e as never); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    ga.unpaidHeld = 0;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // sprint 312 — pilfer a second till before the first report rings, so
+    // the books mark them together and the lamp walks both rooms
+    const cageRoom2 = g.route.underRooms.find((r) => r !== cageRoom
+      && (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    let pilfered2 = false;
+    if (cageRoom2) {
+      const tag2 = (cageRoom2.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia)!;
+      ga.currentRoom = cageRoom2.index;
+      for (let f = 0; f < 50; f++) {
+        g.player.teleport(tag2.pos.x + 0.4, 0, tag2.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(tag2.pos.y - eyeY, 0.5);
+        g.player.yaw = Math.atan2(tag2.pos.x - g.player.pos.x, tag2.pos.z - g.player.pos.z);
+        g.frame();
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      pilfered2 = caps.filter((c) => /effects held|inside the bag|old papers|someone's papers/.test(c)).length >= 2;
+    }
+    // linger exposed in the pilfered room — the count rings ~75s out, then
+    // the checker walks. Stay put: this is the losing play, on purpose.
+    // (cap sized for a 2-stop route: sweep of this room can land ~150s in)
+    let dispatched = false;
+    for (let f = 0; f < 340 * 30 && heard.length === 0; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      g.frame();
+      if (ga.checker.stage !== 'idle') dispatched = true;
+    }
+    const found = heard[0];
+    // sprint 311 — the floor shutters while the count walks: a stocked
+    // broker pedestal must refuse trade until the checker leaves
+    const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
+      && (r.sockets ?? []).some((s) => s.meta?.broker !== undefined && s.meta?.brokerItem !== undefined && s.meta?.sold !== true));
+    if (!lobby) return { stage: 'no-lobby' } as const;
+    const bsock = (lobby.sockets ?? []).find((s) => s.meta?.broker !== undefined
+      && s.meta?.brokerItem !== undefined && s.meta?.sold !== true)!;
+    ga.marginalia = 99;
+    ga.currentRoom = lobby.index;
+    const closedBefore = caps.length;
+    for (let f = 0; f < 90 && bsock.meta?.sold !== true; f++) {
+      if (ga.checker.stage === 'idle') break; // too late — he already left
+      const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
+      const ax = bsock.pos.x - g.player.pos.x, az = bsock.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(bsock.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+      if (/trade wares|inspect|take/i.test(g.interaction.focused?.prompt ?? '')) {
+        g.input.interactPressed = true;
+      }
+      g.frame();
+      g.input.interactPressed = false;
+    }
+    const closedSeen = caps.slice(closedBefore).some((c) => /floor is closed/.test(c));
+    const refusedWhileWalking = bsock.meta?.sold !== true;
+    // let it close the count and leave
+    for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
+    // the floor reopens — the same pedestal trades now
+    for (let f = 0; f < 90 && bsock.meta?.sold !== true; f++) {
+      const dx = lobby.origin.x - bsock.pos.x, dz = lobby.origin.z - bsock.pos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(bsock.pos.x + (dx / L) * 0.9, 0, bsock.pos.z + (dz / L) * 0.9);
+      const ax = bsock.pos.x - g.player.pos.x, az = bsock.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(bsock.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+      if (/trade wares|inspect|take/i.test(g.interaction.focused?.prompt ?? '')) {
+        g.input.interactPressed = true;
+      }
+      g.frame();
+      g.input.interactPressed = false;
+    }
+    const soldAfter = bsock.meta?.sold === true;
+    return { stage: 'done', paid, dispatched, found: heard.length > 0,
+      closedSeen, refusedWhileWalking, soldAfter, pilfered2,
+      wideSeen: caps.some((c) => /more than one till|marked them together/.test(c)),
+      walkCont: caps.some((c) => /walk continues/.test(c)),
+      fx: found?.x, fz: found?.z, intensity: found?.intensity,
+      finalStage: ga.checker.stage,
+      px: tag.pos.x + 0.4, pz: tag.pos.z,
+      cueSeen: caps.some((c) => /walks the row|more than one till/.test(c)),
+      closeSeen: caps.some((c) => /closes the count|counts the till/.test(c)),
+      witSeen: caps.some((c) => /register gains a witness/.test(c)),
+      heldAfter: ga.unpaidHeld,
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.cueSeen, JSON.stringify(result)).toBe(true); // the answer went out
+  expect(result.dispatched, JSON.stringify(result)).toBe(true);
+  expect(result.found, JSON.stringify(result)).toBe(true); // the lamp found the lingerer
+  expect(result.heldAfter, JSON.stringify(result)).toBe(1); // the witness line landed
+  expect(result.witSeen, JSON.stringify(result)).toBe(true);
+  // sprint 311 — the floor shutters while he walks, reopens when he leaves
+  expect(result.closedSeen, JSON.stringify(result)).toBe(true);
+  expect(result.refusedWhileWalking, JSON.stringify(result)).toBe(true);
+  expect(result.soldAfter, JSON.stringify(result)).toBe(true);
+  // sprint 312 — two tills marked together: one wide walk, both swept
+  if (result.pilfered2) {
+    expect(result.wideSeen, JSON.stringify(result)).toBe(true);
+    expect(result.walkCont, JSON.stringify(result)).toBe(true);
+  }
+  // the find rings at YOU — the building learns where you are now
+  expect(Math.abs((result.fx ?? 99) - (result.px ?? 0)) + Math.abs((result.fz ?? 99) - (result.pz ?? 0)), JSON.stringify(result)).toBeLessThan(1.0);
+  expect(result.intensity, JSON.stringify(result)).toBeGreaterThanOrEqual(0.55);
+  expect(result.closeSeen, JSON.stringify(result)).toBe(true);
+  expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
+  expect(errors).toEqual([]);
+});
+
+test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 307)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      checker: { stage: string; lampLit: boolean; position: { x: number; z: number } };
+      crewCount: { pending: number };
+      inventory: { id: string; count: number }[];
+      sound: { on(fn: (e: { caption?: string }) => void): unknown };
+    };
+    const cried: string[] = [];
+    ga.sound.on((e) => { if (e.caption && /dies in your hands/.test(e.caption)) cried.push(e.caption); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 30;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    if (!cageRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    if (!tag) return { stage: 'no-tag' } as const;
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    // wait for the books to send somebody (~75s ring + dispatch)
+    for (let f = 0; f < 100 * 30 && ga.checker.stage === 'idle'; f++) g.frame();
+    if (ga.checker.stage === 'idle') return { stage: 'no-dispatch', caps: caps.slice(-8) } as const;
+    // shadow the walker — steal its light while it counts
+    let stripped = false;
+    for (let f = 0; f < 400; f++) {
+      const cp = ga.checker.position;
+      g.player.teleport(cp.x - 0.3, 0, cp.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(0.9 - eyeY, 0.4);
+      g.player.yaw = Math.atan2(cp.x - g.player.pos.x, cp.z - g.player.pos.z);
+      g.frame();
+      if (f === 2) ga.keys.add('KeyE');
+      if (!ga.checker.lampLit) { stripped = true; break; }
+      if (ga.checker.stage === 'idle') break;
+    }
+    ga.keys.delete('KeyE');
+    const lamp = ga.inventory.find((i) => i.id === 'handLamp');
+    // let it finish counting blind and leave
+    for (let f = 0; f < 120 * 30 && ga.checker.stage !== 'idle'; f++) g.frame();
+    return { stage: 'done', stripped, cried: cried.length > 0,
+      charge: lamp?.count ?? 0, pending: ga.crewCount.pending,
+      blindSeen: caps.some((c) => /counts blind/.test(c)),
+      pickupSeen: caps.some((c) => /count's lamp comes free/.test(c)),
+      finalStage: ga.checker.stage,
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.stripped, JSON.stringify(result)).toBe(true);
+  expect(result.cried, JSON.stringify(result)).toBe(true); // it felt the light die
+  expect(result.charge, JSON.stringify(result)).toBe(45); // warm, still swinging
+  expect(result.pending, JSON.stringify(result)).toBeGreaterThanOrEqual(1); // the lamp files another count
+  expect(result.blindSeen, JSON.stringify(result)).toBe(true); // swept blind, count stays open
+  expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
+  expect(errors).toEqual([]);
+});
+
+test('the quiet amendment — bury the count before it rings (sprint 308)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; keys: Set<string>;
+      checker: { stage: string };
+      crewCount: { pending: number };
+      sound: { on(fn: (e: { caption?: string }) => void): unknown };
+    };
+    const rings: string[] = [];
+    ga.sound.on((e) => { if (e.caption && /count is short/.test(e.caption)) rings.push(e.caption); });
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 60;
+    const cageRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
+    const formRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.misfile));
+    if (!cageRoom || !formRoom) return { stage: 'none' } as const;
+    const tag = (cageRoom.sockets ?? []).find((s) => s.meta?.claim && s.meta?.marginalia);
+    const form = (formRoom.sockets ?? []).find((s) => s.meta?.misfile);
+    if (!tag || !form) return { stage: 'no-tag' } as const;
+    // pilfer the tag — a loss-report queues
+    g.player.teleport(cageRoom.origin.x, 0, cageRoom.origin.z);
+    ga.currentRoom = cageRoom.index;
+    for (let f = 0; f < 40; f++) g.frame();
+    for (let f = 0; f < 50; f++) {
+      g.player.teleport(tag.pos.x + 0.4, 0, tag.pos.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.atan2(tag.pos.y - eyeY, 0.5);
+      g.player.yaw = Math.atan2(tag.pos.x - g.player.pos.x, tag.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+    }
+    ga.keys.delete('KeyE');
+    const paid = caps.some((c) => /effects held|inside the bag|old papers|someone's papers/.test(c));
+    if (!paid) return { stage: 'no-pay', caps: caps.slice(-8) } as const;
+    const queued = ga.crewCount.pending;
+    // run to the amendment desk and file before the ring lands
+    g.player.teleport(formRoom.origin.x, 0, formRoom.origin.z);
+    ga.currentRoom = formRoom.index;
+    for (let f = 0; f < 30; f++) g.frame();
+    // stand on the room-center side of the paper — the socket sits +0.5
+    // toward center off a desk collider, so +0.4 lands inside the prop
+    // and the frame pushes you ~1.1m out, swinging the aim off align
+    const toC = { x: formRoom.origin.x - form.pos.x, z: formRoom.origin.z - form.pos.z };
+    const toCL = Math.hypot(toC.x, toC.z) || 1;
+    const stand = { x: form.pos.x + (toC.x / toCL) * 0.9, z: form.pos.z + (toC.z / toCL) * 0.9 };
+    for (let f = 0; f < 60; f++) {
+      g.player.teleport(stand.x, 0, stand.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      // aim at the FOCUS point (pos.y + 0.6), not the socket point — a
+      // down-pitch at the desk-elevated socket fails the 0.86 align gate
+      const hd = Math.hypot(form.pos.x - g.player.pos.x, form.pos.z - g.player.pos.z);
+      g.player.pitch = Math.atan2((form.pos.y + 0.6) - eyeY, hd);
+      g.player.yaw = Math.atan2(form.pos.x - g.player.pos.x, form.pos.z - g.player.pos.z);
+      g.frame();
+      if (f === 5) ga.keys.add('KeyE');
+      if (ga.crewCount.pending === 0) break;
+    }
+    ga.keys.delete('KeyE');
+    const buried = ga.crewCount.pending === 0;
+    // wait past the count's due window — nothing should ring, nobody walks
+    for (let f = 0; f < 90 * 30; f++) g.frame();
+    return { stage: 'done', paid, queued, buried,
+      rang: rings.length > 0, walked: ga.checker.stage !== 'idle',
+      burySeen: caps.some((c) => /never reaches the books/.test(c)),
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.paid, JSON.stringify(result)).toBe(true);
+  expect(result.queued, JSON.stringify(result)).toBeGreaterThanOrEqual(1); // the theft queued a report
+  expect(result.buried, JSON.stringify(result)).toBe(true); // the filing buried it
+  expect(result.burySeen, JSON.stringify(result)).toBe(true);
+  expect(result.rang, JSON.stringify(result)).toBe(false); // the count never rang
+  expect(result.walked, JSON.stringify(result)).toBe(false); // nobody walked
   expect(errors).toEqual([]);
 });

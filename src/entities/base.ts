@@ -63,6 +63,18 @@ export interface EntityCtx {
    *  under-crew saw your hands in the book: their notice reach widens
    *  a tier until the tally is settled. */
   wanted?: () => boolean;
+  /** The Filer's courier made the stairs — her card on the player lands
+   *  in the house register upstairs: +1 line in the Detective's book.
+   *  Optional for headless ctxs. */
+  wordFiled?: () => void;
+  /** The player pulled the house line off the wall — the dead wire is
+   *  billed as damages: +1 line in the Detective's book.
+   *  Optional for headless ctxs. */
+  lineCut?: () => void;
+  /** A wall eye's settle report went upstairs — a witness statement in
+   *  the register: +1 line in the Detective's book. Fires once per eye.
+   *  Optional for headless ctxs. */
+  eyeFiled?: () => void;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */

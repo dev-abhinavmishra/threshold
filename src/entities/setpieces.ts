@@ -1094,6 +1094,15 @@ export class Auditor extends Entity {
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('chalk-mark', this.pos, '[a ledger opens — somebody tallies what you owe]', { severity: 'warn' });
+    // the tally drawer is pilferable — reaching into HIS book is the
+    // loudest claim in the under, and he is standing right at the desk
+    c.addInteractable({
+      kind: 'tallyDrawer', id: this.tallyId(),
+      pos: v3(this.deskPos.x, 0.9, this.deskPos.z),
+      prompt: 'Rifle the tally drawer', holdTime: 0.9,
+      data: { stock: 1, keeper: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 3, // outrank desk loot sockets — his own drawer
+    });
     this.state = 'engage';
   }
 
@@ -1107,6 +1116,17 @@ export class Auditor extends Entity {
   }
 
   private settleId(): string { return `audit-${this.spawnRoom}`; }
+  private tallyId(): string { return `tally-${this.spawnRoom}`; }
+
+  /** Hands in his drawer — the book slaps open at your name on the spot. */
+  rifledTally(): void {
+    if (this.state === 'done' || this.demanded) return;
+    // proximity, not room bounds — a drawer on the room's edge can be
+    // reached from the overlap; hands in it mean you are AT his desk
+    const dx = this.ctx.player.pos.x - this.deskPos.x, dz = this.ctx.player.pos.z - this.deskPos.z;
+    if (dx * dx + dz * dz > 2.6 * 2.6) return;
+    this.openLedger();
+  }
 
   private openLedger(): void {
     const c = this.ctx;
@@ -1213,8 +1233,9 @@ export class Auditor extends Entity {
         this.pos.z += (dz / dd) * this.tuning.speed * dt;
       }
       this.rig?.play('move');
-      // settled or evaded — the book closes
-      if (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 8) {
+      // settled or evaded — the book closes (pRoom -1 = between bounds,
+      // not evaded — the pursuit stays on)
+      if (owed <= 0 || (pRoom >= 0 && Math.abs(pRoom - this.spawnRoom) > 8)) {
         this.pursuing = false;
         this.demanded = false;
         this.homebound = true;
@@ -1246,6 +1267,7 @@ export class Auditor extends Entity {
 
   protected override onDone(): void {
     this.closeLedger();
+    this.ctx.removeInteractable(this.tallyId());
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }
@@ -1258,8 +1280,11 @@ export class Auditor extends Entity {
  *  after you. He lifts the house phone: for a stretch of route either way,
  *  every room you enter rings ahead of you, and the room's listeners are
  *  already awake when you arrive. Settle at his desk — pay the register,
- *  he strikes your name — or outrun the wire. He never touches you; his
- *  weapon is that the building now knows your face. */
+ *  he strikes your name — or outrun the wire. Or sabotage it: the house
+ *  line runs through a junction box beside his entry door — pull it and
+ *  the broadcast dies, but the dead wire is damages he files on the
+ *  spot. He never touches you; his weapon is that the building now
+ *  knows your face. */
 export class Detective extends Entity {
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
@@ -1277,6 +1302,11 @@ export class Detective extends Entity {
   clocked = false;
   /** Your face is on the wire — rooms ahead ring for you. */
   warranted = false;
+  /** His phone line — a junction box on the wall by the entry door.
+   *  Pulled, the wire dies; the damages go in his book. */
+  lineDead = false;
+  private linePos = v3();
+  private lineMesh: THREE.Group | null = null;
 
   constructor() { super('detective', ENTITY_TUNING.detective); }
 
@@ -1315,6 +1345,41 @@ export class Detective extends Entity {
     this.mesh = g;
     c.addEntityMesh(g);
     c.cue('chalk-mark', this.pos, '[a register opens — the house is checking names]', { severity: 'warn' });
+    // the register drawer is pilferable — your hands in HIS book skip the
+    // slow look entirely; he watches you file yourself
+    c.addInteractable({
+      kind: 'registerDrawer', id: this.registerId(),
+      pos: v3(this.deskPos.x, 0.9, this.deskPos.z),
+      prompt: 'Rifle the register drawer', holdTime: 0.9,
+      data: { stock: 1, keeper: this as unknown as Record<string, unknown> },
+      enabled: true, priority: 3, // outrank desk loot sockets — his own drawer
+    });
+    // the house line — a junction box on the wall beside the entry door,
+    // the wire's only counterplay short of settling or outrunning it
+    {
+      const ex = room.entryDir?.x ?? 0, ez = room.entryDir?.z ?? -1;
+      const px = -ez, pz = ex; // wall direction, beside the door
+      this.linePos = v3(
+        room.entryPos.x + px * 0.75 - ex * 0.25, 0,
+        room.entryPos.z + pz * 0.75 - ez * 0.25);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.3, 0.1), MAT.ink());
+      box.position.set(this.linePos.x, 1.25, this.linePos.z);
+      box.rotation.y = Math.atan2(-ex, -ez);
+      // a run of conduit down the jamb
+      const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.0, 0.05), MAT.ink());
+      pipe.position.set(this.linePos.x, 0.7, this.linePos.z);
+      const lg = new THREE.Group();
+      lg.add(box); lg.add(pipe);
+      c.addEntityMesh(lg);
+      this.lineMesh = lg;
+      c.addInteractable({
+        kind: 'houseLine', id: this.lineId(),
+        pos: v3(this.linePos.x, 0.95, this.linePos.z),
+        prompt: 'Pull the house line', holdTime: 1.4,
+        data: { keeper: this as unknown as Record<string, unknown> },
+        enabled: true, priority: 3,
+      });
+    }
     this.state = 'engage';
   }
 
@@ -1328,11 +1393,45 @@ export class Detective extends Entity {
   }
 
   private settleId(): string { return `settle-${this.spawnRoom}`; }
+  private registerId(): string { return `registerdrawer-${this.spawnRoom}`; }
+  private lineId(): string { return `houseline-${this.spawnRoom}`; }
+
+  /** The junction box comes off the wall — sabotage he can't un-notice:
+   *  his desk phone dies mid-service, so he files whoever stood in the
+   *  room. The broadcast dies; the book stays open. */
+  pulledLine(): void {
+    if (this.state === 'done' || this.lineDead) return;
+    this.lineDead = true;
+    const c = this.ctx;
+    c.removeInteractable(this.lineId());
+    if (this.lineMesh) { c.removeEntityMesh(this.lineMesh); this.lineMesh = null; }
+    c.sound.emit({
+      x: this.linePos.x, y: 1.2, z: this.linePos.z,
+      intensity: 0.5, category: 'item', caption: '[a junction box comes off the wall]',
+    });
+    c.lineCut?.(); // the dead wire is billed — damages
+    c.cue('chalk-mark', this.linePos, '[the house line comes off the wall — dead]', { severity: 'warn' });
+    if (this.warranted) {
+      this.warranted = false;
+      c.cue('chalk-mark', this.pos, '[the wire ahead of you goes quiet]', { severity: 'info' });
+    }
+    // the phone dies on his desk — he lifts it, gets nothing, files a face
+    if (!this.clocked) this.openRegister();
+  }
+
+  /** Hands in his register — he doesn't need the slow look now. */
+  rifledRegister(): void {
+    if (this.state === 'done' || this.clocked) return;
+    const dx = this.ctx.player.pos.x - this.deskPos.x, dz = this.ctx.player.pos.z - this.deskPos.z;
+    if (dx * dx + dz * dz > 2.6 * 2.6) return;
+    this.openRegister();
+    this.ctx.cue('chalk-mark', this.pos, '[he watches your hands in his book — your face files itself]', { severity: 'warn' });
+  }
 
   private openRegister(): void {
     const c = this.ctx;
     this.clocked = true;
-    this.warranted = true;
+    this.warranted = !this.lineDead;
     this.interactId = this.settleId();
     const ox = this.roomO.x - this.deskPos.x, oz = this.roomO.z - this.deskPos.z;
     const ol = Math.hypot(ox, oz) || 1;
@@ -1343,7 +1442,9 @@ export class Detective extends Entity {
       data: { detective: this as unknown as Record<string, unknown> },
       enabled: true, priority: 4,
     });
-    c.cue('chalk-mark', this.pos, '[a plain suit lifts the house phone — your face goes on the wire]', { severity: 'warn' });
+    c.cue('chalk-mark', this.pos, this.lineDead
+      ? '[the line is dead in his hand — he files your name longhand]'
+      : '[a plain suit lifts the house phone — your face goes on the wire]', { severity: 'warn' });
   }
 
   private closeRegister(): void {
@@ -1405,8 +1506,12 @@ export class Detective extends Entity {
         });
       }
     }
-    // outrun the wire, or pay it off — either way the register closes
-    if (this.warranted && (owed <= 0 || Math.abs(pRoom - this.spawnRoom) > 10)) this.cool();
+    // outrun the wire, or pay it off — either way the register closes.
+    // pRoom -1 means between room bounds (a desk-edge niche, a door
+    // threshold) — not actually outrun; the warrant stays warm.
+    // Gate on clocked too: a dead line never sets warranted, but the
+    // face-ledger still has to cool when you outrun the desk.
+    if ((this.warranted || this.clocked) && (owed <= 0 || (pRoom >= 0 && Math.abs(pRoom - this.spawnRoom) > 10))) this.cool();
 
     // the return beat — back to the desk, register shut
     if (this.homebound) {
@@ -1428,6 +1533,9 @@ export class Detective extends Entity {
 
   protected override onDone(): void {
     this.closeRegister();
+    this.ctx.removeInteractable(this.registerId());
+    this.ctx.removeInteractable(this.lineId());
+    if (this.lineMesh) { this.ctx.removeEntityMesh(this.lineMesh); this.lineMesh = null; }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
   }
@@ -1593,6 +1701,8 @@ export class Filer extends Entity {
     this.runnerOut = false;
     this.dropRunner();
     this.ctx.cue('chalk-mark', this.runnerPos, '[the word is out — past reach]', { severity: 'warn' });
+    this.ctx.cue('door-locked', this.runnerPos, '[the card reaches the stairs — the house register gains your name]', { severity: 'warn' });
+    this.ctx.wordFiled?.();
   }
 
   private dropRunner(): void {
@@ -1682,7 +1792,8 @@ export class Filer extends Entity {
     }
 
     // outrun the word, or square it away — either way the card comes out
-    if (this.posted && (trail <= 0 || Math.abs(pRoom - this.spawnRoom) > 8)) this.cool();
+    // (pRoom -1 = between bounds, not outrun — the post stays up)
+    if (this.posted && (trail <= 0 || (pRoom >= 0 && Math.abs(pRoom - this.spawnRoom) > 8))) this.cool();
 
     // the return beat — back to the drawer, index shut
     if (this.homebound) {

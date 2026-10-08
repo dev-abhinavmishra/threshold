@@ -43,7 +43,7 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const hazardSrc = readFileSync('src/entities/room.ts', 'utf8');
     // defuse verbs: snip (snare), bleed (steam), coax (wired drawer),
     // valve/drain (puddle), trap (floor trap pry)
-    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'", "'tape'"]) {
+    for (const kind of ["'snip'", "'bleed'", "'coax'", "'scrub'", "'chock'", "'forge'", "'tape'", "'untape'", "'fix'", "'ask'", "'till'", "'bell'", "'purse'", "'fence'", "'restock'", "'book'"]) {
       expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
       expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
     }
@@ -75,6 +75,8 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/wardenOk \|\| !e\.wiped/);
     // sign goes cold — the warden only believes fresh work (~6 min)
     expect(gameSrc).toMatch(/e\.t >= cold/);
+    // the tape is testimony — a blinded eye leaves fresh sign both readers chase
+    expect(gameSrc).toContain("kind: 'blind'");
     const corridorSrc = readFileSync(new URL('../src/entities/corridor.ts', import.meta.url), 'utf8');
     expect(corridorSrc).toContain('the floor smells wiped');
   });
