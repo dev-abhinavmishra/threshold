@@ -298,6 +298,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/0\.85 \* wantedPull/);
   });
 
+  it('the boards tax the thrown and the rung too — every lure you sound', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the pull is a shared getter reaching every player-caused
+    // lure emit: planted tick/ring/bursts, the tossed pebble and a
+    // desk-bell ring you chose to sound
+    expect(gameSrc).toMatch(/private get wantedPull/);
+    expect(gameSrc).toMatch(/0\.45 \* this\.wantedPull/);
+    expect(gameSrc).toMatch(/0\.8 \* this\.wantedPull/);
+  });
+
   it('the seam reads your own bind — holds report, strains warn', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     // a wired leaf answers the listen at the lowest tier: quiet when

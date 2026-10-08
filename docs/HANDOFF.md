@@ -6048,3 +6048,12 @@ nothing else moves]' when quiet, and '[hands work your wire beyond —
 the bind strains]' at warn while `wireStrains` has a first-contact
 count on that leaf. You hear your denial being dismantled before it
 parts — the ear-to-the-seam family now covers the player's own work.
+
+### sprint 436 — the boards tax the thrown and the rung too
+**Done:** `wantedPull` is now a shared getter (`private get wantedPull`)
+reaching every player-caused lure emit: the pebble toss (0.45→×1.5)
+and the desk-bell ring (0.8→×1.5) join the planted tick/ring/bursts.
+Consequence-noise (the repost-scatter, machine clanks) stays flat —
+the tax is on sounds you *aimed*, not sounds you caused.
+**Notes:** bell emit at `case 'bell'`; pebble at `tossPebble`; the
+s434 lure/phone sites now read the getter via a local const.
