@@ -341,6 +341,8 @@ export class Game {
   private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number; doorKey: string; eyeDone: boolean } | null = null;
   private peekEyeDecisions = new Map<string, boolean>();
   private peekEyeUsed = new Set<string>();
+  /** Per-door 'was an eye already at the crack' roll for the stoop (s448). */
+  private stoopEyeUsed = new Set<string>();
   private peekEye: THREE.Group | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -592,6 +594,7 @@ export class Game {
     this.peek = null;
     this.peekEyeDecisions.clear();
     this.peekEyeUsed.clear();
+    this.stoopEyeUsed.clear();
     this.chalkMarks.clear();
     this.visitedRooms.clear();
     this.listenAcc.clear();
@@ -1662,6 +1665,67 @@ export class Game {
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
+  }
+
+  /** Ear to the seam's sight-twin (sprint 445): stooped at the crack under a
+   *  shut leaf you read the far floor itself — only what passes close to the
+   *  threshold shows. Answers 'is it right there', never 'what is it': a
+   *  deep walker and a threshold one both read as shadow, so the crack
+   *  complements the listen instead of repeating it. Honest limits: a room
+   *  too dark gives the crack nothing, a staged (unspawned) threat casts no
+   *  shadow yet, and a lurking readout can't tell you it saw you. */
+  private stoopUnder(door: Door): { text: string; sev?: 'info' | 'warn' | 'danger' } {
+    if (door.falseDoor) return { text: '[solid plaster — the crack is painted on]', sev: 'warn' };
+    if (door.deep) return { text: '[a draught, far too cold — the gap drinks the warmth]', sev: 'warn' };
+    const target = this.roomBeyondDoor(door);
+    if (!target) return { text: '[dead dark — nothing behind it]' };
+    const roam = this.activeRooms();
+    // The nearest live thing in the far room, measured to the leaf — the
+    // crack shows floor, so only proximity to the threshold matters.
+    let best = Infinity;
+    for (const e of this.entities) {
+      if (e.state === 'done') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const ri = underRoomOf(roam, tp);
+      if (ri < 0 || roam[ri] !== target) continue;
+      const d = v3dist(tp, door.pos);
+      if (d < best) best = d;
+    }
+    // sprint 448 — the crack watches back: when a live thing is already
+    // close to the leaf, a seeded per-door decision can put ITS eye to the
+    // gap instead of its shadow. One roll per door — the eye either was
+    // there or it wasn't.
+    if (best <= 2.6 && !this.stoopEyeUsed.has(door.id)) {
+      const eye = this.streams.roomStream('scare', this.currentRoom * 131 + 97).bool(0.22);
+      this.stoopEyeUsed.add(door.id);
+      if (eye) {
+        // the flinch is real: your scramble back off the crack is genuine
+        // noise at YOUR position — unsourced, so the house can rouse on it
+        this.sound.emit({ x: this.player.pos.x, y: 0.3, z: this.player.pos.z, intensity: 0.6 * this.wantedPull, category: 'impact', caption: '' });
+        return { text: '[a low eye meets yours at the crack — it was watching]', sev: 'danger' as const };
+      }
+    }
+    // and the count's own lamp — its low glow reads through the crack even
+    // in a room too dark to show a shadow
+    if (this.space === 'under' && this.checker.active) {
+      const ci = underRoomOf(roam, this.checker.position);
+      if (ci >= 0 && roam[ci] === target) {
+        const d = v3dist(this.checker.position, door.pos);
+        if (this.checker.lampLit) {
+          return { text: d < 2.0
+            ? '[the count’s lamp glows at the crack — the sweep is at this door]'
+            : '[a low light moves beyond — the count’s lamp is working that room]', sev: 'danger' as const };
+        }
+        if (d < best) best = d;
+      }
+    }
+    if (best <= 1.7) return { text: '[a shadow holds at the threshold — it is right there]', sev: 'danger' as const };
+    if (best <= 4.2) return { text: '[a shadow crosses the floor-light — something is working that room]', sev: 'warn' as const };
+    if (best < Infinity) return { text: '[a lit seam — something stirs deep in that room]' };
+    if (target.darkRoom) return { text: '[black glass — no light reaches the crack]', sev: 'warn' };
+    if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { text: '[still floor — a resting place]' };
+    return { text: '[a lit seam — nothing crosses it]' };
   }
 
   /** Doors that already pre-spawned their roused encounters (one-shot). */
@@ -3212,6 +3276,33 @@ export class Game {
         this.listenedDoors.add(door.id);
         const c = this.listenThrough(door);
         this.cue(c.sfx, it.pos, c.text, c.sev);
+        return;
+      }
+      case 'stoop': {
+        const door = it.data as Door;
+        const c = this.stoopUnder(door);
+        this.cue('door-peek', it.pos, c.text, c.sev);
+        this.teach('stoop', '[the crack shows only what passes close — the seam still hears further]');
+        return;
+      }
+      case 'slip': {
+        // sprint 447 — the free toss, aimed: the pebble skips under the
+        // leaf and lands ~1.3m into the far room, on the far side of your
+        // cover. Same cooldown, same weak pull — but it works a room you
+        // never opened, and what it calls comes looking at YOUR door.
+        if (this.clock.time < this.nextToss) {
+          this.cue('door-locked', it.pos, '[your hand finds no pebble — give it a breath]', 'warn');
+          return;
+        }
+        this.nextToss = this.clock.time + 8;
+        const door = it.data as Door;
+        const nX = Math.sin(door.yaw), nZ = Math.cos(door.yaw);
+        const side = Math.sign((this.player.pos.x - door.pos.x) * nX + (this.player.pos.z - door.pos.z) * nZ) || 1;
+        const x = door.pos.x - nX * side * 1.3;
+        const z = door.pos.z - nZ * side * 1.3;
+        this.audio.play('pebble', { x, y: 0.1, z }, '');
+        this.cue('pebble', it.pos, '[the pebble skips under — a tap on the far side]');
+        this.sound.emit({ x, y: 0.1, z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
         return;
       }
       case 'brace': {

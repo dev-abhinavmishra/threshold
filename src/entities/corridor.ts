@@ -447,6 +447,7 @@ export class Warden extends Entity {
   private scentT = 0;                          // evidence polling
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
+  private braceShoveT = 0;                     // seconds since it last shouldered a live brace
   private noiseUnsub: (() => void) | null = null;
 
   /** The second read teaches: a warden that has weighed two marks knows
@@ -526,6 +527,26 @@ export class Warden extends Entity {
             free ??= d;
             continue;
           }
+          return 'blocked';
+        }
+        if (d.heldBy === 'player' && v3dist(c.player.pos, d.pos) <= 1.9 && this.braceShoveT >= 4) {
+          // sprint 446 — your weight is answered here too: a live brace
+          // gets one shoulder per visit before he turns away. The shove
+          // moves the holder, not the hold — past the brace's keep radius
+          // the grip fails on the Game's own rule.
+          this.braceShoveT = 0;
+          const p = c.player;
+          // the shoulder bows the LEAF, not the holder — the frame flexes
+          // a crack open and the grip fails on the Game's own brace-release
+          // rule (openT > 0.05), wherever furniture left the holder
+          d.openT = Math.max(d.openT ?? 0, 0.08);
+          // and the holder still gets moved when there's room — along the
+          // leaf's normal, back into their own room
+          const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
+          const side = Math.sign((p.pos.x - d.pos.x) * nx + (p.pos.z - d.pos.z) * nz) || 1;
+          p.teleport(p.pos.x + nx * side * 0.55, 0, p.pos.z + nz * side * 0.55);
+          c.cue('door-slam', v3(d.pos.x, 1.2, d.pos.z), '[it shoulders the leaf — your grip slips]', { severity: 'danger' });
+          c.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 0.9, category: 'door', caption: '[the leaf bows under a shoulder]', source: this.id });
           return 'blocked';
         }
         if (d.heldBy || d.locked) return 'blocked';
@@ -699,6 +720,8 @@ export class Warden extends Entity {
       }
       return;
     }
+
+    this.braceShoveT += dt;
 
     // Scent: a hazard that died in its room is a footprint. It leaves
     // the line to read the sign — quiet work is marked work.

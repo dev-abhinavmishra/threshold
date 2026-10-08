@@ -6310,3 +6310,91 @@ it can't hold your gaze through cover either.
 **Notes:** the flag's three consumers (Lurker flee, Inkling agitate,
 Husk dormant wake) all inherited the fix at once — a shared flag is
 the right seam for a convention; gate the FLAG, not each effect.
+
+## Sprint 445 — the crack under the leaf
+
+'Stoop to the crack — Door N' mints at leaf CENTRE on every closed leaf
+(`openT <= 0.4`, false doors keep it — plaster is the counter-tell) while
+crouched, aimed low (pos.y - 0.55) so it never shadows the edge seam. The
+sight-twin of 'Listen at Door N': the seam answers WHAT is there (per-entity
+sound cues), the crack answers IS IT RIGHT THERE — nearest live threatPos
+in the far room measured to the leaf: <=1.7m 'a shadow holds at the
+threshold' (danger), <=4.2m 'a shadow crosses the floor-light' (warn),
+deeper 'something stirs deep' (info), dark rooms 'black glass', unspawned
+scheds cast no shadow (honest — they're not flesh yet). The count's lamp
+reads through the crack even in dark rooms: lit lamp in the far room is
+always danger (<=2m 'at this door'), blind sweeps fall back to proximity.
+**Notes:** spatial language is now crouch-centre = stoop, crouch-edge =
+listen/brace/wire — verb count per leaf is up to 5; if focus contention
+shows up, the leaf-normal side offset (wedge's `nX*side` pattern) is the
+free slot, not more lateral.
+
+## Sprint 446 — the weight is answered
+
+Your weight was the strongest hold in the house and nothing answered it:
+`heldBy === 'player'` fell into a 14s patience check, the warden's
+doorOnPath turned back untouched. Now a LIVE brace gets shouldered —
+the bellman works it every ~4.5s, the warden puts one shoulder in per
+visit (braceShoveT cooldown): each strain teleports the holder 0.55m
+straight off the leaf. Pushed past the brace's own 1.7m keep radius the
+grip fails on updateBraces' existing rule — the house moves the HOLDER,
+never touches the hold, and leaning back in between strains is the
+counterplay. A held flag with no player near (<1.9m) is the stale-mark
+case: rattle, then lose interest as before.
+**Notes:** the shove direction is `player - leaf` normalized — always
+the player's own side, so cluster leaves never throw you through the
+doorway. If future walkers join, keep the same convention (move the
+holder via teleport; don't clear heldBy entity-side).
+
+## Sprint 447 — the pebble goes under
+
+'Slip a pebble under Door N' mints inside the stoop gate on every closed
+real leaf (false doors have no far side — honesty). The free toss aimed:
+shares `nextToss`'s 8s cooldown and the same 0.45 'distraction' emit, but
+it lands 1.3m past the leaf on the far side of your cover — you pull a
+thing in a room you never opened, and what it calls comes looking at
+YOUR door (a slipped pull at a braced leaf is a shoulder you invited).
+Named (`wantedPull ×1.5 → 0.675`) it crosses the 0.55 rouse floor — the
+boards' tax can wake what a plain toss never could. Cooldown-spent reads
+'[your hand finds no pebble — give it a breath]'.
+**Notes:** verb lattice on a leaf is now: -0.55 brace · -0.28 slip ·
+0 stoop · +0.28 (free) · +0.55 listen, plus ±0.45-normal wedge/wire.
+Focus contention hasn't surfaced in tests but the lattice is dense —
+next verb should weigh a new gate (locked, held, room kind) not a 6th
+same-gate anchor.
+
+## Sprint 448 — the eye at the crack
+
+The stoop's consequence, in the peekEye pattern: when a live threat is
+already within 2.6m of the leaf on the far side, a seeded per-door roll
+(0.22, roomStream 'scare') can put ITS eye to the gap — '[a low eye meets
+yours at the crack — it was watching]' (danger). The price is honest:
+your flinch is a real UNSOURCED 'impact' emit at YOUR position (0.6 ×
+wantedPull) — it can rouse what your listen never could. One roll per
+door per run (`stoopEyeUsed`, cleared on startRun, not checkpointed —
+the eye either was there or it wasn't, and a death is a new door).
+**Notes:** the roll fires inside stoopUnder BEFORE the lamp/proximity
+read, so a lit lamp's presence is never masked by the eye. Eye odds
+only while a live threat is close — an empty room can't sprout one.
+
+## Sprint 449 — the crack finds its footing
+
+The e2e pass over s445-448 caught three product bugs, all in the same
+small room: (1) the shove never moved a braced player — the radial push
+slid along the leaf into the jamb forever; the fix is geometry-free:
+the house bows the leaf `openT = 0.08`, tripping updateBraces' own
+`> 0.05` release, and `knocked.delete` lets a freed leaf be re-knocked
+(a stale knocked set parked the walk 8s forever). (2) stoop/slip
+anchors minted at `pos.y + 0` — the door's pos is floor height, so the
+crack verbs sat below the floor where dist-dominated focus could never
+pick them; now at `y + 0.42` (real crack height) priority 5. (3) the
+anchors lived dead-center inside the doorway lane's collider — any
+center stand got ejected into the slip anchor's turf; both crack verbs
+now float `+0.25` toward the player's resolved side so a standable
+spot resolves them.
+**Notes:** the leaf lattice is now positional truth: lateral -0.55
+brace · -0.28 slip · 0 stoop · +0.55 listen, ±0.45 normal wedge/wire,
+crack verbs +0.25 normal-side at y+0.42 p5. Two rules for the next
+verb here: anything the player kneels to reach must outrank by
+PRIORITY not proximity (dist always favors the seam edge nearer the
+stand), and never mint inside the leaf lane — the collider owns it.

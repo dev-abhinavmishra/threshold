@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
+  | 'door' | 'peek' | 'listen' | 'stoop' | 'slip' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift' | 'houseLine'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'alarmDrop' | 'coilDrop' | 'keyring' | 'askTally';
@@ -262,6 +262,40 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
     }
     if (d.openT <= 0.4) {
       const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+      const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+      const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
+      // The crack under the leaf: stoop at the door's centre to watch the
+      // far floor. Sight where the seam is sound — it answers 'is it right
+      // there', not 'what is it'. False doors keep it too: solid plaster
+      // is the counter-tell. The anchor floats a step toward YOUR side —
+      // the crack is under your face, not under the leaf's collider (the
+      // doorway lane won't let anyone stand at the leaf's own line).
+      sys.add({
+        kind: 'stoop', id: `stoop-${it.id}`,
+        // y sits at crack height — door anchors are floor-level (pos.y=0)
+        // and the focus score is dist-dominated: anchor the crack where
+        // the eye actually looks or it can never beat the seam verbs
+        pos: { x: it.pos.x + nX * side * 0.25, y: it.pos.y + 0.42, z: it.pos.z + nZ * side * 0.25 },
+        prompt: `Stoop to the crack — Door ${d.label}`, holdTime: 1.0,
+        // p5 — kneeling AT a leaf puts the crack where your face is; the
+        // seam verbs still win at their own edge anchors (distance rules)
+        data: d, enabled: true, priority: 5,
+      });
+      // Slip a pebble under the leaf (sprint 447): the free toss, aimed —
+      // it lands past your cover and pulls whatever's in there toward the
+      // door. False doors have no far side to slip into.
+      if (!d.falseDoor) {
+        sys.add({
+          kind: 'slip', id: `slip-${it.id}`,
+          // same crack height — it shares the stoop's line of sight,
+          // one hand's-width off centre toward the seam's far hinge
+          pos: { x: it.pos.x - latX * 0.28 + nX * side * 0.25, y: it.pos.y + 0.42, z: it.pos.z - latZ * 0.28 + nZ * side * 0.25 },
+          prompt: `Slip a pebble under Door ${d.label}`, holdTime: 0.8,
+          // same p5 as the stoop — the two crack verbs split centre/edge
+          // on distance, and both stay under a verb you walk up to use
+          data: d, enabled: true, priority: 5,
+        });
+      }
       sys.add({
         kind: 'listen', id: `listen-${it.id}`,
         pos: { x: it.pos.x + latX * 0.55, y: it.pos.y, z: it.pos.z + latZ * 0.55 },

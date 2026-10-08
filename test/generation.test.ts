@@ -860,6 +860,60 @@ describe('door listen seams (sprint 229)', () => {
     expect(listens).toBe(closed); // false doors keep theirs — listening is the counter-tell
     expect(peeks).toBe(locked);   // keyhole-peek still covers every locked leaf
   });
+
+  it('every closed door also gains a stoop-to-the-crack point (sprint 445)', async () => {
+    const { InteractionSystem, addCrouchedDoorInteracts } = await import('../src/player/interaction');
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const sys = new InteractionSystem();
+    let closed = 0, stoops = 0;
+    for (const r of route.rooms.filter((x) => x.index >= 0).slice(0, 40)) {
+      sys.clear();
+      sys.addRoomInteractables(r);
+      addCrouchedDoorInteracts(sys);
+      for (const d of r.doors) {
+        if (d.openT > 0.4) continue;
+        closed++;
+        const st = sys.interactables.find((i) => i.kind === 'stoop' && i.data === d);
+        if (!st) continue;
+        stoops++;
+        // centred on the leaf's LATERAL line (the seam verbs live at its
+        // edge), floating a step toward the player's side along the normal,
+        // at crack height — the focus score is dist-dominated, so the
+        // crack anchors where the eye actually looks or the seam verbs
+        // always outrank it
+        const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+        const latOff = (st.pos.x - d.pos.x) * latX + (st.pos.z - d.pos.z) * latZ;
+        expect(Math.abs(latOff)).toBeLessThan(0.06);
+        expect(Math.hypot(st.pos.x - d.pos.x, st.pos.z - d.pos.z)).toBeLessThan(0.5);
+        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.2);
+        expect(st.pos.y).toBeLessThan(d.pos.y + 0.6);
+        expect(st.holdTime).toBeGreaterThanOrEqual(0.8);
+      }
+    }
+    expect(closed).toBeGreaterThan(30);
+    expect(stoops).toBe(closed); // false doors keep the crack too — plaster is the tell
+  });
+
+  it('closed real doors gain a slip-a-pebble point; false doors have no far side (sprint 447)', async () => {
+    const { InteractionSystem, addCrouchedDoorInteracts } = await import('../src/player/interaction');
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const sys = new InteractionSystem();
+    let real = 0, slips = 0, falseSlips = 0;
+    for (const r of route.rooms.filter((x) => x.index >= 0).slice(0, 40)) {
+      sys.clear();
+      sys.addRoomInteractables(r);
+      addCrouchedDoorInteracts(sys);
+      for (const d of r.doors) {
+        if (d.openT > 0.4) continue;
+        if (d.falseDoor) { if (sys.interactables.some((i) => i.kind === 'slip' && i.data === d)) falseSlips++; continue; }
+        real++;
+        if (sys.interactables.some((i) => i.kind === 'slip' && i.data === d)) slips++;
+      }
+    }
+    expect(real).toBeGreaterThan(25);
+    expect(slips).toBe(real);
+    expect(falseSlips).toBe(0);
+  });
 });
 
 describe('connector corridor dressing (sprint 230)', () => {

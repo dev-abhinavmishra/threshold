@@ -399,3 +399,25 @@ describe('the leaf is cover (sprint 441)', () => {
     expect(game).toContain('shutLeafBlockers');
   });
 });
+
+describe('the crack under the leaf (sprint 445)', () => {
+  it('the stoop is wired into the same closed-leaf gate as the seam', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'stoop'");
+    expect(interaction).toContain('Stoop to the crack');
+    expect(game).toContain('stoopUnder(door: Door)');
+    expect(game).toContain("case 'stoop'");
+  });
+
+  it('the slipped pebble lands on the far side of the leaf (sprint 447)', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'slip'");
+    expect(interaction).toContain('Slip a pebble under');
+    expect(game).toContain("case 'slip'");
+    // shares the free toss's cooldown and its weak pull — not a new lure
+    expect(game).toContain('this.nextToss');
+    expect(game).toContain("category: 'distraction'");
+  });
+});

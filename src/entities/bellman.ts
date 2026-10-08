@@ -351,6 +351,33 @@ export class Bellman extends Entity {
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
             this.doorHoldT = 0;
           }
+        } else if (blocking.heldBy === 'player' && v3dist(c.player.pos, blocking.pos) <= 1.9) {
+          // sprint 446 — the weight is answered: a LIVE brace gets shouldered.
+          // Every few seconds of work shoves the holder a stride back off
+          // the leaf; pushed past the brace's own keep radius the grip
+          // fails on the Game's rule — he doesn't break the hold, he moves
+          // the holder. (A held flag with the player nowhere near is the
+          // old stale-mark case: rattle, then lose interest below.)
+          if (this.doorHoldT > 4.5) {
+            this.doorHoldT = 0;
+            const p = c.player;
+            // the shoulder bows the LEAF, not the holder — the frame
+            // flexes a crack open and your grip fails on the Game's own
+            // brace-release rule (openT > 0.05), wherever the room's
+            // furniture left you standing. The leaf re-shuts in a frame;
+            // the fresh knock below is what swings it.
+            blocking.openT = Math.max(blocking.openT ?? 0, 0.08);
+            // and the holder still gets moved when there's room to shove —
+            // along the leaf's normal, back into their own room
+            const nx = Math.sin(blocking.yaw), nz = Math.cos(blocking.yaw);
+            const side = Math.sign((p.pos.x - blocking.pos.x) * nx + (p.pos.z - blocking.pos.z) * nz) || 1;
+            p.teleport(p.pos.x + nx * side * 0.55, 0, p.pos.z + nz * side * 0.55);
+            c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[it shoulders the leaf — your grip slips]', { severity: 'danger' });
+            c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.8, category: 'door', caption: '[the leaf bows under a shoulder]', source: this.id });
+            // a leaf that slipped its brace deserves a fresh knock once
+            // free — same rule the wired bind follows after it parts
+            this.knocked.delete(blocking);
+          }
         } else if (blocking.heldBy === 'wired') {
           // Wire isn't kicked — it's worked. A visit's labor strains the
           // bind once, then he loses interest; the NEXT visit's work
