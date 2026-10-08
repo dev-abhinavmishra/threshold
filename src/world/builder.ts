@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -819,6 +819,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ks.name = 'kick-split';
       ks.position.set(port.width / 2 - 0.5, -1.3, 0.052);
       leaf.add(ks);
+    }
+    // The knobs kept the hands — a burnished ring in the paint where
+    // ten thousand grips turned the same brass.
+    if (!industrial && rng.float() < 0.25) {
+      const ksh = decalQuad(knobShine(rng), 0.3, 0.3);
+      ksh.name = 'knob-shine';
+      ksh.position.set(port.width / 2 - 0.14, 0.02, 0.054);
+      leaf.add(ksh);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -1897,6 +1905,34 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const hs = group.children[group.children.length - 1];
         if (hs && !hs.name) hs.name = 'heel-scuff';
       }
+    }
+
+    // The sconces breathed — soot tongues climbing the wall above the
+    // flame arms that never went out.
+    for (const p of spec.props) {
+      if ((p.kind !== 'wallSconce' && p.kind !== 'cagedSconce' && p.kind !== 'wallLantern')
+        || rng.float() >= 0.55) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const sw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = sw === 'e' || sw === 'w' ? p.z : p.x;
+      wallDecal(sw, sconceSoot(rng), 0.55 + rng.float() * 0.15, 0.9 + rng.float() * 0.2, along, 2.05 + rng.float() * 0.2);
+      const ss = group.children[group.children.length - 1];
+      if (ss && !ss.name) ss.name = 'sconce-soot';
+    }
+    // The clocks swung — case ghosts and scribed pendulum arcs where a
+    // dial hung long enough to wear the plaster.
+    for (const p of spec.props) {
+      const floorCase = p.kind === 'grandfatherClock';
+      if ((p.kind !== 'wallClock' && p.kind !== 'clock' && !floorCase) || rng.float() >= 0.4) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const cw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = cw === 'e' || cw === 'w' ? p.z : p.x;
+      wallDecal(cw, clockGhost(rng), 0.75 + rng.float() * 0.2, 1.1 + rng.float() * 0.25,
+        along, floorCase ? 1.45 + rng.float() * 0.2 : 1.85 + rng.float() * 0.2);
+      const cg = group.children[group.children.length - 1];
+      if (cg && !cg.name) cg.name = 'clock-ghost';
     }
 
     // The water line — a room that flooded once keeps the tide mark:

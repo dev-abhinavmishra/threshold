@@ -2849,3 +2849,108 @@ export function chairHalo(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sconce soot — the breath a flame arm deposits on the wall above
+ * itself: a dark bloom climbing from the fixture. */
+export function sconceSoot(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // the bloom — heaviest at the rim where the flame licks
+    const g = ctx.createRadialGradient(32, 78, 2, 32, 78, 46);
+    g.addColorStop(0, 'rgba(26,22,18,0.5)');
+    g.addColorStop(0.5, 'rgba(26,22,18,0.22)');
+    g.addColorStop(1, 'rgba(26,22,18,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 96);
+    // the finger — a soot tongue the heat carried upward
+    for (let i = 0; i < 4; i++) {
+      const fx = 26 + rng.float() * 12;
+      const flen = 30 + rng.float() * 40;
+      const fg = ctx.createLinearGradient(fx, 74, fx, 74 - flen);
+      fg.addColorStop(0, 'rgba(28,24,20,0.3)');
+      fg.addColorStop(1, 'rgba(28,24,20,0)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(fx - 1 - rng.float(), 74 - flen, 2.4 + rng.float() * 1.6, flen);
+    }
+    // grit flecks in the bloom field
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(30,26,22,${0.14 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(12 + rng.float() * 40, 34 + rng.float() * 50, 0.5 + rng.float() * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Clock ghost — where a wall clock hung and swung: the case ghost
+ * plus the arc its pendulum scribed into the plaster. */
+export function clockGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    // case ghost — the spared rectangle, pale where the case sat
+    const g = ctx.createRadialGradient(cx, 44, 6, cx, 44, 40);
+    g.addColorStop(0, 'rgba(200,192,170,0.28)');
+    g.addColorStop(0.7, 'rgba(200,192,170,0.12)');
+    g.addColorStop(1, 'rgba(200,192,170,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 128);
+    ctx.fillStyle = 'rgba(208,198,176,0.3)';
+    ctx.fillRect(cx - 14, 16, 28, 52);
+    ctx.strokeStyle = 'rgba(90,80,64,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 14, 16, 28, 52);
+    // the scribed arc — the pendulum's swing worn into the wall below
+    ctx.strokeStyle = 'rgba(96,86,68,0.4)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx, 40, 62 + rng.float() * 8, Math.PI * 0.5 - 0.3, Math.PI * 0.5 + 0.3);
+    ctx.stroke();
+    // terminal wear dabs at the swing's ends
+    for (const a of [Math.PI * 0.5 - 0.28, Math.PI * 0.5 + 0.28]) {
+      ctx.fillStyle = 'rgba(96,86,68,0.3)';
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * 63, 40 + Math.sin(a) * 63, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // hook scar above the case
+    ctx.fillStyle = 'rgba(60,50,40,0.4)';
+    ctx.beginPath();
+    ctx.arc(cx, 10, 2, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Knob shine — the brass polish a thousand hands burnished into the
+ * paint around a working handle: a pale worn ring. */
+export function knobShine(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // the ring — finish worn down to a sheen in a hand's reach
+    const g = ctx.createRadialGradient(32, 32, 6, 32, 32, 24);
+    g.addColorStop(0, 'rgba(210,196,160,0)');
+    g.addColorStop(0.55, 'rgba(210,196,160,0.26)');
+    g.addColorStop(0.85, 'rgba(190,176,140,0.12)');
+    g.addColorStop(1, 'rgba(190,176,140,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // finger trails — short worn arcs at turning radius
+    const n = 5 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < n; i++) {
+      const a0 = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(216,202,166,${0.2 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      ctx.beginPath();
+      ctx.arc(32, 32, 13 + rng.float() * 5, a0, a0 + 0.4 + rng.float() * 0.6);
+      ctx.stroke();
+    }
+    // nail scratches at the reach edge
+    for (let i = 0; i < 4; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r0 = 20 + rng.float() * 8;
+      ctx.strokeStyle = `rgba(220,206,170,${0.18 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(32 + Math.cos(a) * r0, 32 + Math.sin(a) * r0);
+      ctx.lineTo(32 + Math.cos(a) * (r0 + 4 + rng.float() * 4), 32 + Math.sin(a) * (r0 + 4 + rng.float() * 4));
+      ctx.stroke();
+    }
+  });
+}

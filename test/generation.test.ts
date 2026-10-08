@@ -2599,3 +2599,48 @@ describe('the chairs kept the heads (sprint 461)', () => {
     expect(n, 'no chair halos').toBeGreaterThan(0);
   });
 });
+
+describe('the sconces breathed (sprint 462)', () => {
+  it('soot tongues climb above the flame arms', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'sconce-soot') n++; });
+      }
+    }
+    expect(n, 'no sconce soot').toBeGreaterThan(0);
+  });
+});
+
+describe('the clocks swung (sprint 462)', () => {
+  it('pendulum arcs scar the plaster behind old dials', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'clock-ghost') n++; });
+      }
+    }
+    expect(n, 'no clock ghosts').toBeGreaterThan(0);
+  });
+});
+
+describe('the knobs kept the hands (sprint 462)', () => {
+  it('burnished rings crown the working brass', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'knob-shine') n++; });
+      }
+    }
+    expect(n, 'no knob shine').toBeGreaterThan(0);
+  });
+});
