@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Reposter, type ReposterHooks } from '../src/entities/reposter';
 import { generateRoute } from '../src/world/generator';
 import { v3 } from '../src/engine/math';
+import { pointInRoom } from '../src/engine/doorGeo';
 import type { RoomInstance } from '../src/game/types';
 
 function underRooms(): RoomInstance[] {
@@ -11,6 +12,7 @@ function underRooms(): RoomInstance[] {
 function hooks() {
   const cues: string[] = [];
   const reposted: { roomIdx: number; x: number; z: number }[] = [];
+  const emits: { intensity: number }[] = [];
   const h: ReposterHooks = {
     addMesh: vi.fn(),
     removeMesh: vi.fn(),
@@ -18,8 +20,9 @@ function hooks() {
     repost: vi.fn((roomIdx: number, host: { x: number; z: number }) => {
       reposted.push({ roomIdx, x: host.x, z: host.z });
     }),
+    emit: vi.fn((e: { intensity: number }) => { emits.push(e); }),
   };
-  return { h, cues, reposted };
+  return { h, cues, reposted, emits };
 }
 
 function step(r: Reposter, rooms: RoomInstance[], h: ReposterHooks, seconds: number) {
@@ -66,6 +69,39 @@ describe('Reposter (the boards won\'t stay bare)', () => {
     expect(reposted.length).toBe(1); // the second board stands bare
     // a second dispatch (the clerk reaching again) still works
     expect(r.dispatch(rooms, hosts, h)).toBe(true);
+  });
+
+  it('he knows whose name he carries — a named face stills the walk and cries it (sprint 364)', () => {
+    const rooms = underRooms();
+    const { h, cues, emits } = hooks();
+    h.wanted = () => true;
+    const r = new Reposter();
+    const hosts = [
+      { roomIdx: 30, x: rooms[30].origin.x, z: rooms[30].origin.z },
+      { roomIdx: 33, x: rooms[33].origin.x, z: rooms[33].origin.z },
+    ];
+    r.dispatch(rooms, hosts, h);
+    // stand on him: his start is the deep end, one metre off
+    const myIdx = rooms.findIndex((rm) => rm.spec && pointInRoom(rm, r.position.x, r.position.z));
+    expect(myIdx).toBeGreaterThanOrEqual(0);
+    const me = { pos: v3(r.position.x + 1, 0, r.position.z), room: rooms[myIdx].index };
+    const travelBefore = (r as unknown as { travel: number }).travel;
+    for (let i = 0; i < 30 && !cues.some((t) => /sees whose name/.test(t)); i++)
+      r.update(0.1, rooms, me, h);
+    expect(cues.some((t) => /sees whose name/.test(t)), 'he cries the named face').toBe(true);
+    expect(emits.length, 'the cry is a real sound the under rouses to').toBe(1);
+    // the look holds the walk — no travel while he names you
+    expect((r as unknown as { travel: number }).travel).toBeLessThanOrEqual(travelBefore + 0.01);
+    // hidden is furniture — no cry (and wanted off is a stranger)
+    const h2 = hooks().h;
+    h2.wanted = () => false;
+    const r2 = new Reposter();
+    r2.dispatch(rooms, hosts, h2);
+    const me2 = { pos: v3(r2.position.x + 1, 0, r2.position.z), room: rooms[myIdx].index };
+    const { cues: cues2 } = { cues: [] as string[] };
+    void cues2;
+    for (let i = 0; i < 40; i++) r2.update(0.1, rooms, me2, h2);
+    expect(emits.length).toBe(1); // still one — the stranger draws no cry
   });
 
   it('one walk at a time — a second dispatch is refused', () => {

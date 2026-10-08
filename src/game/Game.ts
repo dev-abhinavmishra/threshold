@@ -253,6 +253,10 @@ export class Game {
       cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
       // a sheet went back up mid-walk — the board carries the name again
       repost: (roomIdx, host) => { this.wantedRooms.set(roomIdx, { x: host.x, z: host.z }); this.bareBoards.delete(roomIdx); },
+      // the boards name the face he carries — seeing it stills the walk
+      wanted: () => this.wantedActive,
+      // the cry down the spine is a real sound — the under rouses to it
+      emit: (e) => this.sound.emit(e),
     };
   }
   private canvas: HTMLCanvasElement;
@@ -7423,7 +7427,10 @@ export class Game {
     }
     // the reposter walks when the boards stand bare: pin by pin
     if (this.reposter.active && this.route) {
-      this.reposter.update(dt, this.route.underRooms, { pos: this.player.pos }, this.reposterHooks());
+      this.reposter.update(dt, this.route.underRooms, {
+        pos: this.player.pos, room: this.currentRoom,
+        hidden: this.player.protection === 'hidden',
+      }, this.reposterHooks());
     }
     for (const e of [...this.entities]) {
       e.update(dt);
