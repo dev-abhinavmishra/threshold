@@ -1078,7 +1078,7 @@ export class Game {
         this.hazard.snares.splice(i, 1);
         return true;
       },
-      plantSnare: (pos, room) => this.plantSnare(pos, room),
+      plantSnare: (pos, room, planterKey) => this.plantSnare(pos, room, planterKey),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1336,8 +1336,13 @@ export class Game {
    *  and-amber face the seed ones do, tagged `grafted` so the
    *  checkpoint can rebuild it after a reload. */
   private graftedMeshes: THREE.Object3D[] = [];
-  private plantSnare(pos: Vec3, room: number): void {
+  private plantSnare(pos: Vec3, room: number, planterKey?: string): void {
     this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: true, grafted: true });
+    // sprint 418 — the splice signs itself: fresh work marks the floor for
+    // the under's other hunters, the way a rifled till does. The planter
+    // gets it pre-read under its own key so it doesn't chase its own coil.
+    this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
+      t: this.clock.time, readBy: planterKey ? [planterKey] : [] });
     const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
     const fy = this.activeRooms()[room]?.origin.y ?? 0;
     built.group.position.set(pos.x, fy, pos.z);
@@ -1886,7 +1891,8 @@ export class Game {
       this.interaction.add({
         kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
         pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
-        prompt: submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
+        prompt: hz.grafted ? 'Cut the splice'
+          : submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
         holdTime: 1.4, enabled: true, priority: 2,
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });

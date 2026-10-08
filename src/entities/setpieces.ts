@@ -479,7 +479,9 @@ export class Grafter extends Entity {
       const pr = this.roomOf(this.pos);
       if (pr >= 0 && pr === c.currentRoomIndex) {
         this.carrying = 0;
-        c.plantSnare?.(this.pos, pr);
+        // its own work is no news to it — the splice signs itself for
+        // every OTHER reader, marked read under the planter's key
+        c.plantSnare?.(this.pos, pr, `grafter:${this.spawnRoom}`);
         c.cue('grafter-grind', this.pos, '[the coil unwinds where it walks — fresh wire in your room]', { severity: 'warn' });
         c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.4, category: 'item', caption: '[wire laid]', source: this.id });
       }
@@ -546,7 +548,7 @@ export class Grafter extends Entity {
     // settles with it, armed where the rubble sank.
     if (this.carrying > 0) {
       const pr = this.roomOf(this.pos);
-      if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr);
+      if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr, `grafter:${this.spawnRoom}`);
     }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;

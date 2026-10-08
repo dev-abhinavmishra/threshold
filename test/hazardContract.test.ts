@@ -128,6 +128,19 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toContain("kind: 'snare'");
     expect(storeSrc).toContain('graftedWires');
   });
+
+  it('the splice signs itself — fresh grafts leave work sign the planter cannot smell', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const spSrc = readFileSync(new URL('../src/entities/setpieces.ts', import.meta.url), 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // planting pushes a fresh 'work' mark at the graft spot
+    expect(gameSrc).toMatch(/plantSnare[\s\S]*kind: 'work'/);
+    // and the planter's own key is pre-marked so it doesn't chase its own coil
+    expect(baseSrc).toContain('planterKey');
+    expect(spSrc).toContain('grafter:${this.spawnRoom}');
+    // the splice reads as the under's work at the cut verb, not the house's weld
+    expect(gameSrc).toContain('Cut the splice');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

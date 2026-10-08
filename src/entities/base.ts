@@ -119,7 +119,7 @@ export interface EntityCtx {
    *  where the living walk. strip removes a dead snare near (x,z);
    *  plant arms a new (grafted) one at pos in room. */
   stripSnare?: (x: number, z: number) => boolean;
-  plantSnare?: (pos: Vec3, room: number) => void;
+  plantSnare?: (pos: Vec3, room: number, planterKey?: string) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

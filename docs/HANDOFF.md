@@ -5708,3 +5708,16 @@ the yield phase — the gaze yield is under test, not door positioning.
 Probe-observed: cam watcher maxSettle 0.87 center → 0.93 off-center.
 
 Gates: hazards 13/13, entities 11/11 (one designed skip).
+
+## Sprint 418 — the splice signs itself, the splice reads fresh
+A graft used to land silently: now `plantSnare` pushes fresh 'work'
+sign at the coil (the under's own work marks the floor for its other
+hunters, the way a rifled till does upstairs). The planter's key is
+pre-marked (`grafter:<spawnRoom>`) so it never chases its own coil —
+room-keyed, same key as its scent polls. And the splice reads as the
+under's work at the verb: grafted wire offers 'Cut the splice', not
+'Cut the seal' — the player can tell hasty hands from the house's
+weld. Chains are already emergent: a tripped graft is a dead wire,
+and dead wire is what grafters strip — a coil can ride two backs.
+
+Gates: tsc, lint, contract spec +1 (batched).
