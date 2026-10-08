@@ -4826,3 +4826,15 @@ Game.die() from the same five fields.
 - The lamp still outranks the runner when both walk the same room
   (danger over warn); scheduled entities outrank both.
 - Gates: tsc, lint, vitest, sim, build.
+
+## sprint 388 — the seam carries the tread too
+
+- A door-listen now answers roving threats, not just room-stationary
+  ones: entities whose `threatPos()` resolves inside the room beyond
+  the leaf answer with their LISTEN_CUES read (warden's 'measured
+  pacing', hauler's 'sledge scrape', etc.) — loudest severity wins
+  when several share a room.
+- Order: scheduled occupants > under walkers (lamp > paper-runner) >
+  primed milestone > rovers > safe/dark/nothing. Primed stays above
+  rovers — the one-shot mechanism read outranks a passing tread.
+- Gates: tsc, lint, vitest, sim, build.

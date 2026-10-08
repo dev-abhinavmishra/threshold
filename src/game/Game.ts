@@ -1295,6 +1295,23 @@ export class Game {
     if (ms?.primed && ms.primedAudible) {
       return { sfx: 'floor-creak', text: '[a mechanism already mid-count — it heard you]', sev: 'danger' as const };
     }
+    // roving threats carry through the seam too — the spine's walkers
+    // answer by tread before you ever see them; the loudest wins
+    let roverBest: { sfx: string; text: string; sev?: 'info' | 'warn' | 'danger' } | null = null;
+    let roverRank = 0;
+    const roam = this.activeRooms();
+    for (const e of this.entities) {
+      if (e.state === 'done') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const ri = underRoomOf(roam, tp);
+      if (ri < 0 || roam[ri] !== target) continue;
+      const cue = LISTEN_CUES[e.id];
+      if (!cue) continue;
+      const rank = cue.sev === 'danger' ? 3 : cue.sev === 'warn' ? 2 : 1;
+      if (rank > roverRank) { roverRank = rank; roverBest = cue; }
+    }
+    if (roverBest) return roverBest;
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
