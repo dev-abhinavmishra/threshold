@@ -2600,3 +2600,76 @@ export function sillDamp(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Radiator bleed — the rust a sweating radiator runs down the wall:
+ * vertical oxidised streaks from pipe height to the baseboard. */
+export function radiatorBleed(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // rust fans under each fin — the bleed lines correspond to the
+    // vertical ribs the water chose to run down
+    const fans = 5 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < fans; i++) {
+      const fx = 10 + (i / fans) * 78 + (rng.float() - 0.5) * 6;
+      const flen = 36 + rng.float() * 44;
+      const top = 8 + rng.float() * 6;
+      const g = ctx.createLinearGradient(fx, top, fx, top + flen);
+      g.addColorStop(0, 'rgba(96,52,30,0.42)');
+      g.addColorStop(0.7, 'rgba(112,64,36,0.18)');
+      g.addColorStop(1, 'rgba(112,64,36,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(fx - 1.4 - rng.float(), top, 3 + rng.float() * 2, flen);
+    }
+    // the drip line — a darker seam where the bleed pooled at the bottom
+    ctx.strokeStyle = 'rgba(88,48,28,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const py = 78 + rng.float() * 8;
+    ctx.moveTo(8, py);
+    ctx.quadraticCurveTo(48, py + rng.float() * 6, 88, py + (rng.float() - 0.5) * 4);
+    ctx.stroke();
+    // oxide flecks in the run field
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `rgba(120,66,38,${0.12 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(8 + rng.float() * 80, 10 + rng.float() * 72, 0.6 + rng.float() * 1.4, 1.2 + rng.float() * 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Burn marks — cigarette and ember scars a carpet keeps: small char
+ * rings with ash fringes, clustered where a hand would have dropped. */
+export function burnMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 34 + rng.float() * 26;
+    const cy = 38 + rng.float() * 20;
+    const burns = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < burns; i++) {
+      const bx = cx + (rng.float() - 0.5) * 34;
+      const by = cy + (rng.float() - 0.5) * 30;
+      const br = 4 + rng.float() * 4;
+      // char pit — melted fibre, nearly black
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, 'rgba(20,16,12,0.75)');
+      g.addColorStop(0.65, 'rgba(30,24,18,0.45)');
+      g.addColorStop(1, 'rgba(30,24,18,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+      // ash fringe — the pale grey crescent where the ember was ground
+      ctx.strokeStyle = 'rgba(180,174,160,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(bx, by, br + 1, rng.float() * Math.PI, rng.float() * Math.PI + 1.6 + rng.float());
+      ctx.stroke();
+    }
+    // ash dust scattered around the drop zone
+    for (let i = 0; i < 18; i++) {
+      ctx.fillStyle = `rgba(168,160,146,${0.08 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 40, cy - 14 + rng.float() * 32, 0.4 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1839,6 +1839,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         1.0);
       const gm = group.children[group.children.length - 1];
       if (gm && !gm.name) gm.name = 'growth-marks';
+    }
+
+    // The radiators wept — oxide fans run down the wall behind the
+    // ribs where the joints sweated for years.
+    for (const p of spec.props) {
+      if ((p.kind !== 'radiatorFin' && p.kind !== 'radiatorTall') || rng.float() >= 0.5) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const rw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = rw === 'e' || rw === 'w' ? p.z : p.x;
+      wallDecal(rw, radiatorBleed(rng), 0.8 + rng.float() * 0.2, 0.85 + rng.float() * 0.2, along, 0.55 + rng.float() * 0.15);
+      const rb = group.children[group.children.length - 1];
+      if (rb && !rb.name) rb.name = 'radiator-bleed';
+    }
+    // The carpet kept the burns — cigarette and ember scars cluster
+    // where a hand would have dropped. Lived-in floors only.
+    if (livedIn && rng.float() < 0.25) {
+      const bm = decalQuad(burnMarks(rng), 0.8, 0.8);
+      bm.name = 'burn-marks';
+      bm.rotation.x = -Math.PI / 2;
+      bm.rotation.z = rng.float() * Math.PI * 2;
+      bm.position.set((rng.float() - 0.5) * (w - 2), 0.009, (rng.float() - 0.5) * (d - 2));
+      group.add(bm);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

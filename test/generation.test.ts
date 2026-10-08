@@ -2494,3 +2494,33 @@ describe('the sill kept the rain (sprint 458)', () => {
     expect(n, 'no sill damp').toBeGreaterThan(0);
   });
 });
+
+describe('the radiators wept (sprint 459)', () => {
+  it('oxide fans run down behind the ribs', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'radiator-bleed') n++; });
+      }
+    }
+    expect(n, 'no radiator bleeds').toBeGreaterThan(0);
+  });
+});
+
+describe('the carpet kept the burns (sprint 459)', () => {
+  it('char rings gather on lived-in floors', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'burn-marks') n++; });
+      }
+    }
+    expect(n, 'no burn marks').toBeGreaterThan(0);
+  });
+});
