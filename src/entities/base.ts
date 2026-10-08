@@ -111,6 +111,9 @@ export interface EntityCtx {
    *  Returns what it restored, or null. Optional for headless ctxs. */
   rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind', x: number, z: number)
     => 'snare' | 'steam' | 'fan' | 'eye' | null;
+  /** Confiscation isn't deletion — it's carried: a staggered
+   *  floorkeeper scatters the felt it pocketed as floor loot. */
+  dropWraps?: (pos: Vec3, n: number) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

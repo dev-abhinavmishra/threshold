@@ -428,6 +428,22 @@ export class Warden extends Entity {
   private investigate: Vec3 | null = null;   // a heard noise it walks to check
   private investigateScan = 0;
   private investigateKind: string | null = null; // which sign it's checking (noise checks carry none)
+  private pocketed = 0; // felt wraps confiscated off blinded eyes — carried, not deleted
+
+  /** The house keeps what it takes — until it staggers. A floorkeeper
+   *  that goes down (your wire, the glass, a wet floor) spills the
+   *  wraps it peeled where they fell — confiscation is carried, and
+   *  carried means it can be lost. */
+  override stagger(seconds: number): void {
+    super.stagger(seconds);
+    if (this.pocketed > 0) {
+      const n = this.pocketed;
+      this.pocketed = 0;
+      this.ctx.dropWraps?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it goes down — the felt it pocketed scatters]', { severity: 'warn' });
+    }
+  }
   private scentT = 0;                          // evidence polling
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
@@ -632,6 +648,7 @@ export class Warden extends Entity {
             || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
             const kind = this.investigateKind;
             const restored = this.ctx.rearmHazard?.(kind, this.investigate.x, this.investigate.z);
+            if (restored === 'eye') this.pocketed++; // the wrap goes in his pocket — carried, until he staggers
             if (restored) {
               this.ctx.cue('floor-creak', this.investigate,
                 restored === 'snare' ? '[it bends and re-lays the wire — the floor relearns your walk]'

@@ -5566,3 +5566,14 @@ wash), `rearmHazard` exists in the ctx contract and answers all four
 dead-hazard sign kinds, and the felt-strip is confiscation.
 
 Gates: tsc, lint, vitest (hazardContract +2).
+
+## Sprint 413 — confiscation is carried
+The pocketed felt isn't deleted — the floorkeeper carries it until he
+staggers: `pocketed` counts confiscated wraps; a `stagger()` override
+spills them as 'wrapDrop' loot piles at his feet (`dropWraps` ctx →
+dynamic interactables, checkpointed like kickedWedges). The recovery
+is fully emergent — trip your own re-laid wire under him, drop the
+s395 glass, or wait for a wet floor. The loop closes: he peels your
+felt onto his eye, you knock him down and take it back.
+
+Gates: tsc, lint (batched with next).

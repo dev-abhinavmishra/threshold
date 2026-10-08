@@ -764,6 +764,8 @@ export class Game {
     // pocket on a reload any more than the till does
     this.kickedWedges = cp?.kickedWedges?.map((w) => ({ ...w })) ?? [];
     this.mintWedgeDrops();
+    this.droppedWraps = cp?.droppedWraps?.map((w) => ({ ...w })) ?? [];
+    this.mintWrapDrops();
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -1053,6 +1055,9 @@ export class Game {
       // boot doesn't eat the chock, it slides to the player's side of the
       // seam and waits as gatherable loot.
       wedgeKicked: (doorPos, fromPos) => this.dropKickedWedge(doorPos, fromPos),
+      // sprint 413 — confiscation is carried, and carried means it can
+      // be lost: a staggered floorkeeper spills pocketed felt as loot.
+      dropWraps: (pos, n) => this.dropWraps(pos, n),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1280,6 +1285,26 @@ export class Game {
         kind: 'wedgeDrop', id: `wedge-drop-${this.space}-${i}`, 
         pos: { x: w.x, y: 0.15, z: w.z },
         prompt: 'Gather the kicked wedge',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+    });
+  }
+
+  /** sprint 413 — felt the floorkeeper pocketed, spilled where he went
+   *  down. One pile per spill, `data.n` counts the wraps in it. Same
+   *  re-mint/space-agnostic rules as the wedge drops. */
+  private droppedWraps: { x: number; z: number; n: number }[] = [];
+  private dropWraps(pos: Vec3, n: number): void {
+    this.droppedWraps.push({ x: pos.x, z: pos.z, n });
+    this.mintWrapDrops();
+  }
+  private mintWrapDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wrap-drop-'));
+    this.droppedWraps.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'wrapDrop', id: `wrap-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: w.n === 1 ? 'Gather the scattered felt' : `Gather the scattered felt (${w.n})`,
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
     });
@@ -2645,6 +2670,20 @@ export class Game {
         this.mintWedgeDrops();   // re-index the survivors
         this.giveItem('doorChock', 1);
         this.cue('pickup', it.pos, '[door chock — it slid under the leaf to you]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
+      case 'wrapDrop': {
+        // sprint 413 — what the floorkeeper pocketed comes back off the
+        // floor: the felt is yours again, free — the price was tripping
+        // him (or the glass doing it for you).
+        const wi = (it.data as { i?: number }).i ?? -1;
+        const n = wi >= 0 ? this.droppedWraps[wi]?.n ?? 1 : 1;
+        if (wi >= 0) this.droppedWraps.splice(wi, 1);
+        it.enabled = false;
+        this.mintWrapDrops();
+        this.giveItem('feltWrap', n);
+        this.cue('pickup', it.pos, `[felt wrap${n > 1 ? ` ×${n}` : ''} — back off the floor]`);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
@@ -5222,6 +5261,8 @@ export class Game {
       stockFiled: [...this.stockFiled],
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
+      droppedWraps: this.droppedWraps.length > 0
+        ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,
