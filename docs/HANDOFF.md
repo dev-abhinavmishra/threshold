@@ -4112,3 +4112,15 @@ Game.die() from the same five fields.
   real repost.
 - Gates: tsc, lint, vitest persistence+reposter specs green,
   undercast audit leg green on the built bundle.
+
+## sprint 358 — the spill smells of hands
+
+- The reposter cut left no trace while every other pilfer does —
+  tears and rifles both write 'work' sign. Grabbing the bundle now
+  pushes a 'work' mark at the spill point (the warden/grafter read it
+  like any rummage) and emits a positional rustle ('[paper scattering
+  in the corridor]') — the counterplay is loud, just not fee-bearing:
+  crew paper isn't your theft, but spilled sheets don't stay quiet.
+- Trap worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
+  name) — the emit uses 'distraction'.
+- Gates: tsc, lint, vitest 249.

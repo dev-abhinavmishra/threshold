@@ -3385,11 +3385,17 @@ export class Game {
       }
       case 'cutRepost': {
         // Spilling the paper bundle — this walk dies and the clerk
-        // reaches for fresh stock again after another beat.
+        // reaches for fresh stock again after another beat. The grab
+        // is work like any pilfer: the spilled sheets smell of hands
+        // and the spill itself is a sound at your position.
         const r = it.data as unknown as { reposter: { active: boolean; cutBy(h: ReposterHooks): void } };
         if (!r.reposter.active) { it.enabled = false; return; }
         r.reposter.cutBy(this.reposterHooks());
         it.enabled = false;
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'distraction',
+          caption: '[paper scattering in the corridor]', source: 'player' });
         this.wantedRepostT = this.clock.time + 30;
         return;
       }
