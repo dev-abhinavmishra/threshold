@@ -5491,3 +5491,115 @@ export function curtainShade(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Pot ring — the scorch ring a hot pot brands into wood: a dark
+ * ring, pale heat halo, a burnt-through patch at the hottest edge. */
+export function potRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 12;
+    const cy = 48 + (rng.float() - 0.5) * 12;
+    // heat halo — a pale bleach ring where steam dried the wax
+    ctx.strokeStyle = `rgba(190,178,150,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 6 + rng.float() * 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20 + rng.float() * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // the ring — the scorched brand itself
+    ctx.strokeStyle = `rgba(50,38,26,${0.55 + rng.float() * 0.2})`;
+    ctx.lineWidth = 4 + rng.float() * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // the hot edge — one arc where the pot sat longest
+    const a0 = rng.float() * Math.PI * 2;
+    ctx.strokeStyle = 'rgba(24,18,14,0.7)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16 + rng.float() * 3, a0, a0 + 1 + rng.float() * 1.4);
+    ctx.stroke();
+    // scorch specks — carbon freckles inside the ring
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = rng.float() * 13;
+      ctx.fillStyle = `rgba(40,32,24,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Lid steam — the condensation line a lidded pot leaves: a wet
+ * ring, drip beads inside it, a mineral ghost where it dried. */
+export function lidSteam(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48, cy = 48;
+    // the wet ring — a damp circle the lid's rim sealed
+    ctx.strokeStyle = `rgba(140,152,146,${0.35 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 22 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // drip beads — condensed drops inside the ring
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 8 + rng.float() * 13;
+      ctx.fillStyle = `rgba(170,182,174,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.7 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // mineral ghost — the pale tide mark left when it dried
+    ctx.strokeStyle = `rgba(196,192,176,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // runnel — one drip that escaped the lid's edge
+    const ra = rng.float() * Math.PI * 2;
+    ctx.strokeStyle = 'rgba(140,152,146,0.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ra) * 23, cy + Math.sin(ra) * 23);
+    ctx.lineTo(cx + Math.cos(ra) * (30 + rng.float() * 8), cy + Math.sin(ra) * (30 + rng.float() * 8));
+    ctx.stroke();
+  });
+}
+
+/** Wine rack ghost — the pale rings a rack keeps where bottles
+ * lay: paired ring pairs on the shelf, drip stains, dust rows. */
+export function rackGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the rows — bottle-ring pairs stacked up the shelf
+    for (let r = 0; r < 3; r++) {
+      const ry = 24 + r * 26;
+      const bottles = 3 + Math.floor(rng.float() * 2);
+      for (let b2 = 0; b2 < bottles; b2++) {
+        const bx = 16 + b2 * 24 + (rng.float() - 0.5) * 4;
+        // the ring — where the bottle's shoulder rested
+        ctx.strokeStyle = `rgba(150,138,116,${0.3 + rng.float() * 0.2})`;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(bx, ry, 8, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        // the heel mark — the bottle's back ring
+        ctx.beginPath();
+        ctx.ellipse(bx + 10, ry, 5, 3, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // shelf dust between the rows
+      ctx.fillStyle = 'rgba(140,132,114,0.14)';
+      ctx.fillRect(8, ry + 8, 80, 3);
+    }
+    // the drip — wine bled down the shelf face once
+    if (rng.bool(0.5)) {
+      const dx = 20 + rng.float() * 56;
+      ctx.strokeStyle = 'rgba(70,36,36,0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dx, 20);
+      ctx.lineTo(dx + (rng.float() - 0.5) * 4, 60 + rng.float() * 14);
+      ctx.stroke();
+    }
+  });
+}
