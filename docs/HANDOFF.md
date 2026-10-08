@@ -3923,3 +3923,12 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   re-flooded on reload) — now persisted as `string[]` keys
   (`${space}:${idx}`).
 - Gates: tsc, lint (vitest/sim/e2e batched at the next major commit).
+
+## sprint 350 — the register can't bill the same manifest twice
+
+- The Detective's `stockNoted` was per-instance: a checkpoint reload
+  re-sighted your marked wares and filed a SECOND `unpaidHeld` line
+  for the same manifest. `stockSighted` now takes the room key and
+  dedupes against a persisted `stockFiled` set — the cue can re-fire
+  (honest: he re-notes), the line can't.
+- Gates: tsc, lint (batched verification with the next commits).

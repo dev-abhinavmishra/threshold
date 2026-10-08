@@ -177,6 +177,9 @@ export interface CheckpointSave {
     x: number; z: number; dead?: boolean; filed?: boolean }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
+  // registers that already filed a marked-stock sighting — a reload
+  // can't bill the same manifest twice
+  stockFiled?: number[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

@@ -80,8 +80,9 @@ export interface EntityCtx {
    *  Optional for headless ctxs. */
   eyeFiled?: () => void;
   /** The Detective sighted marked stock on the player — the register
-   *  wrote that manifest; the sighting files +1 line. Optional. */
-  stockSighted?: () => void;
+   *  wrote that manifest; the sighting files +1 line, once per
+   *  detective room even across a checkpoint. Optional. */
+  stockSighted?: (roomIdx: number) => void;
   /** True while the player carries marked wares (a hotItems stack with
    *  count > 0). Optional for headless ctxs. */
   carriesMarked?: () => boolean;

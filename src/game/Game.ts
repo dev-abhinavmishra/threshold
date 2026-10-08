@@ -661,6 +661,7 @@ export class Game {
       }
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
+    this.stockFiled = new Set(cp?.stockFiled ?? []);
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -920,7 +921,11 @@ export class Game {
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
       lineDeadFor: (r) => this.deadLines.has(r), // a pulled box stays pulled past a checkpoint
       eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
-      stockSighted: () => { this.unpaidHeld += 1; }, // he knows marked stock — the manifest is his
+      stockSighted: (r) => { // he knows marked stock — once per register, even past a checkpoint
+        if (this.stockFiled.has(r)) return;
+        this.stockFiled.add(r);
+        this.unpaidHeld += 1;
+      },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -970,6 +975,9 @@ export class Game {
   /** Detective rooms whose house line was pulled — the dead wire is a
    *  physical state (box gone, no re-mint) and it rides the checkpoint. */
   private deadLines = new Set<number>();
+  /** Detective rooms whose register already filed a marked-stock
+   *  sighting — the once-per-detective flag survives a reload. */
+  private stockFiled = new Set<number>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -4253,6 +4261,7 @@ export class Game {
           dead: w.dead || undefined, filed: w.filed || undefined })),
       ],
       drainedRooms: [...this.drainedRooms],
+      stockFiled: [...this.stockFiled],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,

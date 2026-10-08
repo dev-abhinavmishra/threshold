@@ -1532,7 +1532,7 @@ export class Detective extends Entity {
         this.openRegister();
         if (marked && !this.stockNoted) {
           this.stockNoted = true;
-          c.stockSighted?.();
+          c.stockSighted?.(this.spawnRoom);
           c.cue('chalk-mark', this.pos, '[he knows marked stock — the register gains a line]', { severity: 'warn' });
         } else {
           c.cue('chalk-mark', this.pos, '[he has your face — settle, or be known]', { severity: 'warn' });
