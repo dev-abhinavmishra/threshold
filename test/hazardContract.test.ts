@@ -10,8 +10,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { InteractionSystem } from '../src/player/interaction';
-import { v3 } from '../src/engine/math';
-import type { RoomInstance, Socket } from '../src/game/types';
+import { v3, hasLineOfSight } from '../src/engine/math';
+import { shutLeafBlockers } from '../src/engine/doorGeo';
+import type { Door, RoomInstance, Socket } from '../src/game/types';
 
 const sock = (kind: string, meta: Record<string, unknown>, x = 1, z = 1): Socket =>
   ({ kind: kind as Socket['kind'], pos: v3(x, 0, z), yaw: 0, filled: true, meta });
@@ -350,5 +351,51 @@ describe('coaxed drawers (sprint 268)', () => {
     const d = sys.interactables.find((i) => i.kind === 'drawer');
     expect(d?.prompt, 'the worked latch reads scarred').toMatch(/scarred/);
     expect(d?.prompt, 'and does not lie about being forced').not.toMatch(/forced/);
+  });
+});
+
+describe('the leaf is cover (sprint 441)', () => {
+  const leaf = (over: Record<string, unknown> = {}) => ({
+    id: 'door-4-in', roomIndex: 4, isMainRoute: true, label: '4',
+    pos: v3(0, 0, 0), yaw: 0, locked: false, opening: false, openT: 0,
+    ...over,
+  } as Door);
+  const roomsWith = (doors: Door[]) => [{ doors }];
+  // yaw 0 → the leaf runs along X (lateral ±0.55), panel z ≈ 0 (±0.06),
+  // top at y = 2.2.
+
+  it('a shut leaf blocks the sight line through it', () => {
+    const blockers = shutLeafBlockers(roomsWith([leaf()]), v3(-2, 0, 0), v3(2, 0, 0));
+    expect(blockers.length).toBe(1);
+    expect(hasLineOfSight(v3(-2, 1.6, 0), v3(2, 1.6, 0), blockers)).toBe(false);
+  });
+
+  it('open, mid-swing, and false leaves cast no panel', () => {
+    for (const over of [{ opening: true }, { openT: 0.8 }, { falseDoor: true }]) {
+      expect(shutLeafBlockers(roomsWith([leaf(over)]), v3(-2, 0, 0), v3(2, 0, 0)).length).toBe(0);
+    }
+  });
+
+  it('a stare around the leaf edge legitimately passes', () => {
+    // ray crosses the leaf plane at |lateral| > 0.55 — past its edge
+    const blockers = shutLeafBlockers(roomsWith([leaf()]), v3(-2, 0, -0.3), v3(2, 0, 1.5));
+    expect(hasLineOfSight(v3(-2, 1.6, -0.3), v3(2, 1.6, 1.5), blockers)).toBe(true);
+  });
+
+  it('the panel is a door leaf, not a wall — the eye sees over it', () => {
+    const blockers = shutLeafBlockers(roomsWith([leaf()]), v3(-2, 0, 0), v3(2, 0, 0));
+    expect(hasLineOfSight(v3(-2, 2.35, 0), v3(2, 2.35, 0), blockers)).toBe(true);
+  });
+
+  it('every sight rule sweeps the leaves — one convention', () => {
+    const corridor = readFileSync('src/entities/corridor.ts', 'utf8');
+    const curator = readFileSync('src/entities/curator.ts', 'utf8');
+    const room = readFileSync('src/entities/room.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    // the whistle, the spot, the Comm's throw/chase trackers, the lens
+    expect(corridor).toContain('shutLeafBlockers');
+    expect(curator).toContain('shutLeafBlockers');
+    expect(room).toContain('shutLeafBlockers');
+    expect(game).toContain('shutLeafBlockers');
   });
 });

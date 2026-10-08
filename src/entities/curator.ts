@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { Entity } from './base';
 import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
+import { shutLeafBlockers } from '../engine/doorGeo';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
 import { riggedFigure, type RiggedFigure } from './rigged';
@@ -189,7 +190,8 @@ export class Curator extends Entity {
     const eyeP = v3();
     p.eyePos(eyeP);
     const room = this.containmentRoom ?? c.rooms[c.currentRoomIndex];
-    const los = hasLineOfSight(v3(this.pos.x, 2.4, this.pos.z), eyeP, room ? room.losBlockers : []);
+    const from = v3(this.pos.x, 2.4, this.pos.z);
+    const los = hasLineOfSight(from, eyeP, (room ? room.losBlockers : []).concat(shutLeafBlockers(this.ctx.rooms, this.pos, p.pos)));
     const playerAudible = c.now - this.lastSoundAt < 1.5 && this.heardRecently && v3dist(this.heardRecently, p.pos) < 2.5;
 
     if (this.cState !== 'stunned' && this.cState !== 'pursue') {

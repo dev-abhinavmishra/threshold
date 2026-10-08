@@ -2,10 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { CorridorRunner, Warden } from '../src/entities/corridor';
 import { Bellman } from '../src/entities/bellman';
 import { Collector } from '../src/entities/collector';
-import { Witness, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector, Commissionaire } from '../src/entities/room';
+import { Witness, Whisper, Hollow, Lurker, Margin, Husk, Porter, Groundswell, Inspector, Commissionaire } from '../src/entities/room';
 import { generateRoute } from '../src/world/generator';
 import { SeedStreams } from '../src/engine/rng';
-import { v3 } from '../src/engine/math';
+import { v3, hasLineOfSight } from '../src/engine/math';
+import { shutLeafBlockers } from '../src/engine/doorGeo';
 import type { EntityCtx } from '../src/entities/base';
 import type { RoomInstance } from '../src/game/types';
 
@@ -742,6 +743,20 @@ describe('Warden (sprint 234)', () => {
     const expose = (hunter: typeof w, upd: () => void) => {
       const pin = () => {
         const h = hunter.mesh ? hunter.mesh.rotation.y : 0;
+        // sprint 441 — the whistle needs air too: hunt the bearing where
+        // the pin's sight line actually clears shut leaves and walls (the
+        // heading cone pins it dead-ahead whatever's in the way; a nearer
+        // stand often clears the finite panel a far one can't).
+        for (const off of [0, 0.35, -0.35, 0.7, -0.7, 1.0, -1.0]) {
+          for (const dist of [8, 6, 4.5, 3]) {
+            const cand = v3(hunter.pos.x + Math.sin(h + off) * dist, 0, hunter.pos.z + Math.cos(h + off) * dist);
+            const host = ctx.rooms[(hunter as unknown as { hostRoom: number }).hostRoom];
+            const eyeW = v3(hunter.pos.x, 1.7, hunter.pos.z);
+            const eyeP = v3(cand.x, 1.5, cand.z);
+            const blockers = (host ? host.losBlockers : []).concat(shutLeafBlockers(ctx.rooms, hunter.pos, cand));
+            if (hasLineOfSight(eyeW, eyeP, blockers)) { player.pos = cand; return; }
+          }
+        }
         player.pos = v3(hunter.pos.x + Math.sin(h) * 8, 0, hunter.pos.z + Math.cos(h) * 8);
       };
       player.hiddenSpot = null;
@@ -2793,5 +2808,59 @@ describe('the Filer’s runner (sprint 300)', () => {
     expect(f.posted, 'the word is out — the halls still listen').toBe(true);
     expect(wordFiled, 'the card lands in the house register').toHaveBeenCalledTimes(1);
     f.dispose();
+  });
+});
+
+describe('the gaze needs air (sprint 442)', () => {
+  // A shut leaf between you and the thing your eyes are on breaks every
+  // gaze-driven effect — the whisper can't strike through it, can't be
+  // banished through it, and relocates instead of landing for free.
+  const leafRoom = (): RoomInstance => ({
+    index: 0, templateId: 't', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 10, spec: { width: 10, depth: 10, props: [] },
+    doors: [{
+      id: 'door-0-in', roomIndex: 0, isMainRoute: true, label: '0',
+      pos: v3(0, 0, 0), yaw: Math.PI / 2, locked: false,
+      opening: false, openT: 0, swingT: 0, holdT: 0,
+    } as RoomInstance['doors'][number]],
+    hidingSpots: [], scheduled: [], sockets: [], losBlockers: [],
+  } as unknown as RoomInstance);
+
+  it("the strike can't reach through a shut leaf — it relocates and hunts again", () => {
+    const rooms = [leafRoom(), leafRoom(), leafRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const p = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    // leaf plane at x=0 (yaw PI/2 → leaf runs along Z): player west, whisper east
+    p.pos = v3(-3, 0, 0);
+    const wh = new Whisper();
+    wh.spawn(ctx);
+    (wh as unknown as { pos: { x: number; z: number } }).pos = v3(3, 0, 0);
+    const before = { x: (wh as unknown as { pos: { x: number } }).pos.x, z: (wh as unknown as { pos: { z: number } }).pos.z };
+    const dmg = ctx.damagePlayer as ReturnType<typeof vi.fn>;
+    const cm = ctx as { now: number };
+    // run past the whole strike window
+    for (let i = 0; i < 160 && !dmg.mock.calls.length; i++) { cm.now += 0.05; wh.update(0.05); }
+    expect(dmg, 'a shut leaf is cover from the strike').not.toHaveBeenCalled();
+    const after = wh as unknown as { pos: { x: number; z: number }; attackT: number };
+    const moved = Math.hypot(after.pos.x - before.x, after.pos.z - before.z);
+    expect(moved, 'it relocates to hunt again rather than landing for free').toBeGreaterThan(0.5);
+    // (it may since have been rightfully dismissed — a relocate landing in
+    // real cover followed by an honest gaze is the designed ending)
+    wh.dispose();
+  });
+
+  it("a gaze through the leaf can't banish it either", () => {
+    const rooms = [leafRoom(), leafRoom(), leafRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0 });
+    const p = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    p.pos = v3(-3, 0, 0);
+    p.yaw = Math.PI / 2; // facing +X — dead-on the whisper behind the leaf
+    const wh = new Whisper();
+    wh.spawn(ctx);
+    (wh as unknown as { pos: { x: number; z: number } }).pos = v3(3, 0, 0);
+    const cm = ctx as { now: number };
+    for (let i = 0; i < 40; i++) { cm.now += 0.05; wh.update(0.05); }
+    expect(wh.state, 'staring through a door is not a gaze').not.toBe('done');
+    wh.dispose();
   });
 });

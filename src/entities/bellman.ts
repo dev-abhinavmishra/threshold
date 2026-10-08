@@ -27,7 +27,7 @@ import { tallFigure } from './figure';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { Rng } from '../engine/rng';
 import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
-import { doorBetween, atRoomDoor } from '../engine/doorGeo';
+import { doorBetween, atRoomDoor, shutLeafBlockers } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 
 const KNOCK_LINES = [
@@ -156,13 +156,11 @@ export class Bellman extends Entity {
     // the leaf is there (door state is runtime, not room geometry). Without
     // this the fold always beat the keys pass — the player could banish him
     // through a locked door he was still keying, for free.
-    const his = this.roomAt(this.pos);
-    for (const r of [room, his]) {
-      if (!r) continue;
-      for (const dor of r.doors) {
-        if (!dor.opening && (dor.openT ?? 0) < 0.5 && doorBetween(dor, this.pos, p.pos)) return false;
-      }
-    }
+    // sprint 441 — the leaf is a finite panel, not a plane: a stare that
+    // clears its edge legitimately passes (his door keying uses doorBetween;
+    // sight uses the panel like every other kill/gaze verdict).
+    if (shutLeafBlockers(c.rooms, this.pos, p.pos).length
+      && !hasLineOfSight(v3(this.pos.x, 1.7, this.pos.z), eye, shutLeafBlockers(c.rooms, this.pos, p.pos))) return false;
     return true;
   }
 

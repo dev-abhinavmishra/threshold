@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
 import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
+import { shutLeafBlockers, pointInRoom } from '../engine/doorGeo';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -56,8 +57,15 @@ export class Witness extends Entity {
     const d = v3dist(this.pos, p.pos);
     if (d > 18 || p.protection === 'hidden') { this.done(); return; }
     if (this.mesh) this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    // sprint 442 — its harm and its pull both travel sight: a shut leaf
+    // or wall between you and it breaks the gaze they ride on.
+    const wRoom = c.rooms[c.currentRoomIndex];
+    const wEye = v3();
+    p.eyePos(wEye);
+    const wCanSee = hasLineOfSight(wEye, v3(this.pos.x, 1.4, this.pos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
     // Camera pull toward itself (resistible) unless reduced-motion.
-    if (!c.accessibility.reducedMotion) {
+    if (!c.accessibility.reducedMotion && wCanSee) {
       const want = Math.atan2(this.pos.x - p.pos.x, this.pos.z - p.pos.z);
       let dy = want - p.yaw;
       while (dy > Math.PI) dy -= Math.PI * 2;
@@ -71,7 +79,7 @@ export class Witness extends Entity {
     const toW = v3(this.pos.x - p.pos.x, 1.4 - p.pos.y - 1.6, this.pos.z - p.pos.z);
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
-    if (facing > 0.86) {
+    if (facing > 0.86 && wCanSee) {
       this.exposure += dt;
       if (this.exposure > 0.25) {
         c.damagePlayer(this.tuning.damage * dt, 'witness', 'The Witness harms what it holds in your sight. Look away.');
@@ -103,8 +111,32 @@ export class Whisper extends Entity {
    *  relocating the real whisper with a tightened strike window. */
   private decoyMesh: THREE.Object3D | null = null;
   private decoyPos = v3();
+  /** Relocation count — salts each new bearing so it can't hunt the same
+   *  shadow twice. */
+  private relocN = 0;
 
   constructor() { super('whisper', ENTITY_TUNING.whisper); }
+
+  /** A fresh hunting spot near the player: varied every call, and kept
+   *  inside their room where a sight line can actually exist — a ring
+   *  pick through a wall into a sealed room is a hunt that never
+   *  resolves. Falls back to the raw ring if no try lands in-bounds. */
+  private relocate(dist = 0): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[c.currentRoomIndex];
+    for (let i = 0; i < 6; i++) {
+      const a2 = new Rng(c.seed + 977 + this.relocN * 131).float() * Math.PI * 2;
+      const r2 = (3 + dist) + new Rng(c.seed + 311 + this.relocN * 197).float() * 2.5;
+      const cand = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
+      this.relocN++;
+      if (i === 5 || !room || pointInRoom(room, cand.x, cand.z)) {
+        this.pos = cand;
+        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        return;
+      }
+    }
+  }
 
   protected override onSpawn(): void {
     const c = this.ctx;
@@ -112,6 +144,12 @@ export class Whisper extends Entity {
     const a = rng.float() * Math.PI * 2;
     const r = 3.5 + rng.float() * 2.5;
     this.pos = v3(c.player.pos.x + Math.cos(a) * r, 0, c.player.pos.z + Math.sin(a) * r);
+    // sprint 443 — a spawn ring can park it through a wall where no sight
+    // line ever exists; keep the first bearing in the room too
+    const spawnRoom = c.rooms[c.currentRoomIndex];
+    if (spawnRoom && !pointInRoom(spawnRoom, this.pos.x, this.pos.z)) {
+      this.relocate(0.5);
+    }
     this.state = 'engage';
     const rig = riggedFigure('ghost');
     const g = rig?.group
@@ -145,20 +183,22 @@ export class Whisper extends Entity {
     p.lookDir(dir);
     // Decoy logic: it localizes just like the real one, but facing it squarely
     // collapses it and relocates the real whisper instead of ending the fight.
+    const wRoom = c.rooms[c.currentRoomIndex];
+    const eye = v3();
+    p.eyePos(eye);
+    const dCanSee = hasLineOfSight(eye, v3(this.decoyPos.x, 1.4, this.decoyPos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.decoyPos)));
     if (this.decoyMesh) {
       const toD = v3(this.decoyPos.x - p.pos.x, 0, this.decoyPos.z - p.pos.z);
       const dd = Math.hypot(toD.x, toD.z) || 1;
       const dfacing = (dir.x * toD.x + dir.z * toD.z) / dd;
-      this.decoyMesh.visible = dfacing > 0.75 && dd < 9;
+      this.decoyMesh.visible = dfacing > 0.75 && dd < 9 && dCanSee;
       if (this.decoyMesh.visible) this.decoyMesh.rotation.y = Math.atan2(p.pos.x - this.decoyPos.x, p.pos.z - this.decoyPos.z);
-      if (dfacing > 0.94 && dd < 9) {
+      if (dfacing > 0.94 && dd < 9 && dCanSee) {
         c.removeEntityMesh(this.decoyMesh);
         this.decoyMesh = null;
         // Relocate the real whisper to a fresh bearing, tighten the window.
-        const a2 = new Rng(c.seed + 977).float() * Math.PI * 2;
-        const r2 = 3 + new Rng(c.seed + 311).float() * 2.5;
-        this.pos = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
-        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        this.relocate();
         this.attackT = this.strikeWindow * 0.35;
         c.cue('whisper-shift', this.pos, '[not it — the voice moved]', { severity: 'warn' });
       }
@@ -167,17 +207,31 @@ export class Whisper extends Entity {
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
     // Show silhouette when roughly faced — reward for localization.
-    if (this.mesh) this.mesh.visible = facing > 0.75 && dn < 9;
+    // sprint 442 — facing a wall isn't facing it: sight needs air or the
+    // silhouette shows through the leaf, and a gaze through it banishes
+    // the thing for free.
+    const canSee = hasLineOfSight(eye, v3(this.pos.x, 1.4, this.pos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
+    if (this.mesh) this.mesh.visible = facing > 0.75 && dn < 9 && canSee;
     if (this.mesh && this.mesh.visible) {
       this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
       this.rig?.play('idle');
     }
-    if (facing > 0.94 && dn < 9) {
+    if (facing > 0.94 && dn < 9 && canSee) {
       c.cue('whisper-dismiss', this.pos, '[it retreats from your regard]', { severity: 'info' });
       this.done();
       return;
     }
     if (this.attackT > this.strikeWindow) {
+      if (!canSee) {
+        // The strike can't reach through a shut leaf — it relocates to
+        // hunt you again instead of landing for free (same move the
+        // decoy collapse pays).
+        this.relocate();
+        this.attackT = this.strikeWindow * 0.35;
+        c.cue('whisper-voice', this.pos, '[the whisper moves — still hunting]', { severity: 'warn' });
+        return;
+      }
       c.damagePlayer(this.tuning.damage, 'whisper', 'Whisper asks you to locate it. Turn toward the voice until the shape shows.');
       this.done();
     }
@@ -399,7 +453,14 @@ export class EchoSkin extends Entity {
     if (p.lastMoveSpeed > 0.5 && Math.random() < dt * 6) {
       c.cue('echoskin-step', v3(bx, 0, bz), '', { severity: 'info' });
     }
-    if (facing > 0.7 && this.approachD < 12) {
+    // sprint 442 — you can't fold what you can't see: the dispel only
+    // counts a gaze that clears the air between you.
+    const eRoom = c.rooms[c.currentRoomIndex];
+    const eEye = v3();
+    p.eyePos(eEye);
+    const eCanSee = hasLineOfSight(eEye, v3(bx, 1.4, bz),
+      (eRoom ? eRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, v3(bx, 0, bz))));
+    if (facing > 0.7 && this.approachD < 12 && eCanSee) {
       this.dispelT += dt;
       if (this.dispelT > 0.7) {
         c.cue('echoskin-fold', v3(bx, 0, bz), '[it folds into the wall]', { severity: 'info' });
@@ -623,7 +684,14 @@ export class Margin extends Entity {
     const toM = v3(x - p.pos.x, 0, z - p.pos.z);
     const dn = Math.hypot(toM.x, toM.z) || 1;
     const facing = (dir.x * toM.x + dir.z * toM.z) / dn;
-    if (facing > 0.35) {
+    // sprint 442 — 'on screen' means on screen: a shut leaf between you
+    // and it isn't a glance, and the strain can't build through it.
+    const mRoom = c.rooms[c.currentRoomIndex];
+    const mEye = v3();
+    p.eyePos(mEye);
+    const mCanSee = hasLineOfSight(mEye, v3(x, 1.4, z),
+      (mRoom ? mRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, v3(x, 0, z))));
+    if (facing > 0.35 && mCanSee) {
       // on screen — frozen but instability grows
       this.instability += dt;
       if (this.instability > 5) {
@@ -1208,7 +1276,7 @@ export class Porter extends Entity {
       // upward pitch so the counterplay is always a deliberate look-up.
       if (dot > 0.62 && dir.y > 0.1) {
         const room = c.rooms[c.currentRoomIndex];
-        gazing = hasLineOfSight(eye, this.header, room ? room.losBlockers : []);
+        gazing = hasLineOfSight(eye, this.header, (room ? room.losBlockers : []).concat(shutLeafBlockers(c.rooms, eye, this.header)));
       }
     }
     if (gazing) {
@@ -1812,7 +1880,7 @@ export class Commissionaire extends Entity {
     const eye = v3(this.pos.x, 1.62, this.pos.z);
     const pe = v3();
     p.eyePos(pe);
-    return hasLineOfSight(eye, pe, room ? room.losBlockers : []);
+    return hasLineOfSight(eye, pe, (room ? room.losBlockers : []).concat(shutLeafBlockers(c.rooms, this.pos, p.pos)));
   }
 
   /** Thrown back toward the sealed door — the price of the light. */
@@ -1873,7 +1941,7 @@ export class Commissionaire extends Entity {
         const eye = v3(this.pos.x, 1.62, this.pos.z);
         const pe = v3();
         p.eyePos(pe);
-        if (hasLineOfSight(eye, pe, room2 ? room2.losBlockers : [])) {
+        if (hasLineOfSight(eye, pe, (room2 ? room2.losBlockers : []).concat(shutLeafBlockers(c.rooms, this.pos, p.pos)))) {
           v3copy(this.lastSeen, p.pos);
           this.chaseLose = 0;
         } else this.chaseLose += dt;

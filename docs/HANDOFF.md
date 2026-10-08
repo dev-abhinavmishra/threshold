@@ -6233,3 +6233,80 @@ its approach ON the leaf is inside the span, not behind it.
   player standing at the leaf's lateral edge — inside its infinite-plane
   'between' tolerance but outside the panel). Every kill verdict now
   treats a closed leaf as cover; open/mid-swing leaves don't.
+
+## Sprint 441 — the leaf is cover everywhere sight is checked
+
+The s440 `playerExposed` leaf sweep was one fix of one class: every
+sight test had the same hole. The warden's whistle-charge, the
+curator's spot, the Commissionaire's throw/chase trackers all checked
+only `room.losBlockers` — furniture and wall boxes — so each could
+see you through a shut door. The cameras had no LOS test at all:
+an adjacent room's lens reported you through the party wall.
+`doorGeo.shutLeafBlockers(rooms, a, b)` now builds the shut-leaf
+panels once (open/mid-swing/false leaves don't count, far leaves
+pruned, panel top at 2.2 so header-height gazes still clear it);
+every sight rule concats it over its own losBlockers — kills,
+whistles, gazes, chases, the lens. The bellman's stare moved off
+`doorBetween` onto the panels too: the plane test wrongly blocked
+stares that clear the leaf's lateral edge, so an edge peek couldn't
+hold his gaze. One convention, one helper — "a shut leaf is cover"
+now means the same thing to every eye in the house.
+**Notes:** `losBlockers` already includes wall boxes (generator
+pushes them per room) — walls were cover all along; only leaves
+were missing. The camera needed the wall test too, not just leaves.
+The edge-peek semantics are the right read: a leaf is a finite
+panel — `doorBetween` stays the tool for "is the door in the way
+of your walk" (knock/keying), `shutLeafBlockers` for "can sight
+pass" (LOS tests).
+
+## Sprint 442 — the gaze needs air
+
+The facing-dot effects had the same hole as the entity sight rules:
+geometric gaze tests, no LOS. The Witness damaged you while you
+'looked' at it through a wall or shut leaf; the Whisper's silhouette,
+dismiss, and decoy-collapse all answered a stare through a door —
+and worst, its strike window fired unconditionally, so a whisper
+relocated behind a shut leaf hit you through it. Every facing check
+now gates on `losBlockers.concat(shutLeafBlockers(...))`: the Witness's
+harm travels sight; the whisper can't be seen, banished, or landed
+through cover — a strike that can't reach relocates it to hunt again
+(same move the decoy pays) instead of a free hit; EchoSkin's dispel
+and the Margin's 'on screen' freeze+strain both need the air too.
+**Notes:** the leaf-cover convention is complete in both directions
+now — things that look at you (s441) and things you look at (s442)
+both respect the shut leaf. The warden-whistle vitest needed a
+LOS-hunting pin: a heading-cone pin 8m ahead can sit behind a leaf,
+so the test hunts bearing×distance for a sight line that actually
+clears — same 'standFor' class of fix as the e2e harness.
+
+## Sprint 443 — the whisper hunts inside the room
+
+s442's whiffed-strike relocate had a shape it couldn't survive:
+`new Rng(seed + 977)` re-rolled the SAME bearing every call, so a
+covered whisper relocated to the same covered spot forever; and the
+3–5.5m ring pick could park it through a wall in a sealed room where
+no sight line ever exists — a hunt that never resolves. `relocate()`
+now salts every bearing (relocN counter — deterministic but varied),
+prefers spots inside the player's room (pointInRoom, 6 tries then any),
+and is shared by the decoy-collapse, the strike-whiff, AND the spawn
+ring — the initial bearing gets the same in-room retry.
+**Notes:** assertion trap — 'the hunt is still on' over-asserted: a
+relocate landing in real cover followed by an honest gaze ending it
+IS the designed ending; assert the contract (no damage, moved)
+not the timeline.
+
+## Sprint 444 — the beam needs air
+
+`lightOnIt` meant 'lamp is on' — nothing more. Every consumer layered
+partial gates on top (the Inkling's distance, the Husk's facing), but
+no layer ever tested the wall between: the torch repelled a Lurker,
+agitated an Inkling, and woke a Husk through shut leaves and through
+the party wall. The flag now means what its comment always claimed —
+the beam covers it: lamp on, inside the cone (dot > 0.4), inside 11m,
+and `losBlockers.concat(shutLeafBlockers)` clear from eye to it. The
+per-entity gates keep their own tuning on top. Also folded in: the
+Witness's camera-pull moved under the same sight gate as its damage —
+it can't hold your gaze through cover either.
+**Notes:** the flag's three consumers (Lurker flee, Inkling agitate,
+Husk dormant wake) all inherited the fix at once — a shared flag is
+the right seam for a convention; gate the FLAG, not each effect.

@@ -18,9 +18,9 @@ import { SoundEventBus, type SoundEvent } from '../engine/events';
 import { noiseCanRouse, withinRouseRadius } from '../engine/noiseRouse';
 import { CrewCount } from '../engine/crewCount';
 import { CrewChecker, roomOf as underRoomOf, type CheckerHooks } from '../entities/crewChecker';
-import { pointInRoom } from '../engine/doorGeo';
+import { pointInRoom, shutLeafBlockers } from '../engine/doorGeo';
 import { SeedStreams, Rng } from '../engine/rng';
-import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
+import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, hasLineOfSight, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { wantedNotice, thresholdSpill } from '../world/decals';
@@ -8690,6 +8690,18 @@ export class Game {
         if (dist > 8 || dist < 0.4) { cm.expo = 0; continue; }
         // desired local yaw: world direction minus the room's own yaw
         const room = this.activeRooms()[cm.i];
+        // sprint 441 — the lens is in the room, not the walls: a shut leaf
+        // (or the wall itself) between it and you is cover. Cameras never
+        // sight-checked before — an adjacent room's eye reported you
+        // through the party wall.
+        {
+          const camFrom = v3(this.tmpV3.x, this.tmpV3.y, this.tmpV3.z);
+          const pEye = v3();
+          this.player.eyePos(pEye);
+          const blockers = (room ? room.losBlockers : []).concat(
+            shutLeafBlockers(this.activeRooms(), camFrom, pEye));
+          if (!hasLineOfSight(camFrom, pEye, blockers)) { cm.expo = 0; continue; }
+        }
         const yawOff = room ? room.yaw : 0;
         const want = Math.atan2(dx, dz) - yawOff - Math.PI / 2;
         let d = want - cm.o.rotation.y;
@@ -8981,7 +8993,32 @@ export class Game {
         e.inputHeld = this.keys.size > 0;
       }
       if (e instanceof Inkling || e instanceof Husk || e instanceof Lurker) {
-        e.lightOnIt = (this.lampOn || this.pulseLampOn) ? 1 : 0;
+        // sprint 444 — the beam needs air: the flag was lamp-on-OR-off,
+        // so the beam repelled, agitated, and woke things through shut
+        // leaves and walls alike. Now it means the beam actually covers
+        // it: lamp on, in the cone, in reach, and sight clear.
+        e.lightOnIt = 0;
+        if (this.lampOn || this.pulseLampOn) {
+          const tp = e.threatPos();
+          if (tp) {
+            const dx = tp.x - this.player.pos.x, dz = tp.z - this.player.pos.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist < 11) {
+              const dir = v3();
+              this.player.lookDir(dir);
+              const dn = dist || 1;
+              if ((dir.x * dx + dir.z * dz) / dn > 0.4) {
+                const eye = v3();
+                this.player.eyePos(eye);
+                const rooms = this.activeRooms();
+                const inRoom = rooms.find((r) => pointInRoom(r, tp.x, tp.z)) ?? rooms[this.currentRoom];
+                const blockers = (inRoom ? inRoom.losBlockers : []).concat(
+                  shutLeafBlockers(rooms, this.player.pos, tp));
+                if (hasLineOfSight(eye, v3(tp.x, 1.2, tp.z), blockers)) e.lightOnIt = 1;
+              }
+            }
+          }
+        }
       }
     }
 

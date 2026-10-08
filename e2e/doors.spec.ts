@@ -258,6 +258,8 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
     if (!bell) return { stage: 'no-bellman-spawn', caps: caps.slice(-8) } as const;
     let killTried = '';
     let killGeo = '';
+    const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
+    if (!door) return { stage: 'no-door' } as const;
     const gAny = g as unknown as { killPlayer(src: string, hint: string): void };
     const origKill = gAny.killPlayer.bind(gAny);
     gAny.killPlayer = (src: string, hint: string) => {
@@ -267,9 +269,6 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
       killGeo = `bell(${bp.x.toFixed(2)},${bp.z.toFixed(2)}) player(${pp.x.toFixed(2)},${pp.z.toFixed(2)}) leaf(${door?.pos.x.toFixed(2)},${door?.pos.z.toFixed(2)}) yaw=${door?.yaw.toFixed(2)}`;
       origKill(src, hint);
     };
-
-    const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
-    if (!door) return { stage: 'no-door' } as const;
     // The brace point sits a half-step off the leaf on the mirror side of
     // the listen seam — stand there, nudged ~0.9m into the room (outside
     // its 1.05 touch reach, inside the 1.7m brace radius), and crouch.
