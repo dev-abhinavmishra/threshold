@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2372,6 +2372,43 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(cw, curtainShade(rng), 0.9 + rng.float() * 0.2, 1.4 + rng.float() * 0.3, along + (rng.float() - 0.5) * 0.2, 1.55 + rng.float() * 0.2);
       const cs = group.children[group.children.length - 1];
       if (cs && !cs.name) cs.name = 'curtain-shade';
+    }
+
+    // The walls opened — where the render failed, the wood lath shows
+    // through like a rib, plaster crumbs dropped at its foot.
+    if (!livedIn && rng.bool(0.5)) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, lathExpose(rng), 0.7 + rng.float() * 0.2, 0.55 + rng.float() * 0.15, spot.along, 1.15 + rng.float() * 0.5);
+        const le = group.children[group.children.length - 1];
+        if (le && !le.name) le.name = 'lath-expose';
+      }
+    }
+
+    // The drains wept — a rust ring and drip channels standing around
+    // the floor grates and the coal scuttles that sweated beside them.
+    for (const p of spec.props) {
+      if ((p.kind !== 'grateDrain' && p.kind !== 'ironGrate' && p.kind !== 'coalScuttle') || rng.float() >= 0.45) continue;
+      const dr = decalQuad(drainRust(rng), 0.6 + rng.float() * 0.15, 0.6 + rng.float() * 0.15);
+      dr.name = 'drain-rust';
+      dr.rotation.x = -Math.PI / 2;
+      dr.rotation.z = rng.float() * Math.PI * 2;
+      dr.position.set(p.x, 0.0087, p.z);
+      group.add(dr);
+    }
+
+    // The dust kept what rolled under — a grey pelt and the small
+    // lost things peeking out at the bed's front edge.
+    for (const p of spec.props) {
+      if ((p.kind !== 'bed' && p.kind !== 'bedOld' && p.kind !== 'daybed') || rng.float() >= 0.4) continue;
+      const cdx = -p.x, cdz = -p.z;
+      const clen = Math.hypot(cdx, cdz) || 1;
+      const uh = decalQuad(underbedHaze(rng), 0.9 + rng.float() * 0.2, 0.6 + rng.float() * 0.1);
+      uh.name = 'underbed-haze';
+      uh.rotation.x = -Math.PI / 2;
+      uh.rotation.z = Math.atan2(-cdx / clen, cdz / clen || 0.0001) + Math.PI;
+      uh.position.set(p.x + (cdx / clen) * 0.7, 0.0085, p.z + (cdz / clen) * 0.7);
+      group.add(uh);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

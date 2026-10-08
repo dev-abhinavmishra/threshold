@@ -3689,3 +3689,48 @@ describe('the wine kept the rack (sprint 484)', () => {
     expect(n, 'no rack ghosts').toBeGreaterThan(0);
   });
 });
+
+describe('the walls opened (sprint 485)', () => {
+  it('plaster wounds show the lath behind on neglected walls', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'lath-expose') n++; });
+      }
+    }
+    expect(n, 'no lath wounds').toBeGreaterThan(0);
+  });
+});
+
+describe('the drains wept (sprint 485)', () => {
+  it('rust rings stand around the floor grates and scuttles', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drain-rust') n++; });
+      }
+    }
+    expect(n, 'no drain rust').toBeGreaterThan(0);
+  });
+});
+
+describe('the dust kept what rolled under (sprint 485)', () => {
+  it('a grey pelt and lost things peek out at bed edges', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'underbed-haze') n++; });
+      }
+    }
+    expect(n, 'no underbed haze').toBeGreaterThan(0);
+  });
+});

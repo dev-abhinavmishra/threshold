@@ -5603,3 +5603,134 @@ export function rackGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 485 — plaster wound: a hole in the render shows the wood lath behind, crumbs below. */
+export function lathExpose(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // broken plaster rim — an irregular gap in the wall skin
+    const cx = 48, cy = 44;
+    const rim: [number, number][] = [];
+    const n = 14;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = 24 + rng.float() * 10;
+      rim.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.72]);
+    }
+    // dark cavity behind
+    g.fillStyle = 'rgba(18,12,9,0.88)';
+    g.beginPath();
+    rim.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    g.closePath(); g.fill();
+    // lath strips inside the cavity
+    g.fillStyle = 'rgba(96,72,46,0.9)';
+    for (let i = 0; i < 5; i++) {
+      const ly = cy - 14 + i * 7;
+      g.fillRect(cx - 20 - rng.float() * 4, ly, 40 + rng.float() * 6, 3.4);
+    }
+    // bright jagged plaster edge
+    g.strokeStyle = 'rgba(216,205,186,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    rim.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    g.closePath(); g.stroke();
+    // hair cracks radiating from the rim
+    g.strokeStyle = 'rgba(60,50,42,0.5)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r0 = 22 + rng.float() * 6, len = 8 + rng.float() * 14;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.72);
+      g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len) * 0.72);
+      g.stroke();
+    }
+    // fallen crumbs at the wound's foot
+    g.fillStyle = 'rgba(200,190,172,0.5)';
+    for (let i = 0; i < 10; i++) {
+      const t = i / 9;
+      g.fillRect(cx - 14 + t * 28 + rng.range(-3, 3), cy + 20 + rng.float() * 6, 1.6, 1.6);
+    }
+  });
+}
+
+/** Sprint 485 — drain ring: rust halo + drip channels around a floor grate. */
+export function drainRust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // diffuse rust halo
+    const halo = g.createRadialGradient(cx, cy, 12, cx, cy, 42);
+    halo.addColorStop(0, 'rgba(122,62,26,0.0)');
+    halo.addColorStop(0.62, 'rgba(122,62,26,0.42)');
+    halo.addColorStop(1, 'rgba(122,62,26,0.0)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, 96, 96);
+    // solid ring where water stands against the grate rim
+    g.strokeStyle = 'rgba(96,44,16,0.75)';
+    g.lineWidth = 3 + rng.float() * 1.5;
+    g.beginPath(); g.arc(cx, cy, 15, 0, Math.PI * 2); g.stroke();
+    // oxide speckle inside
+    g.fillStyle = 'rgba(70,30,12,0.6)';
+    for (let i = 0; i < 26; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(3, 14);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4, 1.4);
+    }
+    // drip channels walking away downslope
+    g.strokeStyle = 'rgba(96,44,16,0.45)';
+    g.lineWidth = 1;
+    const nd = 3 + (rng.float() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nd; i++) {
+      const a = rng.range(0.3, Math.PI - 0.3); // downward hemisphere
+      let x = cx + Math.cos(a) * 16, y = cy + Math.sin(a) * 16;
+      g.beginPath(); g.moveTo(x, y);
+      const steps = 4 + Math.floor(rng.float() * 3);
+      for (let s = 0; s < steps; s++) {
+        x += Math.cos(a) * rng.range(4, 8) + rng.range(-2, 2);
+        y += Math.sin(a) * rng.range(5, 9);
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 485 — underbed haze: dust pelt + the small things that rolled under and stayed. */
+export function underbedHaze(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // long soft dust field, darkest at the back (top = deeper under)
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, 'rgba(60,52,44,0.55)');
+    grad.addColorStop(0.55, 'rgba(70,62,52,0.34)');
+    grad.addColorStop(1, 'rgba(70,62,52,0.0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 96, 64);
+    // dust-bunny clumps along the back edge
+    g.fillStyle = 'rgba(96,88,76,0.5)';
+    for (let i = 0; i < 14; i++) {
+      const x = rng.range(6, 90), y = rng.range(2, 18);
+      g.beginPath(); g.ellipse(x, y, rng.range(2, 5), rng.range(1, 2.4), rng.range(0, 1), 0, Math.PI * 2); g.fill();
+    }
+    // lost buttons / coins / a dead moth — the small archaeology
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 86), y = rng.range(20, 44);
+      if (rng.float() < 0.4) { // coin
+        g.fillStyle = 'rgba(140,120,80,0.6)';
+        g.beginPath(); g.arc(x, y, 1.8, 0, Math.PI * 2); g.fill();
+      } else if (rng.float() < 0.5) { // button
+        g.fillStyle = 'rgba(120,110,96,0.55)';
+        g.beginPath(); g.arc(x, y, 1.6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(40,34,28,0.6)';
+        g.fillRect(x - 0.4, y - 0.4, 0.8, 0.8);
+      } else { // dead moth
+        g.fillStyle = 'rgba(150,140,120,0.5)';
+        g.beginPath(); g.ellipse(x, y, 2.4, 1, rng.range(0, 3), 0, Math.PI * 2); g.fill();
+      }
+    }
+    // sweep-front: someone pushed a broom part-way under once, then gave up
+    g.strokeStyle = 'rgba(52,46,40,0.35)';
+    g.lineWidth = 2;
+    const sw = rng.range(20, 60);
+    g.beginPath(); g.moveTo(sw, 50);
+    g.quadraticCurveTo(sw + rng.range(-6, 6), 34, sw + rng.range(-10, 10), 20);
+    g.stroke();
+  });
+}
