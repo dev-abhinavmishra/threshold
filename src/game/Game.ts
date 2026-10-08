@@ -1272,12 +1272,22 @@ export class Game {
     }
     // the count's lamp carries through the seam too — ears tell you
     // which room the sweep is in before you ever see the glow
-    if (this.space === 'under' && this.checker.active) {
-      const ci = underRoomOf(this.route?.underRooms ?? [], this.checker.position);
-      if (ci >= 0 && this.route?.underRooms[ci] === target) {
-        return { sfx: 'floor-creak', text: this.checker.lampLit
-          ? '[the count’s lamp is lit in there — the sweep is inside]'
-          : '[the count walks blind in there — stripped, but still sweeping]', sev: 'danger' as const };
+    if (this.space === 'under') {
+      if (this.checker.active) {
+        const ci = underRoomOf(this.route?.underRooms ?? [], this.checker.position);
+        if (ci >= 0 && this.route?.underRooms[ci] === target) {
+          return { sfx: 'floor-creak', text: this.checker.lampLit
+            ? '[the count’s lamp is lit in there — the sweep is inside]'
+            : '[the count walks blind in there — stripped, but still sweeping]', sev: 'danger' as const };
+        }
+      }
+      // and its paper-runner: hearing fresh sheets move tells you which
+      // boards get re-pinned before you round the corner on him
+      if (this.reposter.active) {
+        const ri = underRoomOf(this.route?.underRooms ?? [], this.reposter.position);
+        if (ri >= 0 && this.route?.underRooms[ri] === target) {
+          return { sfx: 'floor-creak', text: '[paper moves beyond — a runner carries the count’s fresh sheets]', sev: 'warn' as const };
+        }
       }
     }
     // a primed set piece runs already — its work carries through the seam

@@ -4816,3 +4816,13 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 266, sim 5/5, build. e2e leg deferred to
   the next batched verification pass.
 
+## sprint 387 — the seam carries the paper too
+
+- The repost walk answers a door-listen now: under doors into the
+  room the reposter currently walks return '[paper moves beyond —
+  a runner carries the count's fresh sheets]' (warn). Hearing the
+  sheets move tells you which boards get re-pinned before you round
+  the corner on him — cut or shadow, your call.
+- The lamp still outranks the runner when both walk the same room
+  (danger over warn); scheduled entities outrank both.
+- Gates: tsc, lint, vitest, sim, build.
