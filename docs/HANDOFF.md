@@ -5514,6 +5514,32 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 473–475 — the shelves kept the gaps, the drawers kept their slits & the hearth spilled
+
+Sprint 473: `bookGap` — dark slots in shelf rows (bookshelf/
+stackShelf/shelfWood/linenShelf/pantryShelf/shelf/bookCart, ~40%);
+`deskInk` — blots + nib furrows on writing tops (~30%);
+`pianoDust` — settled film on pianoUpright (~55%). All buildProp
+overlays.
+
+Sprint 474: `pipeSweat` — condensation beads + joint weeps near
+service pipes (~45%); `frameLean` — rub pits + dust tide beside
+leaning frames (~35%); `drawerSlit` — dark gaps + pull grease on
+drawer fronts (drawerUnit/filing/cabinet/dresser/chest/toolChest/
+morgueDrawer, ~35%).
+
+Sprint 475: `hearthSpill` — ash fans + ember pits past fireplace
+fenders (~60%); `crateSplinters` — skid grooves + slivers around
+dragged crates (~40%); `umbrellaRing` — wet drip rings under
+umbrella stands (~60%).
+
+Gotcha: the PropKind union flags invented members with TS2367 —
+verify kind strings against spec.ts before writing conditions
+(caught again: 'picture', 'bureau', 'chestOfDrawers' don't exist).
+
+Gates: tsc, lint, generation tests (9 new cases, 392 total).
+Full suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 470–472 — the rockers swung, the grease hung & the wardrobe kept the dark
 
 Sprint 470: `rockerArcs` — twin runner crescents under armchair/
