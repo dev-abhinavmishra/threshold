@@ -5514,6 +5514,26 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 493–495 — the claws raked low, the book dried open & the mop dried mid-sweep
+
+Sprint 493: `clawMarks` — three-furrow gouges at door-leaf feet
+(~14%, leaf child); `lampSoot` — soot rings + leaning smudge on
+ceilings above hanging lights (~45%); `seatWipe` — seat dust with
+one clean wipe on chairs/benches/stools (~40%).
+
+Sprint 494: `pageFan` — warped covers + dead page fans on books
+(~45%); `paperCurl` — damp-curled corners + bled ink on paperwork
+(~45%); `plasterBloom` — water rings + plaster blisters on wet-room
+ceilings (~40%).
+
+Sprint 495: `emberPits` — scorch craters past the hearth edge
+(~45%); `fingerTrace` — one dragged line through wall dust (~30%);
+`mopArcs` — dried mop strokes + water edge on wet-room floors
+(~40%).
+
+Gates: tsc, lint, generation tests (12 new, 472 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 489–492 — the rail kept its dust, the clock stopped, the gap kept the drift & the battens left ghosts
 
 Sprint 489: `railDust` — picture-rail dust ledge + nail pits on
