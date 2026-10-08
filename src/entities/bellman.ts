@@ -289,6 +289,9 @@ export class Bellman extends Entity {
                 if (d.heldBy === 'wedge' && v3dist(d.pos, blocking.pos) < 0.7) d.heldBy = undefined;
               }
             }
+            // the kick doesn't eat the chock — it slides under the leaf
+            // to the far side, where the Game drops it as gatherable loot
+            c.wedgeKicked?.(blocking.pos, this.pos);
             c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[the wedge skids loose — kicked under the leaf]', { severity: 'warn' });
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
             this.doorHoldT = 0;

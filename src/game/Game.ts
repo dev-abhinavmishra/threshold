@@ -728,6 +728,10 @@ export class Game {
     // the count's running tally of swallowed coin persists too
     this.coinKept = cp?.coinKept ?? 0;
     this.mintSeizedClaim();
+    // kicked wedges stay kicked — floor loot doesn't respawn in your
+    // pocket on a reload any more than the till does
+    this.kickedWedges = cp?.kickedWedges?.map((w) => ({ ...w })) ?? [];
+    this.mintWedgeDrops();
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -1012,6 +1016,10 @@ export class Game {
         this.hotImprints = 0;
         return true;
       },
+      // sprint 393 — the kicked wedge rides under the leaf: the bellman's
+      // boot doesn't eat the chock, it slides to the player's side of the
+      // seam and waits as gatherable loot.
+      wedgeKicked: (doorPos, fromPos) => this.dropKickedWedge(doorPos, fromPos),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1040,6 +1048,10 @@ export class Game {
   /** Interactable points registered by living entities (e.g. the
    *  Collector's toll) — re-applied after every stream rebuild. */
   private dynamicInteractables: import('../player/interaction').Interactable[] = [];
+
+  /** Door chocks the bellman kicked loose — they slid under the leaf
+   *  and lie as gatherable loot until walked back for. */
+  private kickedWedges: { x: number; z: number }[] = [];
 
   /** The Auditor's tally — each marginalia claim drawn, sledge pick, and
    *  basket steal below is pilferage the under's clerks can read. Settled
@@ -1177,6 +1189,32 @@ export class Game {
       pos: { x: this.seizedAt.x + px * 0.3, y: this.seizedAt.y, z: this.seizedAt.z + pz * 0.3 },
       prompt: 'Cut the tag free — your take comes back marked',
       holdTime: 0.6, enabled: true, priority: 3, data: {},
+    });
+  }
+
+  /** The kicked wedge lands on the player's side of the seam — the boot
+   *  sends it skidding under the leaf toward the room it was guarding. */
+  private dropKickedWedge(doorPos: Vec3, fromPos: Vec3): void {
+    const dx = doorPos.x - fromPos.x, dz = doorPos.z - fromPos.z;
+    const dl = Math.hypot(dx, dz) || 1;
+    this.kickedWedges.push({ x: doorPos.x + (dx / dl) * 0.45, z: doorPos.z + (dz / dl) * 0.45 });
+    this.mintWedgeDrops();
+  }
+
+  /** Mint the gather verbs for kicked wedges — rebuilt like restock so a
+   *  room rebuild keeps the drops; indices stay in `data.i`. The filter
+   *  is space-agnostic: `this.space` may still carry the dead run's floor
+   *  at checkpoint-restore time, and a mismatched prefix would strand
+   *  stale verbs alongside fresh ones. */
+  private mintWedgeDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wedge-drop-'));
+    this.kickedWedges.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'wedgeDrop', id: `wedge-drop-${this.space}-${i}`, 
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the kicked wedge',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
     });
   }
 
@@ -2436,6 +2474,18 @@ export class Game {
           : rung !== undefined && this.clock.time - rung.t < 3.5
             ? '[the register already holds your face — the bell can\'t buy his eye off it]'
             : '[the clerk watches your hands — the register writes you twice]', 'warn');
+        return;
+      }
+      case 'wedgeDrop': {
+        // sprint 393 — walk the chock back: the kicked wedge returns to
+        // the pocket, free — the price was the leaf it stopped holding.
+        const wi = (it.data as { i?: number }).i ?? -1;
+        if (wi >= 0) this.kickedWedges.splice(wi, 1);
+        it.enabled = false;
+        this.mintWedgeDrops();   // re-index the survivors
+        this.giveItem('doorChock', 1);
+        this.cue('pickup', it.pos, '[door chock — it slid under the leaf to you]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
       case 'restock': {
@@ -4819,6 +4869,8 @@ export class Game {
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
+      kickedWedges: this.kickedWedges.length > 0
+        ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({

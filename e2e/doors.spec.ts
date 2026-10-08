@@ -447,12 +447,23 @@ test('the door chock holds while you walk away — until something worries it lo
         trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} loose=${loose}`);
       }
     }
-    return { stage: 'done', wedgedRehearsal, countAfterSet, unwedged, countAfterPull, loose, opened, openedAt, heldAfter: door.heldBy, dead: g.player.dead, trace, caps: caps.slice(-14) } as const;
+    // sprint 393 — the kick doesn't eat the chock: it slides under the
+    // leaf to the player's side and lies there as gatherable loot.
+    let dropSeen = false, gathered = false;
+    const drop = g.interaction.interactables.find((i) => i.kind === 'wedgeDrop');
+    if (drop) {
+      dropSeen = true;
+      g.player.teleport(drop.pos.x + (toC.x / L) * 0.9, 0, drop.pos.z + (toC.z / L) * 0.9);
+      const before = gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1;
+      aimHold(drop.id, () => (gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1) > before, 90, unwatch);
+      gathered = (gi.inventory.find((i) => i.id === 'doorChock')?.count ?? -1) > before;
+    }
+    return { stage: 'done', wedgedRehearsal, countAfterSet, unwedged, countAfterPull, loose, opened, openedAt, dropSeen, gathered, heldAfter: door.heldBy, dead: g.player.dead, trace, caps: caps.slice(-14) } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { wedgedRehearsal: boolean; countAfterSet: number; unwedged: boolean; countAfterPull: number; loose: boolean; opened: boolean; openedAt: number; dead: boolean; trace: string[]; caps: string[] };
+  const r = result as { wedgedRehearsal: boolean; countAfterSet: number; unwedged: boolean; countAfterPull: number; loose: boolean; opened: boolean; openedAt: number; dropSeen: boolean; gathered: boolean; dead: boolean; trace: string[]; caps: string[] };
   const tail = r.caps.join(' | ') + ' trace: ' + r.trace.join(' ; ');
   expect(r.wedgedRehearsal, 'the wedge never set').toBe(true);
   expect(r.countAfterSet).toBe(1);
@@ -460,5 +471,7 @@ test('the door chock holds while you walk away — until something worries it lo
   expect(r.countAfterPull).toBe(2);   // the chock comes back to your pocket
   expect(r.loose, `bellman never kicked the wedge — ${tail}`).toBe(true);
   expect(r.opened, `leaf never swung after the chock gave — ${tail}`).toBe(true);
+  expect(r.dropSeen, `the kicked wedge never landed as loot — ${tail}`).toBe(true);
+  expect(r.gathered, `gathering the kicked wedge didn't return the chock — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });

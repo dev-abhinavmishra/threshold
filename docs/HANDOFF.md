@@ -4929,3 +4929,25 @@ Game.die() from the same five fields.
 - vitest +1: synthetic seam twin (wedged + closed) — the warden turns
   from the held door and neither leaf opens.
 - Gates: tsc, lint, vitest 270, sim, build.
+
+## sprint 393 — the kicked wedge rides to your side
+
+- The bellman's boot no longer eats the chock: kicking a 'wedge' hold
+  loose now reports `ctx.wedgeKicked(doorPos, fromPos)` and the Game
+  drops the spent chock as gatherable loot ~0.45m off the leaf on the
+  player's side of the seam — 'Gather the kicked wedge' (0.6s,
+  priority 1) returns it to the pocket. The price was already paid
+  (the leaf stands free and he is through it); the walk-back just
+  reclaims a 6–14-imprint resource.
+- `kickedWedges` rides the checkpoint — floor loot doesn't respawn in
+  your pocket on a reload, same class as cold counters.
+- Trap logged: `this.space` still carries the dead run's floor at
+  checkpoint-restore time — wedge-drop verb ids are rebuilt with a
+  space-agnostic filter or a stale 'under' prefix would strand old
+  verbs beside fresh ones.
+- vitest (same spec, +asserts): wedgeKicked fires once with the door
+  pos and the bellman's own pos at the kick.
+- e2e: the existing chock leg now drives the whole arc — kick → drop
+  minted on the player's side → gather → chock back at 2. First run
+  hit the known 300s browser-newContext infra flake; green on retry.
+- Gates: tsc, lint, vitest 270, sim 5/5, doors 4/4 e2e, build.

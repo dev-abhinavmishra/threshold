@@ -320,6 +320,10 @@ describe('Bellman (sprint 232)', () => {
     const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
     const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
     player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    // sprint 393 — the kick doesn't eat the chock: wedgeKicked reports
+    // the boot so the Game drops it as loot on the far side of the leaf
+    const kicked = vi.fn();
+    ctx.wedgeKicked = kicked;
     const b = new Bellman();
     b.spawn(ctx);
     let t = step(b, ctx, 4);
@@ -327,6 +331,12 @@ describe('Bellman (sprint 232)', () => {
     expect(entry.heldBy).toBe('wedge');
     t = step(b, ctx, 6, t);
     expect(entry.heldBy).toBe(undefined); // the chock gave — kicked loose
+    expect(kicked).toHaveBeenCalledTimes(1);
+    const [doorPos, fromPos] = kicked.mock.calls[0];
+    expect(Math.hypot(doorPos.x - entry.pos.x, doorPos.z - entry.pos.z)).toBeLessThan(0.01);
+    // fromPos is the kick side — the bellman stood ~at the leaf when it gave
+    const bp = (b as unknown as { pos: { x: number; z: number } }).pos;
+    expect(Math.hypot(fromPos.x - bp.x, fromPos.z - bp.z)).toBeLessThan(0.5);
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /wedge skids loose/.test(c))).toBe(true);
     step(b, ctx, 3, t);

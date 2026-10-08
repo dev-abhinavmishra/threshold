@@ -90,6 +90,11 @@ export interface EntityCtx {
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */
   seizeMarked?: () => boolean;
+  /** A kicked door chock — the bellman booted a 'wedge' hold loose at
+   *  `doorPos`; `fromPos` is the kick side. The Game drops the spent
+   *  chock on the far side as gatherable loot. Optional for headless
+   *  ctxs. */
+  wedgeKicked?: (doorPos: Vec3, fromPos: Vec3) => void;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */
