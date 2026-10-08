@@ -4315,6 +4315,7 @@ Game.die() from the same five fields.
   seizing pre-death is moot, the checkpoint still holds the take.
 - Gates: tsc, lint, vitest 255, sim 5/5.
 
+
 ## sprint 412 — the mark deepens
 
 - s409 marked only the room ON a set piece's door. Approach marks now
@@ -4330,3 +4331,166 @@ Game.die() from the same five fields.
 - Vitest: the s409 spec now asserts dist fields, the far-room grade,
   tell/dist pairing, and no marks deeper than 1.
 - Gates: tsc, lint, vitest 254, sim 5/5. Generation-only — no e2e leg.
+
+
+## sprint 367 — its doors stick
+
+- While `wantedActive`, under doors swing at 0.6× openRate — the
+  crew's doors read the boards. The stall announces once per door
+  (`stuckAnnounced`), and the wanted-sheet readout now names this
+  tax too ('its doors stick until the count settles'). A chase
+  through a stuck door is the wanted episode's last unpriced gap —
+  counters were taxed (s353/354) but passage wasn't.
+- Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 368 — the face buys nothing past six lines
+
+- `clerkRefuses(roomIndex, pos)` — one refusal check behind buy/ask/
+  purse: cold counter folds (`closedCounters`), and `unpaidHeld >= 6`
+  closes EVERY staffed counter to the named face — `[she reads the
+  register — the face buys nothing past six lines · the desk is the
+  only answer]`. The register's escalation now matches the under's:
+  deep debt ends service, not just prices it.
+- askReg and slip-back deliberately stay open — a readout is
+  information, and undoing the crime isn't commerce. The register
+  readout declares the tier: '…the counters are closed to you' at 6+.
+- The only house relief past six lines: the Detective's desk or the
+  affidavit's −1. Reaching it takes 3 rifled tills or 6 witness lines.
+- Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 369 — the machines read the books too
+
+- The deep tier (s368) covered staffed counters; the machines were
+  still selling. `vend` now gates on the floor's own book:
+  `unpaidHeld >= 6` upstairs ('the machine reads the register — it
+  holds its stock'), `unpaidTheft >= 6` below ('the machine reads
+  the boards — it holds its stock'). Papers, desks, the Broker and
+  fix stay open on both floors — only staffed counters AND machines
+  refuse. Deep debt ends the floor's commerce, not its mercy.
+- Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 370 — the index closes its own papers
+
+- `indexClosed(pos)` — the third book's deep tier: `paperTrail >= 6`
+  and the asking papers (work order, crew board, claim register)
+  hold their pages — '[the index closes to you — six questions is a
+  file, not a curiosity]'. Relief papers (counter-claim, return slip,
+  affidavit), the desk, the Broker's book-readout and the fence stay
+  open — closing the file's own valves or its readouts would strand
+  or blind the player. All three books now have a deep tier: held →
+  counters + machines, theft → machines, trail → asking papers.
+- Gates: tsc, lint, vitest 121 (entities+persistence+wanted), sim 5/5.
+
+## sprint 371 — e2e: the deep-tier legs
+
+- The vend leg (economy) gained the deep-tier phase: a second unspent
+  vend socket, `unpaidHeld=6` → refused 'the machine reads the
+  register — it holds its stock' + no charge, then `=0` → sells
+  clean (the tier lifts with the book, not permanently).
+- New undercast leg 'the deep tier — the machines read the boards,
+  the index closes': `unpaidTheft=6` → under vend refused + `=0` →
+  sells; `paperTrail=6` → crew board refused 'the index closes to
+  you' + no marginalia spent. Both legs green first try.
+- Gates: tsc, lint; touched specs only per cadence.
+
+## sprint 372 — the seal and the chalk ride the book
+
+- `wardArmed` now rides `CheckpointSave` — an armed ward seal is paid
+  protection (60–90 imprints); before this, a reload silently stripped
+  the arm after `count--` had already eaten the item. Loss, not
+  laundering, but the same class of missing field.
+- `chalkMarks` (door tally marks the player drew) ride too — authored
+  state, not consumable. Fresh runs still clear it (the 581 clear is
+  pre-restore).
+- Note for future: `as` casts inside a `.map()` inside an object
+  literal mis-parse at the arrow's comma — give the callback an
+  explicit return type instead (the pattern used for both maps).
+- Gates: tsc, lint, vitest 255, sim 5/5, build.
+
+## sprint 373 — the till holds its stock
+
+- The deep tier was asymmetric: `unpaidTheft >= 6` closed the under's
+  vending machines (s369) but the Broker's own pedestals still traded
+  at the marked rate — the under's counter skipped the tier. Now the
+  `shop` case's broker branch refuses at six: `[he reads the tally —
+  the till holds its stock · the desk is the only answer]`.
+- The purse, fence, fix and book stay open — laundering and settling
+  aren't commerce (the same deliberate exemption as s368's readouts/
+  relief valves). The book's readout declares the tier: '…the tills
+  are closed to you' at `unpaidTheft >= 6`.
+- e2e: the deep-tier leg gained the broker phase (refuse at 6 → sell
+  at 0). Trap caught: a blind KeyE hold beside the pedestals presses
+  whichever flank verb wins focus — the purse anchor won and its
+  refusal caption failed every regex. Broker legs must press
+  prompt-gated (`interactPressed` on /trade wares/) like the s311
+  shutter leg, not blind-held.
+- Gates: tsc, lint, vitest 255, sim 5/5, undercast deep-tier leg
+  green, build.
+
+## sprint 374 — the count's locker
+
+- `seizeMarked` no longer vanishes the take: stripped stacks stash
+  into `seizedTake` + hang under a fresh tag at the nearest under
+  claim cage (`stashSeized`). 'Claim your seized take — 8 marginalia'
+  mints via `dynamicInteractables`; claiming pays like a bag, files
+  `unpaidTheft +1`, and queues the late till-ring like any draw. The
+  whole seize→locker→reclaim loop now has a price and a place — a
+  named catch costs the goods once, not forever.
+- The tag hangs on the cage's FRONT edge (0.45m toward room center):
+  first attempt put it on top of the cage's own claim verb (aim
+  shadowed — 'Reclaim the effects tagged X' won every focus frame);
+  a lateral offset could still sit BEHIND the authored tag. Anchoring
+  along (roomCenter − socket) makes it the nearer verb by
+  construction.
+- `seizedTake` rides `CheckpointSave` (optional — old saves parse
+  clean) and re-mints on restore.
+- e2e note: hold verbs need the key HELD — `interactPressed` edges
+  only fire instant verbs. The locker's leg holds `KeyE` gated on the
+  focused prompt.
+- Gates: tsc, lint, vitest 255, sim 5/5, undercast 'the count's
+  locker' leg green, build.
+
+## sprint 375 — the locker reads at the end
+
+- `BooksClosed` gained `seized` (optional — older saves/UI payloads
+  parse clean): the count's locker joins the epitaph. Both payloads
+  (death `books`, victory `books`) sum `seizedTake` units.
+- `bookLines` adds 'N seized wares still hang in the count's locker'
+  — the reclaim path has its reckoning on both end screens.
+- Gates: tsc, lint, vitest, sim, build (batched with the sprint).
+
+## sprint 376 — one locker, and the tag files double under the sheets
+
+- `stashSeized` no longer re-anchors on a second catch: while a tag
+  still hangs, a fresh seize just joins the same locker (previously
+  `seizedAt` moved to the nearer cage while the minted verb stayed
+  at the first — the tag and the goods disagreed, and a checkpoint
+  restore re-minted at the wrong spot). One locker per run.
+- Under `wantedActive` the seized-claim files `unpaidTheft +2` (the
+  tag is written in your name while the sheets are up — same rule
+  `fileQuestion` follows for asks). Cue reads '... · the sheets
+  write your name twice'.
+- e2e traps logged: (1) `wantedActive` is frame-synced — lowered
+  when `unpaidTheft <= 0`, raised while any Auditor `demanded`.
+  Setting the flag directly gets stomped; hold `demanded` + owed
+  instead (his openLedger tick gates on `!demanded`, so the desk's
+  priority-4 'Settle' verb never re-mints mid-loop). (2) 'Settle
+  the ledger' outprioritizes a cage tag under aim outright — owed
+  tally beside an Auditor room means the tag can't be pressed.
+- Gates: tsc, lint, vitest 255, sim 5/5, the locker leg extended
+  (join + named-double phases), build.
+
+## sprint 377 — the book knows the locker
+
+- The seize cue now names the destination: both grab sites (Swamper,
+  Laundress) read '[she takes what the sheets describe — a tag hangs
+  on the nearest cage for it]' — the locker was previously only
+  discoverable by happening on the cage.
+- The under-book readout ('Ask what the book says') appends
+  '· a tag keeps N of yours at the cages' while seizedTake pends —
+  the locker is readable through the same paid readout as the
+  ledgers, no new geometry.
+- vitest: the s366 named-catch spec's caption regex updated to the
+  tag phrasing.
+- Gates: tsc, lint, vitest 255, sim 5/5, build.
+

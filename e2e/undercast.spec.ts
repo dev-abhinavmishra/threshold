@@ -1389,3 +1389,326 @@ test('the quiet amendment — bury the count before it rings (sprint 308)', asyn
   expect(result.walked, JSON.stringify(result)).toBe(false); // nobody walked
   expect(errors).toEqual([]);
 });
+
+// sprint 370 — the deep tier below: six thefts and the machines hold
+// their stock; six questions and the index closes its own papers.
+test('the deep tier — the machines read the boards, the index closes', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; imprints: number; keys: Set<string>;
+      unpaidTheft: number; paperTrail: number;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    const hold = (at: { x: number; y: number; z: number }, frames: number): string => {
+      let prompt = '';
+      for (let f = 0; f < frames; f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        g.frame();
+        if (f < 5) prompt = ga.interaction.focused?.prompt ?? prompt;
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      return prompt;
+    };
+
+    // 1. the tally's deep tier — the vend holds its stock
+    const vendRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.vend === true && s.meta.taken !== true));
+    let vendRefused = false, vendCap = '', vendPrompt = '', vendSold = false;
+    if (vendRoom) {
+      const vend = (vendRoom.sockets ?? []).find((s) => s.meta?.vend === true && s.meta.taken !== true);
+      if (!vend?.meta) return { stage: 'no-vend' } as const;
+      ga.unpaidTheft = 6;
+      ga.imprints = 60;
+      g.player.teleport(vendRoom.origin.x, 0, vendRoom.origin.z);
+      ga.currentRoom = vendRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const vx = vendRoom.origin.x - vend.pos.x, vz = vendRoom.origin.z - vend.pos.z;
+      const vl = Math.hypot(vx, vz) || 1;
+      g.player.teleport(vend.pos.x + (vx / vl) * 0.9, 0, vend.pos.z + (vz / vl) * 0.9);
+      const cap0 = caps.length;
+      vendPrompt = hold(vend.pos, 50);
+      vendRefused = vend.meta.taken !== true && ga.imprints === 60;
+      vendCap = caps.slice(cap0).find((c) => /reads the boards/.test(c)) ?? '';
+      // the tier lifts with the book
+      ga.unpaidTheft = 0;
+      hold(vend.pos, 60);
+      vendSold = vend.meta.taken === true;
+      ga.unpaidTheft = 0;
+    }
+
+    // 2. the index's deep tier — the asking papers hold their pages
+    const boardRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.crewBoard));
+    let boardRefused = false, boardCap = '', boardPrompt = '';
+    if (boardRoom) {
+      const board = (boardRoom.sockets ?? []).find((s) => s.meta?.crewBoard);
+      if (!board?.meta) return { stage: 'no-board' } as const;
+      ga.paperTrail = 6;
+      const m0 = (ga.marginalia = 40);
+      g.player.teleport(boardRoom.origin.x, 0, boardRoom.origin.z);
+      ga.currentRoom = boardRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const bx = boardRoom.origin.x - board.pos.x, bz = boardRoom.origin.z - board.pos.z;
+      const bl = Math.hypot(bx, bz) || 1;
+      g.player.teleport(board.pos.x + (bx / bl) * 0.9, 0, board.pos.z + (bz / bl) * 0.9);
+      const cap0 = caps.length;
+      boardPrompt = hold(board.pos, 50);
+      boardRefused = board.meta.taken !== true && ga.marginalia === m0;
+      boardCap = caps.slice(cap0).find((c) => /index closes to you/.test(c)) ?? '';
+      ga.paperTrail = 0;
+    }
+    // 3. sprint 373 — the tally's deep tier reaches the Broker's own
+    // till: trade refuses at six, the fix and the purse stay open
+    const brokerRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.broker !== undefined && s.meta.sold !== true));
+    let tillRefused = false, tillCap = '', tillPrompt = '', tillSold = false;
+    if (brokerRoom) {
+      const till = (brokerRoom.sockets ?? []).find((s) => s.meta?.broker !== undefined && s.meta.sold !== true);
+      if (!till?.meta) return { stage: 'no-till' } as const;
+      ga.unpaidTheft = 6;
+      ga.marginalia = 80;
+      g.player.teleport(brokerRoom.origin.x, 0, brokerRoom.origin.z);
+      ga.currentRoom = brokerRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const tx = brokerRoom.origin.x - till.pos.x, tz = brokerRoom.origin.z - till.pos.z;
+      const tl = Math.hypot(tx, tz) || 1;
+      g.player.teleport(till.pos.x + (tx / tl) * 0.9, 0, till.pos.z + (tz / tl) * 0.9);
+      const cap0 = caps.length;
+      // prompt-gated press — the purse/fix anchors flank the pedestals
+      // and a blind hold presses whichever wins focus
+      const gi = g as unknown as { input: { interactPressed: boolean } };
+      for (let f = 0; f < 50 && !caps.slice(cap0).some((c) => /till holds its stock|marginalia required/.test(c)); f++) {
+        const ax = till.pos.x - g.player.pos.x, az = till.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(till.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        if (f < 5) tillPrompt = ga.interaction.focused?.prompt ?? tillPrompt;
+        if (/trade wares/i.test(ga.interaction.focused?.prompt ?? '')) gi.input.interactPressed = true;
+        g.frame();
+        gi.input.interactPressed = false;
+      }
+      tillRefused = till.meta.sold !== true && ga.marginalia === 80;
+      tillCap = caps.slice(cap0).find((c) => /till holds its stock/.test(c)) ?? '';
+      ga.unpaidTheft = 0;
+      for (let f = 0; f < 90 && till.meta.sold !== true; f++) {
+        const ax = till.pos.x - g.player.pos.x, az = till.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(till.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        if (/trade wares/i.test(ga.interaction.focused?.prompt ?? '')) gi.input.interactPressed = true;
+        g.frame();
+        gi.input.interactPressed = false;
+      }
+      tillSold = till.meta.sold === true;
+      ga.unpaidTheft = 0;
+    }
+    return { stage: 'done' as const, vendRefused, vendCap, vendPrompt, vendSold,
+      boardRefused, boardCap, boardPrompt,
+      tillRefused, tillCap, tillPrompt, tillSold, caps: caps.slice(-8) };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  // the tally at six — the machine holds its stock, then sells clean at zero
+  expect(result.vendRefused, result.vendPrompt).toBe(true);
+  expect(result.vendCap).toMatch(/holds its stock/);
+  expect(result.vendSold).toBe(true);
+  // sprint 373 — the under's own counter: trade refuses at six, sells at zero
+  expect(result.tillRefused, result.tillPrompt).toBe(true);
+  expect(result.tillCap, JSON.stringify({ p: result.tillPrompt, caps: result.caps })).toMatch(/desk is the only answer/);
+  expect(result.tillSold).toBe(true);
+  // the file at six — the asking paper holds its page, no spend
+  expect(result.boardRefused, result.boardPrompt).toBe(true);
+  expect(result.boardCap).toMatch(/index closes to you/);
+  expect(errors).toEqual([]);
+});
+
+// sprint 374 — the count's locker: a named catch's seize locks your
+// take in the nearest claim cage under a fresh tag — claimable back
+// priced + filed like any bag, and the tag rides the checkpoint.
+test("the count's locker — seized goods hang claimable at the cage", async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; unpaidTheft: number; keys: Set<string>;
+      inventory: { id: string; count: number }[];
+      hotItems: Set<string>; hotImprints: number;
+      entityCtx(): { seizeMarked(): boolean };
+      seizedAt: { x: number; y: number; z: number } | null;
+      seizedTake: { id: string; count: number }[];
+      wantedActive: boolean;
+      dynamicInteractables: { id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
+      interaction: { focused?: { prompt?: string; kind?: string } };
+      input: { interactPressed: boolean };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    ga.marginalia = 40;
+    // a marked take on your back + one clean item the seize must spare
+    ga.inventory.push({ id: 'feltWrap', count: 2 }, { id: 'latchpick', count: 1 });
+    ga.hotItems = new Set(['feltWrap']);
+    ga.hotImprints = 5;
+    const didSeize = ga.entityCtx().seizeMarked();
+    const spared = ga.inventory.find((i) => i.id === 'latchpick')?.count === 1;
+    const stripped = !ga.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+      && ga.hotItems.size === 0 && ga.hotImprints === 0;
+    const verb = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
+    let prompt = '', claimed = false, filed = 0, cap = '';
+    const seen: string[] = [];
+    if (verb) {
+      // the tag hangs at the nearest cage — stand on the room-center
+      // side of it (the 0.9m convention; a raw offset lands in the
+      // cage prop's collider and the eject spoils the aim)
+      const room = g.route.underRooms.find((r) => {
+        const L = 6;
+        return Math.abs(r.origin.x - verb.pos.x) < L && Math.abs(r.origin.z - verb.pos.z) < L;
+      });
+      if (room) ga.currentRoom = room.index;
+      const cx = (room?.origin.x ?? verb.pos.x + 1) - verb.pos.x;
+      const cz = (room?.origin.z ?? verb.pos.z + 1) - verb.pos.z;
+      const cl = Math.hypot(cx, cz) || 1;
+      const sx = verb.pos.x + (cx / cl) * 0.9, sz = verb.pos.z + (cz / cl) * 0.9;
+      const t0 = ga.unpaidTheft;
+      for (let f = 0; f < 60 && !claimed; f++) {
+        g.player.teleport(sx, 0, sz);
+        const ax = verb.pos.x - g.player.pos.x, az = verb.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(verb.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        g.frame();
+        const fp = ga.interaction.focused?.prompt ?? '';
+        if (fp && !seen.includes(fp)) seen.push(fp);
+        if (f < 5) prompt = fp || prompt;
+        // hold verbs need the key HELD through the hold — the edge
+        // (interactPressed) only fires instant verbs
+        if (/claim your seized take/i.test(fp)) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+        claimed = ga.inventory.some((i) => i.id === 'feltWrap' && i.count === 2);
+      }
+      ga.keys.delete('KeyE');
+      filed = ga.unpaidTheft - t0;
+      cap = caps.find((c) => /tag tears/.test(c)) ?? '';
+    }
+    // sprint 376 — a second catch while the tag still hangs joins the
+    // same locker, and a claim under the wanted sheets files double.
+    let joined = false, namedFiled = 0, namedCap = '', lockerPos = '';
+    const seen2: string[] = [];
+    if (claimed && verb) {
+      // stand back at the first cage's front edge — the second seize
+      // hangs the tag at whichever cage is nearest, and cage A is the
+      // known-clean one (another cage can sit beside an Auditor desk
+      // whose settle verb outprioritizes the claim under aim)
+      const roomA = g.route.underRooms.reduce((best, r) => {
+        const d = Math.hypot(r.origin.x - verb.pos.x, r.origin.z - verb.pos.z);
+        return d < (best?.d ?? Infinity) ? { d, r } : best;
+      }, null as { d: number; r: (typeof g.route.underRooms)[number] } | null)?.r;
+      const ax0 = (roomA?.origin.x ?? verb.pos.x + 1) - verb.pos.x;
+      const az0 = (roomA?.origin.z ?? verb.pos.z + 1) - verb.pos.z;
+      const al0 = Math.hypot(ax0, az0) || 1;
+      g.player.teleport(verb.pos.x + (ax0 / al0) * 0.9, 0, verb.pos.z + (az0 / al0) * 0.9);
+      ga.inventory.push({ id: 'doorChock', count: 1 });
+      ga.hotItems = new Set(['doorChock']);
+      ga.entityCtx().seizeMarked();
+      const verb2 = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
+      const pos2 = verb2 ? { x: verb2.pos.x, z: verb2.pos.z } : null;
+      // seize again while the second tag pends — the take joins the
+      // same locker, the tag does not re-hang at a nearer cage
+      ga.inventory.push({ id: 'chalkSpool', count: 1 });
+      ga.hotItems = new Set(['chalkSpool']);
+      ga.entityCtx().seizeMarked();
+      joined = !!pos2 && !!ga.seizedAt && ga.seizedAt.x === pos2.x
+        && ga.seizedAt.z === pos2.z && ga.seizedTake.length === 2;
+      // claim it under the sheets — the tag files double. Wanted is
+      // synced by the frame: lowered when the tally reads clean,
+      // raised while a demanded Auditor exists. Hold `demanded` on
+      // the room's Auditor AND keep the book owed — the raise pass
+      // keeps wanted on, while his openLedger tick gates on
+      // `!demanded`, so 'Settle the ledger' (priority 4 — it stole
+      // focus from the tag outright) never re-mints beside the cage.
+      // Pursuit only arms when the player leaves his room; we stay.
+      ga.unpaidTheft = 2;
+      const auds = (ga as unknown as {
+        entities: { demanded?: boolean; closeLedger?: () => void }[];
+      }).entities.filter((e) => e.closeLedger);
+      for (const e of auds) { e.demanded = true; e.closeLedger!(); }
+      g.frame();
+      if (!ga.wantedActive) namedCap = 'wanted never raised';
+      if (pos2) {
+        lockerPos = `${pos2.x.toFixed(1)},${pos2.z.toFixed(1)}`;
+        const dx2 = (roomA?.origin.x ?? pos2.x + 1) - pos2.x;
+        const dz2 = (roomA?.origin.z ?? pos2.z + 1) - pos2.z;
+        const dl2 = Math.hypot(dx2, dz2) || 1;
+        const sx2 = pos2.x + (dx2 / dl2) * 0.9, sz2 = pos2.z + (dz2 / dl2) * 0.9;
+        const t2 = ga.unpaidTheft;
+        let done2 = false;
+        for (let f = 0; f < 60 && !done2; f++) {
+          g.player.teleport(sx2, 0, sz2);
+          const ax = pos2.x - g.player.pos.x, az = pos2.z - g.player.pos.z;
+          g.player.yaw = Math.atan2(ax, az);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          g.player.pitch = Math.atan2(verb2!.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+          g.frame();
+          const fp = ga.interaction.focused?.prompt ?? '';
+          if (fp && !seen2.includes(fp)) seen2.push(fp);
+          if (/claim your seized take/i.test(fp)) ga.keys.add('KeyE');
+          else ga.keys.delete('KeyE');
+          done2 = ga.seizedTake.length === 0 && ga.seizedAt === null;
+        }
+        ga.keys.delete('KeyE');
+        namedFiled = ga.unpaidTheft - t2;
+        namedCap = caps.find((c) => /name twice/.test(c)) ?? namedCap;
+      }
+      for (const e of auds) e.demanded = false;
+      ga.wantedActive = false;
+      ga.unpaidTheft = 0;
+    }
+    return { stage: 'done' as const, didSeize, spared, stripped,
+      minted: !!verb, prompt, seen, claimed, filed, cap,
+      joined, namedFiled, namedCap, lockerPos, seen2,
+      seizedN: ga.seizedTake.length,
+      spentMarg: ga.marginalia,
+      caps: caps.slice(-6) };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.didSeize, JSON.stringify(result)).toBe(true);
+  expect(result.stripped).toBe(true);   // every marked stack + the marked coin stripped
+  expect(result.spared).toBe(true);     // clean goods untouched
+  expect(result.minted, JSON.stringify(result)).toBe(true); // the tag hangs at a cage
+  expect(result.prompt).toMatch(/Claim your seized take/);
+  expect(result.claimed, JSON.stringify(result)).toBe(true);
+  expect(result.filed).toBe(1);         // claiming back files a fresh line
+  expect(result.spentMarg).toBe(24);    // 40 − 8 − 8 — two claims, priced like bags
+  expect(result.cap).toMatch(/hangs on your back again/);
+  expect(result.joined, JSON.stringify(result)).toBe(true); // second catch joins the tag, no re-hang
+  expect(result.namedFiled).toBe(2);    // the sheets name you — the tag files double
+  expect(result.namedCap).toMatch(/name twice/);
+  expect(errors).toEqual([]);
+});
+

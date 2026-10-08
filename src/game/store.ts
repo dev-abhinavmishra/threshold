@@ -139,6 +139,8 @@ export interface BooksClosed {
   asks: number;
   hotCoin: number;
   hotGoods: number;
+  /** wares still hanging in the count's locker at the end */
+  seized?: number;
 }
 
 export interface CheckpointSave {
@@ -173,6 +175,14 @@ export interface CheckpointSave {
   evidence?: { room: number;
     kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work';
     t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
+  // an armed ward seal is paid protection — a reload can't strip it
+  wardArmed?: boolean;
+  // the count's locker — goods a named catch stripped hang claimable
+  // at a cage under a fresh tag; a reload keeps the tag, not the loss
+  seizedTake?: { items: { id: ItemId; count: number }[]; x: number; y: number; z: number };
+  // chalk tally marks the player left on doors — authored state, not
+  // a consumable: reloading shouldn't erase what they drew
+  chalkMarks?: [string, { x: number; y: number; z: number; yaw: number; label: string }][];
   // the dead stay dead — hazards you spent a tool or a risk on don't
   // resurrect on a reload (positions key the match within a room)
   deadHazards?: { room: number; kind: 'snare' | 'steam' | 'fan' | 'eye';

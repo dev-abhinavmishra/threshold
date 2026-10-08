@@ -705,9 +705,21 @@ export class Game {
     }
     this.stockSeen.clear();
     for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
+    // the count's locker keeps its tag — seized goods stay claimable
+    // at the cage across a reload (a fresh run mints nothing)
+    this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
+    this.seizedAt = cp?.seizedTake
+      ? { x: cp.seizedTake.x, y: cp.seizedTake.y, z: cp.seizedTake.z } : null;
+    this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
-    this.wardArmed = false;
+    // the seal stays armed — it was paid for and hasn't refused yet
+    this.wardArmed = cp?.wardArmed ?? false;
+    // chalk tally marks are authored by the player, not consumable —
+    // a reload keeps what they drew (a fresh run clears it at 581)
+    this.chalkMarks = new Map((cp?.chalkMarks ?? []).map(
+      ([k, v]): [string, { pos: Vec3; yaw: number; label: string }] =>
+        [k, { pos: v3(v.x, v.y, v.z), yaw: v.yaw, label: v.label }]));
     this.space = cp?.inUnderscript ? 'under' : 'main';
     this.streamer.setSpace(this.space);
     this.streamer.clear();
@@ -972,9 +984,13 @@ export class Game {
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0) return false;
+        const seized = take.map((i) => ({ id: i.id, count: i.count }));
         for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
         this.inventory = this.inventory.filter((i) => i.count > 0);
         this.hotImprints = 0;
+        // the take doesn't vanish — the count locks it in the nearest
+        // claim cage under a fresh tag, claimable back like any bag
+        this.stashSeized(seized);
         return true;
       },
       trailOwed: () => this.paperTrail,
@@ -1022,6 +1038,11 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** The count's locker — goods a named catch stripped hang under a
+   *  fresh tag at the nearest claim cage. Taking them back is a fresh
+   *  claim on crew-held effects: priced, filed, counted like any bag. */
+  private seizedTake: { id: ItemId; count: number }[] = [];
+  private seizedAt: { x: number; y: number; z: number } | null = null;
   /** Boards the player tore mid-episode — the clerk re-pins THESE
    *  slots, so a partial tear is answered like a clean sweep. */
   private bareBoards = new Map<number, { x: number; z: number }>();
@@ -1044,6 +1065,54 @@ export class Game {
    *  boards name you, every ask counts double: the wanted sheets
    *  carry your face to the index too. */
   private fileQuestion() { this.paperTrail += this.wantedActive ? 2 : 1; }
+
+  /** The count's locker — seized goods hang under a fresh claim tag at
+   *  the nearest under claim cage instead of vanishing. A seed with no
+   *  cage keeps the take (the count swallowed it whole). */
+  private stashSeized(items: { id: ItemId; count: number }[]): void {
+    if (items.length === 0) return;
+    // one locker per run — a second catch doesn't re-hang the tag at a
+    // nearer cage while the first still claims; the take just joins it
+    if (this.seizedAt) {
+      this.seizedTake.push(...items);
+      return;
+    }
+    let cage: { x: number; y: number; z: number } | null = null;
+    let best = Infinity;
+    for (const r of this.route?.underRooms ?? []) {
+      for (const s of r.sockets) {
+        if (s.meta.claim === undefined || s.meta.marginalia !== true) continue;
+        const d = Math.hypot(s.pos.x - this.player.pos.x, s.pos.z - this.player.pos.z);
+        if (d < best) {
+          best = d;
+          // the fresh tag hangs on the cage's FRONT edge — toward the
+          // room's approach — so it's always the nearer claim verb and
+          // never hidden behind the cage's own tag under aim
+          const rx = r.origin.x - s.pos.x, rz = r.origin.z - s.pos.z;
+          const rl = Math.hypot(rx, rz) || 1;
+          cage = { x: s.pos.x + (rx / rl) * 0.45, y: s.pos.y, z: s.pos.z + (rz / rl) * 0.45 };
+        }
+      }
+    }
+    if (!cage) return;
+    this.seizedTake.push(...items);
+    this.seizedAt = cage;
+    this.mintSeizedClaim();
+  }
+
+  /** Mint the claim-back verb at the tag — replayed like restock so a
+   *  room rebuild keeps it, removed on claim. */
+  private mintSeizedClaim(): void {
+    if (!this.seizedAt || this.seizedTake.length === 0) return;
+    const id = `seized-claim-${this.space}`;
+    if (this.dynamicInteractables.some((x) => x.id === id)) return;
+    this.dynamicInteractables.push({
+      kind: 'seizedClaim', id,
+      pos: { x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z },
+      prompt: 'Claim your seized take — 8 marginalia',
+      holdTime: 0.8, enabled: true, priority: 1, data: {},
+    });
+  }
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -1147,6 +1216,8 @@ export class Game {
 
   /** Doors that already pre-spawned their roused encounters (one-shot). */
   private rousedSpawned = new Set<string>();
+  /** Under doors that already announced their named-face stick. */
+  private readonly stuckAnnounced = new Set<string>();
   /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
    *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
   private playerTrail: Vec3[] = [];
@@ -1993,11 +2064,7 @@ export class Game {
           // till folds its hands — no wares, no page, not at any rate.
           const cRoom = this.activeRooms().findIndex((r) =>
             r.sockets.includes(sock));
-          if (cRoom >= 0 && this.closedCounters.has(cRoom)) {
-            this.cue('door-locked', it.pos,
-              "[the clerk folds its hands — the counter is closed to you]", 'warn');
-            return;
-          }
+          if (cRoom >= 0 && this.clerkRefuses(cRoom, it.pos)) return;
           const cItem = sock.meta.clerkItem as ItemId | undefined;
           const cPrice = (sock.meta.clerkPrice as number) ?? 12;
           if (!cItem) return;
@@ -2022,6 +2089,15 @@ export class Game {
         // trade under the crew's own lamp
         if (this.checker.active) {
           this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        // The tally's deep tier reaches the under's own counter: at six
+        // tallied the Broker holds his stock — the desk is the only
+        // answer. The purse, the fence, the fix and the book stay open:
+        // laundering and settling aren't commerce.
+        if (this.unpaidTheft >= 6) {
+          this.cue('door-locked', it.pos,
+            '[he reads the tally — the till holds its stock · the desk is the only answer]', 'warn');
           return;
         }
         const item = sock.meta.brokerItem as ItemId;
@@ -2084,11 +2160,7 @@ export class Game {
         const page = room?.sockets.find((s) => s.meta.clerk === 'slot0');
         if (!room || !page || page.meta.clerkQ === undefined) return;
         // A rifled counter serves nothing — the clerk watched your hands.
-        if (this.closedCounters.has(roomIndex)) {
-          this.cue('door-locked', it.pos,
-            "[the clerk folds its hands — the counter is closed to you]", 'warn');
-          return;
-        }
+        if (this.clerkRefuses(roomIndex, it.pos)) return;
         if (this.clerkAsked.has(roomIndex)) {
           this.cue('door-locked', it.pos, '[the clerk has said what it knows]', 'info');
           return;
@@ -2177,7 +2249,7 @@ export class Game {
         this.chargedImprints(3, it.pos.x, it.pos.z);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it]`
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}]`
           : '[the register has no line on you — your face isn\'t in it]');
         return;
       }
@@ -2284,9 +2356,13 @@ export class Game {
         this.marginalia -= bPrice;
         this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
-        this.cue('whisper', it.pos, t === 1 && th === 0
+        // the book knows the locker too — a pending seize tag reads
+        // through the same paid readout instead of only at the cage
+        const locker = this.seizedTake.reduce((n, s) => n + s.count, 0);
+        const lockerBit = locker > 0 ? ` · a tag keeps ${locker} of yours at the cages` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}]`);
         return;
       }
       case 'purse': {
@@ -2296,11 +2372,7 @@ export class Game {
           // pays the register's sour rate (the house reads ITS book —
           // the register, not the under's tallies).
           const cRoom = (it.data as { roomIndex: number }).roomIndex;
-          if (this.closedCounters.has(cRoom)) {
-            this.cue('door-locked', it.pos,
-              "[the clerk folds its hands — the counter is closed to you]", 'warn');
-            return;
-          }
+          if (this.clerkRefuses(cRoom, it.pos)) return;
           if (this.marginalia < 8) {
             this.cue('door-locked', it.pos,
               `[the purse wants 8 marginalia — you're ${8 - this.marginalia} short]`, 'warn');
@@ -2612,6 +2684,17 @@ export class Game {
       }
       case 'vend': {
         const sock = it.data as Socket;
+        // The deep tier reaches the machines too — six lines in the
+        // floor's own book and the machine holds its stock: the
+        // register's face upstairs, the tally's name below. Papers,
+        // desks and the Broker stay open — only the machines refuse.
+        const deep = this.space === 'under' ? this.unpaidTheft >= 6 : this.unpaidHeld >= 6;
+        if (deep) {
+          this.cue('door-locked', it.pos, this.space === 'under'
+            ? "[the machine reads the boards — it holds its stock]"
+            : "[the machine reads the register — it holds its stock]", 'warn');
+          return;
+        }
         const price = (sock.meta.price as number) ?? 5;
         if (this.imprints < price) {
           this.cue('door-locked', it.pos, `[the machine wants ${price} imprints — ${price - this.imprints} short]`, 'warn');
@@ -2675,6 +2758,35 @@ export class Game {
           const name = ITEM_DEFS[contains as ItemId]?.name.toLowerCase() ?? contains;
           this.cue('pickup', it.pos, `[inside the bag — ${name}]`);
         }
+        return;
+      }
+      case 'seizedClaim': {
+        // The count's locker — what a named catch stripped hangs under
+        // a fresh tag at this cage. Claiming it back is a fresh claim
+        // on crew-held effects: priced, filed, and the till rings late.
+        const sPrice = 8;
+        if (this.marginalia < sPrice) {
+          this.cue('door-locked', it.pos,
+            `[the tag reads ${sPrice} marginalia — your own take costs what any bag costs]`, 'warn');
+          return;
+        }
+        this.marginalia -= sPrice;
+        // like the index's asks — while the boards name you, the tag
+        // reads in your own name and files double
+        this.unpaidTheft += this.wantedActive ? 2 : 1;
+        this.queueLoss(it.pos.x, it.pos.z,
+          '[a tag reads drawn early — the count is short]');
+        const back = this.seizedTake
+          .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
+          .join(' · ');
+        for (const s of this.seizedTake) this.giveItem(s.id, s.count);
+        this.seizedTake = [];
+        this.seizedAt = null;
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => x.id !== it.id);
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
+        this.cue('pickup', it.pos,
+          `[the tag tears — your take hangs on your back again · ${back}${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'info');
         return;
       }
       case 'register': {
@@ -2831,6 +2943,7 @@ export class Game {
         // answers CARGO: which rooms still hold unclaimed stock, and where
         // the egress is stamped.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 5;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -2871,6 +2984,7 @@ export class Game {
         // The crew board — who is signed on down the line: the under's
         // entity foresight, told in crew euphemisms. One read per board.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 5;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -2912,6 +3026,7 @@ export class Game {
         // CLAIMS: which tagged effects in the next stretch are still held
         // and which the crew already drew.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 4;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -3517,7 +3632,7 @@ export class Game {
       case 'wanted': {
         // the sheet prints what the tally says about you — the boards'
         // readout of the clerk's book, free to read, still named
-        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder and every counter reads the boards until the count settles]`, 'warn');
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder, every counter reads the boards, and its doors stick until the count settles]`, 'warn');
         return;
       }
       case 'wantedTear': {
@@ -4161,6 +4276,36 @@ export class Game {
    *  the tally is settled (ctx.wanted widens their notice reach).
    *  Tear every sheet and he reaches for fresh paper: `repost` re-arms
    *  the same raise on new downstream boards after a beat. */
+  /** The index's deep tier — a file six questions deep stops answering
+   *  the asks that dig it: the asking papers (work order, crew board,
+   *  claim register) hold their pages. Relief papers and the desk stay
+   *  open — closing the file's own valves would strand the player. */
+  private indexClosed(pos: Vec3 | null): boolean {
+    if (this.paperTrail < 6) return false;
+    this.cue('door-locked', pos,
+      '[the index closes to you — six questions is a file, not a curiosity]', 'warn');
+    return true;
+  }
+
+  /** Service refusal at a staffed counter — a cold counter folds its
+   *  hands; a face six lines deep in the register buys nothing at any
+   *  counter (the desk is the only answer, and the affidavit's rate).
+   *  askReg and the slip-back stay open: a readout is information, and
+   *  undoing the crime isn't commerce. */
+  private clerkRefuses(roomIndex: number, pos: Vec3 | null): boolean {
+    if (this.closedCounters.has(roomIndex)) {
+      this.cue('door-locked', pos,
+        "[the clerk folds its hands — the counter is closed to you]", 'warn');
+      return true;
+    }
+    if (this.unpaidHeld >= 6) {
+      this.cue('door-locked', pos,
+        "[she reads the register — the face buys nothing past six lines · the desk is the only answer]", 'warn');
+      return true;
+    }
+    return false;
+  }
+
   private raiseWanted(repost = false): void {
     this.wantedActive = true;
     for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
@@ -4457,6 +4602,14 @@ export class Game {
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       taught: [...this.taught],
       deadLines: [...this.deadLines],
+      wardArmed: this.wardArmed,
+      seizedTake: this.seizedAt && this.seizedTake.length > 0
+        ? { items: this.seizedTake.map((s) => ({ ...s })),
+            x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z }
+        : undefined,
+      chalkMarks: [...this.chalkMarks].map(
+        ([k, v]): [string, { x: number; y: number; z: number; yaw: number; label: string }] =>
+          [k, { x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, label: v.label }]),
       deadHazards: [
         ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
         ...this.hazard.steams.filter((s) => s.dead).map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z })),
@@ -4526,6 +4679,7 @@ export class Game {
           books: {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
+            seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
           },
         },
         documents: this.loadDocs(),
@@ -4556,6 +4710,7 @@ export class Game {
         thefts: this.unpaidTheft,
         held: this.unpaidHeld,
         asks: this.paperTrail,
+        seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
       },
@@ -4791,7 +4946,14 @@ export class Game {
       if (!r) continue;
       for (const d of r.doors) {
         if (d.opening && d.openT < 1) {
-          d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1));
+          // The crew's doors read the boards — a named face's under
+          // doors stick to three-fifths their swing. Once per door.
+          const stick = this.space === 'under' && this.wantedActive ? 0.6 : 1;
+          if (stick < 1 && !this.stuckAnnounced.has(d.id)) {
+            this.stuckAnnounced.add(d.id);
+            this.cue('door-locked', d.pos, '[the crew\'s door reads the boards — it sticks]', 'warn');
+          }
+          d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1) * stick);
           // Roused encounters pre-spawn as soon as the leaf has swung —
           // the thing beyond is live before the player crosses in.
           if (d.openT >= 0.6 && !this.rousedSpawned.has(d.id)) {
