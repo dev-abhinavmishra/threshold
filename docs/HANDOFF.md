@@ -5538,3 +5538,12 @@ flooded hall's drain stays drained (re-flooding a hall is heavier
 work than tying wire; left out deliberately).
 
 Gates: tsc, lint.
+
+### note on the under
+No re-layer below: the grafter drags to dead-wire sign as a scavenger,
+the reposter re-pins paper — but nobody *maintains* down there. Wire
+you cut in the under stays cut. That's the honest asymmetry: the
+house repairs its own floor; the underscript is unmaintained by
+definition.
+
+Gates: tsc, lint.
