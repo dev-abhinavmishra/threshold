@@ -2951,3 +2951,754 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Test: test/priming.test.ts covers primed/unprimed Index, Lens Hall
   primed caption, prime idempotency.
 - Gates: tsc, lint, 217 vitest — green.
+||||||| c4a2c0c
+- The under's trace axis: pilfering CREW property (marginalia `claim`
+  cages, sledge `pick`, lamp `strip`) queues a loss-report in
+  `src/engine/crewCount.ts` that `sound.emit`s at the socket ~75s later —
+  intensity 0.6 'item', so it ROUSES dormant encounters through doors and
+  pulls the room's own listeners. Delayed heat that lands where you WERE:
+  pilfer-and-move misleads (the count hunts your shadow), pilfer-and-linger
+  and it finds you. The laundress's keen generalized — the books wail too.
+- Entity desks are NOT crew property (they keep their own books — the
+  drawer rouses are their count). The wash isn't queued either: her keen
+  IS the count for her load.
+- Traps/log: `emitCaption` displays every captioned event regardless of
+  distance — the player "hears" the count anywhere, which is the intended
+  tell. Sound events for listeners need NO `source` field (sourced events
+  are self-noise, filtered by noiseCanBeHeard/noiseCanRouse).
+- Harness: `scripts/soak-cdp-raw.mjs` + `scripts/soak-eval.js` — when
+  playwright's fresh launches enter the `trap int3` Compositor crash state
+  (dmesg; NOT OOM), drive the same playOnce evaluate on the desktop Chrome
+  at :29229 via raw CDP. Needs a self-started `vite preview :4173` (the
+  suite's dies with its runner → new tabs land on chrome-error://).
+- Gates: tsc, lint, 218 vitest (+2), 5-seed sim, economy+undercast 13/13
+  (+the count leg), build.
+
+## sprint 306 — the checker (the count sends a lamp)
+
+- `src/entities/crewChecker.ts` — a Game-managed walker (NOT an Entity;
+  the count is reactive so the responder must be too). A rung count now
+  also dispatches a hooded checker with a live PointLight lamp who walks
+  the under spine (corridorPath reversed — the crew comes from deeper),
+  sweeps the rung socket ~26s, and walks on.
+- The find: exposed player in the socket room for >1.4s of sweep → a
+  0.75 'impact' emit AT THE PLAYER — the building learns where you are
+  NOW, same trick as the detective's phone. Non-damaging, crew-style:
+  the word, not the wound. Vacated/hidden = clean sweep, it moves on.
+- One walker at a time (dispatch returns false while out — the rings
+  still emit, the books don't send a crowd). Player-facing chain:
+  `[the count is answered — somebody walks the row with a lamp]` →
+  `[the checker's lamp finds you — the count stands]` or
+  `[the checker counts the till and moves on]`.
+- Fixed a latent sprint-305 bug found while wiring: crewCount losses
+  survived startRun — a queued report would ring in the NEXT run at a
+  stale socket. `CrewCount.reset()` + `checker.reset(hooks)` now run in
+  startRun beside `this.hazard = new HazardField()`.
+- Tests: roomOf is exported from crewChecker (entities have their own
+  private copies — this one takes (rooms, p) args for headless driving).
+  e2e: `ga.checker.stage` is runtime-reachable (TS private ≠ #private).
+- Gates: tsc, lint, 218 vitest (+4), undercast count/index/audit/checker
+  legs 4/4, build pending.
+
+## sprint 307 — strip the checker's lamp (the boldest pilfer in the under)
+
+- The crew's counterparty carries stealable light: 'Strip the lamp'
+  (1.1s hold, prox-gated per-frame interactable on the walking checker,
+  new kind `stripCheck`) frees a `handLamp` at 45 charge — between the
+  scavenged bulb's 30 and the sledge lamp's 55.
+- The recursion is the design: it is HOLDING the light, so it feels it
+  die on the spot (0.65 impact emit at ITS position — wakes the room),
+  and the lamp is crew property → the strip files ANOTHER loss-report
+  (crewCount.push) → ~75s later the books send the next checker, fresh
+  lamp wired. The lamps are endless; you can strip every one.
+- Blind counting: `lampLit` gates the sweep's find — strip before or
+  during the sweep and it counts you invisible, closing with
+  `[the checker counts blind — the count stays open]`.
+- Traps/log: checker's interactable id is a constant 'stripCheck' (one
+  walker at a time, so no room suffix needed — hold persists across its
+  walk since the id is stable while pos tracks it). Game passes the
+  checker as `it.data` — same cast-to-Record pattern as the hauler.
+- Gates: tsc, lint, 222 vitest (+6 incl. 2 strip specs), 5-seed sim,
+  undercast **10/10** (+strip leg), build.
+
+## sprint 308 — the quiet amendment (bury the count before it rings)
+
+- Seventh under paper: 'Misfile a line item — N marginalia' (6–11, the
+  register's desk family: filing/cubicle/schoolDesk/keyCabinet/
+  recordsCage). The filing strikes every PENDING loss-report out of the
+  count — buried reports never ring, so no checker is dispatched.
+  It is a timing play, not a pardon: a checker already walking keeps
+  walking, and the pilfer itself is already in the Auditor's tally.
+- Blank books shrug free ('[the tally is already honest — nothing to
+  bury]'); short purse warns. One-shot per socket (`meta.taken`).
+- New RngStream 'misfile' (0x151f11e5) isolates the 0.08 roll — same
+  safe-landing / foreshadow-host exclusions as the other papers.
+- Traps/log: the e2e leg needed TWO aim fixes — (1) pitch must target
+  the focus point `pos.y + 0.6`, not the socket point: a desk-elevated
+  socket aimed at raw pos.y is a ~55° down-pitch that fails the 0.86
+  align gate (the +0.6 focus point sits near eye level). (2) standing at
+  `sock.pos + 0.4x` puts you INSIDE the host desk's collider — the frame
+  pushes you ~1.1m out and swings the aim ~45° off. Stand on the
+  room-center side: `sock.pos + dirToCenter * 0.9` (the paper juts that
+  way by design). Distances recompute from g.player.pos AFTER teleport.
+- Gates: tsc, lint, 225 vitest (+1 gen spec), 5-seed sim, undercast
+  **11/11** (+quiet amendment leg), build.
+
+## sprint 309 — the dead line (the wire's counterplay)
+
+- The Detective's broadcast finally has a physical counter: 'Pull the
+  house line' (1.4s hold) on a junction box + conduit mounted beside his
+  entry door (entryPos + perp*0.75 − entryDir*0.25, y1.25 box).
+- The pull is sabotage, not a trick: it emits '[a junction box comes off
+  the wall]' (0.5 item noise — heard), bills +1 held as damages
+  (ctx.lineCut → unpaidHeld+1), and his desk phone dying files a face on
+  the spot — `openRegister()` runs with the dead-line cue variant
+  ('[the line is dead in his hand — he files your name longhand]').
+- Asymmetry vs the runner-cut: cutting the courier kills the whole
+  filing (card closes torn); pulling the line kills only the broadcast —
+  `warranted` never sets (or dies mid-run) but `clocked` and the settle
+  desk stand. The under's word is carried; the house's wire is
+  infrastructure.
+- openRegister now sets `warranted = !lineDead` — pull BEFORE the slow
+  look lands and the wire never starts (prevention play, still priced).
+- Fixed the latent cool-gate hole: `warranted &&` gated the outrun/payoff
+  cool — a dead line never sets warranted, so a clocked-only register
+  could never cool. Now `(warranted || clocked) &&`.
+- Traps/log: test fixtures lack entryDir — `room.entryDir?.x ?? 0`.
+  lineMesh stores the GROUP (box+pipe), not the box — removeEntityMesh
+  needs what addEntityMesh got. The junction is registered at spawn
+  (entity interactable, not a socket — no generation allowlist needed).
+- Gates: tsc, lint, 228 vitest (+3), 5-seed sim, economy **6/6** (+dead
+  line leg; the phone-ahead leg still passes unchanged), build.
+
+## sprint 310 — the witness mark (the find joins the ledgers)
+
+- The checker's lamp find used to cost only a noise emit — the cry to
+  the room and nothing else. Now `CheckerHooks.witnessed` fires once
+  per dispatch on the find and Game writes it into the house book:
+  `unpaidHeld += 1` + '[the lamp holds your face — the register gains
+  a witness]' (warn cue).
+- Design: the counterparty's light holding your face IS a statement —
+  the under's count and the upstairs register now bind through one
+  mechanic. Get seen by the crew's sweep and the Detective's desk grows
+  a line you must settle (or escape via affidavit / paying the held
+  balance).
+- Asymmetry kept: strip the lamp and the blind sweep still files
+  nothing — the witness mark is exactly what the light buys the crew.
+- The hook lives on CheckerHooks (not entityCtx) because the checker is
+  a Game-managed walker, not a RoomEntity — same one-shot-per-dispatch
+  contract as the emit itself.
+- Traps/log: hooks() test helper gains the `witnessed` vi.fn — a
+  blind-sweep spec asserts it never fires. The e2e checker leg sets
+  `unpaidHeld = 0` pre-run and asserts `=== 1` after the find.
+- Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
+  checker leg asserts the witness line + cue), build.
+
+## sprint 311 — the floor closes for the count
+
+- While the checker walks (`checker.active` — inbound, sweep, or
+  outbound), every broker pedestal in the under refuses trade:
+  '[the floor is closed for the count]' (warn cue on the attempt). The
+  prompt stays up; the refusal is the tell. When he despawns the floor
+  reopens — same pedestal sells normally.
+- Design: a pilfered under goes market-dead for exactly the dangerous
+  window — you cannot spend marginalia while the crew audits your
+  theft, so the count's 75s-delayed walk now prices TIME as well as
+  noise. Scoped to the Broker deliberately: he is the only STAFFED
+  marginalia point (same scoping rule as sprint 282's marked rate);
+  cages and papers are unattended reads, not staff you can shutter.
+- The gate sits in Game.tryInteract's 'shop' case after the
+  broker/sold guards — non-broker 'shop' sockets unchanged.
+- Traps/log: post-found shutter window is safe by construction — the
+  find lands ~1.4s into a 26s sweep, so ≥24 sim-s of active time
+  remains before outbound can end (≫ the e2e leg's 90-frame attempt).
+  's' seed u-lobby pedestals stock reliably; the leg picks an unsold
+  one and sets marginalia=99 so refusal reads as the shutter, not the
+  purse.
+- Gates: tsc, lint, 228 vitest, 5-seed sim, undercast **12/12** (the
+  checker leg now asserts closed-cue + refusal + reopening sale),
+  build.
+
+## sprint 312 — the multi-stop sweep (the books mark them together)
+
+- `CrewChecker.dispatch` now takes `sockets[]` and walks ONE hi→lo
+  route that sweeps every till the books marked — one stop per till
+  room. Pilfer twice before the count rings and the lamp visits both
+  rooms on the same walk; a second dispatch while a route is live is
+  still refused ('one walker per beat, not a crowd' holds).
+- `CrewCount.pendingSockets()` exposes queued-but-unrung reports —
+  the books marked them the moment the pilfer happened, so the route
+  covers tills whose ring hasn't gone out yet (their ring still emits
+  on schedule; the walk is already decided).
+- State machine: inbound → sweep → [more stops → inbound → sweep] →
+  outbound → idle. Interim cue '[the checker counts a till — the walk
+  continues]' at each non-final stop; the contextual close (found /
+  lamp-lit / blind) only at the last. Dispatch cue goes wide:
+  '[the count is answered wide — the lamp has more than one till]'.
+- found/witnessed stay once-per-dispatch (the first held face); a
+  multi-stop route also LENGTHENS the sprint-311 shutter window.
+- Traps/log: the e2e find lands at the LAST stop now — the 306 leg's
+  170*30 linger cap was sized for one stop (~55s walk); a 2-stop route
+  puts the second till's sweep ~150s out — cap raised to 340*30. The
+  shutter-attempt loop checks `stage === 'idle'` BEFORE pressing, not
+  after — a same-frame departure could sell through the gate. Spec
+  files treat `sockets`/`meta` optional: `(x.sockets ?? [])` / `?.`.
+- Gates: tsc, lint, 229 vitest (+1 two-stop spec: sweeps counted = 2),
+  5-seed sim, undercast **12/12** (the leg pilfers a second cage tag —
+  's' has tills at under-rooms 1/26/53/56/71/73/90 — asserts the wide
+  cue + walk-continues + found at the linger room), build.
+
+## sprint 313 — the eye files too (devin/1791394439-threshold-s313)
+
+- The house's watchers now rhyme with the checker's lamp: a HELD
+  settle (w.settle > 0.9 report) fires ctx.eyeFiled?.() ONCE per eye
+  (new `filed` flag on the watcher struct) — Game's entityCtx wires it
+  to unpaidHeld + 1, same register the lamp's witness mark lands in.
+  New cue beside the settle: '[the eye's report goes in the register —
+  your face is filed]'. A re-report (still feet → moving again) rings
+  noise but files no second line.
+- Trap/log: watchers are on HazardField (ctx callbacks fine), built
+  from room.spec.props kinds securityCam/searchlight — not sockets.
+  Spec: pinCam + `eyeFiled = vi.fn()` on ctx; step ~8.5s to force two
+  reports and assert eyeFiled called exactly once. The e2e leg zeroes
+  ga.unpaidHeld first, then asserts +1 after settle and still +1 after
+  a second report — measures the ledger, not the caption.
+- Gates: tsc, lint, 230 vitest (+1 once-per-eye spec), 5-seed sim,
+  e2e hazards — 'the watched hall' leg extended (heldAfterSettle===1,
+  filedCue, heldAfterSecond===1), build.
+
+## sprint 314 — the register talks back (devin/1791395297-threshold-s314)
+
+- The watch network is two-way now: while `ctx.heldOwed() > 0` (the
+  Detective's book holds a line on you — eyeFiled/witnessed/wordFiled/
+  lineCut all feed it) every watcher settles ~1.6x faster:
+  `w.settle + dt * (marked ? 1.6 : 1)`. One warn per marking via
+  `markedWarned` (clears when unmarked): '[the register talks back —
+  the eyes have your description]', gated on a LIVE watcher in the
+  current room. No ctx changes — `heldOwed` already existed for the
+  Detective.
+- Trap/log: the pan warn is severity 'info', not 'warn' — check the
+  actual literal before editing nearby cue calls (an edit batch failed
+  mid-apply on that mismatch). Struct-field adds to `watchers` must
+  init in the push block (~line 940) — `filed`/`markedWarned` live
+  there, not on the prop spec.
+- Gates: tsc, lint, 231 vitest (+1 marked-A/B spec: frames-to-settle
+  < stranger*0.85, warn exactly once), 5-seed sim, e2e hazards — the
+  watched-hall leg asserts talksBack fires exactly once after filing,
+  build.
+
+## sprint 315 — the tape is testimony (devin/1791395701-threshold-s315)
+
+- Blinding an eye now leaves sign: the 'tape' case pushes a `kind:
+  'blind'` evidence mark at the mount (fresh t, no flags) — a mounted
+  felt patch is substantive work, not ash (unlike forge's weak mark),
+  so BOTH readers (warden + grafter) pull to it once. The eye fork is
+  now three-way: dodge it (free), eat the file (+1 held), or tape it
+  (permanent blind + fresh sign the hunters chase). Cue amended:
+  '[the eye goes blind under the felt — and the felt smells of your
+  work]'.
+- Trap/log: `wiped` is the wrong flag for "warden reads this" —
+  warden SKIPS wiped entries as targets ('a wipe is a filter on the
+  sign, not a target', corridor.ts ~630); wiped exists only to poison
+  nearby marks via the doubt filter. For a real pull, push a plain
+  fresh mark — `kind` only matters for player-readable old sign.
+- Gates: tsc, lint, 231 vitest (+1 contract line asserting
+  `kind: 'blind'`), 5-seed sim, e2e hazards — the watched-hall leg
+  asserts a 'blind' mark lands within 0.5m of the taped mount, build.
+
+## sprint 316 — the felt comes back (devin/1791396001-threshold-s316)
+
+- Tape is now a PARKED tool, not a consumed one: a taped eye
+  (`w.dead === true` — only felt sets that flag; dead-mains eyes ride
+  `darkRoom` instead) offers 'Take the felt back — it wakes' (`untape`
+  kind, 1.0s hold): `w.dead = false`, `giveItem('feltWrap', 1)`, the
+  mount's prompt flips back to Tape/Smother on the next rebuild. The
+  sprint-315 'blind' mark STAYS — the sign already went out; you can't
+  un-smell it. A re-lit eye can't refile (its `filed` flag persists),
+  its settle restarts from 0.
+- Trap/log: the e2e leg now drives a three-state mount (live → blind
+  → relit) — capture `focused` prompts gated on `live.dead`, or the
+  post-hold frames overwrite 'Tape the eye' with the next state's
+  prompt. Mechanics asserted on state (wraps 0→1, `dead` flag,
+  evidence mark), not on prompt strings.
+- Gates: tsc, lint, 231 vitest (contract kind list += 'untape'),
+  5-seed sim, e2e hazards — the watched-hall leg asserts the recover
+  prompt, wrap refund, relight, and that the blind mark persists,
+  build.
+
+## sprint 317 — the fix (devin/1791396501-threshold-s317)
+
+- The Broker gains a second anchor on the man himself: 'Ask the
+  Broker for a fix' (kind 'fix', 1.2s hold, priority 3 — on the
+  brokerFigs figure at pos.y+1.4, NOT the pedestal socket — the
+  shared-anchor double-verb stays a design call). He makes a call and
+  one line comes off your DEEPEST ledger (tie order: tally > register
+  > file) priced by depth: `min(6 + worst*3, 18)` marginalia. Clean
+  slate → '[your slate is clean — nothing to fix]' (free shrug);
+  short → 'the crew does not write on credit'; checker walking →
+  'the floor is closed for the count' (sprint 311's shutter covers
+  the fix too). Per-ledger captions name the book: tally / register /
+  your file.
+- Trap/log: the fix anchor MUST out-priority the pedestal 'shop'
+  (priority 2) or 'Trade wares' steals focus at every stand point
+  that can see the figure — 3 is the floor. Stand ~1.4m off the fig
+  in e2e; the pedestal anchor is off-axis there.
+- Trap/log: prompt text is static ('Ask the Broker for a fix') —
+  the real price is computed in the press case; a price baked into
+  the prompt at rebuildInteractables time goes stale the moment a
+  ledger moves.
+- Gates: tsc, lint, 231 vitest (contract kind list += 'fix'), 5-seed
+  sim, e2e economy — the broker leg now drives the full arc: refuse →
+  pay → marked rate → fix (held 5→4, call caption) → clean refusal
+  uncharged, build.
+
+## sprint 318 — the night clerk (devin/1791397616-threshold-s318)
+
+- The house gains a staffed counter: any un-authored main-route room
+  with a `counter` prop can staff the night clerk — a masked, amber-
+  eyed house-staff figure (`tallFigure`, NO rig: the porcelain service
+  face is the identity, deliberately not the Broker's hooded robe)
+  behind the till + two `itemPedestal` wares on the counter's front
+  edge (local `counter.x±0.55, counter.z−0.55`, y 1.15). First counter
+  room always staffed; own 'clerk' RngStream (registered in rng.ts —
+  stream names are a union type, adding one needs BOTH the union entry
+  AND the STREAM_SALTS record).
+- 'Buy at the counter' rides the existing 'shop' InteractKind — the
+  press case branches `meta.clerk` first (imprints economy, register's
+  rate: `unpaidHeld > 0` → `price + min(3 + held*2, 10)`, caption
+  'the register's rate', refuse 'settle your claims'), then
+  `meta.broker` (marginalia, tally marked rate). Both sold-states set
+  `it.enabled = false` — the clerk branch must mirror it or the ware
+  re-offers.
+- Trap/log: DON'T template-whitelist clerk rooms — wax-bell-256 draws
+  zero reception-family templates; the `counter` prop is the correct
+  discriminator and guarantees coverage (probe confirmed 2-5 clerked
+  rooms on every QA seed).
+- Gates: tsc, lint, 232 vitest (+1 gen spec asserting ≥1 staffed
+  counter + 2 pedestals per clerked room per seed), 5-seed sim,
+  e2e economy 7/7 (new leg: figure present → short refuse → till
+  rings → register's rate +9 on the second pedestal), build.
+
+## Sprint 319 — ask the clerk (the staffed page)
+
+- New InteractKind 'ask': a second anchor on the clerk figure itself
+  (pos.y+1.4, holdTime 1.0, priority 3 — same floor as 'fix'). Data
+  carries { roomIndex }; the query lives on the room's slot0 socket
+  meta (`clerkQ` ∈ 'staff'|'hazard'|'claims', `clerkQPrice` 4-9,
+  seeded on the existing 'clerk' stream — no new stream needed, the
+  pass already owns clerked rooms).
+- 'Ask the clerk' — one-shot per counter (`clerkAsked` set): pays the
+  page at list price, or the register's rate for a filed face
+  (`price + min(2 + held, 6)`). Answers scan the next 8 main rooms:
+  staff → `r.scheduled` entity nouns (STAFF map), hazard → spec.props
+  fault nouns (FAULT map), claims → next 10 rooms' claim tags
+  (still held/drawn). Empty stretches get a clean 'nothing filed'
+  line, not silence.
+- Trap: the verb is on the FIGURE, and `meta.clerkQ` must never mint
+  an interactable — putting 'ask' on the slot0 socket would shadow
+  'Buy at the counter' at the same anchor (interaction.ts maps
+  `meta.clerk !== undefined` → kind 'shop'; a second mapping on the
+  same socket only sees one branch). Page data on the socket, verb
+  on the man.
+- Trap: e2e leg drives hold verbs by prompt regex — the economy
+  clerk drive's `/counter|buy|wares|take/i` couldn't see 'Ask the
+  clerk', so the second ask never held KeyE. Match lists must cover
+  every prompt the leg touches; ambient watcher captions can satisfy
+  a loose `caps.length > mark` done-predicate and end the drive
+  early — wait on the specific caption.
+- Gates: tsc, lint, vitest (clerk spec extended: every clerked room's
+  slot0 carries a valid clerkQ + 4-9 price; hazardContract += 'ask'),
+  5-seed sim, e2e economy leg extended (ask anchor found → paid at
+  list price → page answered → second ask says what it knows), build.
+
+## Sprint 320 — rifle the till (the staffed counter's rummage)
+
+- 'Rifle the till' (kind 'till', 0.9s hold, one-shot) anchors mid-
+  counter — between the wares laterally and 0.5m back toward the
+  clerk (computed from the two clerk sockets + the fig's position).
+  Pays imprints 4-8 (60%) or one of the clerk's stock pool (40%) on
+  the 'loot' stream; costs `unpaidHeld += 2` — the register-drawer
+  parity: hands in a staffed register file your face twice. The
+  clerk's own rate climbs emergently after (register's rate reads
+  unpaidHeld). `tillTaken` on slot0's meta both disables the press
+  and stops the interactable re-adding on rebuild.
+- REAL BUG the leg surfaced — sold sockets re-minted enabled
+  interactables: `enabled: !sock.meta.taken` ignored `meta.sold`, so
+  'Buy at the counter' re-offered focus after the sale and its press
+  silently hit the sold-guard. Worse, the front-edge wares stand
+  between the player and the counter surface: at 1.0m standoff a
+  same-line anchor 0.55m off a ware is only ~20-29° off-aim, inside
+  the ~0.86 align band, and proximity wins — a sold ware out-scored
+  every counter-surface verb forever. Fix: socket interactables now
+  mint `enabled: !taken && sold !== true`, and the till sits 0.5m
+  back on the counter (~40° off each ware) so aim picks cleanly even
+  before the sale.
+- Focus math for the log: `score = dist - align - priority*0.3` —
+  priority dominates inside the band, but at equal priority the
+  nearer candidate wins even at a 20°+ aim offset. Anchors sharing a
+  line need ≥0.9m lateral separation or a depth offset to separate
+  cleanly at counter standoff.
+- Gates: tsc, lint, vitest (contract += 'till'), 5-seed sim, e2e
+  economy leg extended (rifle → off-the-till pay → held 0→2 → till
+  never re-offers), build.
+
+## Sprint 321 — the desk bell (the house's only positional lure)
+
+- 'Ring the desk bell' (kind 'bell', 0.5s hold) anchors at the
+  counter's far end — 1.5× the slot axis past mid + 0.45 back toward
+  the clerk, computed from the two clerk sockets so it never shadows
+  'Rifle the till' (mid-counter) or the wares. Free, 25s per-room
+  cooldown (`bellRung` map on clock.time); inside it the bell answers
+  '[the bell gives a tired click]' with no noise.
+- The ring emits 'distraction' at 0.8 intensity AT THE BELL — every
+  other noise source in the house sits at the player's position
+  (watcher reports, filer posts, strides); the bell is the first
+  lure you can place and walk away from. ~11m reach through the
+  noiseRouse radius — in-room listeners + the room beyond.
+- Trap: keep counter-verb guards independent — the bell add lived
+  inside `!tillTaken` until it didn't (a rifled till would've
+  deleted the bell). One `tillSocks.length === 2` gate, separate
+  one-shot guards inside.
+- Trap: 'distraction' IS the rouse category — a lure verb doesn't
+  need a new SoundEvent kind, only a position that isn't the player.
+- Gates: tsc, lint, vitest (contract += 'bell'), 5-seed sim, e2e leg
+  extended (ring → distraction emitted AT the bell pos, verified by
+  wrapping g.sound.emit → second ring inside 25s gives the tired
+  click and emits nothing), build.
+
+## Sprint 322 — the counter goes cold (the rifle's real price)
+
+- A rifled till now closes that counter: `closedCounters: Set<number>`
+  (roomIndex) — 'Buy' and 'Ask' at a cold counter answer
+  '[the clerk folds its hands — the counter is closed to you]' at any
+  price. The bell still answers (the house's, not the clerk's). The
+  rummage stops being nearly free: imprints/items now vs the staffed
+  counter's wares AND its seeded page — rifle last.
+- 'shop' resolves the socket's room via
+  `activeRooms().findIndex(r => r.sockets.includes(sock))` — press-time
+  rarity so the O(rooms) scan costs nothing; 'ask'/'till' carry
+  roomIndex in `it.data` already.
+- Trap: keeping a ware unsold through the leg (register's-rate now
+  quoted via REFUSAL caption, not a sale) re-exposed the sprint-320
+  shadow — from the default 1.0m front stand an enabled 'Buy' on the
+  front edge out-scores the mid-counter till (proximity inside the
+  align band beats aim). Stand at 0.7m: wares go ~40° off-axis and the
+  till takes focus. Generalizes: verbs behind a front-edge row need
+  close-stand drives or a depth offset.
+- Gates: tsc, lint, vitest, 5-seed sim, economy leg extended (cold
+  ware refuses at any price + stays unsold · cold ask folds · bell
+  unaffected), build.
+
+## Sprint 323 — the purse (the two currencies finally bridge)
+
+- 'Change the purse — 6 imprints' anchors off the Broker counter's
+  near end: pays 6 imprints for 8 marginalia on clean books, 6 on
+  dirty (any of the three ledgers open sours the rate — the Broker
+  reads you). Repeatable — an exchange, not a sale. Shuttered with
+  the floor while the checker walks, like the fix.
+- First bridge between the currencies: imprints now have a path into
+  every marginalia-priced relief valve (fix, square, slips, claims).
+- Trap (fig-proximity): the clerk figs stand ~2m+ behind their
+  counter, so a mid-counter anchor separates from the priority-3
+  fig verb — but the Broker's fig stands only ~0.7m behind his
+  socks. A mid anchor lands on the fig's own line and 'Ask the
+  Broker for a fix' holds focus dead-aimed. Rule of thumb: before
+  placing a counter verb, check the fig's standoff — close-fig
+  counters need the lateral (bell-style) offset, not the mid one.
+- Gates: tsc, lint, vitest (contract += 'purse'), 5-seed sim, e2e
+  broker leg extended (clean 6→8 · sour 6→6 · short refuse · the
+  fixed anchor verified via purseSeen diagnostics), build.
+
+## Sprint 324 — the purse's other direction (the exchange completes)
+
+- 'Change the purse — 8 marginalia' anchors off the clerk counter's
+  near end (the mirror anchor of the Broker's): pays 8 marginalia
+  for 6 imprints on clean books, 4 for a filed face (unpaidHeld > 0
+  — the clerk reads the register, not the under's tallies).
+  Repeatable; a rifled counter folds like the rest of its service.
+- The currency bridge is now two-way: imprints buy marginalia below
+  (6→8/6), marginalia buy imprints above (8→6/4). Both spreads are
+  the house's cut — clean books always pay better than filed ones.
+- Trap (collider-eject stale aim): a verb anchored at the counter's
+  far lateral end can put the at+1.0·dirToCenter stand INSIDE the
+  counter flank's collider. The eject fires after the drive's aim
+  was set, so every frame's lookDir misses by ~60° and focus sees
+  zero candidates (probed: d0.41 a0.48 — purse dead-ahead but
+  misaligned). Symptom to spot: focused===null for frames on end,
+  not 'wrong prompt'. Fix: shift `at` ~0.4 toward center so the
+  stand clears the collider — same idiom as the till's close-stand.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
+  clean 8→6 · filed-face sour 8→4 · short refuse · cold-counter
+  fold; broker leg unchanged), build.
+
+## Sprint 325 — the till smells of hands (the rifle's third price)
+
+- 'Rifle the till' now leaves fresh `kind: 'work'` evidence at the
+  counter — substantive sign, not ash, so the warden pulls to it
+  like any kill or mounted wrap and `signReads` weighs it toward
+  learning. The rifle's price stack is now three deep: the file
+  (+2 held), the cold counter, and scent — steal early and the
+  floor reads worked where the warden walks.
+- Free emergent counterplay: the crouch-scrub loop iterates
+  `hazard.evidence`, so a felt wrap rubs the hands-smell off the
+  counter too — costing a wrap and leaving a wipe shadow that
+  poisons that floor's later reads for the same warden.
+- Evidence union gained 'work' (room.ts — the kind-agnostic reader
+  filters only on old/weak/wiped flags, so both hunters pull it
+  without reader changes).
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7 (clerk leg:
+  work mark lands at the till pos on rifle), build.
+
+## Sprint 326 — the clerk watches your hands (the cold counter's face)
+
+- Clerk figs now track the player by the head — but only AFTER the
+  rifle: `fig.userData.clerkRoomIndex` set at mint, and the
+  entity-anim traverse's broker head-track gained a clerk branch
+  gated on `closedCounters.has(roomIndex)`. Before the rifle the
+  fig attends the till like furniture; after, its masked face finds
+  your hands from any angle in the room (±1.1 rad clamp, dt*4 lerp
+  — the Broker's own convention).
+- The counter arc's horror beat, free: 'the clerk watches your
+  hands' was already the rifle caption — now it's physical.
+- e2e clerk leg asserts both halves: head yaw ~0 pre-rifle
+  (untracked), >0.25 rad post-rifle standing ~52° off the fig's
+  facing.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 327 — the bell draws its eye
+- The lure's landing made visible: `bellRung` widened to
+  `Map<roomIndex, {t,x,z}>` — the ring now stores the bell's pos,
+  not just the time.
+- A warm (un-rifled) clerk's head turns to its own bell for ~3.5s
+  after a ring — `watches` picks tx/tz = rung pos inside the window,
+  player otherwise; brokers and `closedCounters` clerks keep the
+  thief. The house's own sound answers for the clerk — after the
+  rifle, the bell can't buy its eye back.
+- e2e trap (stale-caption family): a phase's `drive(at, done)`
+  matched a caption left in `caps` by an EARLIER ring — `done`
+  fired at frame 0, no press, `rings` stayed empty. When a later
+  phase must see a FRESH emit, count occurrences:
+  `caps.filter(re).length > before`, or manipulate `bellRung`
+  (`ga.bellRung?.delete(idx)`) to force a fresh ring inside a
+  cooldown.
+- e2e clerk leg asserts both look directions: warm ring → head yaw
+  shares `rel(bell−fig)`'s sign; post-rifle fresh ring with the
+  player at the opposite side → head keeps `rel(player−fig)`.
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 328 — the unfiled hands (the eye's window pays)
+- The sprint-327 head-turn made mechanical: rifled inside the bell's
+  look window (`bellRung.get(roomIndex)`, `clock.time − rung.t < 3.5`),
+  'Rifle the till' files NOTHING — the clerk's eye is on the bell, not
+  your hands: `unpaidHeld +0`, caption '[it was watching the bell —
+  your hands go unfiled]'. The till still opens, still smells ('work'
+  sign lands), and `closedCounters` still folds the counter — only
+  the witness is missing. Ring → cross → rifle is a real steal-window
+  (~1.5m of counter between bell and till inside ~3.5s).
+- e2e trap (second stale-caption instance): the clerk leg's room-B
+  till drive waited on `/off the till/` — room A's rifle caption
+  satisfied `done()` at frame 0, so the drive never teleported
+  (player stranded at the bell stand, `seen=''`, probe showed
+  align −0.16 from a stale spot — mimicked the collider-eject trap).
+  Diagnose order: a `done()` that may match an EARLIER phase's emit
+  must count occurrences, not `some()`. Also: the leg's `drive()`
+  hardcodes `clerked.origin` for its stand direction — multi-room
+  legs need a `toward` param (added; default keeps old callers).
+- e2e clerk leg drives both books: room A rifles unseen-by-nothing
+  (+2 held — rung deleted mid-leg to expire the window), room B
+  rings then rifles inside the window (held stays 0, 'unfiled'
+  caption, counter still cold).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+### sprint 329 — the marked coin (rifled imprints testify)
+- The till's coin is marked: rifled imprints pool into `hotImprints`,
+  and every house-side imprint spend runs through `chargedImprints(n,
+  x, z)` — the hot coin goes first, and each marked spend emits
+  'distraction' (0.5, ~9m reach) at the till it lands in + warn cue
+  '[the till knows its own coin — the house hears where it landed]'.
+  Covers toll doors, the Collector's toll, vend machines, the clerk's
+  wares + ask, the register/roster/complaint/watchSheet/affidavit
+  papers, the claim's imprints branch, the Detective's settle, and
+  the ctx `spendImprints` (entity charges incl. the custodian shop).
+- The fence: the Broker's purse (`imprints -= 6`) is the ONE spend
+  that doesn't testify — it silently burns `min(6, hotImprints)` —
+  the under washes the house's marked coin for the spread. The
+  heist chain: ring the bell → rifle blind → launder downstairs.
+- Implementation note: `spendImprints(n)` ctx cb now wraps
+  `chargedImprints` at `player.pos` — entity desk charges testify
+  too. Only the purse keeps a raw `imprints -=` (the wash).
+- e2e: vend leg pays a fully-hot spend (one 'distraction' ring at
+  the vend, hot→0); broker purse leg adds the wash phase (hot 6→0,
+  no emit asserted); clerk leg asserts `hotAfterRifle > 0` iff the
+  rifle caption reads '— the coin is marked' (item branch = clean).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 330 — the wash files a question (the launder isn't free)
+- The purse's wash now costs the under's own book: `washed > 0` →
+  `paperTrail +1`. The marked coin stays silent to the HOUSE (no
+  emit — the under doesn't testify), but the Broker's book reads
+  coin as carefully as the register reads faces: '[the purse weighs
+  the marked coin — the under's book opens a line · 6 imprints →
+  ${gain} marginalia]'. The heist chain now prices both ledgers:
+  rifle = the house's book (witness + work sign unless the eye is
+  on the bell), wash = the under's book (+1 trail toward her 3+).
+- e2e broker leg: wash phase asserts hot 6→0 AND trail +1 inside
+  `purseWashed`. Caption renamed 'washes' → 'weighs'.
+- Gates: tsc, lint, vitest, 5-seed sim, economy 7/7, build.
+
+
+### sprint 331 — the till's stock is marked (goods testify too)
+- The goods side of the marked family: rifled ITEMS pool into
+  `hotItems = Set<ItemId>` (per-id, not per-unit — ~15 count--
+  consumption sites make unit marks untraceable; fiction: you can't
+  tell which wrap is the till's). Rifle caption gains '— the stock
+  is marked'; a carried hot id testifies at any WARM clerk: the
+  head-track gains a third case (after broker + cold-counter
+  tracking) — `hotItems ∩ inventory` → watches + a per-room
+  (`stockSeen`) 'distraction' ping 0.4 at the player + warn cue
+  '[the clerk reads its own stock on you — the till wares tell]' +
+  quiet emit caption '[the till's stock answers for itself]'.
+  Ring-window precedence is untouched (bell > cold > stock).
+- The fence: the Broker's counter gets a third anchor — 'Fence
+  the take' (+1.2·lateral flank, the purse's mirror — broker
+  counters have no bell). Flat 4 marginalia per marked stack,
+  `paperTrail +1` (the under's book opens a line), clears the hot
+  ids AND strips them from the bag ('[the broker takes the marked
+  stock without a word — the under's book opens a line · +N
+  marginalia]'). No marks → free shrug. The checker-shutter covers
+  it ('the floor is closed for the count'). The heist chain is now
+  two-sided: launder the coin at the purse, fence the goods.
+- Wire-up trap: a new InteractKind needs THREE spots — the union
+  (interaction.ts), the case dispatch, and hazardContract.test's
+  kind list ('fence' appended to all three).
+- e2e: broker leg fence phase (bandage×2 hot → +8 marginalia,
+  hotItems cleared, trail +1, bag stripped); clerk leg stock-read
+  phase (warm figB + hot doorChock → head yaw >0.25 + 'reads its
+  own stock' cue).
+- Gates: tsc, lint, 232 vitest, 5-seed sim, economy 7/7, build.
+
+### sprint 332 — the ledgers outlive you (death can't launder the books)
+- Real hole found in `CheckpointSave`: it carried imprints/marginalia/
+  inventory but NOT `unpaidTheft`/`unpaidHeld`/`paperTrail`/`hotImprints`/
+  `hotItems` — a checkpoint RELOAD (fresh Game) forgot every debt and
+  every mark, so dying was a free full launder for the whole marked
+  economy. Worse, `startRun` never reset the ledger fields at all: a
+  same-instance fresh run LEAKED the previous run's debts.
+- Fix: the five fields are now optional on `CheckpointSave` (old saves
+  parse as a clean slate via `?? 0`); `makeCheckpoint` writes them
+  (`hotItems` → array); `startRun` restores `cp?.x ?? 0` — which both
+  restores a reload AND zeroes a fresh run (the leak closes for free).
+  `stockSeen` clears per run (rooms re-read the take once — fine).
+  Semantics: debts accrued after the checkpoint are forgiven on retry,
+  same as loot (consistent with the honest-replay prop rule).
+- e2e broker leg: `cpLedger` asserts a live `makeCheckpoint` mirrors
+  paperTrail/hotImprints/hotItems/unpaidTheft. vitest persistence spec
+  round-trips all five + the old-save `?? 0` path.
+- Trap: `hotItems` is `readonly` — rebuild via clear()+add, never assign.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg, build.
+
+### sprint 333 — the take goes back (the emptied till reaccepts its own)
+- The marked-goods triangle closes: rifled tills mint a 'restock'
+  verb ('Slip the take back — it never left', 0.9s, the till's own
+  anchor) at rifle time, pushed to `dynamicInteractables` so a room
+  rebuild replays the offer while the counter stays cold. It takes
+  back every carried `hotItems` stack — free, no profit, no ledger
+  relief: the register's witness doesn't unwrite for a returned
+  wrap ('[the till takes its own back — the wrap never left the
+  shelf]'). The decision tree is now: carry (warm clerks read the
+  stock), fence (4/stack + trail below), return (free upstairs).
+- Empty-handed shrug ('[the drawer is empty — nothing of his on
+  you]'); checker-shutter irrelevant (main-route counters).
+- e2e clerk leg: restock at the rifled till clears hotItems +
+  strips the goods + `unpaidHeld` unchanged. Trap: the till anchor
+  sits mid-counter — the drive needs the close 0.7m stand (the
+  1.0m default lands inside the counter flank collider → eject →
+  '' samples; same class as the s324 purse fix).
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 334 — the book answers back (info layer for the ledgers)
+- The five ledgers (`unpaidTheft`/`unpaidHeld`/`paperTrail`/`hotImprints`/
+  `hotItems`) were player-invisible — the only signal was a surcharge.
+  'Ask what the book says — 3 marginalia' is now minted inside the
+  bSocks>=2 broker block, anchored LOW on the fig's flank
+  (`fig.pos + 0.8·lateral`, y+0.55, holdTime 0.8, p2). Case 'book'
+  (Game.ts, before 'purse'): under-only + `checker.active` shutter +
+  `marginalia < 3` refuse. On press: `marginalia -= 3; paperTrail += 1`
+  — the asking files too, so the read counts itself — then captions
+  `[the book on you — N questions filed · M thefts tallied — the asking
+  files too]` / clean `[the book holds one line on you — this one]`.
+  Repeatable, not one-shot.
+- Trap (new class): two same-fig anchors ~0.35m apart lose the in-band
+  priority fight — the first book anchor (fig+0.7lat, +1.1y) sat inside
+  'fix''s focus band and p3 won every frame (`bookSeen` showed only
+  'Ask the Broker for a fix'). Waist-height at 0.8·lateral makes it a
+  pitch-DOWN vs pitch-UP read — disambiguates. e2e legs on fig verbs
+  should assert `xSeen` contains the target prompt, not just the cap.
+- Verb wiring: interaction.ts union + hazardContract kind list.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy broker leg green, build.
+
+## sprint 335 — the marked coin testifies twice
+- `chargedImprints` (the single funnel for every imprint spend) now
+  writes `unpaidHeld += 1` when any hot coin lands — the till that
+  takes marked coin files the hands that fed it. Cue text:
+  '[the till knows its own coin — the register files the hands that
+  fed it]'. The marked-coin dilemma is complete: spend upstairs and
+  every transaction files +1 held, or carry it below and launder at
+  the purse for the asking's price (+1 trail per wash).
+- e2e: the clerk leg's paid buy runs with `hotImprints=1` — asserts
+  hot drains, held +1, 'files the hands' cue; restores held after.
+- Trap: phases that reset `unpaidHeld` for an assertion (e.g. the
+  unfiled phase's `ga.unpaidHeld = 0`) must now ALSO drain
+  `hotImprints` — a stray priced press mid-drive (a warm 'ask' on a
+  fig stealing a press-cycle) spends hot coin and files +1. The
+  unfiled phase zeroes both.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 336 — the books close at the door
+- The five ledgers accrued all run and `victory()` reported only
+  stats — the exit never read the books. `victoryInfo` now carries
+  `books?: BooksClosed { thefts, held, asks, hotCoin, hotGoods }`
+  (store.ts; optional — any other setState writer stays valid).
+  `VictoryScreen` renders a `.stats.books` reckoning block: bracketed
+  epitaph lines per open ledger, or 'every book closed before the
+  door did' when all five are zero.
+- e2e: the runflow victory leg sets all five ledgers via cast, calls
+  `g.victory()`, asserts the reckoning text in the DOM.
+- Readout only — no ending gating (that would be a design call).
+- Gates: tsc, lint, 233 vitest, 5-seed sim, runflow victory leg, build.
+
+## sprint 337 — the mark dies with the goods
+- `hotItems` only left the pool via fence/restock — a mark outlived
+  its last unit, so a stack at count 0 still testified and a fresh
+  CLEAN ware of that id witnessed falsely (false-witness bug).
+  `pruneHotMarks()` runs per frame in `frame()` (post-refreshProtection):
+  an id leaves the pool when no carried stack has count > 0. The three
+  read sites (traverse stock-read, fence take, restock take) also
+  tighten to `i.count > 0` so a just-emptied stack never witnesses
+  in the gap before the prune.
+- e2e: the clerk leg zeroes the marked chock's count → prunes → then
+  gives a CLEAN chock — head must NOT chase it. Assert shape: an
+  unwatched head has NO decay path (`if (head && watches)` is the
+  only writer) — it holds its last bearing, so the proof is drift
+  vs the old yaw < 0.15, not decay to ~0.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 338 — the books smell of hands too
+- The three staffed-book rifles (Filer 'docket', Auditor 'tallyDrawer',
+  Detective 'registerDrawer') left no sign — the till's three-deep price
+  stack (file + keeper-rouse + scent) wasn't symmetric. All three cases
+  now push fresh 'work' evidence at the drawer: the warden pulls to
+  register-drawer sign (main route, its territory), the grafter drags
+  to docket/tally sign (under, its diet).
+- `room: this.currentRoom` is the right tag — evidence readers compare
+  `player.room === e.room` (signReads weigh / wipe zone at ~1430), so
+  the mark's room is "the room the pilfer happened in" by the game's own
+  resolver, NOT the scheduled keeper's room index.
+- e2e trap: `aRoom.index` is NOT a safe assert — under-room coarse
+  bounds overlap (the drawer's own pos can resolve to a different room
+  index than the keeper's scheduled room). Assert
+  `e.room === ga.currentRoom` at the stand + pos distance < 1.2 instead.
+- The marks read positionally like every other kind — no reader-side
+  changes needed; the grafter's stale-diet and the warden's cold-cutoff
+  already apply.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7 (drawerSign),
+  undercast 11/11 (tallySign + docketSign), build.

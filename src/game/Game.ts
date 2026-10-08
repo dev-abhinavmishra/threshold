@@ -3148,6 +3148,11 @@ export class Game {
         this.unpaidTheft += 1; // out of her drawer, into the tally
         this.paperTrail += 2;  // the index logs the rummage as two questions
         it.enabled = false;
+        // hands in a staffed book leave the same smell as hands in a
+        // till — the rifle's third price after the ledgers: sign the
+        // under's own scent-reader drags to.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 9);
@@ -3173,6 +3178,10 @@ export class Game {
         h.stock--;
         this.unpaidTheft += 2;
         it.enabled = false;
+        // hands in a staffed book leave the same smell as hands in a
+        // till — sign the under's scent-reader drags to.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(4, 9);
@@ -3199,6 +3208,11 @@ export class Game {
         h.stock--;
         this.unpaidHeld += 2;
         it.enabled = false;
+        // hands in a staffed book leave the same smell as hands in a
+        // till — a main-route pilfer in warden territory; the warden
+        // pulls to it like any kill or mounted wrap.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
           const amt = this.streams.stream('loot').int(6, 10);
