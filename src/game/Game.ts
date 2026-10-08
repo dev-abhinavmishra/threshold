@@ -2730,9 +2730,12 @@ export class Game {
         const fenced = this.fencedTake.reduce((n, s) => n + s.count, 0);
         const shelfBit = fenced > 0 ? ` · the shelf keeps ${fenced} of yours` : '';
         const tillBit = this.coinKept > 0 ? ` · ${this.coinKept} of your coin sits in the count's till` : '';
-        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0
+        // sprint 412 — and the book names its own pages: torn edges it
+        // can still smell riding in your purse
+        const pagesBit = this.hotMarginalia > 0 ? ` · ${this.hotMarginalia} torn ${this.hotMarginalia === 1 ? 'page rides' : 'pages ride'} in your purse` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0 && this.hotMarginalia === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}${pagesBit}]`);
         return;
       }
       case 'askTally': {
@@ -2778,12 +2781,20 @@ export class Game {
           }
           const filed = this.unpaidHeld > 0;
           const gain = filed ? 4 : 6;
-          this.chargedMarginalia(8, it.pos.x, it.pos.z);
+          this.marginalia -= 8;
+          // sprint 412 — the tear means nothing to the house's till:
+          // marked under-pages launder through the exchange silently —
+          // the mark dies at the jurisdiction line, same as a hot
+          // imprint dies at the Broker's purse below.
+          const torn = Math.min(8, this.hotMarginalia);
+          this.hotMarginalia -= torn;
           this.imprints += gain;
           this.stats.imprintsEarned += gain;
-          this.cue('purchase', it.pos, filed
-            ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
-            : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
+          this.cue('purchase', it.pos, torn > 0
+            ? `[the till can't read the under's torn edges — the pages pass · 8 marginalia → ${gain} imprints]`
+            : filed
+              ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
+              : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
           return;
         }
         // The Broker changes coin — 6 imprints for marginalia. The only

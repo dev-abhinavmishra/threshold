@@ -80,6 +80,36 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const corridorSrc = readFileSync(new URL('../src/entities/corridor.ts', import.meta.url), 'utf8');
     expect(corridorSrc).toContain('the floor smells wiped');
   });
+
+  it('the house re-lays its work — every dead-hazard sign can restore', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const corridorSrc = readFileSync(new URL('../src/entities/corridor.ts', import.meta.url), 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // the floorkeeper callback exists in the ctx contract
+    expect(baseSrc).toContain('rearmHazard');
+    // the warden remembers which sign it walked to
+    expect(corridorSrc).toContain('investigateKind');
+    // and the restore handles all four dead-hazard sign kinds
+    expect(gameSrc).toMatch(/kind === 'wire'/);
+    expect(gameSrc).toMatch(/kind === 'line'/);
+    expect(gameSrc).toMatch(/kind === 'fan'/);
+    expect(gameSrc).toMatch(/kind === 'blind'/);
+    // the house pockets the felt it peels — confiscated, not returned
+    expect(gameSrc).toContain('the felt is confiscated');
+  });
+
+  it('the under\'s coin testifies — every marginalia spend routes the funnel', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // no raw spend outside the funnel itself and the two jurisdiction
+    // exceptions (the house till launders torn pages silently)
+    const raw = gameSrc.split('\n').filter((l) =>
+      /this\.marginalia -=/.test(l) && !/chargedMarginalia/.test(l));
+    expect(raw.map((l) => l.trim())).toEqual([
+      'this.marginalia -= 8;',                    // the upstairs purse — the tear means nothing to the house's till
+      'this.marginalia -= n;',                    // the funnel itself
+    ]);
+    expect(gameSrc).toContain('hotMarginalia');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

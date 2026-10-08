@@ -5547,3 +5547,22 @@ house repairs its own floor; the underscript is unmaintained by
 definition.
 
 Gates: tsc, lint.
+
+## Sprint 412 — the wash crosses both ways
+Jurisdiction honesty for the marked economy: torn under-pages spent
+at the house's purse launder silently — the till can't read the
+under's edges (the upstairs purse branch of `chargedMarginalia`'s
+routing deliberately bypassed; `hotMarginalia` just drains). The
+mirror of hot imprints dying at the Broker's purse below. Both
+jurisdictions now wash only across the line.
+
+And the book names its own pages: 'book' readout appends `· N torn
+pages ride in your purse` — the mark is discoverable through the
+paid read instead of only at spends.
+
+Contract coverage: vitest asserts every `marginalia -=` routes the
+funnel (two exceptions enumerated: the funnel itself + the upstairs
+wash), `rearmHazard` exists in the ctx contract and answers all four
+dead-hazard sign kinds, and the felt-strip is confiscation.
+
+Gates: tsc, lint, vitest (hazardContract +2).
