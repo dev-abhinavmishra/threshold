@@ -5032,3 +5032,15 @@ Game.die() from the same five fields.
 - Also closed a pre-existing hole: tvAnswerQueue never cleared on
   restart — a queued answer could fire into a dead run's stale pos.
 - Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
+
+## sprint 398 — douse the hearth
+
+- The hearth's price was a promise you couldn't renegotiate: lit = 45s
+  of crackle emits (0.18 ambient, every ~3s) + a warm heal circle,
+  and no take-back when a threat walked in. Lit hearths now mint
+  'Douse the hearth' (0.9s) — kills the points/light/heal and stops
+  the murmur. Spent either way: the wood was used at lighting, so a
+  drowned hearth mints nothing — no relight, no second buy.
+- The verb lives only while the fire actually burns (`this.hearths`
+  position-matched), so it un-mints when the burn dies naturally.
+- Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
