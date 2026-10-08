@@ -2161,6 +2161,15 @@ export class Game {
               pos: { x: wx, y: 0.8, z: wz },
               prompt: 'Light the hearth', holdTime: 1.6, enabled: true, priority: 2,
             });
+          } else if (isHearth && this.hearths.some((h) => Math.hypot(h.base.x - wx, h.base.z - wz) < 0.6)) {
+            // sprint 398 — the rest you bought is loud on purpose; when a
+            // threat walks in, the douse is the take-back. Spent either way:
+            // lighting spent the wood, so a drowned hearth mints nothing.
+            this.interaction.add({
+              kind: 'douse', id: `douse-${key}`,
+              pos: { x: wx, y: 0.8, z: wz },
+              prompt: 'Douse the hearth', holdTime: 0.9, enabled: true, priority: 2,
+            });
           } else if (isPhone && !this.answeredPhones.has(key)) {
             this.interaction.add({
               kind: 'phone', id: `phone-${key}`,
@@ -4199,6 +4208,22 @@ export class Game {
         this.spawnHearth(at);
         this.audio.play('fire-crackle', at, '[the hearth takes — warmth, and witnesses]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'machine', caption: '[a fire catches]' });
+        return;
+      }
+      case 'douse': {
+        // sprint 398 — kill the fire early: the crackle stops murmuring and
+        // the warm circle closes. The wood was spent at lighting either way,
+        // so a drowned hearth is dead — no relight, no second buy.
+        it.enabled = false;
+        const at = { x: it.pos.x, y: 0.6, z: it.pos.z };
+        this.hearths = this.hearths.filter((h) => {
+          if (Math.hypot(h.base.x - at.x, h.base.z - at.z) >= 0.6) return true;
+          this.scene.remove(h.pts); this.scene.remove(h.light);
+          h.geo.dispose(); h.mat.dispose();
+          return false;
+        });
+        this.audio.play('inkling-hiss', at, '[the fire drowns — the room goes quiet]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.15, category: 'ambient', caption: '' });
         return;
       }
       case 'valve': {

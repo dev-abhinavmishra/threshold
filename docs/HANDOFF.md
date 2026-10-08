@@ -5071,3 +5071,15 @@ Game.die() from the same five fields.
   sits beside the leaf, never in it. Named 'fled-effects'.
 - Vitest 274: 'the ones who ran'. Gates: tsc, lint, sim 5/5, build.
   Visual dressing only — no e2e leg (suite leg from s426 still running).
+
+## sprint 398 — douse the hearth
+
+- The hearth's price was a promise you couldn't renegotiate: lit = 45s
+  of crackle emits (0.18 ambient, every ~3s) + a warm heal circle,
+  and no take-back when a threat walked in. Lit hearths now mint
+  'Douse the hearth' (0.9s) — kills the points/light/heal and stops
+  the murmur. Spent either way: the wood was used at lighting, so a
+  drowned hearth mints nothing — no relight, no second buy.
+- The verb lives only while the fire actually burns (`this.hearths`
+  position-matched), so it un-mints when the burn dies naturally.
+- Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
