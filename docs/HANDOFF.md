@@ -3932,3 +3932,16 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   dedupes against a persisted `stockFiled` set — the cue can re-fire
   (honest: he re-notes), the line can't.
 - Gates: tsc, lint (batched verification with the next commits).
+
+## sprint 351 — the boards talk to the index
+
+- The wanted sheets named your hands to the swamper/hauler/laundress/
+  grafter ears — but the under's third book heard nothing. While
+  `wantedActive` stands, every consult of the under's paper now files
+  DOUBLE: `fileQuestion()` (a `wantedActive ? 2 : 1` helper) replaces
+  the six inline `paperTrail += 1` sites (book ask, wash, fence, work
+  order, crew board, claim register). The docket rifle's `+= 2` stays
+  — it was always the loudest ask.
+- Readable: the wanted state is announced by the sheets and the
+  extended-band catches; the book readout prints the live count.
+- Gates: tsc, lint (batched verify follows).

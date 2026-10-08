@@ -984,6 +984,10 @@ export class Game {
    *  index logs. Squared at her station; carrying questions into her
    *  room puts your name on a card. */
   private paperTrail = 0;
+  /** A consult of the under's paper files a question — while the
+   *  boards name you, every ask counts double: the wanted sheets
+   *  carry your face to the index too. */
+  private fileQuestion() { this.paperTrail += this.wantedActive ? 2 : 1; }
 
   private spawnEntity(e: Entity): void {
     e.spawn(this.entityCtx());
@@ -2168,7 +2172,7 @@ export class Game {
           return;
         }
         this.marginalia -= bPrice;
-        this.paperTrail += 1;
+        this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
         this.cue('whisper', it.pos, t === 1 && th === 0
           ? '[the book holds one line on you — this one]'
@@ -2223,7 +2227,7 @@ export class Game {
         // the marked coin too, and the purse files the question.
         const washed = Math.min(6, this.hotImprints);
         this.hotImprints -= washed;
-        if (washed > 0) this.paperTrail += 1;
+        if (washed > 0) this.fileQuestion();
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
         this.cue('purchase', it.pos, washed > 0
@@ -2258,7 +2262,7 @@ export class Game {
         this.inventory = this.inventory.filter((i) => i.count > 0);
         this.marginalia += pay;
         this.stats.marginaliaEarned += pay;
-        this.paperTrail += 1;
+        this.fileQuestion();
         this.cue('purchase', it.pos,
           `[the broker takes the marked stock without a word — the under's book opens a line · +${pay} marginalia]`);
         return;
@@ -2706,7 +2710,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2746,7 +2750,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -2787,7 +2791,7 @@ export class Game {
           return;
         }
         this.marginalia -= price;
-        this.paperTrail += 1;
+        this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
