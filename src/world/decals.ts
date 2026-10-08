@@ -3867,3 +3867,115 @@ export function nightGlow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Lace shadow — the net a lace curtain throws onto the wall beside
+ * the window: a dappled lattice of light when the sun was kind. */
+export function laceShadow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the lattice — crossed diagonal threads, pale sun on plaster
+    ctx.strokeStyle = `rgba(216,206,178,${0.14 + rng.float() * 0.1})`;
+    ctx.lineWidth = 1.1;
+    for (let i = 0; i < 12; i++) {
+      const off = -40 + i * 12;
+      ctx.beginPath();
+      ctx.moveTo(off, 0);
+      ctx.lineTo(off + 96, 96);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(off + 96, 0);
+      ctx.lineTo(off, 96);
+      ctx.stroke();
+    }
+    // the rosettes — knots at the crossings, slightly irregular
+    for (let y = 12; y < 96; y += 17) {
+      for (let x = 10; x < 96; x += 17) {
+        if (!rng.bool(0.7)) continue;
+        ctx.fillStyle = `rgba(224,214,186,${0.16 + rng.float() * 0.14})`;
+        ctx.beginPath();
+        ctx.arc(x + (rng.float() - 0.5) * 4, y + (rng.float() - 0.5) * 4, 1.8 + rng.float(), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // the falloff — the net's shadow dies toward the room
+    const fg = ctx.createLinearGradient(96, 0, 0, 96);
+    fg.addColorStop(0, 'rgba(216,206,178,0.05)');
+    fg.addColorStop(1, 'rgba(216,206,178,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(0, 0, 96, 96);
+  });
+}
+
+/** Flour dust — the pale film a worktop keeps in a kitchen that fed
+ * a house: powder drift, wiped arcs, a kneaded patch. */
+export function flourDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the drift — a pale dust field across the board
+    const g = ctx.createRadialGradient(48, 44, 6, 48, 44, 42);
+    g.addColorStop(0, 'rgba(222,216,200,0.3)');
+    g.addColorStop(0.6, 'rgba(222,216,200,0.14)');
+    g.addColorStop(1, 'rgba(222,216,200,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the kneaded patch — a cleared oval where dough was worked
+    ctx.strokeStyle = 'rgba(190,182,162,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(46 + (rng.float() - 0.5) * 8, 42 + (rng.float() - 0.5) * 8, 18 + rng.float() * 6, 13 + rng.float() * 4, (rng.float() - 0.5) * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    // wiped arcs — a hand swept the dust once
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(228,222,208,${0.2 + rng.float() * 0.14})`;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.arc(30 + rng.float() * 36, 46 + rng.float() * 20, 14 + rng.float() * 8, rng.float() * Math.PI, rng.float() * Math.PI + 0.9 + rng.float() * 0.6);
+      ctx.stroke();
+    }
+    // dust lumps — settled ridges at the board's edge
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(226,220,204,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 8 + rng.float() * 80, 0.7 + rng.float() * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Grease cloud — the bloom a cooker breaths onto the ceiling above:
+ * a warm oily film, drips back down the plaster, a hot core. */
+export function greaseCloud(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 12;
+    const cy = 44 + (rng.float() - 0.5) * 12;
+    // the film — amber grease bloom, densest over the burners
+    const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 38);
+    g.addColorStop(0, 'rgba(148,110,58,0.34)');
+    g.addColorStop(0.55, 'rgba(148,110,58,0.16)');
+    g.addColorStop(1, 'rgba(148,110,58,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the hot core — where the steam column hits hardest
+    ctx.fillStyle = 'rgba(110,78,40,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 10 + rng.float() * 4, 8 + rng.float() * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // run-back drips — condensed fat lines under the bloom
+    for (let i = 0; i < 6; i++) {
+      const dx = cx - 22 + rng.float() * 44;
+      const dlen = 8 + rng.float() * 16;
+      const dg = ctx.createLinearGradient(dx, cy + 14, dx, cy + 14 + dlen);
+      dg.addColorStop(0, 'rgba(140,104,54,0.3)');
+      dg.addColorStop(1, 'rgba(140,104,54,0)');
+      ctx.fillStyle = dg;
+      ctx.fillRect(dx - 0.8, cy + 14, 1.6 + rng.float(), dlen);
+    }
+    // dust caught in the grease film
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(110,84,46,${0.2 + rng.float() * 0.2})`;
+      const a = rng.float() * Math.PI * 2;
+      const r = Math.pow(rng.float(), 0.7) * 30;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.7, 0.5 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

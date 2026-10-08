@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1527,6 +1527,23 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cd.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.005);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'counter-drips';
+  }
+  // The flour never left — a pale film and kneaded patch on the
+  // tops that fed the kitchen.
+  const KITCHEN_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['counter', 'merchantCounter', 'breakTable', 'sculleryRack', 'table', 'diningTable', 'picnicTable', 'schoolDesk']);
+  if (KITCHEN_TOPS.has(spec.kind) && rng.bool(0.16)) {
+    const dc = modelCollider(spec.kind);
+    const fd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.48, 0.44),
+      new THREE.MeshStandardMaterial({ map: flourDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    fd.name = 'flour-dust';
+    fd.userData.decalMat = true;
+    fd.rotation.x = -Math.PI / 2;
+    fd.rotation.z = rng.float() * Math.PI * 2;
+    fd.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.85) + 0.004, (rng.float() - 0.5) * 0.16);
+    prop.group.add(fd);
+    if (!prop.group.name) prop.group.name = 'flour-dust';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
