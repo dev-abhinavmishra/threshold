@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1572,6 +1572,51 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wd.position.set(0, (dc?.[1] ?? 1.8) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
     prop.group.add(wd);
     if (!prop.group.name) prop.group.name = 'wardrobe-dark';
+  }
+  // The shelves kept the gaps — dark slots where books were pulled
+  // and never came back.
+  const BOOKSHELVES: ReadonlySet<PropSpec['kind']> = new Set(['bookshelf', 'stackShelf', 'shelfWood', 'linenShelf', 'pantryShelf', 'shelf', 'bookCart']);
+  if (BOOKSHELVES.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const bg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.34),
+      new THREE.MeshStandardMaterial({ map: bookGap(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    bg.name = 'book-gap';
+    bg.userData.decalMat = true;
+    bg.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 1.6) * (0.35 + rng.float() * 0.45), (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(bg);
+    if (!prop.group.name) prop.group.name = 'book-gap';
+  }
+  // The desks kept the ink — blot and nib furrows under the pot.
+  const WRITING_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['writingDesk', 'desk', 'catalogueDesk', 'schoolDesk']);
+  if (WRITING_TOPS.has(spec.kind) && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const di = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.44),
+      new THREE.MeshStandardMaterial({ map: deskInk(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    di.name = 'desk-ink';
+    di.userData.decalMat = true;
+    di.rotation.x = -Math.PI / 2;
+    di.rotation.z = rng.float() * Math.PI * 2;
+    di.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.8) + 0.004, (rng.float() - 0.5) * 0.2);
+    prop.group.add(di);
+    if (!prop.group.name) prop.group.name = 'desk-ink';
+  }
+  // The pianos kept the dust — a settled film on the closed fall.
+  if (spec.kind === 'pianoUpright' && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const pd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.85, 0.4),
+      new THREE.MeshStandardMaterial({ map: pianoDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    pd.name = 'piano-dust';
+    pd.userData.decalMat = true;
+    pd.rotation.x = -Math.PI / 2;
+    pd.position.set(0, (dc?.[1] ?? 1.1) + 0.004, 0);
+    prop.group.add(pd);
+    if (!prop.group.name) prop.group.name = 'piano-dust';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
