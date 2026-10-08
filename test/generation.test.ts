@@ -1397,3 +1397,30 @@ describe('the Filer (sprint 297)', () => {
     }
   });
 });
+
+describe('the undertow (sprint 408)', () => {
+  it('rooms flanking both under-passages carry the seep, graded by distance', () => {
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      const gates = new Set<number>();
+      const ent = route.rooms.find((r) => r.templateId === 'ms-under-entrance');
+      if (ent) gates.add(ent.index);
+      const ret = route.rooms[Math.min(route.underReturn, route.rooms.length - 1)];
+      if (ret) gates.add(ret.index);
+      for (const r of route.rooms) {
+        const nearGate = [...gates].some((g) => Math.abs(r.index - g) <= 2);
+        if (nearGate) {
+          expect(r.underSeep, `gate-adjacent room ${r.index} unmarked on ${seed}`).not.toBeUndefined();
+          expect(r.underSeep!, `seep grade out of range ${seed} ${r.index}`).toBeLessThanOrEqual(2);
+        } else {
+          expect(r.underSeep, `far room ${r.index} seeps on ${seed}`).toBeUndefined();
+        }
+      }
+      // both gates are marked at grade 0
+      for (const g of gates) {
+        expect(route.rooms.find((r) => r.index === g)?.underSeep,
+          `gate room ${g} ungraded on ${seed}`).toBe(0);
+      }
+    }
+  });
+});

@@ -1421,6 +1421,34 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // The undertow — rooms flanking an under-passage pick up its damp:
+    // water-bloom overhead and water-stained wall bases, graded by how
+    // close the room sits to the gate.
+    if (room.underSeep !== undefined) {
+      const near = 1 - Math.min(room.underSeep, 2) / 3;
+      for (let i = 0; i < 1 + Math.floor(rng.float() * 2 * near); i++) {
+        const sz = 1.0 + rng.float() * 1.3;
+        const m = decalQuad(ceilingDamp(rng), sz, sz);
+        m.rotation.x = Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI;
+        m.position.set((rng.float() - 0.5) * (w - sz), h - 0.06, (rng.float() - 0.5) * (d - sz));
+        group.add(m);
+      }
+      for (let i = 0; i < 1 + Math.floor(rng.float() * 2); i++) {
+        const spot = pickWallSpot(0.8);
+        if (!spot) break;
+        wallDecal(spot.wall, grimeStreak(rng), 0.7 + rng.float() * 0.5, 0.4 + rng.float() * 0.3, spot.along, 0.26 + rng.float() * 0.2);
+      }
+      if (near > 0.5 && rng.float() < 0.8) {
+        const sz = 0.9 + rng.float() * 0.7;
+        const m = decalQuad(floorStain(rng), sz, sz);
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI;
+        m.position.set((rng.float() - 0.5) * (w - sz), 0.006, (rng.float() - 0.5) * (d - sz));
+        group.add(m);
+      }
+    }
+
     // Wall-mounted props (models are center-anchored; face +z → yaw per wall).
     const mountYaw = { e: -Math.PI / 2, w: Math.PI / 2, n: Math.PI, s: 0 } as const;
     const mounts: { kind: PropKind; y: number; p: number }[] = ({

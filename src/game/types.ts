@@ -194,6 +194,10 @@ export interface RoomInstance {
   darkRoom: boolean;
   /** Underscript: standing water — wading is slow and every step is loud. */
   flooded?: boolean;
+  /** Rooms flanking an under-passage — the subfloor seeps upward here.
+   *  Distance from the passage room (0 = the gate itself); graded so the
+   *  builder can thin the damp as the under's reach fades. */
+  underSeep?: number;
   authored: boolean;
   /** LOS-safe alcove volumes that count as physical safe spots. */
   safeZones: Aabb[];
