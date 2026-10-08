@@ -3892,3 +3892,17 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - e2e: dead-line leg — post-pull `makeCheckpoint` asserts
   `deadLines` includes the detective's room index.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, economy dead-line leg, build.
+
+## sprint 348 — the sign stays written
+
+- The scent board laundered for free: `hazard.evidence` (fresh work /
+  kill / wipe / blind marks the hunters read) is run-state, and a
+  checkpoint reload rebuilt it empty — the warden's trail of YOU went
+  blank while the ledgers kept your name.
+- `CheckpointSave.evidence` carries only non-`old` entries — authored
+  spent-socket sign re-derives from `addFromRoom` on restore, so it
+  isn't duplicated. `readBy`/`weak`/`wiped` ride along (a read mark
+  stays read, a wiped mark stays doubted); positions save as x/z,
+  `pos.y` restored 0 like every writer.
+- Gates: tsc, lint (vitest/sim batched with the next commits, per the
+  new cadence).

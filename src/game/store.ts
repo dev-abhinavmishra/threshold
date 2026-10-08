@@ -166,6 +166,11 @@ export interface CheckpointSave {
   // a pulled junction box stays off the wall — detective rooms that lost
   // their house line don't grow it back on a reload
   deadLines?: number[];
+  // the sign stays written — fresh work/kill/wipe marks the hunters read
+  // (authored 'old' sign re-derives from sockets, so it isn't carried)
+  evidence?: { room: number;
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work';
+    t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

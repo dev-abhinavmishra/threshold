@@ -633,6 +633,14 @@ export class Game {
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.deadLines = new Set(cp?.deadLines ?? []);
+    // the sign stays written — fresh marks the hunters already smelled
+    // ride the checkpoint; authored 'old' sign re-derives from sockets
+    for (const e of cp?.evidence ?? []) {
+      this.hazard.evidence.push({
+        pos: v3(e.x, 0, e.z), room: e.room, kind: e.kind, t: e.t,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+      });
+    }
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -4216,6 +4224,10 @@ export class Game {
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       deadLines: [...this.deadLines],
+      evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
+        room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+      })),
     };
   }
 
