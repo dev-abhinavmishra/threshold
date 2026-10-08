@@ -163,6 +163,9 @@ export interface CheckpointSave {
   wantedActive?: boolean;
   wantedRooms?: [number, { x: number; z: number }][];
   wantedRepostS?: number;
+  // a pulled junction box stays off the wall — detective rooms that lost
+  // their house line don't grow it back on a reload
+  deadLines?: number[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

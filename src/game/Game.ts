@@ -632,6 +632,7 @@ export class Game {
     this.wantedRooms = new Map(cp?.wantedRooms ?? []);
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
+    this.deadLines = new Set(cp?.deadLines ?? []);
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -889,6 +890,7 @@ export class Game {
       wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
+      lineDeadFor: (r) => this.deadLines.has(r), // a pulled box stays pulled past a checkpoint
       eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
       stockSighted: () => { this.unpaidHeld += 1; }, // he knows marked stock — the manifest is his
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
@@ -937,6 +939,9 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** Detective rooms whose house line was pulled — the dead wire is a
+   *  physical state (box gone, no re-mint) and it rides the checkpoint. */
+  private deadLines = new Set<number>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -3300,10 +3305,11 @@ export class Game {
         // Pulling the Detective's junction box — the broadcast dies on the
         // spot (or never starts), but the dead wire is damages he files
         // in his book. Sabotage is a price, not a trick.
-        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean } };
+        const d = it.data as unknown as { keeper?: { pulledLine(): void; lineDead: boolean }; roomIdx?: number };
         if (d.keeper?.lineDead) { it.enabled = false; return; }
         it.enabled = false;
         d.keeper?.pulledLine();
+        if (d.roomIdx !== undefined) this.deadLines.add(d.roomIdx);
         return;
       }
       case 'strip': {
@@ -4209,6 +4215,7 @@ export class Game {
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
+      deadLines: [...this.deadLines],
     };
   }
 

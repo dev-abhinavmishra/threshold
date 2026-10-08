@@ -3876,3 +3876,19 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `cpWanted` asserts one written after the repost mirrors the refilled
   board map 1:1. Both bind only when their phase held.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, undercast audit leg, build.
+
+## sprint 347 — the dead line stays dead
+
+- Same hole class as s332/346, entity-side this time: `lineDead` lived
+  on the Detective instance — a checkpoint reload re-scheduled him
+  fresh, and the pulled junction box re-minted mesh + verb, un-deading
+  the wire for free (box literally hung back on the wall).
+- Game-level `deadLines: Set<number>` keyed by the detective's
+  `spawnRoom` (carried on `data.roomIdx` at mint); `case 'houseLine'`
+  adds it post-pull; new ctx hook `lineDeadFor(roomIdx)` — `onSpawn`
+  consults it BEFORE minting box/verb, so a dead line never hangs in
+  the first place (`lineDead = true` set from the hook). CheckpointSave
+  carries `deadLines?: number[]`.
+- e2e: dead-line leg — post-pull `makeCheckpoint` asserts
+  `deadLines` includes the detective's room index.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, economy dead-line leg, build.

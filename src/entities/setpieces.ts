@@ -1389,8 +1389,11 @@ export class Detective extends Entity {
       enabled: true, priority: 3, // outrank desk loot sockets — his own drawer
     });
     // the house line — a junction box on the wall beside the entry door,
-    // the wire's only counterplay short of settling or outrunning it
-    {
+    // the wire's only counterplay short of settling or outrunning it.
+    // A pull survives the checkpoint: if this room's line is already
+    // dead, the box never hangs there in the first place.
+    this.lineDead = c.lineDeadFor?.(this.spawnRoom) === true;
+    if (!this.lineDead) {
       const ex = room.entryDir?.x ?? 0, ez = room.entryDir?.z ?? -1;
       const px = -ez, pz = ex; // wall direction, beside the door
       this.linePos = v3(
@@ -1410,7 +1413,7 @@ export class Detective extends Entity {
         kind: 'houseLine', id: this.lineId(),
         pos: v3(this.linePos.x, 0.95, this.linePos.z),
         prompt: 'Pull the house line', holdTime: 1.4,
-        data: { keeper: this as unknown as Record<string, unknown> },
+        data: { keeper: this as unknown as Record<string, unknown>, roomIdx: this.spawnRoom },
         enabled: true, priority: 3,
       });
     }
