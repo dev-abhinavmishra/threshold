@@ -3869,3 +3869,48 @@ describe('the feet wicked the damp (sprint 488)', () => {
     expect(n, 'no leg rings').toBeGreaterThan(0);
   });
 });
+
+describe('the rail kept its dust (sprint 489)', () => {
+  it('a grey ledge and nail pits ride the picture rail', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'rail-dust') n++; });
+      }
+    }
+    expect(n, 'no rail dust').toBeGreaterThan(0);
+  });
+});
+
+describe('the table kept its rings (sprint 489)', () => {
+  it('glass rings and polish blooms mark the tops', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'wax-rings') n++; });
+      }
+    }
+    expect(n, 'no wax rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the basket shed (sprint 489)', () => {
+  it('wicker splinters and fiber wisps lie under the hampers', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'basket-shed') n++; });
+      }
+    }
+    expect(n, 'no basket shed').toBeGreaterThan(0);
+  });
+});

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1918,6 +1918,23 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ps.position.set(0, (dc?.[1] ?? 1.2) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
     prop.group.add(ps);
     if (!prop.group.name) prop.group.name = 'pin-scars';
+  }
+  // The table kept its rings — glass rings and a polish bloom on
+  // the tops that held glasses and plates for decades.
+  const TABLE_TOPS = new Set(['diningTable', 'consoleTable', 'roundTable', 'breakTable', 'coffeeTable', 'picnicTable']);
+  if (TABLE_TOPS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const wr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.9),
+      new THREE.MeshStandardMaterial({ map: waxRings(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    wr.name = 'wax-rings';
+    wr.userData.decalMat = true;
+    wr.rotation.x = -Math.PI / 2;
+    wr.rotation.z = rng.float() * Math.PI * 2;
+    wr.position.set(0, (dc?.[1] ?? 0.75) + 0.006, 0);
+    prop.group.add(wr);
+    if (!prop.group.name) prop.group.name = 'wax-rings';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

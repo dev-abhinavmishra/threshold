@@ -6087,3 +6087,114 @@ export function legRings(rng: Rng): THREE.Texture | null {
     g.fillRect(12, 78, 72, 18);
   });
 }
+
+/** Sprint 489 — the rail kept its dust: a grey ledge line on the picture rail, flyspecks and nail pits. */
+export function railDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust ledge — a soft band sitting on the rail's top edge
+    const ledge = g.createLinearGradient(0, 4, 0, 20);
+    ledge.addColorStop(0, 'rgba(170,160,146,0.55)');
+    ledge.addColorStop(1, 'rgba(170,160,146,0.05)');
+    g.fillStyle = ledge;
+    g.fillRect(4, 4, 88, 16);
+    // thicker drifts in the corners and at the ends
+    g.fillStyle = 'rgba(178,168,152,0.5)';
+    g.beginPath(); g.ellipse(12, 10, 10, 5, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(84, 9, 9, 4.5, 0, 0, Math.PI * 2); g.fill();
+    // flyspecks across the ledge
+    g.fillStyle = 'rgba(40,34,28,0.6)';
+    for (let i = 0; i < 26; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(5, 16), 0.8, 0.8);
+    }
+    // nail pits where hooks once bit the rail
+    g.fillStyle = 'rgba(36,30,24,0.65)';
+    for (let i = 0; i < 5; i++) {
+      const x = 16 + i * 16 + rng.range(-3, 3);
+      g.beginPath(); g.arc(x, 24 + rng.range(-2, 2), 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(x - 0.3, 24, 0.6, 4 + rng.float() * 3);
+    }
+    // paint line where the rail meets plaster — a shadow seam
+    g.strokeStyle = 'rgba(50,42,36,0.4)';
+    g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(2, 30); g.lineTo(94, 30); g.stroke();
+  });
+}
+
+/** Sprint 489 — the table kept its rings: glass rings, a polish bloom and crumbs under the plates. */
+export function waxRings(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // polish bloom — a broad soft sheen where the wax was last rubbed
+    const bloom = g.createRadialGradient(cx - 8, cy - 6, 4, cx - 8, cy - 6, 40);
+    bloom.addColorStop(0, 'rgba(200,190,168,0.28)');
+    bloom.addColorStop(1, 'rgba(200,190,168,0)');
+    g.fillStyle = bloom;
+    g.fillRect(0, 0, 96, 96);
+    // glass rings — three overlapping rings at different alphas
+    for (let i = 0; i < 3; i++) {
+      const x = cx + rng.range(-22, 22), y = cy + rng.range(-20, 20);
+      const r = 9 + rng.float() * 5;
+      g.strokeStyle = `rgba(60,50,40,${0.35 + rng.float() * 0.2})`;
+      g.lineWidth = 1.6 + rng.float();
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke();
+      // the wet edge of the ring — a darker crescent
+      g.strokeStyle = 'rgba(40,32,26,0.4)';
+      g.lineWidth = 1;
+      g.beginPath(); g.arc(x, y, r, rng.range(0, 2), rng.range(2.5, 4.5)); g.stroke();
+    }
+    // crumb trail — a scatter line from the plate edge outward
+    g.fillStyle = 'rgba(140,120,90,0.55)';
+    const tx = rng.range(-1, 1), ty = rng.range(-1, 1);
+    const tl = Math.hypot(tx, ty) || 1;
+    for (let i = 0; i < 12; i++) {
+      const t = i / 11;
+      g.fillRect(cx + (tx / tl) * (8 + t * 30) + rng.range(-4, 4), cy + (ty / tl) * (8 + t * 30) + rng.range(-4, 4), 1.5, 1.2);
+    }
+    // knife score — fine parallel scratches in the sheen
+    g.strokeStyle = 'rgba(90,78,64,0.3)';
+    g.lineWidth = 0.6;
+    for (let i = 0; i < 5; i++) {
+      const x = cx + rng.range(-16, 16), y = cy + rng.range(-12, 12);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(6, 14), y + rng.range(-2, 3)); g.stroke();
+    }
+  });
+}
+
+/** Sprint 489 — the basket shed: wicker splinters and fiber wisps scattered under the weave. */
+export function basketShed(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // fiber halo — fine pale wisps spreading from the basket's foot
+    g.strokeStyle = 'rgba(160,146,118,0.35)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 22; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r0 = rng.range(10, 20), len = rng.range(12, 30);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      g.quadraticCurveTo(
+        cx + Math.cos(a) * (r0 + len * 0.5) + rng.range(-4, 4), cy + Math.sin(a) * (r0 + len * 0.5) + rng.range(-4, 4),
+        cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len));
+      g.stroke();
+    }
+    // wicker splinters — short straw slivers
+    g.fillStyle = 'rgba(148,130,100,0.6)';
+    for (let i = 0; i < 16; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(8, 42);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      g.save(); g.translate(x, y); g.rotate(rng.range(0, Math.PI));
+      g.fillRect(-rng.range(2, 5), -0.5, rng.range(4, 10), 1); g.restore();
+    }
+    // the shadow foot — where the basket always sits
+    const foot = g.createRadialGradient(cx, cy, 2, cx, cy, 16);
+    foot.addColorStop(0, 'rgba(46,38,30,0.45)');
+    foot.addColorStop(1, 'rgba(46,38,30,0)');
+    g.fillStyle = foot;
+    g.fillRect(cx - 18, cy - 18, 36, 36);
+    // dust between the splinters
+    g.fillStyle = 'rgba(120,110,94,0.3)';
+    for (let i = 0; i < 18; i++) {
+      g.fillRect(cx + rng.range(-30, 30), cy + rng.range(-30, 30), 1.1, 1);
+    }
+  });
+}
