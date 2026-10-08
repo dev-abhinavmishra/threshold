@@ -4777,3 +4777,14 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 262, sim 5/5, locker leg green
   (itemize → join → named → cut → rot → shelf-refuse → buyback),
   build.
+
+## sprint 425 — the wiring shows
+
+- Ceiling depth in the service bones: 40% of maintenance/underscript/
+  unlit rooms get 1-2 `hangingCable`/`conduitRun` props at y h-0.28,
+  door-lane-cleared via `footprintInDoorLane(spec, ...)`. Named
+  'ceiling-cable'.
+- `footprintInDoorLane` takes the spec shape ({width,depth,entry,
+  exits}) — pass `spec` directly, not doorPositions.
+- Vitest 267: 'the wiring shows' (main + under). Gates: tsc, lint,
+  sim 5/5. Visual dressing only — no e2e leg.
