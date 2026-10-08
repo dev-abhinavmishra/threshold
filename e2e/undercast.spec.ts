@@ -1474,8 +1474,54 @@ test('the deep tier — the machines read the boards, the index closes', async (
       boardCap = caps.slice(cap0).find((c) => /index closes to you/.test(c)) ?? '';
       ga.paperTrail = 0;
     }
+    // 3. sprint 373 — the tally's deep tier reaches the Broker's own
+    // till: trade refuses at six, the fix and the purse stay open
+    const brokerRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.broker !== undefined && s.meta.sold !== true));
+    let tillRefused = false, tillCap = '', tillPrompt = '', tillSold = false;
+    if (brokerRoom) {
+      const till = (brokerRoom.sockets ?? []).find((s) => s.meta?.broker !== undefined && s.meta.sold !== true);
+      if (!till?.meta) return { stage: 'no-till' } as const;
+      ga.unpaidTheft = 6;
+      ga.marginalia = 80;
+      g.player.teleport(brokerRoom.origin.x, 0, brokerRoom.origin.z);
+      ga.currentRoom = brokerRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const tx = brokerRoom.origin.x - till.pos.x, tz = brokerRoom.origin.z - till.pos.z;
+      const tl = Math.hypot(tx, tz) || 1;
+      g.player.teleport(till.pos.x + (tx / tl) * 0.9, 0, till.pos.z + (tz / tl) * 0.9);
+      const cap0 = caps.length;
+      // prompt-gated press — the purse/fix anchors flank the pedestals
+      // and a blind hold presses whichever wins focus
+      const gi = g as unknown as { input: { interactPressed: boolean } };
+      for (let f = 0; f < 50 && !caps.slice(cap0).some((c) => /till holds its stock|marginalia required/.test(c)); f++) {
+        const ax = till.pos.x - g.player.pos.x, az = till.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(till.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        if (f < 5) tillPrompt = ga.interaction.focused?.prompt ?? tillPrompt;
+        if (/trade wares/i.test(ga.interaction.focused?.prompt ?? '')) gi.input.interactPressed = true;
+        g.frame();
+        gi.input.interactPressed = false;
+      }
+      tillRefused = till.meta.sold !== true && ga.marginalia === 80;
+      tillCap = caps.slice(cap0).find((c) => /till holds its stock/.test(c)) ?? '';
+      ga.unpaidTheft = 0;
+      for (let f = 0; f < 90 && till.meta.sold !== true; f++) {
+        const ax = till.pos.x - g.player.pos.x, az = till.pos.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(till.pos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        if (/trade wares/i.test(ga.interaction.focused?.prompt ?? '')) gi.input.interactPressed = true;
+        g.frame();
+        gi.input.interactPressed = false;
+      }
+      tillSold = till.meta.sold === true;
+      ga.unpaidTheft = 0;
+    }
     return { stage: 'done' as const, vendRefused, vendCap, vendPrompt, vendSold,
-      boardRefused, boardCap, boardPrompt, caps: caps.slice(-8) };
+      boardRefused, boardCap, boardPrompt,
+      tillRefused, tillCap, tillPrompt, tillSold, caps: caps.slice(-8) };
   });
 
   if (result.stage !== 'done') test.skip();
@@ -1483,6 +1529,10 @@ test('the deep tier — the machines read the boards, the index closes', async (
   expect(result.vendRefused, result.vendPrompt).toBe(true);
   expect(result.vendCap).toMatch(/holds its stock/);
   expect(result.vendSold).toBe(true);
+  // sprint 373 — the under's own counter: trade refuses at six, sells at zero
+  expect(result.tillRefused, result.tillPrompt).toBe(true);
+  expect(result.tillCap, JSON.stringify({ p: result.tillPrompt, caps: result.caps })).toMatch(/desk is the only answer/);
+  expect(result.tillSold).toBe(true);
   // the file at six — the asking paper holds its page, no spend
   expect(result.boardRefused, result.boardPrompt).toBe(true);
   expect(result.boardCap).toMatch(/index closes to you/);

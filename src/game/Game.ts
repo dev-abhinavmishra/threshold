@@ -2028,6 +2028,15 @@ export class Game {
           this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
           return;
         }
+        // The tally's deep tier reaches the under's own counter: at six
+        // tallied the Broker holds his stock — the desk is the only
+        // answer. The purse, the fence, the fix and the book stay open:
+        // laundering and settling aren't commerce.
+        if (this.unpaidTheft >= 6) {
+          this.cue('door-locked', it.pos,
+            '[he reads the tally — the till holds its stock · the desk is the only answer]', 'warn');
+          return;
+        }
         const item = sock.meta.brokerItem as ItemId;
         const price = (sock.meta.brokerPrice as number) ?? 20;
         // the clerks' score is on your hands — an unpaid tally trades at
@@ -2286,7 +2295,7 @@ export class Game {
         const t = this.paperTrail, th = this.unpaidTheft;
         this.cue('whisper', it.pos, t === 1 && th === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}]`);
         return;
       }
       case 'purse': {
