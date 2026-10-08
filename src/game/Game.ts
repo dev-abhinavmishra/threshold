@@ -666,6 +666,7 @@ export class Game {
     this.spillMeshes.clear();
     this.primedStingDone.clear();
     this.hotImprints = cp?.hotImprints ?? 0;
+    this.hotMarginalia = cp?.hotMarginalia ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
     // the wanted episode rides the checkpoint too — torn boards stay
@@ -738,6 +739,12 @@ export class Game {
       const at = dr.fuse > 7 ? until - 7 : this.clock.time;
       this.hookRings.push({ key: dr.key, pos: { x: dr.x, y: 1.4, z: dr.z }, at, until, lastRing: 0, dial: true });
     }
+    // sprint 404 — a spent or pried spring stays down across a reload
+    for (const st of cp?.snappedTraps ?? []) this.snappedTraps.add(st);
+    for (const pt of cp?.priedTraps ?? []) this.priedTraps.add(pt);
+    // sprint 406 — a slid rug or splashed puddle is spent too
+    for (const sr of cp?.slippedRugs ?? []) this.slippedRugs.add(sr);
+    for (const sp of cp?.slippedPuddles ?? []) this.slippedPuddles.add(sp);
     // the count's locker keeps its tag — seized goods stay claimable
     // at the cage across a reload (a fresh run mints nothing)
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
@@ -1029,16 +1036,17 @@ export class Game {
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
-        if (take.length === 0 && this.hotImprints <= 0) return false;
+        if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
         const seized = take.map((i) => ({ id: i.id, count: i.count }));
         for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
         this.inventory = this.inventory.filter((i) => i.count > 0);
         // the take doesn't vanish — the count locks it in the nearest
         // claim cage under a fresh tag, claimable back like any bag.
         // The coin is itemized on the same tag — the count's paper
-        // lists what it swallowed (sprint 382).
-        this.stashSeized(seized, this.hotImprints);
+        // lists what it swallowed (sprint 382), marked pages too (s409).
+        this.stashSeized(seized, this.hotImprints + this.hotMarginalia);
         this.hotImprints = 0;
+        this.hotMarginalia = 0;
         return true;
       },
       // sprint 393 — the kicked wedge rides under the leaf: the bellman's
@@ -1066,6 +1074,40 @@ export class Game {
           && Math.hypot(e.pos.x - x, e.pos.z - z) < r);
         for (const e of out) if (!e.wiped) e.readBy.push(key);
         return out;
+      },
+      // sprint 410-411 — the house re-lays its own work: a reader that
+      // reached a dead hazard's sign brings it back — wire re-tied, bled
+      // lines re-pressurized, wheels re-engaged, felt stripped off its
+      // eyes. Death flags are the source of truth: a restored hazard
+      // simply leaves the deadHazards checkpoint list, and the
+      // tug-of-war is symmetric — restored work threatens walkers too.
+      rearmHazard: (kind, x, z) => {
+        const near = (p: { x: number; z: number }) => Math.hypot(p.x - x, p.z - z) < 1.4;
+        if (kind === 'wire') {
+          const s = this.hazard.snares.find((hz) => !hz.armed && near(hz.pos));
+          if (!s) return null;
+          s.armed = true;
+          return 'snare';
+        }
+        if (kind === 'line') {
+          const s = this.hazard.steams.find((st) => st.dead && near(st.pos));
+          if (!s) return null;
+          s.dead = false;
+          return 'steam';
+        }
+        if (kind === 'fan') {
+          const f = this.hazard.fans.find((ff) => ff.dead && near(ff.pos));
+          if (!f) return null;
+          f.dead = false;
+          return 'fan';
+        }
+        if (kind === 'blind') {
+          const w = this.hazard.watchers.find((ww) => ww.dead && near(ww.pos));
+          if (!w) return null;
+          w.dead = false; // the felt is confiscated — the house pockets your wrap
+          return 'eye';
+        }
+        return null;
       },
     };
   }
@@ -2382,7 +2424,7 @@ export class Game {
         const marked = this.unpaidTheft > 0;
         const effPrice = marked ? price + Math.min(4 + this.unpaidTheft * 2, 14) : price;
         if (this.marginalia >= effPrice) {
-          this.marginalia -= effPrice;
+          this.chargedMarginalia(effPrice, it.pos.x, it.pos.z);
           sock.meta.sold = true;
           it.enabled = false;
           this.giveItem(item, 1);
@@ -2413,7 +2455,7 @@ export class Game {
             `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         if (this.unpaidTheft >= this.unpaidHeld && this.unpaidTheft >= this.paperTrail) {
           this.unpaidTheft -= 1;
           this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the tally · ${price} marginalia]`, 'info');
@@ -2650,7 +2692,7 @@ export class Game {
             `[the fenced take costs ${bPrice} marginalia — the house's margin was the point]`, 'warn');
           return;
         }
-        this.marginalia -= bPrice;
+        this.chargedMarginalia(bPrice, it.pos.x, it.pos.z);
         const back = this.fencedTake
           .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
           .join(' · ');
@@ -2674,7 +2716,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the book wants ${bPrice} marginalia — even questions have a price]`, 'warn');
           return;
         }
-        this.marginalia -= bPrice;
+        this.chargedMarginalia(bPrice, it.pos.x, it.pos.z);
         this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
         // the book knows the locker too — a pending seize tag reads
@@ -2693,6 +2735,34 @@ export class Game {
           : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
         return;
       }
+      case 'askTally': {
+        // sprint 408 — the tally answers back too: the Auditor's own
+        // ledger reads you out loud, priced like the other two books.
+        // The asking is itself a filed question (the index counts this
+        // one) — and the readout knows what the tally's book cares
+        // about: the thefts owed, whether the boards still listen, and
+        // the tag the count keeps.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        if (this.marginalia < 3) {
+          this.cue('door-locked', it.pos, '[the tally wants 3 marginalia — even questions have a price]', 'warn');
+          return;
+        }
+        this.chargedMarginalia(3, it.pos.x, it.pos.z);
+        this.fileQuestion();
+        const th2 = this.unpaidTheft;
+        const tagN = this.seizedTake.reduce((n, s) => n + s.count, 0);
+        const boardsBit = this.wantedActive ? ' · the boards still listen' : '';
+        const deepBit = th2 >= 6 ? ' · the tills hold their stock' : '';
+        const tagBit = tagN > 0 ? ` · the count keeps ${tagN} of yours tagged` : '';
+        this.cue('whisper', it.pos, th2 === 0 && !this.wantedActive && tagN === 0
+          ? '[the tally keeps no line on you — clean hands]'
+          : `[the tally on you — ${th2} theft${th2 === 1 ? '' : 's'} owed${boardsBit}${deepBit}${tagBit}]`);
+        return;
+      }
       case 'purse': {
         if (this.space !== 'under') {
           // The clerk changes the other way — 8 marginalia for
@@ -2708,7 +2778,7 @@ export class Game {
           }
           const filed = this.unpaidHeld > 0;
           const gain = filed ? 4 : 6;
-          this.marginalia -= 8;
+          this.chargedMarginalia(8, it.pos.x, it.pos.z);
           this.imprints += gain;
           this.stats.imprintsEarned += gain;
           this.cue('purchase', it.pos, filed
@@ -3047,7 +3117,7 @@ export class Game {
             `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
           return;
         }
-        if (cur) this.marginalia -= price;
+        if (cur) this.chargedMarginalia(price, it.pos.x, it.pos.z);
         else this.chargedImprints(price, it.pos.x, it.pos.z);
         if (cur) this.unpaidTheft += this.wantedActive ? 2 : 1; // a claim on somebody else's effects — the crew keeps score; named, the tag writes double
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
@@ -3063,6 +3133,7 @@ export class Game {
           const amt = (sock.meta.amount as number) ?? 8;
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // crew's purse — torn edges testify at the under's tills
           this.cue('pickup', it.pos, `[the effects held a purse — +${amt} marginalia]`);
         } else if (contains === 'imprints') {
           const amt = (sock.meta.amount as number) ?? 10;
@@ -3098,7 +3169,7 @@ export class Game {
             `[the tag reads ${sPrice} marginalia — your own take costs what any bag costs]`, 'warn');
           return;
         }
-        this.marginalia -= sPrice;
+        this.chargedMarginalia(sPrice, it.pos.x, it.pos.z);
         // like the index's asks — while the boards name you, the tag
         // reads in your own name and files double
         this.unpaidTheft += this.wantedActive ? 2 : 1;
@@ -3308,7 +3379,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3349,7 +3420,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3391,7 +3462,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3428,7 +3499,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the counter-claim wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.paperTrail = Math.max(0, this.paperTrail - 2) + 1;
@@ -3452,7 +3523,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the return slip wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.unpaidTheft = Math.max(0, this.unpaidTheft - 2) + 1;
@@ -3476,7 +3547,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the amendment wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         const buried = this.crewCount.pending;
@@ -3593,7 +3664,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the ledger asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= toll;
+        this.chargedMarginalia(toll, it.pos.x, it.pos.z);
         this.unpaidTheft = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -3612,7 +3683,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the index asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= toll;
+        this.chargedMarginalia(toll, it.pos.x, it.pos.z);
         this.paperTrail = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -3668,7 +3739,7 @@ export class Game {
         if (this.imprints >= price) {
           this.chargedImprints(price, it.pos.x, it.pos.z); paid = true;
         }
-        else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
+        else if (this.marginalia >= 1) { this.chargedMarginalia(1, it.pos.x, it.pos.z); paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;
           d.pay();
@@ -3797,7 +3868,7 @@ export class Game {
         }
         // a marked coin testifies in the slot like at any till (s335);
         // under, the page is just a page
-        if (under) this.marginalia -= 1; else this.chargedImprints(1, at.x, at.z);
+        if (under) this.chargedMarginalia(1, at.x, at.z); else this.chargedImprints(1, at.x, at.z);
         const scare = this.streams.roomStream('scare', this.currentRoom * 397 + 29);
         const ringAt = this.clock.time + 3.5 + scare.range(0, 3);
         this.hookRings.push({ key: target.key, pos: target.pos, at: ringAt, until: ringAt + 7, lastRing: 0, dial: true });
@@ -3915,6 +3986,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(8, 14);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // pilfered pages — torn edges testify at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — pins in the hem]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[linen lifted]' });
@@ -3931,6 +4003,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // pilfered pages testify at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the sledge]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -3966,6 +4039,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // its own pages — the index files the hands that spend them
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the index]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -3997,6 +4071,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // off HIS book — the torn edge testifies at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the tally]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -4069,6 +4144,7 @@ export class Game {
         const amt = this.streams.stream('loot').int(3, 6);
         this.marginalia += amt;
         this.stats.marginaliaEarned += amt;
+        this.hotMarginalia += amt; // the crew's coin — torn edges testify at the under's tills
         this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
         return;
       }
@@ -5103,6 +5179,7 @@ export class Game {
       unpaidHeld: this.unpaidHeld,
       paperTrail: this.paperTrail,
       hotImprints: this.hotImprints,
+      hotMarginalia: this.hotMarginalia,
       hotItems: [...this.hotItems],
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
@@ -5152,6 +5229,10 @@ export class Game {
             fuse: Math.max(0, hr.until - this.clock.time),
           }))
         : undefined,
+      snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
+      priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
+      slippedRugs: this.slippedRugs.size > 0 ? [...this.slippedRugs] : undefined,
+      slippedPuddles: this.slippedPuddles.size > 0 ? [...this.slippedPuddles] : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -5210,6 +5291,7 @@ export class Game {
           books: {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
+            hotPages: this.hotMarginalia,
             seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
             // dead — the live tag rots, so its listed coin is kept too
             coinKept: this.coinKept + this.seizedCoin,
@@ -5248,6 +5330,7 @@ export class Game {
         coinKept: this.coinKept + this.seizedCoin,
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
+        hotPages: this.hotMarginalia,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -6910,6 +6993,26 @@ export class Game {
       '[the till knows its own coin — the register files the hands that fed it]', 'warn');
   }
 
+  /** sprint 409 — the under's coin is marked too: marginalia off a
+   *  pilfered book or satchel is torn-edged, and every hot page that
+   *  lands in an under till testifies — the index files the hands that
+   *  fed it, the way the house's register files a marked imprint. */
+  private hotMarginalia = 0;
+
+  /** Spend marginalia at an under service — the marked pages go first,
+   *  and each one that lands files a question at the index. */
+  private chargedMarginalia(n: number, x: number, z: number): void {
+    this.marginalia -= n;
+    const hot = Math.min(n, this.hotMarginalia);
+    if (hot <= 0) return;
+    this.hotMarginalia -= hot;
+    this.fileQuestion();
+    this.sound.emit({ x, y: 1, z, intensity: 0.45, category: 'distraction',
+      caption: '[a torn edge lands where it fell]' });
+    this.cue('machine', v3(x, 1, z),
+      '[the book knows its own pages — the index files the hands that fed it]', 'warn');
+  }
+
   /** The marked-stock pool only testifies while its units are still
    *  carried — the last unit consumed drops the mark, so a fresh clean
    *  ware of that id is never the take. Pruned per frame; the pool is
@@ -7903,6 +8006,150 @@ export class Game {
         this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
         this.player.health = Math.max(3, this.player.health - 4);
         this.player.panic = Math.min(1, this.player.panic + 0.08);
+      }
+    }
+
+    // sprint 404 — the trap doesn't care whose foot: a walker crossing a
+    // live trap eats the same snap — staggered mid-stride, loud enough
+    // that everything else hears the room has teeth.
+    for (const tp of this.liveTraps) {
+      if (this.snappedTraps.has(tp.key)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - tp.x, edz = epos.z - tp.z;
+        if (edx * edx + edz * edz >= 0.55 * 0.55) continue;
+        this.snappedTraps.add(tp.key);
+        ent.stagger(1.7);
+        const at = { x: tp.x, y: 0.05, z: tp.z };
+        this.audio.play('trap-snap', at, '[the trap fires — it found a foot that was not yours]', 'warn');
+        this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
+        break;
+      }
+    }
+
+    // sprint 405 — the wire doesn't care whose foot either: a walker
+    // crossing an armed paper seal trips it like you would — rooted a
+    // beat, loud, and the sprung wire leaves fresh sign where it fell.
+    // Entities have no crouch: a submerged wire trips an upright stride
+    // it could never feel for.
+    for (const hz of this.hazard.snares) {
+      if (!hz.armed) continue;
+      let tripper: Entity | null = null;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - hz.pos.x, edz = epos.z - hz.pos.z;
+        if (edx * edx + edz * edz < 0.7 * 0.7) { tripper = ent; break; }
+      }
+      if (!tripper) continue;
+      hz.armed = false;
+      this.hazard.evidence.push({ pos: v3(hz.pos.x, 0, hz.pos.z), room: hz.room, kind: 'wire', t: this.clock.time, readBy: [] });
+      tripper.stagger(1.6);
+      this.audio.play('trap-snap', { x: hz.pos.x, y: 0.2, z: hz.pos.z },
+        '[paper screams — a foot that was not yours]', 'warn');
+      this.sound.emit({ x: hz.pos.x, y: 0.4, z: hz.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
+    }
+
+    // sprint 406 — the floor slides under his stride too: a walker
+    // crossing a loose rug or a wet floor loses his footing like you
+    // do — one trip each, and the stumble carries to the next room.
+    for (const rg of this.liveRugs) {
+      if (this.slippedRugs.has(rg.key)) continue;
+      let tripped = false;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - rg.x, edz = epos.z - rg.z;
+        if (edx * edx + edz * edz >= 0.85 * 0.85) continue;
+        this.slippedRugs.add(rg.key);
+        ent.stagger(1.2);
+        this.audio.play('rug-slide', { x: rg.x, y: 0.05, z: rg.z },
+          '[the rug slides — a stride that was not yours]', 'warn');
+        this.sound.emit({ x: rg.x, y: 0.1, z: rg.z, intensity: 0.3, category: 'footstep', caption: '[a stumble]' });
+        tripped = true;
+        break;
+      }
+      if (tripped) continue;
+    }
+    for (const pd of this.livePuddles) {
+      if (this.slippedPuddles.has(pd.key)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - pd.x, edz = epos.z - pd.z;
+        if (edx * edx + edz * edz >= 0.8 * 0.8) continue;
+        this.slippedPuddles.add(pd.key);
+        ent.stagger(1.5);
+        this.audio.play('puddle-splash', { x: pd.x, y: 0.05, z: pd.z },
+          '[the floor takes his feet — water everywhere]', 'warn');
+        this.sound.emit({ x: pd.x, y: 0.1, z: pd.z, intensity: 0.45, category: 'footstep', caption: '[a splash]' });
+        break;
+      }
+    }
+
+    // sprint 407 — the blast, the blades, and the amber water don't
+    // check whose shoulders they take either: a walker inside a firing
+    // steam vent, under a live belt-wheel, or wading live water is
+    // staggered like standing flesh is cut — one lurch per source, and
+    // the bite carries to the next room.
+    const curRoomIdx = this.activeRooms()[this.currentRoom]?.index;
+    for (const pu of this.hazard.puddles) {
+      if (pu.room !== curRoomIdx) continue;
+      const rm = this.activeRooms().find((r) => r.index === pu.room);
+      if (!rm?.flooded || this.drainedRooms.has(`${this.space}:${pu.room}`)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - pu.pos.x, edz = epos.z - pu.pos.z;
+        if (edx * edx + edz * edz >= pu.radius * pu.radius) continue;
+        ent.stagger(0.4);
+        if (tA - (pu.entT ?? -10) > 3) {
+          pu.entT = tA;
+          this.audio.play('steam-hiss', { x: pu.pos.x, y: 0.2, z: pu.pos.z },
+            '[the water crackles — something else is in it]', 'warn');
+          this.sound.emit({ x: pu.pos.x, y: 0.2, z: pu.pos.z, intensity: 0.45, category: 'machine', caption: '[the water arcs]' });
+        }
+        break;
+      }
+    }
+    for (const st of this.hazard.steams) {
+      if (st.dead || st.room !== curRoomIdx || st.phase >= 1.8) continue;
+      if (tA - (st.entT ?? -1) <= 1.6) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - st.pos.x, edz = epos.z - st.pos.z;
+        if (edx * edx + edz * edz >= 1.3 * 1.3) continue;
+        st.entT = tA;
+        ent.stagger(0.9);
+        this.audio.play('steam-hiss', { x: st.pos.x, y: 0.5, z: st.pos.z },
+          '[the blast takes his shoulders — a scalding that was not yours]', 'warn');
+        this.sound.emit({ x: st.pos.x, y: 0.5, z: st.pos.z, intensity: 0.5, category: 'machine', caption: '[a line vents]' });
+        break;
+      }
+    }
+    for (const f of this.hazard.fans) {
+      if (f.dead || f.room !== curRoomIdx) continue;
+      if (tA - (f.entT ?? -1) <= 1.4) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - f.pos.x, edz = epos.z - f.pos.z;
+        if (edx * edx + edz * edz >= 1.0) continue;
+        f.entT = tA;
+        ent.stagger(1.2);
+        this.audio.play('steam-hiss', { x: f.pos.x, y: 1.2, z: f.pos.z },
+          '[the wheel bites — a shoulder that was not yours]', 'warn');
+        this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.55, category: 'machine', caption: '[the wheel bites]' });
+        break;
       }
     }
 

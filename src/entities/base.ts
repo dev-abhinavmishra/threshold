@@ -104,6 +104,13 @@ export interface EntityCtx {
    *  so each hunter reads each sign once. Optional for headless ctxs. */
   hazardEvidence?: (readerKey: string, x: number, z: number, radius: number)
     => { pos: Vec3; room: number; kind: string; t: number; old?: boolean; weak?: boolean; wiped?: boolean }[];
+  /** The house re-lays its own work: a floorkeeper that reads a dead
+   *  hazard's sign can bring it back near that spot — wire re-tied,
+   *  bled lines re-pressurized, killed wheels re-engaged, felt stripped
+   *  off its eyes (the wrap is confiscated — the house pockets it).
+   *  Returns what it restored, or null. Optional for headless ctxs. */
+  rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind', x: number, z: number)
+    => 'snare' | 'steam' | 'fan' | 'eye' | null;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

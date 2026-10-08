@@ -5388,6 +5388,71 @@ coin AND a sound where you stand.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
 
+## Sprint 404 — the trap doesn't care whose foot
+Armed mousetraps were player-only: a hunter walked over a live spring
+for free. Now any entity with a threatPos inside the 0.55m snap radius
+eats it — `snappedTraps.add` + `ent.stagger(1.7)` + the same 0.55
+'footstep' pull, so the room's teeth cost everyone alike. The snap is
+loud on purpose: a staggers is bought with a summon.
+
+- Whichever foot lands first spends the spring (the player's own check
+  still wins by frame order — he can't retro-bite you).
+- `snappedTraps`/`priedTraps` now ride the checkpoint — a reload no
+  longer re-arms a spring anyone already spent (the s347 class of
+  laundering, closed for traps).
+- e2e leg plants a grafter on a live trap: snap → stagger flag →
+  pull emit at the trap → player's health untouched.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
+## Sprint 405 — the wire doesn't care whose foot either
+Armed paper snares tripped only the player — a hunter crossed a live
+seal for free. Same two-ways patch as the trap: any entity's threatPos
+inside the 0.7m trip radius springs it — `armed=false` + stagger(1.6) +
+the same 0.8 'impact' pull + a fresh 'wire' sign where it fell.
+
+- Entities have no crouch: a submerged wire trips an upright stride it
+  could never feel for (the crouch exemption is player-only by design).
+- Snare death already rode `deadHazards` — entity trips persist free.
+- e2e leg parks the player 2.5m clear, plants a grafter on the seal:
+  armed→spent, stagger flag, pull at the wire, 'wire' evidence pushed,
+  and the cue reads 'a foot that was not yours'.
+
+Gates: tsc, lint, build; hazards leg 1/1.
+
+## Sprint 406 — the floor slides under his stride too
+Loose rugs and wet floors were player-only slips. A walker crossing an
+armed rug (0.85m) or puddle (0.8m) now loses his footing like you do —
+one trip each: `slippedRugs`/`slippedPuddles` + stagger (1.2s/1.5s) +
+the same 'stumble'/'splash' emits.
+
+- `slippedRugs`/`slippedPuddles` now ride the checkpoint — same
+  laundering class as the s404 springs, closed for slips.
+- e2e trap logged: live lists only fill while the spot's room is
+  minted — park the player INSIDE the room (2.2m clear toward the
+  heart, outside the slip radius). A player slip adds the same key —
+  assert the entity's own caption, not just the set.
+- e2e trap logged: `armedRugs`/`armedPuddles` roll lazily per minted
+  prop — mint the room first, then force-arm the key (the leg tests
+  the trip, not the 0.35 seed roll).
+
+Gates: tsc, lint, build; hazards leg 1/1.
+
+## Sprint 407 — the blast and the blades don't check whose shoulders
+The last player-only hazard teeth: steam blasts, belt-wheels, and
+electrified water bit only the player. A walker inside a firing vent
+(phase<1.8, within 1.3m), under live blades (1.0m — he never ducks),
+or wading amber water (radius, flooded && !drained) is staggered like
+standing flesh is cut — one lurch per source on entT cooldowns, and
+every bite emits at the hazard.
+
+- Nothing persists: blasts/wheels/water are cyclic hazards, not spent
+  consumables — dead ones already ride `deadHazards`.
+- e2e: shipped on vitest/sim gates (small addition per the pace call);
+  the same grafter-teleport pattern covers it if legs are wanted later.
+
+Gates: tsc, lint, build.
+
 ## Sprint 448 — the paper trail & the things they left
 First BIG-format sprint (his new directive: big worked-on PRs, not tiny
 ones — cluster several dressing systems per PR). Two related batches:
@@ -5444,5 +5509,77 @@ tall-prop silhouette (`inspector-tally`/`oldNumber`/`dustShadow`/
 chalk marks are authored placements — exempt). Authored-count tests now
 assert presence not rate — rng stream drift shifts seeded counts.
 
-Gates: tsc, lint, vitest 298→119-file pass, sim 5/5, build. No e2e leg —
+Gates: tsc, lint, vitest 119-file pass, sim 5/5, build. No e2e leg —
 dressing/ambient only.
+
+## Sprint 408 — the tally answers back
+The third book gets its readout: 'Ask what the tally says — 3
+marginalia' mints on the Auditor's fig (waist-height at 0.5·lateral —
+the pitch band keeps it off the p3 tallyDrawer line, same trick as the
+Broker's 'book'). Reads what the tally's book cares about: thefts
+owed, '· the boards still listen' while wantedActive, '· the tills
+hold their stock' at the deep tier, and '· the count keeps N of yours
+tagged' while a seize tag pends. The asking is itself a filed
+question (fileQuestion — the index counts this one); the checker's
+shutter covers it like the other two.
+
+The readout trio is complete: book (index — trail+theft+locker+shelf),
+register (held face), tally (theft book + boards + tag).
+
+Gates: tsc, lint (batched verification with the next commits).
+
+## Sprint 409 — the tally's coin testifies
+The hot-coin mechanic now reaches the under's own currency:
+marginalia gained by pilfering (basket hems, sledges, the index
+rummage, the tally drawer itself, the courier's satchel, the crew's
+claim cages) is torn-edged — `hotMarginalia` — and every marked page
+that lands in an under till files a question at the index via the new
+`chargedMarginalia` funnel (all `marginalia -=` sites routed). The
+count's seize sweeps torn pages into the tag alongside marked coin;
+the epitaphs read `hotPages`; the field rides the checkpoint.
+
+Clean sources stay clean by design: washer payouts, floor loot, fence
+pay, purse change — coin no book filed a line for.
+
+Gates: tsc, lint (batched with the next commits).
+
+## Sprint 410 — the house re-lays its wire
+The hazard war is now two-sided: the warden's sign-read that ends on
+dead wire sign re-arms the snare it read (`investigateKind` remembers
+which sign it walked to; `rearmSnare` ctx callback arms the nearest
+dead snare within 1.4m). Your defuses AND your entity-trips both feed
+it — and the tug-of-war is symmetric: a re-laid wire trips walkers
+again (s405), trips you, and just leaves the deadHazards checkpoint
+list (armed is the source of truth). The wipe shadow still wins: a
+doubted read never investigates, so a poisoned floor's wire stays
+dead — emergent counterplay for free.
+
+The floor is now a contested surface: you cut/snare/trip, the house
+reads the sign and re-lays where you walked.
+
+Gates: tsc, lint (batched with the next commits).
+
+## Sprint 411 — the floorkeeper's whole kit
+The re-lay generalizes to every dead-hazard kind via `rearmHazard`:
+a read ending on 'line' sign re-pressurizes the bled steam, on 'fan'
+sign re-engages the killed wheel, and on 'blind' sign it peels your
+felt off the eye — and pockets the wrap (confiscated, not returned:
+the house keeps the tool you parked on it). Each restoration cues its
+own line; the untape/tape verbs re-mint off `w.dead` so a stripped
+eye's mount flips back correctly.
+
+Wipe-shadowed reads still can't investigate (poisoned reads = no
+restore); 'work' and 'water' sign carry nothing to re-lay — the
+flooded hall's drain stays drained (re-flooding a hall is heavier
+work than tying wire; left out deliberately).
+
+Gates: tsc, lint.
+
+### note on the under
+No re-layer below: the grafter drags to dead-wire sign as a scavenger,
+the reposter re-pins paper — but nobody *maintains* down there. Wire
+you cut in the under stays cut. That's the honest asymmetry: the
+house repairs its own floor; the underscript is unmaintained by
+definition.
+
+Gates: tsc, lint.

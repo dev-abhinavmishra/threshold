@@ -873,9 +873,9 @@ export class Husk extends Entity {
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {
   snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
-  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number }[] = [];
+  puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number; entT?: number }[] = [];
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
-    cycle: number; dead: boolean; hitT?: number; warnT?: number }[] = [];
+    cycle: number; dead: boolean; hitT?: number; warnT?: number; entT?: number }[] = [];
   /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
    *  scent a posted hunter can read — quiet work is marked work. A `wipe`
    *  record is the felt-wrap's shadow: the floor was worked clean, and only
@@ -883,7 +883,7 @@ export class HazardField {
   evidence: { pos: import('../engine/math').Vec3; room: number;
     kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work'; t: number; readBy: string[];
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
-  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number }[] = [];
+  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles
    *  the eye — a settled eye rings your position to every listener in

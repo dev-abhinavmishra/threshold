@@ -427,6 +427,7 @@ export class Warden extends Entity {
   private expireT = 120;
   private investigate: Vec3 | null = null;   // a heard noise it walks to check
   private investigateScan = 0;
+  private investigateKind: string | null = null; // which sign it's checking (noise checks carry none)
   private scentT = 0;                          // evidence polling
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
@@ -482,6 +483,7 @@ export class Warden extends Entity {
       if (!noiseRoom || !atRoomDoor(noiseRoom, this.pos, 2.2)) return;
     }
     this.investigate = v3(e.x, 0, e.z);
+    this.investigateKind = null;
     this.investigateScan = 0;
     c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });
     this.rig?.play('move', 0.1);
@@ -604,6 +606,7 @@ export class Warden extends Entity {
       if (this.doorOnPath() === 'blocked') {
         // A held or locked leaf answers the shoulder — it gives the check up.
         this.investigate = null;
+        this.investigateKind = null;
         this.ctx.cue('door-locked', this.pos, '[it turns from the held door]', { severity: 'info' });
         return;
       }
@@ -620,7 +623,33 @@ export class Warden extends Entity {
       } else {
         this.investigateScan += dt;
         if (this.mesh) this.mesh.rotation.y += dt * 2.4;
-        if (this.investigateScan > (this.learned ? 2.6 : 1.8)) this.investigate = null;
+        if (this.investigateScan > (this.learned ? 2.6 : 1.8)) {
+          // sprint 410-411 — the house re-lays its work: a read that
+          // ends on a dead hazard's sign brings it back — wire re-tied,
+          // bled lines re-pressurized, wheels re-engaged, felt stripped
+          // off its eyes (the wrap is pocketed, not returned).
+          if (this.investigateKind === 'wire' || this.investigateKind === 'line'
+            || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
+            const kind = this.investigateKind;
+            const restored = this.ctx.rearmHazard?.(kind, this.investigate.x, this.investigate.z);
+            if (restored) {
+              this.ctx.cue('floor-creak', this.investigate,
+                restored === 'snare' ? '[it bends and re-lays the wire — the floor relearns your walk]'
+                  : restored === 'steam' ? '[it works the valve back open — the line breathes again]'
+                    : restored === 'fan' ? '[it re-engages the wheel — the blades turn again]'
+                      : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+              // the house's work is audible like yours — re-tying wire
+              // rustles where it happens, tagged to him so he doesn't
+              // pull to his own hands
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.5, z: this.investigate.z,
+                intensity: 0.35, category: 'item', caption: '[wire retied]',
+                source: this.id });
+            }
+          }
+          this.investigate = null;
+          this.investigateKind = null;
+        }
       }
       return;
     }
@@ -651,6 +680,7 @@ export class Warden extends Entity {
         }
         this.investigate = v3(ev.pos.x, 0, ev.pos.z);
         this.investigateScan = 0;
+        this.investigateKind = ev.kind;
         c.cue('floor-creak', this.pos, named
           ? '[the register\'s face is on this sign — it knows these hands]'
           : '[it reads the sign — someone has been here]', { severity: 'warn' });

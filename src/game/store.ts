@@ -139,6 +139,7 @@ export interface BooksClosed {
   asks: number;
   hotCoin: number;
   hotGoods: number;
+  hotPages?: number;
   /** wares still hanging in the count's locker at the end */
   seized?: number;
   /** coin the count swallowed outright — cut tags, rotted tags */
@@ -161,6 +162,7 @@ export interface CheckpointSave {
   unpaidHeld?: number;
   paperTrail?: number;
   hotImprints?: number;
+  hotMarginalia?: number;
   hotItems?: ItemId[];
   // the wanted episode outlives you too — torn boards stay torn, an
   // armed repost keeps its remaining seconds
@@ -219,6 +221,14 @@ export interface CheckpointSave {
   // sprint 403 — calls you placed ride the checkpoint too: a paid ring
   // still lands after a reload (fuse = seconds until the far line dies)
   dialedRings?: { key: string; x: number; z: number; fuse: number }[];
+  // sprint 404 — a trap that already fired or was pried stays down
+  // (a reload can't re-arm a spent spring)
+  snappedTraps?: string[];
+  priedTraps?: string[];
+  // sprint 406 — a slid rug or splashed puddle is spent too; the floor
+  // doesn't re-slip on a reload (same class as the springs)
+  slippedRugs?: string[];
+  slippedPuddles?: string[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {
