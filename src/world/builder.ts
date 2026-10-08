@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1675,6 +1675,30 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         0.007,
         p.z + Math.cos(py) * 0.55);
       group.add(m);
+    }
+
+    // The inspector's tally — beside a hollow's seat, scratch-counts kept
+    // on the nearest wall: four strokes and the crossing fifth, counting
+    // the times it was checked.
+    for (const spot of room.hidingSpots) {
+      if (!spot.trappedBy || rng.float() >= 0.6) continue;
+      const sx = (spot.volume.minX + spot.volume.maxX) / 2 - room.origin.x;
+      const sz = (spot.volume.minZ + spot.volume.maxZ) / 2 - room.origin.z;
+      const tc = Math.cos(-room.yaw), ts = Math.sin(-room.yaw);
+      const hx = sx * tc + sz * ts, hz = -sx * ts + sz * tc;
+      // nearest wall gets the count
+      const dists = [
+        { wall: 'e' as const, dist: w / 2 - hx, along: hz },
+        { wall: 'w' as const, dist: hx + w / 2, along: hz },
+        { wall: 'n' as const, dist: d / 2 - hz, along: hx },
+        { wall: 's' as const, dist: hz + d / 2, along: hx },
+      ].sort((a, b) => a.dist - b.dist);
+      const near = dists[0];
+      const span = (near.wall === 'e' || near.wall === 'w' ? d : w) / 2 - 0.5;
+      const along = Math.max(-span, Math.min(span, near.along + (rng.float() - 0.5) * 0.4));
+      wallDecal(near.wall, tallyMarks(rng), 0.45 + rng.float() * 0.15, 0.45 + rng.float() * 0.15, along, 0.85 + rng.float() * 0.45);
+      const last = group.children[group.children.length - 1];
+      if (last && !last.name) last.name = 'inspector-tally';
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:
