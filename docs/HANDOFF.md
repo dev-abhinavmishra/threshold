@@ -4155,7 +4155,6 @@ Game.die() from the same five fields.
   FICTION (every hear gate rejects `e.source`) — the spill carries no
   `source` so the crew physically hears the paper hit the floor.
 - Gates: tsc, lint, vitest 249.
->>>>>>> devin/1791426766-threshold-s356
 
 ## sprint 359 — the window is for strangers
 
@@ -4240,6 +4239,31 @@ Game.die() from the same five fields.
   book they answer to: warden ↔ register (362), grafter ↔ tally
   (363).
 - Gates: tsc, lint, vitest 106 entities (+1 spec).
+
+## sprint 410 — the periodic count (verification batch)
+
+- Recorded e2e sweep on main covering s408-409 + s402-403: both
+  under-passages grade the seep correctly (gate rooms carry 2 ceiling
+  blooms, controls carry none); all four set-piece approach rooms bleed
+  their tells (hauler 4.2m trail, pursuer 3.6m trails, curator stains);
+  primed milestones still spill light under the door; 55-65 walk sweep
+  clean. No failures.
+- Verification note for probes: decal features are unambiguous by MESH
+  signature (ceiling-damp quads at h-0.06, tell-trail quad sizes) — do
+  not pixel-assert SwiftShader darkness.
+
+## sprint 411 — the house teaches
+
+- First-exposure captions on the verbs nothing told you: crouch
+  ('soft feet, quiet doors'), sprint ('the house hears fast feet'),
+  first hide ('the spot holds you — a thing passing close still smells
+  you'), panic >0.5 ('panic throws you out of cover'), first dark room
+  ('the dark keeps its own things — some of them are places to hide').
+- `Game.teach(key, text)` fires once per key through 'arrival' cues;
+  `taught` rides the checkpoint (new optional `CheckpointSave.taught`)
+  so a death doesn't re-lecture. Fresh runs teach from zero.
+- Gates: tsc, lint, 253 tests (persistence round-trip covers taught),
+  sim 5/5, build. Runtime-only layer — no e2e leg.
 
 ## sprint 364 — the boards' courier knows your face
 

@@ -320,6 +320,14 @@ export class Game {
   private primedStingDone = new Set<number>();
   /** Staged arrival captions for a fresh run (lobby cold-open). */
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
+  /** First-exposure lessons already taught — the house teaches each verb
+   *  once; rides the checkpoint so a death doesn't re-lecture. */
+  private taught = new Set<string>();
+  private teach(key: string, text: string): void {
+    if (this.taught.has(key)) return;
+    this.taught.add(key);
+    this.cue('arrival', null, text, 'info');
+  }
   private dread = 0;
   /** Keyhole peek: camera pushed through a locked door for a look beyond. */
   private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number; doorKey: string; eyeDone: boolean } | null = null;
@@ -655,6 +663,8 @@ export class Game {
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.deadLines = new Set(cp?.deadLines ?? []);
+    // the house only teaches once — taught lessons ride the checkpoint
+    this.taught = new Set(cp?.taught ?? []);
     // the sign stays written — fresh marks the hunters already smelled
     // ride the checkpoint; authored 'old' sign re-derives from sockets
     for (const e of cp?.evidence ?? []) {
@@ -2421,6 +2431,7 @@ export class Game {
         const spot = it.data as RoomInstance['hidingSpots'][number];
         if (this.player.enterHiding(spot, this.clock.time)) {
           this.cue('hide-in', null, '');
+          this.teach('hide', '[the spot holds you — a thing passing close still smells you]');
           if (spot.trappedBy === 'hollow') {
             this.spawnEntity(new Hollow());
           }
@@ -4444,6 +4455,7 @@ export class Game {
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
       bareBoards: [...this.bareBoards].map(([k, v]) => [k, { x: v.x, z: v.z }] as [number, { x: number; z: number }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
+      taught: [...this.taught],
       deadLines: [...this.deadLines],
       deadHazards: [
         ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
@@ -4886,6 +4898,13 @@ export class Game {
         this.cue('arrival', null, a.text, a.sev);
       }
     }
+    // The house teaches — first-exposure captions on the verbs nothing
+    // tells you about: soft feet, loud feet, cover, nerves, the dark.
+    if (this.player.crouching) this.teach('crouch', '[low and slow — soft feet, quiet doors]');
+    if (this.keys.has(this.keyFor('sprint')) && !this.player.crouching) this.teach('sprint', '[running is loud — the house hears fast feet]');
+    if (this.player.panic > 0.5) this.teach('panic', '[your hands are shaking — panic throws you out of cover]');
+    const curTeach = this.activeRooms()[this.currentRoom];
+    if (curTeach?.darkRoom) this.teach('dark', '[the dark keeps its own things — some of them are places to hide]');
     // Fog eases toward the current biome's density/tint.
     const fog = this.scene.fog as THREE.FogExp2 | null;
     const cur = this.activeRooms()[this.currentRoom];
