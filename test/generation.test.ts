@@ -1750,3 +1750,34 @@ describe('the fallen (sprint 428)', () => {
     expect(fallen, 'no fallen frames').toBeGreaterThan(10);
   });
 });
+
+describe('the cold hearth (sprint 429)', () => {
+  it('ash spills at the feet of dead grates', () => {
+    let hearths = 0, near = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const fp = room.spec.props.filter((p) => ['fireplace', 'stove', 'stoveRange', 'firePit'].includes(p.kind));
+        if (!fp.length) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name !== 'cold-hearth') return;
+          hearths++;
+          if (fp.some((p) => Math.hypot(o.position.x - p.x, o.position.z - p.z) < 1.2)) near++;
+        });
+      }
+    }
+    expect(hearths, 'no ash piles').toBeGreaterThan(8);
+    expect(near, 'ash not near a grate').toBeGreaterThanOrEqual(hearths);
+    // and no decal may sit on a NaN transform (poisons the room)
+    const nanGuard = generateRoute({ seedText: SEEDS[0], includeUnderscript: true }).rooms.every((r) => {
+      if (!r.spec) return true;
+      const b = buildRoomMesh(r, r.spec, r.index, 'high');
+      let bad = false;
+      b.group.traverse((o) => { if (o.name === 'cold-hearth' && (!Number.isFinite(o.position.x) || !Number.isFinite(o.position.z))) bad = true; });
+      return !bad;
+    });
+    expect(nanGuard, 'cold-hearth decal at NaN').toBe(true);
+  });
+});
