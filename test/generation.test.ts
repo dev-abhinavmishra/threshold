@@ -885,6 +885,27 @@ describe('door listen seams (sprint 229)', () => {
     expect(closed).toBeGreaterThan(30);
     expect(stoops).toBe(closed); // false doors keep the crack too — plaster is the tell
   });
+
+  it('closed real doors gain a slip-a-pebble point; false doors have no far side (sprint 447)', async () => {
+    const { InteractionSystem, addCrouchedDoorInteracts } = await import('../src/player/interaction');
+    const route = generateRoute({ seedText: 's', difficulty: 'standard', includeUnderscript: true });
+    const sys = new InteractionSystem();
+    let real = 0, slips = 0, falseSlips = 0;
+    for (const r of route.rooms.filter((x) => x.index >= 0).slice(0, 40)) {
+      sys.clear();
+      sys.addRoomInteractables(r);
+      addCrouchedDoorInteracts(sys);
+      for (const d of r.doors) {
+        if (d.openT > 0.4) continue;
+        if (d.falseDoor) { if (sys.interactables.some((i) => i.kind === 'slip' && i.data === d)) falseSlips++; continue; }
+        real++;
+        if (sys.interactables.some((i) => i.kind === 'slip' && i.data === d)) slips++;
+      }
+    }
+    expect(real).toBeGreaterThan(25);
+    expect(slips).toBe(real);
+    expect(falseSlips).toBe(0);
+  });
 });
 
 describe('connector corridor dressing (sprint 230)', () => {

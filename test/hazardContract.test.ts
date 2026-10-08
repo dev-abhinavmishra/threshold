@@ -409,4 +409,15 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('stoopUnder(door: Door)');
     expect(game).toContain("case 'stoop'");
   });
+
+  it('the slipped pebble lands on the far side of the leaf (sprint 447)', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'slip'");
+    expect(interaction).toContain('Slip a pebble under');
+    expect(game).toContain("case 'slip'");
+    // shares the free toss's cooldown and its weak pull — not a new lure
+    expect(game).toContain('this.nextToss');
+    expect(game).toContain("category: 'distraction'");
+  });
 });

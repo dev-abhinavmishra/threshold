@@ -8,7 +8,7 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'stoop' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
+  | 'door' | 'peek' | 'listen' | 'stoop' | 'slip' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift' | 'houseLine'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
   | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'alarmDrop' | 'coilDrop' | 'keyring' | 'askTally';
@@ -272,6 +272,17 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
         prompt: `Stoop to the crack — Door ${d.label}`, holdTime: 1.0,
         data: d, enabled: true, priority: 4,
       });
+      // Slip a pebble under the leaf (sprint 447): the free toss, aimed —
+      // it lands past your cover and pulls whatever's in there toward the
+      // door. False doors have no far side to slip into.
+      if (!d.falseDoor) {
+        sys.add({
+          kind: 'slip', id: `slip-${it.id}`,
+          pos: { x: it.pos.x - latX * 0.28, y: it.pos.y - 0.55, z: it.pos.z - latZ * 0.28 },
+          prompt: `Slip a pebble under Door ${d.label}`, holdTime: 0.8,
+          data: d, enabled: true, priority: 4,
+        });
+      }
       sys.add({
         kind: 'listen', id: `listen-${it.id}`,
         pos: { x: it.pos.x + latX * 0.55, y: it.pos.y, z: it.pos.z + latZ * 0.55 },

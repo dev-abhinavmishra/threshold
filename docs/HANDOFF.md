@@ -6345,3 +6345,20 @@ case: rattle, then lose interest as before.
 the player's own side, so cluster leaves never throw you through the
 doorway. If future walkers join, keep the same convention (move the
 holder via teleport; don't clear heldBy entity-side).
+
+## Sprint 447 — the pebble goes under
+
+'Slip a pebble under Door N' mints inside the stoop gate on every closed
+real leaf (false doors have no far side — honesty). The free toss aimed:
+shares `nextToss`'s 8s cooldown and the same 0.45 'distraction' emit, but
+it lands 1.3m past the leaf on the far side of your cover — you pull a
+thing in a room you never opened, and what it calls comes looking at
+YOUR door (a slipped pull at a braced leaf is a shoulder you invited).
+Named (`wantedPull ×1.5 → 0.675`) it crosses the 0.55 rouse floor — the
+boards' tax can wake what a plain toss never could. Cooldown-spent reads
+'[your hand finds no pebble — give it a breath]'.
+**Notes:** verb lattice on a leaf is now: -0.55 brace · -0.28 slip ·
+0 stoop · +0.28 (free) · +0.55 listen, plus ±0.45-normal wedge/wire.
+Focus contention hasn't surfaced in tests but the lattice is dense —
+next verb should weigh a new gate (locked, held, room kind) not a 6th
+same-gate anchor.

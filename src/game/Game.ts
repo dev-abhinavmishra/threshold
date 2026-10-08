@@ -3268,6 +3268,26 @@ export class Game {
         this.teach('stoop', '[the crack shows only what passes close — the seam still hears further]');
         return;
       }
+      case 'slip': {
+        // sprint 447 — the free toss, aimed: the pebble skips under the
+        // leaf and lands ~1.3m into the far room, on the far side of your
+        // cover. Same cooldown, same weak pull — but it works a room you
+        // never opened, and what it calls comes looking at YOUR door.
+        if (this.clock.time < this.nextToss) {
+          this.cue('door-locked', it.pos, '[your hand finds no pebble — give it a breath]', 'warn');
+          return;
+        }
+        this.nextToss = this.clock.time + 8;
+        const door = it.data as Door;
+        const nX = Math.sin(door.yaw), nZ = Math.cos(door.yaw);
+        const side = Math.sign((this.player.pos.x - door.pos.x) * nX + (this.player.pos.z - door.pos.z) * nZ) || 1;
+        const x = door.pos.x - nX * side * 1.3;
+        const z = door.pos.z - nZ * side * 1.3;
+        this.audio.play('pebble', { x, y: 0.1, z }, '');
+        this.cue('pebble', it.pos, '[the pebble skips under — a tap on the far side]');
+        this.sound.emit({ x, y: 0.1, z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
+        return;
+      }
       case 'brace': {
         // Brace the whole doorway cluster: your weight on this leaf holds
         // both sides. Released by stepping away, or by opening it yourself.
