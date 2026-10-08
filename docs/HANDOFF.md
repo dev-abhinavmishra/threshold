@@ -4080,3 +4080,77 @@ Game.die() from the same five fields.
 - Test: 'the set-piece approach' asserts the key, the exclusion, and
   that no stray room is marked, across all five seeds.
 - Gates: tsc, lint, 248 tests, sim 5/5, build. Dressing-only — no e2e.
+
+## sprint 356 — the repost walks — cut the reposter
+
+- s344's bare-board recovery was an instant global flip — every sheet
+  reappeared at once, unreachable. `entities/reposter.ts` is a
+  `CrewChecker`-pattern walker: when the repost arms, a clerk walks
+  the under spine hi→lo (WALK 1.6 — an amble, catchable) and pins a
+  fresh sheet at each bare board in person (PIN_T 2.2). Cues: 'the
+  clerk walks out with fresh paper', 'a sheet goes back up' per pin,
+  'the boards stand re-sheeted'. `raiseWanted(true)` stays as the
+  no-path fallback (empty hosts).
+- Counterplay, honest both ways: 'cutRepost' (1.0s hold, ≤1.9m) grabs
+  the bundle — the walk dies, 'the paper spills', and the boards it
+  never reached stay bare. Cutting doesn't forgive you: the repost
+  re-arms (`wantedRepostT = clock + 30`) — the clerk reaches for more
+  paper. Mirrors the runner's cut: silence is bought, not the ledger.
+- The tear/repost tug-of-war is now spatial: tear all 5 → 30s window →
+  a physical walker re-pins one room at a time. Tearing while he walks
+  is still free.
+- e2e: the audit leg's repost phase updated — waits out the arm then
+  the walker's first pin (the hi→lo walk can be long), drives onto
+  `reposter.position` and holds E for the cut (cut detected by the
+  'paper spills' caption — `active` also drops on a natural finish),
+  asserts un-pinned boards stay bare. vitest reposter.test.ts covers
+  dispatch→pin-order(hi→lo)→idle, mid-walk cut, dispatch refusal.
+- Leg traps worth keeping: (a) teleporting out of the Auditor's room
+  while owed makes him walk his ledger after you — the chase phase
+  ends the settle verb; stand on him so `collect()` strikes and
+  releases him home, then wait AT THE DESK (his spawn room, not the
+  leg's aRoom — `spawnRoom = currentRoomIndex` at onSpawn, and the
+  drawer rifle sets `demanded` without any room-presence). (b) the
+  entity's position field is private `pos` — `clerk.pos`/`deskPos`
+  read fine at runtime, `.position` is only the Reposter getter.
+- Traps worth keeping: repost hosts come from `pickWantedHosts` at
+  arm-time — rooms torn AFTER dispatch still get pinned if they were
+  bare at pick; the walker's `pinAt` is nearest-path-point, so a host
+  off the spine pins at its closest corridor point (the sheet still
+  lands at the host's room — `repost()` writes `wantedRooms[roomIdx]`
+  with the HOST's coords, not the walker's).
+- Gates: tsc, lint, vitest 249 (3 new reposter specs), sim 5/5,
+  undercast audit leg (in flight), build.
+
+## sprint 357 — the clerk notices a bare board
+
+- s344/s356's repost armed only when the boards hit ZERO — tearing
+  four of five sheets was never answered. Every tear now arms the
+  repost (~30s), and the walker re-pins THE TORN SLOTS (`bareBoards`
+  map, roomIdx → host pos) instead of fresh downstream boards — a
+  partial tear gets a partial re-sheet, same boards, honest spots.
+- The duel is now per-board: tear → he walks → pin → re-tear → he
+  walks again. Tearing mid-walk re-arms; at fire time a second
+  dispatch is refused while he's out (+12s re-arm instead). Cut
+  re-arms as before. `lowerWanted`/startRun clear `bareBoards`;
+  it rides the checkpoint (`bareBoards` save field).
+- Leg fix worth keeping: the audit leg's tear-sweep now outlives the
+  armed repost — s357 means a pin CAN land mid-sweep. The leg pins
+  `wantedRepostT = clock + 400` after each tear, then releases it
+  (`clock + 1`) before the repost phase — deterministic sweep,
+  real repost.
+- Gates: tsc, lint, vitest persistence+reposter specs green,
+  undercast audit leg green on the built bundle.
+
+## sprint 358 — the spill smells of hands
+
+- The reposter cut left no trace while every other pilfer does —
+  tears and rifles both write 'work' sign. Grabbing the bundle now
+  pushes a 'work' mark at the spill point (the warden/grafter read it
+  like any rummage) and emits a positional rustle ('[paper scattering
+  in the corridor]') — the counterplay is loud, just not fee-bearing:
+  crew paper isn't your theft, but spilled sheets don't stay quiet.
+- Trap worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
+  name) — the emit uses 'distraction'.
+- Gates: tsc, lint, vitest 249.
+>>>>>>> devin/1791426766-threshold-s356

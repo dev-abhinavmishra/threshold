@@ -95,6 +95,7 @@ describe('checkpoint', () => {
       health: 70, inventory: [], imprints: 4, marginalia: 2,
       stats: { roomsEntered: 20, deaths: 0, kills: 0, hidesUsed: 0, itemsUsed: 0, imprintsFound: 4, marginaliaFound: 2, timePlayed: 60, entitiesSurvived: 2, secretsFound: 0 },
       wantedActive: true, wantedRooms: [[7, { x: 1, z: 2 }]], wantedRepostS: 0,
+      bareBoards: [[9, { x: 3, z: 4 }]],
       deadLines: [5, 9],
       evidence: [{ room: 3, kind: 'work', t: 42, x: 1.5, z: 2.5, readBy: ['warden:33'], wiped: false }],
       deadHazards: [{ room: 4, kind: 'snare', x: 0, z: 1 }, { room: 6, kind: 'eye', x: 2, z: 3, filed: true }],
@@ -104,6 +105,7 @@ describe('checkpoint', () => {
     const cp = loadCheckpoint()!;
     expect(cp.wantedActive).toBe(true);
     expect(cp.wantedRooms).toEqual([[7, { x: 1, z: 2 }]]);
+    expect(cp.bareBoards).toEqual([[9, { x: 3, z: 4 }]]);
     expect(cp.deadLines).toEqual([5, 9]);
     expect(cp.evidence).toHaveLength(1);
     expect(cp.evidence![0].readBy).toEqual(['warden:33']);

@@ -25,6 +25,7 @@ import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { wantedNotice, thresholdSpill } from '../world/decals';
 import { pickWantedHosts } from './wanted';
+import { Reposter, type ReposterHooks } from '../entities/reposter';
 import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
@@ -243,6 +244,15 @@ export class Game {
         this.unpaidHeld += 1;
         this.cue('chalk-mark', this.player.pos, '[the lamp holds your face — the register gains a witness]', 'warn');
       },
+    };
+  }
+  private reposterHooks(): ReposterHooks {
+    return {
+      addMesh: (o) => this.entityGroup.add(o),
+      removeMesh: (o) => this.entityGroup.remove(o),
+      cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
+      // a sheet went back up mid-walk — the board carries the name again
+      repost: (roomIdx, host) => { this.wantedRooms.set(roomIdx, { x: host.x, z: host.z }); this.bareBoards.delete(roomIdx); },
     };
   }
   private canvas: HTMLCanvasElement;
@@ -543,6 +553,7 @@ export class Game {
     this.hazard = new HazardField();
     this.crewCount.reset();
     this.checker.reset(this.checkerHooks());
+    this.reposter.reset(this.reposterHooks());
     for (const r of [...this.route.rooms, ...this.route.underRooms]) this.hazard.addFromRoom(r);
     this.roomBounds.clear();
     // the prop layer holds no memory across runs — every one-time
@@ -636,6 +647,7 @@ export class Game {
     // torn, an armed repost keeps its remaining seconds on this clock
     this.wantedActive = cp?.wantedActive ?? false;
     this.wantedRooms = new Map(cp?.wantedRooms ?? []);
+    this.bareBoards = new Map(cp?.bareBoards ?? []);
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.deadLines = new Set(cp?.deadLines ?? []);
@@ -978,6 +990,12 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** Boards the player tore mid-episode — the clerk re-pins THESE
+   *  slots, so a partial tear is answered like a clean sweep. */
+  private bareBoards = new Map<number, { x: number; z: number }>();
+  /** The reposter — the repost walk made flesh: a clerk carries fresh
+   *  sheets to the bare boards one room at a time. Catchable. */
+  private reposter = new Reposter();
   /** Detective rooms whose house line was pulled — the dead wire is a
    *  physical state (box gone, no re-mint) and it rides the checkpoint. */
   private deadLines = new Set<number>();
@@ -1635,6 +1653,21 @@ export class Game {
         holdTime: 1.0, enabled: true, priority: 3,
         data: ent as unknown as Record<string, unknown>,
       });
+    }
+    // Beside the reposter: 'Cut the reposter' — grab the bundle and this
+    // walk dies; the boards it never reached stay bare.
+    if (this.reposter.active) {
+      const rp = this.reposter.position;
+      const dx = rp.x - this.player.pos.x, dz = rp.z - this.player.pos.z;
+      if (dx * dx + dz * dz <= 1.9 * 1.9) {
+        this.interaction.add({
+          kind: 'cutRepost', id: `cutRepost-${this.space}:reposter`,
+          pos: { x: rp.x, y: 0.9, z: rp.z },
+          prompt: 'Cut the reposter',
+          holdTime: 1.0, enabled: true, priority: 3,
+          data: { reposter: this.reposter as unknown as Record<string, unknown> },
+        });
+      }
     }
     // Beside the checker's lamp: 'Strip the lamp' — take its light mid-
     // count. The boldest pilfer in the under: it is HOLDING the light.
@@ -3350,6 +3383,22 @@ export class Game {
         h.keeper?.rifledRegister?.();
         return;
       }
+      case 'cutRepost': {
+        // Spilling the paper bundle — this walk dies and the clerk
+        // reaches for fresh stock again after another beat. The grab
+        // is work like any pilfer: the spilled sheets smell of hands
+        // and the spill itself is a sound at your position.
+        const r = it.data as unknown as { reposter: { active: boolean; cutBy(h: ReposterHooks): void } };
+        if (!r.reposter.active) { it.enabled = false; return; }
+        r.reposter.cutBy(this.reposterHooks());
+        it.enabled = false;
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'distraction',
+          caption: '[paper scattering in the corridor]', source: 'player' });
+        this.wantedRepostT = this.clock.time + 30;
+        return;
+      }
       case 'cutWord': {
         // Tearing the courier's message — the word dies mid-delivery.
         // Not theft: the card is yours, and the Filer closes it torn.
@@ -3404,7 +3453,9 @@ export class Game {
         // the boards carry the wider ear — pull the sheet and the room
         // forgets your face; the last sheet ends the reach everywhere.
         // The ledger itself is untouched: the tally still wants a settle.
+        const tornHost = this.wantedRooms.get(this.currentRoom);
         this.wantedRooms.delete(this.currentRoom);
+        if (tornHost) this.bareBoards.set(this.currentRoom, { x: tornHost.x, z: tornHost.z });
         it.enabled = false;
         const built = this.streamer.get(this.currentRoom);
         const notice = built?.group.getObjectByName('wanted-notice');
@@ -3414,8 +3465,9 @@ export class Game {
         this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
           ? '[the last sheet comes down — the boards forget your face]'
           : '[the sheet comes down — the boards have one fewer name for you]', 'warn');
-        // the boards stand bare — the clerk reaches for fresh paper
-        if (this.wantedRooms.size === 0) this.wantedRepostT = this.clock.time + 30;
+        // the clerk notices a bare board — every tear is answered,
+        // not just the last: the repost arms on any pull
+        this.wantedRepostT = this.clock.time + 30;
         return;
       }
       case 'stripCheck': {
@@ -4051,6 +4103,7 @@ export class Game {
   private lowerWanted(): void {
     this.wantedActive = false;
     this.wantedRooms.clear();
+    this.bareBoards.clear();
     for (const i of this.streamer.builtIndices) {
       const built = this.streamer.get(i);
       const m = built?.group.getObjectByName('wanted-notice');
@@ -4329,6 +4382,7 @@ export class Game {
       hotItems: [...this.hotItems],
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
+      bareBoards: [...this.bareBoards].map(([k, v]) => [k, { x: v.x, z: v.z }] as [number, { x: number; z: number }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       deadLines: [...this.deadLines],
       deadHazards: [
@@ -4806,10 +4860,22 @@ export class Game {
     // the boards stand bare — the clerk reaches for fresh paper and the
     // sheets go back up on new boards downstream (the tug-of-war: every
     // repost is another trip to another board for the tearer)
-    else if (this.wantedActive && this.wantedRooms.size === 0 && this.space === 'under'
+    else if (this.wantedActive && this.bareBoards.size > 0 && this.space === 'under'
       && this.clock.time >= this.wantedRepostT && this.wantedRepostT > 0) {
-      this.raiseWanted(true);
-      this.wantedRepostT = 0;
+      // the repost walks now — a clerk carries the fresh paper to each
+      // torn board and re-pins the same slot; only an impossible path
+      // posts instantly, and a walk already out answers on the next round
+      const hosts = [...this.bareBoards.entries()].map(([roomIdx, h]) => ({ roomIdx, x: h.x, z: h.z }));
+      if (this.route && this.reposter.dispatch(this.route.underRooms, hosts, this.reposterHooks())) {
+        this.wantedRepostT = 0;
+      } else if (this.reposter.active) {
+        this.wantedRepostT = this.clock.time + 12;
+      } else {
+        for (const [roomIdx, h] of this.bareBoards) this.wantedRooms.set(roomIdx, { x: h.x, z: h.z });
+        this.bareBoards.clear();
+        this.wantedRepostT = 0;
+        this.cue('chalk-mark', null, '[fresh sheets go up on the boards ahead — the clerk has more paper]', 'warn');
+      }
     }
 
     for (const i of this.streamer.builtIndices) {
@@ -7301,6 +7367,10 @@ export class Game {
         room: this.space === 'under' ? underRoomOf(this.route.underRooms, p) : -1,
         exposed: !this.player.hiddenSpot && this.player.protection !== 'hidden',
       }, this.checkerHooks());
+    }
+    // the reposter walks when the boards stand bare: pin by pin
+    if (this.reposter.active && this.route) {
+      this.reposter.update(dt, this.route.underRooms, { pos: this.player.pos }, this.reposterHooks());
     }
     for (const e of [...this.entities]) {
       e.update(dt);
