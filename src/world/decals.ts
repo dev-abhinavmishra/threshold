@@ -3542,3 +3542,119 @@ export function ceilingHair(rng: Rng): THREE.Texture | null {
     ctx.fillRect(0, 0, 128, 96);
   });
 }
+
+/** Cart tracks — twin wheel rails ground into a service floor: two
+ * parallel drags, darker where the wheels bit, dust between. */
+export function cartTracks(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    const gap = 26 + rng.float() * 10;
+    const drift = (rng.float() - 0.5) * 10;
+    for (const side of [-1, 1]) {
+      const wx = 64 + side * gap / 2 + drift;
+      // the rail — a worn dark line, slightly wavy
+      ctx.strokeStyle = `rgba(44,38,32,${0.34 + rng.float() * 0.12})`;
+      ctx.lineWidth = 2.2 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(wx + (rng.float() - 0.5) * 3, 6);
+      ctx.bezierCurveTo(wx + (rng.float() - 0.5) * 6, 34, wx + (rng.float() - 0.5) * 6, 62, wx + (rng.float() - 0.5) * 3, 90);
+      ctx.stroke();
+      // polished keel — the shine line inside the track
+      ctx.strokeStyle = `rgba(196,186,162,${0.2 + rng.float() * 0.12})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(wx, 8);
+      ctx.lineTo(wx + (rng.float() - 0.5) * 4, 88);
+      ctx.stroke();
+    }
+    // dust ridge between the rails
+    const dg = ctx.createLinearGradient(0, 0, 0, 96);
+    dg.addColorStop(0, 'rgba(160,148,128,0.05)');
+    dg.addColorStop(0.5, `rgba(160,148,128,${0.12 + rng.float() * 0.08})`);
+    dg.addColorStop(1, 'rgba(160,148,128,0.05)');
+    ctx.fillStyle = dg;
+    ctx.fillRect(64 + drift - gap / 2 + 4, 0, gap - 8, 96);
+    // grit cast off the treads
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(70,62,52,${0.14 + rng.float() * 0.16})`;
+      const side = rng.bool(0.5) ? -1 : 1;
+      ctx.beginPath();
+      ctx.arc(64 + drift + side * (gap / 2 + 2 + rng.float() * 6), 8 + rng.float() * 80, 0.5 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Grout lines — the darkening bands tile keeps between its courses:
+ * horizontal seams gone grey-green with damp and soap years. */
+export function groutLines(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // horizontal seams — every ~22px, slight wander
+    const rows = 4 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < rows; i++) {
+      const gy = 14 + i * 22 + (rng.float() - 0.5) * 3;
+      ctx.strokeStyle = `rgba(52,56,46,${0.28 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.1 + rng.float() * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      for (let x = 0; x <= 128; x += 32) ctx.lineTo(x, gy + (rng.float() - 0.5) * 1.6);
+      ctx.stroke();
+      // drip stain riding the seam — the damp follows the grout
+      if (rng.bool(0.55)) {
+        const dx = 12 + rng.float() * 104;
+        const dl = ctx.createLinearGradient(dx, gy, dx, gy + 18 + rng.float() * 10);
+        dl.addColorStop(0, 'rgba(52,56,46,0.3)');
+        dl.addColorStop(1, 'rgba(52,56,46,0)');
+        ctx.fillStyle = dl;
+        ctx.fillRect(dx - 1.2, gy, 2.4 + rng.float(), 18 + rng.float() * 10);
+      }
+    }
+    // a few vertical joints
+    for (let i = 0; i < 4; i++) {
+      const vx = 16 + i * 32 + (rng.float() - 0.5) * 6;
+      ctx.strokeStyle = `rgba(52,56,46,${0.18 + rng.float() * 0.12})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(vx, 10);
+      ctx.lineTo(vx + (rng.float() - 0.5) * 2, 88);
+      ctx.stroke();
+    }
+    // soap bloom across the field
+    const g = ctx.createRadialGradient(64, 48, 10, 64, 48, 60);
+    g.addColorStop(0, 'rgba(190,194,180,0.08)');
+    g.addColorStop(1, 'rgba(190,194,180,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 96);
+  });
+}
+
+/** Counter drips — the runs that streak down a case piece's face:
+ * gravity trails under the lip where spills escaped the top. */
+export function counterDrips(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // lip shadow — the dark seam under the top edge
+    ctx.fillStyle = 'rgba(40,34,28,0.3)';
+    ctx.fillRect(6, 8, 52, 2.4);
+    // drip runs — thin gravity trails, some stopping early
+    const n = 3 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < n; i++) {
+      const dx = 10 + rng.float() * 44;
+      const dlen = 26 + rng.float() * 50;
+      const dg = ctx.createLinearGradient(dx, 10, dx, 10 + dlen);
+      dg.addColorStop(0, `rgba(96,78,56,${0.36 + rng.float() * 0.18})`);
+      dg.addColorStop(1, 'rgba(96,78,56,0)');
+      ctx.fillStyle = dg;
+      ctx.fillRect(dx - 0.9, 10, 1.8 + rng.float(), dlen);
+      // the tear-drop at the run's end
+      ctx.fillStyle = 'rgba(96,78,56,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(dx, 10 + dlen, 1.6, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // pale tide at the bottom where the drips pooled
+    const bg = ctx.createLinearGradient(0, 78, 0, 96);
+    bg.addColorStop(0, 'rgba(110,92,68,0)');
+    bg.addColorStop(1, `rgba(110,92,68,${0.16 + rng.float() * 0.1})`);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 78, 64, 18);
+  });
+}
