@@ -1400,9 +1400,13 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // room leaves its mark in this one: prints, scuffs, drag-lines a
     // careful player learns to read before the door.
     const approachTell = room.foreshadow ?? room.milestoneTell;
-    if (approachTell && rng.float() < 0.8) {
+    // Marks fade with distance from the set piece: dist 0 (the room on the
+    // milestone's door) keeps full density; one room back the trail thins.
+    // Entity foreshadows always dress at full density.
+    const tellNear = room.milestoneTell === undefined ? 1 : 1 - (room.milestoneDist ?? 0) * 0.45;
+    if (approachTell && rng.float() < 0.8 * tellNear) {
       for (const t of FORESHADOW_TELLS[approachTell] ?? []) {
-        for (let n = 0; n < (t.n ?? 1); n++) {
+        for (let n = 0; n < Math.max(1, Math.round((t.n ?? 1) * tellNear)); n++) {
           if (t.wall) {
             const spot = pickWallSpot(t.w);
             if (!spot) break;

@@ -4314,3 +4314,19 @@ Game.die() from the same five fields.
   `go in the wash`). Grafter untouched: killPlayer means death —
   seizing pre-death is moot, the checkpoint still holds the take.
 - Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 412 — the mark deepens
+
+- s409 marked only the room ON a set piece's door. Approach marks now
+  grade two rooms back: `milestoneDist` (0 = adjacent, 1 = one room
+  earlier) rides `milestoneTell`; the nearer milestone wins a contested
+  room (min-dist). At dist 0 the two fields still exclude `foreshadow`
+  (the next room IS the milestone); at dist 1 they can coexist — the
+  builder prefers the live entity's marks via `foreshadow ??
+  milestoneTell`.
+- The builder thins by distance (`tellNear = 1 - dist*0.45`): gate and
+  per-tell count both scale, so a Pursuer trail starts as faint scuffs a
+  room out and gouges deep at the door. Entity foreshadows unaffected.
+- Vitest: the s409 spec now asserts dist fields, the far-room grade,
+  tell/dist pairing, and no marks deeper than 1.
+- Gates: tsc, lint, vitest 254, sim 5/5. Generation-only — no e2e leg.
