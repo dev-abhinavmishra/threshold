@@ -207,11 +207,14 @@ export interface RoomInstance {
    *  room can dress the approach with that entity's tell marks. */
   foreshadow?: EntityId;
   /** A set piece sits past this room's exit — a FORESHADOW_TELLS key whose
-   *  marks bleed into this approach room (the Pursuer's gouges before a
-   *  chase, the Curator's scatter before the Lens Hall). Mutually
-   *  exclusive with `foreshadow` by construction: the next room is the
-   *  milestone itself. */
+   *  marks bleed into the approach rooms (the Pursuer's gouges before a
+   *  chase, the Curator's scatter before the Lens Hall). At distance 0 it
+   *  excludes `foreshadow` (the next room IS the milestone); further back
+   *  both can coexist — the builder prefers the live entity's marks. */
   milestoneTell?: string;
+  /** How far this approach room sits from the milestone — 0 is the room
+   *  directly before it; marks thin as they recede from the door. */
+  milestoneDist?: number;
   /** Optional branch room index connected through a side door. */
   branchOf?: number;
   /** Gap corridor bridging prev exit → this room's entry (jittered milestones). */

@@ -1425,29 +1425,37 @@ describe('the undertow (sprint 408)', () => {
   });
 });
 
-describe('the set-piece approach (sprint 409)', () => {
-  it('rooms before chases, the lens hall and baggage bleed that piece\u2019s tells', () => {
+describe('the set-piece approach (sprints 409/412)', () => {
+  it('rooms before chases, the lens hall and baggage bleed that piece\u2019s tells, graded by distance', () => {
     const MAP: Record<string, string> = {
       'ms-chase1': 'pursuer', 'ms-chase2': 'pursuer',
       'ms-lens-hall': 'curator', 'ms-baggage': 'hauler',
     };
     for (const seed of SEEDS) {
       const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
-      for (let i = 0; i + 1 < route.rooms.length; i++) {
-        const next = route.rooms[i + 1].templateId;
-        const want = MAP[next];
-        if (want && !route.rooms[i].templateId.startsWith('ms-')) {
-          expect(route.rooms[i].milestoneTell, `${seed} room ${route.rooms[i].index} before ${next}`).toBe(want);
-          expect(route.rooms[i].foreshadow, `${seed} room ${route.rooms[i].index} double-tells`).toBeUndefined();
-        } else {
-          expect(route.rooms[i].milestoneTell, `${seed} room ${route.rooms[i].index} stray tell`).toBeUndefined();
-        }
-      }
-      // every keyed milestone actually has an approach room marked
+      // every keyed milestone grades the two rooms on its approach
       for (const ms of Object.keys(MAP)) {
         const pos = route.rooms.findIndex((r) => r.templateId === ms);
         expect(pos, `${seed} missing ${ms}`).toBeGreaterThan(0);
-        expect(route.rooms[pos - 1].milestoneTell, `${seed} approach to ${ms}`).toBe(MAP[ms]);
+        const near = route.rooms[pos - 1];
+        expect(near.milestoneTell, `${seed} approach to ${ms}`).toBe(MAP[ms]);
+        expect(near.milestoneDist, `${seed} dist for ${ms}`).toBe(0);
+        expect(near.foreshadow, `${seed} room ${near.index} double-tells`).toBeUndefined();
+        const far = route.rooms[pos - 2];
+        if (far && !far.templateId.startsWith('ms-')) {
+          expect(far.milestoneDist, `${seed} far approach to ${ms}`).toBe(1);
+          expect(far.milestoneTell, `${seed} far tell for ${ms}`).toBeDefined();
+        }
+      }
+      // marks never appear further than one room out, and dist always
+      // rides with its tell
+      for (const r of route.rooms) {
+        expect(r.milestoneDist ?? 0, `${seed} room ${r.index} mark too deep`).toBeLessThanOrEqual(1);
+        expect(
+          (r.milestoneTell !== undefined) === (r.milestoneDist !== undefined),
+          `${seed} room ${r.index} tell/dist mismatch`,
+        ).toBe(true);
+        if (r.milestoneDist === 0) expect(r.foreshadow, `${seed} room ${r.index} double-tells`).toBeUndefined();
       }
     }
   });

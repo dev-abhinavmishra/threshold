@@ -540,16 +540,25 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   scheduleEncounters(mainRooms, encRng, opts, planBeats(streams.stream('pacing'), mainRooms));
   applyForeshadowing(mainRooms, streams.stream('scare'));
 
-  // The set pieces leave tracks too — the room before a chase, the Lens
-  // Hall or the baggage hall bleeds that piece's tell marks (no authored
-  // ante exists for these; the ante rooms at 49/99 dress themselves).
+  // The set pieces leave tracks too — the rooms before a chase, the Lens
+  // Hall or the baggage hall bleed that piece's tell marks, graded as they
+  // recede (no authored ante exists for these; the ante rooms at 49/99
+  // dress themselves).
   const MILESTONE_TELLS: Record<string, string> = {
     'ms-chase1': 'pursuer', 'ms-chase2': 'pursuer',
     'ms-lens-hall': 'curator', 'ms-baggage': 'hauler',
   };
   for (let i = 0; i + 1 < mainRooms.length; i++) {
     const tell = MILESTONE_TELLS[mainRooms[i + 1].templateId];
-    if (tell && !mainRooms[i].templateId.startsWith('ms-')) mainRooms[i].milestoneTell = tell;
+    if (!tell) continue;
+    for (let d = 0; d <= 1; d++) {
+      const room = mainRooms[i - d];
+      if (!room || room.templateId.startsWith('ms-')) continue;
+      if ((room.milestoneDist ?? Infinity) > d) {
+        room.milestoneTell = tell;
+        room.milestoneDist = d;
+      }
+    }
   }
 
   // The confiscated case — the eyes guard a prize. Watched rooms (a live
