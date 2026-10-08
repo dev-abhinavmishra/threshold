@@ -178,7 +178,12 @@ export abstract class Entity {
   private staggerUntil = -1;
 
   stagger(seconds: number): void {
+    // Already down — the crash was heard when it fell; re-staggering
+    // under standing water or steam extends the hold without lying
+    // that something heavy hit the floor again.
+    const wasDown = this.ctx.now < this.staggerUntil;
     this.staggerUntil = this.ctx.now + seconds;
+    if (wasDown) return;
     // sprint 415 — the fall is heard: a body going down is a real
     // sound in the house, not fiction — what listens drifts to the
     // crash. No source tag: entity listeners skip sourced events, and
@@ -216,6 +221,14 @@ export abstract class Entity {
   /** Approximate threat position for proximity systems (dread layer);
    *  null when the entity has no spatial presence. */
   threatPos(): Vec3 | null { return null; }
+
+  /** The eye at the crack told on the player: the watcher that met a
+   *  stoop through the gap now knows where the kneel happened. Entities
+   *  that can act on a sighting override this — it feeds their existing
+   *  pursuit machinery (a dropped crumb, an investigate point), never a
+   *  teleport. `at` is where the player knelt; `leaf` is the door's own
+   *  position for watchers that can't leave their room. */
+  eyeTell?(at: Vec3, leaf?: Vec3): void;
 
   /** Corridor telegraph: the index span a pass will cover plus the wave
    *  direction (±1 in index space) and warn progress 0→1. Null when not
@@ -257,7 +270,7 @@ export function playerExposed(ctx: EntityCtx, entPos: Vec3): 'safe' | 'kill' {
   const eye = v3();
   p.eyePos(eye);
   const entEye = v3(entPos.x, 1.6, entPos.z);
-  const colliders: Aabb[] = room ? room.losBlockers : [];
+  const colliders: Aabb[] = room?.losBlockers ?? [];
   if (!hasLineOfSight(entEye, eye, colliders)) return 'safe';
   // A shut leaf is a physical panel — sight can't pass it. The kill
   // verdict has to treat it as blocking, or a touch lands through the

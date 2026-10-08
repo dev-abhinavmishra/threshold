@@ -396,6 +396,26 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('the eye tells — a stoop sighting drops a crumb it walks to (sprint 450)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const trail = [v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const b = new Bellman();
+    b.spawn(ctx);
+    const t = step(b, ctx, 4);   // warn → engage, trail starts pulling
+    // the crack met your kneel here — the watcher gets YOUR position
+    const kneel = v3(room.origin.x + 6, 0, room.origin.z + 3);
+    const d0 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
+    b.eyeTell!(kneel);
+    step(b, ctx, 4, t);
+    const d1 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
+    expect(d1).toBeLessThan(d0); // it walks the sighting, not the cold trail
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /remembers the crack/.test(c))).toBe(true);
+    b.dispose();
+  });
+
   it('releases the hold and knocks normally once the brace is gone', () => {
     const rooms = routeRooms();
     const room = rooms[20];
@@ -1669,6 +1689,28 @@ describe('Grafter (sprint 256)', () => {
     g.dispose();
   });
 
+  it('the rubble felt the crack — a stoop sighting drags it to the leaf (sprint 452)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = 30; ctx.player.pos.z = 30; // unseen, a room over
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); }
+    const leaf = v3(3.6, 0, 0);
+    const gp = (g as unknown as { pos: { x: number; z: number } }).pos;
+    const d0 = Math.hypot(gp.x - leaf.x, gp.z - leaf.z);
+    g.eyeTell!(v3(30, 0, 30), leaf);
+    for (let i = 0; i < 200; i++) { ctx.now += 0.05; g.update(0.05); }
+    const d1 = Math.hypot(gp.x - leaf.x, gp.z - leaf.z);
+    expect(d1, 'the rubble camps the told leaf').toBeLessThan(Math.min(d0, 0.4));
+    g.dispose();
+  });
+
   it('reads the sign — killed hazards drag the rubble to the mark', async () => {
     const { Grafter } = await import('../src/entities/setpieces');
     const room = {
@@ -2397,6 +2439,40 @@ describe('the House Detective (sprint 278)', () => {
     d.dispose();
   });
 
+  it('the eye at his crack opens the register on the spot (sprint 451)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the slow look has barely started').toBe(false);
+    // your kneel at his leaf is the closest look he'll ever get
+    d.eyeTell!(v3(d.deskPos.x + 1, 0, d.deskPos.z));
+    expect(d.clocked, 'the register opens on the sighting').toBe(true);
+    expect(d.warranted, 'the wire is live').toBe(true);
+    d.dispose();
+  });
+
+  it('a clean face at his crack is only a kneel (sprint 451)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 0, carriesMarked: () => false,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    d.eyeTell!(v3(d.deskPos.x + 1, 0, d.deskPos.z));
+    expect(d.clocked, 'nothing to file — the register stays shut').toBe(false);
+    d.dispose();
+  });
+
   it('phones ahead — each fresh room you enter rings for you', async () => {
     const { Detective } = await import('../src/entities/setpieces');
     const ctx = makeCtx([deskRoom, hallRoom], {
@@ -2913,5 +2989,253 @@ describe('the gaze needs air (sprint 442)', () => {
     for (let i = 0; i < 40; i++) { cm.now += 0.05; wh.update(0.05); }
     expect(wh.state, 'staring through a door is not a gaze').not.toBe('done');
     wh.dispose();
+  });
+});
+
+describe('the eye tells — the rest of the cast (sprints 455-460)', () => {
+  const washRoom = {
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 11, flooded: true,
+    entryPos: { x: 0, y: 0, z: -5 }, exitPos: { x: 0, y: 0, z: 5 }, navNodes: [],
+    spec: { width: 9, depth: 11, props: [{ kind: 'pipeManifold', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const deskRoom = {
+    index: 0, templateId: 'u-records-cage', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'filing', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('the pipes tell her — a kneel at her leaf pulls her off the basin (sprint 455)', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([washRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); }
+    expect(w.guarding, 'she holds the drain').toBe(true);
+    const leaf = v3(-3.5, 0, -2);
+    w.eyeTell!(v3(30, 0, 30), leaf); // your kneel carries down the plumbing
+    expect(w.guarding, 'the basin is unwatched').toBe(false);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    const d0 = Math.hypot(wp.x - leaf.x, wp.z - leaf.z);
+    for (let i = 0; i < 120; i++) { ctx.now += 0.05; w.update(0.05); }
+    const d1 = Math.hypot(wp.x - leaf.x, wp.z - leaf.z);
+    expect(d1, 'she walks to HER side of the leaf').toBeLessThan(d0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /pipes told her/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('a face at her crack is a face on file — the index opens (sprint 456)', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.filed, 'the drawer is still shut on you').toBe(false);
+    f.eyeTell!(v3(0, 0, -5)); // the kneel gives her your face
+    expect(f.filed, 'your name is on a card').toBe(true);
+    expect(f.posted, 'the word goes out on foot').toBe(true);
+    f.eyeTell!(v3(0, 0, -5)); // filed once — further kneels tell nothing
+    f.dispose();
+  });
+
+  it('a debtor at his crack opens the ledger early (sprint 457)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    expect(a.demanded, 'the tally is still shut').toBe(false);
+    a.eyeTell!(v3(0, 0, -5)); // a debtor presenting themselves
+    expect(a.demanded, 'the ledger comes out on the sighting').toBe(true);
+    a.dispose();
+  });
+
+  it('a clean face at his crack is only a kneel (sprint 457)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, claimsOwed: () => 0,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    a.eyeTell!(v3(0, 0, -5));
+    expect(a.demanded, 'nothing owed — the book stays shut').toBe(false);
+    a.dispose();
+  });
+
+  it('the lantern locks on the crack (sprint 458)', () => {
+    const entryRoom = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: -14 }, yaw: 0,
+      width: 8, depth: 8,
+      entryPos: { x: 0, y: 0, z: -17 }, exitPos: { x: 0, y: 0, z: -11 }, navNodes: [],
+      spec: { width: 8, depth: 8, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const room = {
+      index: 1, templateId: 'u-hall', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 8, depth: 8,
+      entryPos: { x: 0, y: 0, z: -3 }, exitPos: { x: 0, y: 0, z: 3 }, navNodes: [],
+      spec: { width: 8, depth: 8, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([entryRoom, room], { currentRoomIndex: 1 });
+    const cm = new Commissionaire();
+    cm.spawn(ctx);
+    const leaf = v3(room.exitPos.x - 1, 0, room.exitPos.z);
+    cm.eyeTell!(v3(30, 0, 30), leaf);
+    const pin = cm as unknown as { pinYaw: number | null; pinUntil: number };
+    expect(pin.pinYaw, 'the light holds a bearing').not.toBeNull();
+    expect(pin.pinUntil, 'the pin outlasts a thrown sound').toBeGreaterThan(ctx.now + 4);
+    // post = exitPos + sin/cos(baseYaw)·1.0, baseYaw = atan2(entry−exit)
+    const baseYaw = Math.atan2(room.entryPos.x - room.exitPos.x, room.entryPos.z - room.exitPos.z);
+    const post = { x: room.exitPos.x + Math.sin(baseYaw), z: room.exitPos.z + Math.cos(baseYaw) };
+    const want = Math.atan2(leaf.x - post.x, leaf.z - post.z);
+    expect(Math.abs(pin.pinYaw! - want), 'the lantern aims at your leaf').toBeLessThan(0.3);
+    cm.dispose();
+  });
+
+  it('the keys turn toward your door (sprint 459)', () => {
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 12, depth: 12,
+      entryPos: { x: 0, y: 0, z: -5 }, exitPos: { x: 0, y: 0, z: 5 }, navNodes: [],
+      spec: { width: 12, depth: 12, props: [] },
+      doors: [], sockets: [],
+      hidingSpots: [
+        { id: 'far', kind: 'cabinet', exitPos: { x: 4, y: 0, z: 4 } },
+        { id: 'near', kind: 'cabinet', exitPos: { x: -4, y: 0, z: -4 } },
+      ],
+      scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const leaf = v3(-4.5, 0, -4.5); // the crack sits beside the 'near' lid
+    insp.eyeTell!(v3(30, 0, 30), leaf);
+    const tgt = (insp as unknown as { target: { id: string } | null }).target;
+    expect(tgt?.id, 'it walks to the cover nearest your door').toBe('near');
+    insp.dispose();
+  });
+
+  it('the shy thing flinches — a sighting costs it the spot (sprint 460)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    ctx.player.pos.x = room.origin.x; ctx.player.pos.z = room.origin.z;
+    const wh = new Whisper();
+    wh.spawn(ctx);
+    const wp = wh as unknown as { pos: { x: number; z: number } };
+    const before = { x: wp.pos.x, z: wp.pos.z };
+    wh.eyeTell!(v3(30, 0, 30));
+    const moved = Math.hypot(wp.pos.x - before.x, wp.pos.z - before.z);
+    expect(moved, 'it abandons the spot you saw').toBeGreaterThan(0.5);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shadow flinches/.test(c))).toBe(true);
+    wh.dispose();
+  });
+});
+
+describe('the eye tells — hunters and mass (sprints 461-464)', () => {
+  it('the mass bends through your kneel (sprint 461)', async () => {
+    const { Pursuer } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    const p = new Pursuer();
+    p.spawn(ctx);
+    const wps = [v3(room.origin.x, 0, room.origin.z - 4), v3(room.origin.x, 0, room.origin.z + 4)];
+    p.begin(wps);
+    const kneel = v3(room.origin.x + 2, 0, room.origin.z);
+    p.eyeTell!(kneel);
+    const wi = (p as unknown as { wi: number }).wi;
+    expect((p as unknown as { waypoints: { x: number; z: number }[] }).waypoints[wi].x,
+      'the route detours through the told point').toBeCloseTo(kneel.x, 3);
+    p.end();
+  });
+
+  it('a kneel before it wakes the route is ignored (sprint 461)', async () => {
+    const { Pursuer } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const p = new Pursuer();
+    p.spawn(ctx);
+    p.eyeTell!(v3(1, 0, 1)); // no chase running — frames on a rack
+    expect((p as unknown as { waypoints: unknown[] }).waypoints.length).toBe(0);
+    p.dispose();
+  });
+
+  it('it red-lines the floor under the crack (sprint 462)', async () => {
+    const { Editor } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const e = new Editor();
+    e.spawn(ctx);
+    const leaf = v3(rooms[20].origin.x + 3, 0, rooms[20].origin.z + 2);
+    const n0 = e.zones.length;
+    e.eyeTell!(v3(30, 0, 30), leaf);
+    expect(e.zones.length, 'the audit writes a zone on the spot').toBe(n0 + 1);
+    const z = e.zones[e.zones.length - 1];
+    expect(Math.hypot(z.x - leaf.x, z.z - leaf.z), 'the zone covers the leaf').toBeLessThan(0.01);
+    e.dispose();
+  });
+
+  it('the sleeper stirs on the kneel — two sightings wake it (sprint 463)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    ctx.player.pos.x = room.origin.x + 8; ctx.player.pos.z = room.origin.z + 8; // far corner, unstirring
+    ctx.player.lastMoveSpeed = 0;
+    const h = new Husk();
+    h.spawn(ctx);
+    const hp = (h as unknown as { pos: { x: number; z: number } }).pos;
+    // player 8+ meters out, lamp beam aimed away — dormant baseline
+    ctx.player.yaw = Math.atan2(room.origin.x - hp.x > 0 ? -1 : 1, 0); // face away
+    ctx.now += 0.05; h.update(0.05);
+    h.eyeTell!(v3(30, 0, 30));
+    const angered = (h as unknown as { anger: number }).anger;
+    expect(angered, 'the kneel thump works on it').toBeGreaterThan(0.4);
+    h.eyeTell!(v3(30, 0, 30));
+    // two tells is enough — the sleeper should be hunting now or one frame from it
+    ctx.now += 0.05; h.update(0.05);
+    const mode = (h as unknown as { mode: string }).mode;
+    expect(mode, 'the second crack woke it').toBe('hunt');
+    h.dispose();
+  });
+
+  it('the pass slows over the told seam (sprint 464)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    const cm = ctx as { now: number };
+    // run through the warning into the pass
+    for (let i = 0; i < 400 && sw.state === 'warn'; i++) { cm.now += 0.05; sw.update(0.05); }
+    expect(sw.state).toBe('engage');
+    // drop a told crack just ahead of the moving front
+    const f = sw as unknown as { pos?: unknown };
+    void f;
+    const path = (sw as unknown as { path: { x: number; z: number }[] }).path;
+    const leaf = v3(path[Math.min(2, path.length - 1)].x, 0, path[Math.min(2, path.length - 1)].z);
+    sw.eyeTell!(v3(30, 0, 30), leaf);
+    // run until the front reaches the told leaf — the pass should brake there
+    const nm = sw as unknown as { nearMissUntil: number };
+    let slowed = false;
+    for (let i = 0; i < 1200 && sw.state === 'engage'; i++) {
+      cm.now += 0.05; sw.update(0.05);
+      if (nm.nearMissUntil > cm.now) { slowed = true; break; }
+    }
+    expect(slowed, 'it braked over the seam it watched').toBe(true);
+    sw.dispose();
   });
 });

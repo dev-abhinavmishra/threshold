@@ -6452,3 +6452,173 @@ crack verbs +0.25 normal-side at y+0.42 p5. Two rules for the next
 verb here: anything the player kneels to reach must outrank by
 PRIORITY not proximity (dist always favors the seam edge nearer the
 stand), and never mint inside the leaf lane — the collider owns it.
+
+## Sprint 450 — the eye tells
+
+The s448 scare is now a consequence: when the crack's eye meets yours,
+`bestE.eyeTell(player.pos)` hands the watching entity YOUR kneel
+position — the stoop's information trade is live, not just loud. The
+channel is a new optional `Entity.eyeTell(at)` in base.ts; each mobile
+watcher feeds it into its own pursuit machinery rather than a special
+sprint: Bellman drops a `noiseCrumb` at your spot (block→knock→strain→
+shoulder chain handles the leaf), the warden sets `investigate` (its
+doorOnPath answers braced/locked/free leaves), the Curator tilts
+suspicious→investigate. Static `threatPos` holders (setpieces, room
+figs) can't implement it — the eye there was atmosphere, and the
+flinch emit still carries the near-side noise.
+**Notes:** eyeTell honors each entity's own gates (underGaze, charging,
+pursue) — a sighting can't override a stronger claim. The watcher
+guards `threatPos()` engagement filters, so only already-live threats
+can watch a crack at all. No checkpoints: stoopEyeUsed resets per run
+by design (a death is a new door).
+
+## Sprint 451 — his eye was at the crack too
+
+The Detective implements eyeTell: a kneel at his leaf is the closest
+look he'll ever get, so the register opens ON THE SIGHTING — no slow
+look, no room presence required (the crack is the one place your face
+crosses his threshold while you're outside his room). Marked stock on
+your back files the same line it would across his desk. A clean face
+at his crack is only a kneel — the register stays shut.
+**Notes:** this closes the tell family: mobile watchers walk to the
+leaf (s450), the desk filer files you on sight (s451). Entities
+without an override keep the eye as atmosphere only.
+
+## Sprint 452 — the rubble felt the crack
+
+The Grafter implements eyeTell with the `leaf` argument — it can't
+leave its spawn room, so the sighting sends it dragging to the door's
+own position instead of yours. It CAMPS the leaf for ~14s
+(crackCampUntil blocks pickRoam's wander, idle grind still strips
+dead wire at its feet), then roams off when the window rots.
+**Notes:** without the camp, the grafter reached the leaf and pickRoam
+wandered it straight off — a sighting that means "camped the crack"
+needs its own linger, not just a retarget.
+
+## Sprint 453 — every touch respects the leaf
+
+Kill-gate audit after the s440 LOS fix: five touch-kills still used
+raw distance and landed through shut leaves — pursuer, editor,
+grafter, husk, curator. All five now gate on
+`playerExposed(c, this.pos) === 'kill'` beside their own proximity
+checks, so the leaf sweep covers every contact kill in the game.
+**Notes:** bellman + corridor warden already used playerExposed
+(s440); these were the stragglers. playerExposed also free-passes the
+existing protection checks (hidden/losSafe/spot) — strictly more
+cover, no removed safety.
+
+## Sprint 454 — the review's bill: 17 fixes across five merged arcs
+
+Devin Review findings on #164/#171/#173/#180/#181, all verified
+against current code and fixed (3 flags deferred to design calls):
+
+- **the double plant** (setpieces): Grafter.onDone clears `carrying`
+  before planting — dispose() re-invokes onDone and re-planted.
+- **the flood that floods** (base): stagger() emits 'impact' only on
+  a fresh knockdown — standing water/steam extends the hold without
+  re-lying the crash.
+- **the shy repairman** (corridor): warden's 1.8m repair-abort now
+  requires `!p.hiddenSpot` — the comment always claimed a hidden
+  slip aborts; now the check honors it.
+- **the blind scavenger** (setpieces): stripSnare hoisted out of the
+  stationary branch — a grafter crossing dead wire en route strips
+  it mid-stride.
+- **the first strain was a bluff** (corridor): doorOnPath returns
+  'working' — the warden stands at a wired leaf ~2.2s and re-strains
+  to 'freed' instead of abandoning after the first contact. braceShoveT
+  ticks during checks now, and a fresh warden inside its shoulder
+  cooldown waits out the remainder at the leaf ('working' too).
+- **the vanishing re-lay** (Game): rearmHazard sets `claimed` instead
+  of clearing `planted` — the claimed wire keeps its checkpoint slot
+  (graftedWires record `claimed`), reads 'Cut the seal', yields no coil.
+- **the late ring** (Game): armedLures restore clamps nextTick to
+  Math.min(0.8, al.t) — a sub-0.8s fuse can't outlive its own ring.
+- **the haunted bind** (Game): pendingDoorOpen skips heldBy leaves —
+  a wired/chocked door holds against the haunting, with a tell.
+- **the plastered lens** (Game): cam LOS origin nudged 0.18m toward
+  room center — mounts sat 0.07 inside the edge vs the wall collider's
+  ~0.12 inner face, so every cam reported blind.
+- **the wall-piercing gazes** (room): Echo-Skin + Margin strikes now
+  require the player's clear LOS line — cover holds them at
+  killRange+0.4/0.3 until the air clears.
+- **the unreachable hunting spot** (room): Whisper.relocate prefers
+  in-room AND hasLineOfSight candidates (first in-room kept as fallback).
+- **the buried keyhole** (interaction): locked-door peek is p6 at
+  keyhole height (y+0.95) — the level look outranks the crack lattice.
+- **the shared anchor** (interaction): wireDoor offset -latX*0.26 off
+  the wedge's identical position — equal-score ties let first-added win.
+- **the articulate dark** (Game): stoopUnder returns 'black glass'
+  BEFORE shadow reads in a darkRoom (the lit checker lamp keeps its
+  exemption — it IS the light).
+- **the room-shared eye** (Game): stoop eye seed hashes door.id in —
+  per-door rolls, not per-room.
+- **the haunted reopening** (Game): pendingDoorOpen excludes heldBy.
+
+**Deferred to threads (needs_human):** purse-jurisdiction contract
+question, wire-cut e2e coverage gap, route-wide sight-scan perf flag.
+
+**Notes:** playerExposed now defaults `room?.losBlockers ?? []` —
+synthetic test rooms without the field crashed the grafter rise spec.
+Contract spec updated: `s.claimed = true` replaces the pinned
+`s.planted = false` shape, plus !claimed guards on reclaim verbs.
+
+## Sprints 455-460 — the eye tells the rest of the cast
+
+The stoop-sighting surface (s450-453) now reaches the six cast members
+that plausibly watch a crack. Each answers in its own idiom — the
+watcher's temperament decides whether the kneel endangers you or it:
+
+- **s455 the pipes tell her** (Laundress): a kneel at her leaf thumps
+  down the plumbing she works — she leaves the basin to sniff at HER
+  side of the door (`alerted` at the leaf pos — never the player's
+  room, same room-bound rule as her hearing).
+- **s456 a face on file** (Filer): a face she can see is a face she
+  can file — the kneel opens the index (`openIndex`) without waiting
+  for her own look. Once filed+posted, further kneels tell nothing.
+- **s457 the ledger opens early** (Auditor): a kneel at his leaf while
+  `claimsOwed > 0` demands on the sighting — a debtor presenting
+  themselves. A clean face is only a kneel.
+- **s458 the lantern locks on the crack** (Commissionaire): the pin
+  machinery hears the sighting like a noise, but holds 5s — longer
+  than any thrown lure — aimed at the leaf you knelt at.
+- **s459 the keys turn toward your door** (Inspector): it glances up
+  off its current lid test and retargets to the unchecked hiding spot
+  NEAREST your leaf — the sighting endangers the cover closest to
+  where you knelt.
+- **s460 the shy thing flinches** (Whisper): the only watcher whose
+  answer is to leave — a sighted whisper relocates on the spot and
+  loses the ambush bearing it had.
+
+**Notes:** eyeTell already receives `(playerPos, leafPos)` — the leaf
+param is what keeps room-bound watchers honest (they walk to their
+side, never wall-walk to yours). The asymmetry is the point: predators
+come to the told point, clerks open their books, the shy lose their
+spot. Watcher selection is `bestE` — nearest live threatPos within
+2.6m of the leaf, same 0.22/door seeded roll as s450.
+
+## Sprints 461-464 — the eye tells the hunters
+
+The intake surface closes: even the chase pieces answer a watched
+kneel now. With 455-460 the watching cast is complete — every entity
+that can plausibly put an eye to a crack responds in idiom.
+
+- **s461 the mass bends through your kneel** (Pursuer): mid-chase, a
+  sighted kneel splices in as the next waypoint — the route detours
+  through where you knelt, then resumes. Pre-`begin` it ignores you.
+- **s462 it red-lines the crack** (Editor): the audit writes a
+  deletion zone centered on the told leaf — re-kneeling there or
+  stepping through when the leaf moves pays the delete price.
+- **s463 the sleeper stirs on the kneel** (Husk): the kneel's thump
+  feeds `anger` like the beam does (+0.55, capped); dormant-only —
+  once it's up, the sighting tells it nothing new.
+- **s464 the pass slows over the told seam** (CorridorRunner): the
+  runner is rail-bound, so the crack lands where the route runs —
+  crossing the told leaf drops the pass to near-miss speed + a second
+  touch (`pendingTap`), once per sighting.
+
+**Notes:** eyeTell is a convention, not an interface requirement —
+the Game calls it only when the watcher is `bestE` (nearest live
+threatPos within 2.6m of the leaf under the seeded 0.22/door roll).
+Entities that can't plausibly watch (Swamper — submerged, Hollow —
+it IS the trap, Orrery — ceiling fixture, staged/ms entities) stay
+silent on purpose: the crack shows nothing that isn't there.

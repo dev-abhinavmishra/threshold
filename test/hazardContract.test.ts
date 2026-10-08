@@ -236,9 +236,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
 
   it('maintenance is a claim — a re-tied coil stops being yours', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
-    // the warden's re-lay clears the planted flag: the re-armed wire
-    // mints 'Cut the seal' like any house snare and yields no coil
-    expect(gameSrc).toMatch(/kind === 'wire'[\s\S]*?s\.planted = false/);
+    // the warden's re-lay marks your wire claimed: it stays planted for
+    // the checkpoint but mints 'Cut the seal' like any house snare and
+    // yields no coil (a reload keeps the re-lay — clearing `planted`
+    // dropped the wire from the graftedWires list entirely)
+    expect(gameSrc).toMatch(/kind === 'wire'[\s\S]*?s\.claimed = true/);
+    // the reclaim verbs only belong to wire the house hasn't claimed
+    expect(gameSrc).toMatch(/hz\.planted && !hz\.claimed[\s\S]*?'Pull the wire free'/);
+    // and the claim rides the checkpoint like the rest of the graft
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toMatch(/graftedWires\?.*claimed\?/);
   });
 
   it('the wound clock outlives you too — a paid alarm keeps its fuse', () => {

@@ -4,7 +4,7 @@
  * Each is a small state machine with deterministic cue windows.
  */
 import * as THREE from 'three';
-import { Entity, type EntityCtx } from './base';
+import { Entity, playerExposed, type EntityCtx } from './base';
 import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
 import { shutLeafBlockers, pointInRoom } from '../engine/doorGeo';
 import type { RoomInstance } from '../game/types';
@@ -125,17 +125,39 @@ export class Whisper extends Entity {
     const c = this.ctx;
     const p = c.player;
     const room = c.rooms[c.currentRoomIndex];
+    // A spot inside the room can still hide behind the furniture it was
+    // meant to be found through — prefer the candidate a sight line can
+    // actually reach; the first in-bounds pick is the honest fallback
+    const eye = v3();
+    p.eyePos(eye);
+    let inside: Vec3 | null = null;
     for (let i = 0; i < 6; i++) {
       const a2 = new Rng(c.seed + 977 + this.relocN * 131).float() * Math.PI * 2;
       const r2 = (3 + dist) + new Rng(c.seed + 311 + this.relocN * 197).float() * 2.5;
       const cand = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
       this.relocN++;
-      if (i === 5 || !room || pointInRoom(room, cand.x, cand.z)) {
+      if (room && !pointInRoom(room, cand.x, cand.z)) continue;
+      inside ??= cand;
+      if (!room || hasLineOfSight(eye, v3(cand.x, 1.4, cand.z),
+        room.losBlockers.concat(shutLeafBlockers(c.rooms, p.pos, cand)))) {
         this.pos = cand;
         if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
         return;
       }
     }
+    if (inside) {
+      this.pos = inside;
+      if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+    }
+  }
+
+  /** The eye at the crack: the shy thing that met you through the gap
+   *  flinches — the sighting costs it the ambush spot it had. The only
+   *  watcher whose answer is to leave rather than come. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage') return;
+    this.relocate();
+    this.ctx.cue('moth-flutter', this.pos, '[the shadow flinches — it is somewhere else now]', { severity: 'warn' });
   }
 
   protected override onSpawn(): void {
@@ -469,8 +491,12 @@ export class EchoSkin extends Entity {
       }
     } else {
       this.dispelT = 0;
-      this.approachD = Math.max(1.4, this.approachD - this.tuning.speed * dt * (p.lastMoveSpeed < 0.5 ? 1.2 : 0.6));
-      if (this.approachD <= this.tuning.killRange + 0.4) {
+      // It closes while you look away, but a wall between you is still
+      // a wall — out of your sight it stops short of contact until the
+      // air between you clears; a look-away strike needs the clear line
+      const floor = eCanSee ? 1.4 : this.tuning.killRange + 0.4;
+      this.approachD = Math.max(floor, this.approachD - this.tuning.speed * dt * (p.lastMoveSpeed < 0.5 ? 1.2 : 0.6));
+      if (eCanSee && this.approachD <= this.tuning.killRange + 0.4) {
         c.damagePlayer(this.tuning.damage, 'echoskin', 'Echo-Skin borrows your footsteps. Stop, listen, and hold it in view.');
         this.done();
       }
@@ -699,7 +725,10 @@ export class Margin extends Entity {
         this.instability = 0;
       }
     } else {
-      this.d = Math.max(1.2, this.d - this.tuning.speed * dt);
+      // It drifts closer while you look away — but a wall between you
+      // is still a wall: out of sight it stops short of contact until
+      // the air clears, and the strike needs the clear line
+      this.d = Math.max(mCanSee ? 1.2 : this.tuning.killRange + 0.3, this.d - this.tuning.speed * dt);
       // Positional misdirection: a soft rustle from the mirrored edge.
       this.rustleT -= dt;
       if (this.rustleT <= 0) {
@@ -708,7 +737,7 @@ export class Margin extends Entity {
         const mz = p.pos.z + Math.cos(p.yaw - side * 1.35) * this.d;
         c.cue('margin-rustle', v3(mx, 0, mz), '', { severity: 'warn' });
       }
-      if (this.d <= this.tuning.killRange) {
+      if (mCanSee && this.d <= this.tuning.killRange) {
         c.damagePlayer(this.tuning.damage, 'margin', 'Margin moves when unseen. Glance at it — but never too long.');
         this.done();
       }
@@ -828,6 +857,21 @@ export class Husk extends Entity {
     this.state = 'engage';
   }
 
+  /** The eye at the crack: a sleeper doesn't chase sounds it can't reach,
+   *  but a kneel thumped through its floor works on it like the beam —
+   *  the crack feeds the same anger, and a sleeper near the edge wakes
+   *  on the sighting. Once it's up the kneel tells it nothing new. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage' || this.mode !== 'dormant') return;
+    this.anger = Math.min(1.2, this.anger + 0.55);
+    if (!this.stirred && this.anger > 0.5) {
+      this.stirred = true;
+      this.ctx.duckTone?.(2.6);
+      this.ctx.cue('husk-stir', this.pos, '[the figure in the corner shifts — it felt the kneel]', { severity: 'warn' });
+      if (this.mesh) this.mesh.rotation.x = 0.08;
+    }
+  }
+
   protected override onUpdate(dt: number): void {
     const c = this.ctx;
     const p = c.player;
@@ -888,7 +932,7 @@ export class Husk extends Entity {
         this.footT = 0;
         c.cue('husk-foot', this.pos, '', { severity: 'warn' });
       }
-      if (d < this.tuning.killRange && !hidden) {
+      if (d < this.tuning.killRange && !hidden && playerExposed(c, this.pos) === 'kill') {
         this.rig?.play('attack', 0.05);
         c.killPlayer('husk', 'It sleeps until you paint it with light or crowd it. Sweep slowly.');
         this.done();
@@ -949,6 +993,9 @@ export class HazardField {
      *  answers to 'Pull the wire free'. Trips the house's walkers too —
      *  the wire doesn't care whose foot. */
     planted?: boolean;
+    /** sprint 454 — the house's claim on your wire: the warden's re-lay
+     *  re-tied it under its own knot — 'Cut the seal', no coil back. */
+    claimed?: boolean;
     /** prop face for laid wire (grafts + planted) — removed with the
      *  snare so a pulled wire never leaves a ghost visual. */
     mesh?: THREE.Object3D }[] = [];
@@ -1575,6 +1622,33 @@ export class Inspector extends Entity {
     this.state = 'engage';
   }
 
+  /** The eye at the crack: the kneel read like a noise to it — it glances
+   *  up off whatever lid it holds, then walks its keys to the cover
+   *  nearest YOUR door instead of whatever was next. The sighting
+   *  endangers the spot closest to where you knelt. */
+  override eyeTell(at: Vec3, leaf?: Vec3): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.expireT <= c.now) return;
+    const room = c.rooms[c.currentRoomIndex];
+    if (!room || room.index !== this.hostRoom) return;
+    if (this.testing && this.testT > 1.2) this.testT = 1.2;
+    const near = leaf ?? at;
+    let best: RoomInstance['hidingSpots'][number] | null = null;
+    let bestD = Infinity;
+    for (const s of room.hidingSpots) {
+      if (this.checked.has(s.id) || s.trappedBy) continue;
+      const d = v3dist(near, s.exitPos);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    if (best) {
+      this.target = { exitPos: best.exitPos, id: best.id, spot: best };
+      if (this.glanceCd <= c.now) {
+        this.glanceCd = c.now + 8;
+        c.cue('collector-rattle', this.pos, '[it glances up — the keys turn toward your door]', { severity: 'warn' });
+      }
+    }
+  }
+
   /** A loud noise makes it cut the current lid test short — it glances up
    *  and moves to the next spot. Noise buys you seconds at the lid it is
    *  on, at the price of hurrying it toward yours. */
@@ -1840,6 +1914,21 @@ export class Commissionaire extends Entity {
     this.rig?.play('idle', 0.1);
     this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** The eye at the crack: the lantern answers the kneel the way it
+   *  answers a noise — the light locks on your leaf and holds longer
+   *  than a thrown sound could buy it. While it watches the crack,
+   *  the far arc stays blind. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.chasing || this.returning || !leaf) return;
+    this.pinYaw = Math.atan2(leaf.x - this.pos.x, leaf.z - this.pos.z);
+    this.pinUntil = c.now + 5;
+    if (this.pinCd <= 0) {
+      this.pinCd = 6;
+      c.cue('floor-creak', this.pos, '[the light locks on the crack]', { severity: 'warn' });
+    }
   }
 
   /** It never leaves its post for a noise — but the light turns to look,

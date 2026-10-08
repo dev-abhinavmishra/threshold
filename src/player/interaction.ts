@@ -255,9 +255,12 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
     if (it.kind !== 'door' || !d) continue;
     if (d.locked && !d.falseDoor) {
       sys.add({
-        kind: 'peek', id: `peek-${it.id}`, pos: it.pos,
+        kind: 'peek', id: `peek-${it.id}`,
+        // the eye goes to the keyhole, not the floor — at a locked leaf
+        // the level look outranks kneeling at the crack lattice
+        pos: { x: it.pos.x, y: it.pos.y + 0.95, z: it.pos.z },
         prompt: `Peek Door ${d.label}`, holdTime: 0.9,
-        data: d, enabled: true, priority: 4,
+        data: d, enabled: true, priority: 6,
       });
     }
     if (d.openT <= 0.4) {
@@ -332,7 +335,10 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
           const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
           sys.add({
             kind: 'wireDoor', id: `wire-${it.id}`,
-            pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
+            // a hand's-width off the wedge's own anchor — same floor,
+            // same side, same priority; identical anchors tie and the
+            // first-minted verb would shadow the other for good
+            pos: { x: it.pos.x - latX * 0.26 + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z - latZ * 0.26 + nZ * side * 0.45 },
             prompt: `Wire Door ${d.label} shut`, holdTime: 1.2,
             data: d, enabled: true, priority: 4,
           });

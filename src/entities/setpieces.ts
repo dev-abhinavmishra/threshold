@@ -4,7 +4,7 @@
  * free-roamers — they exist only inside their milestone controllers.
  */
 import * as THREE from 'three';
-import { Entity, corridorPath, followPath, pathLength } from './base';
+import { Entity, corridorPath, followPath, pathLength, playerExposed } from './base';
 import { v3, v3copy, v3dist, clamp } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -92,7 +92,7 @@ export class Pursuer extends Entity {
     }
 
     const d = v3dist(this.pos, p.pos);
-    if (d < this.tuning.killRange && p.protection !== 'hidden') {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && playerExposed(c, this.pos) === 'kill') {
       this.rig?.play('attack', 0.05);
       c.killPlayer('pursuer', 'The Pursuer only wins if you stop. Sprint the whole sequence — vaults and gates slow it too.');
       this.done();
@@ -101,6 +101,16 @@ export class Pursuer extends Entity {
     if (d < 20 && Math.random() < dt * 4) {
       c.cue('pursuer-crash', this.pos, '', { severity: 'danger' });
     }
+  }
+
+  /** The eye at the crack: the route it chases is scripted, but a kneel
+   *  it watched lands as an extra stop — the mass bends through the
+   *  point you knelt at, then resumes the corridor. Mid-chase only;
+   *  before `begin` it is still frames on a rack. */
+  override eyeTell(at: Vec3): void {
+    if (!this.active || this.wi >= this.waypoints.length) return;
+    this.waypoints.splice(this.wi, 0, v3copy(v3(), at));
+    this.ctx.cue('pursuer-crash', this.pos, '[the frames turn — it counted your kneel]', { severity: 'danger' });
   }
 
   /** Chase over (player reached the end or died). */
@@ -315,10 +325,21 @@ export class Editor extends Entity {
       }
     }
     // contact
-    if (v3dist(this.pos, p.pos) < this.tuning.killRange + 0.4 && p.protection !== 'hidden') {
+    if (v3dist(this.pos, p.pos) < this.tuning.killRange + 0.4 && p.protection !== 'hidden' && playerExposed(c, this.pos) === 'kill') {
       c.killPlayer('editor', 'The Editor deletes whatever it touches. The floor it marks is already gone — keep moving.');
       this.done();
     }
+  }
+
+  /** The eye at the crack: it audits what it saw — the floor under your
+   *  kneel is red-lined on the spot. The zone is written on ITS side of
+   *  the leaf, so kneeling at that crack again (or stepping through the
+   *  moment the leaf moves) pays the deletion price. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.deletionZones.push({ x: leaf.x, z: leaf.z, r: 1.8 });
+    if (this.deletionZones.length > 8) this.deletionZones.shift();
+    this.ctx.cue('editor-delete', leaf, '[a deletion zone is being written — under the crack]', { severity: 'warn' });
   }
 
   protected override onDone(): void {
@@ -420,6 +441,22 @@ export class Grafter extends Entity {
     }
   }
 
+  /** Seconds the told crack stays worth camping — it keeps grinding at
+   *  the leaf (stripping any dead wire at its feet) rather than
+   *  reaching it and wandering straight off. */
+  private crackCampUntil = 0;
+
+  /** The eye at the crack: loose masonry felt the kneel through the
+   *  gap. It can't leave its room — it drags to the leaf itself and
+   *  camps the threshold, grinding whatever lies at its feet. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.target = v3(leaf.x, 0, leaf.z);
+    this.roamT = 0;
+    this.crackCampUntil = this.ctx.now + 14;
+    this.ctx.cue('grafter-grind', this.pos, '[the rubble felt the crack — it drags to the leaf]', { severity: 'warn' });
+  }
+
   private pickRoam(): void {
     const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 97));
     this.target = v3(
@@ -461,14 +498,14 @@ export class Grafter extends Entity {
       if (this.mesh) this.mesh.rotation.y = Math.atan2(dx, dz);
     } else {
       this.rig?.play('idle');
-      if (this.roamT > 1.4) this.pickRoam();
-      // It grinds the floor wherever it stands — a dead snare at its
-      // feet is scrap, and scrap gets carried.
-      if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
-        this.carrying = 1;
-        this.carryCued = false;
-        c.cue('grafter-grind', this.pos, '[stone grinds the wire free — the coil goes with it]', { severity: 'warn' });
-      }
+      if (this.roamT > 1.4 && c.now > this.crackCampUntil) this.pickRoam();
+    }
+    // It grinds the floor wherever it is — a dead snare crossed under
+    // its stride is scrap too, not only the one under a standing rubble.
+    if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
+      this.carrying = 1;
+      this.carryCued = false;
+      c.cue('grafter-grind', this.pos, '[stone grinds the wire free — the coil goes with it]', { severity: 'warn' });
     }
     // The coil unwinds where the living walk — the under doesn't
     // repair its floor, it moves the wire onto your path.
@@ -546,7 +583,7 @@ export class Grafter extends Entity {
       c.cue('grafter-grind', this.pos, '[stone drags on stone]', { severity: 'warn' });
     }
 
-    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising()) {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising() && playerExposed(c, this.pos) === 'kill') {
       this.rig?.play('attack', 0.05);
       c.cue('grafter-strike', this.pos, '', { severity: 'danger' });
       c.killPlayer('grafter', 'The Grafter is slow. Walk around it — never let it close the gap.');
@@ -585,6 +622,9 @@ export class Grafter extends Entity {
     // It settles back into the floor — a coil still on its back
     // settles with it, armed where the rubble sank.
     if (this.carrying > 0) {
+      // dispose() re-invokes onDone — the coil must leave the rubble's
+      // hands once planted or a settled body plants it twice
+      this.carrying = 0;
       const pr = this.roomOf(this.pos);
       if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr, `grafter:${this.spawnRoom}`);
     }
@@ -1089,6 +1129,18 @@ export class Laundress extends Entity {
     this.sniffUntil = this.ctx.now + 5;
   }
 
+  /** The eye at the crack: she doesn't read faces — but a kneel at her
+   *  leaf thumps down the plumbing she works. The pipes tell her where,
+   *  and she leaves the basin to sniff at her side of the door. Same
+   *  room-bound rule as her hearing: the point is HER side of the leaf,
+   *  never the player's. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.alerted = v3(leaf.x, 0, leaf.z);
+    this.sniffUntil = this.ctx.now + 5;
+    this.ctx.cue('puddle-splash', this.pos, '[the pipes told her — she leaves the basin]', { severity: 'warn' });
+  }
+
   /** The drain press reaches her — she takes the hand on the crank. */
   aggravate(p: Vec3): void {
     const c = this.ctx;
@@ -1257,6 +1309,16 @@ export class Auditor extends Entity {
 
   private settleId(): string { return `audit-${this.spawnRoom}`; }
   private tallyId(): string { return `tally-${this.spawnRoom}`; }
+
+  /** The eye at the crack: a kneel at his leaf while you owe is a debtor
+   *  presenting themselves — the ledger opens on the sighting, earlier
+   *  than his own room rule would fire it. A clean face is only a kneel. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state === 'done' || this.demanded || this.homebound) return;
+    const owed = this.ctx.claimsOwed?.() ?? 0;
+    if (owed <= 0) return;
+    this.openLedger();
+  }
 
   /** Hands in his drawer — the book slaps open at your name on the spot. */
   rifledTally(): void {
@@ -1578,6 +1640,24 @@ export class Detective extends Entity {
     this.ctx.cue('chalk-mark', this.pos, '[he watches your hands in his book — your face files itself]', { severity: 'warn' });
   }
 
+  /** The eye at the crack: the closest look he'll ever get. A kneel at
+   *  his leaf puts your face at his door — if there's anything to file,
+   *  the register opens on the spot; the slow look doesn't apply when
+   *  you've come to him. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state === 'done' || this.clocked || this.homebound) return;
+    const c = this.ctx;
+    const owed = c.heldOwed?.() ?? 0;
+    const marked = c.carriesMarked?.() === true;
+    if (owed <= 0 && !marked) return; // a clean face is only a kneel
+    this.openRegister();
+    if (marked && !this.stockNoted) {
+      this.stockNoted = true;
+      c.stockSighted?.(this.spawnRoom);
+    }
+    c.cue('chalk-mark', this.pos, '[his eye was at the crack too — the register is already open]', { severity: 'warn' });
+  }
+
   private openRegister(): void {
     const c = this.ctx;
     this.clocked = true;
@@ -1796,6 +1876,14 @@ export class Filer extends Entity {
 
   private squareId(): string { return `square-${this.spawnRoom}`; }
   private docketId(): string { return `docket-${this.spawnRoom}`; }
+
+  /** The eye at the crack: a face she can see is a face she can file —
+   *  the kneel opens the index without waiting for her own look. Once
+   *  filed and posted, further kneels tell her nothing new. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage' || this.filed || this.homebound) return;
+    this.openIndex();
+  }
 
   private openIndex(): void {
     const c = this.ctx;

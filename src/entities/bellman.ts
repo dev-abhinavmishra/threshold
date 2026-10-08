@@ -481,6 +481,17 @@ export class Bellman extends Entity {
     c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it stoops to the sound]', { severity: 'warn' });
   }
 
+  /** The eye at the crack: it watched you kneel — the sight lands like a
+   *  dropped crumb at your own spot, and it walks its usual door-work to
+   *  reach it (block, knock, strain, shoulder). Frozen under your gaze it
+   *  can't have been watching. */
+  override eyeTell(at: Vec3): void {
+    if (this.state !== 'engage' && this.state !== 'warn') return;
+    if (this.underGaze()) return;
+    this.noiseCrumb = v3(at.x, 0, at.z);
+    this.ctx.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it remembers the crack]', { severity: 'warn' });
+  }
+
   /** The trail array dropped its oldest crumb — keep our cursor aligned. */
   override trailShifted(): void { this.crumb = Math.max(0, this.crumb - 1); }
 
