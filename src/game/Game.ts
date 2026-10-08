@@ -1991,7 +1991,10 @@ export class Game {
     for (const hz of this.hazard.snares) {
       // sprint 423 — your own laid wire mints too, live or dead: pull it
       // free for the coil back, or gather the spent trip-line
-      if (!hz.armed && !hz.planted) continue;
+      // sprint 431 — a dead graft mints too: the under's slack wire is
+      // scrap anyone can take — the grafter strips it for the splice,
+      // you gather it for the coil. Dead wire is contested loot.
+      if (!hz.armed && !hz.planted && !hz.grafted) continue;
       const rm = rooms.find((r) => r.index === hz.room) ?? this.route?.branchRooms.find((r) => r.index === hz.room);
       if (!rm) continue;
       const submerged = !!rm.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
@@ -2002,7 +2005,7 @@ export class Game {
         kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
         pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
         prompt: hz.planted ? (hz.armed ? 'Pull the wire free' : 'Gather the wire')
-          : hz.grafted ? 'Cut the splice'
+          : hz.grafted ? (hz.armed ? 'Cut the splice' : 'Gather the wire')
           : submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
         holdTime: hz.planted ? 0.9 : 1.4, enabled: true, priority: 2,
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },

@@ -5948,3 +5948,11 @@ a reload still laundered. Each live lure saves its remaining fuse
 re-timed onto the live clock like `dialedRings`/`hookRings`. A paid
 windAlarm no longer dies unrung for the price of a checkpoint —
 `Math.max(0.5, until − now)` keeps a dead-on-arrival fuse honest.
+
+## Sprint 431 — the dead splice is contested loot
+
+A dead graft minted nothing before — now it reads 'Gather the wire'
+like your own spent line. Same slack the grafter strips to carry:
+dead wire is now a real two-ways resource fight — gather it first
+and the under's splice pool shrinks; leave it and the grafter
+re-plants it on your path. Armed grafts still read 'Cut the splice'.

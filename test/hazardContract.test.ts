@@ -249,6 +249,14 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/armedLures: this\.lures\.some/);
     expect(gameSrc).toMatch(/cp\?\.armedLures[\s\S]*?this\.lures\.push/);
   });
+
+  it('the dead splice is contested loot — gather it before the grafter does', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a dead graft mints 'Gather the wire' like your own spent line —
+    // the same slack the grafter strips to carry
+    expect(gameSrc).toMatch(/!hz\.armed && !hz\.planted && !hz\.grafted/);
+    expect(gameSrc).toMatch(/hz\.grafted \? \(hz\.armed \? 'Cut the splice' : 'Gather the wire'\)/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
