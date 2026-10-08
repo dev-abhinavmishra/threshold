@@ -4066,3 +4066,17 @@ Game.die() from the same five fields.
   and no far room is.
 - Gates: tsc, lint, 247 tests, sim 5/5, build. Dressing-only change —
   no e2e leg per the tempo rule.
+
+## sprint 409 — the set-piece approach
+
+- The room before an unauthored set piece now bleeds that piece's marks:
+  `ms-chase1`/`ms-chase2` → pursuer gouges, `ms-lens-hall` → curator
+  scatter, `ms-baggage` → hauler drags. The ante rooms at 49/99 dress
+  themselves; the under-entrance approach rides sprint 408's seep.
+- New `RoomInstance.milestoneTell?: string` — a FORESHADOW_TELLS key set
+  at generation when `rooms[i+1]` is a keyed milestone (skipped when the
+  approach is itself a milestone). Mutually exclusive with `foreshadow`
+  by construction; the builder reads `foreshadow ?? milestoneTell` once.
+- Test: 'the set-piece approach' asserts the key, the exclusion, and
+  that no stray room is marked, across all five seeds.
+- Gates: tsc, lint, 248 tests, sim 5/5, build. Dressing-only — no e2e.
