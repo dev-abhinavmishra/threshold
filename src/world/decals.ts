@@ -5603,3 +5603,487 @@ export function rackGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 485 — plaster wound: a hole in the render shows the wood lath behind, crumbs below. */
+export function lathExpose(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // broken plaster rim — an irregular gap in the wall skin
+    const cx = 48, cy = 44;
+    const rim: [number, number][] = [];
+    const n = 14;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const r = 24 + rng.float() * 10;
+      rim.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.72]);
+    }
+    // dark cavity behind
+    g.fillStyle = 'rgba(18,12,9,0.88)';
+    g.beginPath();
+    rim.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    g.closePath(); g.fill();
+    // lath strips inside the cavity
+    g.fillStyle = 'rgba(96,72,46,0.9)';
+    for (let i = 0; i < 5; i++) {
+      const ly = cy - 14 + i * 7;
+      g.fillRect(cx - 20 - rng.float() * 4, ly, 40 + rng.float() * 6, 3.4);
+    }
+    // bright jagged plaster edge
+    g.strokeStyle = 'rgba(216,205,186,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    rim.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y));
+    g.closePath(); g.stroke();
+    // hair cracks radiating from the rim
+    g.strokeStyle = 'rgba(60,50,42,0.5)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r0 = 22 + rng.float() * 6, len = 8 + rng.float() * 14;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.72);
+      g.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len) * 0.72);
+      g.stroke();
+    }
+    // fallen crumbs at the wound's foot
+    g.fillStyle = 'rgba(200,190,172,0.5)';
+    for (let i = 0; i < 10; i++) {
+      const t = i / 9;
+      g.fillRect(cx - 14 + t * 28 + rng.range(-3, 3), cy + 20 + rng.float() * 6, 1.6, 1.6);
+    }
+  });
+}
+
+/** Sprint 485 — drain ring: rust halo + drip channels around a floor grate. */
+export function drainRust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // diffuse rust halo
+    const halo = g.createRadialGradient(cx, cy, 12, cx, cy, 42);
+    halo.addColorStop(0, 'rgba(122,62,26,0.0)');
+    halo.addColorStop(0.62, 'rgba(122,62,26,0.42)');
+    halo.addColorStop(1, 'rgba(122,62,26,0.0)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, 96, 96);
+    // solid ring where water stands against the grate rim
+    g.strokeStyle = 'rgba(96,44,16,0.75)';
+    g.lineWidth = 3 + rng.float() * 1.5;
+    g.beginPath(); g.arc(cx, cy, 15, 0, Math.PI * 2); g.stroke();
+    // oxide speckle inside
+    g.fillStyle = 'rgba(70,30,12,0.6)';
+    for (let i = 0; i < 26; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(3, 14);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4, 1.4);
+    }
+    // drip channels walking away downslope
+    g.strokeStyle = 'rgba(96,44,16,0.45)';
+    g.lineWidth = 1;
+    const nd = 3 + (rng.float() < 0.5 ? 1 : 0);
+    for (let i = 0; i < nd; i++) {
+      const a = rng.range(0.3, Math.PI - 0.3); // downward hemisphere
+      let x = cx + Math.cos(a) * 16, y = cy + Math.sin(a) * 16;
+      g.beginPath(); g.moveTo(x, y);
+      const steps = 4 + Math.floor(rng.float() * 3);
+      for (let s = 0; s < steps; s++) {
+        x += Math.cos(a) * rng.range(4, 8) + rng.range(-2, 2);
+        y += Math.sin(a) * rng.range(5, 9);
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 485 — underbed haze: dust pelt + the small things that rolled under and stayed. */
+export function underbedHaze(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // long soft dust field, darkest at the back (top = deeper under)
+    const grad = g.createLinearGradient(0, 0, 0, 64);
+    grad.addColorStop(0, 'rgba(60,52,44,0.55)');
+    grad.addColorStop(0.55, 'rgba(70,62,52,0.34)');
+    grad.addColorStop(1, 'rgba(70,62,52,0.0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 96, 64);
+    // dust-bunny clumps along the back edge
+    g.fillStyle = 'rgba(96,88,76,0.5)';
+    for (let i = 0; i < 14; i++) {
+      const x = rng.range(6, 90), y = rng.range(2, 18);
+      g.beginPath(); g.ellipse(x, y, rng.range(2, 5), rng.range(1, 2.4), rng.range(0, 1), 0, Math.PI * 2); g.fill();
+    }
+    // lost buttons / coins / a dead moth — the small archaeology
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 86), y = rng.range(20, 44);
+      if (rng.float() < 0.4) { // coin
+        g.fillStyle = 'rgba(140,120,80,0.6)';
+        g.beginPath(); g.arc(x, y, 1.8, 0, Math.PI * 2); g.fill();
+      } else if (rng.float() < 0.5) { // button
+        g.fillStyle = 'rgba(120,110,96,0.55)';
+        g.beginPath(); g.arc(x, y, 1.6, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(40,34,28,0.6)';
+        g.fillRect(x - 0.4, y - 0.4, 0.8, 0.8);
+      } else { // dead moth
+        g.fillStyle = 'rgba(150,140,120,0.5)';
+        g.beginPath(); g.ellipse(x, y, 2.4, 1, rng.range(0, 3), 0, Math.PI * 2); g.fill();
+      }
+    }
+    // sweep-front: someone pushed a broom part-way under once, then gave up
+    g.strokeStyle = 'rgba(52,46,40,0.35)';
+    g.lineWidth = 2;
+    const sw = rng.range(20, 60);
+    g.beginPath(); g.moveTo(sw, 50);
+    g.quadraticCurveTo(sw + rng.range(-6, 6), 34, sw + rng.range(-10, 10), 20);
+    g.stroke();
+  });
+}
+
+/** Sprint 486 — the paper let go: a wallpaper flap curls off the seam, paste stain and bare plaster behind. */
+export function paperPeel(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const sx = 30 + rng.float() * 20; // seam x
+    // exposed plaster behind the flap — a rough vertical tongue
+    g.fillStyle = 'rgba(196,184,166,0.85)';
+    g.beginPath();
+    g.moveTo(sx, 8);
+    g.quadraticCurveTo(sx + 14 + rng.float() * 8, 30, sx + 10 + rng.float() * 10, 58);
+    g.quadraticCurveTo(sx + 8, 76, sx + 2, 88);
+    g.lineTo(sx - 3, 88);
+    g.quadraticCurveTo(sx - 2, 60, sx - 4, 30);
+    g.closePath(); g.fill();
+    // paste stain — darker tide where the adhesive let go
+    g.strokeStyle = 'rgba(140,120,94,0.4)';
+    g.lineWidth = 2.4;
+    g.beginPath();
+    g.moveTo(sx - 2, 10);
+    g.quadraticCurveTo(sx + 12, 34, sx + 8, 60);
+    g.stroke();
+    // the flap itself — curled paper edge still holding its pattern
+    g.fillStyle = 'rgba(112,96,78,0.9)';
+    g.beginPath();
+    g.moveTo(sx - 4, 8);
+    g.quadraticCurveTo(sx + 16 + rng.float() * 6, 32, sx + 12, 62);
+    g.lineTo(sx + 6, 66);
+    g.quadraticCurveTo(sx + 8, 38, sx - 6, 12);
+    g.closePath(); g.fill();
+    // curl shadow under the flap's free edge
+    g.strokeStyle = 'rgba(30,24,18,0.6)';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(sx - 4, 8);
+    g.quadraticCurveTo(sx + 15, 32, sx + 11, 62);
+    g.stroke();
+    // faint stripe of surviving pattern on the flap face
+    g.strokeStyle = 'rgba(150,132,108,0.35)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      g.beginPath();
+      g.moveTo(sx - 2 + i * 4, 14 + i * 4);
+      g.quadraticCurveTo(sx + 10 + i * 3, 34 + i * 6, sx + 8 + i * 2, 58);
+      g.stroke();
+    }
+    // grit fallen at the foot
+    g.fillStyle = 'rgba(170,158,140,0.5)';
+    for (let i = 0; i < 8; i++) {
+      g.fillRect(sx - 6 + rng.float() * 18, 84 + rng.float() * 8, 1.4, 1.4);
+    }
+  });
+}
+
+/** Sprint 486 — the tiles broke: a crack web and dark grout on wet-room floors. */
+export function tileCrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // darkened grout cross — the tile grid showing through grime
+    g.strokeStyle = 'rgba(52,44,38,0.4)';
+    g.lineWidth = 1.6;
+    for (const [x0, y0, x1, y1] of [[0, 48, 96, 48], [48, 0, 48, 96], [0, 24, 96, 24], [24, 0, 24, 96], [0, 72, 96, 72], [72, 0, 72, 96]] as const) {
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    }
+    // the crack — one main fracture with branch hairlines
+    g.strokeStyle = 'rgba(30,24,20,0.8)';
+    g.lineWidth = 1.2;
+    let x = cx + rng.range(-10, 10), y = 8;
+    g.beginPath(); g.moveTo(x, y);
+    const segs = 5 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < segs; i++) {
+      x += rng.range(-12, 12);
+      y += rng.range(10, 18);
+      g.lineTo(x, y);
+    }
+    g.stroke();
+    // branches
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 4; i++) {
+      const bx = cx + rng.range(-18, 18), by = rng.range(20, 70);
+      g.beginPath(); g.moveTo(bx, by);
+      g.lineTo(bx + rng.range(-14, 14), by + rng.range(-8, 12));
+      g.stroke();
+    }
+    // chips where the crack crossed the grout
+    g.fillStyle = 'rgba(190,180,164,0.5)';
+    for (let i = 0; i < 6; i++) {
+      g.fillRect(cx + rng.range(-16, 16), 44 + rng.range(-6, 8), 2, 1.4);
+    }
+    // grime pool in the low tile
+    const pool = g.createRadialGradient(70, 70, 2, 70, 70, 16);
+    pool.addColorStop(0, 'rgba(46,40,34,0.5)');
+    pool.addColorStop(1, 'rgba(46,40,34,0)');
+    g.fillStyle = pool;
+    g.fillRect(50, 50, 40, 40);
+  });
+}
+
+/** Sprint 486 — the scuttle spilled: coal dust, lumps and the scuffed circle where it always stands. */
+export function coalDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // rubbed black circle — the scuttle's standing spot
+    const spot = g.createRadialGradient(cx, cy, 4, cx, cy, 34);
+    spot.addColorStop(0, 'rgba(22,18,15,0.7)');
+    spot.addColorStop(0.7, 'rgba(28,24,20,0.35)');
+    spot.addColorStop(1, 'rgba(28,24,20,0)');
+    g.fillStyle = spot;
+    g.fillRect(0, 0, 96, 96);
+    // spilled lumps, densest near the center then scattered out
+    for (let i = 0; i < 22; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r = i < 8 ? rng.range(6, 18) : rng.range(18, 44);
+      const s = rng.range(1.2, 3.2);
+      g.fillStyle = `rgba(16,14,12,${0.55 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      g.lineTo(cx + Math.cos(a) * r + s, cy + Math.sin(a) * r - s * 0.6);
+      g.lineTo(cx + Math.cos(a) * r + s * 1.4, cy + Math.sin(a) * r + s * 0.5);
+      g.closePath(); g.fill();
+    }
+    // glinting facets on the fresh lumps
+    g.fillStyle = 'rgba(140,150,160,0.35)';
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(4, 20);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.2, 0.8);
+    }
+    // dust tails — drag arcs where a lump skidded
+    g.strokeStyle = 'rgba(30,26,22,0.4)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 5; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8);
+      g.quadraticCurveTo(
+        cx + Math.cos(a) * 24 + rng.range(-4, 4), cy + Math.sin(a) * 24 + rng.range(-4, 4),
+        cx + Math.cos(a) * rng.range(30, 42), cy + Math.sin(a) * rng.range(30, 42));
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 487 — the pegs kept the shapes: faded coat + hat silhouettes and rust freckles where things hung. */
+export function coatGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (g) => {
+    const cx = 48;
+    // hat ghost — a brimmed oval fading into the paint
+    g.fillStyle = 'rgba(70,62,52,0.4)';
+    g.beginPath(); g.ellipse(cx, 26, 15 + rng.float() * 4, 6, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(cx, 20, 7, 7 + rng.float() * 2, 0, 0, Math.PI * 2); g.fill();
+    // coat ghost — shoulders sloping to a hem, the wall lighter where cloth sat
+    g.fillStyle = 'rgba(96,86,72,0.42)';
+    g.beginPath();
+    g.moveTo(cx - 12, 34);
+    g.quadraticCurveTo(cx - 22 - rng.float() * 4, 44, cx - 24 - rng.float() * 5, 78);
+    g.quadraticCurveTo(cx - 24, 96, cx - 18, 100);
+    g.lineTo(cx + 18, 100);
+    g.quadraticCurveTo(cx + 24, 96, cx + 24 + rng.float() * 5, 78);
+    g.quadraticCurveTo(cx + 22 + rng.float() * 4, 44, cx + 12, 34);
+    g.quadraticCurveTo(cx, 40, cx - 12, 34);
+    g.closePath(); g.fill();
+    // collar dip
+    g.fillStyle = 'rgba(52,46,38,0.35)';
+    g.beginPath(); g.ellipse(cx, 36, 5, 3, 0, 0, Math.PI * 2); g.fill();
+    // hook rust freckles
+    g.fillStyle = 'rgba(110,58,26,0.6)';
+    for (let i = 0; i < 4; i++) {
+      const hx = cx - 18 + i * 12 + rng.range(-2, 2);
+      g.beginPath(); g.arc(hx, 30 + rng.range(-2, 2), 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(hx - 0.4, 30, 0.8, 5 + rng.float() * 3);
+    }
+    // hem drip shadows
+    g.fillStyle = 'rgba(60,52,44,0.25)';
+    for (let i = 0; i < 5; i++) {
+      g.fillRect(cx - 20 + i * 9 + rng.range(-2, 2), 100 + rng.range(-3, 3), 3 + rng.float() * 3, 6 + rng.float() * 5);
+    }
+  });
+}
+
+/** Sprint 487 — the box gave way: damp bloom, a sagging corner and pulp smear under cartons left too long. */
+export function boxRot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // damp bloom spreading past the footprint
+    const bloom = g.createRadialGradient(cx, cy, 8, cx, cy, 44);
+    bloom.addColorStop(0, 'rgba(70,58,40,0.55)');
+    bloom.addColorStop(0.65, 'rgba(76,64,44,0.28)');
+    bloom.addColorStop(1, 'rgba(76,64,44,0)');
+    g.fillStyle = bloom;
+    g.fillRect(0, 0, 96, 96);
+    // the footprint's darker edge where the box drank the damp
+    g.strokeStyle = 'rgba(56,44,30,0.5)';
+    g.lineWidth = 3;
+    g.strokeRect(cx - 22, cy - 18, 44, 36);
+    // pulp smears — softened cardboard slumping outward
+    g.fillStyle = 'rgba(88,72,50,0.45)';
+    for (let i = 0; i < 8; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.ellipse(cx + Math.cos(a) * rng.range(22, 32), cy + Math.sin(a) * rng.range(20, 30),
+        rng.range(3, 7), rng.range(1.5, 3.5), a, 0, Math.PI * 2);
+      g.fill();
+    }
+    // tape ghost — the strip that held the seam
+    g.strokeStyle = 'rgba(120,108,88,0.4)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(cx - 20, cy);
+    g.lineTo(cx + 20, cy + rng.range(-2, 2));
+    g.stroke();
+    // paper pulp fibers
+    g.strokeStyle = 'rgba(100,84,58,0.35)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 10; i++) {
+      const x = cx + rng.range(-26, 26), y = cy + rng.range(-22, 22);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(-4, 4), y + rng.range(-4, 4)); g.stroke();
+    }
+  });
+}
+
+/** Sprint 487 — the case filmed over: dust film and one wiped arc on display glass nobody has opened in years. */
+export function caseDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // overall film — heaviest at the edges
+    const edge = g.createRadialGradient(48, 48, 18, 48, 48, 60);
+    edge.addColorStop(0, 'rgba(168,160,144,0.1)');
+    edge.addColorStop(1, 'rgba(168,160,144,0.5)');
+    g.fillStyle = edge;
+    g.fillRect(0, 0, 96, 96);
+    // dust speckle
+    g.fillStyle = 'rgba(180,172,156,0.4)';
+    for (let i = 0; i < 60; i++) {
+      g.fillRect(rng.range(2, 94), rng.range(2, 94), 0.9, 0.9);
+    }
+    // the one wiped arc — somebody looked inside once
+    g.strokeStyle = 'rgba(48,42,36,0.5)';
+    g.lineWidth = 7 + rng.float() * 2;
+    g.beginPath();
+    const ay = 30 + rng.float() * 30;
+    g.moveTo(14, ay);
+    g.quadraticCurveTo(48, ay - 14 - rng.float() * 8, 82, ay + rng.range(-4, 6));
+    g.stroke();
+    // streak tails under the wipe
+    g.strokeStyle = 'rgba(120,112,98,0.35)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const sx = 20 + i * 16 + rng.range(-3, 3);
+      g.beginPath(); g.moveTo(sx, ay + 2); g.lineTo(sx + rng.range(-2, 2), ay + 10 + rng.float() * 6); g.stroke();
+    }
+    // fingermarks at the lower edge
+    g.fillStyle = 'rgba(60,54,46,0.4)';
+    for (let i = 0; i < 3; i++) {
+      g.beginPath(); g.ellipse(30 + i * 16 + rng.range(-4, 4), 88 + rng.range(-3, 3), 2, 2.6, rng.range(-0.4, 0.4), 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 488 — the rug frayed: loose edge threads, a worn binding band and grit shaken out. */
+export function carpetFray(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // binding band — the hem strip where the pile wore to the warp
+    g.fillStyle = 'rgba(74,64,52,0.55)';
+    g.fillRect(0, 4, 96, 10 + rng.float() * 4);
+    // worn gaps in the binding
+    g.fillStyle = 'rgba(140,128,110,0.4)';
+    for (let i = 0; i < 9; i++) {
+      g.fillRect(4 + i * 10 + rng.range(-2, 2), 6 + rng.range(-2, 2), rng.range(4, 8), 5);
+    }
+    // loose threads curling off the edge
+    g.strokeStyle = 'rgba(130,116,96,0.6)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 16; i++) {
+      const x = 4 + i * 5.6 + rng.range(-2, 2);
+      const len = 8 + rng.float() * 14;
+      g.beginPath();
+      g.moveTo(x, 14);
+      g.quadraticCurveTo(x + rng.range(-3, 3), 14 + len * 0.6, x + rng.range(-5, 5), 14 + len);
+      g.stroke();
+    }
+    // grit and fiber pills shaken free
+    g.fillStyle = 'rgba(60,52,44,0.5)';
+    for (let i = 0; i < 14; i++) {
+      g.fillRect(rng.range(2, 94), rng.range(28, 46), 1.3, 1.1);
+    }
+    // a few longer pulled threads
+    g.strokeStyle = 'rgba(150,136,114,0.5)';
+    for (let i = 0; i < 4; i++) {
+      const x = rng.range(8, 88);
+      g.beginPath(); g.moveTo(x, 15); g.lineTo(x + rng.range(-14, 14), 40 + rng.float() * 5); g.stroke();
+    }
+  });
+}
+
+/** Sprint 488 — the board kept the holes: pin pocks, rust freckles and paper ghosts where notices hung. */
+export function pinScars(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // paper ghosts — rectangles faded lighter than the felt around them
+    g.fillStyle = 'rgba(150,140,120,0.3)';
+    for (let i = 0; i < 4; i++) {
+      const w0 = 14 + rng.float() * 16, h0 = 18 + rng.float() * 18;
+      g.fillRect(8 + rng.range(0, 60), 10 + rng.range(0, 56), w0, h0);
+    }
+    // pin pocks — the dense old holes
+    g.fillStyle = 'rgba(30,24,18,0.7)';
+    for (let i = 0; i < 40; i++) {
+      g.beginPath(); g.arc(rng.range(6, 90), rng.range(6, 90), 0.7 + rng.float() * 0.4, 0, Math.PI * 2); g.fill();
+    }
+    // rust freckles where pins sat for years
+    g.fillStyle = 'rgba(112,58,26,0.55)';
+    for (let i = 0; i < 12; i++) {
+      const x = rng.range(8, 88), y = rng.range(8, 88);
+      g.beginPath(); g.arc(x, y, 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(x - 0.3, y, 0.6, 3 + rng.float() * 3);
+    }
+    // corner tape ghosts
+    g.fillStyle = 'rgba(140,128,104,0.35)';
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 80), y = rng.range(10, 80);
+      g.save(); g.translate(x, y); g.rotate(rng.range(-0.4, 0.4));
+      g.fillRect(-4, -1.5, 8, 3); g.restore();
+    }
+  });
+}
+
+/** Sprint 488 — the feet wicked the damp: dark tide rings where the furniture stands in wet rooms. */
+export function legRings(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // four leg positions, tide ring at each
+    const legs: [number, number][] = [[30, 30], [66, 30], [30, 66], [66, 66]];
+    for (const [lx, ly] of legs) {
+      const r0 = 5 + rng.float() * 2;
+      const ring = g.createRadialGradient(lx, ly, r0 * 0.4, lx, ly, r0 + 6);
+      ring.addColorStop(0, 'rgba(60,48,36,0)');
+      ring.addColorStop(0.55, 'rgba(60,48,36,0.55)');
+      ring.addColorStop(1, 'rgba(60,48,36,0)');
+      g.fillStyle = ring;
+      g.fillRect(lx - 12, ly - 12, 24, 24);
+      // the dark contact point under the leg
+      g.fillStyle = 'rgba(38,30,24,0.7)';
+      g.beginPath(); g.arc(lx, ly, r0 * 0.5, 0, Math.PI * 2); g.fill();
+    }
+    // wicking trails between the feet — damp walked the grain
+    g.strokeStyle = 'rgba(56,46,36,0.3)';
+    g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(30, 30); g.lineTo(66, 30); g.stroke();
+    g.beginPath(); g.moveTo(30, 66); g.lineTo(66, 66); g.stroke();
+    // swell shadow under the near edge
+    const edge = g.createLinearGradient(0, 78, 0, 96);
+    edge.addColorStop(0, 'rgba(52,42,32,0)');
+    edge.addColorStop(1, 'rgba(52,42,32,0.45)');
+    g.fillStyle = edge;
+    g.fillRect(12, 78, 72, 18);
+  });
+}
