@@ -4150,7 +4150,9 @@ Game.die() from the same five fields.
   like any rummage) and emits a positional rustle ('[paper scattering
   in the corridor]') — the counterplay is loud, just not fee-bearing:
   crew paper isn't your theft, but spilled sheets don't stay quiet.
-- Trap worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
-  name) — the emit uses 'distraction'.
+- Traps worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
+  name) — the emit uses 'distraction'. And a `source`-tagged emit is
+  FICTION (every hear gate rejects `e.source`) — the spill carries no
+  `source` so the crew physically hears the paper hit the floor.
 - Gates: tsc, lint, vitest 249.
 >>>>>>> devin/1791426766-threshold-s356

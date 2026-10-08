@@ -3395,7 +3395,7 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
           kind: 'work', t: this.clock.time, readBy: [] });
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'distraction',
-          caption: '[paper scattering in the corridor]', source: 'player' });
+          caption: '[paper scattering in the corridor]' });
         this.wantedRepostT = this.clock.time + 30;
         return;
       }
