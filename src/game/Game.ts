@@ -2602,6 +2602,17 @@ export class Game {
       }
       case 'vend': {
         const sock = it.data as Socket;
+        // The deep tier reaches the machines too — six lines in the
+        // floor's own book and the machine holds its stock: the
+        // register's face upstairs, the tally's name below. Papers,
+        // desks and the Broker stay open — only the machines refuse.
+        const deep = this.space === 'under' ? this.unpaidTheft >= 6 : this.unpaidHeld >= 6;
+        if (deep) {
+          this.cue('door-locked', it.pos, this.space === 'under'
+            ? "[the machine reads the boards — it holds its stock]"
+            : "[the machine reads the register — it holds its stock]", 'warn');
+          return;
+        }
         const price = (sock.meta.price as number) ?? 5;
         if (this.imprints < price) {
           this.cue('door-locked', it.pos, `[the machine wants ${price} imprints — ${price - this.imprints} short]`, 'warn');

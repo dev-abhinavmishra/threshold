@@ -4339,3 +4339,14 @@ Game.die() from the same five fields.
 - The only house relief past six lines: the Detective's desk or the
   affidavit's −1. Reaching it takes 3 rifled tills or 6 witness lines.
 - Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 369 — the machines read the books too
+
+- The deep tier (s368) covered staffed counters; the machines were
+  still selling. `vend` now gates on the floor's own book:
+  `unpaidHeld >= 6` upstairs ('the machine reads the register — it
+  holds its stock'), `unpaidTheft >= 6` below ('the machine reads
+  the boards — it holds its stock'). Papers, desks, the Broker and
+  fix stay open on both floors — only staffed counters AND machines
+  refuse. Deep debt ends the floor's commerce, not its mercy.
+- Gates: tsc, lint, vitest 255, sim 5/5.
