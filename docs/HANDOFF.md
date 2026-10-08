@@ -3898,3 +3898,21 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   at all four sites; test/roomLocal.test.ts pins the frame math.
 - Bonus guard: `pathTo` no longer crashes on rooms without `navNodes`.
 - Gates: tsc, lint, vitest scoped (12/12) — green.
+
+## sprint 404 — the threshold spills light
+
+A primed milestone's entry door now leaks a warm glow strip under its
+seam (`ensurePrimedSpill` → `thresholdSpill` decal, additive, room-local
+via `roomLocal`). The primed tell now reads visually from the hall —
+the ear gets s340's seam hum, the eye gets light escaping a shut door.
+
+- `src/world/decals.ts`: `thresholdSpill()` canvas (128×40, warm edge-fade
+  + vertical die-off so the seam side burns brightest).
+- `src/game/Game.ts`: `spillMaterial()` cached beside `wantedMaterial`;
+  `ensurePrimedSpill(i, built)` on the ensure chain — cap once per built
+  room, entry door = nearest `room.doors` to `room.entryPos`, strip lands
+  0.1m inside across the threshold. Flat-quad in-plane yaw rides
+  `rotation.z = room.yaw - door.yaw - π/2` (derived: Euler XYZ applies Rz
+  first; world long-axis = roomYaw − θ).
+- Doors are NOT left ajar — `d.openT` decays to shut in <0.1s, and
+  leaf-collider/peek semantics were left untouched on purpose.

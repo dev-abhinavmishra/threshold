@@ -600,3 +600,30 @@ export function rainStreaks(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/* ---------- threshold spill (under-door light) ---------- */
+
+/** Warm light seeping under a closed door — a thin horizontal glow strip
+ *  whose brightness dies at the edges. Signals "the room inside is already
+ *  awake" when the door reads closed. */
+export function thresholdSpill(): THREE.Texture | null {
+  return canvasTex(128, 40, (ctx) => {
+    const g = ctx.createLinearGradient(0, 0, 128, 0);
+    g.addColorStop(0, 'rgba(255,196,120,0)');
+    g.addColorStop(0.25, 'rgba(255,196,120,0.55)');
+    g.addColorStop(0.5, 'rgba(255,214,150,0.9)');
+    g.addColorStop(0.75, 'rgba(255,196,120,0.55)');
+    g.addColorStop(1, 'rgba(255,196,120,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 40);
+    // fade vertically — brightest at the seam line (top), dying into the floor
+    const v = ctx.createLinearGradient(0, 0, 0, 40);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(0.25, 'rgba(0,0,0,0.55)');
+    v.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, 128, 40);
+    ctx.globalCompositeOperation = 'source-over';
+  });
+}
