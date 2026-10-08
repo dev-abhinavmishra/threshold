@@ -57,15 +57,22 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
     const hadCharge = (g as unknown as { inventory: { id: string; count: number }[] })
       .inventory.find((i) => i.id === 'handLamp')?.count ?? 0;
     let stripPrompt = '';
-    for (let f = 0; f < 45 && hl.lampLit; f++) {
-      g.player.teleport(hl.lampPos.x, 0, hl.lampPos.z);
+    for (let f = 0; f < 140 && hl.lampLit; f++) {
+      // tail-side aimed stand, focus-gated hold — 'strip' (s401) gates
+      // on a yaw window (cos ≥ 0.6 inside 1.9m); the haul crosses door
+      // lanes where 'Open Door' or 'Pick the sledge' steals focus, so
+      // hold E only while the lamp owns it
+      const sx = hl.lampPos.x - hauler.sledgePos.x, sz = hl.lampPos.z - hauler.sledgePos.z;
+      const sl = Math.hypot(sx, sz) || 1;
+      g.player.teleport(hl.lampPos.x + (sx / sl) * 0.7, 0, hl.lampPos.z + (sz / sl) * 0.7);
       const eyeY = g.player.pos.y + g.player.eyeHeight;
-      g.player.pitch = Math.atan2(0.75 - eyeY, 0.5);
+      g.player.pitch = Math.atan2(0.75 - eyeY, 0.7);
       g.player.yaw = Math.atan2(hl.lampPos.x - g.player.pos.x,
-        hl.lampPos.z - g.player.pos.z) || 0;
+        hl.lampPos.z - g.player.pos.z);
       g.frame();
       stripPrompt = g.interaction.focused?.prompt ?? stripPrompt;
-      if (f === 8) ga.keys.add('KeyE');
+      if (/Strip the lamp/.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+      else ga.keys.delete('KeyE');
     }
     ga.keys.delete('KeyE');
     for (let f = 0; f < 10; f++) g.frame();
@@ -83,14 +90,20 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
       relit = hl.relit && hl.lampLit;
       if (relit) {
         const had2 = lampAfter?.count ?? 0;
-        for (let f = 0; f < 45 && hl.lampLit; f++) {
-          g.player.teleport(hl.lampPos.x, 0, hl.lampPos.z);
+        for (let f = 0; f < 140 && hl.lampLit; f++) {
+          // tail-side aimed stand, focus-gated hold — the haul crosses
+          // door lanes where 'Open Door' steals focus; hold E only while
+          // the lamp owns it and let the drag carry a clean window by
+          const sx = hl.lampPos.x - hauler.sledgePos.x, sz = hl.lampPos.z - hauler.sledgePos.z;
+          const sl = Math.hypot(sx, sz) || 1;
+          g.player.teleport(hl.lampPos.x + (sx / sl) * 0.7, 0, hl.lampPos.z + (sz / sl) * 0.7);
           const eyeY = g.player.pos.y + g.player.eyeHeight;
-          g.player.pitch = Math.atan2(0.75 - eyeY, 0.5);
+          g.player.pitch = Math.atan2(0.75 - eyeY, 0.7);
           g.player.yaw = Math.atan2(hl.lampPos.x - g.player.pos.x,
-            hl.lampPos.z - g.player.pos.z) || 0;
+            hl.lampPos.z - g.player.pos.z);
           g.frame();
-          if (f === 8) ga.keys.add('KeyE');
+          if (/Strip the lamp/.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+          else ga.keys.delete('KeyE');
         }
         ga.keys.delete('KeyE');
         for (let f = 0; f < 10; f++) g.frame();
