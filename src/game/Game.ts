@@ -725,6 +725,8 @@ export class Game {
     this.fencedTake = cp?.fencedTake?.map((s) => ({ ...s })) ?? [];
     // and the tag's listed coin rides with it
     this.seizedCoin = cp?.seizedTake?.coin ?? 0;
+    // the count's running tally of swallowed coin persists too
+    this.coinKept = cp?.coinKept ?? 0;
     this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1069,6 +1071,10 @@ export class Game {
    *  held under the same tag, priced into the claim at par. The cut
    *  can't hand back coin — the count swallowed it outright. */
   private seizedCoin = 0;
+  /** Sprint 383 — the running count of coin the count kept outright
+   *  (a cut tag's forfeit, a rotted tag's loss) — never comes back,
+   *  so the books remember it at the end. */
+  private coinKept = 0;
   /** Sprint 381 — what the count kept: a rotted tag's goods get fenced
    *  to the Broker's shelf, buyable back at the house's markup. */
   private fencedTake: { id: ItemId; count: number }[] = [];
@@ -2910,6 +2916,7 @@ export class Game {
           .join(' · ');
         for (const s of this.seizedTake) { this.giveItem(s.id, s.count); this.hotItems.add(s.id); }
         // the cut can't hand back coin — the count swallowed it outright
+        this.coinKept += this.seizedCoin;
         this.seizedCoin = 0;
         this.seizedTake = [];
         this.seizedAt = null;
@@ -4741,6 +4748,7 @@ export class Game {
             x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z,
             fuse: this.seizedFuse, coin: this.seizedCoin }
         : undefined,
+      coinKept: this.coinKept > 0 ? this.coinKept : undefined,
       fencedTake: this.fencedTake.length > 0
         ? this.fencedTake.map((s) => ({ ...s })) : undefined,
       chalkMarks: [...this.chalkMarks].map(
@@ -4816,6 +4824,8 @@ export class Game {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
             seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
+            // dead — the live tag rots, so its listed coin is kept too
+            coinKept: this.coinKept + this.seizedCoin,
           },
         },
         documents: this.loadDocs(),
@@ -4847,6 +4857,8 @@ export class Game {
         held: this.unpaidHeld,
         asks: this.paperTrail,
         seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
+        // a live tag's listed coin rots with the goods at the door too
+        coinKept: this.coinKept + this.seizedCoin,
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
       },
@@ -5270,6 +5282,7 @@ export class Game {
         // buyable back at the house's own margin. Coin doesn't fence —
         // it's fungible; the count simply keeps it.
         this.fencedTake.push(...this.seizedTake);
+        this.coinKept += this.seizedCoin;
         this.seizedCoin = 0;
         this.seizedTake = [];
         this.seizedAt = null;

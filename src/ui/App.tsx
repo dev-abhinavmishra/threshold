@@ -151,11 +151,12 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; seized?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; seized?: number; coinKept?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
-  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + seized;
+  const coinKept = books.coinKept ?? 0;
+  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + seized + coinKept;
   if (total === 0) {
     lines.push('every book closed before the door did');
   } else {
@@ -166,6 +167,7 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
     if (books.hotGoods > 0) lines.push(`${books.hotGoods} marked ${books.hotGoods === 1 ? 'ware' : 'wares'} went home on your back`);
     // the count's locker keeps what it caught — unclaimed at the end
     if (seized > 0) lines.push(`${seized} seized ${seized === 1 ? 'ware' : 'wares'} still hang in the count's locker`);
+    if (coinKept > 0) lines.push(`${coinKept} of your ${coinKept === 1 ? 'coin stays' : 'coins stay'} in the count's till`);
   }
   return lines;
 }

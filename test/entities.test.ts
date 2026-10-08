@@ -2056,6 +2056,50 @@ describe('the Auditor (sprint 277)', () => {
     a.dispose();
   });
 
+  it('the clerk\'s hands take it too — a named catch seizes (sprint 383)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.wanted = () => true;
+    ctx.seizeMarked = vi.fn(() => true);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; a.update(0.05); }
+    ctx.player.pos.x = 0; ctx.player.pos.z = 12;
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(a.pursuing).toBe(true);
+    const wp = (a as unknown as { pos: { x: number; z: number } }).pos;
+    ctx.player.pos.x = wp.x + 0.5; ctx.player.pos.z = wp.z;
+    for (let i = 0; i < 20 && !ctx.damagePlayer.mock.calls.length; i++) { ctx.now += 0.05; a.update(0.05); }
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(10, 'auditor', expect.any(String));
+    expect(ctx.seizeMarked, 'the tally\'s own clerk strips the marked take').toHaveBeenCalled();
+    a.dispose();
+    // a stranger keeps his pockets — no seize while the boards don't name him
+    const ctx2 = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      claimsOwed: () => 3,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx2.wanted = () => false;
+    ctx2.seizeMarked = vi.fn(() => true);
+    ctx2.player.pos.x = 0; ctx2.player.pos.z = 0;
+    const a2 = new Auditor();
+    a2.spawn(ctx2);
+    for (let i = 0; i < 40; i++) { ctx2.now += 0.05; a2.update(0.05); }
+    ctx2.player.pos.x = 0; ctx2.player.pos.z = 12;
+    for (let i = 0; i < 30; i++) { ctx2.now += 0.05; a2.update(0.05); }
+    const wp2 = (a2 as unknown as { pos: { x: number; z: number } }).pos;
+    ctx2.player.pos.x = wp2.x + 0.5; ctx2.player.pos.z = wp2.z;
+    for (let i = 0; i < 20 && !ctx2.damagePlayer.mock.calls.length; i++) { ctx2.now += 0.05; a2.update(0.05); }
+    expect(ctx2.damagePlayer).toHaveBeenCalled();
+    expect(ctx2.seizeMarked).not.toHaveBeenCalled();
+    a2.dispose();
+  });
+
   it('settled stamps square — ledger shut, pursuit off', async () => {
     const { Auditor } = await import('../src/entities/setpieces');
     const ctx = makeCtx([deskRoom, hallRoom], {
