@@ -3916,3 +3916,13 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
   first; world long-axis = roomYaw − θ).
 - Doors are NOT left ajar — `d.openT` decays to shut in <0.1s, and
   leaf-collider/peek semantics were left untouched on purpose.
+
+## sprint 405 — the sting behind the seam
+
+The primed tell now lands: opening a door onto a primed set piece cues
+'[the work was already running — it heard you]' once per room
+(`primedStingDone`, cleared on startRun; gated on the player being
+outside `d.roomIndex` so leaving the room never re-stings). The s404
+spill breathes too — `spillMeshes` (per-room cloned material) pulses
+opacity 0.6±0.4 on the ensure loop, so a primed door reads alive from
+the hall, not just lit.

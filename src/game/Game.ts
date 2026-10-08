@@ -302,6 +302,8 @@ export class Game {
    *  per room, so stacked encounters can't compound into darkness. */
   private dimmedRooms = new Set<number>();
   private doorStates = new Map<string, { t: number; opening: boolean }>();
+  private spillMeshes = new Map<number, THREE.Mesh>();
+  private primedStingDone = new Set<number>();
   /** Staged arrival captions for a fresh run (lobby cold-open). */
   private arrival: { t: number; text: string; sev: 'info' | 'warn' | 'danger'; fired: boolean }[] = [];
   private dread = 0;
@@ -625,6 +627,8 @@ export class Game {
     this.paperTrail = cp?.paperTrail ?? 0;
     this.wantedActive = false;
     this.wantedRooms.clear();
+    this.spillMeshes.clear();
+    this.primedStingDone.clear();
     this.hotImprints = cp?.hotImprints ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
@@ -2388,6 +2392,14 @@ export class Game {
           this.cue('door-open', it.pos, '');
           this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'door', caption: '[door]' });
         }
+        // opening onto a primed set piece earns its sting once — the work
+        // was already mid-count behind that seam
+        for (const d of cluster) {
+          const ms = this.milestones.get(d.roomIndex);
+          if (!ms?.primed || this.primedStingDone.has(d.roomIndex) || this.currentRoom === d.roomIndex) continue;
+          this.primedStingDone.add(d.roomIndex);
+          this.cue('floor-creak', it.pos, '[the work was already running — it heard you]', 'danger');
+        }
         return;
       }
       case 'drawer': {
@@ -4046,7 +4058,8 @@ export class Game {
     // push the strip just inside the room, across the threshold
     const ix = room.origin.x - door.pos.x, iz = room.origin.z - door.pos.z;
     const il = Math.hypot(ix, iz) || 1;
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.55), mat);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.55), mat.clone());
+    this.spillMeshes.set(roomIndex, m);
     m.name = 'primed-spill';
     m.rotation.x = -Math.PI / 2;
     // flat quads take in-plane yaw on z; long axis lies along the door's width
@@ -4718,6 +4731,8 @@ export class Game {
       if (!built) continue;
       this.ensureWanted(i, built);
       this.ensurePrimedSpill(i, built);
+      const spill = this.spillMeshes.get(i);
+      if (spill?.parent) (spill.material as THREE.MeshBasicMaterial).opacity = 0.6 + 0.4 * Math.sin(this.clock.time * 1.6 + i * 1.9);
       this.ensureChalkMarks(i, built);
       this.ensureGateMark(i, built);
       this.ensureDeepVoid(i, built);
