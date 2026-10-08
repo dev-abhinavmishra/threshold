@@ -4350,3 +4350,15 @@ Game.die() from the same five fields.
   fix stay open on both floors — only staffed counters AND machines
   refuse. Deep debt ends the floor's commerce, not its mercy.
 - Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 370 — the index closes its own papers
+
+- `indexClosed(pos)` — the third book's deep tier: `paperTrail >= 6`
+  and the asking papers (work order, crew board, claim register)
+  hold their pages — '[the index closes to you — six questions is a
+  file, not a curiosity]'. Relief papers (counter-claim, return slip,
+  affidavit), the desk, the Broker's book-readout and the fence stay
+  open — closing the file's own valves or its readouts would strand
+  or blind the player. All three books now have a deep tier: held →
+  counters + machines, theft → machines, trail → asking papers.
+- Gates: tsc, lint, vitest 121 (entities+persistence+wanted), sim 5/5.
