@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2059,6 +2059,109 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pc.position.set(0, (dc?.[1] ?? 0.2) + 0.006, 0);
     prop.group.add(pc);
     if (!prop.group.name) prop.group.name = 'paper-curl';
+  }
+  // The sill peeled — flakes curling off the board where the weather
+  // got at it, damp trails dropping under the lip.
+  const WINDOW_KINDS = new Set(['window', 'windowArch', 'transomWindow', 'roseWindow', 'traceryWindow']);
+  if (WINDOW_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const sp = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.4),
+      new THREE.MeshStandardMaterial({ map: sillPeel(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sp.name = 'sill-peel';
+    sp.userData.decalMat = true;
+    sp.position.set(0, (dc?.[1] ?? 1.6) * 0.22, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(sp);
+    if (!prop.group.name) prop.group.name = 'sill-peel';
+  }
+  // The drawers kept the scratches — ring-pull rubs, scuffed fronts,
+  // dust packed into the seams.
+  const DRAWER_KINDS = new Set(['dresser', 'nightstand', 'drawerUnit', 'sideboard', 'chest', 'toolChest', 'morgueDrawer', 'vanityTable']);
+  if (DRAWER_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const ds = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.5),
+      new THREE.MeshStandardMaterial({ map: drawerScars(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ds.name = 'drawer-scars';
+    ds.userData.decalMat = true;
+    ds.position.set(0, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    prop.group.add(ds);
+    if (!prop.group.name) prop.group.name = 'drawer-scars';
+  }
+  // The range kept its grease — spatter burst and fat drips on the
+  // oven door face.
+  const RANGE_KINDS = new Set(['stove', 'stoveRange', 'kitchenRange']);
+  if (RANGE_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const og = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.44),
+      new THREE.MeshStandardMaterial({ map: ovenGrease(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    og.name = 'oven-grease';
+    og.userData.decalMat = true;
+    og.position.set(0, (dc?.[1] ?? 0.9) * 0.5, (dc?.[2] ?? 0.6) / 2 + 0.006);
+    prop.group.add(og);
+    if (!prop.group.name) prop.group.name = 'oven-grease';
+  }
+  // The dial kept the thumb — a polish halo broken out of the dust
+  // where one hand always found the tuner.
+  const DIAL_KINDS = new Set(['radio', 'boombox', 'cassettePlayer']);
+  if (DIAL_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const dr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: dialRubs(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    dr.name = 'dial-rubs';
+    dr.userData.decalMat = true;
+    dr.position.set(0, (dc?.[1] ?? 0.35) * 0.55, (dc?.[2] ?? 0.25) / 2 + 0.005);
+    prop.group.add(dr);
+    if (!prop.group.name) prop.group.name = 'dial-rubs';
+  }
+  // The mirror crept — amalgam eating in from the edges and corners.
+  if ((spec.kind === 'mirror' || spec.kind === 'pierMirror') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const ma = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: mirrorAmalgam(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ma.name = 'mirror-amalgam';
+    ma.userData.decalMat = true;
+    ma.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.005);
+    prop.group.add(ma);
+    if (!prop.group.name) prop.group.name = 'mirror-amalgam';
+  }
+  // The basin kept its ring — limescale tide line and scum film in
+  // the bowl where the water always stops.
+  if ((spec.kind === 'basinSink' || spec.kind === 'washStand') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const br = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: basinRing(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    br.name = 'basin-ring';
+    br.userData.decalMat = true;
+    br.rotation.x = -Math.PI / 2;
+    br.position.set(0, (dc?.[1] ?? 0.8) + 0.005, 0);
+    prop.group.add(br);
+    if (!prop.group.name) prop.group.name = 'basin-ring';
+  }
+  // The hinge wore the frame — swing rub, finger grime and nail
+  // crescents on the cabinet fronts that get opened.
+  const CABINET_KINDS = new Set(['cabinet', 'modernCabinet', 'vintageCabinet', 'apothecaryCabinet', 'keyCabinet', 'wardrobe', 'locker', 'cageLocker']);
+  if (CABINET_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const hw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.42),
+      new THREE.MeshStandardMaterial({ map: hingeWear(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    hw.name = 'hinge-wear';
+    hw.userData.decalMat = true;
+    hw.position.set(0, (dc?.[1] ?? 1.3) * 0.55, (dc?.[2] ?? 0.45) / 2 + 0.006);
+    prop.group.add(hw);
+    if (!prop.group.name) prop.group.name = 'hinge-wear';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

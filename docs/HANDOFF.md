@@ -5514,6 +5514,25 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 496–498 — the ladder left its rub, the range kept its grease & the mirror crept
+
+Sprint 496: `ladderRub` — twin polish streaks + kicked feet where
+the ladder leans (service walls ~35%); `sillPeel` — flaking sill
+paint + damp trails on windows (~40%); `drawerScars` — pull-rub
+rings + seam dust on drawer fronts (~45%).
+
+Sprint 497: `boilerFlake` — rust scale scattered in the drip line
+(~45%); `ovenGrease` — spatter burst + fat drips on range faces
+(~45%); `dialRubs` — thumb polish halo on radio/boombox dials
+(~45%).
+
+Sprint 498: `mirrorAmalgam` — silvering creep at mirror edges
+(~45%); `basinRing` — limescale tide + scum film in basins (~45%);
+`hingeWear` — swing rub + pull grime on cabinet fronts (~40%).
+
+Gates: tsc, lint, generation tests (9 new, 494 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 493–495 — the claws raked low, the book dried open & the mop dried mid-sweep
 
 Sprint 493: `clawMarks` — three-furrow gouges at door-leaf feet

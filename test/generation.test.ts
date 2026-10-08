@@ -4184,3 +4184,138 @@ describe('the mop dried mid-sweep (sprint 495)', () => {
     expect(n, 'no mop arcs').toBeGreaterThan(0);
   });
 });
+
+describe('the ladder left its rub (sprint 496)', () => {
+  it('twin polish streaks mark service walls where the ladder leans', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'ladder-rub') n++; });
+      }
+    }
+    expect(n, 'no ladder rub').toBeGreaterThan(0);
+  });
+});
+
+describe('the sill peeled (sprint 496)', () => {
+  it('paint flakes curl off the window board', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'sill-peel') n++; });
+      }
+    }
+    expect(n, 'no sill peel').toBeGreaterThan(0);
+  });
+});
+
+describe('the drawers kept the scratches (sprint 496)', () => {
+  it('pull-rub rings and scuffs mark the drawer fronts', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drawer-scars') n++; });
+      }
+    }
+    expect(n, 'no drawer scars').toBeGreaterThan(0);
+  });
+});
+
+describe('the boiler shed its skin (sprint 497)', () => {
+  it('rust flakes and scale scatter in the drip line', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'boiler-flake') n++; });
+      }
+    }
+    expect(n, 'no boiler flakes').toBeGreaterThan(0);
+  });
+});
+
+describe('the range kept its grease (sprint 497)', () => {
+  it('spatter and fat drips mark the oven face', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'oven-grease') n++; });
+      }
+    }
+    expect(n, 'no oven grease').toBeGreaterThan(0);
+  });
+});
+
+describe('the dial kept the thumb (sprint 497)', () => {
+  it('a polish halo breaks the dust where the tuner lives', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'dial-rubs') n++; });
+      }
+    }
+    expect(n, 'no dial rubs').toBeGreaterThan(0);
+  });
+});
+
+describe('the mirror crept (sprint 498)', () => {
+  it('amalgam eats the glass from the edges in', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'mirror-amalgam') n++; });
+      }
+    }
+    expect(n, 'no mirror amalgam').toBeGreaterThan(0);
+  });
+});
+
+describe('the basin kept its ring (sprint 498)', () => {
+  it('a limescale tide band marks the bowl', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'basin-ring') n++; });
+      }
+    }
+    expect(n, 'no basin ring').toBeGreaterThan(0);
+  });
+});
+
+describe('the hinge wore the frame (sprint 498)', () => {
+  it('swing rub and finger grime mark the cabinet fronts', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'hinge-wear') n++; });
+      }
+    }
+    expect(n, 'no hinge wear').toBeGreaterThan(0);
+  });
+});
