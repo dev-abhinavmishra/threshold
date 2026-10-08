@@ -5864,3 +5864,14 @@ indices shift as lures die). Un-planting returns the item whole; a
 rung clock is scrap and stops offering itself the moment it spends.
 The carried kit's un-plant family is symmetric now: wire (pull/gather),
 receiver (hang up), chock (gather the kicked wedge), alarm (pick up).
+
+## Sprint 425 — the coil testifies
+
+Carried `wireCoil` reads to the grafter's scent poll as sign on the
+move: same-room + 40m, it retargets `this.target` to your live pos
+each 1.6s beat and cues '[stone turns toward the hands holding its
+wire]'. The hide covers you, not your coil — hiding doesn't mask the
+smell (kill is still gaze-gated by protection). It drags WITHOUT
+feeding markReads — one smell isn't twenty marks; the rubble tracks
+your hands but doesn't go eager on a coil that never lands. New ctx
+`playerCarries(id)` answers from the pack, not the sign list.

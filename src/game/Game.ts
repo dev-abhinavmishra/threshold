@@ -1050,6 +1050,7 @@ export class Game {
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
+      playerCarries: (id) => this.inventory.some((i) => i.id === id && i.count > 0),
       heldOwed: () => this.unpaidHeld,
       wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register

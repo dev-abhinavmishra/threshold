@@ -191,6 +191,20 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // rang lures never mint — a sprung clock is spent
     expect(gameSrc).toMatch(/this\.lures\.forEach[\s\S]*if \(l\.rang\) return/);
   });
+
+  it('the coil testifies — carried splice-scrap drags the grafter to your hands', () => {
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the under reads its own wire off your back — same room, same 40m scent reach
+    expect(spSrc).toContain("playerCarries?.('wireCoil')");
+    expect(spSrc).toContain('the hands holding its wire');
+    // it drags toward you without learning hunger from a smell that never lands
+    expect(spSrc).toMatch(/playerCarries[\s\S]*?this\.target = v3\(p\.pos\.x/);
+    // ctx answers it from the pack, not the sign list
+    expect(baseSrc).toContain('playerCarries?:');
+    expect(gameSrc).toContain('playerCarries: (id) => this.inventory.some');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

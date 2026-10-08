@@ -57,6 +57,9 @@ export interface EntityCtx {
   /** The audit tally — marginalia claims / sledge picks / basket steals
    *  the player hasn't settled for. Optional: headless ctxs may omit it. */
   claimsOwed?: () => number;
+  /** True while the pack holds a live stack of the given item id.
+   *  Optional for headless ctxs (they answer false). */
+  playerCarries?: (id: string) => boolean;
   /** Held-property tally in imprints — the Detective's book. */
   heldOwed?: () => number;
   /** True while a wanted notice is posted on the crew boards — the

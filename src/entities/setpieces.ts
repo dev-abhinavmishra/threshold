@@ -505,13 +505,13 @@ export class Grafter extends Entity {
     if (this.scentT <= 0) {
       this.scentT = 1.6;
       const evs = c.hazardEvidence?.(`grafter:${this.spawnRoom}`, this.pos.x, this.pos.z, 40) ?? [];
+      // The tally's mark is on the sign — while the Auditor's book
+      // holds a line on you (claimsOwed > 0), every fresh mark below
+      // has a name attached and teaches the rubble double: the
+      // register's face on the sign, one floor down.
+      const owed = (c.claimsOwed?.() ?? 0) > 0;
       for (const ev of evs) {
         if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
-        // The tally's mark is on the sign — while the Auditor's book
-        // holds a line on you (claimsOwed > 0), every fresh mark below
-        // has a name attached and teaches the rubble double: the
-        // register's face on the sign, one floor down.
-        const owed = (c.claimsOwed?.() ?? 0) > 0;
         this.markReads += owed ? 2 : 1;
         this.target = v3(ev.pos.x, 0, ev.pos.z);
         this.roamT = 0;
@@ -520,6 +520,20 @@ export class Grafter extends Entity {
           : ev.weak ? '[stone snuffles the ash — it smells hands]'
           : '[stone drags to the fresh sign]', { severity: 'warn' });
         break;
+      }
+      // sprint 425 — the coil testifies: the under knows its own wire.
+      // Carried splice-scrap smells like sign on the move — in its own
+      // room the rubble drags toward the hands holding its wire. The
+      // hide covers you, not your coil.
+      if (c.playerCarries?.('wireCoil')
+          && this.roomOf(p.pos) === this.spawnRoom
+          && v3dist(this.pos, p.pos) < 40) {
+        // one smell, not twenty marks — it drags to your hands without
+        // learning hunger from a coil that never lands
+        this.target = v3(p.pos.x, 0, p.pos.z);
+        this.roamT = 0;
+        c.cue('grafter-grind', this.pos,
+          '[stone turns toward the hands holding its wire]', { severity: 'warn' });
       }
       if (this.eager && !this.eagerCued) {
         this.eagerCued = true;
