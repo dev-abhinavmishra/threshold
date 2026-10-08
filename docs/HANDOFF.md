@@ -4193,3 +4193,19 @@ Game.die() from the same five fields.
 - Trap: `route.rooms` exists by ~532 but the room restore block sits
   at ~680 — the stamp loop must live there, not earlier in startRun.
 - Gates: tsc, lint, vitest 251 (+2 persistence fields).
+
+## sprint 361 — the register answers back
+
+- 'Ask what the register says — 3 imprints' on every staffed clerk
+  figure — the house's mirror of the Broker's 'Ask what the book
+  says' (s334). Flat 3: reading your own file isn't a thing the
+  register surcharges. Repeatable (standing changes), cold counters
+  fold it. Captions: `[the register on you — N claims held · your
+  face is in it]` / `[the register has no line on you]`.
+- The held count had no live readout upstairs until the victory
+  screen; now the two books read you the same way on both floors.
+- Anchor: same figure, waist height (y+0.85) vs 'ask' head height
+  (y+1.4) — the pitch band separates them; a same-height second verb
+  would lose every focus frame (s334 trap).
+- Gates: tsc, lint, vitest 251, economy clerk leg +4 asserts
+  (clean/filed/repeat/paid), build.

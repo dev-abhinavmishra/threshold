@@ -1413,6 +1413,17 @@ export class Game {
         holdTime: 1.0, enabled: true, priority: 3,
         data: { roomIndex },
       });
+      // The register readout — the house's mirror of the Broker's book.
+      // Same figure, waist-height: the pitch band separates it from
+      // 'ask' at head height (a same-height second anchor would lose
+      // every focus frame to the higher priority).
+      this.interaction.add({
+        kind: 'askReg', id: `askReg-${this.space}:${roomIndex}`,
+        pos: { x: fig.position.x, y: fig.position.y + 0.85, z: fig.position.z },
+        prompt: 'Ask what the register says — 3 imprints',
+        holdTime: 0.8, enabled: true, priority: 2,
+        data: { roomIndex },
+      });
       // The till sits mid-counter, between the wares laterally but a
       // half-step back toward the clerk — inside the focus band an
       // interactable needs ~0.86 aim-alignment, and a same-line anchor
@@ -2123,6 +2134,29 @@ export class Game {
             ? `[the clerk's held-file: ${entries.join(' · ')}]`
             : '[the clerk\'s held-file — the house holds nothing ahead]');
         }
+        return;
+      }
+      case 'askReg': {
+        // The register readout — the house's mirror of the Broker's
+        // 'Ask what the book says'. Repeatable (standing changes), flat
+        // price: reading your own file isn't a thing the register
+        // surcharges. A cold counter folds it with the rest.
+        const rIdx = (it.data as { roomIndex: number }).roomIndex;
+        if (this.closedCounters.has(rIdx)) {
+          this.cue('door-locked', it.pos,
+            "[the clerk folds its hands — the counter is closed to you]", 'warn');
+          return;
+        }
+        if (this.imprints < 3) {
+          this.cue('door-locked', it.pos,
+            `[the clerk wants 3 imprints to open the register — ${3 - this.imprints} short]`, 'warn');
+          return;
+        }
+        this.chargedImprints(3, it.pos.x, it.pos.z);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos, this.unpaidHeld > 0
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it]`
+          : '[the register has no line on you — your face isn\'t in it]');
         return;
       }
       case 'till': {
