@@ -924,3 +924,131 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
   }
   expect(errors).toEqual([]);
 });
+
+// The aimed lure — a coin rings the farthest live phone on the floor:
+// the pull lands where you aren't, the touch-tones where you are.
+test('dial the far line — the aimed pull', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const rec = g as unknown as {
+      imprints: number;
+      answeredPhones: Set<string>; offHookPhones: Set<string>; spentPhones: Set<string>;
+      hookRings: { key: string; pos: { x: number; y: number; z: number }; at: number; until: number; lastRing: number; dial?: boolean }[];
+    };
+    const SAFE = new Set(['ms-clinic', 'ms-custodian', 'ms-index-ante', 'ms-final-ante', 'ms-decompress']);
+    const world = (room: GRoom, p: { x: number; z: number }) => {
+      const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+      return { x: room.origin.x + p.x * c + p.z * s, z: room.origin.z - p.x * s + p.z * c };
+    };
+    // every payphone on the floor, keyed like the mint loop does
+    const phones: { key: string; room: GRoom; wpos: { x: number; z: number } }[] = [];
+    for (const r of g.route.rooms) {
+      if (!r.spec || SAFE.has(r.templateId ?? '')) continue;
+      let pn = 0;
+      for (const p of r.spec.props) {
+        if (p.kind !== 'payphone') continue;
+        phones.push({ key: `${(g as unknown as { space: string }).space}:${r.index}:${pn++}`, room: r, wpos: world(r, p) });
+      }
+    }
+    if (phones.length < 2) return { stage: 'one-phone' };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const em: { x: number; z: number; intensity: number; category: string }[] = [];
+    (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string }) => void): void } })
+      .sound.on((e) => { if (e.category === 'distraction') em.push(e); });
+
+    const drive = (at: { x: number; z: number }, ay: number, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(ay + 0.55 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+    const stand = (ph: { wpos: { x: number; z: number }; room: GRoom }) => {
+      const dx = ph.room.origin.x - ph.wpos.x, dz = ph.room.origin.z - ph.wpos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(ph.wpos.x + (dx / L) * 1.2, 0, ph.wpos.z + (dz / L) * 1.2);
+      g.currentRoom = ph.room.index;
+      for (let f = 0; f < 40; f++) g.frame();
+    };
+
+    // stand at the first phone, dial — the farthest live phone should ring
+    const home = phones[0];
+    const live = (k: string) => !rec.answeredPhones.has(k) && !rec.offHookPhones.has(k)
+      && !rec.spentPhones.has(k) && !rec.hookRings.some((r) => r.key === k);
+    const want = phones.filter((p) => p.key !== home.key && live(p.key))
+      .sort((x, y) => Math.hypot(y.wpos.x - home.wpos.x, y.wpos.z - home.wpos.z)
+        - Math.hypot(x.wpos.x - home.wpos.x, x.wpos.z - home.wpos.z))[0];
+    if (!want) return { stage: 'no-target' };
+    stand(home);
+    rec.imprints = 5;
+    const p1 = drive(home.wpos, 1.12, /dial the far line/i,
+      () => rec.hookRings.some((r) => r.dial), 240);
+    const hr = rec.hookRings.find((r) => r.dial);
+    if (!hr) return { stage: 'dial-failed', p1 };
+    const paidCoin = rec.imprints === 4;
+    const rangFar = hr.key === want.key && Math.hypot(hr.pos.x - want.wpos.x, hr.pos.z - want.wpos.z) < 0.8;
+
+    // jump to connect: the pull emits at the far phone, not here
+    g.clock.time = hr.at - 0.3;
+    for (let f = 0; f < 400 && em.length < 4; f++) g.frame();
+    const farPull = em.filter((e) => Math.hypot(e.x - want.wpos.x, e.z - want.wpos.z) < 2);
+    const homePull = em.filter((e) => Math.hypot(e.x - home.wpos.x, e.z - home.wpos.z) < 2);
+
+    // lift the ringing phone — the call dies in your hand
+    stand(want);
+    const emBefore = em.length;
+    const p2 = drive(want.wpos, 1.4, /lift the receiver/i,
+      () => rec.answeredPhones.has(want.key), 240);
+    const callDied = rec.answeredPhones.has(want.key)
+      && !rec.hookRings.some((r) => r.dial)
+      && caps.some((c) => /call dies in your hand/.test(c));
+    const ringStopped = em.length === emBefore || em.slice(emBefore).length < 3;
+
+    // no live phones left: the line finds nothing, and takes no coin
+    for (const p of phones) if (p.key !== home.key) {
+      rec.spentPhones.add(p.key);
+    }
+    rec.hookRings.length = 0;
+    stand(home);
+    rec.imprints = 5;
+    const p3 = drive(home.wpos, 1.12, /dial the far line/i,
+      () => caps.some((c) => /finds no live phone/.test(c)), 200);
+    const refused = caps.some((c) => /finds no live phone/.test(c))
+      && rec.imprints === 5 && !rec.hookRings.some((r) => r.dial);
+
+    return { stage: 'done', paidCoin, rangFar, farPull: farPull.length, homePull: homePull.length,
+      callDied, ringStopped, refused, p1, p2, p3, caps: caps.slice(-6) };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.paidCoin, 'the phone takes its coin').toBe(true);
+  expect(result.rangFar, 'the dial rings the farthest live phone').toBe(true);
+  expect(result.farPull, 'the pull emits at the far phone').toBeGreaterThanOrEqual(3);
+  expect(result.homePull, 'no pull at your own phone').toBe(0);
+  expect(result.callDied, 'lifting the ringing phone kills the paid call').toBe(true);
+  expect(result.ringStopped, 'the ring stops once answered').toBe(true);
+  expect(result.refused, 'no live phones refuses free').toBe(true);
+  expect(errors).toEqual([]);
+});

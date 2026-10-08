@@ -5360,3 +5360,30 @@ hook, or rung out — the seeded scare keeps to live lines only.
   stalls on a prompt that already reads 'Leave it off the hook'.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
+## Sprint 403 — dial the far line
+The lure ecology gains its aimed pull: 'Dial the far line — 1 imprint'
+(keypad anchor at y=1.12, pitch-down against the y=1.4 receiver chain)
+rings the farthest *live* payphone on the floor ~3.5-6.5s after you pay
+— the pull lands where you aren't. The s402 live-lines rule holds for
+targets: never lifted, never left open, never rung out, not already
+ringing. Touch-tones emit 'item' 0.35 at your spot — aiming costs a
+coin AND a sound where you stand.
+
+- `hookRings` entries carry `dial?: boolean` — the same burst machinery
+  drives both lures; the door-listen reads a paid ring as its own line
+  ('[a phone rings beyond — the line you paid for]').
+- The toll prices by floor: imprints upstairs via `chargedImprints` (a
+  marked coin testifies in the slot like at any till), marginalia under
+  ('[you feed it a page]').
+- Honesty: 'Lift the receiver' now also cuts a dialed ring on that
+  phone ('[the call dies in your hand]'); `maybePhoneRing` skips any
+  phone with a pending call. `dialedRings` rides the checkpoint
+  (same fuse convention; expired restores as spent).
+- A ringing line can't dial out (mint gate: `!hookRings.some(key)`),
+  an off-hook line can't either. Repeatable — chain-dialing spends coins.
+- e2e leg drives: pay → farthest-live ring armed → clock-jump → ≥3
+  distraction emits at the far pos, zero at home → teleport → lift →
+  'the call dies' → all-others-spent refuses free.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.

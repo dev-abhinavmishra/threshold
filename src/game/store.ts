@@ -216,6 +216,9 @@ export interface CheckpointSave {
   // receivers left off the hook — a planted lure keeps its remaining
   // seconds on the fuse (fuse<=0 means the line already went dead)
   offHook?: { key: string; x: number; z: number; fuse: number }[];
+  // sprint 403 — calls you placed ride the checkpoint too: a paid ring
+  // still lands after a reload (fuse = seconds until the far line dies)
+  dialedRings?: { key: string; x: number; z: number; fuse: number }[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

@@ -730,6 +730,14 @@ export class Game {
         this.hookRings.push({ key: oh.key, pos: { x: oh.x, y: 1.4, z: oh.z }, at, until, lastRing: 0 });
       } else this.spentPhones.add(oh.key);
     }
+    // sprint 403 — paid calls restore armed: the far phone still rings
+    // after a reload (dur 7s — same fuse convention as offHook)
+    for (const dr of cp?.dialedRings ?? []) {
+      if (dr.fuse <= 0) { this.spentPhones.add(dr.key); continue; }
+      const until = this.clock.time + dr.fuse;
+      const at = dr.fuse > 7 ? until - 7 : this.clock.time;
+      this.hookRings.push({ key: dr.key, pos: { x: dr.x, y: 1.4, z: dr.z }, at, until, lastRing: 0, dial: true });
+    }
     // the count's locker keeps its tag — seized goods stay claimable
     // at the cage across a reload (a fresh run mints nothing)
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
@@ -1369,11 +1377,13 @@ export class Game {
     if (roverBest) return roverBest;
     // a line left open hums through the seam too — the ear tells you which
     // room carries your own armed lure (lower than any live tread)
-    if (this.hookRings.some((hr) => {
+    const armedLine = this.hookRings.find((hr) => {
       const ri = underRoomOf(roam, hr.pos);
       return ri >= 0 && roam[ri] === target;
-    })) {
-      return { sfx: 'printer-whir', text: '[a line hums beyond — somebody left it off the hook]', sev: 'info' as const };
+    });
+    if (armedLine) {
+      return { sfx: 'printer-whir', sev: 'info' as const,
+        text: armedLine.dial ? '[a phone rings beyond — the line you paid for]' : '[a line hums beyond — somebody left it off the hook]' };
     }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
@@ -2277,6 +2287,19 @@ export class Game {
               kind: 'seat', id: `seat-${key}`,
               pos: { x: wx, y: 0.55, z: wz },
               prompt: 'Rest a moment', holdTime: 1.1, enabled: true, priority: 2,
+            });
+          }
+          // sprint 403 — the keypad still works on a live line: dialing
+          // costs a coin and rings the farthest phone the floor has left —
+          // a pull you aim at a room you're not in. Busy lines (off the
+          // hook, rung out, already ringing) can't dial out.
+          if (isPhone && !this.offHookPhones.has(key) && !this.spentPhones.has(key)
+            && !this.hookRings.some((r) => r.key === key)) {
+            this.interaction.add({
+              kind: 'dial', id: `dial-${key}`,
+              pos: { x: wx, y: 1.12, z: wz },
+              prompt: this.space === 'under' ? 'Dial the far line — 1 marginalia' : 'Dial the far line — 1 imprint',
+              holdTime: 0.9, enabled: true, priority: 2,
             });
           }
         }
@@ -3699,6 +3722,14 @@ export class Game {
           this.cue('phone-stop', at, '[the ringing stops — dead line]', 'warn');
           this.phoneRing = null;
         }
+        // sprint 403 — a phone ringing because you dialed it dies the same
+        // way: the call dies in your hand, paid or not.
+        const pk = it.id.replace(/^phone-/, '');
+        const hi = this.hookRings.findIndex((r) => r.key === pk);
+        if (hi >= 0) {
+          this.hookRings.splice(hi, 1);
+          this.cue('phone-stop', at, '[the call dies in your hand]', 'warn');
+        }
         return;
       }
       case 'offHook': {
@@ -3728,6 +3759,55 @@ export class Game {
         this.spentPhones.add(key);
         this.cue('phone-stop', at, '[the line goes quiet — you hung it up]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
+      case 'dial': {
+        // sprint 403 — the aimed lure: a coin rings the farthest live phone
+        // on this floor. The pull lands where you aren't; the touch-tones
+        // are a sound where you are. The s402 rule holds — the line only
+        // reaches a phone that was never lifted, left open, or rung out.
+        const key = it.id.replace(/^dial-/, '');
+        const at = { x: it.pos.x, y: 1.4, z: it.pos.z };
+        const under = this.space === 'under';
+        const purse = under ? this.marginalia : this.imprints;
+        if (purse < 1) {
+          this.cue('door-locked', it.pos,
+            `[the phone wants a ${under ? 'page' : 'coin'} — 1 ${under ? 'marginalia' : 'imprint'} short]`, 'warn');
+          return;
+        }
+        let target: { key: string; pos: Vec3 } | null = null;
+        let best = -1;
+        for (const r of this.activeRooms()) {
+          if (!r.spec || SAFE_ROOM_TEMPLATES.has(r.templateId)) continue;
+          const rc = Math.cos(r.yaw), rs = Math.sin(r.yaw);
+          let pn2 = 0;
+          for (const p of r.spec.props) {
+            if (p.kind !== 'payphone') continue;
+            const pkey = `${this.space}:${r.index}:${pn2++}`;
+            if (pkey === key || this.answeredPhones.has(pkey) || this.offHookPhones.has(pkey)
+              || this.spentPhones.has(pkey) || this.hookRings.some((hr) => hr.key === pkey)) continue;
+            const pos = { x: r.origin.x + p.x * rc + p.z * rs, y: 1.4, z: r.origin.z - p.x * rs + p.z * rc };
+            const d = Math.hypot(pos.x - at.x, pos.z - at.z);
+            if (d > best) { best = d; target = { key: pkey, pos }; }
+          }
+        }
+        if (!target) {
+          this.cue('phone-stop', it.pos, '[the line finds no live phone]', 'warn');
+          return;
+        }
+        // a marked coin testifies in the slot like at any till (s335);
+        // under, the page is just a page
+        if (under) this.marginalia -= 1; else this.chargedImprints(1, at.x, at.z);
+        const scare = this.streams.roomStream('scare', this.currentRoom * 397 + 29);
+        const ringAt = this.clock.time + 3.5 + scare.range(0, 3);
+        this.hookRings.push({ key: target.key, pos: target.pos, at: ringAt, until: ringAt + 7, lastRing: 0, dial: true });
+        this.cue('phone-stop', at, under ? '[you feed it a page — the far phone rings rooms away]' : '[you dial — the far phone rings rooms away]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.35, category: 'item', caption: '' });
+        // the receiver lifts to dial — a live scare-ring here dies with it
+        if (this.phoneRing && Math.hypot(this.phoneRing.pos.x - at.x, this.phoneRing.pos.z - at.z) < 0.8) {
+          this.cue('phone-stop', at, '[the ringing stops — dead line]', 'warn');
+          this.phoneRing = null;
+        }
         return;
       }
       case 'trap': {
@@ -5066,6 +5146,12 @@ export class Game {
               fuse: hr ? Math.max(0, hr.until - this.clock.time) : 0 };
           })
         : undefined,
+      dialedRings: this.hookRings.some((r) => r.dial)
+        ? this.hookRings.filter((r) => r.dial).map((hr) => ({
+            key: hr.key, x: hr.pos.x, z: hr.pos.z,
+            fuse: Math.max(0, hr.until - this.clock.time),
+          }))
+        : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -6295,7 +6381,7 @@ export class Game {
   // placed wherever the house hung a phone.
   private offHookPhones = new Set<string>();
   private spentPhones = new Set<string>();
-  private hookRings: { key: string; pos: Vec3; at: number; until: number; lastRing: number }[] = [];
+  private hookRings: { key: string; pos: Vec3; at: number; until: number; lastRing: number; dial?: boolean }[] = [];
   private armedTraps = new Map<string, boolean>();
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
@@ -6661,7 +6747,8 @@ export class Game {
     const phoneOrd = (room.spec?.props.slice(0, room.spec.props.indexOf(prop))
       .filter((p) => p.kind === 'payphone').length) ?? 0;
     const pkey = `${this.space}:${room.index}:${phoneOrd}`;
-    if (this.answeredPhones.has(pkey) || this.offHookPhones.has(pkey) || this.spentPhones.has(pkey)) return;
+    if (this.answeredPhones.has(pkey) || this.offHookPhones.has(pkey) || this.spentPhones.has(pkey)
+      || this.hookRings.some((hr) => hr.key === pkey)) return;
     const scare = this.streams.roomStream('scare', this.currentRoom + 199 + (under ? 977 : 0));
     if (!scare.bool(0.3)) return;
     const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);
