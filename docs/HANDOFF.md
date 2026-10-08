@@ -5179,3 +5179,12 @@ Game.die() from the same five fields.
   faint halo + heavier settled flecks + pale drift center.
   Named 'fan-sheds'.
 - Vitest 286: 'the fan sheds'. Gates: tsc, lint, 102/102.
+
+## sprint 440 — the fourth count
+
+- Roster re-audit after the dressing batch (431-439) + sibling's cast
+  additions: main-route maxGap 7-9 across seeds (unchanged from the
+  third count), under 4-5; deciles spread normally, opening decile
+  stays light by design. No tuning needed — the dressing batch moved
+  no dials.
+- npm run balance is the repeatable audit; run it at each round number.
