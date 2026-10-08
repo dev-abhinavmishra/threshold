@@ -5931,3 +5931,11 @@ charge, the tally's deep-tier refusal intact. The house shelf stays
 off it — the clerk's stock is finished goods; splice scrap only sells
 below. Bought or cut, the coil smells the same: `playerCarries`
 doesn't launder the scent.
+
+## Sprint 429 — maintenance is a claim
+
+The warden's re-lay now clears `planted` when it re-arms your dead
+wire: the house re-ties the coil as its own — 'Pull the wire free'
+reads 'Cut the seal', and the cut yields nothing (the house took it).
+Your wire is only yours while you watch it: leave a dead one lying and
+the tug-of-war can take the coil itself, not just the arm.

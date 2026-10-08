@@ -232,6 +232,13 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const clerk = gameSrc.match(/private populateClerk[\s\S]*?const stock[\s\S]*?\];/)?.[0] ?? '';
     expect(clerk).not.toContain('wireCoil');
   });
+
+  it('maintenance is a claim — a re-tied coil stops being yours', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the warden's re-lay clears the planted flag: the re-armed wire
+    // mints 'Cut the seal' like any house snare and yields no coil
+    expect(gameSrc).toMatch(/kind === 'wire'[\s\S]*?s\.planted = false/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

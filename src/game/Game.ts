@@ -1137,6 +1137,11 @@ export class Game {
           const s = this.hazard.snares.find((hz) => !hz.armed && near(hz.pos));
           if (!s) return null;
           s.armed = true;
+          // sprint 429 — the warden re-ties your wire as the house's:
+          // maintenance is a claim — the coil you left dead stops being
+          // yours. 'Pull the wire free' reads 'Cut the seal' now, and
+          // cutting yields no coil: the house already took it.
+          s.planted = false;
           return 'snare';
         }
         if (kind === 'line') {
