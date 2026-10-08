@@ -629,7 +629,12 @@ export class Warden extends Entity {
       for (const ev of evs) {
         if (ev.wiped) continue; // a wipe is a filter on the sign, not a target
         if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
-        this.signReads += 1; // weighed in-room — believed or doubted, it learns
+        // The register's face is on the sign — while the register holds
+        // a line on you (heldOwed > 0), every fresh mark has a name
+        // attached and teaches him double: two strangers' reads to
+        // learn, one filed face's.
+        const named = (c.heldOwed?.() ?? 0) > 0;
+        this.signReads += named ? 2 : 1;
         // Sign in smelling range of a wiped floor — it could be a lie. The
         // warden doubts and stays on the line (the mark is already spent:
         // hazardEvidence marked it read when it returned it).
@@ -639,7 +644,9 @@ export class Warden extends Entity {
         }
         this.investigate = v3(ev.pos.x, 0, ev.pos.z);
         this.investigateScan = 0;
-        c.cue('floor-creak', this.pos, '[it reads the sign — someone has been here]', { severity: 'warn' });
+        c.cue('floor-creak', this.pos, named
+          ? '[the register\'s face is on this sign — it knows these hands]'
+          : '[it reads the sign — someone has been here]', { severity: 'warn' });
         this.rig?.play('move', 0.1);
         break;
       }

@@ -4209,3 +4209,20 @@ Game.die() from the same five fields.
   would lose every focus frame (s334 trap).
 - Gates: tsc, lint, vitest 251, economy clerk leg +4 asserts
   (clean/filed/repeat/paid), build.
+
+## sprint 362 — the register's face is on the sign
+
+- The warden's sign-read (`signReads`, learns at 2) now reads
+  `ctx.heldOwed()`: while the register holds a line on you, every
+  fresh mark has a name attached — `signReads += 2`, so ONE mark
+  authored by a filed face teaches what two strangers' marks used to.
+  Tell: '[the register's face is on this sign — it knows these
+  hands]'. Doubted marks (wipe-shadow range) still teach the name —
+  "believed or doubted, it learns" already held.
+- Counterplay hook it adds: settling your register debt de-arms the
+  warden's pattern-read — the first sprint where the house book
+  prices the WALK, not the counter.
+- Ctx pattern note: `heldOwed` was already on EntityCtx (s314 eyes);
+  corridor entities read it the same optional way (`c.heldOwed?.()
+  ?? 0`) — makeCtx specs inject it as `heldOwed: () => 3`.
+- Gates: tsc, lint, vitest 105 entities (+1 spec), sim 5/5.
