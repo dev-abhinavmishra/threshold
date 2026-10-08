@@ -207,6 +207,9 @@ export interface CheckpointSave {
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
+  /** The grafter's relocated wire — armed or dead, the graft persists
+   *  where it was laid (dead ones also ride deadHazards). */
+  graftedWires?: { x: number; z: number; room: number; armed: boolean }[];
   // counters gone cold — a rifled till doesn't re-warm its clerk on a
   // reload (sold wares still restock: you paid for those)
   closedCounters?: number[];

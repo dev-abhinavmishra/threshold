@@ -566,6 +566,10 @@ export class Game {
     this.brokerFigs.clear();
     for (const fig of this.clerkFigs.values()) this.entityGroup.remove(fig);
     this.clerkFigs.clear();
+    // sprint 414 — the grafter's work clears with the run; a checkpoint
+    // restore re-lays it below
+    for (const gm of this.graftedMeshes) this.entityGroup.remove(gm);
+    this.graftedMeshes = [];
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
@@ -766,6 +770,13 @@ export class Game {
     this.mintWedgeDrops();
     this.droppedWraps = cp?.droppedWraps?.map((w) => ({ ...w })) ?? [];
     this.mintWrapDrops();
+    // the grafter's grafts stay grafted — planted wire survives a
+    // reload wearing the same face it was laid with; a graft that
+    // died stays dead like any wire (its mark rides deadHazards)
+    for (const gw of cp?.graftedWires ?? []) {
+      this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
+      if (gw.armed === false) this.hazard.snares[this.hazard.snares.length - 1].armed = false;
+    }
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -1058,6 +1069,16 @@ export class Game {
       // sprint 413 — confiscation is carried, and carried means it can
       // be lost: a staggered floorkeeper spills pocketed felt as loot.
       dropWraps: (pos, n) => this.dropWraps(pos, n),
+      // sprint 414 — the under's version of maintenance: its scavenger
+      // strips dead wire and grafts it fresh where the living walk.
+      stripSnare: (x, z) => {
+        const i = this.hazard.snares.findIndex((hz) =>
+          !hz.armed && Math.hypot(hz.pos.x - x, hz.pos.z - z) < 1.2);
+        if (i < 0) return false;
+        this.hazard.snares.splice(i, 1);
+        return true;
+      },
+      plantSnare: (pos, room) => this.plantSnare(pos, room),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1308,6 +1329,21 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
     });
+  }
+
+  /** sprint 414 — the grafter lays a stripped coil where the living
+   *  walk. The graft is a normal armed snare wearing the same paper-
+   *  and-amber face the seed ones do, tagged `grafted` so the
+   *  checkpoint can rebuild it after a reload. */
+  private graftedMeshes: THREE.Object3D[] = [];
+  private plantSnare(pos: Vec3, room: number): void {
+    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: true, grafted: true });
+    const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
+    const fy = this.activeRooms()[room]?.origin.y ?? 0;
+    built.group.position.set(pos.x, fy, pos.z);
+    built.group.rotation.y = ((pos.x * 7.31 + pos.z * 13.7) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    this.entityGroup.add(built.group);
+    this.graftedMeshes.push(built.group);
   }
 
   private spawnEntity(e: Entity): void {
@@ -5263,6 +5299,9 @@ export class Game {
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
+      graftedWires: this.hazard.snares.some((s) => s.grafted)
+        ? this.hazard.snares.filter((s) => s.grafted)
+          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,

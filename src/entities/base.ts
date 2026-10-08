@@ -114,6 +114,12 @@ export interface EntityCtx {
   /** Confiscation isn't deletion — it's carried: a staggered
    *  floorkeeper scatters the felt it pocketed as floor loot. */
   dropWraps?: (pos: Vec3, n: number) => void;
+  /** The under's version of maintenance: the scavenger strips dead
+   *  wire it stumbles on and carries the coil — then lays it fresh
+   *  where the living walk. strip removes a dead snare near (x,z);
+   *  plant arms a new (grafted) one at pos in room. */
+  stripSnare?: (x: number, z: number) => boolean;
+  plantSnare?: (pos: Vec3, room: number) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

@@ -5577,3 +5577,21 @@ s395 glass, or wait for a wet floor. The loop closes: he peels your
 felt onto his eye, you knock him down and take it back.
 
 Gates: tsc, lint (batched with next).
+
+## Sprint 414 — the under relocates
+The under's answer to "the house re-lays its work": nothing repairs
+below — the wire MOVES. The Grafter (the under's scavenger, already
+drags to dead-wire sign) now strips any dead snare it stands on
+(`stripSnare` ctx, splices it — scrap goes with the rubble), carries
+one coil, and lays it fresh when it reaches the room you're standing
+in (`plantSnare` — a real armed snare wearing the same paper-amber
+face, `grafted: true`). If it settles still carrying, the coil arms
+where the rubble sank. House: wire re-tied where you cut it. Under:
+wire re-laid where you WALK. Grafts ride the checkpoint
+(`graftedWires`); dead grafts stay dead via deadHazards convention.
+
+Known-honest hole (same convention as all dead hazards): a stripped
+snare's seed prop face stays on the floor — wire visuals never change
+on death anywhere in the game; the captions carry the truth.
+
+Gates: tsc, lint, contract spec (batched).

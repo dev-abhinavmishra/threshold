@@ -110,6 +110,24 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     ]);
     expect(gameSrc).toContain('hotMarginalia');
   });
+
+  it('the under relocates instead — the scavenger strips and re-lays wire', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const spSrc = readFileSync(new URL('../src/entities/setpieces.ts', import.meta.url), 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    // the asymmetry is contractual: the house repairs (rearmHazard),
+    // the under moves hazards onto your path (strip + plant)
+    expect(baseSrc).toContain('stripSnare');
+    expect(baseSrc).toContain('plantSnare');
+    // the grafter carries the coil and lays it in your room
+    expect(spSrc).toContain('this.carrying');
+    expect(spSrc).toContain('the coil unwinds where it walks');
+    // grafts are real snares with real faces — and they persist
+    expect(gameSrc).toContain('grafted: true');
+    expect(gameSrc).toContain("kind: 'snare'");
+    expect(storeSrc).toContain('graftedWires');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
