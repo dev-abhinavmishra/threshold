@@ -1888,3 +1888,18 @@ describe('the house was hurt before (sprint 435)', () => {
     expect(patches, 'no patch plugs').toBeGreaterThan(8);
   });
 });
+
+describe('the numbers changed (sprint 437)', () => {
+  it('doors carry a painted numeral, the old one scratched out', () => {
+    let nums = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'old-number') nums++; });
+      }
+    }
+    expect(nums, 'no old numbers').toBeGreaterThan(15);
+  });
+});
