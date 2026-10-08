@@ -8993,7 +8993,32 @@ export class Game {
         e.inputHeld = this.keys.size > 0;
       }
       if (e instanceof Inkling || e instanceof Husk || e instanceof Lurker) {
-        e.lightOnIt = (this.lampOn || this.pulseLampOn) ? 1 : 0;
+        // sprint 444 — the beam needs air: the flag was lamp-on-OR-off,
+        // so the beam repelled, agitated, and woke things through shut
+        // leaves and walls alike. Now it means the beam actually covers
+        // it: lamp on, in the cone, in reach, and sight clear.
+        e.lightOnIt = 0;
+        if (this.lampOn || this.pulseLampOn) {
+          const tp = e.threatPos();
+          if (tp) {
+            const dx = tp.x - this.player.pos.x, dz = tp.z - this.player.pos.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist < 11) {
+              const dir = v3();
+              this.player.lookDir(dir);
+              const dn = dist || 1;
+              if ((dir.x * dx + dir.z * dz) / dn > 0.4) {
+                const eye = v3();
+                this.player.eyePos(eye);
+                const rooms = this.activeRooms();
+                const inRoom = rooms.find((r) => pointInRoom(r, tp.x, tp.z)) ?? rooms[this.currentRoom];
+                const blockers = (inRoom ? inRoom.losBlockers : []).concat(
+                  shutLeafBlockers(rooms, this.player.pos, tp));
+                if (hasLineOfSight(eye, v3(tp.x, 1.2, tp.z), blockers)) e.lightOnIt = 1;
+              }
+            }
+          }
+        }
       }
     }
 

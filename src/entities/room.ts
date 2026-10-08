@@ -57,8 +57,15 @@ export class Witness extends Entity {
     const d = v3dist(this.pos, p.pos);
     if (d > 18 || p.protection === 'hidden') { this.done(); return; }
     if (this.mesh) this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+    // sprint 442 — its harm and its pull both travel sight: a shut leaf
+    // or wall between you and it breaks the gaze they ride on.
+    const wRoom = c.rooms[c.currentRoomIndex];
+    const wEye = v3();
+    p.eyePos(wEye);
+    const wCanSee = hasLineOfSight(wEye, v3(this.pos.x, 1.4, this.pos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
     // Camera pull toward itself (resistible) unless reduced-motion.
-    if (!c.accessibility.reducedMotion) {
+    if (!c.accessibility.reducedMotion && wCanSee) {
       const want = Math.atan2(this.pos.x - p.pos.x, this.pos.z - p.pos.z);
       let dy = want - p.yaw;
       while (dy > Math.PI) dy -= Math.PI * 2;
@@ -72,13 +79,6 @@ export class Witness extends Entity {
     const toW = v3(this.pos.x - p.pos.x, 1.4 - p.pos.y - 1.6, this.pos.z - p.pos.z);
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
-    // sprint 442 — its harm travels sight, and sight needs air: a shut
-    // leaf or wall between you and it breaks the gaze the damage rides on.
-    const wRoom = c.rooms[c.currentRoomIndex];
-    const wEye = v3();
-    p.eyePos(wEye);
-    const wCanSee = hasLineOfSight(wEye, v3(this.pos.x, 1.4, this.pos.z),
-      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
     if (facing > 0.86 && wCanSee) {
       this.exposure += dt;
       if (this.exposure > 0.25) {

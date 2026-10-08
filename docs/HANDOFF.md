@@ -6253,3 +6253,19 @@ ring — the initial bearing gets the same in-room retry.
 relocate landing in real cover followed by an honest gaze ending it
 IS the designed ending; assert the contract (no damage, moved)
 not the timeline.
+
+## Sprint 444 — the beam needs air
+
+`lightOnIt` meant 'lamp is on' — nothing more. Every consumer layered
+partial gates on top (the Inkling's distance, the Husk's facing), but
+no layer ever tested the wall between: the torch repelled a Lurker,
+agitated an Inkling, and woke a Husk through shut leaves and through
+the party wall. The flag now means what its comment always claimed —
+the beam covers it: lamp on, inside the cone (dot > 0.4), inside 11m,
+and `losBlockers.concat(shutLeafBlockers)` clear from eye to it. The
+per-entity gates keep their own tuning on top. Also folded in: the
+Witness's camera-pull moved under the same sight gate as its damage —
+it can't hold your gaze through cover either.
+**Notes:** the flag's three consumers (Lurker flee, Inkling agitate,
+Husk dormant wake) all inherited the fix at once — a shared flag is
+the right seam for a convention; gate the FLAG, not each effect.
