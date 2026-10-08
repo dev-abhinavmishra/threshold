@@ -1390,3 +1390,327 @@ export function oldMap(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The register — a guest ledger page: ruled lines, neat early
+ * signatures, and later entries that stop pretending to be handwriting. */
+export function registerPage(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // paper, pinned, slightly curled shadow
+    ctx.fillStyle = 'rgba(198,190,166,0.9)';
+    ctx.fillRect(10, 8, 76, 112);
+    ctx.fillStyle = 'rgba(40,36,30,0.25)';
+    ctx.fillRect(84, 12, 4, 108);
+    // pin shadow
+    ctx.fillStyle = 'rgba(60,55,48,0.6)';
+    ctx.beginPath(); ctx.arc(48, 12, 2.5, 0, Math.PI * 2); ctx.fill();
+    // ruled lines
+    ctx.strokeStyle = 'rgba(90,84,70,0.4)';
+    ctx.lineWidth = 0.8;
+    for (let r = 0; r < 13; r++) {
+      ctx.beginPath();
+      ctx.moveTo(14, 22 + r * 7.5);
+      ctx.lineTo(82, 22 + r * 7.5);
+      ctx.stroke();
+    }
+    // signatures — early rows neat wiggles, late rows descend to scrawl
+    const rows = 9 + Math.floor(rng.float() * 3);
+    for (let r = 0; r < rows; r++) {
+      const y = 24 + r * 7.5;
+      const degrade = r / rows;
+      ctx.strokeStyle = `rgba(52,48,60,${0.6 - degrade * 0.25})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      const n = 5 + rng.float() * 6;
+      let x = 16;
+      ctx.moveTo(x, y);
+      for (let w = 0; w < n; w++) {
+        const wx = x + 4 + rng.float() * 4;
+        if (degrade < 0.5) {
+          ctx.bezierCurveTo(x + 2, y - 3 - rng.float() * 2, wx - 2, y + 2, wx, y - rng.float() * 2);
+        } else {
+          // scrawl: jagged dips
+          ctx.lineTo(wx, y + (rng.float() - 0.5) * 6 * degrade);
+        }
+        x = wx;
+      }
+      ctx.stroke();
+      // late rows: a date or a tallied cross in the margin
+      if (degrade > 0.6 && rng.bool(0.5)) {
+        ctx.fillStyle = 'rgba(120,40,36,0.5)';
+        ctx.fillRect(78, y - 2, 4, 1);
+        ctx.fillRect(80, y - 4, 1, 4);
+      }
+    }
+    // stain corner
+    ctx.fillStyle = 'rgba(120,100,70,0.2)';
+    ctx.beginPath(); ctx.arc(80, 112, 8, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+/** The eviction slip — an official dispossession notice pinned where
+ * the guest stopped being a guest: letterhead bar, typed lines, the
+ * stamped seal, a name field that was never filled in. */
+export function evictionSlip(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // crisp paper, official — brighter than the wall wants it to be
+    ctx.fillStyle = 'rgba(212,206,190,0.92)';
+    ctx.fillRect(16, 6, 64, 116);
+    ctx.fillStyle = 'rgba(40,36,30,0.28)';
+    ctx.fillRect(78, 10, 4, 112);
+    // letterhead bar + rules
+    ctx.fillStyle = 'rgba(58,54,70,0.75)';
+    ctx.fillRect(22, 12, 52, 5);
+    ctx.strokeStyle = 'rgba(58,54,70,0.5)';
+    ctx.lineWidth = 0.7;
+    for (let r = 0; r < 12; r++) {
+      ctx.beginPath();
+      ctx.moveTo(22, 26 + r * 6.5);
+      ctx.lineTo(74 - rng.float() * 14, 26 + r * 6.5);
+      ctx.stroke();
+    }
+    // the name field — typed dots, never filled
+    ctx.setLineDash([2, 3]);
+    ctx.strokeStyle = 'rgba(58,54,70,0.55)';
+    ctx.strokeRect(24, 58, 42, 9);
+    ctx.setLineDash([]);
+    // official seal — a stamped circle, half off the page edge
+    ctx.strokeStyle = 'rgba(96,40,36,0.6)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(66, 92, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(66, 92, 7, 0, Math.PI * 2);
+    ctx.stroke();
+    // torn bottom corner
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillStyle = 'rgba(212,206,190,0.0)';
+    ctx.beginPath();
+    ctx.moveTo(72, 122);
+    ctx.lineTo(80, 108 + rng.float() * 8);
+    ctx.lineTo(80, 122);
+    ctx.closePath();
+    ctx.fill();
+    // pin
+    ctx.fillStyle = 'rgba(60,55,48,0.7)';
+    ctx.beginPath(); ctx.arc(48, 10, 2.2, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+/** The repair ticket — a maintenance stub torn off its perforation:
+ * stamped job number, scrawled status, a grease thumb where the
+ * mechanic held it. */
+export function repairTicket(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // tag paper, hung on the wire hole at top-left
+    ctx.fillStyle = 'rgba(196,186,158,0.9)';
+    ctx.fillRect(8, 14, 80, 70);
+    // perforation edge (top) — sawtooth
+    ctx.fillStyle = 'rgba(196,186,158,0.0)';
+    for (let x = 8; x < 88; x += 6) {
+      ctx.clearRect(x, 12, 3, 3);
+    }
+    // wire hole + string shadow
+    ctx.fillStyle = 'rgba(30,26,22,0.8)';
+    ctx.beginPath(); ctx.arc(20, 22, 3, 0, Math.PI * 2); ctx.fill();
+    // stamped job number — blocky digits
+    ctx.fillStyle = 'rgba(48,44,60,0.7)';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(`NO ${4100 + Math.floor(rng.float() * 900)}`, 28, 30);
+    // part lines — printed columns
+    ctx.strokeStyle = 'rgba(60,54,46,0.45)';
+    ctx.lineWidth = 0.7;
+    for (let r = 0; r < 6; r++) {
+      ctx.beginPath();
+      ctx.moveTo(14, 40 + r * 7);
+      ctx.lineTo(82, 40 + r * 7);
+      ctx.stroke();
+      // checkbox marks, some ticked
+      if (rng.bool(0.6)) {
+        ctx.fillStyle = 'rgba(96,40,36,0.55)';
+        ctx.fillRect(16, 37 + r * 7, 3, 3);
+      }
+    }
+    // the verdict, scrawled — a red slash through the last line
+    ctx.strokeStyle = 'rgba(120,40,36,0.7)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(16, 78 + rng.float() * 2);
+    ctx.lineTo(80, 72 + rng.float() * 4);
+    ctx.stroke();
+    // grease thumbprint — oval smudge bottom-right
+    ctx.fillStyle = 'rgba(46,40,32,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(72, 78, 8, 5, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** The photo strip — a booth strip pinned crooked: four frames of a
+ * face that reads less like a face each exposure. */
+export function photoStrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 128, (ctx) => {
+    // the strip itself — dark photo paper
+    ctx.fillStyle = 'rgba(30,28,30,0.92)';
+    ctx.fillRect(8, 8, 32, 114);
+    for (let f = 0; f < 4; f++) {
+      const y = 12 + f * 28;
+      // frame silver border
+      ctx.strokeStyle = 'rgba(190,182,170,0.5)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(12, y, 24, 24);
+      // figure — a head shape that dissolves with each frame
+      const fade = f / 3;
+      ctx.fillStyle = `rgba(196,190,178,${0.55 - fade * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(24 + (rng.float() - 0.5) * 4 * f, y + 11 + rng.float() * 3, 5 - fade * 2, 0, Math.PI * 2);
+      ctx.fill();
+      // scatter/noise takes over the late frames
+      const noise = 4 + f * 6;
+      for (let i = 0; i < noise; i++) {
+        ctx.fillStyle = `rgba(120,112,104,${0.2 + rng.float() * 0.25})`;
+        ctx.fillRect(13 + rng.float() * 22, y + 1 + rng.float() * 22, 1.5, 1.5);
+      }
+      if (f === 3) {
+        // last frame — a smear where the head was
+        ctx.fillStyle = 'rgba(70,66,72,0.5)';
+        ctx.beginPath();
+        ctx.ellipse(24, y + 13, 7, 4, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // pin through the top
+    ctx.fillStyle = 'rgba(70,64,56,0.8)';
+    ctx.beginPath(); ctx.arc(24, 8, 2.2, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+/** The dropped glove — someone's hand-shaped belonging left mid-floor:
+ * a limp silhouette, fingers curled under, cuff open where it slid off. */
+export function droppedGlove(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // glove body — palm oval + four finger stubs + thumb
+    ctx.fillStyle = 'rgba(58,48,40,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(48, 58, 16, 22, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    // fingers — stubby rounded bars curled under
+    for (let f = 0; f < 4; f++) {
+      const fx = 36 + f * 8.5;
+      ctx.beginPath();
+      ctx.ellipse(fx, 34 - rng.float() * 3, 3.4, 9 - rng.float() * 2, (rng.float() - 0.5) * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // thumb sticking out
+    ctx.beginPath();
+    ctx.ellipse(66, 54, 4, 9, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    // cuff opening — lighter rim where the hand slid out
+    ctx.strokeStyle = 'rgba(90,76,62,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(48, 78, 13, 5, 0, 0, Math.PI);
+    ctx.stroke();
+    // fabric sheen + seam stitch lines
+    ctx.strokeStyle = 'rgba(80,68,56,0.4)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(38 + i * 9, 44);
+      ctx.quadraticCurveTo(40 + i * 9, 58, 38 + i * 9, 72);
+      ctx.stroke();
+    }
+    // soft floor shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(50, 84, 20, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** The spilled pen — ink spill blooming where it hit, the pen itself
+ * dropped beside it at whatever angle the fall left. */
+export function inkSpill(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // ink bloom — irregular dark pool, edges feathered
+    ctx.fillStyle = 'rgba(30,32,50,0.75)';
+    ctx.beginPath();
+    const cx = 40, cy = 60;
+    ctx.moveTo(cx + 14, cy);
+    for (let a = 0; a <= 6.3; a += 0.5) {
+      const r = 10 + rng.float() * 7;
+      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // satellite spatter — the little drops that flew
+    for (let i = 0; i < 8; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const d = 12 + rng.float() * 18;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.7, 0.6 + rng.float() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the pen — thin barrel at a fall angle, nib toward the pool
+    ctx.save();
+    ctx.translate(62, 34);
+    ctx.rotate(0.5 + rng.float() * 0.6);
+    ctx.fillStyle = 'rgba(52,44,38,0.9)';
+    ctx.fillRect(-2, -16, 4, 26);
+    ctx.fillStyle = 'rgba(160,140,90,0.8)';
+    ctx.fillRect(-1.5, 10, 3, 6);
+    ctx.restore();
+    // ink trail where it rolled
+    ctx.strokeStyle = 'rgba(30,32,50,0.4)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(58, 42);
+    ctx.quadraticCurveTo(52, 50, 44, 56);
+    ctx.stroke();
+  });
+}
+
+/** The fallen spectacles — glasses cracked on the floorboards: round
+ * frames, one lens starred, a temple arm folded wrong. */
+export function fallenSpecs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    ctx.strokeStyle = 'rgba(140,120,80,0.85)';
+    ctx.lineWidth = 2;
+    // two round rims
+    ctx.beginPath(); ctx.arc(36, 54, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(62, 54, 12, 0, Math.PI * 2); ctx.stroke();
+    // bridge
+    ctx.beginPath();
+    ctx.moveTo(48, 54); ctx.lineTo(50, 54);
+    ctx.quadraticCurveTo(49, 51, 50, 54);
+    ctx.stroke();
+    // temple arms — one out, one folded under
+    ctx.beginPath();
+    ctx.moveTo(24, 52); ctx.lineTo(12, 58 + rng.float() * 4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(74, 52); ctx.lineTo(82, 46);
+    ctx.stroke();
+    // glass shine in the good lens
+    ctx.strokeStyle = 'rgba(200,200,210,0.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(30, 48); ctx.lineTo(40, 60);
+    ctx.stroke();
+    // starred crack in the right lens
+    ctx.strokeStyle = 'rgba(210,210,220,0.6)';
+    ctx.lineWidth = 0.9;
+    for (let i = 0; i < 5; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(62, 54);
+      ctx.lineTo(62 + Math.cos(a) * (5 + rng.float() * 6), 54 + Math.sin(a) * (5 + rng.float() * 6));
+      ctx.stroke();
+    }
+    // floor shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(49, 68, 26, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

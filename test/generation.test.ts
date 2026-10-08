@@ -2038,3 +2038,62 @@ describe('the map nobody trusts (sprint 447)', () => {
     expect(maps, 'no route maps').toBeGreaterThan(4);
   });
 });
+
+describe('the register (sprint 448)', () => {
+  it('lobbies pin the guest ledger page', () => {
+    let pages = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'register-page') pages++; });
+      }
+    }
+    expect(pages, 'no register pages').toBeGreaterThan(4);
+  });
+});
+
+describe('the paper trail (sprint 448)', () => {
+  const count = (name: string) => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === name) n++; });
+      }
+    }
+    return n;
+  };
+
+  it('guest doors pin the dispossession notice', () => {
+    expect(count('eviction-slip'), 'no eviction slips').toBeGreaterThan(2);
+  });
+
+  it('service spaces keep torn repair stubs', () => {
+    expect(count('repair-ticket'), 'no repair tickets').toBeGreaterThan(2);
+  });
+
+  it('guest rooms pin the booth strip', () => {
+    expect(count('photo-strip'), 'no photo strips').toBeGreaterThan(1);
+  });
+});
+
+describe('the things they left (sprint 448)', () => {
+  it('floors keep the dropped belongings', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'left-glove' || o.name === 'left-pen' || o.name === 'left-specs') n++;
+        });
+      }
+    }
+    expect(n, 'nothing left behind').toBeGreaterThan(3);
+  });
+});
