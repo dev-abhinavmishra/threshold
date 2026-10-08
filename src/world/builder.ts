@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -827,6 +827,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ksh.name = 'knob-shine';
       ksh.position.set(port.width / 2 - 0.14, 0.02, 0.054);
       leaf.add(ksh);
+    }
+    // The hinges bled — oxidised runs dragged down the face from
+    // each knuckle that wept for years.
+    if (!industrial && rng.float() < 0.18) {
+      const hr = decalQuad(hingeRust(rng), 0.16, 0.9);
+      hr.name = 'hinge-rust';
+      hr.position.set(-(port.width / 2) + 0.14, -0.1, 0.052);
+      leaf.add(hr);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -1829,6 +1837,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const rg = group.children[group.children.length - 1];
         if (rg && !rg.name) rg.name = 'rail-ghost';
       }
+      // The sun bleached the boards — a parallelogram of pale wood
+      // pooled on the floor under the sill.
+      if (rng.float() < 0.4) {
+        const sf = decalQuad(sunFade(rng), 1.3 + rng.float() * 0.3, 1.0 + rng.float() * 0.25);
+        sf.name = 'sun-fade';
+        sf.rotation.x = -Math.PI / 2;
+        sf.rotation.z = (dww === 'n' ? Math.PI : dww === 's' ? 0 : dww === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.2;
+        const six = dww === 'e' ? -1.0 : dww === 'w' ? 1.0 : 0;
+        const siz = dww === 'n' ? 1.0 : dww === 's' ? -1.0 : 0;
+        const sp2 = portLocalPos({ wall: dww, offset: dAlong, width: 0.9 }, w, d);
+        sf.position.set(sp2.x + six, 0.0095, sp2.z + siz);
+        group.add(sf);
+      }
     }
 
     // The switches kept the hands — a decade of reaching leaves a
@@ -2053,6 +2074,23 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         wallDecal(spot.wall, groutLines(rng), 1.5 + rng.float() * 0.3, 1.1 + rng.float() * 0.2, spot.along, 1.0 + rng.float() * 0.2);
         const gl = group.children[group.children.length - 1];
         if (gl && !gl.name) gl.name = 'grout-lines';
+      }
+    }
+
+    // The lamps left their rings — a spared circle of boards where
+    // a standing lamp kept the dark off for years.
+    if (livedIn && rng.float() < 0.25) {
+      const spot = pickWallSpot(0.6);
+      if (spot) {
+        const lp = portLocalPos({ wall: spot.wall, offset: spot.along, width: 0.9 }, w, d);
+        const ix = spot.wall === 'e' ? -0.7 : spot.wall === 'w' ? 0.7 : 0;
+        const iz = spot.wall === 'n' ? 0.7 : spot.wall === 's' ? -0.7 : 0;
+        const lg = decalQuad(lampGhost(rng), 0.75 + rng.float() * 0.2, 0.75 + rng.float() * 0.2);
+        lg.name = 'lamp-ghost';
+        lg.rotation.x = -Math.PI / 2;
+        lg.rotation.z = rng.float() * Math.PI * 2;
+        lg.position.set(lp.x + ix, 0.009, lp.z + iz);
+        group.add(lg);
       }
     }
 

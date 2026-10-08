@@ -3658,3 +3658,110 @@ export function counterDrips(rng: Rng): THREE.Texture | null {
     ctx.fillRect(0, 78, 64, 18);
   });
 }
+
+/** Sun fade — the bleached patch a window pours onto the boards:
+ * a pale parallelogram, sharpest at the sill edge, feathered away. */
+export function sunFade(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // the pool — a parallelogram of bleached boards, slanted with the
+    // sun's angle
+    const skew = 10 + rng.float() * 14;
+    ctx.fillStyle = `rgba(216,206,178,${0.16 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.moveTo(20, 14);
+    ctx.lineTo(104, 14);
+    ctx.lineTo(104 + skew, 78);
+    ctx.lineTo(20 + skew, 78);
+    ctx.closePath();
+    ctx.fill();
+    // mullion bars — darker slots where the frame's shadow never
+    // bleached
+    for (let i = 1; i <= 2; i++) {
+      const bx = 20 + i * 28 + skew * 0.5;
+      ctx.fillStyle = 'rgba(90,80,64,0.18)';
+      ctx.fillRect(bx, 12, 3 + rng.float() * 2, 68);
+    }
+    // the sill edge — sharpest line where the light cut in
+    ctx.strokeStyle = 'rgba(220,210,182,0.4)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(18, 12);
+    ctx.lineTo(106, 12);
+    ctx.stroke();
+    // the feathered far edge — fade out where the sun lost reach
+    const fg = ctx.createLinearGradient(0, 60, 0, 90);
+    fg.addColorStop(0, 'rgba(216,206,178,0.1)');
+    fg.addColorStop(1, 'rgba(216,206,178,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(16, 60, 116, 30);
+  });
+}
+
+/** Hinge rust — the oxidised runs a leaf's hinges bleed down the
+ * door face: vertical streaks from each knuckle, pitting at top. */
+export function hingeRust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // hinge shadows — two knuckle stains at hinge heights
+    for (const hy of [16, 52, 82]) {
+      if (!rng.bool(0.8)) continue;
+      const g = ctx.createRadialGradient(30, hy, 1, 30, hy, 9);
+      g.addColorStop(0, 'rgba(96,52,30,0.5)');
+      g.addColorStop(1, 'rgba(96,52,30,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(30, hy, 9, 0, Math.PI * 2);
+      ctx.fill();
+      // the run — a rust tongue dragged down the grain
+      const rlen = 12 + rng.float() * 22;
+      const rg = ctx.createLinearGradient(30, hy, 30, hy + rlen);
+      rg.addColorStop(0, 'rgba(110,62,36,0.4)');
+      rg.addColorStop(1, 'rgba(110,62,36,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(28.4 + (rng.float() - 0.5) * 2, hy, 3.4, rlen);
+      // oxide grit at the knuckle
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = `rgba(120,68,40,${0.24 + rng.float() * 0.2})`;
+        ctx.beginPath();
+        ctx.arc(26 + rng.float() * 9, hy - 3 + rng.float() * 6, 0.5 + rng.float() * 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/** Lamp ghost — the pale ring a standing lamp's shade threw onto the
+ * floor for years: a soft ring of un-darkened boards. */
+export function lampGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 12;
+    const cy = 48 + (rng.float() - 0.5) * 12;
+    // the spared field — boards kept pale inside the lamp's reach
+    const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 34);
+    g.addColorStop(0, 'rgba(212,202,176,0.24)');
+    g.addColorStop(0.7, 'rgba(212,202,176,0.12)');
+    g.addColorStop(1, 'rgba(212,202,176,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the base ring — the darker circle the stand sat in
+    ctx.strokeStyle = 'rgba(88,76,60,0.35)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // floor-cord drag — the flex path out of the ring
+    ctx.strokeStyle = 'rgba(80,70,56,0.3)';
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 8, cy + 4);
+    ctx.quadraticCurveTo(cx + 20 + rng.float() * 8, cy + 12, cx + 30 + rng.float() * 10, cy + 8 + rng.float() * 10);
+    ctx.stroke();
+    // dust line at the spared edge
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.fillStyle = `rgba(170,160,140,${0.14 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (30 + rng.float() * 6), cy + Math.sin(a) * (30 + rng.float() * 6), 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
