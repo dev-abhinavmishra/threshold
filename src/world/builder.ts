@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1705,7 +1705,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // carries what the line has been feeding it: a wet ring, splash edge,
     // dark core. Only where the run above is already dressed.
     for (const p of spec.props) {
-      if (p.kind !== 'hangingCable' && p.kind !== 'conduitRun' && p.kind !== 'pipeRun' && p.kind !== 'indPipes') continue;
+      if (p.kind !== 'hangingCable' && p.kind !== 'conduitRun' && p.kind !== 'indPipes' && p.kind !== 'ductRun' && p.kind !== 'ductCirc' && p.kind !== 'ductRect') continue;
       if (rng.float() >= 0.4) continue;
       if (footprintInDoorLane(spec, p.x, p.z, 0.4, 0.4)) continue;
       const m = decalQuad(dampSpot(rng), 0.5 + rng.float() * 0.3, 0.5 + rng.float() * 0.3);
@@ -1714,6 +1714,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The leaf remembers — a polished arc on the leaf's travel, scuffed
+    // into the floor at every door that's swung a thousand times.
+    if (['lobby', 'guest', 'corridor', 'records', 'gallery'].includes(spec.biome)) {
+      for (const port of [spec.entry, ...spec.exits]) {
+        if (rng.float() >= 0.45) continue;
+        const lp = portLocalPos(port, w, d);
+        const hx0 = -(port.width / 2 - 0.05);
+        // hinge pos and leaf-tip tangent per wall (frame rotated per wall)
+        let hx = lp.x, hz = lp.z, tx = 1, tz = 0;
+        if (port.wall === 's') { hx += hx0; }
+        else if (port.wall === 'n') { hx -= hx0; tx = -1; }
+        else if (port.wall === 'e') { hz += hx0; tx = 0; tz = 1; }
+        else { hz -= hx0; tx = 0; tz = -1; }
+        const ix = -tz, iz = tx; // inward = rotate90(T)
+        const leafW = port.width - 0.1;
+        const size = leafW + 0.55;
+        const cx = hx + (tx + ix) * size * 0.46;
+        const cz = hz + (tz + iz) * size * 0.46;
+        const m = decalQuad(swingWear(rng), size, size);
+        m.name = 'swing-wear';
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = Math.atan2(-tz, tx);
+        m.position.set(cx, 0.0068, cz);
+        group.add(m);
+      }
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:

@@ -997,3 +997,31 @@ export function dampSpot(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** The arc a door leaf polishes into the floor — a faint band on the
+ * leaf's travel, denser where it rests and smears where it snaps shut. */
+export function swingWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    const r = 92 + rng.float() * 12;
+    const cx = 6, cy = 6;
+    // quarter arc from +u edge sweeping toward +v edge
+    const a0 = -0.15 + rng.float() * 0.2, a1 = Math.PI / 2 + 0.1 - rng.float() * 0.2;
+    ctx.strokeStyle = 'rgba(88,80,70,0.32)';
+    ctx.lineWidth = 8 + rng.float() * 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a0, a1);
+    ctx.stroke();
+    // brighter rub where the leaf tip rides most
+    ctx.strokeStyle = 'rgba(96,88,76,0.28)';
+    ctx.lineWidth = 3 + rng.float() * 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + (rng.float() - 0.5) * 8, a0 + 0.2, a1 - 0.15);
+    ctx.stroke();
+    // smear at the closed end
+    ctx.fillStyle = 'rgba(80,72,62,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r, 10, 4, a0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
