@@ -2097,7 +2097,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The rockers swung — twin crescents carved under the runners of
     // chairs that rocked a decade of nights.
     for (const p of spec.props) {
-      if ((p.kind !== 'armchair' && p.kind !== 'chair' && p.kind !== 'rockingChair')
+      if ((p.kind !== 'armchair' && p.kind !== 'chair')
         || rng.float() >= 0.25) continue;
       const ra = decalQuad(rockerArcs(rng), 0.9 + rng.float() * 0.15, 0.85 + rng.float() * 0.15);
       ra.name = 'rocker-arcs';
