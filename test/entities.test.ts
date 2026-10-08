@@ -403,12 +403,12 @@ describe('Bellman (sprint 232)', () => {
     const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
     const b = new Bellman();
     b.spawn(ctx);
-    let t = step(b, ctx, 4);   // warn → engage, trail starts pulling
+    const t = step(b, ctx, 4);   // warn → engage, trail starts pulling
     // the crack met your kneel here — the watcher gets YOUR position
     const kneel = v3(room.origin.x + 6, 0, room.origin.z + 3);
     const d0 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
     b.eyeTell!(kneel);
-    t = step(b, ctx, 4, t);
+    step(b, ctx, 4, t);
     const d1 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
     expect(d1).toBeLessThan(d0); // it walks the sighting, not the cold trail
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
@@ -2414,6 +2414,40 @@ describe('the House Detective (sprint 278)', () => {
     d.rifledRegister();
     expect(d.clocked, 'your face files itself').toBe(true);
     expect(d.warranted, 'the wire is live already').toBe(true);
+    d.dispose();
+  });
+
+  it('the eye at his crack opens the register on the spot (sprint 451)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; d.update(0.05); }
+    expect(d.clocked, 'the slow look has barely started').toBe(false);
+    // your kneel at his leaf is the closest look he'll ever get
+    d.eyeTell!(v3(d.deskPos.x + 1, 0, d.deskPos.z));
+    expect(d.clocked, 'the register opens on the sighting').toBe(true);
+    expect(d.warranted, 'the wire is live').toBe(true);
+    d.dispose();
+  });
+
+  it('a clean face at his crack is only a kneel (sprint 451)', async () => {
+    const { Detective } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom, hallRoom], {
+      currentRoomIndex: 0,
+      heldOwed: () => 0, carriesMarked: () => false,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const d = new Detective();
+    d.spawn(ctx);
+    d.eyeTell!(v3(d.deskPos.x + 1, 0, d.deskPos.z));
+    expect(d.clocked, 'nothing to file — the register stays shut').toBe(false);
     d.dispose();
   });
 

@@ -1578,6 +1578,24 @@ export class Detective extends Entity {
     this.ctx.cue('chalk-mark', this.pos, '[he watches your hands in his book — your face files itself]', { severity: 'warn' });
   }
 
+  /** The eye at the crack: the closest look he'll ever get. A kneel at
+   *  his leaf puts your face at his door — if there's anything to file,
+   *  the register opens on the spot; the slow look doesn't apply when
+   *  you've come to him. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state === 'done' || this.clocked || this.homebound) return;
+    const c = this.ctx;
+    const owed = c.heldOwed?.() ?? 0;
+    const marked = c.carriesMarked?.() === true;
+    if (owed <= 0 && !marked) return; // a clean face is only a kneel
+    this.openRegister();
+    if (marked && !this.stockNoted) {
+      this.stockNoted = true;
+      c.stockSighted?.(this.spawnRoom);
+    }
+    c.cue('chalk-mark', this.pos, '[his eye was at the crack too — the register is already open]', { severity: 'warn' });
+  }
+
   private openRegister(): void {
     const c = this.ctx;
     this.clocked = true;

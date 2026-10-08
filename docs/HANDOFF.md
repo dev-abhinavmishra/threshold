@@ -6417,3 +6417,15 @@ pursue) — a sighting can't override a stronger claim. The watcher
 guards `threatPos()` engagement filters, so only already-live threats
 can watch a crack at all. No checkpoints: stoopEyeUsed resets per run
 by design (a death is a new door).
+
+## Sprint 451 — his eye was at the crack too
+
+The Detective implements eyeTell: a kneel at his leaf is the closest
+look he'll ever get, so the register opens ON THE SIGHTING — no slow
+look, no room presence required (the crack is the one place your face
+crosses his threshold while you're outside his room). Marked stock on
+your back files the same line it would across his desk. A clean face
+at his crack is only a kneel — the register stays shut.
+**Notes:** this closes the tell family: mobile watchers walk to the
+leaf (s450), the desk filer files you on sight (s451). Entities
+without an override keep the eye as atmosphere only.
