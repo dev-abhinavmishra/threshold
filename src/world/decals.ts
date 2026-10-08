@@ -842,3 +842,32 @@ export function wallNotice(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Oxidising streaks bleeding down from a fixture — ochre drips
+ *  thinning as they fall. Anchor at top edge. */
+export function rustStreak(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 144, (ctx) => {
+    const rust = (a: number) => `rgba(120,62,30,${a})`;
+    const drips = 3 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < drips; i++) {
+      const x = 12 + rng.float() * 72;
+      const len = 40 + rng.float() * 95;
+      const wd = 2.5 + rng.float() * 5;
+      const g = ctx.createLinearGradient(0, 0, 0, len);
+      g.addColorStop(0, rust(0.55 + rng.float() * 0.2));
+      g.addColorStop(1, rust(0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      // a drip that wobbles as it falls
+      ctx.moveTo(x - wd / 2, 0);
+      for (let y = 4; y < len; y += 8) ctx.lineTo(x - wd / 2 + Math.sin(y * 0.3 + i) * 1.5, y);
+      for (let y = len; y > 4; y -= 8) ctx.lineTo(x + wd / 2 + Math.sin(y * 0.3 + i) * 1.5, y);
+      ctx.lineTo(x + wd / 2, 0);
+      ctx.closePath();
+      ctx.fill();
+      // bead at the head
+      ctx.fillStyle = rust(0.5);
+      ctx.fillRect(x - wd * 0.9, 0, wd * 1.8, 3);
+    }
+  });
+}

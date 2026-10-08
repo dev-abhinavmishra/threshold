@@ -4746,3 +4746,12 @@ Game.die() from the same five fields.
   wall span), y ~1.45-1.7. Named 'wall-notice'.
 - Vitest 265: 'the notices'. Gates: tsc, lint, sim 5/5. Visual
   dressing only — no e2e leg.
+
+## sprint 424 — the rust keeps score
+
+- `rustStreak` decal: ochre drips wobbling down from a fixture head,
+  thinning to nothing. Anchors at the texture top edge.
+- 40% in maintenance/underscript/unlit/corridor: 1-2 `pickWallSpot`
+  streaks at cy 1.9-2.6 (fixture height). Named 'rust-streak'.
+- Vitest 266: 'the rust keeps score' (main + under rooms). Gates:
+  tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
