@@ -5512,6 +5512,40 @@ assert presence not rate — rng stream drift shifts seeded counts.
 Gates: tsc, lint, vitest 119-file pass, sim 5/5, build. No e2e leg —
 dressing/ambient only.
 
+Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
+
+## Sprint 452–454 — the wood keeps the water, the drains drink & the letters never sent
+
+Sprint 452: ring stains on tabletop surfaces (`ringStains` — mug rings +
+spill blooms on desks/tables/dressers/sideboards/counters/nightstands/tills,
+decal quad at `modelCollider` top height +0.004, name `ring-stain`) and
+verdigris drain halos under basin sinks (`drainHalo`, floor `decalQuad`,
+name `drain-halo`, nudged toward the sink's forward).
+
+Sprint 453: flood memory — `waterline` tide marks (sediment band + sharp
+top edge) on one wall of maintenance/unlit/underscript rooms or rooms with
+basins/puddles, `cy` ≈0.3–0.45, name `waterline`; and `sootStain` — the
+black bloom a hearth breathes up its wall, placed on the wall nearest the
+fireplace/stove/stoveRange/firePit at `cy` ≈1.4–1.65, name `soot-stain`
+(inside the cold-hearth loop, independent of the ash roll).
+
+Sprint 454: `sleptIn` — sweat-shadow + head oval + spine trough on ~30% of
+beds at mattress height 0.585, mesh named `slept-in`; the bed group also
+takes the name so the static-prop bake can't merge it away (same exemption
+trick as `wrong-room`). `lostLetter` — cream envelopes (stamp + address
+scrawl + fold scar) dropped on the floor beside beds/nightstands/dressers/
+desks/tills at ~12%, `decalQuad` named `lost-letter`.
+
+**Gotcha (new, 454):** kind-level overlay quads added in `buildProp` on an
+UNNAMED prop group are still swallowed by the static-prop bake — name the
+group (`prop.group.name = ...`) or the overlay vanishes in the merged mesh.
+Guard `if (!prop.group.name)` so authored names (door-logic kinds) win.
+
+Eleven new decal canvases landed across sprints 450–454: wrongRoom,
+plasterFall, glassFog, mothDrift, ringStains, drainHalo, waterline,
+sootStain, sleptIn, lostLetter. Presence tests in generation.test.ts
+(`the …` describes, one per arc) sweep SEEDS×rooms and assert count > 0.
+
 ## Sprint 450–451 — the glass lies & the glass sweats
 Two dressing arcs on one branch: reflective surfaces you can't trust
 and glass you can't quite see through.
