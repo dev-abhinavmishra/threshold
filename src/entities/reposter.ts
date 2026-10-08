@@ -131,7 +131,10 @@ export class Reposter {
         this.sawNamed = true;
         this.spotT = 1.2;
         hooks.cue('chalk-mark', this.pos, '[the clerk sees whose name he\'s carrying — he cries it down the spine]', { severity: 'warn' });
-        hooks.emit?.({ x: this.pos.x, y: 1.4, z: this.pos.z, intensity: 0.55, category: 'entity-cue', caption: '' });
+        // 'distraction', not 'entity-cue' — entity-cue is excluded from
+        // ROUSE_CATEGORIES (it marks rouse tells, anti-cascade), so the cry
+        // would rouse nobody. A shouted name is a real disturbance.
+        hooks.emit?.({ x: this.pos.x, y: 1.4, z: this.pos.z, intensity: 0.55, category: 'distraction', caption: '' });
       }
     }
     if (this.spotT > 0) {

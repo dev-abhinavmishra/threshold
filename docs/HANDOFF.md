@@ -4271,3 +4271,22 @@ Game.die() from the same five fields.
   re-muttering once is honest (the books still mutter) — it is not a
   consequence the player can launder.
 - Gates: tsc, lint, vitest 254, sim 5/5.
+
+## sprint 366 — the shout is a real sound; the sheets take the take
+
+- s364's reposter cry emitted `category: 'entity-cue'` — that category
+  is EXCLUDED from `ROUSE_CATEGORIES` (it marks rouse tells, the
+  anti-cascade guard), so the shout roused nobody. Now `'distraction'`
+  at intensity 0.55 (~7.7m) — a shouted name is a real disturbance.
+  The vitest spec now asserts `noiseCanRouse(emits[0])`. Trap: any
+  emit meant to be heard must use a ROUSE_CATEGORIES category —
+  sprint/door/impact/item/puzzle-fail/machine/distraction/drawer.
+- `EntityCtx.seizeMarked?: () => boolean` — repossess the marked take
+  (strips hotItems stacks + zeroes hotImprints; false when nothing to
+  take so callers cue honestly). Game impl mirrors the fence's strip.
+- Swamper + Laundress strikes: while `wanted()` the catch also calls
+  `seizeMarked` — the boards describe your face, the crew repossesses
+  what the sheets describe (`[the marked wares go to the count]` /
+  `go in the wash`). Grafter untouched: killPlayer means death —
+  seizing pre-death is moot, the checkpoint still holds the take.
+- Gates: tsc, lint, vitest 255, sim 5/5.

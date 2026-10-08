@@ -3,6 +3,7 @@ import { Reposter, type ReposterHooks } from '../src/entities/reposter';
 import { generateRoute } from '../src/world/generator';
 import { v3 } from '../src/engine/math';
 import { pointInRoom } from '../src/engine/doorGeo';
+import { noiseCanRouse } from '../src/engine/noiseRouse';
 import type { RoomInstance } from '../src/game/types';
 
 function underRooms(): RoomInstance[] {
@@ -12,7 +13,7 @@ function underRooms(): RoomInstance[] {
 function hooks() {
   const cues: string[] = [];
   const reposted: { roomIdx: number; x: number; z: number }[] = [];
-  const emits: { intensity: number }[] = [];
+  const emits: import('../src/engine/events').SoundEvent[] = [];
   const h: ReposterHooks = {
     addMesh: vi.fn(),
     removeMesh: vi.fn(),
@@ -20,7 +21,7 @@ function hooks() {
     repost: vi.fn((roomIdx: number, host: { x: number; z: number }) => {
       reposted.push({ roomIdx, x: host.x, z: host.z });
     }),
-    emit: vi.fn((e: { intensity: number }) => { emits.push(e); }),
+    emit: vi.fn((e: import('../src/engine/events').SoundEvent) => { emits.push(e); }),
   };
   return { h, cues, reposted, emits };
 }
@@ -90,6 +91,9 @@ describe('Reposter (the boards won\'t stay bare)', () => {
       r.update(0.1, rooms, me, h);
     expect(cues.some((t) => /sees whose name/.test(t)), 'he cries the named face').toBe(true);
     expect(emits.length, 'the cry is a real sound the under rouses to').toBe(1);
+    // 'entity-cue' is excluded from ROUSE_CATEGORIES (anti-cascade) — the
+    // cry must be a category listeners actually rouse to.
+    expect(noiseCanRouse(emits[0]), 'the shout rouses the under').toBe(true);
     // the look holds the walk — no travel while he names you
     expect((r as unknown as { travel: number }).travel).toBeLessThanOrEqual(travelBefore + 0.01);
     // hidden is furniture — no cry (and wanted off is a stranger)
@@ -98,8 +102,6 @@ describe('Reposter (the boards won\'t stay bare)', () => {
     const r2 = new Reposter();
     r2.dispatch(rooms, hosts, h2);
     const me2 = { pos: v3(r2.position.x + 1, 0, r2.position.z), room: rooms[myIdx].index };
-    const { cues: cues2 } = { cues: [] as string[] };
-    void cues2;
     for (let i = 0; i < 40; i++) r2.update(0.1, rooms, me2, h2);
     expect(emits.length).toBe(1); // still one — the stranger draws no cry
   });

@@ -637,6 +637,10 @@ export class Swamper extends Entity {
       c.cue('puddle-splash', this.pos, '[the water stands up]', { severity: 'danger' });
       c.sound.emit({ x: p.pos.x, y: 0.3, z: p.pos.z, intensity: 0.7, category: 'impact', caption: '[the flood breaks]', source: 'swamper' });
       c.damagePlayer(this.tuning.damage, 'swamper', 'The Swamper finds you by the water you move. Crouch-wade — or open the drain first.');
+      // the boards name you — she takes the marked take for the count
+      if (this.ctx.wanted?.() && c.seizeMarked?.()) {
+        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — the marked wares go to the count]', { severity: 'warn' });
+      }
       // slip back to the far corner and lie again
       let bx = this.roomO.x, bz = this.roomO.z, best = -1;
       for (const [cx, cz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
@@ -1022,6 +1026,10 @@ export class Laundress extends Entity {
       this.struckCd = 2.5;
       this.rig?.play('attack', 0.05);
       c.damagePlayer(this.tuning.damage, 'laundress', 'The Laundress keeps her basin — pull her off the drain with a thrown sound before you touch the crank.');
+      // the boards name you — the marked take goes in the wash
+      if (this.ctx.wanted?.() && c.seizeMarked?.()) {
+        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — the marked wares go in the wash]', { severity: 'warn' });
+      }
     }
   }
 
