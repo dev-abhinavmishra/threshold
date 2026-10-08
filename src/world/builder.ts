@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1713,6 +1713,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.x = -Math.PI / 2;
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
+      group.add(m);
+    }
+
+    // The fan sheds — dust rings under ceiling fans and vents, what the
+    // blades threw off settling in a halo at the drop point.
+    for (const p of spec.props) {
+      if (p.kind !== 'ceilingFan' && p.kind !== 'vent') continue;
+      if (rng.float() >= 0.5) continue;
+      if (footprintInDoorLane(spec, p.x, p.z, 0.45, 0.45)) continue;
+      const m = decalQuad(dustFall(rng), 0.9 + rng.float() * 0.4, 0.9 + rng.float() * 0.4);
+      m.name = 'fan-sheds';
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI;
+      m.position.set(p.x + (rng.float() - 0.5) * 0.2, 0.0066, p.z + (rng.float() - 0.5) * 0.2);
       group.add(m);
     }
 

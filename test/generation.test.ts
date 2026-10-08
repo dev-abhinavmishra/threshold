@@ -1918,3 +1918,18 @@ describe('the wall kept the hooks (sprint 438)', () => {
     expect(rows, 'no nail rows').toBeGreaterThan(6);
   });
 });
+
+describe('the fan sheds (sprint 439)', () => {
+  it('dust rings gather under ceiling fans and vents', () => {
+    let falls = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fan-sheds') falls++; });
+      }
+    }
+    expect(falls, 'no dust falls').toBeGreaterThan(6);
+  });
+});
