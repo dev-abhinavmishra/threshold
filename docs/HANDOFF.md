@@ -5103,3 +5103,12 @@ Game.die() from the same five fields.
   center, nearest-wall pick by min distance.
 - Vitest 277: 'the inspector tally'. Gates: tsc, lint, generation 93/93.
   Dressing only — no e2e leg.
+
+## sprint 431 — the drip keeps time
+
+- Under cable/pipe runs (hangingCable/conduitRun/pipeRun/indPipes),
+  40% roll drops a `dampSpot` decal on the floor below — wet ring,
+  splash edge, dark core. Door-lane cleared. Named 'drip-keeps-time'.
+- Kind check: pipe props are 'pipeRun'/'indPipes' (no 'pipes'/'pipeCluster').
+- Vitest 278: 'the drip keeps time'. Gates: tsc, lint, generation 94/94.
+  Dressing only — no e2e leg.

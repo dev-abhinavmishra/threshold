@@ -966,3 +966,34 @@ export function tallyMarks(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** What the line above has been feeding — a damp ring with splash edge,
+ * dark enough to read wet on any floor. */
+export function dampSpot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const g = ctx.createRadialGradient(48, 48, 4, 48, 48, 42);
+    g.addColorStop(0, 'rgba(22,20,18,0.55)');
+    g.addColorStop(0.6, 'rgba(28,25,22,0.4)');
+    g.addColorStop(1, 'rgba(30,27,24,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(48, 48, 42, 38, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // splash edge — droplets thrown outward from the impact ring
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2, r = 32 + rng.float() * 12;
+      ctx.fillStyle = `rgba(20,18,16,${0.35 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * r, 48 + Math.sin(a) * r * 0.9, 1 + rng.float() * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // hard wet core
+    const core = ctx.createRadialGradient(48, 48, 0, 48, 48, 14);
+    core.addColorStop(0, 'rgba(15,14,13,0.65)');
+    core.addColorStop(1, 'rgba(15,14,13,0)');
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(48, 48, 14, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

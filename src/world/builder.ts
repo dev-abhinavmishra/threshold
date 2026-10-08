@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1699,6 +1699,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(near.wall, tallyMarks(rng), 0.45 + rng.float() * 0.15, 0.45 + rng.float() * 0.15, along, 0.85 + rng.float() * 0.45);
       const last = group.children[group.children.length - 1];
       if (last && !last.name) last.name = 'inspector-tally';
+    }
+
+    // The drip keeps time — under cable runs and pipework the floor
+    // carries what the line has been feeding it: a wet ring, splash edge,
+    // dark core. Only where the run above is already dressed.
+    for (const p of spec.props) {
+      if (p.kind !== 'hangingCable' && p.kind !== 'conduitRun' && p.kind !== 'pipeRun' && p.kind !== 'indPipes') continue;
+      if (rng.float() >= 0.4) continue;
+      if (footprintInDoorLane(spec, p.x, p.z, 0.4, 0.4)) continue;
+      const m = decalQuad(dampSpot(rng), 0.5 + rng.float() * 0.3, 0.5 + rng.float() * 0.3);
+      m.name = 'drip-keeps-time';
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI;
+      m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
+      group.add(m);
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:
