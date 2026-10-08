@@ -1083,8 +1083,19 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     if (till) {
       ga.unpaidHeld = 0;
       g.imprints = 0;
-      // pre-rifle: the clerk attends the till — its head never tracks
-      headPre = clerkHead ? Math.abs(clerkHead.rotation.y) : -1;
+      ga.hotItems?.clear();
+      ga.hotImprints = 0;
+      // pre-rifle: the clerk attends the till — its head never tracks.
+      // sprint 359 — a clean book isn't watched; but an unwatched head
+      // holds its last bearing (no decay), so prove no-retrack: stand at
+      // a mirrored bearing and assert the head doesn't swing to you
+      const h0 = clerkHead ? clerkHead.rotation.y : 0;
+      if (clerkFig) {
+        const mx = clerkFig.position.x + (g.player.pos.x - clerkFig.position.x) * -1;
+        g.player.teleport(mx, 0, g.player.pos.z);
+        for (let f = 0; f < 15; f++) g.frame();
+      }
+      headPre = clerkHead ? Math.abs(clerkHead.rotation.y - h0) : -1;
       if (bell && clerkFig && clerkHead) {
         drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60);
         for (let f = 0; f < 20; f++) g.frame();

@@ -4156,3 +4156,23 @@ Game.die() from the same five fields.
   `source` so the crew physically hears the paper hit the floor.
 - Gates: tsc, lint, vitest 249.
 >>>>>>> devin/1791426766-threshold-s356
+
+## sprint 359 — the window is for strangers
+
+- s328's bell-window worked for anyone: ring, rifle inside ~3.5s, the
+  register never writes. But the register prices filed faces
+  everywhere else — the window should too. `unfiled` now requires
+  `unpaidHeld === 0`: once the register holds your face the bell
+  can't buy his eye off it (rifle in-window while filed → +2 held and
+  '[the register already holds your face — the bell can't buy his eye
+  off it]'). House-book gated, not under-book — the boards don't reach
+  upstairs; the register does.
+- The eye matches the mechanic: warm clerk head-track now watches a
+  filed face (`unpaidHeld > 0` counts as a watch reason beside
+  Broker/cold/stock-tell) and ignores its own bell entirely.
+- Leg fix: `headPre` read absolute head yaw — an unwatched head holds
+  its last bearing (no decay path, s337 same trap). The probe now
+  proves no-retrack: zero the book + drain `hotItems`/`hotImprints`,
+  stand at a mirrored bearing, assert the head doesn't swing.
+- Gates: tsc, lint, vitest 251, economy clerk leg green (unfiled path
+  unchanged for a clean book).

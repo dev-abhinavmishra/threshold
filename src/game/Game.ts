@@ -2128,8 +2128,10 @@ export class Game {
         // window (~3.5s), the clerk's eye is on the ringing bell, not
         // your hands — the till still opens and still smells, but the
         // register never writes you. The lure is a real steal-window.
+        // sprint 359 — the window is for strangers: once the register
+        // holds your face the bell can't buy his eye off it.
         const rung = this.bellRung.get(roomIndex);
-        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5;
+        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5 && this.unpaidHeld === 0;
         if (!unfiled) this.unpaidHeld += 2;
         it.enabled = false;
         // sprint 333 — the take goes back: the emptied till takes its
@@ -2174,7 +2176,9 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, unfiled
           ? '[it was watching the bell — your hands go unfiled]'
-          : '[the clerk watches your hands — the register writes you twice]', 'warn');
+          : rung !== undefined && this.clock.time - rung.t < 3.5
+            ? '[the register already holds your face — the bell can\'t buy his eye off it]'
+            : '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
       case 'restock': {
@@ -5171,11 +5175,14 @@ export class Game {
           // landing visibly), and after the rifle it ignores the bell
           // entirely — the cold counter's face finds your hands.
           let tx = this.player.pos.x, tz = this.player.pos.z;
+          // sprint 359 — a filed face is a known face: warm clerks
+          // watch the register's mark, not their own bell
           let watches = o.userData.broker === true
-            || this.closedCounters.has(o.userData.clerkRoomIndex as number);
+            || this.closedCounters.has(o.userData.clerkRoomIndex as number)
+            || (o.userData.clerk === true && this.unpaidHeld > 0);
           if (o.userData.clerk === true && !watches) {
             const rung = this.bellRung.get(o.userData.clerkRoomIndex as number);
-            if (rung && this.clock.time - rung.t < 3.5) {
+            if (rung && this.clock.time - rung.t < 3.5 && this.unpaidHeld === 0) {
               tx = rung.x; tz = rung.z; watches = true;
             } else if (this.hotItems.size > 0
                 && this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0)) {
