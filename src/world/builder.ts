@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2169,6 +2169,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       rc.rotation.z = rng.float() * Math.PI * 2;
       rc.position.set(p.x + (rng.float() - 0.5) * 0.5, 0.011, p.z + (rng.float() - 0.5) * 0.5);
       group.add(rc);
+    }
+
+    // The pipes sweated — condensation beads and joint weeps down
+    // the service runs.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pipe' && p.kind !== 'indPipes' && p.kind !== 'pipeManifold' && p.kind !== 'pipeLamp')
+        || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const pw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = pw === 'e' || pw === 'w' ? p.z : p.x;
+      wallDecal(pw, pipeSweat(rng), 1.1 + rng.float() * 0.3, 0.6 + rng.float() * 0.15, along, 1.9 + rng.float() * 0.4);
+      const ps = group.children[group.children.length - 1];
+      if (ps && !ps.name) ps.name = 'pipe-sweat';
+    }
+    // The frames leaned — rubbing pits and dust tides beside frames
+    // that rest against the wall instead of hanging.
+    for (const p of spec.props) {
+      if ((p.kind !== 'frameStand' && p.kind !== 'standingFrame' && p.kind !== 'painting' )
+        || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const fw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = fw === 'e' || fw === 'w' ? p.z : p.x;
+      wallDecal(fw, frameLean(rng), 0.6 + rng.float() * 0.15, 0.6 + rng.float() * 0.15, along + (rng.float() - 0.5) * 0.3, 0.6 + rng.float() * 0.2);
+      const fl = group.children[group.children.length - 1];
+      if (fl && !fl.name) fl.name = 'frame-lean';
     }
 
     // The water line — a room that flooded once keeps the tide mark:

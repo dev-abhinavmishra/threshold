@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1617,6 +1617,21 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pd.position.set(0, (dc?.[1] ?? 1.1) + 0.004, 0);
     prop.group.add(pd);
     if (!prop.group.name) prop.group.name = 'piano-dust';
+  }
+  // The drawers kept their slits — dark gaps and pull grease on
+  // fronts that never quite shut.
+  const DRAWERS: ReadonlySet<PropSpec['kind']> = new Set(['drawerUnit', 'filing', 'cabinet', 'vintageCabinet', 'apothecaryCabinet', 'dresser', 'chest', 'toolChest', 'morgueDrawer']);
+  if (DRAWERS.has(spec.kind) && rng.bool(0.35)) {
+    const dc = modelCollider(spec.kind);
+    const ds = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.32, 0.26),
+      new THREE.MeshStandardMaterial({ map: drawerSlit(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ds.name = 'drawer-slit';
+    ds.userData.decalMat = true;
+    ds.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.1) * (0.3 + rng.float() * 0.5), (dc?.[2] ?? 0.4) / 2 + 0.006);
+    prop.group.add(ds);
+    if (!prop.group.name) prop.group.name = 'drawer-slit';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
