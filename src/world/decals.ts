@@ -5989,3 +5989,101 @@ export function caseDust(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 488 — the rug frayed: loose edge threads, a worn binding band and grit shaken out. */
+export function carpetFray(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // binding band — the hem strip where the pile wore to the warp
+    g.fillStyle = 'rgba(74,64,52,0.55)';
+    g.fillRect(0, 4, 96, 10 + rng.float() * 4);
+    // worn gaps in the binding
+    g.fillStyle = 'rgba(140,128,110,0.4)';
+    for (let i = 0; i < 9; i++) {
+      g.fillRect(4 + i * 10 + rng.range(-2, 2), 6 + rng.range(-2, 2), rng.range(4, 8), 5);
+    }
+    // loose threads curling off the edge
+    g.strokeStyle = 'rgba(130,116,96,0.6)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 16; i++) {
+      const x = 4 + i * 5.6 + rng.range(-2, 2);
+      const len = 8 + rng.float() * 14;
+      g.beginPath();
+      g.moveTo(x, 14);
+      g.quadraticCurveTo(x + rng.range(-3, 3), 14 + len * 0.6, x + rng.range(-5, 5), 14 + len);
+      g.stroke();
+    }
+    // grit and fiber pills shaken free
+    g.fillStyle = 'rgba(60,52,44,0.5)';
+    for (let i = 0; i < 14; i++) {
+      g.fillRect(rng.range(2, 94), rng.range(28, 46), 1.3, 1.1);
+    }
+    // a few longer pulled threads
+    g.strokeStyle = 'rgba(150,136,114,0.5)';
+    for (let i = 0; i < 4; i++) {
+      const x = rng.range(8, 88);
+      g.beginPath(); g.moveTo(x, 15); g.lineTo(x + rng.range(-14, 14), 40 + rng.float() * 5); g.stroke();
+    }
+  });
+}
+
+/** Sprint 488 — the board kept the holes: pin pocks, rust freckles and paper ghosts where notices hung. */
+export function pinScars(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // paper ghosts — rectangles faded lighter than the felt around them
+    g.fillStyle = 'rgba(150,140,120,0.3)';
+    for (let i = 0; i < 4; i++) {
+      const w0 = 14 + rng.float() * 16, h0 = 18 + rng.float() * 18;
+      g.fillRect(8 + rng.range(0, 60), 10 + rng.range(0, 56), w0, h0);
+    }
+    // pin pocks — the dense old holes
+    g.fillStyle = 'rgba(30,24,18,0.7)';
+    for (let i = 0; i < 40; i++) {
+      g.beginPath(); g.arc(rng.range(6, 90), rng.range(6, 90), 0.7 + rng.float() * 0.4, 0, Math.PI * 2); g.fill();
+    }
+    // rust freckles where pins sat for years
+    g.fillStyle = 'rgba(112,58,26,0.55)';
+    for (let i = 0; i < 12; i++) {
+      const x = rng.range(8, 88), y = rng.range(8, 88);
+      g.beginPath(); g.arc(x, y, 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(x - 0.3, y, 0.6, 3 + rng.float() * 3);
+    }
+    // corner tape ghosts
+    g.fillStyle = 'rgba(140,128,104,0.35)';
+    for (let i = 0; i < 5; i++) {
+      const x = rng.range(10, 80), y = rng.range(10, 80);
+      g.save(); g.translate(x, y); g.rotate(rng.range(-0.4, 0.4));
+      g.fillRect(-4, -1.5, 8, 3); g.restore();
+    }
+  });
+}
+
+/** Sprint 488 — the feet wicked the damp: dark tide rings where the furniture stands in wet rooms. */
+export function legRings(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // four leg positions, tide ring at each
+    const legs: [number, number][] = [[30, 30], [66, 30], [30, 66], [66, 66]];
+    for (const [lx, ly] of legs) {
+      const r0 = 5 + rng.float() * 2;
+      const ring = g.createRadialGradient(lx, ly, r0 * 0.4, lx, ly, r0 + 6);
+      ring.addColorStop(0, 'rgba(60,48,36,0)');
+      ring.addColorStop(0.55, 'rgba(60,48,36,0.55)');
+      ring.addColorStop(1, 'rgba(60,48,36,0)');
+      g.fillStyle = ring;
+      g.fillRect(lx - 12, ly - 12, 24, 24);
+      // the dark contact point under the leg
+      g.fillStyle = 'rgba(38,30,24,0.7)';
+      g.beginPath(); g.arc(lx, ly, r0 * 0.5, 0, Math.PI * 2); g.fill();
+    }
+    // wicking trails between the feet — damp walked the grain
+    g.strokeStyle = 'rgba(56,46,36,0.3)';
+    g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(30, 30); g.lineTo(66, 30); g.stroke();
+    g.beginPath(); g.moveTo(30, 66); g.lineTo(66, 66); g.stroke();
+    // swell shadow under the near edge
+    const edge = g.createLinearGradient(0, 78, 0, 96);
+    edge.addColorStop(0, 'rgba(52,42,32,0)');
+    edge.addColorStop(1, 'rgba(52,42,32,0.45)');
+    g.fillStyle = edge;
+    g.fillRect(12, 78, 72, 18);
+  });
+}

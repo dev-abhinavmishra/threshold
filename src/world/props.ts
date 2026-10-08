@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1890,6 +1890,34 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cd.position.set(0, (dc?.[1] ?? 1.2) * 0.62, (dc?.[2] ?? 0.4) / 2 + 0.006);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'case-dust';
+  }
+  // The rug frayed — loose threads and a worn binding along one edge.
+  if ((spec.kind === 'rug') && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const cf = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.0, 0.35),
+      new THREE.MeshStandardMaterial({ map: carpetFray(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cf.name = 'carpet-fray';
+    cf.userData.decalMat = true;
+    cf.rotation.x = -Math.PI / 2;
+    cf.position.set(0, 0.008, (dc?.[2] ?? 1.2) / 2 + 0.06);
+    prop.group.add(cf);
+    if (!prop.group.name) prop.group.name = 'carpet-fray';
+  }
+  // The board kept the holes — pin pocks and paper ghosts on the
+  // felt long after the notices came down.
+  if (spec.kind === 'board' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ps = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.8),
+      new THREE.MeshStandardMaterial({ map: pinScars(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ps.name = 'pin-scars';
+    ps.userData.decalMat = true;
+    ps.position.set(0, (dc?.[1] ?? 1.2) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(ps);
+    if (!prop.group.name) prop.group.name = 'pin-scars';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
