@@ -876,9 +876,17 @@ describe('door listen seams (sprint 229)', () => {
         const st = sys.interactables.find((i) => i.kind === 'stoop' && i.data === d);
         if (!st) continue;
         stoops++;
-        // centred on the leaf (the seam verbs live at its edge), aimed low
-        expect(Math.hypot(st.pos.x - d.pos.x, st.pos.z - d.pos.z)).toBeLessThan(0.06);
-        expect(st.pos.y).toBeLessThan(d.pos.y - 0.3);
+        // centred on the leaf's LATERAL line (the seam verbs live at its
+        // edge), floating a step toward the player's side along the normal,
+        // at crack height — the focus score is dist-dominated, so the
+        // crack anchors where the eye actually looks or the seam verbs
+        // always outrank it
+        const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+        const latOff = (st.pos.x - d.pos.x) * latX + (st.pos.z - d.pos.z) * latZ;
+        expect(Math.abs(latOff)).toBeLessThan(0.06);
+        expect(Math.hypot(st.pos.x - d.pos.x, st.pos.z - d.pos.z)).toBeLessThan(0.5);
+        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.2);
+        expect(st.pos.y).toBeLessThan(d.pos.y + 0.6);
         expect(st.holdTime).toBeGreaterThanOrEqual(0.8);
       }
     }

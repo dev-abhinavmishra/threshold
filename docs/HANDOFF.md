@@ -6376,3 +6376,25 @@ the eye either was there or it wasn't, and a death is a new door).
 **Notes:** the roll fires inside stoopUnder BEFORE the lamp/proximity
 read, so a lit lamp's presence is never masked by the eye. Eye odds
 only while a live threat is close — an empty room can't sprout one.
+
+## Sprint 449 — the crack finds its footing
+
+The e2e pass over s445-448 caught three product bugs, all in the same
+small room: (1) the shove never moved a braced player — the radial push
+slid along the leaf into the jamb forever; the fix is geometry-free:
+the house bows the leaf `openT = 0.08`, tripping updateBraces' own
+`> 0.05` release, and `knocked.delete` lets a freed leaf be re-knocked
+(a stale knocked set parked the walk 8s forever). (2) stoop/slip
+anchors minted at `pos.y + 0` — the door's pos is floor height, so the
+crack verbs sat below the floor where dist-dominated focus could never
+pick them; now at `y + 0.42` (real crack height) priority 5. (3) the
+anchors lived dead-center inside the doorway lane's collider — any
+center stand got ejected into the slip anchor's turf; both crack verbs
+now float `+0.25` toward the player's resolved side so a standable
+spot resolves them.
+**Notes:** the leaf lattice is now positional truth: lateral -0.55
+brace · -0.28 slip · 0 stoop · +0.55 listen, ±0.45 normal wedge/wire,
+crack verbs +0.25 normal-side at y+0.42 p5. Two rules for the next
+verb here: anything the player kneels to reach must outrank by
+PRIORITY not proximity (dist always favors the seam edge nearer the
+stand), and never mint inside the leaf lane — the collider owns it.

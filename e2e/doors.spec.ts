@@ -159,6 +159,137 @@ test('ear to the seam: listen reports what waits beyond a door', async ({ page }
   expect(errors).toEqual([]);
 });
 
+test('the crack and the pebble: stoop reads the seam, slip taps the far side', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const emits: { x: number; z: number; category: string; intensity: number }[] = [];
+    const snd = g.sound as { emit(e: { x: number; z: number; category: string; intensity: number }): void };
+    const origEmit = snd.emit.bind(snd);
+    snd.emit = (e) => { emits.push(e); origEmit(e); };
+
+    const inRoom = (r: GRoom, x: number, z: number) => {
+      const dx = x - r.origin.x, dz = z - r.origin.z;
+      const c = Math.cos(r.yaw), s = Math.sin(r.yaw);
+      const lx = dx * c - dz * s, lz = dx * s + dz * c;
+      const sw = r.spec?.width ?? r.spec?.w, sd = r.spec?.depth ?? r.spec?.d;
+      return !!sw && !!sd && Math.abs(lx) <= sw / 2 + 0.5 && Math.abs(lz) <= sd / 2 + 0.5;
+    };
+    const hold = (at: { x: number; y: number; z: number }, match: RegExp, done: () => boolean, cap: number, aimY = 0.4): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        g.player.pitch = Math.atan2(at.y + aimY - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+        g.frame();
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+    const main = g.route.rooms.filter((r) => r.index >= 0).sort((a, b) => a.index - b.index);
+    const attempts: string[] = [];
+
+    // A door whose next room is quiet — the crack reads an empty seam, and
+    // the pebble lands where nothing hunts it.
+    for (let i = 0; i < main.length - 1; i++) {
+      const host = main[i], next = main[i + 1];
+      if (next.scheduled?.length) continue;
+      const door = (next.doors ?? []).find((d) => d.id === `door-${next.index}-in`);
+      if (!door || (door.openT ?? 0) > 0.4 || door.falseDoor) continue;
+      const nx = Math.sin(door.yaw), nz = Math.cos(door.yaw);
+      const cand = [1, -1].map((s) => ({ x: door.pos.x + nx * 1.2 * s, z: door.pos.z + nz * 1.2 * s })).find((p) => inRoom(host, p.x, p.z));
+      if (!cand) continue;
+      g.player.teleport(cand.x, 0, cand.z);
+      g.currentRoom = host.index;
+      for (let f = 0; f < 40; f++) g.frame();
+      g.keys.add('KeyC');
+      for (let f = 0; f < 10; f++) g.frame();
+
+      const stoop = g.interaction.interactables.find((i) => i.kind === 'stoop' && i.id === `stoop-${door.id}`);
+      const slip = g.interaction.interactables.find((i) => i.kind === 'slip' && i.id === `slip-${door.id}`);
+      if (!stoop || !slip) { g.keys.delete('KeyC'); continue; }
+
+      // Stand ON the leaf's normal — the room-center nudge veers laterally
+      // into the seam anchors' shadow. The lattice is positional: leaf
+      // centre reads the crack, the edges read sound and weight.
+      const side = Math.sign((cand.x - door.pos.x) * nx + (cand.z - door.pos.z) * nz) || 1;
+      const standAt = (ax: number, az: number, rad: number) => {
+        g.player.teleport(ax + nx * side * rad, 0, az + nz * side * rad);
+        g.currentRoom = host.index;
+        for (let f = 0; f < 40; f++) g.frame();
+      };
+      const aimFrames = (at: { x: number; y: number; z: number }, aimY: number, n: number) => {
+        for (let f = 0; f < n; f++) {
+          const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+          g.player.yaw = Math.atan2(ax, az);
+          g.player.pitch = Math.atan2(at.y + aimY - (g.player.pos.y + g.player.eyeHeight), Math.hypot(ax, az) || 1);
+          g.frame();
+        }
+      };
+      // hunt a stand where the STOOP is what focus lands on — the doorway
+      // lane ejects some centre stands, so try the normal at a few depths
+      let stoopStood = false;
+      for (const rad of [0.45, 0.62, 0.8, 1.0]) {
+        standAt(stoop.pos.x, stoop.pos.z, rad);
+        aimFrames(stoop.pos, -0.45, 8);
+        if (g.interaction.focused?.id === stoop.id) { stoopStood = true; break; }
+      }
+      if (!stoopStood) {
+        attempts.push(`${door.id}: stoop never focused — ${JSON.stringify({
+          p: { x: +g.player.pos.x.toFixed(2), z: +g.player.pos.z.toFixed(2) },
+          near: g.interaction.interactables.filter((i) => Math.hypot(i.pos.x - g.player.pos.x, i.pos.z - g.player.pos.z) < 1.5).map((i) => i.id),
+        })}`);
+        continue;
+      }
+      caps.length = 0;
+      const stoopPrompts = hold(stoop.pos, /stoop to the crack/i, () => caps.some((c) => /crack|seam|shadow|glass|floor|eye|plaster|dark|resting|lamp/.test(c)), 200, -0.45);
+      const stoopCap = caps.find((c) => /lit seam|black glass|shadow|draught|eye meets|resting|dead dark|plaster|lamp|floor/.test(c));
+
+      let slipStood = false;
+      for (const rad of [0.45, 0.62, 0.8]) {
+        standAt(slip.pos.x, slip.pos.z, rad);
+        aimFrames(slip.pos, -0.45, 8);
+        if (g.interaction.focused?.id === slip.id) { slipStood = true; break; }
+      }
+      if (!slipStood) { attempts.push(`${door.id}: slip never focused`); continue; }
+      caps.length = 0;
+      const e0 = emits.length;
+      const slipPrompts = hold(slip.pos, /slip a pebble/i, () => caps.some((c) => /pebble skips under/.test(c)), 200, -0.45);
+      g.keys.delete('KeyC');
+      const slipCaps = [...caps];
+      // the tap should land on the far side of the leaf — side resolved
+      // the same way the verb does (the side the player stood on, above)
+      const landX = door.pos.x - nx * side * 1.3, landZ = door.pos.z - nz * side * 1.3;
+      const tap = emits.slice(e0).find((e) => e.category === 'distraction' && Math.hypot(e.x - landX, e.z - landZ) < 0.5);
+      return { stage: 'done', room: next.index, stoopPrompts, stoopCap, slipPrompts, slipCaps, tap, emitCount: emits.length - e0, attempts };
+    }
+    g.keys.delete('KeyC');
+    return attempts.length ? { stage: 'unreachable', attempts } as const : { stage: 'no-door' } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { room: number; stoopPrompts: string; stoopCap?: string; slipPrompts: string; slipCaps: string[]; tap?: { x: number; z: number }; emitCount: number };
+  expect(r.stoopPrompts, 'the stoop verb never focused at the leaf').toMatch(/stoop to the crack/i);
+  expect(r.stoopCap ?? `no seam read — caps[${r.slipCaps}]`).toBeTruthy();
+  expect(r.slipPrompts, 'the slip verb never minted').toMatch(/slip a pebble/i);
+  expect(r.slipCaps.some((c) => /pebble skips under/.test(c)), `slip caps[${r.slipCaps}]`).toBe(true);
+  expect(r.tap ?? `no far-side 'distraction' emit at the land point`).toBeTruthy();
+  expect(errors).toEqual([]);
+});
+
 test('noise through the door rouses what waits beyond', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -296,33 +427,43 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
     g.keys.delete('KeyE');
     if (!braced) return { stage: 'brace-failed', prompt: g.interaction.focused?.prompt } as const;
 
-    // Stay on the bar (release is >1.7m or opening it). The bellman warns,
-    // walks to the leaf, rattles on a cadence, holds ~14s, then fades.
-    let faded = false, opened = false;
+    // Stay on the bar. The bellman warns, walks to the leaf — and since
+    // s446 a LIVE brace is shouldered, not waited out: every ~4.5s of
+    // strain shoves the holder a stride back until the grip slips past
+    // the 1.7m keep radius and he comes through.
+    let shouldered = false, opened = false;
     const cluster = [...g.route.rooms[bRoom.index - 1].doors, ...bRoom.doors]
       .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
     const trace: string[] = [];
-    for (let f = 0; f < 700 && !faded; f++) {
+    const d0 = Math.hypot(g.player.pos.x - door.pos.x, g.player.pos.z - door.pos.z);
+    let dMax = d0;
+    for (let f = 0; f < 900 && bell.state !== 'done'; f++) {
       g.frame();
+      if (caps.some((c) => /shoulders the leaf/.test(c))) shouldered = true;
+      const dd = Math.hypot(g.player.pos.x - door.pos.x, g.player.pos.z - door.pos.z);
+      if (dd > dMax) dMax = dd;
       if (cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05)) opened = true;
-      if (caps.some((c) => /steps fade down the hall/.test(c))) faded = true;
       if (f % 30 === 0) {
         const tp = bell.threatPos();
-        const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
-        trace.push(`f${f} bell@${dd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} ht=${(bell as unknown as { doorHoldT?: number }).doorHoldT?.toFixed(1)} st=${bell.state} o=${door.opening ? 'open' : (door.openT ?? 0).toFixed(2)}`);
+        const bd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
+        trace.push(`f${f} bell@${bd.toFixed(2)} dead=${g.player.dead} hold=${door.heldBy} pd=${dd.toFixed(2)} ht=${(bell as unknown as { doorHoldT?: number }).doorHoldT?.toFixed(1)} st=${bell.state} o=${door.opening ? 'open' : (door.openT ?? 0).toFixed(2)}`);
       }
     }
     g.keys.delete('KeyC');
-    return { stage: 'done', faded, opened, bellState: bell.state, dead: g.player.dead, trace, caps: caps.slice(-14), allCaps: caps, killTried, killGeo } as const;
+    return { stage: 'done', shouldered, opened, d0, dMax, heldBy: door.heldBy, bellState: bell.state, dead: g.player.dead, trace, caps: caps.slice(-14), allCaps: caps, killTried, killGeo } as const;
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
   if (result.stage !== 'done') return;
-  const r = result as { faded: boolean; opened: boolean; bellState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[]; killTried: string; killGeo: string };
+  const r = result as { shouldered: boolean; opened: boolean; d0: number; dMax: number; heldBy?: string; bellState: string; dead: boolean; trace: string[]; caps: string[]; allCaps: string[]; killTried: string; killGeo: string };
   const tail = r.allCaps.join(' | ') + ' trace: ' + r.trace.join(' ; ') + ' killTried: ' + r.killTried + ' geo: ' + r.killGeo;
   expect(r.caps.some((c) => /tests the bar|strains|palm flat/.test(c)), `caps: ${tail}`).toBe(true);
-  expect(r.faded, `caps: ${tail}`).toBe(true);
-  expect(r.opened, 'the brace leaked — a cluster leaf swung').toBe(false);
+  expect(r.shouldered, `no shoulder — caps: ${tail}`).toBe(true);
+  // the shoulder bows the leaf a crack open — the grip fails on the
+  // brace's own openT rule (whether or not the room gave room to be
+  // pushed into; the d0/dMax bookkeeping stays in the trace)
+  expect(r.heldBy, `the grip should have slipped — ${tail}`).toBe(undefined);
+  expect(r.opened, 'after the grip failed the leaf never swung for it').toBe(true);
   expect(r.bellState).toBe('done');
   expect(errors).toEqual([]);
 });

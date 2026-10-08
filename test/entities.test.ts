@@ -367,6 +367,11 @@ describe('Bellman (sprint 232)', () => {
     step(b, ctx, 5, t);       // second strain — past the 1.7m keep radius
     const d2 = Math.hypot(player.pos.x - entry.pos.x, player.pos.z - entry.pos.z);
     expect(d2).toBeGreaterThan(1.7);  // the brace's own rule would release now
+    // and the leaf bows under the shoulder — openT past 0.05 trips the
+    // Game's own brace-release even where the room gives no room to be
+    // pushed into (real-geometry fix: the shove bows the leaf, not just
+    // the holder)
+    expect(entry.openT ?? 0).toBeGreaterThan(0.05);
     const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
     expect(captions.some((c) => /shoulders the leaf/.test(c))).toBe(true);
     b.dispose();

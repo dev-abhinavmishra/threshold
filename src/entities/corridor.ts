@@ -536,9 +536,15 @@ export class Warden extends Entity {
           // the grip fails on the Game's own rule.
           this.braceShoveT = 0;
           const p = c.player;
-          const dx = p.pos.x - d.pos.x, dz = p.pos.z - d.pos.z;
-          const len = Math.hypot(dx, dz) || 1;
-          p.teleport(p.pos.x + (dx / len) * 0.55, 0, p.pos.z + (dz / len) * 0.55);
+          // the shoulder bows the LEAF, not the holder — the frame flexes
+          // a crack open and the grip fails on the Game's own brace-release
+          // rule (openT > 0.05), wherever furniture left the holder
+          d.openT = Math.max(d.openT ?? 0, 0.08);
+          // and the holder still gets moved when there's room — along the
+          // leaf's normal, back into their own room
+          const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
+          const side = Math.sign((p.pos.x - d.pos.x) * nx + (p.pos.z - d.pos.z) * nz) || 1;
+          p.teleport(p.pos.x + nx * side * 0.55, 0, p.pos.z + nz * side * 0.55);
           c.cue('door-slam', v3(d.pos.x, 1.2, d.pos.z), '[it shoulders the leaf — your grip slips]', { severity: 'danger' });
           c.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 0.9, category: 'door', caption: '[the leaf bows under a shoulder]', source: this.id });
           return 'blocked';

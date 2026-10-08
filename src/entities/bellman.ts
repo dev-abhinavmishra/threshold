@@ -361,11 +361,22 @@ export class Bellman extends Entity {
           if (this.doorHoldT > 4.5) {
             this.doorHoldT = 0;
             const p = c.player;
-            const dx = p.pos.x - blocking.pos.x, dz = p.pos.z - blocking.pos.z;
-            const len = Math.hypot(dx, dz) || 1;
-            p.teleport(p.pos.x + (dx / len) * 0.55, 0, p.pos.z + (dz / len) * 0.55);
+            // the shoulder bows the LEAF, not the holder — the frame
+            // flexes a crack open and your grip fails on the Game's own
+            // brace-release rule (openT > 0.05), wherever the room's
+            // furniture left you standing. The leaf re-shuts in a frame;
+            // the fresh knock below is what swings it.
+            blocking.openT = Math.max(blocking.openT ?? 0, 0.08);
+            // and the holder still gets moved when there's room to shove —
+            // along the leaf's normal, back into their own room
+            const nx = Math.sin(blocking.yaw), nz = Math.cos(blocking.yaw);
+            const side = Math.sign((p.pos.x - blocking.pos.x) * nx + (p.pos.z - blocking.pos.z) * nz) || 1;
+            p.teleport(p.pos.x + nx * side * 0.55, 0, p.pos.z + nz * side * 0.55);
             c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[it shoulders the leaf — your grip slips]', { severity: 'danger' });
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.8, category: 'door', caption: '[the leaf bows under a shoulder]', source: this.id });
+            // a leaf that slipped its brace deserves a fresh knock once
+            // free — same rule the wired bind follows after it parts
+            this.knocked.delete(blocking);
           }
         } else if (blocking.heldBy === 'wired') {
           // Wire isn't kicked — it's worked. A visit's labor strains the
