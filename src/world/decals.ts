@@ -1315,3 +1315,29 @@ export function mouseHole(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The chase patch — a rectangular cutout in the wall, re-plastered:
+ * pale fill inside a hairline border crack where the wall was opened
+ * for wire and closed again. */
+export function chasePatch(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const x0 = 24 + rng.float() * 10, y0 = 14 + rng.float() * 12;
+    const pw = 34 + rng.float() * 18, ph = 70 + rng.float() * 30;
+    // hairline border crack
+    ctx.strokeStyle = 'rgba(52,48,42,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x0, y0, pw, ph);
+    // plaster fill — paler than the wall
+    ctx.fillStyle = 'rgba(176,168,150,0.22)';
+    ctx.fillRect(x0 + 2, y0 + 2, pw - 4, ph - 4);
+    // a corner sag where the fill shrank
+    ctx.strokeStyle = 'rgba(60,55,48,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(x0, y0 + ph);
+    ctx.lineTo(x0 + pw * 0.4, y0 + ph + 3 + rng.float() * 4);
+    ctx.stroke();
+    // dust track down from the work
+    ctx.fillStyle = 'rgba(140,132,114,0.15)';
+    ctx.fillRect(x0 + pw * 0.3, y0 + ph + 4, pw * 0.4, 16 + rng.float() * 12);
+  });
+}
