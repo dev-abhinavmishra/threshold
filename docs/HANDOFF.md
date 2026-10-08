@@ -4545,3 +4545,21 @@ Game.die() from the same five fields.
   counts named decals — wear everywhere, scars on locked rooms.
 - Gates: tsc, lint, vitest 257 (worn-way spec green), sim 5/5.
   Visual dressing only — no e2e leg.
+
+## sprint 415 — the sparse pass
+
+- The seeded floor-clutter pass only dressed corridor/records/guest/
+  unlit — maintenance and gallery rooms (the thin end of the
+  template audit: maint-stairs ~6 props, puzzle-valve 7,
+  corridor-checkpoint 13, most records/gallery under 18) built
+  bare. `CLUTTER_BY_BIOME` now gives each biome its own vocabulary:
+  paper everywhere; gallery sheds fallen catalogs and `books`;
+  maintenance drifts `carton`/`rubblePile`/`bleachBottle` toward the
+  walls (all non-paper kinds wall-bias, never mid-lane); lobby +
+  unlit picked up too. Clutter groups are named `clutter-<kind>`
+  for tests/debug.
+- Vitest 258: 'the sparse pass' builds every maint/gallery room
+  across seeds — both carry clutter, gallery sheds books,
+  maintenance carries a bulky kind paper biomes never get.
+- Gates: tsc, lint, vitest 258, sim 5/5. Visual dressing only —
+  no e2e leg.

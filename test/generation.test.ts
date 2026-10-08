@@ -1501,3 +1501,26 @@ describe('the worn way (sprint 414)', () => {
     expect(scars, 'locked doors never scarred').toBeGreaterThan(0);
   });
 });
+
+describe('the sparse pass (sprint 415)', () => {
+  it('maintenance and gallery rooms carry floor clutter with their own vocabulary', () => {
+    const seen: Record<string, Set<string>> = {};
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec || (room.biome !== 'maintenance' && room.biome !== 'gallery')) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        const set = (seen[room.biome] ??= new Set());
+        built.group.traverse((o) => { if (o.name.startsWith('clutter-')) set.add(o.name.slice(8)); });
+      }
+    }
+    for (const biome of ['maintenance', 'gallery']) {
+      expect(seen[biome]?.size ?? 0, `${biome} rooms never dressed`).toBeGreaterThan(0);
+    }
+    // biome vocabulary — gallery sheds books, maintenance drifts bulky
+    // kinds (carton/rubble/bottles) the paper biomes never carry
+    expect(seen.gallery?.has('books'), 'gallery never sheds books').toBe(true);
+    const bulky = ['carton', 'rubblePile', 'bleachBottle'].some((k) => seen.maintenance?.has(k));
+    expect(bulky, 'maintenance carries no bulky clutter').toBe(true);
+  });
+});
