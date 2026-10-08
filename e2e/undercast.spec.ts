@@ -91,9 +91,8 @@ test('the haul — a sledge you can pick while it scrapes the hall', async ({ pa
       if (relit) {
         const had2 = lampAfter?.count ?? 0;
         for (let f = 0; f < 140 && hl.lampLit; f++) {
-          // tail-side aimed stand, focus-gated hold — the haul crosses
-          // door lanes where 'Open Door' steals focus; hold E only while
-          // the lamp owns it and let the drag carry a clean window by
+          // same tail-side aimed stand + focus-gated hold as the first
+          // strip — the sledge keeps dragging, and door lanes steal focus
           const sx = hl.lampPos.x - hauler.sledgePos.x, sz = hl.lampPos.z - hauler.sledgePos.z;
           const sl = Math.hypot(sx, sz) || 1;
           g.player.teleport(hl.lampPos.x + (sx / sl) * 0.7, 0, hl.lampPos.z + (sz / sl) * 0.7);
@@ -554,6 +553,40 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     const demanded = caps.slice(demandCap).some((c) => /hands are in his book|book slaps open/.test(c));
     if (ga.marginalia < 14) ga.marginalia = 14; // purse floor for the settle
 
+    // --- 2.5 read the wanted sheet — the boards print your tally ---
+    const wG = ga as unknown as { wantedActive: boolean; wantedRooms: Map<number, { x: number; z: number }> };
+    for (let f = 0; f < 30 && !wG.wantedActive; f++) g.frame();
+    const wantedUp = wG.wantedActive === true;
+    const sheets = wG.wantedRooms.size;
+    let sheetRead = '';
+    const wEntry = [...wG.wantedRooms.entries()][0];
+    if (wEntry) {
+      const [wIdx, wHost] = wEntry;
+      const wRoom = g.route.underRooms[wIdx] ?? g.route.underRooms.find((r) => r.index === wIdx);
+      g.player.teleport(wHost.x, 0, wHost.z);
+      ga.currentRoom = wIdx;
+      for (let f = 0; f < 20; f++) g.frame();
+      // stand 0.7m toward the room's middle, aimed up at the sheet face
+      const wx = (wRoom?.origin.x ?? wHost.x) - wHost.x, wz = (wRoom?.origin.z ?? wHost.z) - wHost.z;
+      const wl = Math.hypot(wx, wz) || 1;
+      for (let f = 0; f < 60 && !sheetRead; f++) {
+        g.player.teleport(wHost.x + (wx / wl) * 0.7, 0, wHost.z + (wz / wl) * 0.7);
+        g.player.yaw = Math.atan2(wHost.x - g.player.pos.x, wHost.z - g.player.pos.z);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(1.35 - eyeY, 0.7);
+        g.frame();
+        if (/Read the wanted sheet/.test(ga.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+        const hit = caps.find((c) => /the sheet names your hands/.test(c));
+        if (hit) sheetRead = hit;
+      }
+      ga.keys.delete('KeyE');
+    }
+    // back to his room — the settle point only mints at his desk
+    g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
+    ga.currentRoom = aRoom.index;
+    for (let f = 0; f < 20; f++) g.frame();
+
     // --- 3. settle at his desk ---
     const settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled);
     if (!settle) return { stage: 'no-settle' } as const;
@@ -576,6 +609,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
+      wantedUp, sheets, sheetRead,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -584,6 +618,8 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
   expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him
   expect(result.tallySign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
+  expect(result.wantedUp, JSON.stringify(result)).toBe(true); // the ledger named you — sheets up
+  if ((result.sheets ?? 0) > 0) expect(result.sheetRead, JSON.stringify(result)).toMatch(/the sheet names your hands — 2 thefts/);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);

@@ -3702,14 +3702,37 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   already apply.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7 (drawerSign),
   undercast 11/11 (tallySign + docketSign), build.
-## sprint 402 — the sheet names the tally (wanted read verb + calls closed)
+## sprint 339 — the sheet names your hands
+
+- The wanted system (s401) gains its first interactable: 'Read the
+  wanted sheet' mints at a wantedRooms host when wantedActive (0.8s,
+  priority 1, within 2.2m). Reading is free and repeatable — the sheet
+  prints the clerk's count aloud: `[the sheet names your hands — N
+  thefts tallied · the crew listens harder until the count settles]`.
+  The naming still clears only by settling the tally (lowerWanted).
+- Verb pos is y=0.75 so the focus target (pos.y + 0.6 = 1.35) lands on
+  the sheet face — players get the prompt when they look AT the paper.
+- e2e trap: `v3dist` in the focus pass is FULL 3D — a verb at y=1.1
+  stood 0.7m away is prox 1.3 > 1.1, killing the nearEnough fallback;
+  put verb y within ~0.8 of ground for floor-level verbs, or aim height
+  at pos.y+0.6 for wall props (a sheet's face is at 1.35, not its pos).
+- e2e trap (sibling to registerDrawer): verbs minted per room — a leg
+  that leaves the room to read a sheet must teleport back before
+  looking up 'audit'-kind interactables, or they aren't minted yet.
+- undercast audit leg drives: tally-drawer rifle → demanded → wanted
+  sheets up (wantedActive, 5 rooms) → read a sheet → settle lowers it.
+- Gates: tsc, lint, 237 vitest (+wanted contract kind), 5-seed sim,
+  undercast 11/11, build.
+  undercast 11/11 (tallySign + docketSign), build.
+## sprint 402 — calls closed, host pick extracted (sheet verb → s339)
 
 - DESIGN_CALLS.md deleted — all three calls settled and built in 401.
-- The wanted sheet earns its verb: 'Read the wanted sheet' (wantedSheet
-  interactable, held 0.7s at each pinned board within 1.7m) reads your
-  own face back — "[your face — the tally runs N lines — the clerk's
-  desk settles it]", or the struck variant once the debt clears and the
-  sheet hasn't come down yet. A read, not a claim — costs nothing.
 - pickWantedHosts extracted to src/game/wanted.ts (pure: downstream
-  rooms only, first crew-board prop per room, cap 5) with 6 unit tests.
+  rooms only, first crew-board prop per room, cap 5, yaw-projected)
+  with 6 unit tests; raiseWanted calls it.
+- SUPERSEDED: my 'wantedSheet' read verb dropped — sibling sprint 339
+  landed 'Read the wanted sheet' (kind 'wanted', room-scoped host
+  lookup, priority 1, y=0.75) first; theirs stays end-to-end.
 - Gates: tsc, lint, vitest scoped (10/10) — green.
+||||||| 949df78
+  undercast 11/11 (tallySign + docketSign), build.

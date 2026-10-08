@@ -1397,6 +1397,24 @@ export class Game {
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });
     }
+    // Read the wanted sheet — once the clerk's ledger names you, the
+    // boards ahead print your tally on their faces. Reading is free;
+    // the naming stays until the tally settles.
+    if (this.wantedActive) {
+      const host = this.wantedRooms.get(this.currentRoom);
+      if (host) {
+        const dx = host.x - this.player.pos.x, dz = host.z - this.player.pos.z;
+        if (dx * dx + dz * dz <= 2.2 * 2.2) {
+          this.interaction.add({
+            kind: 'wanted', id: `wanted-${this.space}:${this.currentRoom}`,
+            pos: { x: host.x, y: 0.75, z: host.z },
+            prompt: 'Read the wanted sheet',
+            holdTime: 0.8, enabled: true, priority: 1,
+            data: {},
+          });
+        }
+      }
+    }
     // Bleed the line — a live steam fitting can be bled quiet at the
     // valve; the blast stops, the corridor calms.
     for (const st of this.hazard.steams) {
@@ -1516,28 +1534,6 @@ export class Game {
             data: ent as unknown as Record<string, unknown>,
           });
         }
-      }
-    }
-    // The wanted sheet on the boards: your own face reads the tally
-    // back — how many lines the book runs before the desk settles it.
-    if (this.wantedActive) {
-      const rooms = this.activeRooms();
-      for (const [i, host] of this.wantedRooms) {
-        if (!this.streamer.builtIndices.includes(i)) continue;
-        const r = rooms[i];
-        if (!r) continue;
-        const ox = r.origin.x - host.x, oz = r.origin.z - host.z;
-        const ol = Math.hypot(ox, oz) || 1;
-        const px = host.x + (ox / ol) * 0.5, pz = host.z + (oz / ol) * 0.5;
-        const dx = px - this.player.pos.x, dz = pz - this.player.pos.z;
-        if (dx * dx + dz * dz > 1.7 * 1.7) continue;
-        this.interaction.add({
-          kind: 'wantedSheet', id: `wanted-${this.space}:${i}`,
-          pos: { x: px, y: 1.3, z: pz },
-          prompt: 'Read the wanted sheet',
-          holdTime: 0.7, enabled: true, priority: 3,
-          data: { owed: this.unpaidTheft },
-        });
       }
     }
     // Beside the filer's courier: 'Cut the runner' — tear the message
@@ -2666,17 +2662,6 @@ export class Game {
         if (egress) this.cue('whisper', it.pos, `[the egress stamp is filed at Door ${String(egress.index).padStart(3, '0')}]`);
         return;
       }
-      case 'wantedSheet': {
-        // Reading your own sheet — the tally in your name, and where
-        // it settles. A read, not a claim: it costs nothing but the time.
-        const owed = (it.data as { owed?: number }).owed ?? this.unpaidTheft;
-        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.3, category: 'entity-cue', caption: '' });
-        this.cue('whisper', it.pos,
-          owed > 0
-            ? `[your face — the tally runs ${owed} line${owed === 1 ? '' : 's'} — the clerk's desk settles it]`
-            : '[your face — the tally is struck; somebody still wants you seen]');
-        return;
-      }
       case 'crewBoard': {
         // The crew board — who is signed on down the line: the under's
         // entity foresight, told in crew euphemisms. One read per board.
@@ -3305,6 +3290,12 @@ export class Game {
         // its lamp is crew property too — stripped or scavenged, it counts
         this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
           '[the drag\'s lamp is marked gone — the count is short]');
+        return;
+      }
+      case 'wanted': {
+        // the sheet prints what the tally says about you — the boards'
+        // readout of the clerk's book, free to read, still named
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
         return;
       }
       case 'stripCheck': {
