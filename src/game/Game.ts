@@ -1995,11 +1995,7 @@ export class Game {
           // till folds its hands — no wares, no page, not at any rate.
           const cRoom = this.activeRooms().findIndex((r) =>
             r.sockets.includes(sock));
-          if (cRoom >= 0 && this.closedCounters.has(cRoom)) {
-            this.cue('door-locked', it.pos,
-              "[the clerk folds its hands — the counter is closed to you]", 'warn');
-            return;
-          }
+          if (cRoom >= 0 && this.clerkRefuses(cRoom, it.pos)) return;
           const cItem = sock.meta.clerkItem as ItemId | undefined;
           const cPrice = (sock.meta.clerkPrice as number) ?? 12;
           if (!cItem) return;
@@ -2086,11 +2082,7 @@ export class Game {
         const page = room?.sockets.find((s) => s.meta.clerk === 'slot0');
         if (!room || !page || page.meta.clerkQ === undefined) return;
         // A rifled counter serves nothing — the clerk watched your hands.
-        if (this.closedCounters.has(roomIndex)) {
-          this.cue('door-locked', it.pos,
-            "[the clerk folds its hands — the counter is closed to you]", 'warn');
-          return;
-        }
+        if (this.clerkRefuses(roomIndex, it.pos)) return;
         if (this.clerkAsked.has(roomIndex)) {
           this.cue('door-locked', it.pos, '[the clerk has said what it knows]', 'info');
           return;
@@ -2179,7 +2171,7 @@ export class Game {
         this.chargedImprints(3, it.pos.x, it.pos.z);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it]`
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}]`
           : '[the register has no line on you — your face isn\'t in it]');
         return;
       }
@@ -2298,11 +2290,7 @@ export class Game {
           // pays the register's sour rate (the house reads ITS book —
           // the register, not the under's tallies).
           const cRoom = (it.data as { roomIndex: number }).roomIndex;
-          if (this.closedCounters.has(cRoom)) {
-            this.cue('door-locked', it.pos,
-              "[the clerk folds its hands — the counter is closed to you]", 'warn');
-            return;
-          }
+          if (this.clerkRefuses(cRoom, it.pos)) return;
           if (this.marginalia < 8) {
             this.cue('door-locked', it.pos,
               `[the purse wants 8 marginalia — you're ${8 - this.marginalia} short]`, 'warn');
@@ -4163,6 +4151,25 @@ export class Game {
    *  the tally is settled (ctx.wanted widens their notice reach).
    *  Tear every sheet and he reaches for fresh paper: `repost` re-arms
    *  the same raise on new downstream boards after a beat. */
+  /** Service refusal at a staffed counter — a cold counter folds its
+   *  hands; a face six lines deep in the register buys nothing at any
+   *  counter (the desk is the only answer, and the affidavit's rate).
+   *  askReg and the slip-back stay open: a readout is information, and
+   *  undoing the crime isn't commerce. */
+  private clerkRefuses(roomIndex: number, pos: Vec3 | null): boolean {
+    if (this.closedCounters.has(roomIndex)) {
+      this.cue('door-locked', pos,
+        "[the clerk folds its hands — the counter is closed to you]", 'warn');
+      return true;
+    }
+    if (this.unpaidHeld >= 6) {
+      this.cue('door-locked', pos,
+        "[she reads the register — the face buys nothing past six lines · the desk is the only answer]", 'warn');
+      return true;
+    }
+    return false;
+  }
+
   private raiseWanted(repost = false): void {
     this.wantedActive = true;
     for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
