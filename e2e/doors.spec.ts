@@ -264,7 +264,7 @@ test('brace the door: the bellman tests the bar and loses interest', async ({ pa
       killTried = `${src}:${hint}`;
       const bp = (bell as unknown as { pos: { x: number; z: number } }).pos;
       const pp = g.player.pos;
-      killGeo = `bell(${bp.x.toFixed(2)},${bp.z.toFixed(2)}) player(${pp.x.toFixed(2)},${pp.z.toFixed(2)}) leaf(${door.pos.x.toFixed(2)},${door.pos.z.toFixed(2)}) yaw=${door.yaw.toFixed(2)}`;
+      killGeo = `bell(${bp.x.toFixed(2)},${bp.z.toFixed(2)}) player(${pp.x.toFixed(2)},${pp.z.toFixed(2)}) leaf(${door?.pos.x.toFixed(2)},${door?.pos.z.toFixed(2)}) yaw=${door?.yaw.toFixed(2)}`;
       origKill(src, hint);
     };
 
