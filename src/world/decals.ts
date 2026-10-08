@@ -1134,3 +1134,32 @@ export function patchPlug(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The old number — a painted room numeral over a door, the one before
+ * it scratched out beneath: the hotel renumbered its rooms once. */
+export function oldNumber(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // current number — faded stencil digits
+    const digits = String(10 + Math.floor(rng.float() * 88));
+    ctx.fillStyle = 'rgba(165,155,135,0.30)';
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(digits, 48, 44);
+    // worn speckle across the strokes
+    for (let i = 0; i < 26; i++) {
+      ctx.clearRect(30 + rng.float() * 36, 20 + rng.float() * 22, 2 + rng.float() * 3, 1 + rng.float() * 2);
+    }
+    // the earlier number — scratched over, barely there
+    ctx.fillStyle = 'rgba(120,110,95,0.20)';
+    ctx.font = '24px serif';
+    ctx.fillText(String(1 + Math.floor(rng.float() * 9)) + digits[1], 48, 74);
+    ctx.strokeStyle = 'rgba(70,64,55,0.45)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo(32 + rng.float() * 6, 62 + rng.float() * 12);
+      ctx.lineTo(58 + rng.float() * 6, 58 + rng.float() * 12);
+      ctx.stroke();
+    }
+  });
+}

@@ -5157,3 +5157,11 @@ Game.die() from the same five fields.
   the walls inward — same-sign corners map U to the x-wall, opposite to
   z. Named 'corner-scuff'.
 - Vitest 283: 'the runners slide'. Gates: tsc, lint, 99/99.
+
+## sprint 437 — the numbers changed
+
+- Painted room numerals over door frames in guest/lobby/corridor/records
+  (50% per port): faded stencil digits + an earlier number scratched out
+  beneath — the hotel renumbered once. cy 2.42 above the frame.
+  Named 'old-number'.
+- Vitest 284: 'the numbers changed'. Gates: tsc, lint, 100/100.
