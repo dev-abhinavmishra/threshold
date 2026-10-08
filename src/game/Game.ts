@@ -2260,7 +2260,7 @@ export class Game {
         data: ent as unknown as Record<string, unknown>,
       });
     }
-    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
+    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos, this.inventory.some((i) => i.id === 'wireCoil' && i.count > 0));
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -3183,6 +3183,36 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'door', caption: '' });
         return;
       }
+      case 'wireDoor': {
+        // sprint 432 — the wire is a brace you can leave: the coil binds
+        // the leaf shut for both sides until it's cut. Walkers read it
+        // 'blocked' like any held leaf and route elsewhere; nobody kicks
+        // wire loose — it takes a blade.
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        if (cluster.some((d) => d.heldBy)) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        const coil = this.inventory.find((i) => i.id === 'wireCoil');
+        if (!coil || coil.count <= 0) return;
+        coil.count--;
+        for (const d of cluster) d.heldBy = 'wired';
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
+          room: this.currentRoom, kind: 'work', t: this.clock.time,
+          readBy: ['player'] });
+        this.cue('door-creak', it.pos, '[you work the coil around the leaf — the wire holds it]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.3, category: 'door', caption: '' });
+        return;
+      }
+      case 'unwireDoor': {
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        for (const d of cluster) if (d.heldBy === 'wired') d.heldBy = undefined;
+        this.giveItem('wireCoil', 1);
+        this.cue('door-creak', it.pos, '[the coil comes back to your hand]');
+        this.audio.play('trap-click', { x: it.pos.x, y: 0.4, z: it.pos.z }, '[a quiet snip]');
+        this.sound.emit({ x: it.pos.x, y: 0.6, z: it.pos.z, intensity: 0.25, category: 'item', caption: '' });
+        return;
+      }
       case 'door': {
         const door = it.data as RoomInstance['doors'][number];
         if (door.falseDoor) {
@@ -3200,6 +3230,10 @@ export class Game {
         // you set holds it from this side — pull it free instead.
         if (cluster.some((d) => d.heldBy === 'wedge')) {
           this.cue('door-locked', it.pos, '[the wedge holds it — pull it free first]', 'warn');
+          return;
+        }
+        if (cluster.some((d) => d.heldBy === 'wired')) {
+          this.cue('door-locked', it.pos, '[the wire binds it — cut it free first]', 'warn');
           return;
         }
         if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {

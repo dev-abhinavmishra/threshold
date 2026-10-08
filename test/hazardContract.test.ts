@@ -257,6 +257,21 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/!hz\.armed && !hz\.planted && !hz\.grafted/);
     expect(gameSrc).toMatch(/hz\.grafted \? \(hz\.armed \? 'Cut the splice' : 'Gather the wire'\)/);
   });
+
+  it('the wire is a brace you can leave — the leaf binds shut', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const intSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const typeSrc = readFileSync('src/game/types.ts', 'utf8');
+    // a closed, unlocked, unheld leaf mints 'Wire Door N shut' while
+    // you carry a coil; the bind rides heldBy like the wedge does
+    expect(intSrc).toContain('Wire Door');
+    expect(typeSrc).toContain("'wired'");
+    // the press consumes the coil and signs the work; the snip hands
+    // it back; opening reads the bind, not a stranger's grip
+    expect(gameSrc).toMatch(/d\.heldBy = 'wired'/);
+    expect(gameSrc).toContain('the wire binds it — cut it free first');
+    expect(gameSrc).toMatch(/unwireDoor[\s\S]*?giveItem\('wireCoil', 1\)/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

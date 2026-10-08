@@ -5983,3 +5983,14 @@ like your own spent line. Same slack the grafter strips to carry:
 dead wire is now a real two-ways resource fight — gather it first
 and the under's splice pool shrinks; leave it and the grafter
 re-plants it on your path. Armed grafts still read 'Cut the splice'.
+
+## Sprint 432 — the wire is a brace you can leave
+
+'Wire Door N shut' mints on closed, unlocked, unheld leaves while you
+carry a coil (crouch-minted, beside the wedge slot): the coil binds
+the leaf via `heldBy: 'wired'` — the paid, walk-away twin of 'Brace'.
+Walkers read it 'blocked' like any held leaf and route elsewhere —
+nobody kicks wire loose, it takes a blade. 'Cut the wired leaf free'
+hands the coil back (un-plant symmetry). The bind signs 'work' on
+the leaf like every hands-on the floor. Releases on reload like the
+wedge — a held leaf never rode the checkpoint.

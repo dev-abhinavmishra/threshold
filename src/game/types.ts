@@ -159,7 +159,7 @@ export interface Door {
   /** Held shut from the far side (not a lock — no key path). The
    *  Commissionaire grips entry leaves; 'player' is a crouch-braced leaf;
    *  'wedge' a placed chock — holds until pulled or worried loose. */
-  heldBy?: EntityId | 'player' | 'wedge';
+  heldBy?: EntityId | 'player' | 'wedge' | 'wired';
 }
 
 export interface RoomInstance {
