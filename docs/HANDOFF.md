@@ -5060,6 +5060,18 @@ Game.die() from the same five fields.
   restart — a queued answer could fire into a dead run's stale pos.
 - Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
 
+## sprint 427 — the ones who ran
+
+- Personal effects abandoned mid-flight in lobby/guest/corridor/records:
+  35% of rooms drop a `suitcase` (+50% a `fishHat`/`cigaretteCase`)
+  beside a random non-entry port, tangent 1.1-1.9m off the leaf, and
+  50% chance `rubberBoots`/`fishHat` near a hiding spot — the ones
+  who dragged the arrows ran out of pockets.
+- Door-lane cleared via `footprintInDoorLane`; suitcase's small collider
+  sits beside the leaf, never in it. Named 'fled-effects'.
+- Vitest 274: 'the ones who ran'. Gates: tsc, lint, sim 5/5, build.
+  Visual dressing only — no e2e leg (suite leg from s426 still running).
+
 ## sprint 398 — douse the hearth
 
 - The hearth's price was a promise you couldn't renegotiate: lit = 45s
