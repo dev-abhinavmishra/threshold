@@ -6057,3 +6057,13 @@ Consequence-noise (the repost-scatter, machine clanks) stays flat —
 the tax is on sounds you *aimed*, not sounds you caused.
 **Notes:** bell emit at `case 'bell'`; pebble at `tossPebble`; the
 s434 lure/phone sites now read the getter via a local const.
+
+### sprint 437 — the wire answers the knocker too
+**Done:** the bellman's held-leaf branch now knows `wired`: a visit
+works the bind once via `strainWire` (>6s of door-hold), cues the
+strain, then loses interest — the bind holds that knock. A later
+visit's work calls `strainWire` again and parts it (`'freed'` →
+he walks through). Two knocks of denial where the wedge gives one.
+**Notes:** the freed leaf drops the coil as loot like the warden's
+work does; the lose-interest cue is distinct so a player listening
+can tell "it gave up" from "it couldn't start".

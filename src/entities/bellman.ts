@@ -335,6 +335,20 @@ export class Bellman extends Entity {
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
             this.doorHoldT = 0;
           }
+        } else if (blocking.heldBy === 'wired') {
+          // Wire isn't kicked — it's worked. A visit's labor strains the
+          // bind once, then he loses interest; the NEXT visit's work
+          // parts it. Two knocks of denial where the wedge gives one.
+          if (this.doorHoldT > 6) {
+            if (c.strainWire?.(blocking.pos.x, blocking.pos.z) === 'freed') {
+              this.doorHoldT = 0;
+              // the leaf swings free — he comes through next frames
+            } else {
+              c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it worked at the wire — the bind held, and its steps fade]', { severity: 'info' });
+              this.done();
+              return;
+            }
+          }
         } else if (this.doorHoldT > 14) {
           c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[its steps fade down the hall — it lost interest]', { severity: 'info' });
           this.done();

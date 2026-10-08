@@ -308,6 +308,15 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/0\.8 \* this\.wantedPull/);
   });
 
+  it('the wire answers the knocker too — a visit strains, the next parts it', () => {
+    const src = readFileSync('src/entities/bellman.ts', 'utf8');
+    // the bellman can't kick wire like a wedge: a held visit works the
+    // bind once via strainWire, then loses interest — a later visit's
+    // work frees the leaf the same way the warden's does
+    expect(src).toMatch(/heldBy === 'wired'[\s\S]*?strainWire\?\.\(blocking\.pos\.x, blocking\.pos\.z\)/);
+    expect(src).toContain('the bind held');
+  });
+
   it('the seam reads your own bind — holds report, strains warn', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     // a wired leaf answers the listen at the lowest tier: quiet when
