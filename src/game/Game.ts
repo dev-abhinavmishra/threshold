@@ -3162,7 +3162,7 @@ export class Game {
           return;
         }
         this.bellRung.set(roomIndex, { t: this.clock.time, x: it.pos.x, z: it.pos.z });
-        this.sound.emit({ x: it.pos.x, y: it.pos.y, z: it.pos.z, intensity: 0.8, category: 'distraction', caption: '' });
+        this.sound.emit({ x: it.pos.x, y: it.pos.y, z: it.pos.z, intensity: 0.8 * this.wantedPull, category: 'distraction', caption: '' });
         this.cue('phone-ring', it.pos, "[the bell's note rolls down the hall]", 'info');
         return;
       }
@@ -3267,6 +3267,11 @@ export class Game {
         if (!coil || coil.count <= 0) return;
         coil.count--;
         for (const d of cluster) d.heldBy = 'wired';
+        // sprint 439 — a fresh knot counts fresh: unwire-and-rewire
+        // doesn't inherit the work the house already put into the
+        // last bind on this leaf (keyed on the leaf pos like strainWire)
+        const bindDoor = it.data as RoomInstance['doors'][number];
+        this.wireStrains.delete(`wire:${Math.round(bindDoor.pos.x * 7)}x${Math.round(bindDoor.pos.z * 7)}`);
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
           room: this.currentRoom, kind: 'work', t: this.clock.time,
           readBy: ['player'] });
@@ -6644,6 +6649,13 @@ export class Game {
    *  wind-up alarm, but it costs nothing but nerve. */
   private nextToss = 0;
 
+  /** The boards' noise tax — every lure-sound you control pulls half
+   *  again as far while the sheets name you (s434; planted lures and
+   *  thrown/rung lures alike, s436). */
+  private get wantedPull(): number {
+    return this.wantedActive ? 1.5 : 1;
+  }
+
   private tossPebble(): void {
     if (this.clock.time < this.nextToss) return;
     this.nextToss = this.clock.time + 8;
@@ -6651,7 +6663,7 @@ export class Game {
     const x = this.player.pos.x + fx * 3.5;
     const z = this.player.pos.z + fz * 3.5;
     this.audio.play('pebble', { x, y: 0.1, z }, '');
-    this.sound.emit({ x, y: 0.1, z, intensity: 0.45, category: 'distraction', caption: '' });
+    this.sound.emit({ x, y: 0.1, z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
   }
 
   /** The numbers moved — on revisit, a room's exit-door plate can read a
@@ -8226,7 +8238,7 @@ export class Game {
     // sheets name you, every sound you planted pulls half again as
     // far — a lure works better and betrays you harder, same tax the
     // filings take.
-    const wantedPull = this.wantedActive ? 1.5 : 1;
+    const wantedPull = this.wantedPull;
     for (const lure of this.lures) {
       if (tA < lure.nextTick) continue;
       lure.nextTick = tA + 1.2;

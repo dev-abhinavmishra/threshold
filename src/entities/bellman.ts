@@ -191,22 +191,40 @@ export class Bellman extends Entity {
   /** A closed leaf on the path to the target — it waits for the swing it
    *  knocked for, or holds (and eventually quits) at a braced one. Radius
    *  sits inside the 1.25 knock reach so a head-on approach knocks first. */
+  /** The leaf he's committed to — a held leaf he's already at stays his
+   *  blocking target until it swings or he quits, so doorBetween's edge
+   *  cases can't flap him between a held leaf and a closed sibling and
+   *  mis-file wire-work time as knocked-wait patience (s440). */
+  private lastBlock: Door | null = null;
+
   private blockingDoorNear(target: Vec3): Door | null {
     // Cluster doors stack in the seam — a held leaf is the real obstacle and
     // must win over a merely-closed sibling, or the walk waits forever on a
     // leaf nobody knocked (the wait-for-swing branch has no timeout).
+    if (this.lastBlock && !this.lastBlock.opening && (this.lastBlock.openT ?? 0) <= 0.5
+        && !this.lastBlock.falseDoor && v3dist(this.pos, this.lastBlock.pos) < 1.6) {
+      return this.lastBlock;
+    }
     let held: Door | null = null;
     let closed: Door | null = null;
     for (const r of this.ctx.rooms) {
       for (const d of r.doors) {
         if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.2) continue;
+        if (d.heldBy) {
+          // A held leaf he's already at blocks him regardless of
+          // between-geometry — doorBetween can fail when he stands on
+          // the leaf itself, and flapping to a closed sibling mis-files
+          // wire-work as knocked-wait patience (s440)
+          held ??= d;
+          continue;
+        }
         if (!doorBetween(d, this.pos, target)) continue;
-        if (d.heldBy) held ??= d;
-        else closed ??= d;
+        closed ??= d;
       }
     }
-    return held ?? closed;
+    this.lastBlock = held ?? closed;
+    return this.lastBlock;
   }
 
   /** Rattle against a brace, on a cadence — felt through the leaf. */
@@ -334,6 +352,21 @@ export class Bellman extends Entity {
             c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[the wedge skids loose — kicked under the leaf]', { severity: 'warn' });
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
             this.doorHoldT = 0;
+          }
+        } else if (blocking.heldBy === 'wired') {
+          // Wire isn't kicked — it's worked. A visit's labor strains the
+          // bind once, then he loses interest; the NEXT visit's work
+          // parts it. Two knocks of denial where the wedge gives one.
+          if (this.doorHoldT > 6) {
+            if (c.strainWire?.(blocking.pos.x, blocking.pos.z) === 'freed') {
+              this.knocked.delete(blocking);   // let him knock the leaf he just freed
+              this.doorHoldT = 0;
+              // the leaf swings free — he comes through next frames
+            } else {
+              c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[it worked at the wire — the bind held, and its steps fade]', { severity: 'info' });
+              this.done();
+              return;
+            }
           }
         } else if (this.doorHoldT > 14) {
           c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[its steps fade down the hall — it lost interest]', { severity: 'info' });

@@ -298,6 +298,41 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/0\.85 \* wantedPull/);
   });
 
+  it('the boards tax the thrown and the rung too — every lure you sound', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the pull is a shared getter reaching every player-caused
+    // lure emit: planted tick/ring/bursts, the tossed pebble and a
+    // desk-bell ring you chose to sound
+    expect(gameSrc).toMatch(/private get wantedPull/);
+    expect(gameSrc).toMatch(/0\.45 \* this\.wantedPull/);
+    expect(gameSrc).toMatch(/0\.8 \* this\.wantedPull/);
+  });
+
+  it('the wire answers the knocker too — a visit strains, the next parts it', () => {
+    const src = readFileSync('src/entities/bellman.ts', 'utf8');
+    // the bellman can't kick wire like a wedge: a held visit works the
+    // bind once via strainWire, then loses interest — a later visit's
+    // work frees the leaf the same way the warden's does
+    expect(src).toMatch(/heldBy === 'wired'[\s\S]*?strainWire\?\.\(blocking\.pos\.x, blocking\.pos\.z\)/);
+    expect(src).toContain('the bind held');
+  });
+
+  it('the gloved hand spends your holds, it does not eat them', () => {
+    const src = readFileSync('src/entities/room.ts', 'utf8');
+    // sealing a wired leaf works the bind free (coil drops as loot);
+    // sealing a chocked one skids it loose like a kick — the Comm's
+    // grip answers 'wired' and 'wedge' before it takes 'commissionaire'
+    expect(src).toMatch(/heldBy === 'wired'[\s\S]*?strainWire/);
+    expect(src).toMatch(/heldBy === 'wedge'[\s\S]*?wedgeKicked/);
+  });
+
+  it('a fresh knot counts fresh — rewire drops the house\u2019s work', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // unwire-and-rewire doesn't inherit the strain count from the
+    // bind the house already worked on
+    expect(gameSrc).toMatch(/case 'wireDoor'[\s\S]*?wireStrains\.delete/);
+  });
+
   it('the seam reads your own bind — holds report, strains warn', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     // a wired leaf answers the listen at the lowest tier: quiet when

@@ -1747,6 +1747,21 @@ export class Commissionaire extends Entity {
       if (!r) continue;
       for (const d of r.doors) {
         if (Math.hypot(d.pos.x - en.x, d.pos.z - en.z) < 0.9) {
+          // sprint 438 — the gloved hand doesn't eat your work: a wired
+          // leaf is worked free in one motion (the coil drops as loot),
+          // a chocked one skids loose the way a kick drops it. Holds
+          // spent, not vanished.
+          if (d.heldBy === 'wired') {
+            c.strainWire?.(d.pos.x, d.pos.z);
+            c.strainWire?.(d.pos.x, d.pos.z);
+          } else if (d.heldBy === 'wedge') {
+            for (const r2 of c.rooms) {
+              for (const d2 of r2.doors) {
+                if (d2.heldBy === 'wedge' && v3dist(d2.pos, d.pos) < 0.7) d2.heldBy = undefined;
+              }
+            }
+            c.wedgeKicked?.(d.pos, this.pos);
+          }
           d.heldBy = 'commissionaire';
           this.sealedDoors.push(d);
         }

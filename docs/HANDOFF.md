@@ -6129,3 +6129,66 @@ nothing else moves]' when quiet, and '[hands work your wire beyond —
 the bind strains]' at warn while `wireStrains` has a first-contact
 count on that leaf. You hear your denial being dismantled before it
 parts — the ear-to-the-seam family now covers the player's own work.
+
+### sprint 436 — the boards tax the thrown and the rung too
+**Done:** `wantedPull` is now a shared getter (`private get wantedPull`)
+reaching every player-caused lure emit: the pebble toss (0.45→×1.5)
+and the desk-bell ring (0.8→×1.5) join the planted tick/ring/bursts.
+Consequence-noise (the repost-scatter, machine clanks) stays flat —
+the tax is on sounds you *aimed*, not sounds you caused.
+**Notes:** bell emit at `case 'bell'`; pebble at `tossPebble`; the
+s434 lure/phone sites now read the getter via a local const.
+
+### sprint 437 — the wire answers the knocker too
+**Done:** the bellman's held-leaf branch now knows `wired`: a visit
+works the bind once via `strainWire` (>6s of door-hold), cues the
+strain, then loses interest — the bind holds that knock. A later
+visit's work calls `strainWire` again and parts it (`'freed'` →
+he walks through). Two knocks of denial where the wedge gives one.
+**Notes:** the freed leaf drops the coil as loot like the warden's
+work does; the lose-interest cue is distinct so a player listening
+can tell "it gave up" from "it couldn't start".
+
+### sprint 438 — the gloved hand spends your holds
+**Done:** the Commissionaire's seal no longer eats holds: a wired leaf
+is worked free in one motion (two `strainWire` contacts — the coil
+drops as gatherable loot at the leaf); a chocked one skids loose via
+`wedgeKicked` (the chock lands as loot, kick-parity). The bind is
+spent, not vanished.
+**Notes:** 'player' braces still lose silently — the gloved hand
+outranks your weight and `releaseBracedDoors` drops your tracking
+without clearing 'commissionaire' (verified safe).
+
+### sprint 439 — a fresh knot counts fresh
+**Done:** `wireDoor` now clears the leaf's `wireStrains` key on bind —
+unwire-and-rewire doesn't inherit the work the house already put
+into the last bind on that leaf.
+**Notes:** the key is leaf-pos-derived (`wire:${round(x*7)}x...`),
+keyed on `bindDoor.pos` not the verb anchor (anchors sit 0.45m off).
+
+### sprint 440 — the knocker finds the bind from any side
+**Done:** `blockingDoorNear` was slipping on a held leaf once the
+bellman stood inside its swing: `doorBetween` fails with him ON the
+leaf (pos inside the door's span), the held leaf fell out of the
+scan, a closed sibling won `blocking`, and the shared `doorHoldT`
+turned wire-work patience into knocked-door patience — he gave up
+at 8s with the wire still on. Now held leaves bypass `doorBetween`
+within 1.2m and a `lastBlock` sticky target (1.6m hysteresis) keeps
+the same leaf as he wobbles; `knocked.delete` on 'freed' so he can
+knock the leaf he just worked open.
+**Notes:** the wait-branch (>8s) and held-branch (>14s) print the
+SAME '[its steps fade down the hall — it lost interest]' cue —
+indistinguishable in captions; only the trace positions told them
+apart. E2E trap: the 'freed' mint lands on the next frame's
+interactable rebuild — checking `interactables` in the same frame
+as the cue reads a pre-mint array; settle ~4-6 frames before
+looking for a coilDrop/wedgeDrop. The doorBetween dead spot is
+why every door-scan needs the held-bypass: any entity that ends
+its approach ON the leaf is inside the span, not behind it.
+  Also landed here: `playerExposed` now sweeps shut-leaf panels into its
+  LOS test — the 1.0x2.2 leaf is a physical panel that can't ride the
+  static `losBlockers` list, so touch-kills could reach *through* a shut
+  door (found when the bellman, spawned on the leaf, touched a bracing
+  player standing at the leaf's lateral edge — inside its infinite-plane
+  'between' tolerance but outside the panel). Every kill verdict now
+  treats a closed leaf as cover; open/mid-swing leaves don't.
