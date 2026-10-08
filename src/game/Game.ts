@@ -680,7 +680,17 @@ export class Game {
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
     this.stockFiled = new Set(cp?.stockFiled ?? []);
+    // the rifled till stays rifled — cold counters + the stock-reads
+    // already testified ride the checkpoint with the debt that priced them
+    this.closedCounters.clear();
+    for (const ci of cp?.closedCounters ?? []) {
+      this.closedCounters.add(ci);
+      const tillSock = this.route.rooms[ci]?.sockets
+        .find((s) => s.meta.clerk === 'slot0');
+      if (tillSock) tillSock.meta.tillTaken = true;
+    }
     this.stockSeen.clear();
+    for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
     this.lampOn = false;
     this.pulseLampOn = false;
     this.wardArmed = false;
@@ -4399,6 +4409,8 @@ export class Game {
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
+      closedCounters: [...this.closedCounters],
+      stockSeen: [...this.stockSeen],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,

@@ -182,6 +182,11 @@ export interface CheckpointSave {
   // registers that already filed a marked-stock sighting — a reload
   // can't bill the same manifest twice
   stockFiled?: number[];
+  // counters gone cold — a rifled till doesn't re-warm its clerk on a
+  // reload (sold wares still restock: you paid for those)
+  closedCounters?: number[];
+  // rooms whose stock-read already testified — same once-flag class
+  stockSeen?: number[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

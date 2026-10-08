@@ -4176,3 +4176,20 @@ Game.die() from the same five fields.
   stand at a mirrored bearing, assert the head doesn't swing.
 - Gates: tsc, lint, vitest 251, economy clerk leg green (unfiled path
   unchanged for a clean book).
+
+## sprint 360 — the cold stays cold
+
+- Same checkpoint hole as 346-351, last of the class: `tillTaken`,
+  `closedCounters` and `stockSeen` were run-state a reload laundered —
+  a rifled till re-warmed its clerk while `unpaidHeld` still punished.
+  `CheckpointSave.closedCounters` restores the cold set AND re-stamps
+  `meta.tillTaken` on each room's clerk socket; `stockSeen` carries the
+  already-testified stock-reads. Sold wares still restock (paid, not
+  stolen — the deliberate leniency).
+- Known edge: the s333 'Slip the take back' verb is minted at rifle
+  time and doesn't survive reload — post-reload the take stays fenced
+  or carried. Same once-flag class as one-shot papers; noted, not
+  closed.
+- Trap: `route.rooms` exists by ~532 but the room restore block sits
+  at ~680 — the stamp loop must live there, not earlier in startRun.
+- Gates: tsc, lint, vitest 251 (+2 persistence fields).
