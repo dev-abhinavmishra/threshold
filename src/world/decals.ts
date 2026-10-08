@@ -871,3 +871,34 @@ export function rustStreak(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The clean rectangle a fallen picture left behind — grime everywhere but
+ * the patch the frame covered, a nail still set, dust skirt at the base. */
+export function frameGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 120, (ctx) => {
+    // aged wall reads through alpha — darken the surround, keep the
+    // picture-shaped patch pale like fresh paint the grime never reached.
+    ctx.fillStyle = 'rgba(40,32,26,0.28)';
+    ctx.fillRect(0, 0, 96, 120);
+    const px = 14 + rng.float() * 8, py = 12 + rng.float() * 8;
+    const pw = 56 + rng.float() * 14, ph = 66 + rng.float() * 20;
+    ctx.fillStyle = 'rgba(210,198,175,0.5)';
+    ctx.fillRect(px, py, pw, ph);
+    // faint grime bleed along the patch's lower lip
+    const g = ctx.createLinearGradient(0, py + ph - 10, 0, py + ph + 10);
+    g.addColorStop(0, 'rgba(60,45,32,0)');
+    g.addColorStop(1, 'rgba(60,45,32,0.45)');
+    ctx.fillStyle = g;
+    ctx.fillRect(px - 3, py + ph - 8, pw + 6, 16);
+    // the nail that held it
+    ctx.fillStyle = 'rgba(30,24,20,0.85)';
+    ctx.beginPath();
+    ctx.arc(px + pw / 2, py - 5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    // dust skirt the drop shook loose
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(120,105,88,${0.12 + rng.float() * 0.15})`;
+      ctx.fillRect(px - 4 + rng.float() * (pw + 8), py + ph + 8 + rng.float() * 6, 2 + rng.float() * 5, 1.5);
+    }
+  });
+}

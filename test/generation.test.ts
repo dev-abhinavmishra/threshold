@@ -1735,3 +1735,18 @@ describe('the ones who ran (sprint 427)', () => {
     expect(fled, 'no fled effects').toBeGreaterThan(10);
   });
 });
+
+describe('the fallen (sprint 428)', () => {
+  it('dropped frames leave a clean ghost on lived-in walls', () => {
+    let fallen = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fallen-frame') fallen++; });
+      }
+    }
+    expect(fallen, 'no fallen frames').toBeGreaterThan(10);
+  });
+});
