@@ -244,6 +244,9 @@ export class Game {
         this.unpaidHeld += 1;
         this.cue('chalk-mark', this.player.pos, '[the lamp holds your face — the register gains a witness]', 'warn');
       },
+      // and the marks on your back — the count receipts them into its
+      // locker on the same find
+      seizeMarked: () => this.entityCtx().seizeMarked?.() ?? false,
     };
   }
   private reposterHooks(): ReposterHooks {

@@ -1072,6 +1072,9 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     const ga = g as unknown as {
       enterUnderscript(): void; godMode: boolean; currentRoom: number;
       marginalia: number; keys: Set<string>; unpaidHeld: number;
+      inventory: { id: string; count: number }[];
+      hotItems: Set<string>; seizedTake: { id: string; count: number }[];
+      dynamicInteractables: { id: string }[];
       checker: { stage: string };
       sound: { on(fn: (e: { x: number; z: number; caption?: string; intensity: number }) => void): unknown };
     };
@@ -1081,6 +1084,10 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     ga.godMode = true;
     ga.marginalia = 30;
     ga.unpaidHeld = 0;
+    // sprint 378 — carry one marked ware into the lamp's find: the
+    // count receipts it into the locker on the same spot
+    ga.inventory.push({ id: 'latchpick', count: 1 });
+    ga.hotItems = new Set(['latchpick']);
     const cageRoom = g.route.underRooms.find((r) =>
       (r.sockets ?? []).some((s) => s.meta?.claim && s.meta?.marginalia));
     if (!cageRoom) return { stage: 'none' } as const;
@@ -1129,6 +1136,12 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
       if (ga.checker.stage !== 'idle') dispatched = true;
     }
     const found = heard[0];
+    // sprint 378 — the same find read the marks: the latchpick is
+    // stripped into the count's locker under a fresh tag
+    const seizedByLamp = ga.seizedTake.some((s) => s.id === 'latchpick')
+      && !ga.inventory.some((i) => i.id === 'latchpick' && i.count > 0);
+    const seizeSeen = caps.some((c) => /reads the marks on you/.test(c));
+    const lockerMinted = ga.dynamicInteractables.some((x) => x.id.startsWith('seized-claim'));
     // sprint 311 — the floor shutters while the count walks: a stocked
     // broker pedestal must refuse trade until the checker leaves
     const lobby = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
@@ -1175,6 +1188,7 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
     }
     const soldAfter = bsock.meta?.sold === true;
     return { stage: 'done', paid, dispatched, found: heard.length > 0,
+      seizedByLamp, seizeSeen, lockerMinted,
       closedSeen, refusedWhileWalking, soldAfter, pilfered2,
       wideSeen: caps.some((c) => /more than one till|marked them together/.test(c)),
       walkCont: caps.some((c) => /walk continues/.test(c)),
@@ -1195,6 +1209,10 @@ test('the checker — the count sends a lamp down the row (sprint 306)', async (
   expect(result.found, JSON.stringify(result)).toBe(true); // the lamp found the lingerer
   expect(result.heldAfter, JSON.stringify(result)).toBe(1); // the witness line landed
   expect(result.witSeen, JSON.stringify(result)).toBe(true);
+  // sprint 378 — the lamp read the mark: goods seized into the locker
+  expect(result.seizedByLamp, JSON.stringify(result)).toBe(true);
+  expect(result.seizeSeen, JSON.stringify(result)).toBe(true);
+  expect(result.lockerMinted, JSON.stringify(result)).toBe(true);
   // sprint 311 — the floor shutters while he walks, reopens when he leaves
   expect(result.closedSeen, JSON.stringify(result)).toBe(true);
   expect(result.refusedWhileWalking, JSON.stringify(result)).toBe(true);
