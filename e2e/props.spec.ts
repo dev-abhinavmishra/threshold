@@ -816,51 +816,76 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
       return seen.join('|');
     };
 
-    // Any non-safe room carrying a payphone.
-    const stage = 'no-phone';
-    let room: GRoom | undefined;
-    let wpos: { x: number; z: number } | undefined;
+    // Up to two payphone rooms: phone A rings out, phone B is hung up
+    // mid-fuse and must stay silent (sprint 401 — the un-plant).
+    const phones: { room: GRoom; wpos: { x: number; z: number } }[] = [];
     for (const r of g.route.rooms) {
       const p = r.spec?.props.find((x) => x.kind === 'payphone');
       if (!p) continue;
-      room = r; wpos = world(r, p); break;
+      phones.push({ room: r, wpos: world(r, p) });
+      if (phones.length === 2) break;
     }
-    if (!room || !wpos) return { stage };
-
-    // Stand phone-side of the room, settle so the verbs mint.
-    const dx = room.origin.x - wpos.x, dz = room.origin.z - wpos.z;
-    const L = Math.hypot(dx, dz) || 1;
-    g.player.teleport(wpos.x + (dx / L) * 1.2, 0, wpos.z + (dz / L) * 1.2);
-    g.currentRoom = room.index;
-    for (let f = 0; f < 40; f++) g.frame();
-
-    // Answer it, then leave it off the hook.
-    const p1 = drive(wpos, /lift the receiver/i, () => rec.answeredPhones.size > 0, 200);
-    if (rec.answeredPhones.size === 0) return { stage: 'answer-failed', p1 };
-    const p2 = drive(wpos, /leave it off the hook/i, () => rec.offHookPhones.size > 0, 200);
-    if (rec.offHookPhones.size === 0) return { stage: 'arm-failed', p1, p2 };
-
-    const hr = rec.hookRings[0];
-    if (!hr) return { stage: 'no-ring-armed' };
-    const ringAt = hr.at, fuseLen = hr.until - hr.at;
+    if (!phones.length) return { stage: 'no-phone' };
 
     // Listen for the planted lure's emits.
     const em: { x: number; z: number; intensity: number; category: string }[] = [];
     (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string }) => void): void } })
       .sound.on((e) => { if (e.category === 'distraction') em.push(e); });
 
-    // Jump to the fuse and run the ring out.
-    g.clock.time = ringAt - 0.5;
-    for (let f = 0; f < 400 && rec.spentPhones.size === 0; f++) g.frame();
+    const standAndArm = (ph: { room: GRoom; wpos: { x: number; z: number } }, cap: number) => {
+      const dx = ph.room.origin.x - ph.wpos.x, dz = ph.room.origin.z - ph.wpos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(ph.wpos.x + (dx / L) * 1.2, 0, ph.wpos.z + (dz / L) * 1.2);
+      g.currentRoom = ph.room.index;
+      for (let f = 0; f < 40; f++) g.frame();
+      // counts are relative — an earlier phone's keys already sit in the sets
+      const aBefore = rec.answeredPhones.size;
+      const p1 = drive(ph.wpos, /lift the receiver/i,
+        () => rec.answeredPhones.size > aBefore, cap);
+      if (rec.answeredPhones.size <= aBefore) return { ok: false as const, p1 };
+      const oBefore = rec.offHookPhones.size;
+      const p2 = drive(ph.wpos, /leave it off the hook/i,
+        () => rec.offHookPhones.size > oBefore, cap);
+      return { ok: rec.offHookPhones.size > oBefore, p1, p2 };
+    };
 
-    const nearPhone = em.filter((e) => Math.hypot(e.x - wpos!.x, e.z - wpos!.z) < 0.5);
+    // Phone A: the full ring.
+    const a = standAndArm(phones[0], 200);
+    if (!a.ok) return { stage: 'arm-failed', a };
+    const hr = rec.hookRings[0];
+    if (!hr) return { stage: 'no-ring-armed' };
+    const fuseLen = hr.until - hr.at;
+    g.clock.time = hr.at - 0.5;
+    for (let f = 0; f < 400 && rec.spentPhones.size === 0; f++) g.frame();
+    const luresA = em.filter((e) => Math.hypot(e.x - phones[0].wpos.x, e.z - phones[0].wpos.z) < 0.5);
+
+    // Phone B: arm it, then hang the receiver up — the ring must die
+    // with it (no emits at its spot, phone spent).
+    let hungUp = false; let silenced = true; let p3 = '';
+    if (phones.length > 1) {
+      const emBefore = em.length;
+      const arm = standAndArm(phones[1], 200);
+      if (!arm.ok) return { stage: 'b-arm-failed', arm };
+      const hrB = rec.hookRings.find((r) => !rec.spentPhones.has(r.key)
+        && Math.hypot(r.pos.x - phones[1].wpos.x, r.pos.z - phones[1].wpos.z) < 1);
+      if (!hrB) return { stage: 'b-no-ring-armed' };
+      p3 = drive(phones[1].wpos, /hang the receiver up/i,
+        () => rec.spentPhones.size > 1, 200);
+      hungUp = rec.spentPhones.size > 1;
+      // run the clock well past the old fuse — nothing should ever ring
+      g.clock.time = hrB.at + 8;
+      for (let f = 0; f < 30; f++) g.frame();
+      const emB = em.slice(emBefore).filter((e) => Math.hypot(e.x - phones[1].wpos.x, e.z - phones[1].wpos.z) < 0.5);
+      silenced = emB.length === 0 && rec.hookRings.length === 0;
+    }
+
     return {
-      stage: 'done', p1, p2, fuseLen,
-      ringDelay: hr.at - ringAt,
-      lures: nearPhone.length,
-      lureIntensity: nearPhone[0]?.intensity ?? 0,
+      stage: 'done', fuseLen,
+      lures: luresA.length,
+      lureIntensity: luresA[0]?.intensity ?? 0,
       spent: rec.spentPhones.size,
-      stillOff: rec.offHookPhones.size,
+      secondPhone: phones.length > 1,
+      hungUp, silenced, p3,
     };
   });
 
@@ -868,7 +893,10 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
   expect(result.fuseLen).toBeCloseTo(6.5, 1);
   expect(result.lures, 'the planted ring emits distraction lure bursts').toBeGreaterThanOrEqual(4);
   expect(result.lureIntensity).toBeCloseTo(0.85, 2);
-  expect(result.spent, 'the line went dead after the ring').toBe(1);
-  expect(result.stillOff).toBe(1);
+  expect(result.spent, 'the line went dead after the ring').toBeGreaterThanOrEqual(1);
+  if (result.secondPhone) {
+    expect(result.hungUp, JSON.stringify(result)).toBe(true);
+    expect(result.silenced, 'a hung-up receiver never rings').toBe(true);
+  }
   expect(errors).toEqual([]);
 });

@@ -1367,6 +1367,14 @@ export class Game {
       if (rank > roverRank) { roverRank = rank; roverBest = cue; }
     }
     if (roverBest) return roverBest;
+    // a line left open hums through the seam too — the ear tells you which
+    // room carries your own armed lure (lower than any live tread)
+    if (this.hookRings.some((hr) => {
+      const ri = underRoomOf(roam, hr.pos);
+      return ri >= 0 && roam[ri] === target;
+    })) {
+      return { sfx: 'printer-whir', text: '[a line hums beyond — somebody left it off the hook]', sev: 'info' as const };
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
@@ -2199,6 +2207,15 @@ export class Game {
               kind: 'offHook', id: `offHook-${key}`,
               pos: { x: wx, y: 1.4, z: wz },
               prompt: 'Leave it off the hook — it will ring', holdTime: 1.2, enabled: true, priority: 2,
+            });
+          } else if (isPhone && this.offHookPhones.has(key) && !this.spentPhones.has(key)) {
+            // sprint 401 — walk the plant back: hang the receiver up before
+            // the fuse (or mid-ring) and the lure dies quiet — the phone is
+            // spent either way, the decision is only whether it ever rang.
+            this.interaction.add({
+              kind: 'hangUp', id: `hangUp-${key}`,
+              pos: { x: wx, y: 1.4, z: wz },
+              prompt: 'Hang the receiver up — the ring dies with it', holdTime: 0.8, enabled: true, priority: 2,
             });
           } else if (isTrap) {
             // some of the house's traps are set — seeded per trap, stable
@@ -3691,6 +3708,19 @@ export class Game {
         this.hookRings.push({ key, pos: at, at: ringAt, until: ringAt + 6.5, lastRing: 0 });
         this.cue('phone-stop', at, '[the receiver dangles — the line stays open]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.25, category: 'item', caption: '' });
+        return;
+      }
+      case 'hangUp': {
+        // sprint 401 — un-plant your own lure: an armed fuse or a live ring
+        // both end here — the phone is spent either way, the choice was only
+        // whether the pull ever sounded.
+        it.enabled = false;
+        const key = it.id.replace(/^hangUp-/, '');
+        const at = { x: it.pos.x, y: 1.4, z: it.pos.z };
+        this.hookRings = this.hookRings.filter((r) => r.key !== key);
+        this.spentPhones.add(key);
+        this.cue('phone-stop', at, '[the line goes quiet — you hung it up]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
       case 'trap': {

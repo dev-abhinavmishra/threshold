@@ -5314,3 +5314,28 @@ rule — a reload can't re-offer a read it already sold you).
   was ringing (rearm `at=now`). Mid-ring saves resume mid-ring.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
+## Sprint 401 — hang the receiver up, the seam carries the line
+The off-hook lifecycle completes: an armed (or live-ringing) phone
+mints 'Hang the receiver up — the ring dies with it' (0.8s) — un-plant
+your own lure and the phone is spent either way; the choice is only
+whether the pull ever sounded. And the seam family (s386-388) extends:
+a door-listen in a room with an armed line reads '[a line hums beyond
+— somebody left it off the hook]' — your own lure answers the ear,
+lowest precedence below every live tread.
+
+- Mint chain is now three disjoint states: `!answered → Lift`,
+  `answered && !offHook && !spent → offHook`,
+  `offHook && !spent → hangUp`. `hangUp` filters `hookRings` by key
+  and adds to `spentPhones` — armed-fuse and mid-ring both end.
+- Checkpoint needs no new fields: a hung-up phone's `offHook` entry
+  already restores with fuse=0 → `spentPhones` (s400's fold covers it).
+- Listen precedence: sched > walkers > primed > rovers > **armed line**
+  > safe/dark — your own lure never outranks a live threat.
+- e2e leg extended: phone B arm→hangUp asserts zero 'distraction'
+  emits at its spot after the fuse passes. Trap: set-size `done()`
+  conditions must be RELATIVE (`> before`) — phone A's key already
+  sits in `offHookPhones` when B's drive starts, so `size > 0` exits
+  at frame 0 without ever pressing.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
