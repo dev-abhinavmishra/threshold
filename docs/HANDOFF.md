@@ -6237,3 +6237,19 @@ both respect the shut leaf. The warden-whistle vitest needed a
 LOS-hunting pin: a heading-cone pin 8m ahead can sit behind a leaf,
 so the test hunts bearing×distance for a sight line that actually
 clears — same 'standFor' class of fix as the e2e harness.
+
+## Sprint 443 — the whisper hunts inside the room
+
+s442's whiffed-strike relocate had a shape it couldn't survive:
+`new Rng(seed + 977)` re-rolled the SAME bearing every call, so a
+covered whisper relocated to the same covered spot forever; and the
+3–5.5m ring pick could park it through a wall in a sealed room where
+no sight line ever exists — a hunt that never resolves. `relocate()`
+now salts every bearing (relocN counter — deterministic but varied),
+prefers spots inside the player's room (pointInRoom, 6 tries then any),
+and is shared by the decoy-collapse, the strike-whiff, AND the spawn
+ring — the initial bearing gets the same in-room retry.
+**Notes:** assertion trap — 'the hunt is still on' over-asserted: a
+relocate landing in real cover followed by an honest gaze ending it
+IS the designed ending; assert the contract (no damage, moved)
+not the timeline.

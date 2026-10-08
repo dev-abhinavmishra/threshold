@@ -6,7 +6,7 @@
 import * as THREE from 'three';
 import { Entity, type EntityCtx } from './base';
 import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
-import { shutLeafBlockers } from '../engine/doorGeo';
+import { shutLeafBlockers, pointInRoom } from '../engine/doorGeo';
 import type { RoomInstance } from '../game/types';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -111,8 +111,32 @@ export class Whisper extends Entity {
    *  relocating the real whisper with a tightened strike window. */
   private decoyMesh: THREE.Object3D | null = null;
   private decoyPos = v3();
+  /** Relocation count — salts each new bearing so it can't hunt the same
+   *  shadow twice. */
+  private relocN = 0;
 
   constructor() { super('whisper', ENTITY_TUNING.whisper); }
+
+  /** A fresh hunting spot near the player: varied every call, and kept
+   *  inside their room where a sight line can actually exist — a ring
+   *  pick through a wall into a sealed room is a hunt that never
+   *  resolves. Falls back to the raw ring if no try lands in-bounds. */
+  private relocate(dist = 0): void {
+    const c = this.ctx;
+    const p = c.player;
+    const room = c.rooms[c.currentRoomIndex];
+    for (let i = 0; i < 6; i++) {
+      const a2 = new Rng(c.seed + 977 + this.relocN * 131).float() * Math.PI * 2;
+      const r2 = (3 + dist) + new Rng(c.seed + 311 + this.relocN * 197).float() * 2.5;
+      const cand = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
+      this.relocN++;
+      if (i === 5 || !room || pointInRoom(room, cand.x, cand.z)) {
+        this.pos = cand;
+        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        return;
+      }
+    }
+  }
 
   protected override onSpawn(): void {
     const c = this.ctx;
@@ -120,6 +144,12 @@ export class Whisper extends Entity {
     const a = rng.float() * Math.PI * 2;
     const r = 3.5 + rng.float() * 2.5;
     this.pos = v3(c.player.pos.x + Math.cos(a) * r, 0, c.player.pos.z + Math.sin(a) * r);
+    // sprint 443 — a spawn ring can park it through a wall where no sight
+    // line ever exists; keep the first bearing in the room too
+    const spawnRoom = c.rooms[c.currentRoomIndex];
+    if (spawnRoom && !pointInRoom(spawnRoom, this.pos.x, this.pos.z)) {
+      this.relocate(0.5);
+    }
     this.state = 'engage';
     const rig = riggedFigure('ghost');
     const g = rig?.group
@@ -168,10 +198,7 @@ export class Whisper extends Entity {
         c.removeEntityMesh(this.decoyMesh);
         this.decoyMesh = null;
         // Relocate the real whisper to a fresh bearing, tighten the window.
-        const a2 = new Rng(c.seed + 977).float() * Math.PI * 2;
-        const r2 = 3 + new Rng(c.seed + 311).float() * 2.5;
-        this.pos = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
-        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        this.relocate();
         this.attackT = this.strikeWindow * 0.35;
         c.cue('whisper-shift', this.pos, '[not it — the voice moved]', { severity: 'warn' });
       }
@@ -200,10 +227,7 @@ export class Whisper extends Entity {
         // The strike can't reach through a shut leaf — it relocates to
         // hunt you again instead of landing for free (same move the
         // decoy collapse pays).
-        const a2 = new Rng(c.seed + 977).float() * Math.PI * 2;
-        const r2 = 3 + new Rng(c.seed + 311).float() * 2.5;
-        this.pos = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
-        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        this.relocate();
         this.attackT = this.strikeWindow * 0.35;
         c.cue('whisper-voice', this.pos, '[the whisper moves — still hunting]', { severity: 'warn' });
         return;
