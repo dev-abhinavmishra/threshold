@@ -1979,7 +1979,8 @@ export class Game {
           this.cue('door-locked', it.pos, '[your slate is clean — nothing to fix]', 'info');
           return;
         }
-        const price = Math.min(6 + worst * 3, 18);
+        // The boards tax the call too — a named face pays two more.
+        const price = Math.min(6 + worst * 3, 18) + (this.wantedActive ? 2 : 0);
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos,
             `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
@@ -2225,7 +2226,11 @@ export class Game {
           return;
         }
         const dirty = this.unpaidTheft > 0 || this.unpaidHeld > 0 || this.paperTrail > 0;
-        const gain = dirty ? 6 : 8;
+        // The boards carry your face to the counter too — while the
+        // wanted sheets stand, the Broker's rate drops two steps:
+        // named and clean pays the dirty price; named and dirty pays
+        // the register's sour.
+        const gain = Math.max(4, (dirty ? 6 : 8) - (this.wantedActive ? 2 : 0));
         this.imprints -= 6;
         // sprint 329 — the under launders: the Broker takes the till's
         // marked coin without asking — hot imprints die here, silent.
@@ -2237,10 +2242,12 @@ export class Game {
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
         this.cue('purchase', it.pos, washed > 0
-          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia]`
-          : dirty
-            ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
-            : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
+          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia${this.wantedActive ? ' · the boards sour it too' : ''}]`
+          : this.wantedActive
+            ? `[the broker reads the boards, not just your coin — 6 imprints → ${gain} marginalia]`
+            : dirty
+              ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
+              : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
         return;
       }
       case 'fence': {
@@ -2260,7 +2267,9 @@ export class Game {
           return;
         }
         const count = take.reduce((n, i) => n + i.count, 0);
-        const pay = 4 * count;
+        // Named hands move marked goods slower — the boards tax the
+        // take a step while they stand.
+        const pay = Math.max(2, 4 - (this.wantedActive ? 1 : 0)) * count;
         for (const i of take) {
           this.hotItems.delete(i.id);
           i.count = 0;
@@ -2531,7 +2540,7 @@ export class Game {
         it.enabled = false;
         // under cages are crew property — the books below count them on a
         // slow cycle, and the till rings ~75s later where the tag hung
-        if (cur) this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        if (cur) this.queueLoss(it.pos.x, it.pos.z,
           '[a tag reads drawn early — the count is short]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         const contains = sock.meta.contains as string | undefined;
@@ -3243,7 +3252,7 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         // the drag's cargo is crew property — the count finds it short later
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the drag reads light — the count is short]');
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
@@ -3381,14 +3390,14 @@ export class Game {
         this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         // its lamp is crew property too — stripped or scavenged, it counts
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the drag\'s lamp is marked gone — the count is short]');
         return;
       }
       case 'wanted': {
         // the sheet prints what the tally says about you — the boards'
         // readout of the clerk's book, free to read, still named
-        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder and every counter reads the boards until the count settles]`, 'warn');
         return;
       }
       case 'wantedTear': {
@@ -3420,7 +3429,7 @@ export class Game {
         this.giveItem('handLamp', charge);
         this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the count\'s lamp is marked gone — the count is short]');
         return;
       }
@@ -4337,6 +4346,15 @@ export class Game {
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
       })),
     };
+  }
+
+  /** Queue a loss-report with the count — while the boards name you,
+   *  the books don't wait for the slow cycle: the ring answers on the
+   *  spot (~4s, so a named face is still mid-exit when the lamp comes). */
+  private queueLoss(x: number, z: number, caption: string): void {
+    this.crewCount.push(x, z, this.clock.time,
+      caption + (this.wantedActive ? ' — the boards already named you' : ''),
+      this.wantedActive ? 4 : undefined);
   }
 
   /* ==================== damage/death/victory ==================== */

@@ -4012,3 +4012,42 @@ Death screen now reads the same ledger epitaph the victory screen does
 them open — "the books stay open on you:" followed by the unpaid tally.
 `bookLines()` shared in App.tsx; `deathInfo.books` populated in
 Game.die() from the same five fields.
+
+## sprint 352 — the count answers a named face on the spot
+
+- The wanted sheets named your hands, but the count still queued a
+  pilfer on its slow 75s cycle — a named face got the same grace a
+  stranger does. `queueLoss()` (one helper for the four crewCount.push
+  sites: cage tag, sledge cargo, both lamps) now passes `delay: 4`
+  while `wantedActive` stands — the ring lands while you're still
+  mid-exit of that room, so named pilfering has no steal-window to
+  walk out of.
+- Honest tell: the fast ring's caption gains '— the boards already
+  named you' (ring captions are written at push-time). The quiet
+  amendment reads `pending` either way — a fast loss is still a loss.
+- Gates: tsc, lint (batched verify follows).
+
+## sprint 353/354 — the boards tax everything
+
+- While `wantedActive` stands, the under's whole counter sours:
+  the Broker's purse pays `Math.max(4, gain − 2)` (named+clean pays
+  the dirty price; named+dirty hits the register's sour floor of 4),
+  the fix's call runs `price + 2`, and the fence's take pays
+  `Math.max(2, 4 − 1)` per stack. Captions name the boards.
+- Settles stay exempt by design — the audit/square tolls are the
+  redemption that LOWERS the wanted state; taxing the exit would be
+  perverse. Main-route prices untouched (the house reads the
+  register, not the under's boards).
+- Gates: tsc, lint (batched verify follows).
+
+## sprint 355 — the sheet warns of the taxes
+
+- The wanted readout now announces the whole price: 'the crew listens
+  harder AND every counter reads the boards until the count settles' —
+  so the s351–354 taxes are legible at the sheet, not just felt at
+  each counter.
+- Leg fix worth keeping: the strip-lamp leg's `pending >= 1` asserted
+  the ring is ALWAYS still queued — s352's fast ring (~4s while named)
+  fires mid-leg when the leg's earlier pilfers raised wanted. The leg
+  now counts `pending + rung` (queued OR already rung) via a
+  `ga.sound.on` capture of the 'marked gone' emit.
