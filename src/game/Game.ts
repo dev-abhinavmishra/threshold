@@ -1347,6 +1347,22 @@ export class Game {
     });
   }
 
+  /** sprint 424 — a live planted alarm still ticks for you: picking it
+   *  up before the ring takes the lure back whole. Re-minted per frame
+   *  — a ringing lure stops offering itself the moment it spends. */
+  private mintAlarmDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('alarm-drop-'));
+    this.lures.forEach((l, i) => {
+      if (l.rang) return;   // a sprung clock is scrap, not a coil you wind back
+      this.dynamicInteractables.push({
+        kind: 'alarmDrop', id: `alarm-drop-${this.space}-${i}`,
+        pos: { x: l.pos.x, y: 0.15, z: l.pos.z },
+        prompt: 'Pick the alarm up', holdTime: 0.8, enabled: true, priority: 1,
+        data: { x: Number(l.pos.x.toFixed(2)), z: Number(l.pos.z.toFixed(2)) },
+      });
+    });
+  }
+
   /** sprint 414 — the grafter lays a stripped coil where the living
    *  walk. The graft is a normal armed snare wearing the same paper-
    *  and-amber face the seed ones do, tagged `grafted` so the
@@ -2778,6 +2794,24 @@ export class Game {
         this.mintWrapDrops();
         this.giveItem('feltWrap', n);
         this.cue('pickup', it.pos, `[felt wrap${n > 1 ? ` ×${n}` : ''} — back off the floor]`);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
+      case 'alarmDrop': {
+        // sprint 424 — un-plant the clock: a live alarm comes back to
+        // the pocket whole. It was never heard, never spent — the lure
+        // you meant to place is yours to place again.
+        const dx = (it.data as { x?: number }).x ?? 0;
+        const dz = (it.data as { z?: number }).z ?? 0;
+        const li = this.lures.findIndex((l) => !l.rang
+          && Math.abs(l.pos.x - dx) < 0.05 && Math.abs(l.pos.z - dz) < 0.05);
+        if (li < 0) { it.enabled = false; this.mintAlarmDrops(); return; }
+        const l = this.lures.splice(li, 1)[0];
+        this.entityGroup.remove(l.mesh);
+        it.enabled = false;
+        this.mintAlarmDrops();
+        this.giveItem('windAlarm', 1);
+        this.cue('pickup', it.pos, '[the alarm winds down into your hand]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
@@ -8044,6 +8078,7 @@ export class Game {
       }
     }
     this.lures = this.lures.filter((l) => !l.rang || tA < l.until + 2.5);
+    this.mintAlarmDrops();
 
     // Hollow off-hum — a trapped hiding spot is audible before it is legible.
     if (tA >= this.nextHollowHum) {

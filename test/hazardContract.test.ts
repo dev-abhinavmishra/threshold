@@ -179,6 +179,18 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(storeSrc).toContain('planted?: boolean');
     expect(gameSrc).toMatch(/gw\.planted[\s\S]*armed: gw\.armed, planted: true/);
   });
+
+  it('the alarm winds down into your hand — a live lure can be un-planted', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // live lures mint the reclaim verb; a ringing clock is scrap and stops offering
+    expect(gameSrc).toContain('Pick the alarm up');
+    expect(gameSrc).toContain('mintAlarmDrops');
+    // picking it up returns the item whole and frees the floor
+    expect(gameSrc).toContain('the alarm winds down into your hand');
+    expect(gameSrc).toMatch(/case 'alarmDrop'[\s\S]*giveItem\('windAlarm', 1\)/);
+    // rang lures never mint — a sprung clock is spent
+    expect(gameSrc).toMatch(/this\.lures\.forEach[\s\S]*if \(l\.rang\) return/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

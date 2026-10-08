@@ -5819,3 +5819,11 @@ the coil circulates.
 - Harness note: `activeSlot` indexes the FILTERED slotItems list
   (ITEM_DEFS.slotItem), not raw inventory — compute the index over the
   same filter or the active item silently isn't the one you set.
+
+## Sprint 424 — the alarm winds down into your hand
+
+'Pick the alarm up' mints on a live windAlarm lure (0.8s, pos-keyed —
+indices shift as lures die). Un-planting returns the item whole; a
+rung clock is scrap and stops offering itself the moment it spends.
+The carried kit's un-plant family is symmetric now: wire (pull/gather),
+receiver (hang up), chock (gather the kicked wedge), alarm (pick up).
