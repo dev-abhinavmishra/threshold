@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -296,6 +296,16 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       pt.userData.decalMat = true;
       pt.position.set(0, 0, 0.071);
       g.add(pt);
+    }
+    // The glass kept the word — a finger dragged through the sweat
+    // spelled something once; the wiped field never fully fogged back.
+    if (!boarded && rng.bool(0.1)) {
+      const pw = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.72),
+        new THREE.MeshStandardMaterial({ map: paneWriting(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 }));
+      pw.name = 'pane-writing';
+      pw.userData.decalMat = true;
+      pw.position.set(0, -0.1, 0.0705);
+      g.add(pw);
     }
     // Boarded up — rough planks nailed across the panes; the night glow
     // still leaks through the gaps, which is the whole point.
@@ -1416,6 +1426,23 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     prop.group.add(dd);
     if (!prop.group.name) prop.group.name = 'dust-date';
   }
+  // The boards kept the knives — a worked patch of crossed cuts on
+  // surfaces that did years of service.
+  if (spec.kind in TOPS && rng.bool(0.14)) {
+    const dc = modelCollider(spec.kind);
+    const cutY = (dc?.[1] ?? TOPS[spec.kind as keyof typeof TOPS]!) + 0.006;
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.42),
+      new THREE.MeshStandardMaterial({ map: tableScratches(rng) ?? undefined, transparent: true, roughness: 0.92, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ts.name = 'table-scratches';
+    ts.userData.decalMat = true;
+    ts.rotation.x = -Math.PI / 2;
+    ts.rotation.z = rng.float() * Math.PI * 2;
+    ts.position.set((rng.float() - 0.5) * 0.3, cutY, (rng.float() - 0.5) * 0.2);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'table-scratches';
+  }
   // The chairs kept the heads — a pomade sheen on the back of a seat
   // someone leaned into for years.
   const BACKED: ReadonlySet<PropSpec['kind']> = new Set(['armchair', 'chair', 'diningChair', 'bench', 'bedBench', 'schoolChair', 'streetSeat', 'chapelPew', 'pewRow']);
@@ -1443,6 +1470,34 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bn.position.set(rng.bool(0.5) ? 0.42 : -0.42, 0.62, -0.78);
     prop.group.add(bn);
     if (!prop.group.name) prop.group.name = 'bedpost-notches';
+  }
+  // The basin kept the tide — a scum ring and drainward drips on the
+  // bowl that stood full too many times.
+  if (spec.kind === 'basinSink' && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const ss = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.22),
+      new THREE.MeshStandardMaterial({ map: soapScum(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    ss.name = 'soap-scum';
+    ss.userData.decalMat = true;
+    ss.rotation.x = -Math.PI / 2;
+    ss.position.set(0, (dc?.[1] ?? 0.8) - 0.04, 0.02);
+    prop.group.add(ss);
+    if (!prop.group.name) prop.group.name = 'soap-scum';
+  }
+  // The mirror kept the shaver — a hand wiped through the soap film
+  // and left the bristles in it.
+  if (spec.kind === 'mirror' && rng.bool(0.18)) {
+    const sm = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.32, 0.3),
+      new THREE.MeshStandardMaterial({ map: shaverSmear(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sm.name = 'shaver-smear';
+    sm.userData.decalMat = true;
+    sm.position.set((rng.float() - 0.5) * 0.1, 0.26, 0.043);
+    prop.group.add(sm);
+    if (!prop.group.name) prop.group.name = 'shaver-smear';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

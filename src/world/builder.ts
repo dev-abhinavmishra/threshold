@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1952,6 +1952,64 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const cr = group.children[group.children.length - 1];
         if (cr && !cr.name) cr.name = 'chair-rub';
       }
+    }
+
+    // The phone hung here once — a case ghost and cord shadow on walls
+    // the hallway traffic passed for decades.
+    if (livedIn && rng.float() < 0.18) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, phoneGhost(rng), 0.55 + rng.float() * 0.1, 0.75 + rng.float() * 0.15, spot.along, 1.5);
+        const pg = group.children[group.children.length - 1];
+        if (pg && !pg.name) pg.name = 'phone-ghost';
+      }
+    }
+
+    // The corners bloomed — mold owns the cold joints in the wet
+    // bones: spore clusters creeping out of the ceiling seams.
+    if ((!livedIn || spec.props.some(p => p.kind === 'basinSink' || p.kind === 'puddle')) && rng.float() < 0.3) {
+      const spot = pickWallSpot(1.0);
+      if (spot) {
+        wallDecal(spot.wall, mouldBloom(rng), 0.7 + rng.float() * 0.3, 0.7 + rng.float() * 0.3,
+          spot.along, 2.35 + rng.float() * 0.2);
+        const mb = group.children[group.children.length - 1];
+        if (mb && !mb.name) mb.name = 'mould-bloom';
+      }
+    }
+    // The board kept the keys — a pegboard ghost with swung key
+    // shadows on the walls where the desk worked.
+    if (livedIn && rng.float() < 0.16) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, keyBoard(rng), 0.7 + rng.float() * 0.15, 0.7 + rng.float() * 0.15, spot.along, 1.55);
+        const kb = group.children[group.children.length - 1];
+        if (kb && !kb.name) kb.name = 'key-board';
+      }
+    }
+    // The luggage scraped by — a belt-height drag band down the walls
+    // that carried the traffic.
+    if (rng.float() < 0.25) {
+      const spot = pickWallSpot(1.8);
+      if (spot) {
+        wallDecal(spot.wall, luggageScuff(rng), 1.8 + rng.float() * 0.4, 0.4, spot.along, 0.72);
+        const ls = group.children[group.children.length - 1];
+        if (ls && !ls.name) ls.name = 'luggage-scuff';
+      }
+    }
+
+    // The doors dragged — a sagging leaf scrapes its swing's far
+    // reach into the floor, darkest where the leaf stalls.
+    for (const port of doorPositions) {
+      if (rng.float() >= 0.2) continue;
+      const lp = portLocalPos(port, w, d);
+      const inx = port.wall === 'n' ? 0 : port.wall === 's' ? 0 : port.wall === 'e' ? -0.55 : 0.55;
+      const inz = port.wall === 'n' ? 0.55 : port.wall === 's' ? -0.55 : 0;
+      const dg2 = decalQuad(doorDrag(rng), 1.1 + rng.float() * 0.3, 0.55);
+      dg2.name = 'door-drag';
+      dg2.rotation.x = -Math.PI / 2;
+      dg2.rotation.z = (port.wall === 'n' ? 0 : port.wall === 's' ? Math.PI : port.wall === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.3;
+      dg2.position.set(lp.x + inx, 0.0085, lp.z + inz);
+      group.add(dg2);
     }
 
     // The water line — a room that flooded once keeps the tide mark:
