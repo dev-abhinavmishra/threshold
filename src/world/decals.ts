@@ -6808,3 +6808,128 @@ export function plasterBloom(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 495 — the embers jumped: scorch pits and coal shadows on the floor past the hearth's edge. */
+export function emberPits(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // ash wash — grey film thickest near the hearth (bottom of the tex)
+    const wash = g.createLinearGradient(0, 64, 0, 20);
+    wash.addColorStop(0, 'rgba(140,134,124,0.4)');
+    wash.addColorStop(1, 'rgba(140,134,124,0)');
+    g.fillStyle = wash;
+    g.fillRect(0, 20, 96, 44);
+    // scorch pits — small black craters where a live coal landed
+    for (let i = 0; i < 6; i++) {
+      const x = 14 + i * 13 + rng.range(-4, 4);
+      const y = 30 + rng.range(0, 26);
+      const r = 2.2 + rng.float() * 2;
+      const pit = g.createRadialGradient(x, y, 0.4, x, y, r + 2);
+      pit.addColorStop(0, 'rgba(16,12,10,0.9)');
+      pit.addColorStop(0.5, 'rgba(30,24,20,0.6)');
+      pit.addColorStop(1, 'rgba(30,24,20,0)');
+      g.fillStyle = pit;
+      g.fillRect(x - r - 3, y - r - 3, r * 2 + 6, r * 2 + 6);
+      // the roll mark — the coal skidded before it died
+      g.strokeStyle = 'rgba(36,28,22,0.5)';
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x - rng.range(3, 8), y + rng.range(-2, 3)); g.lineTo(x, y); g.stroke();
+    }
+    // ember ghosts — faint orange ember-crackles frozen in the grain
+    g.strokeStyle = 'rgba(160,80,30,0.3)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const x = rng.range(16, 80), y = rng.range(30, 54);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(-4, 4), y + rng.range(2, 6)); g.stroke();
+    }
+    // kicked ash fans
+    g.fillStyle = 'rgba(150,144,134,0.3)';
+    for (let i = 0; i < 3; i++) {
+      const x = rng.range(20, 76);
+      g.beginPath(); g.ellipse(x, 56 + rng.range(-2, 4), 8, 3, rng.range(-0.3, 0.3), 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 495 — someone traced the wall: one finger line dragged through the dust, dust piled at its end. */
+export function fingerTrace(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust field — the wall's skin of grey
+    const field = g.createLinearGradient(0, 0, 0, 48);
+    field.addColorStop(0, 'rgba(158,148,132,0.3)');
+    field.addColorStop(1, 'rgba(158,148,132,0.15)');
+    g.fillStyle = field;
+    g.fillRect(0, 0, 96, 48);
+    // speckle
+    g.fillStyle = 'rgba(130,120,106,0.3)';
+    for (let i = 0; i < 40; i++) {
+      g.fillRect(rng.range(4, 92), rng.range(4, 44), 1, 0.9);
+    }
+    // THE LINE — a clean dragged channel through the dust, slightly
+    // wavering like a finger, ending in a dust ridge
+    const y0 = 20 + rng.range(-6, 6);
+    const up = rng.bool(0.3);
+    g.strokeStyle = 'rgba(56,48,40,0.7)';
+    g.lineWidth = 3.2;
+    g.beginPath(); g.moveTo(12, y0);
+    for (let i = 1; i <= 8; i++) {
+      g.lineTo(12 + i * 8, y0 + Math.sin(i * 0.9) * 2 + rng.range(-1, 1) + (up ? -i * 1.2 : 0));
+    }
+    g.stroke();
+    // the dust piled where the finger stopped
+    const ex = 12 + 8 * 8;
+    const ey = y0 + Math.sin(8 * 0.9) * 2 + (up ? -9.6 : 0);
+    g.fillStyle = 'rgba(150,140,124,0.7)';
+    g.beginPath(); g.ellipse(ex + 2, ey, 5, 3, 0.2, 0, Math.PI * 2); g.fill();
+    // a second fainter line — they came back once
+    if (rng.bool(0.5)) {
+      g.strokeStyle = 'rgba(60,52,44,0.4)';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(16, y0 + 9); g.lineTo(60 + rng.range(-8, 8), y0 + 9 + rng.range(-3, 3)); g.stroke();
+    }
+    // fingertip prints beside the line
+    g.fillStyle = 'rgba(60,52,44,0.35)';
+    for (let i = 0; i < 3; i++) {
+      g.beginPath(); g.ellipse(20 + i * 8 + rng.range(-2, 2), y0 - 8 + rng.range(-2, 2), 1.6, 2.1, 0.2, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 495 — the mop dried mid-sweep: curved stroke arcs and a water edge that never finished. */
+export function mopArcs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 50;
+    // mop strokes — concentric arcs fanned from the sweeper's stance
+    for (let i = 0; i < 6; i++) {
+      const r = 18 + i * 9;
+      const a0 = Math.PI * (1.1 + rng.range(-0.08, 0.08));
+      const a1 = Math.PI * (1.75 + rng.range(-0.08, 0.08));
+      g.strokeStyle = `rgba(120,116,108,${0.4 - i * 0.04})`;
+      g.lineWidth = 2.6;
+      g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
+      // bristle streaks within the stroke
+      g.strokeStyle = 'rgba(140,134,124,0.2)';
+      g.lineWidth = 0.7;
+      g.beginPath(); g.arc(cx, cy, r + 2, a0 + 0.05, a1 - 0.05); g.stroke();
+    }
+    // the water edge — the tide line where the wet work stopped
+    g.strokeStyle = 'rgba(66,60,52,0.55)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(10, 30);
+    g.quadraticCurveTo(48, 24 + rng.range(-3, 3), 86, 32);
+    g.stroke();
+    // damp sheen above the edge — the floor still drying
+    const sheen = g.createLinearGradient(0, 8, 0, 30);
+    sheen.addColorStop(0, 'rgba(110,104,96,0.25)');
+    sheen.addColorStop(1, 'rgba(110,104,96,0)');
+    g.fillStyle = sheen;
+    g.fillRect(8, 8, 80, 22);
+    // grit the mop gathered at stroke ends
+    g.fillStyle = 'rgba(70,62,52,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = rng.range(Math.PI * 1.6, Math.PI * 1.95);
+      const r = rng.range(20, 66);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4, 1);
+    }
+  });
+}
