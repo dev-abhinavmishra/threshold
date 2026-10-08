@@ -5148,3 +5148,12 @@ Game.die() from the same five fields.
   + hairline crack ring + stress crack run in lived-in biomes.
   Named 'patch-plug'.
 - Vitest 282: 'the house was hurt before'. Gates: tsc, lint, 98/98.
+
+## sprint 436 — the runners slide
+
+- Crescent scuff arcs in room corners (30% per corner, corridor/lobby/
+  maintenance/underscript): sole-drag rings + heel digs, anchored with
+  the texture's top-left corner on the wall corner; +u/+v point along
+  the walls inward — same-sign corners map U to the x-wall, opposite to
+  z. Named 'corner-scuff'.
+- Vitest 283: 'the runners slide'. Gates: tsc, lint, 99/99.
