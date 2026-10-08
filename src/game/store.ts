@@ -179,7 +179,7 @@ export interface CheckpointSave {
   wardArmed?: boolean;
   // the count's locker — goods a named catch stripped hang claimable
   // at a cage under a fresh tag; a reload keeps the tag, not the loss
-  seizedTake?: { items: { id: ItemId; count: number }[]; x: number; y: number; z: number; fuse?: number };
+  seizedTake?: { items: { id: ItemId; count: number }[]; x: number; y: number; z: number; fuse?: number; coin?: number };
   // what a rotted tag fed the count — fenced goods waiting on the
   // Broker's shelf ride the checkpoint like the debts that put them there
   fencedTake?: { id: ItemId; count: number }[];
