@@ -4388,3 +4388,23 @@ Game.die() from the same five fields.
   literal mis-parse at the arrow's comma — give the callback an
   explicit return type instead (the pattern used for both maps).
 - Gates: tsc, lint, vitest 255, sim 5/5, build.
+
+## sprint 373 — the till holds its stock
+
+- The deep tier was asymmetric: `unpaidTheft >= 6` closed the under's
+  vending machines (s369) but the Broker's own pedestals still traded
+  at the marked rate — the under's counter skipped the tier. Now the
+  `shop` case's broker branch refuses at six: `[he reads the tally —
+  the till holds its stock · the desk is the only answer]`.
+- The purse, fence, fix and book stay open — laundering and settling
+  aren't commerce (the same deliberate exemption as s368's readouts/
+  relief valves). The book's readout declares the tier: '…the tills
+  are closed to you' at `unpaidTheft >= 6`.
+- e2e: the deep-tier leg gained the broker phase (refuse at 6 → sell
+  at 0). Trap caught: a blind KeyE hold beside the pedestals presses
+  whichever flank verb wins focus — the purse anchor won and its
+  refusal caption failed every regex. Broker legs must press
+  prompt-gated (`interactPressed` on /trade wares/) like the s311
+  shutter leg, not blind-held.
+- Gates: tsc, lint, vitest 255, sim 5/5, undercast deep-tier leg
+  green, build.
