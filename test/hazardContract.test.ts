@@ -326,6 +326,13 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(src).toMatch(/heldBy === 'wedge'[\s\S]*?wedgeKicked/);
   });
 
+  it('a fresh knot counts fresh — rewire drops the house\u2019s work', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // unwire-and-rewire doesn't inherit the strain count from the
+    // bind the house already worked on
+    expect(gameSrc).toMatch(/case 'wireDoor'[\s\S]*?wireStrains\.delete/);
+  });
+
   it('the seam reads your own bind — holds report, strains warn', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     // a wired leaf answers the listen at the lowest tier: quiet when

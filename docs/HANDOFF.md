@@ -6077,3 +6077,10 @@ spent, not vanished.
 **Notes:** 'player' braces still lose silently — the gloved hand
 outranks your weight and `releaseBracedDoors` drops your tracking
 without clearing 'commissionaire' (verified safe).
+
+### sprint 439 — a fresh knot counts fresh
+**Done:** `wireDoor` now clears the leaf's `wireStrains` key on bind —
+unwire-and-rewire doesn't inherit the work the house already put
+into the last bind on that leaf.
+**Notes:** the key is leaf-pos-derived (`wire:${round(x*7)}x...`),
+keyed on `bindDoor.pos` not the verb anchor (anchors sit 0.45m off).

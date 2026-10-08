@@ -3267,6 +3267,11 @@ export class Game {
         if (!coil || coil.count <= 0) return;
         coil.count--;
         for (const d of cluster) d.heldBy = 'wired';
+        // sprint 439 — a fresh knot counts fresh: unwire-and-rewire
+        // doesn't inherit the work the house already put into the
+        // last bind on this leaf (keyed on the leaf pos like strainWire)
+        const bindDoor = it.data as RoomInstance['doors'][number];
+        this.wireStrains.delete(`wire:${Math.round(bindDoor.pos.x * 7)}x${Math.round(bindDoor.pos.z * 7)}`);
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
           room: this.currentRoom, kind: 'work', t: this.clock.time,
           readBy: ['player'] });
