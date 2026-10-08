@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1759,6 +1759,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const sl = group.children[group.children.length - 1];
         if (sl && !sl.name) sl.name = 'soot-stain';
       }
+      // The ceiling kept the smoke — the greasy film above where
+      // the fire ran, browner than the paint around it ever was.
+      if (rng.float() < 0.45) {
+        const ss = decalQuad(smokeStain(rng), 1.5 + rng.float() * 0.4, 1.5 + rng.float() * 0.4);
+        ss.name = 'smoke-stain';
+        ss.rotation.x = Math.PI / 2;
+        ss.rotation.z = rng.float() * Math.PI;
+        const hy = p.yaw ?? 0;
+        ss.position.set(p.x + Math.sin(hy) * 0.3, h - 0.058, p.z + Math.cos(hy) * 0.3);
+        group.add(ss);
+      }
       if (rng.float() >= 0.55) continue;
       const m = decalQuad(ashPile(rng), 0.9 + rng.float() * 0.4, 0.75 + rng.float() * 0.3);
       m.name = 'cold-hearth';
@@ -1784,6 +1795,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const wl = group.children[group.children.length - 1];
         if (wl && !wl.name) wl.name = 'waterline';
       }
+    }
+
+    // The wall kept the fist — somewhere a blow landed at striking
+    // height: the knuckle ring, the plaster bulge, the cracks.
+    if (doorPositions.length > 0 && rng.float() < 0.35) {
+      const port = doorPositions[Math.floor(rng.float() * doorPositions.length)];
+      wallDecal(port.wall, fistMark(rng), 0.62 + rng.float() * 0.14, 0.62 + rng.float() * 0.14,
+        port.along + (rng.float() < 0.5 ? -1 : 1) * (0.85 + rng.float() * 0.5),
+        1.4 + rng.float() * 0.3);
+      const fm = group.children[group.children.length - 1];
+      if (fm && !fm.name) fm.name = 'fist-mark';
     }
 
     // The inspector's tally — beside a hollow's seat, scratch-counts kept
@@ -2437,6 +2459,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const fy = p.yaw ?? 0;
         dh.position.set(p.x + Math.sin(fy) * 0.15, 0.0085, p.z + Math.cos(fy) * 0.15);
         group.add(dh);
+      }
+      // Under the bed — whatever the room kept pushed under the
+      // frame: a box, a case, the dust that never got swept.
+      if (p.kind === 'bed' && rng.float() < 0.35) {
+        const ub = decalQuad(underBed(rng), 0.95, 0.6);
+        ub.name = 'under-bed';
+        ub.rotation.x = -Math.PI / 2;
+        const by = p.yaw ?? 0;
+        ub.rotation.z = -by + (rng.float() - 0.5) * 0.3;
+        const side = rng.bool(0.5) ? 1 : -1;
+        ub.position.set(p.x + Math.cos(by) * 0.5 * side, 0.008, p.z - Math.sin(by) * 0.5 * side);
+        group.add(ub);
       }
       // The letters never sent — a dropped envelope where someone
       // slept, dressed, or was paid out.

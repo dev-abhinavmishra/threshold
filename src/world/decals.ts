@@ -2147,3 +2147,120 @@ export function lostLetter(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Fist mark — a punched-wall crater at striking height: dark impact
+ * ring, radiating hairline cracks, and the pale bulge where plaster
+ * pushed back. */
+export function fistMark(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    const cy = 48 + (rng.float() - 0.5) * 8;
+    // the bulge — plaster pushed outward around the blow
+    const bulge = ctx.createRadialGradient(cx, cy, 2, cx, cy, 26);
+    bulge.addColorStop(0, 'rgba(255,255,255,0)');
+    bulge.addColorStop(0.55, 'rgba(236,228,210,0.16)');
+    bulge.addColorStop(1, 'rgba(236,228,210,0)');
+    ctx.fillStyle = bulge;
+    ctx.fillRect(0, 0, 96, 96);
+    // the ring — the knuckle circle that took the skin
+    ctx.strokeStyle = 'rgba(52,44,34,0.42)';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // the dark center — plaster punched through to lath
+    const pit = ctx.createRadialGradient(cx, cy, 0, cx, cy, 8);
+    pit.addColorStop(0, 'rgba(38,30,24,0.55)');
+    pit.addColorStop(1, 'rgba(38,30,24,0)');
+    ctx.fillStyle = pit;
+    ctx.fillRect(cx - 9, cy - 9, 18, 18);
+    // hairline cracks running off the blow — 4 to 6 of them
+    const n = 4 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rng.float() * 0.5;
+      const len = 14 + rng.float() * 22;
+      ctx.strokeStyle = 'rgba(70,58,44,0.5)';
+      ctx.lineWidth = 0.8 + rng.float() * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9);
+      const mx = cx + Math.cos(a) * len * 0.6, my = cy + Math.sin(a) * len * 0.6;
+      ctx.quadraticCurveTo(mx + (rng.float() - 0.5) * 8, my + (rng.float() - 0.5) * 8,
+        cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Smoke stain — the greasy film a fire leaves on the ceiling: a broad
+ * brown-yellow bloom, darkest over the hearth, thinning to nothing. */
+export function smokeStain(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    const cx = 64 + (rng.float() - 0.5) * 14;
+    const cy = 64 + (rng.float() - 0.5) * 14;
+    // the bloom — dirty amber, wider than tall, edges feathered
+    const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 58);
+    g.addColorStop(0, 'rgba(88,66,40,0.42)');
+    g.addColorStop(0.4, 'rgba(96,74,46,0.28)');
+    g.addColorStop(0.75, 'rgba(104,82,54,0.12)');
+    g.addColorStop(1, 'rgba(104,82,54,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 56, 46 + rng.float() * 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the hot core — where the column of smoke stood
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18);
+    core.addColorStop(0, 'rgba(58,42,28,0.4)');
+    core.addColorStop(1, 'rgba(58,42,28,0)');
+    ctx.fillStyle = core;
+    ctx.fillRect(cx - 20, cy - 20, 40, 40);
+    // soot flecks drifting off the bloom
+    for (let i = 0; i < 30; i++) {
+      const a = rng.float() * Math.PI * 2, r = 20 + rng.float() * 42;
+      ctx.fillStyle = `rgba(70,52,34,${0.06 + rng.float() * 0.1})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, 0.7 + rng.float() * 1.6, 0.7 + rng.float() * 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Under-bed — the things the room kept under the mattress: a shoe-box
+ * silhouette, a suitcase corner, the soft rim of gathered dust. */
+export function underBed(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // dust rim — the untouched halo under the frame
+    const dust = ctx.createRadialGradient(48, 32, 8, 48, 32, 44);
+    dust.addColorStop(0, 'rgba(140,130,112,0.3)');
+    dust.addColorStop(1, 'rgba(140,130,112,0)');
+    ctx.fillStyle = dust;
+    ctx.fillRect(0, 0, 96, 64);
+    // the box — a shoe-box rectangle pushed to one side
+    if (rng.bool(0.75)) {
+      const bx = 12 + rng.float() * 20;
+      ctx.fillStyle = 'rgba(60,50,40,0.5)';
+      ctx.fillRect(bx, 26, 22 + rng.float() * 8, 16);
+      ctx.strokeStyle = 'rgba(30,26,20,0.5)';
+      ctx.strokeRect(bx, 26, 22, 16);
+      ctx.strokeStyle = 'rgba(46,38,30,0.4)'; // lid seam
+      ctx.beginPath();
+      ctx.moveTo(bx, 30); ctx.lineTo(bx + 22, 30); ctx.stroke();
+    }
+    // the suitcase — a taller case corner with a strap line
+    if (rng.bool(0.5)) {
+      const sx = 50 + rng.float() * 24;
+      ctx.fillStyle = 'rgba(52,42,34,0.55)';
+      ctx.fillRect(sx, 18, 26, 28);
+      ctx.strokeStyle = 'rgba(30,24,20,0.55)';
+      ctx.strokeRect(sx, 18, 26, 28);
+      ctx.beginPath();
+      ctx.moveTo(sx + 8, 18); ctx.lineTo(sx + 8, 46); ctx.stroke();
+    }
+    // dust strands pooling around whatever is under there
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `rgba(150,142,124,${0.1 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(rng.float() * 96, 40 + rng.float() * 20, 1 + rng.float() * 3, 0.8 + rng.float() * 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
