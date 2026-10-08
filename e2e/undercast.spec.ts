@@ -1231,7 +1231,7 @@ test('strip the checker\'s lamp — the most brazen pilfer in the under (sprint 
   expect(result.charge, JSON.stringify(result)).toBe(45); // warm, still swinging
   // the lamp files another count — still queued, or (s352: while the
   // boards name you the ring lands ~4s in) already fired mid-leg
-  expect(result.pending + result.rung, JSON.stringify(result)).toBeGreaterThanOrEqual(1);
+  expect((result.pending ?? 0) + (result.rung ?? 0), JSON.stringify(result)).toBeGreaterThanOrEqual(1);
   expect(result.blindSeen, JSON.stringify(result)).toBe(true); // swept blind, count stays open
   expect(result.finalStage, JSON.stringify(result)).toBe('idle'); // it left
   expect(errors).toEqual([]);
