@@ -24,6 +24,7 @@ import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aab
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { wantedNotice } from '../world/decals';
+import { pickWantedHosts } from './wanted';
 import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
@@ -1517,6 +1518,28 @@ export class Game {
         }
       }
     }
+    // The wanted sheet on the boards: your own face reads the tally
+    // back — how many lines the book runs before the desk settles it.
+    if (this.wantedActive) {
+      const rooms = this.activeRooms();
+      for (const [i, host] of this.wantedRooms) {
+        if (!this.streamer.builtIndices.includes(i)) continue;
+        const r = rooms[i];
+        if (!r) continue;
+        const ox = r.origin.x - host.x, oz = r.origin.z - host.z;
+        const ol = Math.hypot(ox, oz) || 1;
+        const px = host.x + (ox / ol) * 0.5, pz = host.z + (oz / ol) * 0.5;
+        const dx = px - this.player.pos.x, dz = pz - this.player.pos.z;
+        if (dx * dx + dz * dz > 1.7 * 1.7) continue;
+        this.interaction.add({
+          kind: 'wantedSheet', id: `wanted-${this.space}:${i}`,
+          pos: { x: px, y: 1.3, z: pz },
+          prompt: 'Read the wanted sheet',
+          holdTime: 0.7, enabled: true, priority: 3,
+          data: { owed: this.unpaidTheft },
+        });
+      }
+    }
     // Beside the filer's courier: 'Cut the runner' — tear the message
     // mid-delivery and the word dies with it.
     for (const ent of this.entities) {
@@ -2641,6 +2664,17 @@ export class Game {
           : "[the sheet is stamped closed ahead — the crew's been through]";
         this.cue('whisper', it.pos, text);
         if (egress) this.cue('whisper', it.pos, `[the egress stamp is filed at Door ${String(egress.index).padStart(3, '0')}]`);
+        return;
+      }
+      case 'wantedSheet': {
+        // Reading your own sheet — the tally in your name, and where
+        // it settles. A read, not a claim: it costs nothing but the time.
+        const owed = (it.data as { owed?: number }).owed ?? this.unpaidTheft;
+        this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.3, category: 'entity-cue', caption: '' });
+        this.cue('whisper', it.pos,
+          owed > 0
+            ? `[your face — the tally runs ${owed} line${owed === 1 ? '' : 's'} — the clerk's desk settles it]`
+            : '[your face — the tally is struck; somebody still wants you seen]');
         return;
       }
       case 'crewBoard': {
@@ -3893,19 +3927,8 @@ export class Game {
    *  the tally is settled (ctx.wanted widens their notice reach). */
   private raiseWanted(): void {
     this.wantedActive = true;
-    const HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
-    const rooms = this.activeRooms();
-    let marked = 0;
-    for (let i = this.currentRoom + 1; i < rooms.length && marked < 5; i++) {
-      const r = rooms[i];
-      const host = r.spec?.props.find((pp) => HOSTS.has(pp.kind));
-      if (!host) continue;
-      const cyr = Math.cos(r.yaw), syr = Math.sin(r.yaw);
-      this.wantedRooms.set(i, {
-        x: r.origin.x + host.x * cyr + host.z * syr,
-        z: r.origin.z - host.x * syr + host.z * cyr,
-      });
-      marked++;
+    for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
+      this.wantedRooms.set(h.roomIdx, { x: h.x, z: h.z });
     }
     this.cue('chalk-mark', null, '[sheets go up on the boards ahead — your hands are named]', 'warn');
   }

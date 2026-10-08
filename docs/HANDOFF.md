@@ -3702,3 +3702,14 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   already apply.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7 (drawerSign),
   undercast 11/11 (tallySign + docketSign), build.
+## sprint 402 — the sheet names the tally (wanted read verb + calls closed)
+
+- DESIGN_CALLS.md deleted — all three calls settled and built in 401.
+- The wanted sheet earns its verb: 'Read the wanted sheet' (wantedSheet
+  interactable, held 0.7s at each pinned board within 1.7m) reads your
+  own face back — "[your face — the tally runs N lines — the clerk's
+  desk settles it]", or the struck variant once the debt clears and the
+  sheet hasn't come down yet. A read, not a claim — costs nothing.
+- pickWantedHosts extracted to src/game/wanted.ts (pure: downstream
+  rooms only, first crew-board prop per room, cap 5) with 6 unit tests.
+- Gates: tsc, lint, vitest scoped (10/10) — green.
