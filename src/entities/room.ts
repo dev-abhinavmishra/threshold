@@ -872,7 +872,11 @@ export class Husk extends Entity {
 /* ============================ HAZARDS ============================ */
 /** Environmental hazard runtime: snares, electrified puddles, steam, fans. */
 export class HazardField {
-  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number }[] = [];
+  snares: { pos: import('../engine/math').Vec3; room: number; armed: boolean; scuffT?: number;
+    /** sprint 414 — the grafter's relocated coils: armed wire the under
+     *  lays fresh where the living walk. Checkpointed separately so a
+     *  reload keeps the graft, same convention as kickedWedges. */
+    grafted?: boolean }[] = [];
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number; entT?: number }[] = [];
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
     cycle: number; dead: boolean; hitT?: number; warnT?: number; entT?: number }[] = [];

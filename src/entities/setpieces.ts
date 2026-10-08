@@ -353,6 +353,11 @@ export class Grafter extends Entity {
   /** The boards already named a face it read past its reach — once
    *  per wanted episode. */
   private sheetNamed = false;
+  /** sprint 414 — the under's version of maintenance: it scavenges
+   *  dead wire it stumbles on and drags the coil with it, laying it
+   *  fresh when it reaches the living's room. */
+  private carrying = 0;
+  private carryCued = false;
   private get eager() { return this.markReads >= 2; }
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
@@ -456,6 +461,28 @@ export class Grafter extends Entity {
     } else {
       this.rig?.play('idle');
       if (this.roamT > 1.4) this.pickRoam();
+      // It grinds the floor wherever it stands — a dead snare at its
+      // feet is scrap, and scrap gets carried.
+      if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
+        this.carrying = 1;
+        this.carryCued = false;
+        c.cue('grafter-grind', this.pos, '[stone grinds the wire free — the coil goes with it]', { severity: 'warn' });
+      }
+    }
+    // The coil unwinds where the living walk — the under doesn't
+    // repair its floor, it moves the wire onto your path.
+    if (this.carrying > 0) {
+      if (!this.carryCued) {
+        this.carryCued = true;
+        c.cue('grafter-grind', this.pos, '[it drags a coil behind it]', { severity: 'info' });
+      }
+      const pr = this.roomOf(this.pos);
+      if (pr >= 0 && pr === c.currentRoomIndex) {
+        this.carrying = 0;
+        c.plantSnare?.(this.pos, pr);
+        c.cue('grafter-grind', this.pos, '[the coil unwinds where it walks — fresh wire in your room]', { severity: 'warn' });
+        c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.4, category: 'item', caption: '[wire laid]', source: this.id });
+      }
     }
     if (this.mesh) this.mesh.position.copy(this.pos);
     if (this.rig) this.rig.group.position.y = 0.12 + Math.sin(this.lifeT * 1.7) * 0.1;
@@ -515,6 +542,12 @@ export class Grafter extends Entity {
   }
 
   protected override onDone(): void {
+    // It settles back into the floor — a coil still on its back
+    // settles with it, armed where the rubble sank.
+    if (this.carrying > 0) {
+      const pr = this.roomOf(this.pos);
+      if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr);
+    }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }

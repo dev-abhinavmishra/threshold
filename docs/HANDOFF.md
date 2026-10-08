@@ -5619,3 +5619,92 @@ house repairs its own floor; the underscript is unmaintained by
 definition.
 
 Gates: tsc, lint.
+
+## Sprint 412 — the wash crosses both ways
+Jurisdiction honesty for the marked economy: torn under-pages spent
+at the house's purse launder silently — the till can't read the
+under's edges (the upstairs purse branch of `chargedMarginalia`'s
+routing deliberately bypassed; `hotMarginalia` just drains). The
+mirror of hot imprints dying at the Broker's purse below. Both
+jurisdictions now wash only across the line.
+
+And the book names its own pages: 'book' readout appends `· N torn
+pages ride in your purse` — the mark is discoverable through the
+paid read instead of only at spends.
+
+Contract coverage: vitest asserts every `marginalia -=` routes the
+funnel (two exceptions enumerated: the funnel itself + the upstairs
+wash), `rearmHazard` exists in the ctx contract and answers all four
+dead-hazard sign kinds, and the felt-strip is confiscation.
+
+Gates: tsc, lint, vitest (hazardContract +2).
+
+## Sprint 413 — confiscation is carried
+The pocketed felt isn't deleted — the floorkeeper carries it until he
+staggers: `pocketed` counts confiscated wraps; a `stagger()` override
+spills them as 'wrapDrop' loot piles at his feet (`dropWraps` ctx →
+dynamic interactables, checkpointed like kickedWedges). The recovery
+is fully emergent — trip your own re-laid wire under him, drop the
+s395 glass, or wait for a wet floor. The loop closes: he peels your
+felt onto his eye, you knock him down and take it back.
+
+Gates: tsc, lint (batched with next).
+
+## Sprint 414 — the under relocates
+The under's answer to "the house re-lays its work": nothing repairs
+below — the wire MOVES. The Grafter (the under's scavenger, already
+drags to dead-wire sign) now strips any dead snare it stands on
+(`stripSnare` ctx, splices it — scrap goes with the rubble), carries
+one coil, and lays it fresh when it reaches the room you're standing
+in (`plantSnare` — a real armed snare wearing the same paper-amber
+face, `grafted: true`). If it settles still carrying, the coil arms
+where the rubble sank. House: wire re-tied where you cut it. Under:
+wire re-laid where you WALK. Grafts ride the checkpoint
+(`graftedWires`); dead grafts stay dead via deadHazards convention.
+
+Known-honest hole (same convention as all dead hazards): a stripped
+snare's seed prop face stays on the floor — wire visuals never change
+on death anywhere in the game; the captions carry the truth.
+
+Gates: tsc, lint, contract spec (batched).
+
+## Sprint 415 — the fall is heard
+`Entity.stagger()` was fiction: a body going down made no noise.
+Now every stagger (glass drop, sprung wire, steam, wet floor, belt
+wheel, charge hit) emits a real positional 'impact' at intensity 0.5 —
+heard in-room (above the 0.42 hear floor), muffled through walls
+(below the 0.55 rouse floor — a fall is loud where it lands, quiet
+one room over). No source tag: entity listeners skip sourced events,
+and the faller isn't exempt — a tripped warden can wake and read the
+very sign its own fall answered. A stagger you cause on purpose is a
+positional lure that also removes a threat briefly.
+
+Gates: tsc, lint (batched with next).
+
+## Sprint 416 — caught mid-tying
+The re-lay scan is a vulnerable window: slip within 1.8m while the
+warden's hands are in the wires and the read breaks — the work stays
+dead, he turns on you instead. Visible slip → the whistle answers
+like any sighting; a hidden slip aborts the re-lay for free (the
+abort respects protection — hidden hands are undetectable hands).
+The tug-of-war is two-handed now: he re-lays, you interrupt, the
+wipe shadow still poisons his reads.
+
+Gates: tsc, lint, contract spec (all batched — s412-416 arc).
+
+## Sprint 417 — the two-ways repair
+The two-ways arc (s404-411) broke three e2e premises on main: a roamer
+can cut your test wire before you reach it, the seed's only lit eye is
+a wide-arc cam (±0.95 pan vs ±0.42 cone — a center stand's settle
+bleeds between passes and never reaches 0.9), and the bellman's
+knocked-open leaves swing shut behind him — a shut leaf now blocks
+the gaze (s399), so a fixed stare spot ends up blind forever.
+Leg repairs, no product change: 'cut the seal' clears spawned walkers
+before the drive + hunts a focus-holding stand (economy standFor
+pattern); 'the watched hall' stands near the pan's dwell extreme
+(arc*0.6 off center) so the cone's long pause lands the settle;
+'bellman trails' parks him and the player on the same open floor for
+the yield phase — the gaze yield is under test, not door positioning.
+Probe-observed: cam watcher maxSettle 0.87 center → 0.93 off-center.
+
+Gates: hazards 13/13, entities 11/11 (one designed skip).

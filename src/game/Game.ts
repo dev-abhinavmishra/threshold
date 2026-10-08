@@ -566,6 +566,10 @@ export class Game {
     this.brokerFigs.clear();
     for (const fig of this.clerkFigs.values()) this.entityGroup.remove(fig);
     this.clerkFigs.clear();
+    // sprint 414 — the grafter's work clears with the run; a checkpoint
+    // restore re-lays it below
+    for (const gm of this.graftedMeshes) this.entityGroup.remove(gm);
+    this.graftedMeshes = [];
     this.clearRats();
     this.spawned.clear();
     this.milestones.clear();
@@ -764,6 +768,15 @@ export class Game {
     // pocket on a reload any more than the till does
     this.kickedWedges = cp?.kickedWedges?.map((w) => ({ ...w })) ?? [];
     this.mintWedgeDrops();
+    this.droppedWraps = cp?.droppedWraps?.map((w) => ({ ...w })) ?? [];
+    this.mintWrapDrops();
+    // the grafter's grafts stay grafted — planted wire survives a
+    // reload wearing the same face it was laid with; a graft that
+    // died stays dead like any wire (its mark rides deadHazards)
+    for (const gw of cp?.graftedWires ?? []) {
+      this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
+      if (gw.armed === false) this.hazard.snares[this.hazard.snares.length - 1].armed = false;
+    }
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -1053,6 +1066,19 @@ export class Game {
       // boot doesn't eat the chock, it slides to the player's side of the
       // seam and waits as gatherable loot.
       wedgeKicked: (doorPos, fromPos) => this.dropKickedWedge(doorPos, fromPos),
+      // sprint 413 — confiscation is carried, and carried means it can
+      // be lost: a staggered floorkeeper spills pocketed felt as loot.
+      dropWraps: (pos, n) => this.dropWraps(pos, n),
+      // sprint 414 — the under's version of maintenance: its scavenger
+      // strips dead wire and grafts it fresh where the living walk.
+      stripSnare: (x, z) => {
+        const i = this.hazard.snares.findIndex((hz) =>
+          !hz.armed && Math.hypot(hz.pos.x - x, hz.pos.z - z) < 1.2);
+        if (i < 0) return false;
+        this.hazard.snares.splice(i, 1);
+        return true;
+      },
+      plantSnare: (pos, room) => this.plantSnare(pos, room),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1283,6 +1309,41 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
     });
+  }
+
+  /** sprint 413 — felt the floorkeeper pocketed, spilled where he went
+   *  down. One pile per spill, `data.n` counts the wraps in it. Same
+   *  re-mint/space-agnostic rules as the wedge drops. */
+  private droppedWraps: { x: number; z: number; n: number }[] = [];
+  private dropWraps(pos: Vec3, n: number): void {
+    this.droppedWraps.push({ x: pos.x, z: pos.z, n });
+    this.mintWrapDrops();
+  }
+  private mintWrapDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wrap-drop-'));
+    this.droppedWraps.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'wrapDrop', id: `wrap-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: w.n === 1 ? 'Gather the scattered felt' : `Gather the scattered felt (${w.n})`,
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+    });
+  }
+
+  /** sprint 414 — the grafter lays a stripped coil where the living
+   *  walk. The graft is a normal armed snare wearing the same paper-
+   *  and-amber face the seed ones do, tagged `grafted` so the
+   *  checkpoint can rebuild it after a reload. */
+  private graftedMeshes: THREE.Object3D[] = [];
+  private plantSnare(pos: Vec3, room: number): void {
+    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: true, grafted: true });
+    const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
+    const fy = this.activeRooms()[room]?.origin.y ?? 0;
+    built.group.position.set(pos.x, fy, pos.z);
+    built.group.rotation.y = ((pos.x * 7.31 + pos.z * 13.7) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    this.entityGroup.add(built.group);
+    this.graftedMeshes.push(built.group);
   }
 
   private spawnEntity(e: Entity): void {
@@ -2648,6 +2709,20 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
+      case 'wrapDrop': {
+        // sprint 413 — what the floorkeeper pocketed comes back off the
+        // floor: the felt is yours again, free — the price was tripping
+        // him (or the glass doing it for you).
+        const wi = (it.data as { i?: number }).i ?? -1;
+        const n = wi >= 0 ? this.droppedWraps[wi]?.n ?? 1 : 1;
+        if (wi >= 0) this.droppedWraps.splice(wi, 1);
+        it.enabled = false;
+        this.mintWrapDrops();
+        this.giveItem('feltWrap', n);
+        this.cue('pickup', it.pos, `[felt wrap${n > 1 ? ` ×${n}` : ''} — back off the floor]`);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
       case 'restock': {
         // sprint 333 — the take goes back: slip the marked goods into
         // the emptied till. Free, no profit, and the books keep your
@@ -2730,9 +2805,12 @@ export class Game {
         const fenced = this.fencedTake.reduce((n, s) => n + s.count, 0);
         const shelfBit = fenced > 0 ? ` · the shelf keeps ${fenced} of yours` : '';
         const tillBit = this.coinKept > 0 ? ` · ${this.coinKept} of your coin sits in the count's till` : '';
-        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0
+        // sprint 412 — and the book names its own pages: torn edges it
+        // can still smell riding in your purse
+        const pagesBit = this.hotMarginalia > 0 ? ` · ${this.hotMarginalia} torn ${this.hotMarginalia === 1 ? 'page rides' : 'pages ride'} in your purse` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0 && this.hotMarginalia === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}${pagesBit}]`);
         return;
       }
       case 'askTally': {
@@ -2778,12 +2856,20 @@ export class Game {
           }
           const filed = this.unpaidHeld > 0;
           const gain = filed ? 4 : 6;
-          this.chargedMarginalia(8, it.pos.x, it.pos.z);
+          this.marginalia -= 8;
+          // sprint 412 — the tear means nothing to the house's till:
+          // marked under-pages launder through the exchange silently —
+          // the mark dies at the jurisdiction line, same as a hot
+          // imprint dies at the Broker's purse below.
+          const torn = Math.min(8, this.hotMarginalia);
+          this.hotMarginalia -= torn;
           this.imprints += gain;
           this.stats.imprintsEarned += gain;
-          this.cue('purchase', it.pos, filed
-            ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
-            : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
+          this.cue('purchase', it.pos, torn > 0
+            ? `[the till can't read the under's torn edges — the pages pass · 8 marginalia → ${gain} imprints]`
+            : filed
+              ? `[the clerk counts your coins twice — the register's rate sours · 8 marginalia → ${gain} imprints]`
+              : `[the purse changes — 8 marginalia → ${gain} imprints]`, 'info');
           return;
         }
         // The Broker changes coin — 6 imprints for marginalia. The only
@@ -5211,6 +5297,11 @@ export class Game {
       stockFiled: [...this.stockFiled],
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
+      droppedWraps: this.droppedWraps.length > 0
+        ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
+      graftedWires: this.hazard.snares.some((s) => s.grafted)
+        ? this.hazard.snares.filter((s) => s.grafted)
+          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,

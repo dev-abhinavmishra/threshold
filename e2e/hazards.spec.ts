@@ -206,7 +206,9 @@ test('cut the seal — an upright player can disarm a dry wire', async ({ page }
       currentRoom: number; keys: Set<string>;
     };
     ga.godMode = true;
-    const room = g.route.rooms.find((r) => !r.flooded
+    const room = g.route.rooms.find((r) => !r.flooded && !r.scheduled?.length
+      && r.sockets?.some((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent))
+      ?? g.route.rooms.find((r) => !r.flooded
       && r.sockets?.some((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent));
     if (!room) return { stage: 'no-snare' } as const;
     if (!ga.hazard.snares.some((h) => h.room === room.index && h.armed)) return { stage: 'no-snare' } as const;
@@ -214,19 +216,44 @@ test('cut the seal — an upright player can disarm a dry wire', async ({ page }
     g.player.teleport(hz0.x + 0.7, 0, hz0.z + 0.7);
     ga.currentRoom = room.index;
     for (let f = 0; f < 25; f++) g.frame();
+    // sprint 404+ — wires trip walkers too: anything already afield can cut
+    // the seal for you before the drive lands. Clear the field; staying in
+    // this room mints no new spawns.
+    for (const e of (g.entities as unknown as { done?(): void }[])) e.done?.();
+    for (let f = 0; f < 30; f++) g.frame();
     const sawPrompt = g.interaction.interactables.some((i) => i.kind === 'snip');
+    // hunt a stand that actually holds the wire's focus: a bare pitch at a
+    // fixed offset can lose the cone to a nearer counter verb. Same
+    // stand-drop probe the economy legs use.
+    let lock: { x: number; z: number; dy: number } | null = null;
+    for (let k = 0; k < 12 && !lock; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const sx = hz0.x + Math.sin(a) * 1.1, sz = hz0.z + Math.cos(a) * 1.1;
+      for (const dy of [0.7, 0.45, 0.2, 0]) {
+        g.player.teleport(sx, 0, sz);
+        g.player.yaw = Math.atan2(hz0.x - sx, hz0.z - sz);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45,
+          Math.atan2(0.06 + dy - eyeY, Math.hypot(hz0.x - sx, hz0.z - sz) || 1)));
+        g.frame();
+        if (/cut the seal/i.test(g.interaction.focused?.prompt ?? '')) { lock = { x: sx, z: sz, dy }; break; }
+      }
+    }
     let cut = false;
-    for (let f = 0; f < 160 && !cut; f++) {
+    for (let f = 0; f < 160 && !cut && lock; f++) {
       const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
       if (!it) break;
-      g.player.yaw = Math.atan2(it.pos.x - g.player.pos.x, it.pos.z - g.player.pos.z);
-      g.player.pitch = -0.7;
+      g.player.teleport(lock.x, 0, lock.z);
+      g.player.yaw = Math.atan2(it.pos.x - lock.x, it.pos.z - lock.z);
+      const eyeY = g.player.pos.y + g.player.eyeHeight;
+      g.player.pitch = Math.max(-1.45, Math.min(1.45,
+        Math.atan2(it.pos.y + lock.dy - eyeY, Math.hypot(it.pos.x - lock.x, it.pos.z - lock.z) || 1)));
       if (/cut the seal/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
       g.frame();
       cut = caps.some((c) => /seal parts/.test(c));
     }
     ga.keys.delete('KeyE');
-    return { stage: 'done', room: room.index, sawPrompt, cut,
+    return { stage: 'done', room: room.index, sawPrompt, hunted: !!lock, cut,
       disarmed: !ga.hazard.snares.find((h) => h.room === room.index)?.armed,
       caps: caps.slice(-12) } as const;
   });
@@ -741,7 +768,7 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       hazard: { watchers: { pos: { x: number; y: number; z: number }; yaw: number;
-        room: number; dead: boolean }[] };
+        room: number; dead: boolean; arc: number }[] };
       currentRoom: number; godMode: boolean; keys: Set<string>;
       unpaidHeld: number;
       giveItem(id: string, n: number): void;
@@ -751,9 +778,14 @@ test('the watched hall — the eye reads motion, felt blinds it', async ({ page 
     };
     ga.godMode = true;
     ga.unpaidHeld = 0;
+
     const live = ga.hazard.watchers.find((w) => !w.dead && !g.route.rooms[w.room]?.darkRoom);
     if (!live) return { stage: 'no-live-watcher' } as const;
-    const fx = Math.sin(live.yaw), fz = Math.cos(live.yaw);
+    // stand off the arc's center toward an extreme: the pan is sinusoidal and
+    // dwells longest at its turning points — a wide-arc eye (arc ~0.95 vs the
+    // ±0.42 cone) bleeds a center stand's settle between passes, but a stand
+    // near the dwell point stays in-cone through the long pause.
+    const fx = Math.sin(live.yaw + live.arc * 0.6), fz = Math.cos(live.yaw + live.arc * 0.6);
     const sx = live.pos.x + fx * 3, sz = live.pos.z + fz * 3;
     g.player.teleport(sx, 0, sz);
     ga.currentRoom = live.room;
@@ -953,5 +985,165 @@ test('the confiscated case — the eyes guard a prize', async ({ page }) => {
   }
   expect(result.openCaption, 'the pry pays out + rings').toBe(true);
   expect(result.pryGone, 'the pry is one-shot').toBe(true);
+  expect(errors).toEqual([]);
+});
+
+// Sprints 410-416 — the floor answers back: the warden re-lays dead
+// hazards its sign-read lands on (restoring them in place), slipping
+// close mid-tying aborts the read, every stagger emits a real crash
+// other listeners drift to, and under the floor the grafter relocates
+// dead wire onto your path instead of repairing it.
+test('the house re-lays, the under relocates, the fall is heard', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's'
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    interface WardenX { investigate: { x: number; z: number } | null; investigateScan: number;
+      pos: { x: number; y: number; z: number; set?(x: number, y: number, z: number): void };
+      stagger(s: number): void }
+    const ga = g as unknown as {
+      enterUnderscript(): void; currentRoom: number; godMode: boolean;
+      entities: { id: string; state: string; threatPos(): { x: number; z: number } }[];
+      spawnScheduled(): void;
+      hazard: { snares: { pos: { x: number; y: number; z: number }; room: number; armed: boolean; grafted?: boolean }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      sound: { emit(e: Record<string, unknown>): void; on(f: (e: { x: number; z: number; category: string; intensity: number; source?: string }) => void): () => void };
+    };
+
+    // ---------- A: the re-lay upstairs ----------
+    // largest main room — warden patrols its entry→exit line; we need
+    // the player outside its 9m see-range while the read completes.
+    const room = g.route.rooms
+      .filter((r) => (r.width ?? 0) >= 10 && (r.depth ?? 0) >= 10)
+      .sort((a, b) => ((b.width ?? 0) + (b.depth ?? 0)) - ((a.width ?? 0) + (a.depth ?? 0)))[0];
+    if (!room) return { stage: 'no-big-room' } as const;
+    room.scheduled = [...(room.scheduled ?? []), { entity: 'warden', triggerRoom: room.index, seed: 1 }];
+    g.player.teleport(room.origin.x, 0, room.origin.z - (room.depth ?? 10) / 2 + 1.2);
+    ga.currentRoom = room.index;
+    ga.godMode = true;
+    for (let f = 0; f < 40; f++) g.frame();
+    const warden = ga.entities.find((e) => e.id === 'warden' && e.state !== 'done') as unknown as
+      (WardenX & { id: string; state: string; threatPos(): { x: number; z: number } }) | undefined;
+    if (!warden) return { stage: 'no-warden', ents: ga.entities.map((e) => e.id) } as const;
+
+    // dead wire + fresh sign on its patrol midpoint
+    const wp = warden.threatPos();
+    const spot = { x: (room.entryPos.x + room.exitPos.x) / 2, z: (room.entryPos.z + room.exitPos.z) / 2 };
+    ga.hazard.snares.push({ pos: { x: spot.x, y: 0, z: spot.z }, room: room.index, armed: false });
+    ga.hazard.evidence.push({ pos: { x: spot.x, y: 0, z: spot.z }, room: room.index, kind: 'wire', t: g.clock.time, readBy: [] });
+    let reLaid = false;
+    for (let f = 0; f < 600 && !reLaid; f++) {
+      g.frame();
+      const s = ga.hazard.snares.find((s) => s.room === room.index && Math.hypot(s.pos.x - spot.x, s.pos.z - spot.z) < 0.4);
+      if (s?.armed) reLaid = true;
+    }
+    const reLayCue = caps.some((c) => /re-lays the wire/.test(c));
+    if (!reLaid) return { stage: 'no-relay', wp, caps: caps.slice(-8) } as const;
+
+    // ---------- B: caught mid-tying ----------
+    const spot2 = { x: spot.x + 1.0, z: spot.z + 0.5 };
+    ga.hazard.snares.push({ pos: { x: spot2.x, y: 0, z: spot2.z }, room: room.index, armed: false });
+    ga.hazard.evidence.push({ pos: { x: spot2.x, y: 0, z: spot2.z }, room: room.index, kind: 'wire', t: g.clock.time, readBy: [] });
+    // wait until it's AT the SIGN (kind 'wire', scan ticking) — noise
+    // investigates (e.g. it hearing its own re-laid wire snap under it)
+    // don't count: the abort must land on a sign-read's hands
+    let aborted = false;
+    let abortKind = 'never';
+    for (let f = 0; f < 1500 && !aborted; f++) {
+      g.frame();
+      const kind = (warden as unknown as { investigateKind: string | null }).investigateKind;
+      if (warden.investigate && kind === 'wire' && warden.investigateScan > 0.15) {
+        abortKind = String(kind);
+        const tp = warden.threatPos();
+        g.player.teleport(tp.x + 1.1, 0, tp.z + 0.6);
+        for (let k = 0; k < 12; k++) g.frame();
+        aborted = !warden.investigate;
+        break;
+      }
+    }
+    const stillDead2 = ga.hazard.snares.some((s) => !s.armed && Math.hypot(s.pos.x - spot2.x, s.pos.z - spot2.z) < 0.4);
+    const abortCue = caps.some((c) => /half-fast|stops mid-tying/.test(c));
+
+    // ---------- C: the fall is heard ----------
+    const heard: { x: number; z: number; category: string; intensity: number }[] = [];
+    ga.sound.on((e) => { if (e.category === 'impact') heard.push(e); });
+    const wpos = warden.threatPos();
+    warden.stagger(1.5);
+    g.frame();
+    const crash = heard.find((e) => Math.hypot(e.x - wpos.x, e.z - wpos.z) < 0.5);
+
+    // ---------- D: the under relocates ----------
+    ga.enterUnderscript();
+    const gRoom = g.route.underRooms
+      .filter((r) => r.scheduled?.some((s) => s.entity === 'grafter'))
+      .sort((a, b) => ((b.width ?? 0) + (b.depth ?? 0)) - ((a.width ?? 0) + (a.depth ?? 0)))[0];
+    if (!gRoom) return { stage: 'no-grafter-room', reLaid, aborted, crash: !!crash } as const;
+    g.player.teleport(gRoom.origin.x - (gRoom.width ?? 8) / 2 - 2.5, 0, gRoom.origin.z);
+    ga.currentRoom = gRoom.index - 1 >= 0 ? gRoom.index - 1 : gRoom.index;
+    // step in just long enough for the spawn, then out — no chase while it works
+    g.player.teleport(gRoom.origin.x, 0, gRoom.origin.z);
+    ga.currentRoom = gRoom.index;
+    for (let f = 0; f < 8; f++) g.frame();
+    const grafter = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done') as unknown as
+      { pos: { x: number; y: number; z: number }; target: { x: number; y: number; z: number };
+        id: string; state: string } | undefined;
+    if (!grafter) return { stage: 'no-grafter', reLaid, aborted, crash: !!crash, ents: ga.entities.map((e) => e.id) } as const;
+    g.player.teleport(gRoom.origin.x - (gRoom.width ?? 8) / 2 - 2.5, 0, gRoom.origin.z);
+    ga.currentRoom = gRoom.index - 1 >= 0 ? gRoom.index - 1 : gRoom.index;
+
+    // dead wire inside the room + park the rubble on it
+    const ds = { x: gRoom.origin.x + 1.0, z: gRoom.origin.z + 1.0 };
+    const deadBefore = ga.hazard.snares.filter((s) => !s.armed).length;
+    ga.hazard.snares.push({ pos: { x: ds.x, y: 0, z: ds.z }, room: gRoom.index, armed: false });
+    grafter.pos.x = ds.x + 0.1; grafter.pos.y = 0; grafter.pos.z = ds.z + 0.1;
+    grafter.target.x = ds.x + 0.1; grafter.target.z = ds.z + 0.1;
+    let stripped = false;
+    for (let f = 0; f < 30 && !stripped; f++) {
+      g.frame();
+      stripped = ga.hazard.snares.filter((s) => !s.armed).length === deadBefore; // the planted dead one is gone
+    }
+    if (!stripped) return { stage: 'no-strip', reLaid, aborted, crash: !!crash } as const;
+
+    // step back into its room — the coil unwinds where the living walk
+    g.player.teleport(gRoom.origin.x - (gRoom.width ?? 8) / 2 + 1.2, 0, gRoom.origin.z);
+    ga.currentRoom = gRoom.index;
+    let grafted = false;
+    for (let f = 0; f < 40 && !grafted; f++) {
+      g.frame();
+      // the graft itself is the mechanic — whether it stays armed after
+      // its planter walks over it is the two-ways ecology working
+      grafted = ga.hazard.snares.some((s) => s.grafted === true && s.room === gRoom.index);
+    }
+    const gx = grafter as unknown as { carrying: number; state: string; roomOf(p: { x: number; z: number }): number };
+    const graftDebug = { carrying: gx.carrying, state: gx.state,
+      roomOfPos: gx.roomOf?.(grafter.pos) ?? -99, curRoom: ga.currentRoom, gIdx: gRoom.index,
+      snareRooms: ga.hazard.snares.filter((s) => s.grafted).map((s) => s.room) };
+    const graftCue = caps.some((c) => /coil unwinds|coil goes with it|drags a coil/.test(c));
+
+    return { stage: 'done', reLaid, reLayCue, aborted, stillDead2, abortCue,
+      crash: !!crash, crashCat: crash?.category, stripped, grafted, graftCue,
+      capsTail: caps.filter((c) => !/scuffle/.test(c)).slice(-14), abortKind, graftDebug } as const;
+  });
+
+  if (result.stage === 'no-big-room' || result.stage === 'no-grafter-room' || result.stage === 'no-grafter'
+    || result.stage === 'no-warden') test.skip();
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  expect(result.reLaid, 'the warden re-lays dead wire it reads').toBe(true);
+  expect(result.reLayCue, JSON.stringify(result)).toBe(true);
+  expect(result.aborted, 'a close slip aborts the read mid-tying').toBe(true);
+  expect(result.stillDead2, 'the aborted wire stays dead').toBe(true);
+  expect(result.abortCue, JSON.stringify(result)).toBe(true);
+  expect(result.crash, 'the stagger is a real positional sound').toBe(true);
+  expect(result.stripped, 'the grafter strips dead wire it stands on').toBe(true);
+  expect(result.grafted, 'the coil is laid fresh in your room').toBe(true);
+  expect(result.graftCue, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
