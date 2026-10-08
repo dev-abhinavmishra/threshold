@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1744,6 +1744,21 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     rf.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.005);
     prop.group.add(rf);
     if (!prop.group.name) prop.group.name = 'rope-fray';
+  }
+  // The webs veiled the tops — thread fans worked between tall
+  // furniture and the wall behind it.
+  const TALLS: ReadonlySet<PropSpec['kind']> = new Set(['wardrobe', 'bookshelf', 'cabinet', 'vintageCabinet', 'filing', 'drawerUnit', 'dresser', 'grandfatherClock', 'stackShelf']);
+  if (TALLS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const wb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: webDrape(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    wb.name = 'web-drape';
+    wb.userData.decalMat = true;
+    wb.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 1.8) - 0.05, -(dc?.[2] ?? 0.4) / 2 - 0.004);
+    prop.group.add(wb);
+    if (!prop.group.name) prop.group.name = 'web-drape';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
