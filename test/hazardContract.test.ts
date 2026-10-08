@@ -222,6 +222,41 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // dead grafts restore wearing it too — no faceless wire anywhere
     expect(gameSrc).toMatch(/gw\.armed === false[\s\S]*?dead\.mesh = this\.buildSnareProp/);
   });
+
+  it('the under sells its own wire — the broker stocks the coil', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the coil sits in the broker's seeded stock, priced between felt and a pick
+    expect(gameSrc).toMatch(/populateBroker[\s\S]*?id: 'wireCoil', price: rng\.int\(/);
+    // but the house's own shelf never carries splice scrap — the
+    // upstairs twin stocks chocks and picks, not the under's wire
+    const clerk = gameSrc.match(/private populateClerk[\s\S]*?const stock[\s\S]*?\];/)?.[0] ?? '';
+    expect(clerk).not.toContain('wireCoil');
+  });
+
+  it('maintenance is a claim — a re-tied coil stops being yours', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the warden's re-lay clears the planted flag: the re-armed wire
+    // mints 'Cut the seal' like any house snare and yields no coil
+    expect(gameSrc).toMatch(/kind === 'wire'[\s\S]*?s\.planted = false/);
+  });
+
+  it('the wound clock outlives you too — a paid alarm keeps its fuse', () => {
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('armedLures');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the save carries each live lure's remaining fuse; the restore
+    // re-times it onto the live clock with its clock-mesh rebuilt
+    expect(gameSrc).toMatch(/armedLures: this\.lures\.some/);
+    expect(gameSrc).toMatch(/cp\?\.armedLures[\s\S]*?this\.lures\.push/);
+  });
+
+  it('the dead splice is contested loot — gather it before the grafter does', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a dead graft mints 'Gather the wire' like your own spent line —
+    // the same slack the grafter strips to carry
+    expect(gameSrc).toMatch(/!hz\.armed && !hz\.planted && !hz\.grafted/);
+    expect(gameSrc).toMatch(/hz\.grafted \? \(hz\.armed \? 'Cut the splice' : 'Gather the wire'\)/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

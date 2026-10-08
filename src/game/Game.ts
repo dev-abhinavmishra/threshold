@@ -795,6 +795,17 @@ export class Game {
       }
       this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
     }
+    // wound clocks restore mid-fuse — a paid alarm doesn't die unrung
+    // on a reload; `t` was the fuse left, re-timed onto the live clock
+    for (const al of cp?.armedLures ?? []) {
+      const pos = v3(al.x, al.y, al.z);
+      const mesh = modelInstance('wallClock', 0.6) ?? new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.22, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x8a6d4a, roughness: 0.8 }));
+      mesh.position.copy(pos);
+      this.entityGroup.add(mesh);
+      this.lures.push({ pos, mesh, until: this.clock.time + al.t, nextTick: this.clock.time + 0.8, rang: false });
+    }
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -927,6 +938,10 @@ export class Game {
       { id: 'latchpick', price: rng.int(24, 34) },
       { id: 'windAlarm', price: rng.int(28, 40) },
       { id: 'doorChock', price: rng.int(8, 14) },
+      // sprint 428 — the under sells its own pre-coiled wire: scrap
+      // cheaper than a latchpick because every grafter carries it —
+      // and it smells like their stock either way you came by it.
+      { id: 'wireCoil', price: rng.int(16, 24) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -1133,6 +1148,11 @@ export class Game {
           const s = this.hazard.snares.find((hz) => !hz.armed && near(hz.pos));
           if (!s) return null;
           s.armed = true;
+          // sprint 429 — the warden re-ties your wire as the house's:
+          // maintenance is a claim — the coil you left dead stops being
+          // yours. 'Pull the wire free' reads 'Cut the seal' now, and
+          // cutting yields no coil: the house already took it.
+          s.planted = false;
           return 'snare';
         }
         if (kind === 'line') {
@@ -1971,7 +1991,10 @@ export class Game {
     for (const hz of this.hazard.snares) {
       // sprint 423 — your own laid wire mints too, live or dead: pull it
       // free for the coil back, or gather the spent trip-line
-      if (!hz.armed && !hz.planted) continue;
+      // sprint 431 — a dead graft mints too: the under's slack wire is
+      // scrap anyone can take — the grafter strips it for the splice,
+      // you gather it for the coil. Dead wire is contested loot.
+      if (!hz.armed && !hz.planted && !hz.grafted) continue;
       const rm = rooms.find((r) => r.index === hz.room) ?? this.route?.branchRooms.find((r) => r.index === hz.room);
       if (!rm) continue;
       const submerged = !!rm.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
@@ -1982,7 +2005,7 @@ export class Game {
         kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
         pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
         prompt: hz.planted ? (hz.armed ? 'Pull the wire free' : 'Gather the wire')
-          : hz.grafted ? 'Cut the splice'
+          : hz.grafted ? (hz.armed ? 'Cut the splice' : 'Gather the wire')
           : submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
         holdTime: hz.planted ? 0.9 : 1.4, enabled: true, priority: 2,
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
@@ -5465,6 +5488,13 @@ export class Game {
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
           .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted })) : undefined,
+      // sprint 430 — a live lure keeps its fuse through the save:
+      // `t` is seconds left on the clock, re-timed at restore
+      armedLures: this.lures.some((l) => !l.rang)
+        ? this.lures.filter((l) => !l.rang)
+          .map((l) => ({ x: l.pos.x, y: l.pos.y, z: l.pos.z,
+            t: Math.max(0.5, l.until - this.clock.time) }))
+        : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,

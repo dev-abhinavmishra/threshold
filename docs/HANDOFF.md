@@ -5948,3 +5948,38 @@ the drop clatter (0.3 item, real sound — the room hears the coil slip).
 Dead grafts restoring from `graftedWires` rebuild the face too, and
 planted wires restore their face regardless of armed — the face is the
 wire's look, not its state. No faceless wire anywhere.
+
+## Sprint 428 — the under sells its own wire
+
+`wireCoil` joins the Broker's seeded stock (`populateBroker`, 16–24
+marginalia — scrap cheaper than a pick because every grafter carries
+it). The buy rides the generic ware path: `giveItem`, marginalia
+charge, the tally's deep-tier refusal intact. The house shelf stays
+off it — the clerk's stock is finished goods; splice scrap only sells
+below. Bought or cut, the coil smells the same: `playerCarries`
+doesn't launder the scent.
+
+## Sprint 429 — maintenance is a claim
+
+The warden's re-lay now clears `planted` when it re-arms your dead
+wire: the house re-ties the coil as its own — 'Pull the wire free'
+reads 'Cut the seal', and the cut yields nothing (the house took it).
+Your wire is only yours while you watch it: leave a dead one lying and
+the tug-of-war can take the coil itself, not just the arm.
+
+## Sprint 430 — the wound clock outlives you too
+
+`armedLures` rides the checkpoint now — the last piece of carried kit
+a reload still laundered. Each live lure saves its remaining fuse
+(`t` seconds) and restores mid-count with its clock-mesh rebuilt,
+re-timed onto the live clock like `dialedRings`/`hookRings`. A paid
+windAlarm no longer dies unrung for the price of a checkpoint —
+`Math.max(0.5, until − now)` keeps a dead-on-arrival fuse honest.
+
+## Sprint 431 — the dead splice is contested loot
+
+A dead graft minted nothing before — now it reads 'Gather the wire'
+like your own spent line. Same slack the grafter strips to carry:
+dead wire is now a real two-ways resource fight — gather it first
+and the under's splice pool shrinks; leave it and the grafter
+re-plants it on your path. Armed grafts still read 'Cut the splice'.
