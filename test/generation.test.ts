@@ -1720,3 +1720,18 @@ describe('the wiring shows (sprint 425)', () => {
     expect(cables, 'no ceiling cables').toBeGreaterThan(10);
   });
 });
+
+describe('the ones who ran (sprint 427)', () => {
+  it('abandoned effects wait by doors and cover', () => {
+    let fled = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fled-effects') fled++; });
+      }
+    }
+    expect(fled, 'no fled effects').toBeGreaterThan(10);
+  });
+});

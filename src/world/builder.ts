@@ -1583,6 +1583,58 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // The ones who ran — personal effects abandoned mid-flight beside the
+    // doors and the cover they didn't reach: a grip left standing, a hat,
+    // someone's boots. Whoever dragged the arrows ran out of pockets.
+    if (['lobby', 'guest', 'corridor', 'records'].includes(spec.biome) && rng.float() < 0.35) {
+      const port = spec.exits.length
+        ? spec.exits[Math.floor(rng.float() * spec.exits.length)]
+        : spec.entry;
+      const pl = portLocalPos(port, w, d);
+      const inward = port.wall === 's' ? { x: 0, z: 1 } : port.wall === 'n' ? { x: 0, z: -1 } : port.wall === 'e' ? { x: -1, z: 0 } : { x: 1, z: 0 };
+      const side = rng.float() < 0.5 ? -1 : 1;
+      const along = 1.1 + rng.float() * 0.8;
+      const deep = 0.35 + rng.float() * 0.25;
+      const fx = port.wall === 'n' || port.wall === 's'
+        ? pl.x + side * along
+        : pl.x + inward.x * deep;
+      const fz = port.wall === 'e' || port.wall === 'w'
+        ? pl.z + side * along
+        : pl.z + inward.z * deep;
+      if (!footprintInDoorLane(spec, fx, fz, 0.5, 0.5)) {
+        const pieces: { kind: Parameters<typeof buildProp>[0]['kind']; yaw: number }[] = [{ kind: 'suitcase', yaw: rng.float() * Math.PI }];
+        if (rng.float() < 0.5) pieces.push({ kind: rng.float() < 0.5 ? 'fishHat' : 'cigaretteCase', yaw: rng.float() * Math.PI * 2 });
+        pieces.forEach((p, i) => {
+          try {
+            const built = buildProp({
+              kind: p.kind,
+              x: fx + (rng.float() - 0.5) * 0.3 * i,
+              z: fz + inward.z * (0.35 * i) + (rng.float() - 0.5) * 0.3 * i,
+              yaw: p.yaw,
+            }, rng.fork(7700 + i));
+            built.group.name = 'fled-effects';
+            group.add(built.group);
+          } catch { /* dressing only */ }
+        });
+      }
+      // near a hiding spot: the hat or boots that waited too long
+      if (room.hidingSpots.length && rng.float() < 0.5) {
+        const spot = room.hidingSpots[Math.floor(rng.float() * room.hidingSpots.length)];
+        const cx = (spot.volume.minX + spot.volume.maxX) / 2 - room.origin.x;
+        const cz = (spot.volume.minZ + spot.volume.maxZ) / 2 - room.origin.z;
+        const dc = Math.cos(-room.yaw), dsn = Math.sin(-room.yaw);
+        const hx = cx * dc + cz * dsn, hz = -cx * dsn + cz * dc;
+        const hxo = hx + (rng.float() - 0.5) * 0.9, hzo = hz + (rng.float() - 0.5) * 0.9;
+        if (!footprintInDoorLane(spec, hxo, hzo, 0.3, 0.3)) {
+          try {
+            const built = buildProp({ kind: rng.float() < 0.5 ? 'rubberBoots' : 'fishHat', x: hxo, z: hzo, yaw: rng.float() * Math.PI * 2 }, rng.fork(7800));
+            built.group.name = 'fled-effects';
+            group.add(built.group);
+          } catch { /* dressing only */ }
+        }
+      }
+    }
+
     // The undertow — rooms flanking an under-passage pick up its damp:
     // water-bloom overhead and water-stained wall bases, graded by how
     // close the room sits to the gate.
