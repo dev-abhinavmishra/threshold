@@ -1664,6 +1664,53 @@ export class Game {
     return { sfx: 'floor-creak', text: '[nothing moves]' };
   }
 
+  /** Ear to the seam's sight-twin (sprint 445): stooped at the crack under a
+   *  shut leaf you read the far floor itself — only what passes close to the
+   *  threshold shows. Answers 'is it right there', never 'what is it': a
+   *  deep walker and a threshold one both read as shadow, so the crack
+   *  complements the listen instead of repeating it. Honest limits: a room
+   *  too dark gives the crack nothing, a staged (unspawned) threat casts no
+   *  shadow yet, and a lurking readout can't tell you it saw you. */
+  private stoopUnder(door: Door): { text: string; sev?: 'info' | 'warn' | 'danger' } {
+    if (door.falseDoor) return { text: '[solid plaster — the crack is painted on]', sev: 'warn' };
+    if (door.deep) return { text: '[a draught, far too cold — the gap drinks the warmth]', sev: 'warn' };
+    const target = this.roomBeyondDoor(door);
+    if (!target) return { text: '[dead dark — nothing behind it]' };
+    const roam = this.activeRooms();
+    // The nearest live thing in the far room, measured to the leaf — the
+    // crack shows floor, so only proximity to the threshold matters.
+    let best = Infinity;
+    for (const e of this.entities) {
+      if (e.state === 'done') continue;
+      const tp = e.threatPos();
+      if (!tp) continue;
+      const ri = underRoomOf(roam, tp);
+      if (ri < 0 || roam[ri] !== target) continue;
+      const d = v3dist(tp, door.pos);
+      if (d < best) best = d;
+    }
+    // and the count's own lamp — its low glow reads through the crack even
+    // in a room too dark to show a shadow
+    if (this.space === 'under' && this.checker.active) {
+      const ci = underRoomOf(roam, this.checker.position);
+      if (ci >= 0 && roam[ci] === target) {
+        const d = v3dist(this.checker.position, door.pos);
+        if (this.checker.lampLit) {
+          return { text: d < 2.0
+            ? '[the count’s lamp glows at the crack — the sweep is at this door]'
+            : '[a low light moves beyond — the count’s lamp is working that room]', sev: 'danger' as const };
+        }
+        if (d < best) best = d;
+      }
+    }
+    if (best <= 1.7) return { text: '[a shadow holds at the threshold — it is right there]', sev: 'danger' as const };
+    if (best <= 4.2) return { text: '[a shadow crosses the floor-light — something is working that room]', sev: 'warn' as const };
+    if (best < Infinity) return { text: '[a lit seam — something stirs deep in that room]' };
+    if (target.darkRoom) return { text: '[black glass — no light reaches the crack]', sev: 'warn' };
+    if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { text: '[still floor — a resting place]' };
+    return { text: '[a lit seam — nothing crosses it]' };
+  }
+
   /** Doors that already pre-spawned their roused encounters (one-shot). */
   private rousedSpawned = new Set<string>();
   /** Under doors that already announced their named-face stick. */
@@ -3212,6 +3259,13 @@ export class Game {
         this.listenedDoors.add(door.id);
         const c = this.listenThrough(door);
         this.cue(c.sfx, it.pos, c.text, c.sev);
+        return;
+      }
+      case 'stoop': {
+        const door = it.data as Door;
+        const c = this.stoopUnder(door);
+        this.cue('door-peek', it.pos, c.text, c.sev);
+        this.teach('stoop', '[the crack shows only what passes close — the seam still hears further]');
         return;
       }
       case 'brace': {

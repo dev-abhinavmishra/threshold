@@ -6310,3 +6310,21 @@ it can't hold your gaze through cover either.
 **Notes:** the flag's three consumers (Lurker flee, Inkling agitate,
 Husk dormant wake) all inherited the fix at once — a shared flag is
 the right seam for a convention; gate the FLAG, not each effect.
+
+## Sprint 445 — the crack under the leaf
+
+'Stoop to the crack — Door N' mints at leaf CENTRE on every closed leaf
+(`openT <= 0.4`, false doors keep it — plaster is the counter-tell) while
+crouched, aimed low (pos.y - 0.55) so it never shadows the edge seam. The
+sight-twin of 'Listen at Door N': the seam answers WHAT is there (per-entity
+sound cues), the crack answers IS IT RIGHT THERE — nearest live threatPos
+in the far room measured to the leaf: <=1.7m 'a shadow holds at the
+threshold' (danger), <=4.2m 'a shadow crosses the floor-light' (warn),
+deeper 'something stirs deep' (info), dark rooms 'black glass', unspawned
+scheds cast no shadow (honest — they're not flesh yet). The count's lamp
+reads through the crack even in dark rooms: lit lamp in the far room is
+always danger (<=2m 'at this door'), blind sweeps fall back to proximity.
+**Notes:** spatial language is now crouch-centre = stoop, crouch-edge =
+listen/brace/wire — verb count per leaf is up to 5; if focus contention
+shows up, the leaf-normal side offset (wedge's `nX*side` pattern) is the
+free slot, not more lateral.

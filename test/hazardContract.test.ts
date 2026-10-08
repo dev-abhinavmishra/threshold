@@ -399,3 +399,14 @@ describe('the leaf is cover (sprint 441)', () => {
     expect(game).toContain('shutLeafBlockers');
   });
 });
+
+describe('the crack under the leaf (sprint 445)', () => {
+  it('the stoop is wired into the same closed-leaf gate as the seam', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'stoop'");
+    expect(interaction).toContain('Stoop to the crack');
+    expect(game).toContain('stoopUnder(door: Door)');
+    expect(game).toContain("case 'stoop'");
+  });
+});
