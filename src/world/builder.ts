@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, dustDate, drapeGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1790,6 +1790,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         0.007,
         p.z + Math.cos(py) * 0.55);
       group.add(m);
+    }
+
+    // The curtains kept the sun — the wall stayed dark where a
+    // drape hung, bleached pale around its fold edges.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const dww: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const dAlong = dww === 'e' || dww === 'w' ? p.z : p.x;
+      wallDecal(dww, drapeGhost(rng), 0.6 + rng.float() * 0.15, 1.5 + rng.float() * 0.3,
+        dAlong + (rng.float() < 0.5 ? -1 : 1) * (0.8 + rng.float() * 0.25),
+        1.35 + rng.float() * 0.25);
+      const dg = group.children[group.children.length - 1];
+      if (dg && !dg.name) dg.name = 'drape-ghost';
     }
 
     // The water line — a room that flooded once keeps the tide mark:

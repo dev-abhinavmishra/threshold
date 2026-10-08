@@ -2419,3 +2419,33 @@ describe('the count chalked a body (sprint 456)', () => {
     expect(n, 'no body outlines').toBeGreaterThan(0);
   });
 });
+
+describe('the dust wrote the months (sprint 457)', () => {
+  it('dates stay traced in the film on dusty tops', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'dust-date') n++; });
+      }
+    }
+    expect(n, 'no dust dates').toBeGreaterThan(0);
+  });
+});
+
+describe('the curtains kept the sun (sprint 457)', () => {
+  it('walls keep the spared strip where a drape hung', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drape-ghost') n++; });
+      }
+    }
+    expect(n, 'no drape ghosts').toBeGreaterThan(0);
+  });
+});

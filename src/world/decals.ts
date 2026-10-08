@@ -2404,3 +2404,80 @@ export function bodyOutline(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Dust date — a date finger-traced through the film on a dusty top:
+ * pale wiped strokes in a dark grey field, one year, never finished. */
+export function dustDate(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // the film itself — undisturbed dust darkening the wood
+    const film = ctx.createRadialGradient(48, 32, 6, 48, 32, 44);
+    film.addColorStop(0, 'rgba(120,114,102,0.4)');
+    film.addColorStop(1, 'rgba(120,114,102,0)');
+    ctx.fillStyle = film;
+    ctx.fillRect(0, 0, 96, 64);
+    // wiped strokes — the pale wood showing through where a finger drew
+    ctx.strokeStyle = 'rgba(226,216,192,0.6)';
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    const stroke = (x: number, y: number, w: number, h: number, tilt: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x + w * 0.5, y + h * 0.5 + (rng.float() - 0.5) * 2,
+        x + w, y + h + tilt);
+      ctx.stroke();
+    };
+    // two or three digits, blocky and hesitant
+    let x = 22 + rng.float() * 8;
+    const digits = 2 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < digits; i++) {
+      const dw = 10 + rng.float() * 3;
+      stroke(x, 20, 0, 14, 0);              // left stem
+      if (rng.bool(0.8)) stroke(x, 20, dw, 0, (rng.float() - 0.5) * 2);   // top
+      if (rng.bool(0.7)) stroke(x, 34, dw * 0.9, 0, 0);                    // bottom
+      if (rng.bool(0.55)) stroke(x + dw, 20, 0, 14, 0);                    // right
+      x += dw + 4 + rng.float() * 4;
+    }
+    // the smear where the hand rested after
+    ctx.strokeStyle = 'rgba(226,216,192,0.25)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(20, 48);
+    ctx.quadraticCurveTo(48, 52, 72 + rng.float() * 10, 46);
+    ctx.stroke();
+  });
+}
+
+/** Drape ghost — the sun-bleached rectangle a hanging drape spared:
+ * the wall kept dark where it hung, pale around the fold edges. */
+export function drapeGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    const gw = 26 + rng.float() * 8;
+    // pale surround — years of bleaching except where cloth covered
+    const bg = ctx.createRadialGradient(cx, 64, gw * 0.6, cx, 64, gw * 2.2);
+    bg.addColorStop(0, 'rgba(240,232,212,0.0)');
+    bg.addColorStop(0.75, 'rgba(240,232,212,0.16)');
+    bg.addColorStop(1, 'rgba(240,232,212,0)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 96, 128);
+    // the spared strip — the wall's original colour kept vertical
+    const strip = ctx.createLinearGradient(cx - gw / 2, 0, cx + gw / 2, 0);
+    strip.addColorStop(0, 'rgba(70,60,48,0.05)');
+    strip.addColorStop(0.5, 'rgba(70,60,48,0.3)');
+    strip.addColorStop(1, 'rgba(70,60,48,0.05)');
+    ctx.fillStyle = strip;
+    ctx.fillRect(cx - gw / 2, 8, gw, 112);
+    // fold shadows — the pleats left stripes within the spared strip
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(56,48,38,${0.08 + rng.float() * 0.1})`;
+      ctx.fillRect(cx - gw / 2 + i * (gw / 6) + rng.float(), 8, gw / 9, 112);
+    }
+    // the hem line — a sharper edge where the drape ended
+    ctx.strokeStyle = 'rgba(240,232,212,0.28)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - gw / 2 - 3, 118);
+    ctx.lineTo(cx + gw / 2 + 3, 118);
+    ctx.stroke();
+  });
+}
