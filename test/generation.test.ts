@@ -1601,3 +1601,34 @@ describe('the lamps take sides (sprint 419)', () => {
     expect(litOpen, 'open leaves never lit').toBeGreaterThan(10);
   });
 });
+
+describe('the house remembers routes (sprint 420)', () => {
+  it('junctions carry arrows — mostly honest, sometimes bait', () => {
+    let honest = 0, lies = 0, aimed = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec || !room.doors.length) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        const ports = [room.spec.entry, ...room.spec.exits].map((p) => portLocalPos(p, room.spec.width, room.spec.depth));
+        built.group.traverse((o) => {
+          if (o.name === 'way-arrow' || o.name === 'way-arrow-false') {
+            if (o.name === 'way-arrow') honest++; else lies++;
+            // arrow direction is rotation.z: dir = (cos a, -sin a) in xz
+            const ax = Math.cos(o.rotation.z), az = -Math.sin(o.rotation.z);
+            const hit = ports.some((lp) => {
+              const L = Math.hypot(lp.x, lp.z) || 1;
+              return (ax * lp.x / L + az * lp.z / L) > 0.85;
+            });
+            if (hit) aimed++;
+          }
+        });
+      }
+    }
+    expect(honest + lies, 'no way arrows at junctions').toBeGreaterThan(10);
+    expect(honest, 'no honest arrows').toBeGreaterThan(5);
+    expect(lies, 'the house never lies — too honest').toBeGreaterThan(0);
+    // arrows steer: nearly all point within ~30° of some door
+    expect(aimed / (honest + lies)).toBeGreaterThan(0.9);
+  });
+});

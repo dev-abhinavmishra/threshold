@@ -738,3 +738,37 @@ export function chalkMark(rng: Rng): THREE.Texture | null {
     ctx.fillRect(14, 70, 68, 14);
   });
 }
+
+/** A dragged chalk/paint arrow scuffed on the floor, pointing +X. */
+export function wayArrow(rng: Rng) {
+  return canvasTex(128, 96, (ctx) => {
+    const chalk = (a: number) => `rgba(235,232,224,${a})`;
+    const wob = () => rng.float() * 3 - 1.5;
+    ctx.strokeStyle = chalk(0.8);
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    // shaft — two wobbly strokes like a dragged heel
+    ctx.beginPath();
+    ctx.moveTo(14, 48 + wob());
+    ctx.lineTo(92 + wob() * 2, 46 + wob());
+    ctx.stroke();
+    ctx.lineWidth = 5;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(18, 52 + wob());
+    ctx.lineTo(88 + wob(), 50 + wob());
+    ctx.stroke();
+    // head
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(74 + wob(), 30 + wob());
+    ctx.lineTo(100 + wob(), 48 + wob());
+    ctx.lineTo(74 + wob(), 66 + wob());
+    ctx.stroke();
+    // dust smear behind the tail
+    ctx.fillStyle = chalk(0.06);
+    ctx.fillRect(8, 58, 60, 16);
+  });
+}

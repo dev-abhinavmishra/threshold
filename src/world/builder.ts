@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1494,6 +1494,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           Math.max(-d / 2 + 0.5, Math.min(d / 2 - 0.5, lz + (rng.float() - 0.5) * 0.8)));
       }
       group.add(m);
+    }
+
+    // The house remembers routes — at junctions a dragged arrow points
+    // the way on. Mostly honest; sometimes it points down the branch —
+    // whoever dragged it had their own errand.
+    if (spec.exits.length >= 1) {
+      const junction = spec.exits.length >= 2;
+      const roll = rng.float();
+      let target: { x: number; z: number } | undefined;
+      let honest = true;
+      if (junction && roll < 0.2) { target = portLocalPos(spec.exits[1 + Math.floor(rng.float() * (spec.exits.length - 1))], w, d); honest = false; }
+      else if (roll < (junction ? 0.9 : 0.3)) target = portLocalPos(spec.exits[0], w, d);
+      if (target) {
+        const entryL = portLocalPos(spec.entry, w, d);
+        const tl = Math.hypot(target.x, target.z) || 1;
+        const a = decalQuad(wayArrow(rng), 0.9, 0.65);
+        a.name = honest ? 'way-arrow' : 'way-arrow-false';
+        a.rotation.x = -Math.PI / 2;
+        a.rotation.z = Math.atan2(-target.z, target.x);
+        // stands just past the entry door, where you arrive
+        a.position.set(entryL.x * 0.7 + (target.x / tl) * 0.15, 0.0065, entryL.z * 0.7 + (target.z / tl) * 0.15);
+        group.add(a);
+      }
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:
