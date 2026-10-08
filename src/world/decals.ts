@@ -627,3 +627,50 @@ export function thresholdSpill(): THREE.Texture | null {
     ctx.globalCompositeOperation = 'source-over';
   });
 }
+
+/* ---------- worn threshold — the traffic polished the boards ---------- */
+
+export function thresholdWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 96, (ctx) => {
+    // a polished traffic band down the middle of the strip — dark worn
+    // board where every walk crosses, feathering to nothing at the edges
+    for (let i = 0; i < 7; i++) {
+      const cy = 34 + rng.float() * 28;
+      const rx = 90 + rng.float() * 60;
+      const ry = 7 + rng.float() * 10;
+      const a = 0.10 + rng.float() * 0.14;
+      const g = ctx.createRadialGradient(128, cy, 2, 128, cy, rx);
+      g.addColorStop(0, `rgba(16,13,10,${a})`);
+      g.addColorStop(0.6, `rgba(16,13,10,${a * 0.55})`);
+      g.addColorStop(1, 'rgba(16,13,10,0)');
+      ctx.fillStyle = g;
+      ctx.save();
+      ctx.translate(128, cy);
+      ctx.scale(1, ry / rx);
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // scuff drag-lines crossing the band
+    ctx.strokeStyle = 'rgba(20,16,12,0.16)';
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 6; i++) {
+      const y = 30 + rng.float() * 36;
+      ctx.beginPath();
+      ctx.moveTo(30 + rng.float() * 40, y + (rng.float() - 0.5) * 6);
+      ctx.quadraticCurveTo(128, y + (rng.float() - 0.5) * 14, 190 + rng.float() * 40, y + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    }
+    // hard feather top+bottom so the strip never shows a canvas edge
+    const v = ctx.createLinearGradient(0, 0, 0, 96);
+    v.addColorStop(0, 'rgba(0,0,0,1)');
+    v.addColorStop(0.22, 'rgba(0,0,0,0)');
+    v.addColorStop(0.78, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, 256, 96);
+    ctx.globalCompositeOperation = 'source-over';
+  });
+}

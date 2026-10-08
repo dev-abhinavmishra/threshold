@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1423,6 +1423,40 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
               (rng.float() - 0.5) * Math.max(0.4, d - t.h - 0.6));
             group.add(m);
           }
+        }
+      }
+    }
+
+    // The worn way — thresholds carry the traffic: a polished strip just
+    // inside every leaf, and a tried leaf scars the wall beside it (a
+    // locked leaf was worried before you; a toll leaf doubly so).
+    for (const door of room.doors) {
+      const ddx = door.pos.x - room.origin.x, ddz = door.pos.z - room.origin.z;
+      const dc = Math.cos(-room.yaw), dsn = Math.sin(-room.yaw);
+      const dp = { x: ddx * dc + ddz * dsn, z: -ddx * dsn + ddz * dc };
+      const dil = Math.hypot(dp.x, dp.z) || 1;
+      const inx = -dp.x / dil, inz = -dp.z / dil;
+      if (rng.float() < (door.isMainRoute ? 0.85 : 0.45)) {
+        const m = decalQuad(thresholdWear(rng), 1.15, 0.55);
+        m.name = 'worn-threshold';
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = room.yaw - door.yaw - Math.PI / 2;
+        m.position.set(dp.x + inx * 0.34, 0.0055, dp.z + inz * 0.34);
+        group.add(m);
+      }
+      // scratches crowd the lock side — pick one leaf edge, pile marks on it
+      if (door.locked && rng.float() < 0.75) {
+        const side = rng.bool() ? 1 : -1;
+        const px = inz * side, pz = -inx * side;
+        const n = door.lockId === 'toll' ? 2 : 1;
+        for (let k = 0; k < n; k++) {
+          const m = decalQuad(door.lockId === 'toll' ? handPrints(rng) : scratchMarks(rng), 0.5 + rng.float() * 0.3, 0.5 + rng.float() * 0.35);
+          m.name = 'lock-scars';
+          m.position.set(
+            dp.x + inx * 0.08 + px * (0.52 + rng.float() * 0.2), 1.05 + rng.float() * 0.5,
+            dp.z + inz * 0.08 + pz * (0.52 + rng.float() * 0.2));
+          m.rotation.y = Math.atan2(inx, inz);
+          group.add(m);
         }
       }
     }
