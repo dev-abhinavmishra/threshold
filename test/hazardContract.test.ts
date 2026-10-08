@@ -205,6 +205,14 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(baseSrc).toContain('playerCarries?:');
     expect(gameSrc).toContain('playerCarries: (id) => this.inventory.some');
   });
+
+  it('the seam carries the tick — a door-listen answers your wound clock', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    expect(gameSrc).toContain('a small clock counts down beyond');
+    expect(gameSrc).toContain('an alarm rings beyond — the clock you wound');
+    // the listen reads the live lures list, lowest precedence — below every tread
+    expect(gameSrc).toMatch(/this\.lures\.find\(\(l\) => \{\s*const ri = underRoomOf\(roam, l\.pos\)/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

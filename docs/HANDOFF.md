@@ -5875,3 +5875,12 @@ smell (kill is still gaze-gated by protection). It drags WITHOUT
 feeding markReads — one smell isn't twenty marks; the rubble tracks
 your hands but doesn't go eager on a coil that never lands. New ctx
 `playerCarries(id)` answers from the pack, not the sign list.
+
+## Sprint 426 — the seam carries the tick
+
+A door-listen now answers a live windAlarm lure in the room beyond:
+'[a small clock counts down beyond — the lure you planted]', and while
+it pays out '[an alarm rings beyond — the clock you wound]'. Same info
+tier as the armed-line hum — below every tread, above the room-type
+reads. The ear-to-the-seam family: sched > lamp > paper > primed >
+tread > armed line > your tick > template.

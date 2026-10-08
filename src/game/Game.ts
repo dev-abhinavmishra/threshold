@@ -1559,6 +1559,18 @@ export class Game {
       return { sfx: 'printer-whir', sev: 'info' as const,
         text: armedLine.dial ? '[a phone rings beyond — the line you paid for]' : '[a line hums beyond — somebody left it off the hook]' };
     }
+    // sprint 426 — and the seam carries the tick: your own wound clock
+    // counts down behind a closed leaf — the ear knows its lure's room
+    // before the ring ever pays it out
+    const ticking = this.lures.find((l) => {
+      const ri = underRoomOf(roam, l.pos);
+      return ri >= 0 && roam[ri] === target;
+    });
+    if (ticking) {
+      return { sfx: 'printer-whir', sev: 'info' as const,
+        text: ticking.rang ? '[an alarm rings beyond — the clock you wound]'
+          : '[a small clock counts down beyond — the lure you planted]' };
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
