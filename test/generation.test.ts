@@ -1828,3 +1828,18 @@ describe('the leaf remembers (sprint 432)', () => {
     expect(arcs, 'no swing arcs').toBeGreaterThan(15);
   });
 });
+
+describe('the dust shadow (sprint 433)', () => {
+  it('walls keep the silhouette of long-standing furniture', () => {
+    let shadows = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'dust-shadow') shadows++; });
+      }
+    }
+    expect(shadows, 'no dust shadows').toBeGreaterThan(10);
+  });
+});

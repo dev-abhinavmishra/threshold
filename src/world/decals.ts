@@ -1025,3 +1025,24 @@ export function swingWear(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** The dust shadow — a faintly cleaner patch of wall where tall
+ * furniture has stood for years, edged with the grime that built up
+ * around it. */
+export function dustShadow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // grime halo around the clean patch
+    ctx.fillStyle = 'rgba(48,44,38,0.30)';
+    ctx.beginPath();
+    ctx.roundRect(6, 6, 84, 116, 8);
+    ctx.fill();
+    // the protected area — lighter than the wall around it
+    ctx.fillStyle = 'rgba(198,190,172,0.20)';
+    ctx.beginPath();
+    ctx.roundRect(14, 12, 68, 104, 4);
+    ctx.fill();
+    // dust line where the top edge of the furniture sat
+    ctx.fillStyle = 'rgba(60,54,46,0.25)';
+    ctx.fillRect(12, 10 + rng.float() * 6, 72, 3);
+  });
+}

@@ -5124,3 +5124,11 @@ Game.die() from the same five fields.
   are NOT PropKind (model names, not kinds) — main was broken. Kinds are
   hangingCable/conduitRun/indPipes/ductRun/ductCirc/ductRect.
 - Vitest 279: 'the leaf remembers'. Gates: tsc, lint, generation 95/95.
+
+## sprint 433 — the dust shadow
+
+- Walls keep furniture silhouettes: tall props (cabinet/shelf/filing/
+  locker/wardrobe/bookshelf/drawerUnit) within 0.85 of a wall get a
+  paler dust-shadow patch behind them (50% roll), grime-edged.
+  Named 'dust-shadow'.
+- Vitest 280: 'the dust shadow'. Gates: tsc, lint, generation 96/96.

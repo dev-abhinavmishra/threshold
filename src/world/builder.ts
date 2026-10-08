@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,23 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The dust shadow — the wall keeps the silhouette of whatever's been
+    // standing against it for years: a paler patch, grime edged.
+    for (const p of spec.props) {
+      const tall = p.kind === 'cabinet' || p.kind === 'shelf' || p.kind === 'filing'
+        || p.kind === 'locker' || p.kind === 'wardrobe' || p.kind === 'bookshelf' || p.kind === 'drawerUnit';
+      if (!tall || rng.float() >= 0.5) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const m = Math.min(dE, dW, dN, dS);
+      if (m > 0.85) continue;
+      const wall = m === dE ? 'e' : m === dW ? 'w' : m === dN ? 'n' : 's';
+      const along = wall === 'e' || wall === 'w' ? p.z : p.x;
+      const dw = 0.7 + rng.float() * 0.4, dh = 1.3 + rng.float() * 0.5;
+      wallDecal(wall, dustShadow(rng), dw, dh, along + (rng.float() - 0.5) * 0.15, 0.9 + rng.float() * 0.3);
+      const last = group.children[group.children.length - 1];
+      if (last && !last.name) last.name = 'dust-shadow';
     }
 
     // The leaf remembers — a polished arc on the leaf's travel, scuffed
