@@ -5514,6 +5514,32 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 482–484 — the keyholes kept the fumbles, the moths ate the drapes & the pots kept their rings
+
+Sprint 482: `keyholeWear` — polish ring + fumble-scratch fan on
+non-industrial door leaves (~30%, leaf child); `candleSkin` —
+collapsed wax shells on candle/candelabra/candelabrum/lantern/
+wallLantern (~35%); `treadShine` — polished lanes + heel chips on
+stairs/stairLanding/grandStair (~50%).
+
+Sprint 483: `mothBites` — chewed voids + fray + shed scales on
+curtain/drape props (~40%); `valanceDust` — dust film + swept lane
+on curtain headers (~35%); `curtainShade` — fold shadows on walls
+behind drapes (~40%).
+
+Sprint 484: `potRing` — scorch brands on kitchen worktops (~25%);
+`lidSteam` — wet rings + drip beads under lidded pots (~45%);
+`rackGhost` — bottle rings + wine drips on racks/barrels (~50%).
+
+Gotcha: python str.replace() with no count arg replaces EVERY
+occurrence — running the wiring script twice duplicates whole
+blocks (hit BURNED_CANDLES at two anchors). Check for dup
+declarations before asserting success, and dedupe the appended
+test describes too.
+
+Gates: tsc, lint, generation tests (9 new cases, 423 total).
+Full suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 479–481 — the taps calcified, the bells rusted dumb & the webs veiled the tops
 
 Sprint 479: `tapCalc` — lime crust + verdigris on basin/tap fronts
