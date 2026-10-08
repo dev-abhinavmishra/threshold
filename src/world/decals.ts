@@ -4732,3 +4732,126 @@ export function candleDrip(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Plaster bulge — the blister a damp wall pushes out: a raised
+ * dome shade, crack crown around it, damp skirt bleeding down. */
+export function plasterBulge(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 14;
+    const cy = 44 + (rng.float() - 0.5) * 12;
+    // the damp skirt — moisture bleeding below the blister
+    const dg = ctx.createLinearGradient(0, cy + 8, 0, cy + 44);
+    dg.addColorStop(0, `rgba(110,104,84,${0.2 + rng.float() * 0.12})`);
+    dg.addColorStop(1, 'rgba(110,104,84,0)');
+    ctx.fillStyle = dg;
+    ctx.fillRect(cx - 24, cy + 8, 48, 40);
+    // the dome — lit top, shaded underside (a raised blister)
+    const g = ctx.createRadialGradient(cx - 4, cy - 5, 2, cx, cy, 18);
+    g.addColorStop(0, 'rgba(190,182,164,0.4)');
+    g.addColorStop(0.6, `rgba(120,110,94,${0.24 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(70,62,50,0.12)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 16 + rng.float() * 4, 13 + rng.float() * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // crack crown — hairlines ringing the blister
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + rng.float() * 0.4;
+      ctx.strokeStyle = `rgba(48,40,32,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      const r0 = 15 + rng.float() * 3;
+      ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0 * 0.82);
+      ctx.lineTo(cx + Math.cos(a) * (r0 + 4 + rng.float() * 6), cy + Math.sin(a) * (r0 + 4 + rng.float() * 5) * 0.82);
+      ctx.stroke();
+    }
+    // flake — a fallen plaster scale at the skirt's foot
+    ctx.fillStyle = 'rgba(180,172,152,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 20, cy + 40, 3, 2, rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Mirror blind — the tarnish a mirror loses its silvering to:
+ * dark bloom at the edges, fogged lobes, a cold grey field. */
+export function mirrorBlind(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // edge tarnish — dark creep in from the frame
+    ctx.strokeStyle = `rgba(38,34,32,${0.5 + rng.float() * 0.15})`;
+    ctx.lineWidth = 7 + rng.float() * 4;
+    ctx.strokeRect(4, 4, 88, 88);
+    // fogged lobes — silvering lost in grey billows
+    for (let i = 0; i < 5; i++) {
+      const lx = 14 + rng.float() * 68;
+      const ly = 14 + rng.float() * 68;
+      ctx.fillStyle = `rgba(96,92,88,${0.18 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 8 + rng.float() * 8, 6 + rng.float() * 6, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // fogged speckle — the fine pinpoints where it failed
+    for (let i = 0; i < 24; i++) {
+      const x = rng.float() * 88 + 4;
+      const y = rng.float() * 88 + 4;
+      // heavier near the edges
+      const edge = Math.min(x, 96 - x, y, 96 - y) / 48;
+      if (rng.float() > 0.3 + edge) continue;
+      ctx.fillStyle = `rgba(60,56,52,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.5 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the kiss — a dark bloom where a face pressed
+    if (rng.bool(0.5)) {
+      ctx.fillStyle = 'rgba(50,46,44,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(48 + (rng.float() - 0.5) * 10, 40, 8, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Door dent — the pit a doorknob pounds into the wall it slams
+ * into: a round crater, ring cracks, paint chips. */
+export function doorDent(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // the crater — dark pit at the impact point
+    const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, 10);
+    g.addColorStop(0, 'rgba(24,20,16,0.65)');
+    g.addColorStop(0.6, `rgba(60,50,40,${0.4 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(60,50,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.fillStyle = 'rgba(18,14,12,0.7)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 3.5 + rng.float(), 3 + rng.float(), rng.float() * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // ring cracks — hairlines radiating from the pit
+    for (let i = 0; i < 5; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(40,32,26,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 4, cy + Math.sin(a) * 3);
+      ctx.lineTo(cx + Math.cos(a) * (9 + rng.float() * 8), cy + Math.sin(a) * (8 + rng.float() * 6));
+      ctx.stroke();
+    }
+    // paint chips — flecks knocked loose around the crater
+    for (let i = 0; i < 10; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 6 + rng.float() * 12;
+      ctx.fillStyle = `rgba(170,160,140,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.5 + rng.float() * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // smear — a rubbed arc where the knob scraped
+    ctx.strokeStyle = 'rgba(80,70,58,0.28)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12 + rng.float() * 3, Math.PI * 0.4, Math.PI * 1.1);
+    ctx.stroke();
+  });
+}

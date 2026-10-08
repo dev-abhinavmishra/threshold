@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1676,6 +1676,18 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cd.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'candle-drip';
+  }
+  // The mirrors blinded — silvering lost to tarnish and fog.
+  if (spec.kind === 'mirror' && rng.bool(0.4)) {
+    const mb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: mirrorBlind(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    mb.name = 'mirror-blind';
+    mb.userData.decalMat = true;
+    mb.position.set((rng.float() - 0.5) * 0.15, 0.05, 0.048);
+    prop.group.add(mb);
+    if (!prop.group.name) prop.group.name = 'mirror-blind';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

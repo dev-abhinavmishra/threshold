@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2276,6 +2276,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(fw, flueStain(rng), 0.8 + rng.float() * 0.2, 1.3 + rng.float() * 0.2, along, 1.9 + rng.float() * 0.2);
       const fs = group.children[group.children.length - 1];
       if (fs && !fs.name) fs.name = 'flue-stain';
+    }
+
+    // The plaster bulged — damp blisters with crack crowns on walls
+    // that never dried.
+    if (!livedIn || rng.bool(0.55)) {
+      const spot = pickWallSpot(0.85);
+      if (spot) {
+        wallDecal(spot.wall, plasterBulge(rng), 0.7 + rng.float() * 0.2, 0.7 + rng.float() * 0.2, spot.along, 1.3 + rng.float() * 0.5);
+        const pb = group.children[group.children.length - 1];
+        if (pb && !pb.name) pb.name = 'plaster-bulge';
+      }
+    }
+    // The doors dented the wall — impact pits behind the swings.
+    for (const port of doorPositions) {
+      if (rng.float() >= 0.3) continue;
+      const hit = portLocalPos({ wall: port.wall, offset: port.offset, width: 0.9 }, w, d);
+      const inx = port.wall === 'e' ? -1 : port.wall === 'w' ? 1 : 0;
+      const inz = port.wall === 's' ? -1 : port.wall === 'n' ? 1 : 0;
+      const along = (port.wall === 'e' || port.wall === 'w' ? hit.z : hit.x)
+        + (rng.bool(0.5) ? port.width / 2 + 0.12 : -port.width / 2 - 0.12);
+      wallDecal(port.wall, doorDent(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1, along + inx * 0 + inz * 0, 0.95 + rng.float() * 0.15);
+      const dd = group.children[group.children.length - 1];
+      if (dd && !dd.name) dd.name = 'door-dent';
     }
 
     // The water line — a room that flooded once keeps the tide mark:
