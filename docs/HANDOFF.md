@@ -5016,3 +5016,19 @@ Game.die() from the same five fields.
   locked). e2e batched per pace directive — the existing bellman legs
   are unaffected (they drive at range / pin watchT=0).
 - Gates: tsc, lint, vitest 273, sim 5/5, build.
+
+## sprint 397 — the set goes dark
+
+- The tuned TV was the only tool with a deferred threat and no out:
+  ~1/3 of sets schedule 'the channel knows you are here' 14-26s later,
+  uncancellable. Lit sets now mint 'Turn the set off' (0.6s, priority 2)
+  — kills the light + hiss, and drops that set's pending answer.
+- The prompt tells the truth — when the channel already flagged the
+  room it reads 'Turn the set off — the channel knows you are here',
+  so the decision is inspectable: tune, see the flag, kill it before
+  it speaks. Going dark is terminal (deadTVs; no re-tune, no re-off —
+  the channel got your attention once) and the press answers honestly:
+  '[the set goes dark — the channel forgets the room]' vs plain dark.
+- Also closed a pre-existing hole: tvAnswerQueue never cleared on
+  restart — a queued answer could fire into a dead run's stale pos.
+- Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.

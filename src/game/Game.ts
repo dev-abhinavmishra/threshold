@@ -597,6 +597,8 @@ export class Game {
     this.deepSeen.clear();
     this.playedPianos.clear();
     this.litTVs.clear();
+    this.deadTVs.clear();
+    this.tvAnswerQueue.length = 0;
     this.woundClocks.clear();
     this.crackedVents.clear();
     this.litHearths.clear();
@@ -2099,7 +2101,18 @@ export class Game {
               pos: { x: wx, y: 1, z: wz },
               prompt: 'Play the piano', holdTime: 0.9, enabled: true, priority: 2,
             });
-          } else if (p.kind === 'television' && !this.litTVs.has(key)) {
+          } else if (p.kind === 'television' && this.litTVs.has(key)) {
+            // sprint 397 — a lit set is yours to kill. The prompt tells the
+            // truth: if the channel already flagged this room, the off is
+            // your only out — kill the set before it answers back.
+            const flagged = this.tvAnswerQueue.some((q) => Math.hypot(q.pos.x - wx, q.pos.z - wz) < 0.6);
+            this.interaction.add({
+              kind: 'tvoff', id: `tvoff-${key}`,
+              pos: { x: wx, y: 1, z: wz },
+              prompt: flagged ? 'Turn the set off — the channel knows you are here' : 'Turn the set off',
+              holdTime: 0.6, enabled: true, priority: 2,
+            });
+          } else if (p.kind === 'television' && !this.deadTVs.has(key)) {
             this.interaction.add({
               kind: 'tv', id: `tv-${key}`,
               pos: { x: wx, y: 1, z: wz },
@@ -4231,6 +4244,25 @@ export class Game {
         }
         return;
       }
+      case 'tvoff': {
+        // sprint 397 — kill the set. Going dark is terminal (the channel got
+        // your attention once), and it cancels the answer-back if the channel
+        // flagged this room but hasn't spoken yet. The light and hiss die too.
+        it.enabled = false;
+        const offKey = it.id.replace(/^tvoff-/, '');
+        this.litTVs.delete(offKey);
+        this.deadTVs.add(offKey);
+        this.untuneTVAt(this.currentRoom, Number(offKey.split(':')[2] ?? 0));
+        const at = { x: it.pos.x, y: 1.2, z: it.pos.z };
+        const flagged = this.tvAnswerQueue.some((q) => Math.hypot(q.pos.x - at.x, q.pos.z - at.z) < 0.6);
+        if (flagged) {
+          this.tvAnswerQueue = this.tvAnswerQueue.filter((q) => Math.hypot(q.pos.x - at.x, q.pos.z - at.z) >= 0.6);
+        }
+        this.cue('trap-click', at, flagged
+          ? '[the set goes dark — the channel forgets the room]'
+          : '[the set goes dark]');
+        return;
+      }
       case 'piano': {
         it.enabled = false;
         this.playedPianos.add(it.id.replace(/^piano-/, ''));
@@ -6078,6 +6110,16 @@ export class Game {
     });
   }
 
+  /** Kill the n-th television group in room i — the channel goes dark. */
+  private untuneTVAt(i: number, n: number): void {
+    let seen = -1;
+    this.worldGroup.traverse((o) => {
+      if (o.name !== `tv-${i}`) return;
+      seen += 1;
+      if (seen === n) o.traverse((x) => { if (x.userData.anim === 'tv-live') x.userData.anim = 'screen'; });
+    });
+  }
+
   private ensureCoffin(_i: number, built: { group: THREE.Group }): void {
     if (!this.coffinOpened) return;
     const g = built.group.getObjectByName(`coffin-${_i}`);
@@ -6098,6 +6140,7 @@ export class Game {
   private coffinOpened = false;
   private playedPianos = new Set<string>();
   private litTVs = new Set<string>();
+  private deadTVs = new Set<string>();
   private woundClocks = new Set<string>();
   private crackedVents = new Set<string>();
   private steamMasks: { pos: Vec3; until: number }[] = [];
