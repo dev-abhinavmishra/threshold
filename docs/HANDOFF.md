@@ -5514,6 +5514,43 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 455–457 — the wall kept the fist, the count chalked a body & the dust wrote the months
+
+Sprint 455: `fistMark` — punched-wall craters beside doors at striking
+height (~35% of rooms, `cy`≈1.4–1.7, named `fist-mark`); `smokeStain` —
+greasy ceiling film above hearth props (ceiling quad `rotation.x=+π/2` at
+`h-0.058`, named `smoke-stain`); `underBed` — box/case silhouettes + dust
+rim at bed side edges (~35%, floor quad named `under-bed`).
+
+Sprint 456: `kickSplit` — forced-door split + splinters + shoe shadow as a
+CHILD OF THE LEAF group (rides the leaf, survives consolidation via the
+doorLeaves keep-set — no userData flags needed, ~15% of interior doors,
+named `kick-split`); `scratchWriting` — pin-scratched words on ~22% of
+mirrors at buildProp level (mesh + group both named `scratch-writing` so
+both merge passes spare it); `bodyOutline` — chalk fallen-figure outlines
+on maintenance/unlit/under floors (~22%, named `body-outline`).
+
+Sprint 457: `dustDate` — a year finger-traced through dust on TOPS
+surfaces (~16%, `topY` recomputed — the ring-stain `topY` is scoped to its
+own block; group named `dust-date`); `drapeGhost` — sun-bleach spared
+strips on the wall nearest windows (~35%, named `drape-ghost`).
+
+**Gotcha (new, 457):** `wallDecal`/`pickWallSpot`/`portOffsetsOn` are
+`const`s inside a depth-3 sub-block of `buildRoomMesh` — they are NOT in
+scope inside the `passthrough` buildProp loop (~line 2377). Calling them
+there throws a ReferenceError that the loop's `try{}` swallows SILENTLY
+(presence tests pass because no exception escapes — the decal just never
+exists). Any decal placement that needs prop coordinates must live in the
+dressing block's own `for (const p of spec.props)` loops (the soot/hearth
+loops ~1744+, or a new loop beside them). Port interface: `Port` has
+`wall` + `offset` (NOT `along`) — use `portLocalPos(port, w, d)` then
+`along = (e|w) ? pos.z : pos.x`.
+
+**Gotcha (new, 456):** decals riding a door leaf need nothing extra —
+children of a keep-listed group survive room consolidation wholesale.
+
+Gates: tsc, lint, generation tests (6 new). Full suite + sim before push.
+
 ## Sprint 452–454 — the wood keeps the water, the drains drink & the letters never sent
 
 Sprint 452: ring stains on tabletop surfaces (`ringStains` — mug rings +
