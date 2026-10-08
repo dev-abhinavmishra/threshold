@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -940,6 +940,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const spot = pickWallSpot(1.1);
         if (!spot) break;
         wallDecal(spot.wall, crackDecal(rng), 1.1, 1.1, spot.along, 1.3 + rng.float() * 0.7);
+        // what fell out of the wound lands at the wall's feet
+        if (rng.float() < 0.45) {
+          const f = decalQuad(plasterFall(rng), 0.8, 0.8);
+          f.name = 'plaster-fall';
+          f.rotation.x = -Math.PI / 2;
+          f.rotation.z = rng.float() * Math.PI;
+          const ins = 0.13 + rng.float() * 0.15;
+          if (spot.wall === 'e') f.position.set(w / 2 - ins, 0.0075, spot.along);
+          else if (spot.wall === 'w') f.position.set(-w / 2 + ins, 0.0075, spot.along);
+          else if (spot.wall === 'n') f.position.set(spot.along, 0.0075, d / 2 - ins);
+          else f.position.set(spot.along, 0.0075, -d / 2 + ins);
+          group.add(f);
+        }
       }
       if (rng.float() < 0.3) {
         const m = decalQuad(crackDecal(rng), 1.3, 1.3);
@@ -2378,6 +2391,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind === 'window') {
         const len = Math.hypot(p.x, p.z) || 1;
         moonlightPool(p.x - (p.x / len) * 0.9, p.z - (p.z / len) * 0.9, (p.yaw ?? 0) + (rng.float() - 0.5) * 0.15);
+        // Dead moths gather where the light used to be.
+        if (rng.float() < 0.4) {
+          const moth = decalQuad(mothDrift(rng), 0.85, 0.85);
+          if (moth) {
+            moth.name = 'moth-drift';
+            moth.rotation.x = -Math.PI / 2;
+            moth.rotation.z = rng.float() * Math.PI;
+            moth.position.set(p.x - (p.x / len) * 0.22, 0.008, p.z - (p.z / len) * 0.22);
+            group.add(moth);
+          }
+        }
       }
       // Ceiling rosette under hanging fixtures — plaster medallion + ring
       // where the chain meets the slab.
