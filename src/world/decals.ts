@@ -2481,3 +2481,274 @@ export function drapeGhost(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Switch polish — the grease halo a decade of hands leaves around a
+ * switch or latch: a dark smudge core, a lighter wipe ring. */
+export function switchPolish(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32 + (rng.float() - 0.5) * 8;
+    const cy = 32 + (rng.float() - 0.5) * 8;
+    // wipe ring — the cleaner reached out to here, rarely past it
+    const ring = ctx.createRadialGradient(cx, cy, 8, cx, cy, 26);
+    ring.addColorStop(0, 'rgba(70,60,46,0)');
+    ring.addColorStop(0.7, 'rgba(216,206,184,0.18)');
+    ring.addColorStop(1, 'rgba(216,206,184,0)');
+    ctx.fillStyle = ring;
+    ctx.fillRect(0, 0, 64, 64);
+    // the smudge — layered palm-grease, darkest dead centre
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 13);
+    core.addColorStop(0, 'rgba(56,46,36,0.5)');
+    core.addColorStop(0.6, 'rgba(56,46,36,0.28)');
+    core.addColorStop(1, 'rgba(56,46,36,0)');
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 14, 17, (rng.float() - 0.5) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // finger smear trails — the swipe arcs of reaching hands
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(66,55,42,${0.1 + rng.float() * 0.12})`;
+      ctx.lineWidth = 2 + rng.float() * 1.5;
+      const a = -0.6 + i * 0.24 + rng.float() * 0.1;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 15 + i, a, a + 0.5 + rng.float() * 0.4);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Growth marks — the pencil ticks a parent kept on the door frame:
+ * short ruled lines ascending, a year scrawled beside a few. */
+export function growthMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 128, (ctx) => {
+    ctx.strokeStyle = 'rgba(52,44,34,0.75)';
+    ctx.lineCap = 'round';
+    let y = 108;
+    const ticks = 4 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < ticks; i++) {
+      const tx = 18 + (rng.float() - 0.5) * 6;
+      ctx.lineWidth = 1.3 + rng.float() * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(tx, y);
+      ctx.lineTo(tx + 14 + rng.float() * 6, y + (rng.float() - 0.5) * 1.5);
+      ctx.stroke();
+      // a tiny year beside one in three
+      if (rng.bool(0.35)) {
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = 'rgba(52,44,34,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(tx + 18, y - 3); ctx.lineTo(tx + 26, y - 3 + rng.float());
+        ctx.moveTo(tx + 18, y + 1); ctx.lineTo(tx + 24, y + 1);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(52,44,34,0.75)';
+      }
+      y -= 12 + rng.float() * 9;
+      if (y < 14) break;
+    }
+    // the last mark sits highest and is freshest — darker, surer
+    ctx.strokeStyle = 'rgba(40,34,26,0.85)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(16, y + 4); ctx.lineTo(34, y + 4);
+    ctx.stroke();
+  });
+}
+
+/** Sill damp — the rain the sill kept letting in: damp fans running
+ * down from a leak line, tide edge where the plaster stayed wet. */
+export function sillDamp(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const top = 10 + rng.float() * 6;
+    // damp fans — soft dark streaks splaying downward
+    const fans = 4 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < fans; i++) {
+      const fx = 12 + (i / fans) * 74 + (rng.float() - 0.5) * 8;
+      const flen = 40 + rng.float() * 60;
+      const g = ctx.createLinearGradient(fx, top, fx + (rng.float() - 0.5) * 10, top + flen);
+      g.addColorStop(0, 'rgba(84,72,56,0.4)');
+      g.addColorStop(0.75, 'rgba(96,84,64,0.12)');
+      g.addColorStop(1, 'rgba(96,84,64,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(fx - 3, top);
+      ctx.lineTo(fx + 3, top);
+      ctx.lineTo(fx + 6 + rng.float() * 4, top + flen);
+      ctx.lineTo(fx - 6 - rng.float() * 4, top + flen);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // the tide edge — a darker wavy line where the wet stopped
+    ctx.strokeStyle = 'rgba(70,58,44,0.4)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    const tideY = 84 + rng.float() * 20;
+    ctx.moveTo(6, tideY);
+    for (let x = 6; x < 90; x += 8)
+      ctx.quadraticCurveTo(x + 4, tideY + (rng.float() - 0.5) * 5, x + 8, tideY + (rng.float() - 0.5) * 3);
+    ctx.stroke();
+    // the bloom beneath — plaster that never dried pale
+    const bloom = ctx.createLinearGradient(0, tideY, 0, 128);
+    bloom.addColorStop(0, 'rgba(160,150,130,0.2)');
+    bloom.addColorStop(1, 'rgba(160,150,130,0)');
+    ctx.fillStyle = bloom;
+    ctx.fillRect(6, tideY, 84, 128 - tideY);
+    // mineral speckles in the tide
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(200,194,180,${0.12 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, tideY - 4 + rng.float() * 14, 0.5 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Radiator bleed — the rust a sweating radiator runs down the wall:
+ * vertical oxidised streaks from pipe height to the baseboard. */
+export function radiatorBleed(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // rust fans under each fin — the bleed lines correspond to the
+    // vertical ribs the water chose to run down
+    const fans = 5 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < fans; i++) {
+      const fx = 10 + (i / fans) * 78 + (rng.float() - 0.5) * 6;
+      const flen = 36 + rng.float() * 44;
+      const top = 8 + rng.float() * 6;
+      const g = ctx.createLinearGradient(fx, top, fx, top + flen);
+      g.addColorStop(0, 'rgba(96,52,30,0.42)');
+      g.addColorStop(0.7, 'rgba(112,64,36,0.18)');
+      g.addColorStop(1, 'rgba(112,64,36,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(fx - 1.4 - rng.float(), top, 3 + rng.float() * 2, flen);
+    }
+    // the drip line — a darker seam where the bleed pooled at the bottom
+    ctx.strokeStyle = 'rgba(88,48,28,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const py = 78 + rng.float() * 8;
+    ctx.moveTo(8, py);
+    ctx.quadraticCurveTo(48, py + rng.float() * 6, 88, py + (rng.float() - 0.5) * 4);
+    ctx.stroke();
+    // oxide flecks in the run field
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `rgba(120,66,38,${0.12 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(8 + rng.float() * 80, 10 + rng.float() * 72, 0.6 + rng.float() * 1.4, 1.2 + rng.float() * 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Burn marks — cigarette and ember scars a carpet keeps: small char
+ * rings with ash fringes, clustered where a hand would have dropped. */
+export function burnMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 34 + rng.float() * 26;
+    const cy = 38 + rng.float() * 20;
+    const burns = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < burns; i++) {
+      const bx = cx + (rng.float() - 0.5) * 34;
+      const by = cy + (rng.float() - 0.5) * 30;
+      const br = 4 + rng.float() * 4;
+      // char pit — melted fibre, nearly black
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+      g.addColorStop(0, 'rgba(20,16,12,0.75)');
+      g.addColorStop(0.65, 'rgba(30,24,18,0.45)');
+      g.addColorStop(1, 'rgba(30,24,18,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+      // ash fringe — the pale grey crescent where the ember was ground
+      ctx.strokeStyle = 'rgba(180,174,160,0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(bx, by, br + 1, rng.float() * Math.PI, rng.float() * Math.PI + 1.6 + rng.float());
+      ctx.stroke();
+    }
+    // ash dust scattered around the drop zone
+    for (let i = 0; i < 18; i++) {
+      ctx.fillStyle = `rgba(168,160,146,${0.08 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 40, cy - 14 + rng.float() * 32, 0.4 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Pane tape — the masking-tape X a wartime house puts on its glass:
+ * two cream strips crossing, frayed ends, edges lifting. */
+export function paneTape(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const tape = (x0: number, y0: number, x1: number, y1: number, wdt: number) => {
+      // the strip — cream with translucent edges
+      ctx.strokeStyle = 'rgba(216,204,178,0.55)';
+      ctx.lineWidth = wdt;
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+      // torn edge shading along one side
+      ctx.strokeStyle = 'rgba(150,138,116,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 + wdt * 0.4, y0);
+      ctx.lineTo(x1 + wdt * 0.4, y1);
+      ctx.stroke();
+      // frayed ends — ragged little flags past the glass edge
+      ctx.strokeStyle = 'rgba(216,204,178,0.7)';
+      ctx.lineWidth = wdt * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 + (rng.float() - 0.5) * 6, y1 + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    };
+    tape(6, 6, 88, 122, 5 + rng.float() * 2);
+    tape(88, 8, 10, 120, 5 + rng.float() * 2);
+    // the cross point — a dab where they overlap
+    ctx.fillStyle = 'rgba(216,204,178,0.5)';
+    ctx.beginPath();
+    ctx.arc(47 + (rng.float() - 0.5) * 6, 64, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // lifting corners — tiny gaps where tape peeled off
+    for (const [px, py] of [[8, 8], [86, 10], [10, 118]]) {
+      if (rng.bool(0.5)) {
+        ctx.fillStyle = 'rgba(40,36,30,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 3, 2, rng.float(), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/** Wax sheen — the half-moons a polisher left at a threshold: soft
+ * overlapping arcs of sheen where the floor was last buffed. */
+export function waxSheen(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // polish arcs — overlapping crescents, pale sheen
+    const arcs = 5 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < arcs; i++) {
+      const ax = 20 + i * (88 / arcs) + (rng.float() - 0.5) * 8;
+      const ay = 30 + rng.float() * 36;
+      const ar = 14 + rng.float() * 12;
+      ctx.strokeStyle = `rgba(230,222,200,${0.12 + rng.float() * 0.12})`;
+      ctx.lineWidth = 5 + rng.float() * 4;
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar, Math.PI + (rng.float() - 0.5) * 0.5, Math.PI * 2 + (rng.float() - 0.5) * 0.3);
+      ctx.stroke();
+    }
+    // the haze — broad soft sheen field under the arcs
+    const haze = ctx.createRadialGradient(64, 52, 10, 64, 52, 56);
+    haze.addColorStop(0, 'rgba(230,222,200,0.1)');
+    haze.addColorStop(1, 'rgba(230,222,200,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, 128, 96);
+    // the dry edge — where the wax wasn't reached
+    ctx.strokeStyle = 'rgba(90,80,64,0.2)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(10, 82);
+    ctx.quadraticCurveTo(64, 86 + rng.float() * 6, 118, 80);
+    ctx.stroke();
+  });
+}

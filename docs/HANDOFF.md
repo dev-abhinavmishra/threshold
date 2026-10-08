@@ -5514,6 +5514,34 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 458–460 — the switches kept the hands, the radiators wept & the tape never got peeled
+
+Sprint 458: `switchPolish` — grease halos at shoulder height beside
+~45% of doors (named `switch-polish`); `growthMarks` — pencil ticks
+climbing a door jamb in ~30% of lived-in rooms (named
+`growth-marks`, lived-in = not maintenance/unlit/gallery/under);
+`sillDamp` — damp fans running down the wall under ~45% of windows,
+independent roll beside `drape-ghost` (named `sill-damp`).
+
+Sprint 459: `radiatorBleed` — oxide fans down the wall behind
+radiatorFin/radiatorTall props at ~50% (named `radiator-bleed`);
+`burnMarks` — cigarette/ember char rings on ~25% of lived-in floors
+(named `burn-marks`).
+
+Sprint 460: `paneTape` — weathered masking-tape X on ~16% of
+unboarded windows (buildProp overlay at z=0.071, named `pane-tape`);
+`waxSheen` — half-moon polish arcs on floors of lived-in rooms with
+>=2 doors at ~30% (named `wax-sheen`).
+
+Gotcha: substring guards like `if 'name' not in src` match call
+sites too — check the import line specifically when adding decal
+imports; a skipped import fails every sprint's tests with
+ReferenceError at buildRoomMesh, which vitest reports fast (the
+2-second crash) rather than a 0-count assertion.
+
+Gates: tsc, lint, generation tests (7 new sprint-458/459/460 cases).
+Full suite + sim before push. No e2e leg — dressing only.
+
 ## Sprint 455–457 — the wall kept the fist, the count chalked a body & the dust wrote the months
 
 Sprint 455: `fistMark` — punched-wall craters beside doors at striking
