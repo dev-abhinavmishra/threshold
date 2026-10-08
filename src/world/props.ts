@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1430,6 +1430,19 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ch.position.set(0, (dc?.[1] ?? 0.9) * 0.82, -((dc?.[2] ?? 0.5) * 0.38));
     prop.group.add(ch);
     if (!prop.group.name) prop.group.name = 'chair-halo';
+  }
+  // The bedpost kept the count — small carved ticks where a sleeper
+  // marked nights on the head frame. Raw wood shows through the cuts.
+  if (spec.kind === 'bed' && rng.bool(0.22)) {
+    const bn = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.14, 0.34),
+      new THREE.MeshStandardMaterial({ map: bedpostNotches(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    bn.name = 'bedpost-notches';
+    bn.userData.decalMat = true;
+    bn.position.set(rng.bool(0.5) ? 0.42 : -0.42, 0.62, -0.78);
+    prop.group.add(bn);
+    if (!prop.group.name) prop.group.name = 'bedpost-notches';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

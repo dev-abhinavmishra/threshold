@@ -5514,6 +5514,33 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 461–463 — the vents breathe, the clocks swung & the bedpost kept the count
+
+Sprint 461: `ventDust` — sooty halos + down-drift behind vent/
+wallVent/airconUnit/steamVent props at ~50% (named `vent-dust`);
+`heelScuff` — black boot arcs along baseboards (35% lived-in / 15%
+else, named `heel-scuff`); `chairHalo` — pomade sheen on seat backs
+for armchair/chair/diningChair/bench/bedBench/schoolChair/
+streetSeat/chapelPew/pewRow at ~22% (buildProp overlay, named
+`chair-halo`, collider-derived height/depth).
+
+Sprint 462: `sconceSoot` — soot tongues climbing above wallSconce/
+cagedSconce/wallLantern at ~55% (named `sconce-soot`); `clockGhost` —
+case ghost + scribed pendulum arc behind wallClock/clock/
+grandfatherClock at ~40%, lower cy for floor cases (named
+`clock-ghost`); `knobShine` — burnished ring at the latch on ~25% of
+non-industrial leaves (leaf child at knob offset, named
+`knob-shine`).
+
+Sprint 463: `railGhost` — bracket scars + rail shadow above ~35% of
+windows, same props loop as drape-ghost (named `rail-ghost`);
+`chairRub` — chair-back height wear band on lived-in walls at ~30%
+(named `chair-rub`); `bedpostNotches` — carved tally ticks on ~22%
+of bed headboards (buildProp overlay, named `bedpost-notches`).
+
+Gates: tsc, lint, generation tests (9 new cases). Full suite + sim
+before push. No e2e leg — dressing only.
+
 ## Sprint 458–460 — the switches kept the hands, the radiators wept & the tape never got peeled
 
 Sprint 458: `switchPolish` — grease halos at shoulder height beside

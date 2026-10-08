@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1821,6 +1821,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const sd = group.children[group.children.length - 1];
         if (sd && !sd.name) sd.name = 'sill-damp';
       }
+      // The rail left its screws — bracket scars and a shadow line
+      // high above the frame where the rod hung for decades.
+      if (rng.float() < 0.35) {
+        wallDecal(dww, railGhost(rng), 1.3 + rng.float() * 0.2, 0.55 + rng.float() * 0.1,
+          dAlong + (rng.float() - 0.5) * 0.15, 2.3 + rng.float() * 0.15);
+        const rg = group.children[group.children.length - 1];
+        if (rg && !rg.name) rg.name = 'rail-ghost';
+      }
     }
 
     // The switches kept the hands — a decade of reaching leaves a
@@ -1933,6 +1941,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         along, floorCase ? 1.45 + rng.float() * 0.2 : 1.85 + rng.float() * 0.2);
       const cg = group.children[group.children.length - 1];
       if (cg && !cg.name) cg.name = 'clock-ghost';
+    }
+
+    // The chairs rubbed the wall — a wear band at chair-back height
+    // where seat tops kept knocking the same stretch of plaster.
+    if (livedIn && rng.float() < 0.3) {
+      const spot = pickWallSpot(1.7);
+      if (spot) {
+        wallDecal(spot.wall, chairRub(rng), 1.7 + rng.float() * 0.3, 0.5, spot.along, 0.82);
+        const cr = group.children[group.children.length - 1];
+        if (cr && !cr.name) cr.name = 'chair-rub';
+      }
     }
 
     // The water line — a room that flooded once keeps the tide mark:

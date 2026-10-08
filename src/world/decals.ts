@@ -2954,3 +2954,112 @@ export function knobShine(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Rail ghost — the hardware a curtain rail left behind: a pale shadow
+ * line above the window, bracket scars, the screw holes that stayed. */
+export function railGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 64, (ctx) => {
+    // the shadow line — a pale run where the rail sat for decades
+    ctx.fillStyle = 'rgba(206,196,172,0.3)';
+    ctx.fillRect(8, 26 + rng.float() * 4, 112, 3.4);
+    ctx.fillStyle = 'rgba(88,78,62,0.22)';
+    ctx.fillRect(8, 30, 112, 1.2);
+    // bracket ghosts — little blocks where the arms stood
+    const brackets = 2 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < brackets; i++) {
+      const bx = 16 + i * (96 / (brackets - 1 || 1)) + (rng.float() - 0.5) * 8;
+      ctx.fillStyle = 'rgba(210,200,176,0.32)';
+      ctx.fillRect(bx - 4, 14, 8, 18);
+      ctx.strokeStyle = 'rgba(90,80,64,0.3)';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(bx - 4, 14, 8, 18);
+      // the screws that stayed — paired dark pits
+      for (const sy of [18, 26]) {
+        ctx.fillStyle = 'rgba(52,44,36,0.55)';
+        ctx.beginPath();
+        ctx.arc(bx + (rng.float() - 0.5) * 3, sy, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // oxidised drip under a bracket end
+    if (rng.bool(0.5)) {
+      const dx = 10 + rng.float() * 100;
+      const dg = ctx.createLinearGradient(dx, 32, dx, 56);
+      dg.addColorStop(0, 'rgba(110,66,38,0.3)');
+      dg.addColorStop(1, 'rgba(110,66,38,0)');
+      ctx.fillStyle = dg;
+      ctx.fillRect(dx - 1.4, 32, 3, 24);
+    }
+  });
+}
+
+/** Chair rub — the chair-back height wear band a room earns where
+ * seats kept knocking the same stretch of wall: a horizontal scuff
+ * line with contact dabs and finish rubbed thin. */
+export function chairRub(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 48, (ctx) => {
+    // the band — finish rubbed to a sheen along back height
+    const band = ctx.createLinearGradient(0, 14, 0, 36);
+    band.addColorStop(0, 'rgba(210,198,170,0)');
+    band.addColorStop(0.5, `rgba(210,198,170,${0.16 + rng.float() * 0.1})`);
+    band.addColorStop(1, 'rgba(210,198,170,0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 14, 128, 22);
+    // contact dabs — the top corners of chair backs left repeat hits
+    const dabs = 3 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < dabs; i++) {
+      const dx = 14 + rng.float() * 100;
+      ctx.fillStyle = `rgba(220,208,180,${0.2 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.ellipse(dx, 24 + (rng.float() - 0.5) * 6, 4 + rng.float() * 5, 2.6 + rng.float() * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(70,60,48,${0.14 + rng.float() * 0.12})`;
+      ctx.beginPath();
+      ctx.ellipse(dx, 27 + (rng.float() - 0.5) * 4, 2.4 + rng.float() * 3, 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // edge nicks — chips where a back caught the plaster hard
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = 'rgba(60,52,42,0.35)';
+      ctx.fillRect(10 + rng.float() * 110, 22 + rng.float() * 10, 1 + rng.float() * 2, 0.8 + rng.float() * 1.4);
+    }
+  });
+}
+
+/** Bedpost notches — the small carved counts a sleeper cut into the
+ * frame: short horizontal ticks in the wood, some still dark. */
+export function bedpostNotches(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const groups = 2 + Math.floor(rng.float() * 3);
+    for (let gIdx = 0; gIdx < groups; gIdx++) {
+      const gx = 10 + gIdx * 18 + (rng.float() - 0.5) * 6;
+      const gy = 14 + rng.float() * 60;
+      const ticks = 3 + Math.floor(rng.float() * 4);
+      for (let i = 0; i < ticks; i++) {
+        const ty = gy + i * 4.4;
+        const dark = rng.bool(0.35);
+        ctx.strokeStyle = dark ? 'rgba(30,24,18,0.6)' : 'rgba(96,80,60,0.5)';
+        ctx.lineWidth = 1 + rng.float() * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(gx, ty);
+        ctx.lineTo(gx + 8 + rng.float() * 4, ty + (rng.float() - 0.5) * 1.6);
+        ctx.stroke();
+      }
+      // a diagonal cross-cut closing the set
+      if (rng.bool(0.5)) {
+        ctx.strokeStyle = 'rgba(96,80,60,0.5)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(gx - 1, gy + ticks * 4.4 - 1);
+        ctx.lineTo(gx + 11, gy - 2);
+        ctx.stroke();
+      }
+    }
+    // raw wood pale around the worked patch
+    const g = ctx.createRadialGradient(30, 50, 4, 30, 50, 40);
+    g.addColorStop(0, 'rgba(214,196,164,0.1)');
+    g.addColorStop(1, 'rgba(214,196,164,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 96);
+  });
+}
