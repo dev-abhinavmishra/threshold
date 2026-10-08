@@ -5220,3 +5220,10 @@ Game.die() from the same five fields.
   lobby (35% per room): ring + tick + 1940s year line, clamped to the
   wall span. Named 'inspection-stamp'.
 - Vitest 290: 'the inspection stamp'. Gates: tsc, lint, 106/106.
+
+## sprint 445 — the mouth it eats from
+
+- Chewed mouse-hole arches at baseboard level (30% per room, corridor/
+  guest/lobby/records/maintenance): dark opening, gnawed rim, tooth
+  nicks, crumb specks. Named 'mouse-hole'.
+- Vitest 291: 'the mouth it eats from'. Gates: tsc, lint, 107/107.

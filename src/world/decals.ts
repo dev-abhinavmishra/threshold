@@ -1277,3 +1277,41 @@ export function inspectionStamp(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The mouth it eats from — a chewed arch at the baseboard line, dark
+ * inside, crumbs and gnaw-marks scattered at the threshold. */
+export function mouseHole(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // chewed opening — irregular dark arch
+    ctx.fillStyle = 'rgba(28,24,20,0.9)';
+    ctx.beginPath();
+    ctx.moveTo(30, 88);
+    ctx.quadraticCurveTo(30, 66, 48, 64);
+    ctx.quadraticCurveTo(66, 66, 66, 88);
+    ctx.closePath();
+    ctx.fill();
+    // gnawed rim — ragged paler plaster edge
+    ctx.strokeStyle = 'rgba(160,150,130,0.45)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(28, 88);
+    ctx.quadraticCurveTo(28, 63, 48, 61);
+    ctx.quadraticCurveTo(68, 63, 68, 88);
+    ctx.stroke();
+    // tooth nicks
+    ctx.fillStyle = 'rgba(140,130,110,0.4)';
+    for (let i = 0; i < 5; i++) {
+      const a = Math.PI * (0.15 + rng.float() * 0.7);
+      ctx.fillRect(48 + Math.cos(a) * 20 - 1, 76 - Math.sin(a) * 14, 3, 3);
+    }
+    // crumbs scattered out from the hole
+    for (let i = 0; i < 9; i++) {
+      const dx = (rng.float() - 0.5) * 60;
+      const dist = 2 + rng.float() * 14;
+      ctx.fillStyle = `rgba(120,105,80,${0.3 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(48 + dx, 88 - dist * rng.float(), 0.8 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
