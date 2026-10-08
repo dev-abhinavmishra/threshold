@@ -2023,3 +2023,18 @@ describe('the wall was opened (sprint 446)', () => {
     expect(patches, 'no chase patches').toBeGreaterThan(5);
   });
 });
+
+describe('the map nobody trusts (sprint 447)', () => {
+  it('lobbies hang framed route plans', () => {
+    let maps = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'old-map') maps++; });
+      }
+    }
+    expect(maps, 'no route maps').toBeGreaterThan(4);
+  });
+});

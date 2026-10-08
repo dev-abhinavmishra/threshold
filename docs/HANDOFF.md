@@ -5234,3 +5234,10 @@ Game.die() from the same five fields.
   room): pale rectangle fill inside a hairline border crack with a sag
   corner and dust track. Named 'chase-patch'.
 - Vitest 292: 'the wall was opened'. Gates: tsc, lint, 108/108.
+
+## sprint 447 — the map nobody trusts
+
+- Framed evacuation route plans in lobby/corridor/safe rooms (35%):
+  corridor spine + room blocks, stairs arrow, glass sheen, and a red
+  YOU ARE HERE dot in the wrong place. Named 'old-map'.
+- Vitest 293: 'the map nobody trusts'. Gates: tsc, lint, 109/109.

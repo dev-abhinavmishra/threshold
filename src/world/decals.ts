@@ -1341,3 +1341,52 @@ export function chasePatch(rng: Rng): THREE.Texture | null {
     ctx.fillRect(x0 + pw * 0.3, y0 + ph + 4, pw * 0.4, 16 + rng.float() * 12);
   });
 }
+
+/** The map nobody trusts — a framed route plan, room blocks and arrows
+ * under old glass, and a YOU ARE HERE dot that can't be right. */
+export function oldMap(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // frame
+    ctx.strokeStyle = 'rgba(90,80,64,0.7)';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(4, 4, 120, 88);
+    // paper
+    ctx.fillStyle = 'rgba(196,186,162,0.85)';
+    ctx.fillRect(9, 9, 110, 78);
+    // room blocks — a corridor spine with rooms off it
+    ctx.strokeStyle = 'rgba(80,72,60,0.6)';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(18, 40, 92, 10);
+    for (let i = 0; i < 6; i++) {
+      const rx = 20 + i * 15 + rng.float() * 3;
+      ctx.strokeRect(rx, 20 + rng.float() * 8, 10, 14);
+      ctx.strokeRect(rx, 56 + rng.float() * 8, 10, 14);
+    }
+    // stair mark + arrows
+    ctx.beginPath();
+    ctx.moveTo(20, 34);
+    ctx.lineTo(30, 30 + rng.float() * 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(96, 54);
+    ctx.lineTo(108, 50 + rng.float() * 6);
+    ctx.stroke();
+    // YOU ARE HERE — red dot, wrong side of the plan half the time
+    ctx.fillStyle = 'rgba(150,40,36,0.75)';
+    ctx.beginPath();
+    ctx.arc(40 + rng.float() * 48, rng.bool(0.5) ? 32 : 60, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    // glass sheen + grime
+    ctx.fillStyle = 'rgba(210,215,220,0.10)';
+    ctx.beginPath();
+    ctx.moveTo(9, 9);
+    ctx.lineTo(50, 9);
+    ctx.lineTo(20, 87);
+    ctx.lineTo(9, 87);
+    ctx.fill();
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = 'rgba(60,55,46,0.15)';
+      ctx.fillRect(10 + rng.float() * 108, 10 + rng.float() * 76, 2 + rng.float() * 4, 1.5);
+    }
+  });
+}
