@@ -5734,3 +5734,143 @@ export function underbedHaze(rng: Rng): THREE.Texture | null {
     g.stroke();
   });
 }
+
+/** Sprint 486 — the paper let go: a wallpaper flap curls off the seam, paste stain and bare plaster behind. */
+export function paperPeel(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const sx = 30 + rng.float() * 20; // seam x
+    // exposed plaster behind the flap — a rough vertical tongue
+    g.fillStyle = 'rgba(196,184,166,0.85)';
+    g.beginPath();
+    g.moveTo(sx, 8);
+    g.quadraticCurveTo(sx + 14 + rng.float() * 8, 30, sx + 10 + rng.float() * 10, 58);
+    g.quadraticCurveTo(sx + 8, 76, sx + 2, 88);
+    g.lineTo(sx - 3, 88);
+    g.quadraticCurveTo(sx - 2, 60, sx - 4, 30);
+    g.closePath(); g.fill();
+    // paste stain — darker tide where the adhesive let go
+    g.strokeStyle = 'rgba(140,120,94,0.4)';
+    g.lineWidth = 2.4;
+    g.beginPath();
+    g.moveTo(sx - 2, 10);
+    g.quadraticCurveTo(sx + 12, 34, sx + 8, 60);
+    g.stroke();
+    // the flap itself — curled paper edge still holding its pattern
+    g.fillStyle = 'rgba(112,96,78,0.9)';
+    g.beginPath();
+    g.moveTo(sx - 4, 8);
+    g.quadraticCurveTo(sx + 16 + rng.float() * 6, 32, sx + 12, 62);
+    g.lineTo(sx + 6, 66);
+    g.quadraticCurveTo(sx + 8, 38, sx - 6, 12);
+    g.closePath(); g.fill();
+    // curl shadow under the flap's free edge
+    g.strokeStyle = 'rgba(30,24,18,0.6)';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(sx - 4, 8);
+    g.quadraticCurveTo(sx + 15, 32, sx + 11, 62);
+    g.stroke();
+    // faint stripe of surviving pattern on the flap face
+    g.strokeStyle = 'rgba(150,132,108,0.35)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      g.beginPath();
+      g.moveTo(sx - 2 + i * 4, 14 + i * 4);
+      g.quadraticCurveTo(sx + 10 + i * 3, 34 + i * 6, sx + 8 + i * 2, 58);
+      g.stroke();
+    }
+    // grit fallen at the foot
+    g.fillStyle = 'rgba(170,158,140,0.5)';
+    for (let i = 0; i < 8; i++) {
+      g.fillRect(sx - 6 + rng.float() * 18, 84 + rng.float() * 8, 1.4, 1.4);
+    }
+  });
+}
+
+/** Sprint 486 — the tiles broke: a crack web and dark grout on wet-room floors. */
+export function tileCrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // darkened grout cross — the tile grid showing through grime
+    g.strokeStyle = 'rgba(52,44,38,0.4)';
+    g.lineWidth = 1.6;
+    for (const [x0, y0, x1, y1] of [[0, 48, 96, 48], [48, 0, 48, 96], [0, 24, 96, 24], [24, 0, 24, 96], [0, 72, 96, 72], [72, 0, 72, 96]] as const) {
+      g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    }
+    // the crack — one main fracture with branch hairlines
+    g.strokeStyle = 'rgba(30,24,20,0.8)';
+    g.lineWidth = 1.2;
+    let x = cx + rng.range(-10, 10), y = 8;
+    g.beginPath(); g.moveTo(x, y);
+    const segs = 5 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < segs; i++) {
+      x += rng.range(-12, 12);
+      y += rng.range(10, 18);
+      g.lineTo(x, y);
+    }
+    g.stroke();
+    // branches
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 4; i++) {
+      const bx = cx + rng.range(-18, 18), by = rng.range(20, 70);
+      g.beginPath(); g.moveTo(bx, by);
+      g.lineTo(bx + rng.range(-14, 14), by + rng.range(-8, 12));
+      g.stroke();
+    }
+    // chips where the crack crossed the grout
+    g.fillStyle = 'rgba(190,180,164,0.5)';
+    for (let i = 0; i < 6; i++) {
+      g.fillRect(cx + rng.range(-16, 16), 44 + rng.range(-6, 8), 2, 1.4);
+    }
+    // grime pool in the low tile
+    const pool = g.createRadialGradient(70, 70, 2, 70, 70, 16);
+    pool.addColorStop(0, 'rgba(46,40,34,0.5)');
+    pool.addColorStop(1, 'rgba(46,40,34,0)');
+    g.fillStyle = pool;
+    g.fillRect(50, 50, 40, 40);
+  });
+}
+
+/** Sprint 486 — the scuttle spilled: coal dust, lumps and the scuffed circle where it always stands. */
+export function coalDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // rubbed black circle — the scuttle's standing spot
+    const spot = g.createRadialGradient(cx, cy, 4, cx, cy, 34);
+    spot.addColorStop(0, 'rgba(22,18,15,0.7)');
+    spot.addColorStop(0.7, 'rgba(28,24,20,0.35)');
+    spot.addColorStop(1, 'rgba(28,24,20,0)');
+    g.fillStyle = spot;
+    g.fillRect(0, 0, 96, 96);
+    // spilled lumps, densest near the center then scattered out
+    for (let i = 0; i < 22; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      const r = i < 8 ? rng.range(6, 18) : rng.range(18, 44);
+      const s = rng.range(1.2, 3.2);
+      g.fillStyle = `rgba(16,14,12,${0.55 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      g.lineTo(cx + Math.cos(a) * r + s, cy + Math.sin(a) * r - s * 0.6);
+      g.lineTo(cx + Math.cos(a) * r + s * 1.4, cy + Math.sin(a) * r + s * 0.5);
+      g.closePath(); g.fill();
+    }
+    // glinting facets on the fresh lumps
+    g.fillStyle = 'rgba(140,150,160,0.35)';
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(4, 20);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.2, 0.8);
+    }
+    // dust tails — drag arcs where a lump skidded
+    g.strokeStyle = 'rgba(30,26,22,0.4)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 5; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8);
+      g.quadraticCurveTo(
+        cx + Math.cos(a) * 24 + rng.range(-4, 4), cy + Math.sin(a) * 24 + rng.range(-4, 4),
+        cx + Math.cos(a) * rng.range(30, 42), cy + Math.sin(a) * rng.range(30, 42));
+      g.stroke();
+    }
+  });
+}

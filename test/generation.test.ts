@@ -3734,3 +3734,48 @@ describe('the dust kept what rolled under (sprint 485)', () => {
     expect(n, 'no underbed haze').toBeGreaterThan(0);
   });
 });
+
+describe('the paper let go (sprint 486)', () => {
+  it('a wallpaper flap curls off the seam on lived-in walls', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'paper-peel') n++; });
+      }
+    }
+    expect(n, 'no paper peels').toBeGreaterThan(0);
+  });
+});
+
+describe('the tiles broke (sprint 486)', () => {
+  it('crack webs and dark grout wear the wet-room floors', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'tile-crack') n++; });
+      }
+    }
+    expect(n, 'no tile cracks').toBeGreaterThan(0);
+  });
+});
+
+describe('the scuttle spilled (sprint 486)', () => {
+  it('coal dust and lumps stand where the scuttle stood', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'coal-dust') n++; });
+      }
+    }
+    expect(n, 'no coal dust').toBeGreaterThan(0);
+  });
+});
