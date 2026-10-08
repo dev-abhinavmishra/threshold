@@ -252,7 +252,7 @@ export class Game {
       removeMesh: (o) => this.entityGroup.remove(o),
       cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
       // a sheet went back up mid-walk — the board carries the name again
-      repost: (roomIdx, host) => { this.wantedRooms.set(roomIdx, { x: host.x, z: host.z }); },
+      repost: (roomIdx, host) => { this.wantedRooms.set(roomIdx, { x: host.x, z: host.z }); this.bareBoards.delete(roomIdx); },
     };
   }
   private canvas: HTMLCanvasElement;
@@ -647,6 +647,7 @@ export class Game {
     // torn, an armed repost keeps its remaining seconds on this clock
     this.wantedActive = cp?.wantedActive ?? false;
     this.wantedRooms = new Map(cp?.wantedRooms ?? []);
+    this.bareBoards = new Map(cp?.bareBoards ?? []);
     const repostS = cp?.wantedRepostS ?? 0;
     this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.deadLines = new Set(cp?.deadLines ?? []);
@@ -989,6 +990,9 @@ export class Game {
   /** The clerk has more paper — once the boards stand bare this clock
    *  starts a repost window (fresh sheets downstream). */
   private wantedRepostT = 0;
+  /** Boards the player tore mid-episode — the clerk re-pins THESE
+   *  slots, so a partial tear is answered like a clean sweep. */
+  private bareBoards = new Map<number, { x: number; z: number }>();
   /** The reposter — the repost walk made flesh: a clerk carries fresh
    *  sheets to the bare boards one room at a time. Catchable. */
   private reposter = new Reposter();
@@ -3443,7 +3447,9 @@ export class Game {
         // the boards carry the wider ear — pull the sheet and the room
         // forgets your face; the last sheet ends the reach everywhere.
         // The ledger itself is untouched: the tally still wants a settle.
+        const tornHost = this.wantedRooms.get(this.currentRoom);
         this.wantedRooms.delete(this.currentRoom);
+        if (tornHost) this.bareBoards.set(this.currentRoom, { x: tornHost.x, z: tornHost.z });
         it.enabled = false;
         const built = this.streamer.get(this.currentRoom);
         const notice = built?.group.getObjectByName('wanted-notice');
@@ -3453,8 +3459,9 @@ export class Game {
         this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
           ? '[the last sheet comes down — the boards forget your face]'
           : '[the sheet comes down — the boards have one fewer name for you]', 'warn');
-        // the boards stand bare — the clerk reaches for fresh paper
-        if (this.wantedRooms.size === 0) this.wantedRepostT = this.clock.time + 30;
+        // the clerk notices a bare board — every tear is answered,
+        // not just the last: the repost arms on any pull
+        this.wantedRepostT = this.clock.time + 30;
         return;
       }
       case 'stripCheck': {
@@ -4090,6 +4097,7 @@ export class Game {
   private lowerWanted(): void {
     this.wantedActive = false;
     this.wantedRooms.clear();
+    this.bareBoards.clear();
     for (const i of this.streamer.builtIndices) {
       const built = this.streamer.get(i);
       const m = built?.group.getObjectByName('wanted-notice');
@@ -4368,6 +4376,7 @@ export class Game {
       hotItems: [...this.hotItems],
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
+      bareBoards: [...this.bareBoards].map(([k, v]) => [k, { x: v.x, z: v.z }] as [number, { x: number; z: number }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       deadLines: [...this.deadLines],
       deadHazards: [
@@ -4845,16 +4854,21 @@ export class Game {
     // the boards stand bare — the clerk reaches for fresh paper and the
     // sheets go back up on new boards downstream (the tug-of-war: every
     // repost is another trip to another board for the tearer)
-    else if (this.wantedActive && this.wantedRooms.size === 0 && this.space === 'under'
+    else if (this.wantedActive && this.bareBoards.size > 0 && this.space === 'under'
       && this.clock.time >= this.wantedRepostT && this.wantedRepostT > 0) {
       // the repost walks now — a clerk carries the fresh paper to each
-      // bare board in person; only an impossible path posts instantly
-      const hosts = pickWantedHosts(this.activeRooms(), this.currentRoom);
+      // torn board and re-pins the same slot; only an impossible path
+      // posts instantly, and a walk already out answers on the next round
+      const hosts = [...this.bareBoards.entries()].map(([roomIdx, h]) => ({ roomIdx, x: h.x, z: h.z }));
       if (this.route && this.reposter.dispatch(this.route.underRooms, hosts, this.reposterHooks())) {
         this.wantedRepostT = 0;
+      } else if (this.reposter.active) {
+        this.wantedRepostT = this.clock.time + 12;
       } else {
-        this.raiseWanted(true);
+        for (const [roomIdx, h] of this.bareBoards) this.wantedRooms.set(roomIdx, { x: h.x, z: h.z });
+        this.bareBoards.clear();
         this.wantedRepostT = 0;
+        this.cue('chalk-mark', null, '[fresh sheets go up on the boards ahead — the clerk has more paper]', 'warn');
       }
     }
 

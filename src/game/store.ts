@@ -163,6 +163,8 @@ export interface CheckpointSave {
   wantedActive?: boolean;
   wantedRooms?: [number, { x: number; z: number }][];
   wantedRepostS?: number;
+  /** Boards torn mid-episode — repost re-pins these exact slots. */
+  bareBoards?: [number, { x: number; z: number }][];
   // a pulled junction box stays off the wall — detective rooms that lost
   // their house line don't grow it back on a reload
   deadLines?: number[];

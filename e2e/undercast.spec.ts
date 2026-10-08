@@ -652,6 +652,10 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
         .interaction.interactables.some((i) => i.kind === 'wantedTear');
       tearDbg.push({ idx: tIdx, minted, seen });
       if (!wG.wantedRooms.has(tIdx)) torn++;
+      // sprint 357 — every tear arms the repost (~30s); hold the timer
+      // off while the sweep finishes so a pin can't land mid-loop
+      (wG as { wantedRepostT?: number }).wantedRepostT
+        = (ga as unknown as { clock: { time: number } }).clock.time + 400;
     }
     const reachDead = wG.wantedRooms.size === 0;
     const lastDown = caps.some((c) => /the last sheet comes down/.test(c));
@@ -681,6 +685,10 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       // the last torn board does
       g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
       ga.currentRoom = aRoom.index;
+      // the sweep held the repost clock pinned — release it so the
+      // clerk walks now
+      (wG as { wantedRepostT?: number }).wantedRepostT
+        = (ga as unknown as { clock: { time: number } }).clock.time + 1;
       // arm window (~30s), then the walker's first pin — the walk runs
       // hi→lo from the deep end, so the first board can be a long walk
       for (let f = 0; f < 1200 && !rG.reposter.active && wG.wantedRooms.size === 0; f++) g.frame();
@@ -765,7 +773,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
-  if (result.stage !== 'done') { console.log('AUDIT-LEG-STAGE', JSON.stringify(result)); test.skip(); }
+  if (result.stage !== 'done') test.skip();
   expect(result.demanded, JSON.stringify(result)).toBe(true);
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
   expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him

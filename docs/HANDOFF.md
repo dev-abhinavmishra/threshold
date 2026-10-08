@@ -4092,3 +4092,23 @@ Game.die() from the same five fields.
   with the HOST's coords, not the walker's).
 - Gates: tsc, lint, vitest 249 (3 new reposter specs), sim 5/5,
   undercast audit leg (in flight), build.
+
+## sprint 357 — the clerk notices a bare board
+
+- s344/s356's repost armed only when the boards hit ZERO — tearing
+  four of five sheets was never answered. Every tear now arms the
+  repost (~30s), and the walker re-pins THE TORN SLOTS (`bareBoards`
+  map, roomIdx → host pos) instead of fresh downstream boards — a
+  partial tear gets a partial re-sheet, same boards, honest spots.
+- The duel is now per-board: tear → he walks → pin → re-tear → he
+  walks again. Tearing mid-walk re-arms; at fire time a second
+  dispatch is refused while he's out (+12s re-arm instead). Cut
+  re-arms as before. `lowerWanted`/startRun clear `bareBoards`;
+  it rides the checkpoint (`bareBoards` save field).
+- Leg fix worth keeping: the audit leg's tear-sweep now outlives the
+  armed repost — s357 means a pin CAN land mid-sweep. The leg pins
+  `wantedRepostT = clock + 400` after each tear, then releases it
+  (`clock + 1`) before the repost phase — deterministic sweep,
+  real repost.
+- Gates: tsc, lint, vitest persistence+reposter specs green,
+  undercast audit leg green on the built bundle.
