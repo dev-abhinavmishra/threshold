@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2162,6 +2162,37 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     hw.position.set(0, (dc?.[1] ?? 1.3) * 0.55, (dc?.[2] ?? 0.45) / 2 + 0.006);
     prop.group.add(hw);
     if (!prop.group.name) prop.group.name = 'hinge-wear';
+  }
+  // The head kept its oil — a dark bloom on the headboard where the
+  // same head rested a thousand nights.
+  const HEAD_KINDS = new Set(['headboard', 'bed', 'bedOld', 'daybed']);
+  if (HEAD_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const hg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.45),
+      new THREE.MeshStandardMaterial({ map: headGrease(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    hg.name = 'head-grease';
+    hg.userData.decalMat = true;
+    hg.position.set(0, (dc?.[1] ?? 1.1) * 0.75, -(dc?.[2] ?? 1.8) / 2 + 0.12);
+    prop.group.add(hg);
+    if (!prop.group.name) prop.group.name = 'head-grease';
+  }
+  // The cushions learned the body — a settle-dip, pulled buttons and
+  // the crumb line on seats that get sat in.
+  const SAG_KINDS = new Set(['sofa', 'settee', 'armchair', 'daybed']);
+  if (SAG_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const sg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.7),
+      new THREE.MeshStandardMaterial({ map: seatSag(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sg.name = 'seat-sag';
+    sg.userData.decalMat = true;
+    sg.rotation.x = -Math.PI / 2;
+    sg.position.set(0, (dc?.[1] ?? 0.85) * 0.55 + 0.006, 0);
+    prop.group.add(sg);
+    if (!prop.group.name) prop.group.name = 'seat-sag';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

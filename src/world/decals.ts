@@ -7371,3 +7371,150 @@ export function hingeWear(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The head kept its oil — a dark bloom on the headboard where the
+ *  same head rested a thousand nights, hair oil worked in deep. */
+export function headGrease(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The rest-bloom — a broad dark oval where the head always lies.
+    const hx = 48 + rng.range(-6, 6);
+    const bloom = g.createRadialGradient(hx, 30, 3, hx, 30, 26);
+    bloom.addColorStop(0, 'rgba(52,40,28,0.55)');
+    bloom.addColorStop(0.6, 'rgba(52,40,28,0.28)');
+    bloom.addColorStop(1, 'rgba(52,40,28,0)');
+    g.fillStyle = bloom;
+    g.beginPath();
+    g.ellipse(hx, 30, 26, 18, 0, 0, Math.PI * 2);
+    g.fill();
+    // The polish ring — hair oil wicks an edge around the bloom.
+    g.strokeStyle = 'rgba(80,60,40,0.35)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    g.ellipse(hx, 30, 24 + rng.float() * 3, 16 + rng.float() * 2, 0, 0, Math.PI * 2);
+    g.stroke();
+    // The pressure never stays even — darker lobes where it leaned.
+    for (let i = 0; i < 3; i++) {
+      const lx = hx + rng.range(-10, 10);
+      const lobe = g.createRadialGradient(lx, 30 + rng.range(-4, 4), 1, lx, 30 + rng.range(-4, 4), 8);
+      lobe.addColorStop(0, 'rgba(44,34,22,0.4)');
+      lobe.addColorStop(1, 'rgba(44,34,22,0)');
+      g.fillStyle = lobe;
+      g.beginPath();
+      g.arc(lx, 30 + rng.range(-4, 4), 8, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Stray hairs stuck in the sheen — fine arcs near the top edge.
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = `rgba(30,24,18,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.35;
+      g.beginPath();
+      const sx = hx + rng.range(-16, 16);
+      g.moveTo(sx, 18 + rng.range(-4, 4));
+      g.quadraticCurveTo(sx + rng.range(-4, 4), 22 + rng.range(-3, 3), sx + rng.range(-6, 6), 26 + rng.range(-3, 3));
+      g.stroke();
+    }
+    // The rail line below — dust shadow under the head's reach.
+    g.fillStyle = 'rgba(40,32,22,0.28)';
+    g.fillRect(hx - 26, 56 + rng.range(-1, 1), 52, 1.6);
+  });
+}
+
+/** The frame knocked the wall — rub arcs and paint chips where the
+ *  headboard bangs the plaster when the bed moves. */
+export function frameRattle(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // Two contact zones — the headboard's posts hit the same spots.
+    for (const cx of [30, 66]) {
+      const cy = 40 + rng.range(-6, 6);
+      // The rub — a crescent of polished plaster.
+      const rub = g.createRadialGradient(cx, cy, 1, cx, cy, 12);
+      rub.addColorStop(0, 'rgba(186,170,142,0.5)');
+      rub.addColorStop(0.6, 'rgba(186,170,142,0.2)');
+      rub.addColorStop(1, 'rgba(186,170,142,0)');
+      g.fillStyle = rub;
+      g.beginPath();
+      g.arc(cx, cy, 12, 0, Math.PI * 2);
+      g.fill();
+      // The chips — knocked-out plaster divots in the rub zone.
+      for (let i = 0; i < 4; i++) {
+        g.fillStyle = `rgba(196,186,168,${0.4 + rng.float() * 0.3})`;
+        g.beginPath();
+        g.arc(cx + rng.range(-6, 6), cy + rng.range(-8, 8), 0.8 + rng.float() * 1.6, 0, Math.PI * 2);
+        g.fill();
+      }
+      // The knock ring — an arc of dented paint around the sweet spot.
+      g.strokeStyle = `rgba(96,80,60,${0.3 + rng.float() * 0.2})`;
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.arc(cx, cy, 8 + rng.float() * 2, rng.float() * 2, rng.float() * 2 + 1.6 + rng.float());
+      g.stroke();
+    }
+    // Swing arcs — the paths the posts drag on each shove.
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(160,144,118,${0.12 + rng.float() * 0.14})`;
+      g.lineWidth = 0.6;
+      const side = rng.bool(0.5) ? 30 : 66;
+      g.beginPath();
+      g.moveTo(side + rng.range(-5, 5), 46 + rng.range(-3, 3));
+      g.quadraticCurveTo(side + rng.range(-3, 3), 54 + rng.range(-3, 3), side + rng.range(-8, 8), 62 + rng.range(-4, 4));
+      g.stroke();
+    }
+    // Fallen plaster dust caught at the base.
+    for (let i = 0; i < 9; i++) {
+      g.fillStyle = `rgba(180,168,146,${0.2 + rng.float() * 0.24})`;
+      g.fillRect(24 + rng.float() * 48, 74 + rng.float() * 12, 0.9 + rng.float(), 0.9 + rng.float() * 0.6);
+    }
+  });
+}
+
+/** The cushions learned the body — a dip-shadow on the seat where
+ *  the weight always settles, button dimples and edge grime. */
+export function seatSag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The dip — a broad settle-shadow across the cushion middle.
+    const dip = g.createRadialGradient(48, 44, 4, 48, 44, 30);
+    dip.addColorStop(0, 'rgba(58,46,34,0.4)');
+    dip.addColorStop(0.7, 'rgba(58,46,34,0.16)');
+    dip.addColorStop(1, 'rgba(58,46,34,0)');
+    g.fillStyle = dip;
+    g.beginPath();
+    g.ellipse(48, 44, 30, 22, 0, 0, Math.PI * 2);
+    g.fill();
+    // Seat-edges catch a sheen — front lip where legs swing over.
+    const lip = g.createLinearGradient(0, 78, 0, 88);
+    lip.addColorStop(0, 'rgba(150,134,110,0)');
+    lip.addColorStop(0.6, `rgba(158,142,116,${0.2 + rng.float() * 0.12})`);
+    lip.addColorStop(1, 'rgba(158,142,116,0)');
+    g.fillStyle = lip;
+    g.fillRect(20, 78, 56, 10);
+    // Button dimples pulled deep by years of sitting.
+    for (const [bx, by] of [[34, 36], [62, 36], [48, 52]] as const) {
+      if (!rng.bool(0.7)) continue;
+      g.fillStyle = 'rgba(34,26,18,0.5)';
+      g.beginPath();
+      g.arc(bx + rng.range(-2, 2), by + rng.range(-2, 2), 1.6 + rng.float(), 0, Math.PI * 2);
+      g.fill();
+      // The pull creases — short lines radiating from each button.
+      for (let c = 0; c < 4; c++) {
+        g.strokeStyle = `rgba(46,36,26,${0.18 + rng.float() * 0.14})`;
+        g.lineWidth = 0.4;
+        const a = (c / 4) * Math.PI * 2 + rng.range(-0.4, 0.4);
+        g.beginPath();
+        g.moveTo(bx + Math.cos(a) * 2.2, by + Math.sin(a) * 2.2);
+        g.lineTo(bx + Math.cos(a) * (5 + rng.float() * 2), by + Math.sin(a) * (5 + rng.float() * 2));
+        g.stroke();
+      }
+    }
+    // The crumb line — what fell between the cushions and stayed.
+    g.strokeStyle = 'rgba(40,32,22,0.4)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    g.moveTo(16, 46 + rng.range(-1.5, 1.5));
+    g.quadraticCurveTo(48, 49 + rng.range(-1.5, 1.5), 80, 46 + rng.range(-1.5, 1.5));
+    g.stroke();
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(60,48,34,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(20 + rng.float() * 56, 46 + rng.range(-2, 3), 0.8, 0.8);
+    }
+  });
+}
