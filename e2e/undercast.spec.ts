@@ -530,6 +530,13 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       ga.keys.delete('KeyE');
     }
     const theftAfterDrawer = ga.unpaidTheft;
+    // sprint 338 — hands in a staffed book leave 'work' sign too: the
+    // grafter reads tally-drawer sign like a till rifle's. Under-room
+    // bounds overlap, so the mark's room is whatever the game resolves
+    // at the stand (ga.currentRoom), not the scheduled room's index.
+    const tallySign = tally ? (ga as unknown as { hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number } }[] } })
+      .hazard.evidence.some((e) => e.kind === 'work' && e.room === ga.currentRoom
+        && Math.hypot(e.pos.x - tally.pos.x, e.pos.z - tally.pos.z) < 1.2) : false;
     for (let f = 0; f < 40 && !clerk.demanded; f++) g.frame();
     const demanded = caps.slice(demandCap).some((c) => /hands are in his book|book slaps open/.test(c));
     if (ga.marginalia < 14) ga.marginalia = 14; // purse floor for the settle
@@ -555,7 +562,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
-    return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, settlePrompt, paid,
+    return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -563,6 +570,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
   expect(result.demanded, JSON.stringify(result)).toBe(true);
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
   expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him
+  expect(result.tallySign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);
@@ -637,6 +645,13 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     }
     ga.keys.delete('KeyE');
     const rifled = (docket.data as { stock?: number }).stock === 0;
+    // sprint 338 — hands in a staffed book leave 'work' sign too: the
+    // grafter reads docket sign like a till rifle's. The mark's room is
+    // whatever the game resolves at the stand (ga.currentRoom) — under
+    // bounds overlap, so don't assert the scheduled room's index.
+    const docketSign = (ga as unknown as { hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number } }[] } })
+      .hazard.evidence.some((e) => e.kind === 'work' && e.room === ga.currentRoom
+        && Math.hypot(e.pos.x - docket.pos.x, e.pos.z - docket.pos.z) < 1.2);
     const trailAfterRifle = ga.paperTrail;
     const docketPaid = ga.marginalia > mDocket || caps.some((c) => /off the index/.test(c));
 
@@ -729,7 +744,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the filer strikes your card/.test(c));
-    return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketPaid,
+    return { stage: 'done' as const, rifled, trailAfterClaim, trailAfterRifle, docketSign, docketPaid,
       filed, wordOut, cutPrompt, cut, courierPaid, wordDead, refiled, wordUpstairs, squarePrompt, paid,
       trail: ga.paperTrail, spent: ga.marginalia < m0, posted: clerk.posted === true };
   });
@@ -738,6 +753,7 @@ test('the index — the filer files your questions, the halls listen', async ({ 
   expect(result.trailAfterClaim, JSON.stringify(result)).toBe(3); // 4 − 2 + 1: the asking is logged too
   expect(result.rifled, JSON.stringify(result)).toBe(true);
   expect(result.trailAfterRifle, JSON.stringify(result)).toBe(5);
+  expect(result.docketSign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.docketPaid, JSON.stringify(result)).toBe(true);
   expect(result.filed, JSON.stringify(result)).toBe(true);
   expect(result.wordOut, JSON.stringify(result)).toBe(true);

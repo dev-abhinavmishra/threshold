@@ -87,6 +87,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     if (!det) return { stage: 'no-det-spawn', ents: ga.entities.map((e) => e.id) } as const;
     const reg = g.interaction.interactables.find((i) => i.kind === 'registerDrawer' && i.enabled);
+    let drawerSign = false;
     if (reg) {
       // rotate through candidate sides until focus locks on the drawer —
       // a neighbouring socket can outrank the naive stand, and an
@@ -105,6 +106,13 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
         if (g.interaction.focused?.id !== reg.id) ci++; // wrong side — rotate
       }
       ga.keys.delete('KeyE');
+      // sprint 338 — hands in a staffed book leave 'work' sign too:
+      // the warden pulls to register-drawer sign like a till rifle's.
+      // The mark's room is whatever the game resolves at the stand
+      // (ga.currentRoom), not the scheduled room's index.
+      drawerSign = (ga as unknown as { hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number } }[] } })
+        .hazard.evidence.some((e) => e.kind === 'work' && e.room === ga.currentRoom
+          && Math.hypot(e.pos.x - reg.pos.x, e.pos.z - reg.pos.z) < 1.2);
     }
     const heldAfterDrawer = (ga as unknown as { unpaidHeld: number }).unpaidHeld;
     for (let f = 0; f < 40 && !det.clocked; f++) g.frame();
@@ -146,7 +154,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
     }
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the detective strikes your name/.test(c));
-    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterDrawer, settlePrompt, paid,
+    return { stage: 'done' as const, clocked, rang, heldAfterAf, heldAfterDrawer, drawerSign, settlePrompt, paid,
       spent: ga.imprints < i0, warranted: det?.warranted === true };
   });
 
@@ -154,6 +162,7 @@ test('the house detective — he phones ahead, or you settle', async ({ page }) 
   expect(result.clocked, JSON.stringify(result)).toBe(true);
   expect(result.heldAfterAf, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself enters his book
   expect(result.heldAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book file your face
+  expect(result.drawerSign, JSON.stringify(result)).toBe(true); // hands in a staffed book leave 'work' sign
   expect(result.rang, JSON.stringify(result)).toBe(true);
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the account/);
   expect(result.paid, JSON.stringify(result)).toBe(true);

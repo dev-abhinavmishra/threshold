@@ -3662,3 +3662,24 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   only writer) — it holds its last bearing, so the proof is drift
   vs the old yaw < 0.15, not decay to ~0.
 - Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 338 — the books smell of hands too
+- The three staffed-book rifles (Filer 'docket', Auditor 'tallyDrawer',
+  Detective 'registerDrawer') left no sign — the till's three-deep price
+  stack (file + keeper-rouse + scent) wasn't symmetric. All three cases
+  now push fresh 'work' evidence at the drawer: the warden pulls to
+  register-drawer sign (main route, its territory), the grafter drags
+  to docket/tally sign (under, its diet).
+- `room: this.currentRoom` is the right tag — evidence readers compare
+  `player.room === e.room` (signReads weigh / wipe zone at ~1430), so
+  the mark's room is "the room the pilfer happened in" by the game's own
+  resolver, NOT the scheduled keeper's room index.
+- e2e trap: `aRoom.index` is NOT a safe assert — under-room coarse
+  bounds overlap (the drawer's own pos can resolve to a different room
+  index than the keeper's scheduled room). Assert
+  `e.room === ga.currentRoom` at the stand + pos distance < 1.2 instead.
+- The marks read positionally like every other kind — no reader-side
+  changes needed; the grafter's stale-diet and the warden's cold-cutoff
+  already apply.
+- Gates: tsc, lint, 233 vitest, 5-seed sim, economy 7/7 (drawerSign),
+  undercast 11/11 (tallySign + docketSign), build.
