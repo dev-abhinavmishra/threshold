@@ -134,6 +134,15 @@ export class Curator extends Entity {
     }
   }
 
+  /** The eye at the crack: it felt your kneel through the gap — the
+   *  position lands like a heard sound and it turns to search the spot.
+   *  Only while it's out and listening; mid-pursuit it already knows. */
+  override eyeTell(at: Vec3): void {
+    if (this.state !== 'engage' || this.cState === 'pursue' || this.cState === 'stunned') return;
+    v3copy(this.target, at);
+    if (this.cState === 'patrol' || this.cState === 'listen' || this.cState === 'search') this.setState('suspicious');
+  }
+
   private setState(s: CuratorState): void {
     if (this.cState === s) return;
     this.cState = s;

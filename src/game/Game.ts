@@ -1683,6 +1683,7 @@ export class Game {
     // The nearest live thing in the far room, measured to the leaf — the
     // crack shows floor, so only proximity to the threshold matters.
     let best = Infinity;
+    let bestE: Entity | null = null;
     for (const e of this.entities) {
       if (e.state === 'done') continue;
       const tp = e.threatPos();
@@ -1690,7 +1691,7 @@ export class Game {
       const ri = underRoomOf(roam, tp);
       if (ri < 0 || roam[ri] !== target) continue;
       const d = v3dist(tp, door.pos);
-      if (d < best) best = d;
+      if (d < best) { best = d; bestE = e; }
     }
     // sprint 448 — the crack watches back: when a live thing is already
     // close to the leaf, a seeded per-door decision can put ITS eye to the
@@ -1700,6 +1701,10 @@ export class Game {
       const eye = this.streams.roomStream('scare', this.currentRoom * 131 + 97).bool(0.22);
       this.stoopEyeUsed.add(door.id);
       if (eye) {
+        // sprint 450 — and the eye TELLS: the watcher that met you through
+        // the gap now knows where you knelt; mobile things walk their own
+        // door-work to reach your side (block, knock, strain, shoulder).
+        bestE?.eyeTell?.(this.player.pos);
         // the flinch is real: your scramble back off the crack is genuine
         // noise at YOUR position — unsourced, so the house can rouse on it
         this.sound.emit({ x: this.player.pos.x, y: 0.3, z: this.player.pos.z, intensity: 0.6 * this.wantedPull, category: 'impact', caption: '' });

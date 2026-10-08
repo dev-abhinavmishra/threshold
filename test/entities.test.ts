@@ -396,6 +396,26 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('the eye tells — a stoop sighting drops a crumb it walks to (sprint 450)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const trail = [v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = step(b, ctx, 4);   // warn → engage, trail starts pulling
+    // the crack met your kneel here — the watcher gets YOUR position
+    const kneel = v3(room.origin.x + 6, 0, room.origin.z + 3);
+    const d0 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
+    b.eyeTell!(kneel);
+    t = step(b, ctx, 4, t);
+    const d1 = Math.hypot(b.pos.x - kneel.x, b.pos.z - kneel.z);
+    expect(d1).toBeLessThan(d0); // it walks the sighting, not the cold trail
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /remembers the crack/.test(c))).toBe(true);
+    b.dispose();
+  });
+
   it('releases the hold and knocks normally once the brace is gone', () => {
     const rooms = routeRooms();
     const room = rooms[20];

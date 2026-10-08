@@ -506,6 +506,19 @@ export class Warden extends Entity {
     this.rig?.play('move', 0.1);
   }
 
+  /** The eye at the crack: it met your stoop through the gap — the kneel
+   *  lands as an investigate point on your side of the leaf, and its
+   *  usual door-work decides what the leaf does next (shoulder through
+   *  or turn back on a held leaf). */
+  override eyeTell(at: Vec3): void {
+    if (this.state !== 'engage' || this.charging || this.investigate) return;
+    this.investigate = v3(at.x, 0, at.z);
+    this.investigateKind = null;
+    this.investigateScan = 0;
+    this.ctx.cue('floor-creak', this.pos, '[it turns toward the crack]', { severity: 'warn' });
+    this.rig?.play('move', 0.1);
+  }
+
   /** Doors on the way to a heard noise: braced or locked leaves turn it
    *  back; everything else it puts a shoulder through and keeps walking. */
   private doorOnPath(): 'blocked' | null {

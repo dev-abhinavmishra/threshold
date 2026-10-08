@@ -6398,3 +6398,22 @@ crack verbs +0.25 normal-side at y+0.42 p5. Two rules for the next
 verb here: anything the player kneels to reach must outrank by
 PRIORITY not proximity (dist always favors the seam edge nearer the
 stand), and never mint inside the leaf lane — the collider owns it.
+
+## Sprint 450 — the eye tells
+
+The s448 scare is now a consequence: when the crack's eye meets yours,
+`bestE.eyeTell(player.pos)` hands the watching entity YOUR kneel
+position — the stoop's information trade is live, not just loud. The
+channel is a new optional `Entity.eyeTell(at)` in base.ts; each mobile
+watcher feeds it into its own pursuit machinery rather than a special
+sprint: Bellman drops a `noiseCrumb` at your spot (block→knock→strain→
+shoulder chain handles the leaf), the warden sets `investigate` (its
+doorOnPath answers braced/locked/free leaves), the Curator tilts
+suspicious→investigate. Static `threatPos` holders (setpieces, room
+figs) can't implement it — the eye there was atmosphere, and the
+flinch emit still carries the near-side noise.
+**Notes:** eyeTell honors each entity's own gates (underGaze, charging,
+pursue) — a sighting can't override a stronger claim. The watcher
+guards `threatPos()` engagement filters, so only already-live threats
+can watch a crack at all. No checkpoints: stoopEyeUsed resets per run
+by design (a death is a new door).
