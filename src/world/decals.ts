@@ -1927,3 +1927,223 @@ export function mothDrift(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Ring stains — years of set-down glasses: thin mug rings, one honest
+ * spill where something soaked through the varnish. */
+export function ringStains(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const n = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const x = 20 + rng.float() * 56, y = 20 + rng.float() * 56;
+      const r = 7 + rng.float() * 6;
+      const a = 0.16 + rng.float() * 0.2;
+      // the ring itself — varnish lifted at the water line
+      ctx.strokeStyle = `rgba(88,66,40,${a})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * (0.85 + rng.float() * 0.2), rng.float() * 0.4, 0, Math.PI * 2);
+      ctx.stroke();
+      // pale tide mark just outside it
+      ctx.strokeStyle = `rgba(190,175,140,${a * 0.7})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r + 1.6, (r + 1.6) * 0.9, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (rng.float() < 0.4) {
+      // the spill — irregular bloom, darker at the rim
+      const bx = 30 + rng.float() * 36, by = 30 + rng.float() * 36;
+      const br = 10 + rng.float() * 10;
+      ctx.strokeStyle = 'rgba(78,58,34,0.2)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.35) {
+        const rr = br + Math.sin(t * 3 + rng.float() * 3) * 3;
+        const px = bx + Math.cos(t) * rr, py = by + Math.sin(t) * rr * 0.8;
+        if (t === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(96,74,44,0.1)';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, br * 0.8, br * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Drain halo — verdigris and rust fanning out from where the water
+ * finds its way down: green-blue core ring, oxidised streaks below. */
+export function drainHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48, cy = 40;
+    // wet sheen field — floor stays darker where it never dries
+    const sheen = ctx.createRadialGradient(cx, cy, 4, cx, cy, 44);
+    sheen.addColorStop(0, 'rgba(40,48,44,0.4)');
+    sheen.addColorStop(1, 'rgba(40,48,44,0)');
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, 96, 96);
+    // verdigris ring — the copper bloom where water sits
+    ctx.strokeStyle = `rgba(82,124,106,${0.3 + rng.float() * 0.2})`;
+    ctx.lineWidth = 4 + rng.float() * 3;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 14 + rng.float() * 4, 10 + rng.float() * 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // oxidised streaks running down-drift
+    for (let i = 0; i < 5; i++) {
+      const sx = cx - 14 + rng.float() * 28;
+      ctx.strokeStyle = `rgba(${120 + rng.float() * 30},${74 + rng.float() * 16},${40 + rng.float() * 14},${0.18 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.4 + rng.float() * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx, cy + 6);
+      ctx.quadraticCurveTo(sx + (rng.float() - 0.5) * 6, cy + 16 + rng.float() * 8, sx + (rng.float() - 0.5) * 10, cy + 26 + rng.float() * 14);
+      ctx.stroke();
+    }
+    // dark rim speckle
+    for (let i = 0; i < 18; i++) {
+      const a = rng.float() * Math.PI * 2, r = 13 + rng.float() * 5;
+      ctx.fillStyle = `rgba(30,34,30,${0.3 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.75, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Waterline — the tide the room survived: a darker line at the top
+ * edge of the flood band, sediment settling below it. */
+export function waterline(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 96, (ctx) => {
+    // the sharp top edge — where the water sat for days
+    const wy = 18 + rng.float() * 8;
+    ctx.strokeStyle = 'rgba(58,52,38,0.5)';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, wy);
+    for (let x = 0; x <= 256; x += 16) ctx.lineTo(x, wy + Math.sin(x * 0.05 + rng.float() * 4) * 2.4);
+    ctx.stroke();
+    // sediment band under it, streaky and uneven
+    for (let i = 0; i < 60; i++) {
+      const x = rng.float() * 256;
+      const top = wy + 2 + rng.float() * 6;
+      const len = 8 + rng.float() * rng.float() * 38;
+      ctx.strokeStyle = `rgba(${70 + rng.float() * 30},${60 + rng.float() * 26},${40 + rng.float() * 18},${0.06 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.5 + rng.float() * 3;
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x + (rng.float() - 0.5) * 4, top + len);
+      ctx.stroke();
+    }
+    // efflorescence flecks — salt pushed out of the plaster as it dried
+    for (let i = 0; i < 26; i++) {
+      ctx.fillStyle = `rgba(190,184,168,${0.08 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(rng.float() * 256, wy + 4 + rng.float() * 40, 1 + rng.float() * 2.5, 0.7 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Soot stain — the black bloom a dead fire breathed up the wall above
+ * its mouth for years: a dark core fingering upward into wisps. */
+export function sootStain(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    // dense core, wide and low
+    const core = ctx.createRadialGradient(cx, 108, 4, cx, 108, 40);
+    core.addColorStop(0, 'rgba(24,20,16,0.75)');
+    core.addColorStop(0.55, 'rgba(26,22,18,0.4)');
+    core.addColorStop(1, 'rgba(26,22,18,0)');
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 40, 96, 88);
+    // smoke fingers rising — darker at root, feathering out
+    for (let i = 0; i < 9; i++) {
+      const sx = cx + (rng.float() - 0.5) * 30;
+      const top = 12 + rng.float() * 40;
+      const w = 2.5 + rng.float() * 4;
+      const g = ctx.createLinearGradient(0, 108, 0, top);
+      g.addColorStop(0, `rgba(28,24,20,${0.35 + rng.float() * 0.2})`);
+      g.addColorStop(1, 'rgba(28,24,20,0)');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, 108);
+      ctx.quadraticCurveTo(sx + (rng.float() - 0.5) * 10, 60, sx + (rng.float() - 0.5) * 16, top);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Slept-in — the sweat-shadow a sleeper leaves on the sheet: a head
+ * oval, a shoulder spread, the faint trough of a body that lay too long. */
+export function sleptIn(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 160, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 8;
+    // yellowed body bloom — biggest at the torso, fading to the knees
+    const g = ctx.createRadialGradient(cx, 62, 6, cx, 62, 52);
+    g.addColorStop(0, 'rgba(120,104,68,0.28)');
+    g.addColorStop(0.6, 'rgba(118,102,66,0.14)');
+    g.addColorStop(1, 'rgba(118,102,66,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, 66, 26, 48, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the head — a darker oval where a pillow would sit
+    ctx.fillStyle = 'rgba(96,80,52,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 6, 20, 11 + rng.float() * 3, 9, (rng.float() - 0.5) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // the trough — a crease-line down the spine of the mattress
+    ctx.strokeStyle = 'rgba(88,74,46,0.22)';
+    ctx.lineWidth = 3 + rng.float();
+    ctx.beginPath();
+    ctx.moveTo(cx + (rng.float() - 0.5) * 4, 40);
+    ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 10, 80, cx + (rng.float() - 0.5) * 8, 126);
+    ctx.stroke();
+    // hair-strand specks near the pillow mark
+    for (let i = 0; i < 7; i++) {
+      ctx.strokeStyle = 'rgba(60,48,34,0.35)';
+      ctx.lineWidth = 0.6;
+      const hx = cx - 8 + rng.float() * 16, hy = 14 + rng.float() * 12;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx + (rng.float() - 0.5) * 6, hy + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Lost letter — a cream envelope dropped face-up: stamp square,
+ * three address lines, one bad crease from being stepped over. */
+export function lostLetter(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // envelope body — aged cream, slight skew
+    ctx.fillStyle = 'rgba(226,214,186,0.92)';
+    ctx.fillRect(8, 20, 48, 32);
+    ctx.strokeStyle = 'rgba(140,124,96,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 20, 48, 32);
+    // flap crease — the V of a sealed envelope
+    ctx.beginPath();
+    ctx.moveTo(8, 22); ctx.lineTo(32, 38); ctx.lineTo(56, 22);
+    ctx.stroke();
+    // the stamp — a small dark square, half peeled
+    ctx.fillStyle = 'rgba(120,90,80,0.8)';
+    ctx.fillRect(46, 24, 7, 7);
+    // address lines — uneven ink scrawl, third line trails off
+    ctx.strokeStyle = 'rgba(50,44,36,0.7)';
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(13, 30); ctx.lineTo(13 + 16 + rng.float() * 6, 30 + (rng.float() - 0.5) * 2);
+    ctx.moveTo(13, 36); ctx.lineTo(13 + 20 + rng.float() * 4, 36);
+    ctx.moveTo(13, 42); ctx.lineTo(13 + 10 + rng.float() * 8, 42 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // the crease — a fold scar across a corner
+    ctx.strokeStyle = 'rgba(160,148,120,0.5)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(10, 50); ctx.lineTo(50 + rng.float() * 4, 22);
+    ctx.stroke();
+  });
+}

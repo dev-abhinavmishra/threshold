@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1748,6 +1748,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         coal.userData.animSeed = rng.float() * 100;
         group.add(coal);
       }
+      // The soot — the fire breathed black up the wall above its mouth
+      // for years; the bloom keeps the shape long after the grate died.
+      if (rng.float() < 0.55) {
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md = Math.min(dE, dW, dN, dS);
+        const sw = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+        const along = sw === 'e' || sw === 'w' ? p.z : p.x;
+        wallDecal(sw, sootStain(rng), 0.9 + rng.float() * 0.3, 0.85 + rng.float() * 0.3, along, 1.4 + rng.float() * 0.25);
+        const sl = group.children[group.children.length - 1];
+        if (sl && !sl.name) sl.name = 'soot-stain';
+      }
       if (rng.float() >= 0.55) continue;
       const m = decalQuad(ashPile(rng), 0.9 + rng.float() * 0.4, 0.75 + rng.float() * 0.3);
       m.name = 'cold-hearth';
@@ -1760,6 +1771,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         0.007,
         p.z + Math.cos(py) * 0.55);
       group.add(m);
+    }
+
+    // The water line — a room that flooded once keeps the tide mark:
+    // sediment band and a sharp top edge at baseboard height.
+    const wetRoom = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
+      || spec.props.some((p) => p.kind === 'basinSink' || p.kind === 'puddle');
+    if (wetRoom && rng.float() < 0.5) {
+      const spot = pickWallSpot(2.0);
+      if (spot) {
+        wallDecal(spot.wall, waterline(rng), 1.8 + rng.float() * 0.6, 0.55 + rng.float() * 0.15, spot.along, 0.3 + rng.float() * 0.14);
+        const wl = group.children[group.children.length - 1];
+        if (wl && !wl.name) wl.name = 'waterline';
+      }
     }
 
     // The inspector's tally — beside a hollow's seat, scratch-counts kept
@@ -2402,6 +2426,28 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
             group.add(moth);
           }
         }
+      }
+      // The drains drink — verdigris bloom and a floor that never
+      // quite dries, pooling out from under the basin.
+      if (p.kind === 'basinSink' && rng.float() < 0.5) {
+        const dh = decalQuad(drainHalo(rng), 1.1, 1.1);
+        dh.name = 'drain-halo';
+        dh.rotation.x = -Math.PI / 2;
+        dh.rotation.z = (p.yaw ?? 0) + (rng.float() - 0.5) * 0.4;
+        const fy = p.yaw ?? 0;
+        dh.position.set(p.x + Math.sin(fy) * 0.15, 0.0085, p.z + Math.cos(fy) * 0.15);
+        group.add(dh);
+      }
+      // The letters never sent — a dropped envelope where someone
+      // slept, dressed, or was paid out.
+      if ((p.kind === 'bed' || p.kind === 'nightstand' || p.kind === 'dresser' || p.kind === 'desk' || p.kind === 'till') && rng.float() < 0.12) {
+        const ll = decalQuad(lostLetter(rng), 0.28, 0.28);
+        ll.name = 'lost-letter';
+        ll.rotation.x = -Math.PI / 2;
+        ll.rotation.z = rng.float() * Math.PI * 2;
+        const la = rng.float() * Math.PI * 2, lr = 0.55 + rng.float() * 0.3;
+        ll.position.set(p.x + Math.cos(la) * lr, 0.009, p.z + Math.sin(la) * lr);
+        group.add(ll);
       }
       // Ceiling rosette under hanging fixtures — plaster medallion + ring
       // where the chain meets the slab.

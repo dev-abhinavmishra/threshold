@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1356,6 +1356,41 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     // overlay's identity away
     prop.group.name = 'wrong-room';
     prop.group.add(wr);
+  }
+  // The wood keeps the water — rings where generations of glasses were
+  // set down and one honest spill that soaked through the varnish.
+  const TOPS: Partial<Record<PropSpec['kind'], number>> = {
+    desk: 0.8, table: 0.8, dresser: 0.98, sideboard: 1.2, writingDesk: 0.82,
+    breakTable: 0.78, counter: 1.13, nightstand: 0.72, till: 1.05,
+  };
+  if (spec.kind in TOPS && rng.bool(0.28)) {
+    const c = modelCollider(spec.kind);
+    const topY = (c?.[1] ?? TOPS[spec.kind as keyof typeof TOPS]!) + 0.004;
+    const rw = c ? Math.min(c[0] * 0.8, 1.1) : 0.8;
+    const rs = new THREE.Mesh(
+      new THREE.PlaneGeometry(rw, rw * 0.8),
+      new THREE.MeshStandardMaterial({ map: ringStains(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    rs.name = 'ring-stain';
+    rs.userData.decalMat = true;
+    rs.rotation.x = -Math.PI / 2;
+    rs.rotation.z = rng.float() * Math.PI * 2;
+    rs.position.set((rng.float() - 0.5) * 0.3, topY, (rng.float() - 0.5) * 0.15);
+    prop.group.add(rs);
+  }
+  // Slept-in — some mattresses keep the shadow of whoever lay too long.
+  if (spec.kind === 'bed' && rng.bool(0.3)) {
+    const si = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 1.6),
+      new THREE.MeshStandardMaterial({ map: sleptIn(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    si.name = 'slept-in';
+    si.userData.decalMat = true;
+    si.rotation.x = -Math.PI / 2;
+    si.rotation.z = (rng.float() - 0.5) * 0.5;
+    si.position.set(0, 0.585, 0.1);
+    prop.group.add(si);
+    if (!prop.group.name) prop.group.name = 'slept-in';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
