@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2196,6 +2196,46 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(fw, frameLean(rng), 0.6 + rng.float() * 0.15, 0.6 + rng.float() * 0.15, along + (rng.float() - 0.5) * 0.3, 0.6 + rng.float() * 0.2);
       const fl = group.children[group.children.length - 1];
       if (fl && !fl.name) fl.name = 'frame-lean';
+    }
+
+    // The hearth spilled — ash fans and ember pits past the fender
+    // of every fireplace that burned.
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit') || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const inx = hw === 'e' ? -1 : hw === 'w' ? 1 : 0;
+      const inz = hw === 's' ? -1 : hw === 'n' ? 1 : 0;
+      const hs = decalQuad(hearthSpill(rng), 0.9 + rng.float() * 0.2, 0.6 + rng.float() * 0.15);
+      hs.name = 'hearth-spill';
+      hs.rotation.x = -Math.PI / 2;
+      hs.rotation.z = rng.float() * Math.PI * 2;
+      hs.position.set(p.x + inx * 0.6, 0.0088, p.z + inz * 0.6);
+      group.add(hs);
+    }
+    // The crates dragged — splinter fields and nail marks where a
+    // crate's corner dug in.
+    for (const p of spec.props) {
+      if ((p.kind !== 'crate' && p.kind !== 'milCrate' && p.kind !== 'plasticCrate' && p.kind !== 'carton')
+        || rng.float() >= 0.4) continue;
+      const cs = decalQuad(crateSplinters(rng), 0.8 + rng.float() * 0.2, 0.55 + rng.float() * 0.1);
+      cs.name = 'crate-splinters';
+      cs.rotation.x = -Math.PI / 2;
+      cs.rotation.z = rng.float() * Math.PI * 2;
+      cs.position.set(p.x + (rng.float() - 0.5) * 0.6, 0.0082, p.z + (rng.float() - 0.5) * 0.6);
+      group.add(cs);
+    }
+    // The umbrellas dripped — wet rings under the stands that caught
+    // the rain.
+    for (const p of spec.props) {
+      if (p.kind !== 'umbrellaStand' || rng.float() >= 0.6) continue;
+      const ur = decalQuad(umbrellaRing(rng), 0.6 + rng.float() * 0.15, 0.6 + rng.float() * 0.15);
+      ur.name = 'umbrella-ring';
+      ur.rotation.x = -Math.PI / 2;
+      ur.rotation.z = rng.float() * Math.PI * 2;
+      ur.position.set(p.x, 0.009, p.z);
+      group.add(ur);
     }
 
     // The water line — a room that flooded once keeps the tide mark:
