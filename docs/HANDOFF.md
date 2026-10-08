@@ -5405,6 +5405,39 @@ loud on purpose: a staggers is bought with a summon.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
 
+## Sprint 405 — the wire doesn't care whose foot either
+Armed paper snares tripped only the player — a hunter crossed a live
+seal for free. Same two-ways patch as the trap: any entity's threatPos
+inside the 0.7m trip radius springs it — `armed=false` + stagger(1.6) +
+the same 0.8 'impact' pull + a fresh 'wire' sign where it fell.
+
+- Entities have no crouch: a submerged wire trips an upright stride it
+  could never feel for (the crouch exemption is player-only by design).
+- Snare death already rode `deadHazards` — entity trips persist free.
+- e2e leg parks the player 2.5m clear, plants a grafter on the seal:
+  armed→spent, stagger flag, pull at the wire, 'wire' evidence pushed,
+  and the cue reads 'a foot that was not yours'.
+
+Gates: tsc, lint, build; hazards leg 1/1.
+
+## Sprint 406 — the floor slides under his stride too
+Loose rugs and wet floors were player-only slips. A walker crossing an
+armed rug (0.85m) or puddle (0.8m) now loses his footing like you do —
+one trip each: `slippedRugs`/`slippedPuddles` + stagger (1.2s/1.5s) +
+the same 'stumble'/'splash' emits.
+
+- `slippedRugs`/`slippedPuddles` now ride the checkpoint — same
+  laundering class as the s404 springs, closed for slips.
+- e2e trap logged: live lists only fill while the spot's room is
+  minted — park the player INSIDE the room (2.2m clear toward the
+  heart, outside the slip radius). A player slip adds the same key —
+  assert the entity's own caption, not just the set.
+- e2e trap logged: `armedRugs`/`armedPuddles` roll lazily per minted
+  prop — mint the room first, then force-arm the key (the leg tests
+  the trip, not the 0.35 seed roll).
+
+Gates: tsc, lint, build; hazards leg 1/1.
+
 ## Sprint 448 — the paper trail & the things they left
 First BIG-format sprint (his new directive: big worked-on PRs, not tiny
 ones — cluster several dressing systems per PR). Two related batches:

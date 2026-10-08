@@ -741,6 +741,9 @@ export class Game {
     // sprint 404 — a spent or pried spring stays down across a reload
     for (const st of cp?.snappedTraps ?? []) this.snappedTraps.add(st);
     for (const pt of cp?.priedTraps ?? []) this.priedTraps.add(pt);
+    // sprint 406 — a slid rug or splashed puddle is spent too
+    for (const sr of cp?.slippedRugs ?? []) this.slippedRugs.add(sr);
+    for (const sp of cp?.slippedPuddles ?? []) this.slippedPuddles.add(sp);
     // the count's locker keeps its tag — seized goods stay claimable
     // at the cage across a reload (a fresh run mints nothing)
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
@@ -5157,6 +5160,8 @@ export class Game {
         : undefined,
       snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
       priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
+      slippedRugs: this.slippedRugs.size > 0 ? [...this.slippedRugs] : undefined,
+      slippedPuddles: this.slippedPuddles.size > 0 ? [...this.slippedPuddles] : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -7916,6 +7921,69 @@ export class Game {
         const at = { x: tp.x, y: 0.05, z: tp.z };
         this.audio.play('trap-snap', at, '[the trap fires — it found a foot that was not yours]', 'warn');
         this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
+        break;
+      }
+    }
+
+    // sprint 405 — the wire doesn't care whose foot either: a walker
+    // crossing an armed paper seal trips it like you would — rooted a
+    // beat, loud, and the sprung wire leaves fresh sign where it fell.
+    // Entities have no crouch: a submerged wire trips an upright stride
+    // it could never feel for.
+    for (const hz of this.hazard.snares) {
+      if (!hz.armed) continue;
+      let tripper: Entity | null = null;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - hz.pos.x, edz = epos.z - hz.pos.z;
+        if (edx * edx + edz * edz < 0.7 * 0.7) { tripper = ent; break; }
+      }
+      if (!tripper) continue;
+      hz.armed = false;
+      this.hazard.evidence.push({ pos: v3(hz.pos.x, 0, hz.pos.z), room: hz.room, kind: 'wire', t: this.clock.time, readBy: [] });
+      tripper.stagger(1.6);
+      this.audio.play('trap-snap', { x: hz.pos.x, y: 0.2, z: hz.pos.z },
+        '[paper screams — a foot that was not yours]', 'warn');
+      this.sound.emit({ x: hz.pos.x, y: 0.4, z: hz.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
+    }
+
+    // sprint 406 — the floor slides under his stride too: a walker
+    // crossing a loose rug or a wet floor loses his footing like you
+    // do — one trip each, and the stumble carries to the next room.
+    for (const rg of this.liveRugs) {
+      if (this.slippedRugs.has(rg.key)) continue;
+      let tripped = false;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - rg.x, edz = epos.z - rg.z;
+        if (edx * edx + edz * edz >= 0.85 * 0.85) continue;
+        this.slippedRugs.add(rg.key);
+        ent.stagger(1.2);
+        this.audio.play('rug-slide', { x: rg.x, y: 0.05, z: rg.z },
+          '[the rug slides — a stride that was not yours]', 'warn');
+        this.sound.emit({ x: rg.x, y: 0.1, z: rg.z, intensity: 0.3, category: 'footstep', caption: '[a stumble]' });
+        tripped = true;
+        break;
+      }
+      if (tripped) continue;
+    }
+    for (const pd of this.livePuddles) {
+      if (this.slippedPuddles.has(pd.key)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - pd.x, edz = epos.z - pd.z;
+        if (edx * edx + edz * edz >= 0.8 * 0.8) continue;
+        this.slippedPuddles.add(pd.key);
+        ent.stagger(1.5);
+        this.audio.play('puddle-splash', { x: pd.x, y: 0.05, z: pd.z },
+          '[the floor takes his feet — water everywhere]', 'warn');
+        this.sound.emit({ x: pd.x, y: 0.1, z: pd.z, intensity: 0.45, category: 'footstep', caption: '[a splash]' });
         break;
       }
     }

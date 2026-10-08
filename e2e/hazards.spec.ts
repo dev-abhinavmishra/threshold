@@ -238,6 +238,169 @@ test('cut the seal — an upright player can disarm a dry wire', async ({ page }
   expect(errors).toEqual([]);
 });
 
+// sprint 405 — the wire doesn't care whose foot either: a walker trips an
+// armed seal like you do — rooted a beat, loud, and the sprung wire signs.
+test('the wire trips a walker too — rooted, loud, signed', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      hazard: { snares: { room: number; armed: boolean; pos: { x: number; y: number; z: number } }[];
+        evidence: { pos: { x: number; z: number }; room: number; kind: string }[] };
+      entities: { id: string; state: string; pos?: { x: number; z: number }; staggerUntil?: number }[];
+      spawnById(id: string): void;
+    };
+    const em: { x: number; z: number; caption?: string }[] = [];
+    (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string; caption?: string }) => void): void } })
+      .sound.on((e) => { if (/snare/.test(e.caption ?? '')) em.push(e); });
+
+    const hz = ga.hazard.snares.find((h) => h.armed);
+    if (!hz) return { stage: 'no-snare' } as const;
+    ga.spawnById('grafter');
+    const ent = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done');
+    if (!ent?.pos) return { stage: 'no-walker' } as const;
+    // player stands clear of the 0.7m trip radius — it must be HIS wire
+    g.player.teleport(hz.pos.x + 2.5, 0, hz.pos.z + 2.5);
+    const ev0 = ga.hazard.evidence.length;
+    ent.pos.x = hz.pos.x; ent.pos.z = hz.pos.z;
+    for (let f = 0; f < 60 && hz.armed; f++) g.frame();
+    const disarmed = !hz.armed;
+    const staggered = disarmed && (ent.staggerUntil ?? 0) > g.clock.time;
+    const pullHeard = em.some((e) => Math.hypot(e.x - hz.pos.x, e.z - hz.pos.z) < 0.5);
+    const signed = ga.hazard.evidence.slice(ev0).some((e) => e.kind === 'wire'
+      && Math.hypot(e.pos.x - hz.pos.x, e.pos.z - hz.pos.z) < 0.5);
+    const notYours = caps.some((c) => /foot that was not yours/.test(c));
+    return { stage: 'done', disarmed, staggered, pullHeard, signed, notYours } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.disarmed, 'the wire trips under the walker').toBe(true);
+  expect(result.staggered, 'the trip roots the walker a beat').toBe(true);
+  expect(result.pullHeard, 'the trip is a real pull at the wire').toBe(true);
+  expect(result.signed, 'the sprung wire leaves fresh sign').toBe(true);
+  expect(result.notYours, 'the house tells you whose foot it was not').toBe(true);
+  expect(errors).toEqual([]);
+});
+
+// sprint 406 — the floor slides under his stride too: a walker loses his
+// footing on a loose rug or a wet floor exactly the way you do.
+test('the rug and the water slide under a walker too', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const ga = g as unknown as {
+      armedRugs: Map<string, boolean>; armedPuddles: Map<string, boolean>;
+      liveRugs: { x: number; z: number; key: string }[];
+      livePuddles: { x: number; z: number; key: string }[];
+      slippedRugs: Set<string>; slippedPuddles: Set<string>;
+      entities: { id: string; state: string; pos?: { x: number; z: number }; staggerUntil?: number }[];
+      spawnById(id: string): void;
+    };
+    const em: { x: number; z: number; caption?: string }[] = [];
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string; caption?: string }) => void): void } })
+      .sound.on((e) => { if (/stumble|splash/.test(e.caption ?? '')) em.push(e); });
+
+    // armed rolls are per-minted prop — mint a room holding a rug and a
+    // room holding a puddle, then arm them directly (the leg tests the
+    // trip, not the 0.35 seed roll).
+    const rugRoom = g.route.rooms.find((r) => r.spec?.props?.some((p) => p.kind === 'rug'));
+    const pdRoom = g.route.rooms.find((r) => r.spec?.props?.some((p) => p.kind === 'puddle'));
+    if (!rugRoom && !pdRoom) return { stage: 'no-slip' } as const;
+    ga.spawnById('grafter');
+    const ent = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done');
+    if (!ent?.pos) return { stage: 'no-walker' } as const;
+    let armedRug: string | undefined;
+    let armedPd: string | undefined;
+    const ga2 = g as unknown as { space: string };
+    for (const rm of [rugRoom, pdRoom]) {
+      if (!rm) continue;
+      g.player.teleport(rm.origin.x, 0, rm.origin.z);
+      for (let f = 0; f < 4; f++) g.frame();
+      const k = [...ga.armedRugs.keys()].filter((x) => x.startsWith(`${ga2.space}:${rm.index}:`)).pop();
+      const pk = [...ga.armedPuddles.keys()].filter((x) => x.startsWith(`${ga2.space}:${rm.index}:`)).pop();
+      if (k && !ga.slippedRugs.has(k)) { ga.armedRugs.set(k, true); if (!armedRug) armedRug = k; }
+      if (pk && !ga.slippedPuddles.has(pk)) { ga.armedPuddles.set(pk, true); if (!armedPd) armedPd = pk; }
+    }
+    if (!armedRug && !armedPd) return { stage: 'no-slip' } as const;
+
+    const out: { rug?: boolean; puddle?: boolean; pullRug?: boolean; pullPd?: boolean; staggered?: boolean;
+      hisRug?: boolean; hisPd?: boolean } = {};
+    // live lists only fill while the spot's room is minted — park the
+    // player inside each room (clear of the slip radius so it's HIS
+    // trip, not yours) and walk the grafter onto the spot.
+    const epos = ent.pos;
+    const trip = (key: string, isRug: boolean, rm: { origin: { x: number; z: number } }) => {
+      const live = () => (isRug ? ga.liveRugs : ga.livePuddles).find((s) => s.key === key);
+      const slipped = () => (isRug ? ga.slippedRugs : ga.slippedPuddles).has(key);
+      g.player.teleport(rm.origin.x, 0, rm.origin.z);
+      for (let f = 0; f < 6 && !live() && !slipped(); f++) g.frame();
+      let spot = live();
+      if (!spot) return { hit: slipped(), pull: false };
+      // park 2.2m clear toward the room's heart — keeps the mint, stays
+      // outside the slip radius so the trip is HIS, not yours
+      const ox = rm.origin.x - spot.x, oz = rm.origin.z - spot.z;
+      const od = Math.hypot(ox, oz) || 1;
+      g.player.teleport(spot.x + (ox / od) * 2.2, 0, spot.z + (oz / od) * 2.2);
+      for (let f = 0; f < 120 && !slipped(); f++) {
+        const s = live();
+        if (s) { spot = s; epos.x = s.x; epos.z = s.z; }
+        g.frame();
+      }
+      return { hit: slipped(), pull: em.some((e) => Math.hypot(e.x - spot.x, e.z - spot.z) < 0.5) };
+    };
+    if (armedRug && rugRoom) {
+      const r = trip(armedRug, true, rugRoom);
+      out.rug = r.hit;
+      out.pullRug = r.pull;
+      out.staggered = (ent.staggerUntil ?? 0) > g.clock.time;
+      out.hisRug = caps.some((c) => /stride that was not yours/.test(c));
+    }
+    if (armedPd && pdRoom) {
+      const r = trip(armedPd, false, pdRoom);
+      out.puddle = r.hit;
+      out.pullPd = r.pull;
+      out.hisPd = caps.some((c) => /floor takes his feet/.test(c));
+      out.staggered = out.staggered || (ent.staggerUntil ?? 0) > g.clock.time;
+    }
+    return { stage: 'done', armedRug: !!armedRug, armedPd: !!armedPd, ...out,
+      emN: em.length, emCap: em.slice(-6).map((e) => e.caption), capsTail: caps.slice(-6) } as const;
+  });
+
+  if (result.stage === 'no-slip') test.skip();
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  if (result.armedRug) {
+    expect(result.rug, 'a loose rug slides under the walker').toBe(true);
+    expect(result.pullRug, `the rug stumble is a real sound: ${JSON.stringify(result)}`).toBe(true);
+    expect(result.hisRug, 'it was HIS stride, not yours').toBe(true);
+  }
+  if (result.armedPd) {
+    expect(result.puddle, 'a wet floor takes his feet').toBe(true);
+    expect(result.pullPd, 'the splash is a real sound').toBe(true);
+    expect(result.hisPd, 'it was HIS feet, not yours').toBe(true);
+  }
+  expect(result.staggered, 'the stumble roots him a beat').toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('scent — a killed hazard signs the room, the Warden reads it', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
