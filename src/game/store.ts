@@ -212,7 +212,7 @@ export interface CheckpointSave {
   droppedCoils?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
-  graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean }[];
+  graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];
   // wound clocks still counting — a paid windAlarm shouldn't die unrung
   // on a reload; `t` is the fuse left in seconds, restored onto the
   // live clock like dialedRings/hookRings

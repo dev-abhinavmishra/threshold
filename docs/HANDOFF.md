@@ -6452,3 +6452,58 @@ checks, so the leaf sweep covers every contact kill in the game.
 (s440); these were the stragglers. playerExposed also free-passes the
 existing protection checks (hidden/losSafe/spot) — strictly more
 cover, no removed safety.
+
+## Sprint 454 — the review's bill: 17 fixes across five merged arcs
+
+Devin Review findings on #164/#171/#173/#180/#181, all verified
+against current code and fixed (3 flags deferred to design calls):
+
+- **the double plant** (setpieces): Grafter.onDone clears `carrying`
+  before planting — dispose() re-invokes onDone and re-planted.
+- **the flood that floods** (base): stagger() emits 'impact' only on
+  a fresh knockdown — standing water/steam extends the hold without
+  re-lying the crash.
+- **the shy repairman** (corridor): warden's 1.8m repair-abort now
+  requires `!p.hiddenSpot` — the comment always claimed a hidden
+  slip aborts; now the check honors it.
+- **the blind scavenger** (setpieces): stripSnare hoisted out of the
+  stationary branch — a grafter crossing dead wire en route strips
+  it mid-stride.
+- **the first strain was a bluff** (corridor): doorOnPath returns
+  'working' — the warden stands at a wired leaf ~2.2s and re-strains
+  to 'freed' instead of abandoning after the first contact. braceShoveT
+  ticks during checks now, and a fresh warden inside its shoulder
+  cooldown waits out the remainder at the leaf ('working' too).
+- **the vanishing re-lay** (Game): rearmHazard sets `claimed` instead
+  of clearing `planted` — the claimed wire keeps its checkpoint slot
+  (graftedWires record `claimed`), reads 'Cut the seal', yields no coil.
+- **the late ring** (Game): armedLures restore clamps nextTick to
+  Math.min(0.8, al.t) — a sub-0.8s fuse can't outlive its own ring.
+- **the haunted bind** (Game): pendingDoorOpen skips heldBy leaves —
+  a wired/chocked door holds against the haunting, with a tell.
+- **the plastered lens** (Game): cam LOS origin nudged 0.18m toward
+  room center — mounts sat 0.07 inside the edge vs the wall collider's
+  ~0.12 inner face, so every cam reported blind.
+- **the wall-piercing gazes** (room): Echo-Skin + Margin strikes now
+  require the player's clear LOS line — cover holds them at
+  killRange+0.4/0.3 until the air clears.
+- **the unreachable hunting spot** (room): Whisper.relocate prefers
+  in-room AND hasLineOfSight candidates (first in-room kept as fallback).
+- **the buried keyhole** (interaction): locked-door peek is p6 at
+  keyhole height (y+0.95) — the level look outranks the crack lattice.
+- **the shared anchor** (interaction): wireDoor offset -latX*0.26 off
+  the wedge's identical position — equal-score ties let first-added win.
+- **the articulate dark** (Game): stoopUnder returns 'black glass'
+  BEFORE shadow reads in a darkRoom (the lit checker lamp keeps its
+  exemption — it IS the light).
+- **the room-shared eye** (Game): stoop eye seed hashes door.id in —
+  per-door rolls, not per-room.
+- **the haunted reopening** (Game): pendingDoorOpen excludes heldBy.
+
+**Deferred to threads (needs_human):** purse-jurisdiction contract
+question, wire-cut e2e coverage gap, route-wide sight-scan perf flag.
+
+**Notes:** playerExposed now defaults `room?.losBlockers ?? []` —
+synthetic test rooms without the field crashed the grafter rise spec.
+Contract spec updated: `s.claimed = true` replaces the pinned
+`s.planted = false` shape, plus !claimed guards on reclaim verbs.

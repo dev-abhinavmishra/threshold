@@ -478,13 +478,13 @@ export class Grafter extends Entity {
     } else {
       this.rig?.play('idle');
       if (this.roamT > 1.4 && c.now > this.crackCampUntil) this.pickRoam();
-      // It grinds the floor wherever it stands — a dead snare at its
-      // feet is scrap, and scrap gets carried.
-      if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
-        this.carrying = 1;
-        this.carryCued = false;
-        c.cue('grafter-grind', this.pos, '[stone grinds the wire free — the coil goes with it]', { severity: 'warn' });
-      }
+    }
+    // It grinds the floor wherever it is — a dead snare crossed under
+    // its stride is scrap too, not only the one under a standing rubble.
+    if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
+      this.carrying = 1;
+      this.carryCued = false;
+      c.cue('grafter-grind', this.pos, '[stone grinds the wire free — the coil goes with it]', { severity: 'warn' });
     }
     // The coil unwinds where the living walk — the under doesn't
     // repair its floor, it moves the wire onto your path.
@@ -601,6 +601,9 @@ export class Grafter extends Entity {
     // It settles back into the floor — a coil still on its back
     // settles with it, armed where the rubble sank.
     if (this.carrying > 0) {
+      // dispose() re-invokes onDone — the coil must leave the rubble's
+      // hands once planted or a settled body plants it twice
+      this.carrying = 0;
       const pr = this.roomOf(this.pos);
       if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr, `grafter:${this.spawnRoom}`);
     }

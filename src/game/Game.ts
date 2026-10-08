@@ -785,7 +785,7 @@ export class Game {
         // your own laid wire restores wearing your flag and its face —
         // silently: the laying signed when you laid it
         const snare = { pos: v3(gw.x, 0, gw.z), room: gw.room, armed: gw.armed, planted: true,
-          mesh: undefined as THREE.Object3D | undefined };
+          claimed: gw.claimed, mesh: undefined as THREE.Object3D | undefined };
         this.hazard.snares.push(snare);
         snare.mesh = this.buildSnareProp(snare.pos, gw.room);
         continue;
@@ -811,7 +811,10 @@ export class Game {
         new THREE.MeshStandardMaterial({ color: 0x8a6d4a, roughness: 0.8 }));
       mesh.position.copy(pos);
       this.entityGroup.add(mesh);
-      this.lures.push({ pos, mesh, until: this.clock.time + al.t, nextTick: this.clock.time + 0.8, rang: false });
+      this.lures.push({ pos, mesh, until: this.clock.time + al.t,
+        // a fuse shorter than the tick floor must still ring — nextTick
+        // past `until` skips the ring outright
+        nextTick: this.clock.time + Math.min(0.8, al.t), rang: false });
     }
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1159,7 +1162,10 @@ export class Game {
           // maintenance is a claim — the coil you left dead stops being
           // yours. 'Pull the wire free' reads 'Cut the seal' now, and
           // cutting yields no coil: the house already took it.
-          s.planted = false;
+          // sprint 454 — the claim is a flag, not a re-flag: clearing
+          // `planted` dropped it from the graftedWires checkpoint list
+          // and a reload made the re-lay vanish entirely
+          s.claimed = true;
           return 'snare';
         }
         if (kind === 'line') {
@@ -1698,7 +1704,12 @@ export class Game {
     // gap instead of its shadow. One roll per door — the eye either was
     // there or it wasn't.
     if (best <= 2.6 && !this.stoopEyeUsed.has(door.id)) {
-      const eye = this.streams.roomStream('scare', this.currentRoom * 131 + 97).bool(0.22);
+      // sprint 454 — the roll keys on the door's own id, not only the
+      // room: one seed for every leaf in the room decided all their
+      // eyes the same way
+      const eyeSeed = this.currentRoom * 131 + 97
+        + [...door.id].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) | 0, 7);
+      const eye = this.streams.roomStream('scare', eyeSeed).bool(0.22);
       this.stoopEyeUsed.add(door.id);
       if (eye) {
         // sprint 450 — and the eye TELLS: the watcher that met you through
@@ -1711,8 +1722,23 @@ export class Game {
         return { text: '[a low eye meets yours at the crack — it was watching]', sev: 'danger' as const };
       }
     }
-    // and the count's own lamp — its low glow reads through the crack even
-    // in a room too dark to show a shadow
+    // sprint 454 — a room too dark gives the crack nothing: no shadow
+    // reads reach black glass. The count's lamp is the one exception —
+    // it IS the light, so it still reads through the crack
+    if (target.darkRoom) {
+      if (this.space === 'under' && this.checker.active && this.checker.lampLit) {
+        const ci = underRoomOf(roam, this.checker.position);
+        if (ci >= 0 && roam[ci] === target) {
+          const d = v3dist(this.checker.position, door.pos);
+          return { text: d < 2.0
+            ? '[the count’s lamp glows at the crack — the sweep is at this door]'
+            : '[a low light moves beyond — the count’s lamp is working that room]', sev: 'danger' as const };
+        }
+      }
+      return { text: '[black glass — no light reaches the crack]', sev: 'warn' };
+    }
+    // and the count's own lamp — its low glow reads through the crack,
+    // and even stripped the lamp's bulk still moves the floor-light
     if (this.space === 'under' && this.checker.active) {
       const ci = underRoomOf(roam, this.checker.position);
       if (ci >= 0 && roam[ci] === target) {
@@ -1728,7 +1754,6 @@ export class Game {
     if (best <= 1.7) return { text: '[a shadow holds at the threshold — it is right there]', sev: 'danger' as const };
     if (best <= 4.2) return { text: '[a shadow crosses the floor-light — something is working that room]', sev: 'warn' as const };
     if (best < Infinity) return { text: '[a lit seam — something stirs deep in that room]' };
-    if (target.darkRoom) return { text: '[black glass — no light reaches the crack]', sev: 'warn' };
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { text: '[still floor — a resting place]' };
     return { text: '[a lit seam — nothing crosses it]' };
   }
@@ -2131,10 +2156,10 @@ export class Game {
       this.interaction.add({
         kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
         pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
-        prompt: hz.planted ? (hz.armed ? 'Pull the wire free' : 'Gather the wire')
+        prompt: hz.planted && !hz.claimed ? (hz.armed ? 'Pull the wire free' : 'Gather the wire')
           : hz.grafted ? (hz.armed ? 'Cut the splice' : 'Gather the wire')
           : submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
-        holdTime: hz.planted ? 0.9 : 1.4, enabled: true, priority: 2,
+        holdTime: hz.planted && !hz.claimed ? 0.9 : 1.4, enabled: true, priority: 2,
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });
     }
@@ -4325,9 +4350,10 @@ export class Game {
           && Math.hypot(hz.pos.x - d.sx, hz.pos.z - d.sz) < 0.45);
         const rm = this.activeRooms()[this.currentRoom];
         const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
-        if (hsn?.planted) {
+        if (hsn?.planted && !hsn.claimed) {
           // your own wire is re-deployable — pull or gather returns the
-          // coil whole; it leaves no dead scrap for the under to strip
+          // coil whole; it leaves no dead scrap for the under to strip.
+          // a warden-claimed wire fails this and falls to the plain cut
           this.removeSnare(hsn);
           this.giveItem('wireCoil', 1);
           this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
@@ -5694,7 +5720,8 @@ export class Game {
         ? this.droppedCoils.map((w) => ({ ...w })) : undefined,
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
-          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted })) : undefined,
+          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted,
+            claimed: s.claimed })) : undefined,
       // sprint 430 — a live lure keeps its fuse through the save:
       // `t` is seconds left on the clock, re-timed at restore
       armedLures: this.lures.some((l) => !l.rang)
@@ -8314,11 +8341,16 @@ export class Game {
     if (this.pendingDoorOpen && tA >= this.pendingDoorOpen.at) {
       const room = this.activeRooms()[this.pendingDoorOpen.room];
       this.pendingDoorOpen = null;
-      const door = room?.doors.find((d) => !d.locked);
+      // a held leaf answers the tug too — your wire or chock is real
+      // cover against the haunting, not just the crew
+      const door = room?.doors.find((d) => !d.locked && !d.heldBy);
       if (door) {
         door.opening = true;
         this.cue('door-open', { x: door.pos.x, y: door.pos.y + 1, z: door.pos.z }, '[the door opens again]', 'warn');
         this.sound.emit({ x: door.pos.x, y: 1, z: door.pos.z, intensity: 0.5, category: 'door', caption: '[door]' });
+      } else if (room?.doors.some((d) => d.heldBy && !d.locked)) {
+        this.cue('door-locked', { x: room.origin.x, y: 1, z: room.origin.z },
+          '[something tugs at the leaf — your work holds]', 'warn');
       }
     }
 
@@ -8791,7 +8823,16 @@ export class Game {
         // sight-checked before — an adjacent room's eye reported you
         // through the party wall.
         {
-          const camFrom = v3(this.tmpV3.x, this.tmpV3.y, this.tmpV3.z);
+          // sprint 454 — the mount sits 0.07 inside the room edge while
+          // the wall collider's inner face reaches ~0.12 in: the ray
+          // starts inside its own wall and never clears it. The lens
+          // reads from just off the wall — a dome's glass is forward of
+          // its bracket, not inside the plaster.
+          const cx = room ? room.origin.x - this.tmpV3.x : 0;
+          const cz = room ? room.origin.z - this.tmpV3.z : 0;
+          const cl = Math.hypot(cx, cz) || 1;
+          const camFrom = v3(this.tmpV3.x + (cx / cl) * 0.18, this.tmpV3.y,
+            this.tmpV3.z + (cz / cl) * 0.18);
           const pEye = v3();
           this.player.eyePos(pEye);
           const blockers = (room ? room.losBlockers : []).concat(

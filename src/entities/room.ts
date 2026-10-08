@@ -125,16 +125,29 @@ export class Whisper extends Entity {
     const c = this.ctx;
     const p = c.player;
     const room = c.rooms[c.currentRoomIndex];
+    // A spot inside the room can still hide behind the furniture it was
+    // meant to be found through — prefer the candidate a sight line can
+    // actually reach; the first in-bounds pick is the honest fallback
+    const eye = v3();
+    p.eyePos(eye);
+    let inside: Vec3 | null = null;
     for (let i = 0; i < 6; i++) {
       const a2 = new Rng(c.seed + 977 + this.relocN * 131).float() * Math.PI * 2;
       const r2 = (3 + dist) + new Rng(c.seed + 311 + this.relocN * 197).float() * 2.5;
       const cand = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
       this.relocN++;
-      if (i === 5 || !room || pointInRoom(room, cand.x, cand.z)) {
+      if (room && !pointInRoom(room, cand.x, cand.z)) continue;
+      inside ??= cand;
+      if (!room || hasLineOfSight(eye, v3(cand.x, 1.4, cand.z),
+        room.losBlockers.concat(shutLeafBlockers(c.rooms, p.pos, cand)))) {
         this.pos = cand;
         if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
         return;
       }
+    }
+    if (inside) {
+      this.pos = inside;
+      if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
     }
   }
 
@@ -469,8 +482,12 @@ export class EchoSkin extends Entity {
       }
     } else {
       this.dispelT = 0;
-      this.approachD = Math.max(1.4, this.approachD - this.tuning.speed * dt * (p.lastMoveSpeed < 0.5 ? 1.2 : 0.6));
-      if (this.approachD <= this.tuning.killRange + 0.4) {
+      // It closes while you look away, but a wall between you is still
+      // a wall — out of your sight it stops short of contact until the
+      // air between you clears; a look-away strike needs the clear line
+      const floor = eCanSee ? 1.4 : this.tuning.killRange + 0.4;
+      this.approachD = Math.max(floor, this.approachD - this.tuning.speed * dt * (p.lastMoveSpeed < 0.5 ? 1.2 : 0.6));
+      if (eCanSee && this.approachD <= this.tuning.killRange + 0.4) {
         c.damagePlayer(this.tuning.damage, 'echoskin', 'Echo-Skin borrows your footsteps. Stop, listen, and hold it in view.');
         this.done();
       }
@@ -699,7 +716,10 @@ export class Margin extends Entity {
         this.instability = 0;
       }
     } else {
-      this.d = Math.max(1.2, this.d - this.tuning.speed * dt);
+      // It drifts closer while you look away — but a wall between you
+      // is still a wall: out of sight it stops short of contact until
+      // the air clears, and the strike needs the clear line
+      this.d = Math.max(mCanSee ? 1.2 : this.tuning.killRange + 0.3, this.d - this.tuning.speed * dt);
       // Positional misdirection: a soft rustle from the mirrored edge.
       this.rustleT -= dt;
       if (this.rustleT <= 0) {
@@ -708,7 +728,7 @@ export class Margin extends Entity {
         const mz = p.pos.z + Math.cos(p.yaw - side * 1.35) * this.d;
         c.cue('margin-rustle', v3(mx, 0, mz), '', { severity: 'warn' });
       }
-      if (this.d <= this.tuning.killRange) {
+      if (mCanSee && this.d <= this.tuning.killRange) {
         c.damagePlayer(this.tuning.damage, 'margin', 'Margin moves when unseen. Glance at it — but never too long.');
         this.done();
       }
@@ -949,6 +969,9 @@ export class HazardField {
      *  answers to 'Pull the wire free'. Trips the house's walkers too —
      *  the wire doesn't care whose foot. */
     planted?: boolean;
+    /** sprint 454 — the house's claim on your wire: the warden's re-lay
+     *  re-tied it under its own knot — 'Cut the seal', no coil back. */
+    claimed?: boolean;
     /** prop face for laid wire (grafts + planted) — removed with the
      *  snare so a pulled wire never leaves a ghost visual. */
     mesh?: THREE.Object3D }[] = [];

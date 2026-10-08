@@ -448,6 +448,7 @@ export class Warden extends Entity {
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
   private braceShoveT = 0;                     // seconds since it last shouldered a live brace
+  private workUntil = 0;                       // mid-doorwork hold: it stands at a bound leaf and works the bind
   private noiseUnsub: (() => void) | null = null;
 
   /** The second read teaches: a warden that has weighed two marks knows
@@ -521,7 +522,7 @@ export class Warden extends Entity {
 
   /** Doors on the way to a heard noise: braced or locked leaves turn it
    *  back; everything else it puts a shoulder through and keeps walking. */
-  private doorOnPath(): 'blocked' | null {
+  private doorOnPath(): 'blocked' | 'working' | null {
     if (!this.investigate) return null;
     const c = this.ctx;
     // Cluster doors stack in the seam — scan every leaf on the path across
@@ -535,14 +536,22 @@ export class Warden extends Entity {
         if (v3dist(this.pos, d.pos) > 1.1 || !doorBetween(d, this.pos, this.investigate)) continue;
         if (d.heldBy === 'wired') {
           // sprint 433 — wire yields slower than a chock: he works the
-          // bind over two contacts, then it parts and the coil drops
+          // bind over two contacts, then it parts and the coil drops.
+          // sprint 454 — the first pass only strains: he stands at the
+          // leaf and works it instead of giving the check up.
+          if (c.now < this.workUntil) return 'working';
           if (this.ctx.strainWire?.(d.pos.x, d.pos.z) === 'freed') {
             free ??= d;
             continue;
           }
-          return 'blocked';
+          this.workUntil = c.now + 2.2;
+          return 'working';
         }
-        if (d.heldBy === 'player' && v3dist(c.player.pos, d.pos) <= 1.9 && this.braceShoveT >= 4) {
+        if (d.heldBy === 'player' && v3dist(c.player.pos, d.pos) <= 1.9) {
+          // sprint 454 — a fresh walker's wind-up isn't refusal: inside
+          // the shoulder's cooldown he waits out the remainder at the
+          // leaf rather than abandoning the check he just took
+          if (this.braceShoveT < 4) return 'working';
           // sprint 446 — your weight is answered here too: a live brace
           // gets one shoulder per visit before he turns away. The shove
           // moves the holder, not the hold — past the brace's keep radius
@@ -643,6 +652,10 @@ export class Warden extends Entity {
 
     if (this.charging) { this.updateCharge(dt); return; }
 
+    // The shoulder's cooldown ticks even mid-check — doorwork reads it
+    // whether he's walking or standing at the bind
+    this.braceShoveT += dt;
+
     if (this.canSee()) {
       this.seenT += dt;
       if (this.seenT > (this.learned ? 0.12 : 0.35)) {
@@ -662,11 +675,17 @@ export class Warden extends Entity {
 
     // Off the line, checking a noise it heard — its eyes still work.
     if (this.investigate) {
-      if (this.doorOnPath() === 'blocked') {
+      const doorAns = this.doorOnPath();
+      if (doorAns === 'blocked') {
         // A held or locked leaf answers the shoulder — it gives the check up.
         this.investigate = null;
         this.investigateKind = null;
         this.ctx.cue('door-locked', this.pos, '[it turns from the held door]', { severity: 'info' });
+        return;
+      }
+      if (doorAns === 'working') {
+        // Hands in the bind — it stands at the leaf and works it. The
+        // eyes still work (canSee ran above); the feet stop.
         return;
       }
       const dx = this.investigate.x - this.pos.x, dz = this.investigate.z - this.pos.z;
@@ -687,7 +706,11 @@ export class Warden extends Entity {
         // turns on the interruption instead. (The far louder option —
         // getting seen — was already checked above this block; a hidden
         // slip still aborts the re-lay, it just doesn't pull the whistle.)
-        if (v3dist(this.pos, p.pos) < 1.8) {
+        // A hidden slip still breaks the read — the comment above said
+        // so already; sprint 454 makes the check honor it: furniture
+        // cover is the quiet interruption, 'hidden' protection is the
+        // loud one that also pulls the whistle below
+        if (v3dist(this.pos, p.pos) < 1.8 && !p.hiddenSpot) {
           const kind = this.investigateKind;
           this.investigate = null;
           this.investigateKind = null;
@@ -733,8 +756,6 @@ export class Warden extends Entity {
       }
       return;
     }
-
-    this.braceShoveT += dt;
 
     // Scent: a hazard that died in its room is a footprint. It leaves
     // the line to read the sign — quiet work is marked work.
