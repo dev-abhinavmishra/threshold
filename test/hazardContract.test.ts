@@ -439,4 +439,18 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('x: door.pos.x, y: 0.15, z: door.pos.z');
     expect(game).toContain('this.nextToss');
   });
+
+  it('the voice tells + mouths back — a camped leaf answers the whisper (sprints 466-467)', () => {
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    const callCase = game.slice(game.indexOf("case 'call'"), game.indexOf("case 'brace'"));
+    // sprint 466: a watcher already at the leaf hears the whisper as a
+    // sighting — same eyeTell intake the crack's watching eye uses
+    expect(callCase).toContain('eyeTell');
+    expect(callCase).toContain('threatPos');
+    // sprint 467: a far-room watcher in earshot mouths back a breath later
+    expect(callCase).toContain('seamAnswer');
+    expect(callCase).toContain('withinRouseRadius');
+    expect(game).toContain('private seamAnswer');
+    expect(game).toContain("category: 'entity-cue'");
+  });
 });

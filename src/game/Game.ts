@@ -3349,6 +3349,45 @@ export class Game {
         const door = it.data as Door;
         this.cue('whisper-voice', door.pos, '[your voice goes under the leaf — a whisper at its foot]', 'warn');
         this.sound.emit({ x: door.pos.x, y: 0.15, z: door.pos.z, intensity: 0.6 * this.wantedPull, category: 'distraction', caption: '' });
+        // sprint 466 — the voice tells: whisper into a leaf a watcher is
+        // already pressed against and the seam betrays the knee for real.
+        // Same surface the crack's watching eye uses — but no seeded roll:
+        // a voice that comes out of the crack under its ear IS the tell.
+        // Both sides count — the seam carries a whisper each way.
+        let told: Entity | null = null;
+        let toldD = 1.4;
+        for (const e of this.entities) {
+          if (e.state === 'done' || !e.eyeTell) continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          const d = v3dist(tp, door.pos);
+          if (d < toldD) { toldD = d; told = e; }
+        }
+        if (told) {
+          told.eyeTell?.(this.player.pos, door.pos);
+          this.cue('whisper-voice', door.pos, '[it takes the whisper from your mouth — the seam told it where you kneel]', 'danger');
+        }
+        // sprint 467 — it mouths back: a watcher the whisper reached in
+        // the far room answers through the same crack a breath later.
+        // The answer is the confirmation you bought with your voice —
+        // now you KNOW something came to your door.
+        const callRoom = this.roomBeyondDoor(door);
+        if (callRoom) {
+          const roam = this.activeRooms();
+          const heard = { x: door.pos.x, y: 0.15, z: door.pos.z, intensity: 0.6 * this.wantedPull, category: 'distraction' as const, caption: '' };
+          let inEar = false;
+          for (const e of this.entities) {
+            if (e.state === 'done') continue;
+            const tp = e.threatPos();
+            if (!tp) continue;
+            const ri = underRoomOf(roam, tp);
+            if (ri < 0 || roam[ri] !== callRoom) continue;
+            if (withinRouseRadius(heard, tp.x, tp.z)) { inEar = true; break; }
+          }
+          if (inEar) {
+            this.seamAnswer = { t: this.clock.time + 1.2 + Math.random() * 0.9, x: door.pos.x, z: door.pos.z };
+          }
+        }
         return;
       }
       case 'brace': {
@@ -6762,6 +6801,9 @@ export class Game {
   private pianoFired = false;
   /** Door-rattle scare — something on the other side tries the handle. */
   private doorTry: { id: string; pos: Vec3; at: number; until: number; rung: boolean } | null = null;
+  /** sprint 467 — a called leaf mouths back a breath later, once the
+   *  whisper has had time to reach whatever heard it in the far room. */
+  private seamAnswer: { t: number; x: number; z: number } | null = null;
   /** A shelf sheds a book while you're inside — it stays fallen. */
   private bookDrop: { x: number; z: number; y: number; vy: number; at: number; mesh: THREE.Mesh | null; landed: boolean } | null = null;
 
@@ -8375,6 +8417,16 @@ export class Game {
       const fs = this.pendingFarSound;
       this.pendingFarSound = null;
       this.cue(fs.cue, fs.pos, fs.caption, 'info');
+    }
+
+    // sprint 467 — the seam mouths back: the answer comes a breath after
+    // the call, an entity-cue whisper at the leaf that nothing can hear
+    // but you — the scare is the information.
+    if (this.seamAnswer && tA >= this.seamAnswer.t) {
+      const sa = this.seamAnswer;
+      this.seamAnswer = null;
+      this.cue('whisper', { x: sa.x, y: 0.15, z: sa.z }, '[something mouths back through the crack — it heard the whisper]', 'warn');
+      this.sound.emit({ x: sa.x, y: 0.15, z: sa.z, intensity: 0.3, category: 'entity-cue', caption: '' });
     }
 
     // Wind-up alarms — tick loud enough to pull sound-hunters, then ring once.
