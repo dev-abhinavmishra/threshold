@@ -6217,3 +6217,23 @@ The edge-peek semantics are the right read: a leaf is a finite
 panel — `doorBetween` stays the tool for "is the door in the way
 of your walk" (knock/keying), `shutLeafBlockers` for "can sight
 pass" (LOS tests).
+
+## Sprint 442 — the gaze needs air
+
+The facing-dot effects had the same hole as the entity sight rules:
+geometric gaze tests, no LOS. The Witness damaged you while you
+'looked' at it through a wall or shut leaf; the Whisper's silhouette,
+dismiss, and decoy-collapse all answered a stare through a door —
+and worst, its strike window fired unconditionally, so a whisper
+relocated behind a shut leaf hit you through it. Every facing check
+now gates on `losBlockers.concat(shutLeafBlockers(...))`: the Witness's
+harm travels sight; the whisper can't be seen, banished, or landed
+through cover — a strike that can't reach relocates it to hunt again
+(same move the decoy pays) instead of a free hit; EchoSkin's dispel
+and the Margin's 'on screen' freeze+strain both need the air too.
+**Notes:** the leaf-cover convention is complete in both directions
+now — things that look at you (s441) and things you look at (s442)
+both respect the shut leaf. The warden-whistle vitest needed a
+LOS-hunting pin: a heading-cone pin 8m ahead can sit behind a leaf,
+so the test hunts bearing×distance for a sight line that actually
+clears — same 'standFor' class of fix as the e2e harness.

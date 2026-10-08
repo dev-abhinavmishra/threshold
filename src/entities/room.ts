@@ -72,7 +72,14 @@ export class Witness extends Entity {
     const toW = v3(this.pos.x - p.pos.x, 1.4 - p.pos.y - 1.6, this.pos.z - p.pos.z);
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
-    if (facing > 0.86) {
+    // sprint 442 — its harm travels sight, and sight needs air: a shut
+    // leaf or wall between you and it breaks the gaze the damage rides on.
+    const wRoom = c.rooms[c.currentRoomIndex];
+    const wEye = v3();
+    p.eyePos(wEye);
+    const wCanSee = hasLineOfSight(wEye, v3(this.pos.x, 1.4, this.pos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
+    if (facing > 0.86 && wCanSee) {
       this.exposure += dt;
       if (this.exposure > 0.25) {
         c.damagePlayer(this.tuning.damage * dt, 'witness', 'The Witness harms what it holds in your sight. Look away.');
@@ -146,13 +153,18 @@ export class Whisper extends Entity {
     p.lookDir(dir);
     // Decoy logic: it localizes just like the real one, but facing it squarely
     // collapses it and relocates the real whisper instead of ending the fight.
+    const wRoom = c.rooms[c.currentRoomIndex];
+    const eye = v3();
+    p.eyePos(eye);
+    const dCanSee = hasLineOfSight(eye, v3(this.decoyPos.x, 1.4, this.decoyPos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.decoyPos)));
     if (this.decoyMesh) {
       const toD = v3(this.decoyPos.x - p.pos.x, 0, this.decoyPos.z - p.pos.z);
       const dd = Math.hypot(toD.x, toD.z) || 1;
       const dfacing = (dir.x * toD.x + dir.z * toD.z) / dd;
-      this.decoyMesh.visible = dfacing > 0.75 && dd < 9;
+      this.decoyMesh.visible = dfacing > 0.75 && dd < 9 && dCanSee;
       if (this.decoyMesh.visible) this.decoyMesh.rotation.y = Math.atan2(p.pos.x - this.decoyPos.x, p.pos.z - this.decoyPos.z);
-      if (dfacing > 0.94 && dd < 9) {
+      if (dfacing > 0.94 && dd < 9 && dCanSee) {
         c.removeEntityMesh(this.decoyMesh);
         this.decoyMesh = null;
         // Relocate the real whisper to a fresh bearing, tighten the window.
@@ -168,17 +180,34 @@ export class Whisper extends Entity {
     const dn = Math.hypot(toW.x, toW.y, toW.z) || 1;
     const facing = (dir.x * toW.x + dir.y * toW.y + dir.z * toW.z) / dn;
     // Show silhouette when roughly faced — reward for localization.
-    if (this.mesh) this.mesh.visible = facing > 0.75 && dn < 9;
+    // sprint 442 — facing a wall isn't facing it: sight needs air or the
+    // silhouette shows through the leaf, and a gaze through it banishes
+    // the thing for free.
+    const canSee = hasLineOfSight(eye, v3(this.pos.x, 1.4, this.pos.z),
+      (wRoom ? wRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, this.pos)));
+    if (this.mesh) this.mesh.visible = facing > 0.75 && dn < 9 && canSee;
     if (this.mesh && this.mesh.visible) {
       this.mesh.rotation.y = Math.atan2(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
       this.rig?.play('idle');
     }
-    if (facing > 0.94 && dn < 9) {
+    if (facing > 0.94 && dn < 9 && canSee) {
       c.cue('whisper-dismiss', this.pos, '[it retreats from your regard]', { severity: 'info' });
       this.done();
       return;
     }
     if (this.attackT > this.strikeWindow) {
+      if (!canSee) {
+        // The strike can't reach through a shut leaf — it relocates to
+        // hunt you again instead of landing for free (same move the
+        // decoy collapse pays).
+        const a2 = new Rng(c.seed + 977).float() * Math.PI * 2;
+        const r2 = 3 + new Rng(c.seed + 311).float() * 2.5;
+        this.pos = v3(p.pos.x + Math.cos(a2) * r2, 0, p.pos.z + Math.sin(a2) * r2);
+        if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+        this.attackT = this.strikeWindow * 0.35;
+        c.cue('whisper-voice', this.pos, '[the whisper moves — still hunting]', { severity: 'warn' });
+        return;
+      }
       c.damagePlayer(this.tuning.damage, 'whisper', 'Whisper asks you to locate it. Turn toward the voice until the shape shows.');
       this.done();
     }
@@ -400,7 +429,14 @@ export class EchoSkin extends Entity {
     if (p.lastMoveSpeed > 0.5 && Math.random() < dt * 6) {
       c.cue('echoskin-step', v3(bx, 0, bz), '', { severity: 'info' });
     }
-    if (facing > 0.7 && this.approachD < 12) {
+    // sprint 442 — you can't fold what you can't see: the dispel only
+    // counts a gaze that clears the air between you.
+    const eRoom = c.rooms[c.currentRoomIndex];
+    const eEye = v3();
+    p.eyePos(eEye);
+    const eCanSee = hasLineOfSight(eEye, v3(bx, 1.4, bz),
+      (eRoom ? eRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, v3(bx, 0, bz))));
+    if (facing > 0.7 && this.approachD < 12 && eCanSee) {
       this.dispelT += dt;
       if (this.dispelT > 0.7) {
         c.cue('echoskin-fold', v3(bx, 0, bz), '[it folds into the wall]', { severity: 'info' });
@@ -624,7 +660,14 @@ export class Margin extends Entity {
     const toM = v3(x - p.pos.x, 0, z - p.pos.z);
     const dn = Math.hypot(toM.x, toM.z) || 1;
     const facing = (dir.x * toM.x + dir.z * toM.z) / dn;
-    if (facing > 0.35) {
+    // sprint 442 — 'on screen' means on screen: a shut leaf between you
+    // and it isn't a glance, and the strain can't build through it.
+    const mRoom = c.rooms[c.currentRoomIndex];
+    const mEye = v3();
+    p.eyePos(mEye);
+    const mCanSee = hasLineOfSight(mEye, v3(x, 1.4, z),
+      (mRoom ? mRoom.losBlockers : []).concat(shutLeafBlockers(c.rooms, p.pos, v3(x, 0, z))));
+    if (facing > 0.35 && mCanSee) {
       // on screen — frozen but instability grows
       this.instability += dt;
       if (this.instability > 5) {
