@@ -5132,3 +5132,12 @@ Game.die() from the same five fields.
   paler dust-shadow patch behind them (50% roll), grime-edged.
   Named 'dust-shadow'.
 - Vitest 280: 'the dust shadow'. Gates: tsc, lint, generation 96/96.
+
+## sprint 434 — the votive
+
+- Watched hiding spots get a guttered candle stub in a wax pool with
+  scattered petals at their feet (45% roll, lane-cleared). Reads as
+  vigil kept where something waits. Named 'votive-watch'.
+- NB: footprintInDoorLane=true means IN lane — check the inversion
+  (first cut had it backwards).
+- Vitest 281: 'the votive'. Gates: tsc, lint, generation 97/97.

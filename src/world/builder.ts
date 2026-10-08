@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The votive — where a spot is watched, someone has kept vigil:
+    // a guttered stub in a wax pool, petals scattered, at the spot's feet.
+    for (const spot of room.hidingSpots) {
+      if (!spot.trappedBy || rng.float() >= 0.45) continue;
+      const hx = (spot.volume.minX + spot.volume.maxX) / 2 - room.origin.x;
+      const hz = (spot.volume.minZ + spot.volume.maxZ) / 2 - room.origin.z;
+      const c = Math.cos(-room.yaw), s = Math.sin(-room.yaw);
+      const lx = hx * c + hz * s, lz = -hx * s + hz * c;
+      if (!footprintInDoorLane(spec, lx, lz, 0.45, 0.45)) {
+        const m = decalQuad(votiveWax(rng), 0.5 + rng.float() * 0.25, 0.5 + rng.float() * 0.25);
+        m.name = 'votive-watch';
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI;
+        m.position.set(lx, 0.0074, lz);
+        group.add(m);
+      }
     }
 
     // The dust shadow — the wall keeps the silhouette of whatever's been
