@@ -5874,3 +5874,118 @@ export function coalDust(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 487 — the pegs kept the shapes: faded coat + hat silhouettes and rust freckles where things hung. */
+export function coatGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (g) => {
+    const cx = 48;
+    // hat ghost — a brimmed oval fading into the paint
+    g.fillStyle = 'rgba(70,62,52,0.4)';
+    g.beginPath(); g.ellipse(cx, 26, 15 + rng.float() * 4, 6, 0, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(cx, 20, 7, 7 + rng.float() * 2, 0, 0, Math.PI * 2); g.fill();
+    // coat ghost — shoulders sloping to a hem, the wall lighter where cloth sat
+    g.fillStyle = 'rgba(96,86,72,0.42)';
+    g.beginPath();
+    g.moveTo(cx - 12, 34);
+    g.quadraticCurveTo(cx - 22 - rng.float() * 4, 44, cx - 24 - rng.float() * 5, 78);
+    g.quadraticCurveTo(cx - 24, 96, cx - 18, 100);
+    g.lineTo(cx + 18, 100);
+    g.quadraticCurveTo(cx + 24, 96, cx + 24 + rng.float() * 5, 78);
+    g.quadraticCurveTo(cx + 22 + rng.float() * 4, 44, cx + 12, 34);
+    g.quadraticCurveTo(cx, 40, cx - 12, 34);
+    g.closePath(); g.fill();
+    // collar dip
+    g.fillStyle = 'rgba(52,46,38,0.35)';
+    g.beginPath(); g.ellipse(cx, 36, 5, 3, 0, 0, Math.PI * 2); g.fill();
+    // hook rust freckles
+    g.fillStyle = 'rgba(110,58,26,0.6)';
+    for (let i = 0; i < 4; i++) {
+      const hx = cx - 18 + i * 12 + rng.range(-2, 2);
+      g.beginPath(); g.arc(hx, 30 + rng.range(-2, 2), 1.1, 0, Math.PI * 2); g.fill();
+      g.fillRect(hx - 0.4, 30, 0.8, 5 + rng.float() * 3);
+    }
+    // hem drip shadows
+    g.fillStyle = 'rgba(60,52,44,0.25)';
+    for (let i = 0; i < 5; i++) {
+      g.fillRect(cx - 20 + i * 9 + rng.range(-2, 2), 100 + rng.range(-3, 3), 3 + rng.float() * 3, 6 + rng.float() * 5);
+    }
+  });
+}
+
+/** Sprint 487 — the box gave way: damp bloom, a sagging corner and pulp smear under cartons left too long. */
+export function boxRot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // damp bloom spreading past the footprint
+    const bloom = g.createRadialGradient(cx, cy, 8, cx, cy, 44);
+    bloom.addColorStop(0, 'rgba(70,58,40,0.55)');
+    bloom.addColorStop(0.65, 'rgba(76,64,44,0.28)');
+    bloom.addColorStop(1, 'rgba(76,64,44,0)');
+    g.fillStyle = bloom;
+    g.fillRect(0, 0, 96, 96);
+    // the footprint's darker edge where the box drank the damp
+    g.strokeStyle = 'rgba(56,44,30,0.5)';
+    g.lineWidth = 3;
+    g.strokeRect(cx - 22, cy - 18, 44, 36);
+    // pulp smears — softened cardboard slumping outward
+    g.fillStyle = 'rgba(88,72,50,0.45)';
+    for (let i = 0; i < 8; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.ellipse(cx + Math.cos(a) * rng.range(22, 32), cy + Math.sin(a) * rng.range(20, 30),
+        rng.range(3, 7), rng.range(1.5, 3.5), a, 0, Math.PI * 2);
+      g.fill();
+    }
+    // tape ghost — the strip that held the seam
+    g.strokeStyle = 'rgba(120,108,88,0.4)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(cx - 20, cy);
+    g.lineTo(cx + 20, cy + rng.range(-2, 2));
+    g.stroke();
+    // paper pulp fibers
+    g.strokeStyle = 'rgba(100,84,58,0.35)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 10; i++) {
+      const x = cx + rng.range(-26, 26), y = cy + rng.range(-22, 22);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(-4, 4), y + rng.range(-4, 4)); g.stroke();
+    }
+  });
+}
+
+/** Sprint 487 — the case filmed over: dust film and one wiped arc on display glass nobody has opened in years. */
+export function caseDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // overall film — heaviest at the edges
+    const edge = g.createRadialGradient(48, 48, 18, 48, 48, 60);
+    edge.addColorStop(0, 'rgba(168,160,144,0.1)');
+    edge.addColorStop(1, 'rgba(168,160,144,0.5)');
+    g.fillStyle = edge;
+    g.fillRect(0, 0, 96, 96);
+    // dust speckle
+    g.fillStyle = 'rgba(180,172,156,0.4)';
+    for (let i = 0; i < 60; i++) {
+      g.fillRect(rng.range(2, 94), rng.range(2, 94), 0.9, 0.9);
+    }
+    // the one wiped arc — somebody looked inside once
+    g.strokeStyle = 'rgba(48,42,36,0.5)';
+    g.lineWidth = 7 + rng.float() * 2;
+    g.beginPath();
+    const ay = 30 + rng.float() * 30;
+    g.moveTo(14, ay);
+    g.quadraticCurveTo(48, ay - 14 - rng.float() * 8, 82, ay + rng.range(-4, 6));
+    g.stroke();
+    // streak tails under the wipe
+    g.strokeStyle = 'rgba(120,112,98,0.35)';
+    g.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const sx = 20 + i * 16 + rng.range(-3, 3);
+      g.beginPath(); g.moveTo(sx, ay + 2); g.lineTo(sx + rng.range(-2, 2), ay + 10 + rng.float() * 6); g.stroke();
+    }
+    // fingermarks at the lower edge
+    g.fillStyle = 'rgba(60,54,46,0.4)';
+    for (let i = 0; i < 3; i++) {
+      g.beginPath(); g.ellipse(30 + i * 16 + rng.range(-4, 4), 88 + rng.range(-3, 3), 2, 2.6, rng.range(-0.4, 0.4), 0, Math.PI * 2); g.fill();
+    }
+  });
+}

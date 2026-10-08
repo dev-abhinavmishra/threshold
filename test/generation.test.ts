@@ -3779,3 +3779,48 @@ describe('the scuttle spilled (sprint 486)', () => {
     expect(n, 'no coal dust').toBeGreaterThan(0);
   });
 });
+
+describe('the pegs kept the shapes (sprint 487)', () => {
+  it('coat and hat ghosts fade into the paint beside the rails', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'coat-ghost') n++; });
+      }
+    }
+    expect(n, 'no coat ghosts').toBeGreaterThan(0);
+  });
+});
+
+describe('the box gave way (sprint 487)', () => {
+  it('damp bloom and pulp smear sit under cartons left too long', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'box-rot') n++; });
+      }
+    }
+    expect(n, 'no box rot').toBeGreaterThan(0);
+  });
+});
+
+describe('the case filmed over (sprint 487)', () => {
+  it('a dust film with one wiped arc covers the display glass', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'case-dust') n++; });
+      }
+    }
+    expect(n, 'no case dust').toBeGreaterThan(0);
+  });
+});
