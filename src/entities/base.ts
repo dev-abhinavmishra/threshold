@@ -221,8 +221,9 @@ export abstract class Entity {
    *  stoop through the gap now knows where the kneel happened. Entities
    *  that can act on a sighting override this — it feeds their existing
    *  pursuit machinery (a dropped crumb, an investigate point), never a
-   *  teleport. */
-  eyeTell?(at: Vec3): void;
+   *  teleport. `at` is where the player knelt; `leaf` is the door's own
+   *  position for watchers that can't leave their room. */
+  eyeTell?(at: Vec3, leaf?: Vec3): void;
 
   /** Corridor telegraph: the index span a pass will cover plus the wave
    *  direction (±1 in index space) and warn progress 0→1. Null when not

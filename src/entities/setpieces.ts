@@ -4,7 +4,7 @@
  * free-roamers — they exist only inside their milestone controllers.
  */
 import * as THREE from 'three';
-import { Entity, corridorPath, followPath, pathLength } from './base';
+import { Entity, corridorPath, followPath, pathLength, playerExposed } from './base';
 import { v3, v3copy, v3dist, clamp } from '../engine/math';
 import { ENTITY_TUNING } from '../game/config';
 import { MAT } from '../world/materials';
@@ -92,7 +92,7 @@ export class Pursuer extends Entity {
     }
 
     const d = v3dist(this.pos, p.pos);
-    if (d < this.tuning.killRange && p.protection !== 'hidden') {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && playerExposed(c, this.pos) === 'kill') {
       this.rig?.play('attack', 0.05);
       c.killPlayer('pursuer', 'The Pursuer only wins if you stop. Sprint the whole sequence — vaults and gates slow it too.');
       this.done();
@@ -315,7 +315,7 @@ export class Editor extends Entity {
       }
     }
     // contact
-    if (v3dist(this.pos, p.pos) < this.tuning.killRange + 0.4 && p.protection !== 'hidden') {
+    if (v3dist(this.pos, p.pos) < this.tuning.killRange + 0.4 && p.protection !== 'hidden' && playerExposed(c, this.pos) === 'kill') {
       c.killPlayer('editor', 'The Editor deletes whatever it touches. The floor it marks is already gone — keep moving.');
       this.done();
     }
@@ -420,6 +420,22 @@ export class Grafter extends Entity {
     }
   }
 
+  /** Seconds the told crack stays worth camping — it keeps grinding at
+   *  the leaf (stripping any dead wire at its feet) rather than
+   *  reaching it and wandering straight off. */
+  private crackCampUntil = 0;
+
+  /** The eye at the crack: loose masonry felt the kneel through the
+   *  gap. It can't leave its room — it drags to the leaf itself and
+   *  camps the threshold, grinding whatever lies at its feet. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.target = v3(leaf.x, 0, leaf.z);
+    this.roamT = 0;
+    this.crackCampUntil = this.ctx.now + 14;
+    this.ctx.cue('grafter-grind', this.pos, '[the rubble felt the crack — it drags to the leaf]', { severity: 'warn' });
+  }
+
   private pickRoam(): void {
     const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 97));
     this.target = v3(
@@ -461,7 +477,7 @@ export class Grafter extends Entity {
       if (this.mesh) this.mesh.rotation.y = Math.atan2(dx, dz);
     } else {
       this.rig?.play('idle');
-      if (this.roamT > 1.4) this.pickRoam();
+      if (this.roamT > 1.4 && c.now > this.crackCampUntil) this.pickRoam();
       // It grinds the floor wherever it stands — a dead snare at its
       // feet is scrap, and scrap gets carried.
       if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
@@ -546,7 +562,7 @@ export class Grafter extends Entity {
       c.cue('grafter-grind', this.pos, '[stone drags on stone]', { severity: 'warn' });
     }
 
-    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising()) {
+    if (d < this.tuning.killRange && p.protection !== 'hidden' && !this.rising() && playerExposed(c, this.pos) === 'kill') {
       this.rig?.play('attack', 0.05);
       c.cue('grafter-strike', this.pos, '', { severity: 'danger' });
       c.killPlayer('grafter', 'The Grafter is slow. Walk around it — never let it close the gap.');

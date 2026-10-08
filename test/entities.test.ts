@@ -1689,6 +1689,28 @@ describe('Grafter (sprint 256)', () => {
     g.dispose();
   });
 
+  it('the rubble felt the crack — a stoop sighting drags it to the leaf (sprint 452)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    ctx.player.pos.x = 30; ctx.player.pos.z = 30; // unseen, a room over
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); }
+    const leaf = v3(3.6, 0, 0);
+    const gp = (g as unknown as { pos: { x: number; z: number } }).pos;
+    const d0 = Math.hypot(gp.x - leaf.x, gp.z - leaf.z);
+    g.eyeTell!(v3(30, 0, 30), leaf);
+    for (let i = 0; i < 200; i++) { ctx.now += 0.05; g.update(0.05); }
+    const d1 = Math.hypot(gp.x - leaf.x, gp.z - leaf.z);
+    expect(d1, 'the rubble camps the told leaf').toBeLessThan(Math.min(d0, 0.4));
+    g.dispose();
+  });
+
   it('reads the sign — killed hazards drag the rubble to the mark', async () => {
     const { Grafter } = await import('../src/entities/setpieces');
     const room = {

@@ -1704,7 +1704,7 @@ export class Game {
         // sprint 450 — and the eye TELLS: the watcher that met you through
         // the gap now knows where you knelt; mobile things walk their own
         // door-work to reach your side (block, knock, strain, shoulder).
-        bestE?.eyeTell?.(this.player.pos);
+        bestE?.eyeTell?.(this.player.pos, door.pos);
         // the flinch is real: your scramble back off the crack is genuine
         // noise at YOUR position — unsourced, so the house can rouse on it
         this.sound.emit({ x: this.player.pos.x, y: 0.3, z: this.player.pos.z, intensity: 0.6 * this.wantedPull, category: 'impact', caption: '' });

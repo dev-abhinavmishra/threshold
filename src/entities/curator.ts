@@ -5,7 +5,7 @@
  * never receives omniscience — it must be fed evidence.
  */
 import * as THREE from 'three';
-import { Entity } from './base';
+import { Entity, playerExposed } from './base';
 import { v3, v3copy, v3dist, hasLineOfSight, type Vec3 } from '../engine/math';
 import { shutLeafBlockers } from '../engine/doorGeo';
 import { ENTITY_TUNING } from '../game/config';
@@ -302,7 +302,8 @@ export class Curator extends Entity {
     }
 
     // Contact kill.
-    if (dPlayer < this.tuning.killRange && p.protection === 'exposed' && this.cState === 'pursue') {
+    if (dPlayer < this.tuning.killRange && p.protection === 'exposed' && this.cState === 'pursue'
+      && playerExposed(c, this.pos) === 'kill') {
       c.killPlayer('curator', 'The Curator files runners under “loud”. Crouch, stay off metal, and never run twice the same way.');
     }
   }

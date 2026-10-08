@@ -6429,3 +6429,26 @@ at his crack is only a kneel — the register stays shut.
 **Notes:** this closes the tell family: mobile watchers walk to the
 leaf (s450), the desk filer files you on sight (s451). Entities
 without an override keep the eye as atmosphere only.
+
+## Sprint 452 — the rubble felt the crack
+
+The Grafter implements eyeTell with the `leaf` argument — it can't
+leave its spawn room, so the sighting sends it dragging to the door's
+own position instead of yours. It CAMPS the leaf for ~14s
+(crackCampUntil blocks pickRoam's wander, idle grind still strips
+dead wire at its feet), then roams off when the window rots.
+**Notes:** without the camp, the grafter reached the leaf and pickRoam
+wandered it straight off — a sighting that means "camped the crack"
+needs its own linger, not just a retarget.
+
+## Sprint 453 — every touch respects the leaf
+
+Kill-gate audit after the s440 LOS fix: five touch-kills still used
+raw distance and landed through shut leaves — pursuer, editor,
+grafter, husk, curator. All five now gate on
+`playerExposed(c, this.pos) === 'kill'` beside their own proximity
+checks, so the leaf sweep covers every contact kill in the game.
+**Notes:** bellman + corridor warden already used playerExposed
+(s440); these were the stragglers. playerExposed also free-passes the
+existing protection checks (hidden/losSafe/spot) — strictly more
+cover, no removed safety.

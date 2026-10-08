@@ -4,7 +4,7 @@
  * Each is a small state machine with deterministic cue windows.
  */
 import * as THREE from 'three';
-import { Entity, type EntityCtx } from './base';
+import { Entity, playerExposed, type EntityCtx } from './base';
 import { v3, v3copy, v3dist, clamp, hasLineOfSight, type Vec3 } from '../engine/math';
 import { shutLeafBlockers, pointInRoom } from '../engine/doorGeo';
 import type { RoomInstance } from '../game/types';
@@ -888,7 +888,7 @@ export class Husk extends Entity {
         this.footT = 0;
         c.cue('husk-foot', this.pos, '', { severity: 'warn' });
       }
-      if (d < this.tuning.killRange && !hidden) {
+      if (d < this.tuning.killRange && !hidden && playerExposed(c, this.pos) === 'kill') {
         this.rig?.play('attack', 0.05);
         c.killPlayer('husk', 'It sleeps until you paint it with light or crowd it. Sweep slowly.');
         this.done();
