@@ -671,21 +671,24 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       wantedRooms?: [number, unknown][]; wantedRepostS?: number } | undefined;
     const cpArmed = !reachDead || (() => { const cp = cpAt(); return !!cp && cp.wantedActive === true
       && (cp.wantedRooms?.length ?? -1) === 0 && (cp.wantedRepostS ?? 0) > 0; })();
+    // sprint 356 — the repost is a walk now: a clerk carries fresh paper
+    // to each bare board in person ('fresh paper' dispatch cue, one pin
+    // at a time); 'fresh sheets go up' is only the no-path fallback.
+    const rG = ga as unknown as { reposter: { active: boolean; position: { x: number; z: number } } };
     if (reachDead) {
       // wait it out back at the desk — the repost picks hosts downstream
       // of where you stand, and his room has more route after it than
       // the last torn board does
       g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
       ga.currentRoom = aRoom.index;
-      for (let f = 0; f < 1400 && wG.wantedRooms.size === 0; f++) g.frame();
+      // arm window (~30s), then the walker's first pin — the walk runs
+      // hi→lo from the deep end, so the first board can be a long walk
+      for (let f = 0; f < 1200 && !rG.reposter.active && wG.wantedRooms.size === 0; f++) g.frame();
+      for (let f = 0; f < 2400 && wG.wantedRooms.size === 0 && rG.reposter.active; f++) g.frame();
     }
-    // sprint 356 — the repost is a walk now: a clerk carries fresh paper
-    // to each bare board in person ('fresh paper' dispatch cue, one pin
-    // at a time); 'fresh sheets go up' is only the no-path fallback.
     const reposted = wG.wantedRooms.size > 0
       && caps.some((c) => /fresh paper|fresh sheets go up|sheet goes back up/.test(c));
     // grab the bundle mid-walk — the boards it never reached stay bare
-    const rG = ga as unknown as { reposter: { active: boolean; position: { x: number; z: number } } };
     const walkerSeen = rG.reposter.active === true
       || caps.some((c) => /walks out with fresh paper/.test(c));
     const sheetsAtPin = wG.wantedRooms.size;
@@ -699,23 +702,45 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
         g.player.pitch = Math.atan2(0.9 - eyeY, 0.4);
         g.frame();
         if (f === 4) ga.keys.add('KeyE');
-        if (!rG.reposter.active) { cutDone = true; break; }
+        if (!rG.reposter.active) break;
       }
       ga.keys.delete('KeyE');
+      // a natural finish also drops active — the cut is its own caption
+      cutDone = caps.some((c) => /paper spills/.test(c));
     }
     const stillBare = cutDone && wG.wantedRooms.size < (torn || 0);
     // a checkpoint after the repost carries the refilled board map
     const cpAfter = cpAt();
     const cpWanted = !reposted || (!!cpAfter && cpAfter.wantedActive === true
       && (cpAfter.wantedRooms?.length ?? -1) === wG.wantedRooms.size);
-    // back to his room — the settle point only mints at his desk
-    g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
-    ga.currentRoom = aRoom.index;
-    for (let f = 0; f < 20; f++) g.frame();
-
-    // --- 3. settle at his desk ---
-    const settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled);
-    if (!settle) return { stage: 'no-settle' } as const;
+    // back to HIM — the settle point only mints at his desk with you in
+    // his spawn room (aRoom is just the first scheduled room, not where
+    // this clerk works). Chasing the reposter made him walk his ledger
+    // after us: while he pursues, stand on him so the collect strikes
+    // and releases him home; once he's walking back, wait at the desk
+    // for the ledger to re-open
+    let settle: { pos: { x: number; y: number; z: number } } | undefined;
+    const cPos = () => (clerk as { pos?: { x: number; z: number } } | undefined)?.pos;
+    const cDesk = () => (clerk as { deskPos?: { x: number; z: number } } | undefined)?.deskPos;
+    for (let f = 0; f < 2400 && !settle; f++) {
+      const cp = cPos();
+      if (clerk?.pursuing && cp) g.player.teleport(cp.x - 0.2, 0, cp.z);
+      else {
+        const dk = cDesk();
+        g.player.teleport(dk ? dk.x + 0.9 : aRoom.origin.x, 0, dk ? dk.z : aRoom.origin.z);
+      }
+      g.frame();
+      settle = g.interaction.interactables.find((i) => i.kind === 'audit' && i.enabled) as typeof settle;
+    }
+    if (!settle) return { stage: 'no-settle', pursuing: clerk?.pursuing, cp: cPos(),
+      demanded: clerk?.demanded,
+      homebound: (clerk as { homebound?: boolean } | undefined)?.homebound,
+      owed: (ga as { unpaidTheft?: number }).unpaidTheft,
+      desk: (clerk as { deskPos?: { x: number; z: number } } | undefined)?.deskPos,
+      spawnRoom: (clerk as { spawnRoom?: number } | undefined)?.spawnRoom,
+      aIdx: aRoom.index, aOrg: { x: aRoom.origin.x, z: aRoom.origin.z },
+      pRoom: (clerk as { roomOf?: (p: { x: number; z: number }) => number } | undefined)
+        ?.roomOf?.(g.player.pos) } as const;
     const m0 = ga.marginalia;
     let settlePrompt = '';
     for (let f = 0; f < 60; f++) {
@@ -740,7 +765,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
-  if (result.stage !== 'done') test.skip();
+  if (result.stage !== 'done') { console.log('AUDIT-LEG-STAGE', JSON.stringify(result)); test.skip(); }
   expect(result.demanded, JSON.stringify(result)).toBe(true);
   expect(result.theftAfterSlip, JSON.stringify(result)).toBe(2); // 3 − 2 + 1: the filing itself is claimed
   expect(result.theftAfterDrawer, JSON.stringify(result)).toBe(2); // 0 + 2: hands in HIS book rouse him

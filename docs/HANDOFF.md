@@ -4070,12 +4070,20 @@ Game.die() from the same five fields.
 - The tear/repost tug-of-war is now spatial: tear all 5 → 30s window →
   a physical walker re-pins one room at a time. Tearing while he walks
   is still free.
-- e2e: the audit leg's repost phase updated — accepts the walker
-  captions ('fresh paper'/'a sheet goes back up'), exposes
-  `reposter.active/position`, drives to the walker and holds E for
-  the cut, asserts un-pinned boards stay bare. vitest reposter.test.ts
-  covers dispatch→pin-order(hi→lo)→idle, mid-walk cut, single-walk
-  dispatch refusal.
+- e2e: the audit leg's repost phase updated — waits out the arm then
+  the walker's first pin (the hi→lo walk can be long), drives onto
+  `reposter.position` and holds E for the cut (cut detected by the
+  'paper spills' caption — `active` also drops on a natural finish),
+  asserts un-pinned boards stay bare. vitest reposter.test.ts covers
+  dispatch→pin-order(hi→lo)→idle, mid-walk cut, dispatch refusal.
+- Leg traps worth keeping: (a) teleporting out of the Auditor's room
+  while owed makes him walk his ledger after you — the chase phase
+  ends the settle verb; stand on him so `collect()` strikes and
+  releases him home, then wait AT THE DESK (his spawn room, not the
+  leg's aRoom — `spawnRoom = currentRoomIndex` at onSpawn, and the
+  drawer rifle sets `demanded` without any room-presence). (b) the
+  entity's position field is private `pos` — `clerk.pos`/`deskPos`
+  read fine at runtime, `.position` is only the Reposter getter.
 - Traps worth keeping: repost hosts come from `pickWantedHosts` at
   arm-time — rooms torn AFTER dispatch still get pinned if they were
   bare at pick; the walker's `pinAt` is nearest-path-point, so a host
