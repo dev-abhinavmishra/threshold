@@ -4374,3 +4374,17 @@ Game.die() from the same five fields.
   sells; `paperTrail=6` → crew board refused 'the index closes to
   you' + no marginalia spent. Both legs green first try.
 - Gates: tsc, lint; touched specs only per cadence.
+
+## sprint 372 — the seal and the chalk ride the book
+
+- `wardArmed` now rides `CheckpointSave` — an armed ward seal is paid
+  protection (60–90 imprints); before this, a reload silently stripped
+  the arm after `count--` had already eaten the item. Loss, not
+  laundering, but the same class of missing field.
+- `chalkMarks` (door tally marks the player drew) ride too — authored
+  state, not consumable. Fresh runs still clear it (the 581 clear is
+  pre-restore).
+- Note for future: `as` casts inside a `.map()` inside an object
+  literal mis-parse at the arrow's comma — give the callback an
+  explicit return type instead (the pattern used for both maps).
+- Gates: tsc, lint, vitest 255, sim 5/5, build.

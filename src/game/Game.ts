@@ -707,7 +707,13 @@ export class Game {
     for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
     this.lampOn = false;
     this.pulseLampOn = false;
-    this.wardArmed = false;
+    // the seal stays armed — it was paid for and hasn't refused yet
+    this.wardArmed = cp?.wardArmed ?? false;
+    // chalk tally marks are authored by the player, not consumable —
+    // a reload keeps what they drew (a fresh run clears it at 581)
+    this.chalkMarks = new Map((cp?.chalkMarks ?? []).map(
+      ([k, v]): [string, { pos: Vec3; yaw: number; label: string }] =>
+        [k, { pos: v3(v.x, v.y, v.z), yaw: v.yaw, label: v.label }]));
     this.space = cp?.inUnderscript ? 'under' : 'main';
     this.streamer.setSpace(this.space);
     this.streamer.clear();
@@ -4491,6 +4497,10 @@ export class Game {
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       taught: [...this.taught],
       deadLines: [...this.deadLines],
+      wardArmed: this.wardArmed,
+      chalkMarks: [...this.chalkMarks].map(
+        ([k, v]): [string, { x: number; y: number; z: number; yaw: number; label: string }] =>
+          [k, { x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, label: v.label }]),
       deadHazards: [
         ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
         ...this.hazard.steams.filter((s) => s.dead).map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z })),
