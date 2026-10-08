@@ -1101,3 +1101,36 @@ export function cornerScuff(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The patch — a repair the house remembers: a pale plaster plug with a
+ * hairline crack ring, where the wall was punched through and mended. */
+export function patchPlug(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const n = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const x = 20 + rng.float() * 56, y = 20 + rng.float() * 56;
+      const r = 7 + rng.float() * 9;
+      // hairline ring of the old wound
+      ctx.strokeStyle = 'rgba(52,48,42,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r + 4, rng.float(), Math.PI * (1 + rng.float()));
+      ctx.stroke();
+      // one or two stress cracks running off it
+      const a = rng.float() * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(a) * (r + 4), y + Math.sin(a) * (r + 4));
+      ctx.lineTo(x + Math.cos(a) * (r + 4 + 8 + rng.float() * 14), y + Math.sin(a) * (r + 4 + 8 + rng.float() * 14));
+      ctx.stroke();
+      // the plug itself — paler, slightly proud
+      ctx.fillStyle = 'rgba(180,172,152,0.32)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(196,188,168,0.22)';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.15, y - r * 0.15, r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

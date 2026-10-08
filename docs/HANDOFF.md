@@ -5150,3 +5150,10 @@ Game.die() from the same five fields.
   the walls inward — same-sign corners map U to the x-wall, opposite to
   z. Named 'corner-scuff'.
 - Vitest 283: 'the runners slide'. Gates: tsc, lint, 99/99.
+
+## sprint 435 — the house was hurt before
+
+- Plaster plug repairs on walls (28% per room, 1-2 clusters): pale patch
+  + hairline crack ring + stress crack run in lived-in biomes.
+  Named 'patch-plug'.
+- Vitest 282: 'the house was hurt before'. Gates: tsc, lint, 98/98.
