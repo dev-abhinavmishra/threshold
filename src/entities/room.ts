@@ -876,7 +876,14 @@ export class HazardField {
     /** sprint 414 — the grafter's relocated coils: armed wire the under
      *  lays fresh where the living walk. Checkpointed separately so a
      *  reload keeps the graft, same convention as kickedWedges. */
-    grafted?: boolean }[] = [];
+    grafted?: boolean;
+    /** sprint 423 — the player's own laid wire: reclaimed coil that
+     *  answers to 'Pull the wire free'. Trips the house's walkers too —
+     *  the wire doesn't care whose foot. */
+    planted?: boolean;
+    /** prop face for laid wire (grafts + planted) — removed with the
+     *  snare so a pulled wire never leaves a ghost visual. */
+    mesh?: THREE.Object3D }[] = [];
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number; entT?: number }[] = [];
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
     cycle: number; dead: boolean; hitT?: number; warnT?: number; entT?: number }[] = [];

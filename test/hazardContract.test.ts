@@ -163,6 +163,22 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const pushes = gameSrc.match(/kind: 'work', t: this\.clock\.time, readBy: \['player'\]/g) ?? [];
     expect(pushes.length).toBeGreaterThanOrEqual(6);
   });
+
+  it('the coil changes hands — cutting a splice yields wire you can lay yourself', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const configSrc = readFileSync('src/game/config.ts', 'utf8');
+    const storeSrc = readFileSync(new URL('../src/game/store.ts', import.meta.url), 'utf8');
+    // the coil is a real item, slot-usable like the wind-up alarm
+    expect(configSrc).toContain("wireCoil: { name: 'Wire Coil'");
+    // a cut splice leaves the floor and rides the pack — no scrap left to strip
+    expect(gameSrc).toContain('the splice parts — the coil is yours');
+    // your own wire mints reclaim verbs, never ghosts a prop face
+    expect(gameSrc).toContain('Pull the wire free');
+    expect(gameSrc).toContain('removeSnare');
+    // laid wires ride the checkpoint under the same flag that carried grafts
+    expect(storeSrc).toContain('planted?: boolean');
+    expect(gameSrc).toMatch(/gw\.planted[\s\S]*armed: gw\.armed, planted: true/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

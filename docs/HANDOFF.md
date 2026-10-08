@@ -5795,3 +5795,27 @@ riding along: wiped 'work' sign stays silent to the player's fresh-read
 — the felt's shadow poisons the reader the same as every hunter.
 
 Gates: tsc, lint, build, splice leg green (batched vitest+sim next).
+
+## Sprint 423 — the coil changes hands (PR pending)
+
+Cut a splice → `wireCoil` joins the pack ('the splice parts — the coil
+is yours'). Slot-use 'Lay the coil' pays out the wire ~1.05m ahead on
+the horizontal — just past the 0.7m trip radius so the hand that paid
+it out never snaps its own wire on the lay (step into it after and it
+takes your foot like anyone's — honest two-ways). Planted wires mint
+'Pull the wire free' (live, 0.9s) / 'Gather the wire' (dead, 1.4s) →
+`removeSnare` + the coil back. Dead planted wires stay grafter-strippable:
+your wire → tripped → under strips it → grafts it → you cut it again —
+the coil circulates.
+
+- `removeSnare(hz)` bound the prop face to the wire (`snare.mesh`) —
+  pulling/cutting a graft no longer ghosts the face; structural param
+  type so both call sites typecheck.
+- `graftedWires` checkpoint carries `planted` (planted → silent direct
+  push + face if armed; dead graft → silent push; live graft → plantSnare
+  re-signs via the s418 path — restores never re-sign).
+- e2e: splice leg phase 2 drives cut→carry→lay→pull live; contract spec
+  pins the mint, the item, and the planted restore.
+- Harness note: `activeSlot` indexes the FILTERED slotItems list
+  (ITEM_DEFS.slotItem), not raw inventory — compute the index over the
+  same filter or the active item silently isn't the one you set.
