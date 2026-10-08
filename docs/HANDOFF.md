@@ -4851,3 +4851,16 @@ Game.die() from the same five fields.
 - The house book stays flat by design — the register answers to
   its own jurisdiction, not the crew's boards.
 - Gates: tsc, lint, vitest, sim, build.
+
+## sprint 390 — the lamp reads the walk too
+
+- The checker's find gated on the sweep stop's room — a lit lamp
+  walked the whole inbound/outbound blind: stand exposed in any
+  room it passed through and it saw nothing. `update` had `rooms`
+  plumbed and unused. The find now reads the room the walker is
+  IN (`roomOf(rooms, this.pos)`) for the walk states; the sweep
+  still reads its marked till. Stripped lamps still walk blind;
+  hiding still protects; found stays once-per-dispatch.
+- vitest +1: stand exposed in a mid-path room, the find lands
+  while `stage` is still 'inbound'.
+- Gates: tsc, lint, vitest 269, sim, build.

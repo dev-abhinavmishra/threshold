@@ -165,7 +165,7 @@ export class CrewChecker {
     return true;
   }
 
-  update(dt: number, _rooms: RoomInstance[], player: CheckerPlayer, hooks: CheckerHooks): void {
+  update(dt: number, rooms: RoomInstance[], player: CheckerPlayer, hooks: CheckerHooks): void {
     if (!this.active) return;
     if (this.state === 'inbound') {
       this.travel += WALK * dt;
@@ -181,28 +181,6 @@ export class CrewChecker {
       // the lamp swings a slow scan over the socket
       if (this.mesh) this.mesh.rotation.y += Math.sin(this.sweepT * 0.9) * 0.35 * dt;
       if (this.lamp && this.lampLit) this.lamp.intensity = 1.7 + Math.sin(this.sweepT * 7.3) * 0.25;
-      if (!this.found && this.lampLit && player.room === this.sweepRoom && player.exposed) {
-        this.spotT += dt;
-        if (this.spotT >= SPOT_T) {
-          this.found = true;
-          hooks.emit({
-            x: player.pos.x, y: 1, z: player.pos.z,
-            intensity: FOUND_INTENSITY, category: 'impact',
-            caption: "[the checker's lamp finds you — the count stands]",
-          });
-          // a face in the lamp is a witness statement — it lands upstairs
-          hooks.witnessed?.();
-          // and the lamp doesn't just see the face — the count reads
-          // the marks on your back and receipts them into its locker
-          if (hooks.seizeMarked?.()) {
-            hooks.cue('chalk-mark', player.pos,
-              '[the lamp reads the marks on you — the count takes its own]',
-              { severity: 'warn' });
-          }
-        }
-      } else {
-        this.spotT = 0;
-      }
       if (this.sweepT >= SWEEP_T) {
         this.stopIdx++;
         if (this.stopIdx < this.stops.length) {
@@ -230,6 +208,31 @@ export class CrewChecker {
       v3copy(this.pos, f.pos);
       this.face(this.travel + 0.5);
       if (f.doneT) this.despawn(hooks);
+    }
+    // A lit lamp reads the room it is in — at the marked socket while it
+    // sweeps, but the corridor it walks too; only a stripped lamp walks blind.
+    const readRoom = this.state === 'sweep' ? this.sweepRoom : roomOf(rooms, this.pos);
+    if (!this.found && this.lampLit && readRoom >= 0 && player.room === readRoom && player.exposed) {
+      this.spotT += dt;
+      if (this.spotT >= SPOT_T) {
+        this.found = true;
+        hooks.emit({
+          x: player.pos.x, y: 1, z: player.pos.z,
+          intensity: FOUND_INTENSITY, category: 'impact',
+          caption: "[the checker's lamp finds you — the count stands]",
+        });
+        // a face in the lamp is a witness statement — it lands upstairs
+        hooks.witnessed?.();
+        // and the lamp doesn't just see the face — the count reads
+        // the marks on your back and receipts them into its locker
+        if (hooks.seizeMarked?.()) {
+          hooks.cue('chalk-mark', player.pos,
+            '[the lamp reads the marks on you — the count takes its own]',
+            { severity: 'warn' });
+        }
+      }
+    } else {
+      this.spotT = 0;
     }
     if (this.mesh) this.mesh.position.copy(this.pos);
     this.rig?.update(dt);
