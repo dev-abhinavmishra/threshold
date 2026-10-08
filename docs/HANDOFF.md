@@ -3985,3 +3985,17 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
 - Readable: the wanted state is announced by the sheets and the
   extended-band catches; the book readout prints the live count.
 - Gates: tsc, lint (batched verify follows).
+
+## sprint 352 — the count answers a named face on the spot
+
+- The wanted sheets named your hands, but the count still queued a
+  pilfer on its slow 75s cycle — a named face got the same grace a
+  stranger does. `queueLoss()` (one helper for the four crewCount.push
+  sites: cage tag, sledge cargo, both lamps) now passes `delay: 4`
+  while `wantedActive` stands — the ring lands while you're still
+  mid-exit of that room, so named pilfering has no steal-window to
+  walk out of.
+- Honest tell: the fast ring's caption gains '— the boards already
+  named you' (ring captions are written at push-time). The quiet
+  amendment reads `pending` either way — a fast loss is still a loss.
+- Gates: tsc, lint (batched verify follows).

@@ -2519,7 +2519,7 @@ export class Game {
         it.enabled = false;
         // under cages are crew property — the books below count them on a
         // slow cycle, and the till rings ~75s later where the tag hung
-        if (cur) this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        if (cur) this.queueLoss(it.pos.x, it.pos.z,
           '[a tag reads drawn early — the count is short]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         const contains = sock.meta.contains as string | undefined;
@@ -3231,7 +3231,7 @@ export class Game {
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         // the drag's cargo is crew property — the count finds it short later
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the drag reads light — the count is short]');
         if (h.stock <= 0) this.cue('drawer', it.pos, '[the sledge is stripped]');
         return;
@@ -3369,7 +3369,7 @@ export class Game {
         this.cue('pickup', it.pos, scavenged ? '[the scavenged bulb is yours — charge for a walk]' : '[the work-lamp comes free — hooded, half a battery]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         // its lamp is crew property too — stripped or scavenged, it counts
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the drag\'s lamp is marked gone — the count is short]');
         return;
       }
@@ -3408,7 +3408,7 @@ export class Game {
         this.giveItem('handLamp', charge);
         this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
-        this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
+        this.queueLoss(it.pos.x, it.pos.z,
           '[the count\'s lamp is marked gone — the count is short]');
         return;
       }
@@ -4324,6 +4324,15 @@ export class Game {
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
       })),
     };
+  }
+
+  /** Queue a loss-report with the count — while the boards name you,
+   *  the books don't wait for the slow cycle: the ring answers on the
+   *  spot (~4s, so a named face is still mid-exit when the lamp comes). */
+  private queueLoss(x: number, z: number, caption: string): void {
+    this.crewCount.push(x, z, this.clock.time,
+      caption + (this.wantedActive ? ' — the boards already named you' : ''),
+      this.wantedActive ? 4 : undefined);
   }
 
   /* ==================== damage/death/victory ==================== */
