@@ -773,3 +773,102 @@ test('the lie in wire — a forged sign reads like fresh work to a hunter', asyn
   expect(result.liesCaption, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+// The receiver stays off — an answered phone mints the planted lure, the
+// fuse rings it back loud ('distraction'), then the line goes dead.
+test('leave it off the hook — the planted ring pulls', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const rec = g as unknown as {
+      answeredPhones: Set<string>; offHookPhones: Set<string>; spentPhones: Set<string>;
+      hookRings: { key: string; pos: { x: number; y: number; z: number }; at: number; until: number; lastRing: number }[];
+    };
+    const world = (room: GRoom, p: { x: number; z: number }) => {
+      const c = Math.cos(room.yaw), s = Math.sin(room.yaw);
+      return { x: room.origin.x + p.x * c + p.z * s, z: room.origin.z - p.x * s + p.z * c };
+    };
+    const drive = (at: { x: number; z: number }, match: RegExp, done: () => boolean, cap: number): string => {
+      const seen: string[] = [];
+      for (let f = 0; f < cap && !done(); f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        // the phone verb anchors at y=1.4 — aim pos.y+0.6 like the focus pass does
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(1.4 + 0.55 - eyeY, Math.hypot(ax, az) || 1)));
+        const prompt = g.interaction.focused?.prompt ?? '';
+        if (f % 12 === 0) seen.push(prompt);
+        if (match.test(prompt)) {
+          if (g.interaction.focused?.holdTime) g.keys.add('KeyE'); else g.input.interactPressed = true;
+        } else {
+          g.keys.delete('KeyE'); g.input.interactPressed = false;
+        }
+        g.frame();
+        g.input.interactPressed = false;
+      }
+      g.keys.delete('KeyE');
+      return seen.join('|');
+    };
+
+    // Any non-safe room carrying a payphone.
+    const stage = 'no-phone';
+    let room: GRoom | undefined;
+    let wpos: { x: number; z: number } | undefined;
+    for (const r of g.route.rooms) {
+      const p = r.spec?.props.find((x) => x.kind === 'payphone');
+      if (!p) continue;
+      room = r; wpos = world(r, p); break;
+    }
+    if (!room || !wpos) return { stage };
+
+    // Stand phone-side of the room, settle so the verbs mint.
+    const dx = room.origin.x - wpos.x, dz = room.origin.z - wpos.z;
+    const L = Math.hypot(dx, dz) || 1;
+    g.player.teleport(wpos.x + (dx / L) * 1.2, 0, wpos.z + (dz / L) * 1.2);
+    g.currentRoom = room.index;
+    for (let f = 0; f < 40; f++) g.frame();
+
+    // Answer it, then leave it off the hook.
+    const p1 = drive(wpos, /lift the receiver/i, () => rec.answeredPhones.size > 0, 200);
+    if (rec.answeredPhones.size === 0) return { stage: 'answer-failed', p1 };
+    const p2 = drive(wpos, /leave it off the hook/i, () => rec.offHookPhones.size > 0, 200);
+    if (rec.offHookPhones.size === 0) return { stage: 'arm-failed', p1, p2 };
+
+    const hr = rec.hookRings[0];
+    if (!hr) return { stage: 'no-ring-armed' };
+    const ringAt = hr.at, fuseLen = hr.until - hr.at;
+
+    // Listen for the planted lure's emits.
+    const em: { x: number; z: number; intensity: number; category: string }[] = [];
+    (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string }) => void): void } })
+      .sound.on((e) => { if (e.category === 'distraction') em.push(e); });
+
+    // Jump to the fuse and run the ring out.
+    g.clock.time = ringAt - 0.5;
+    for (let f = 0; f < 400 && rec.spentPhones.size === 0; f++) g.frame();
+
+    const nearPhone = em.filter((e) => Math.hypot(e.x - wpos!.x, e.z - wpos!.z) < 0.5);
+    return {
+      stage: 'done', p1, p2, fuseLen,
+      ringDelay: hr.at - ringAt,
+      lures: nearPhone.length,
+      lureIntensity: nearPhone[0]?.intensity ?? 0,
+      spent: rec.spentPhones.size,
+      stillOff: rec.offHookPhones.size,
+    };
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.fuseLen).toBeCloseTo(6.5, 1);
+  expect(result.lures, 'the planted ring emits distraction lure bursts').toBeGreaterThanOrEqual(4);
+  expect(result.lureIntensity).toBeCloseTo(0.85, 2);
+  expect(result.spent, 'the line went dead after the ring').toBe(1);
+  expect(result.stillOff).toBe(1);
+  expect(errors).toEqual([]);
+});

@@ -603,6 +603,9 @@ export class Game {
     this.crackedVents.clear();
     this.litHearths.clear();
     this.answeredPhones.clear();
+    this.offHookPhones.clear();
+    this.spentPhones.clear();
+    this.hookRings.length = 0;
     this.listenedDoors.clear();
     this.rousedSpawned.clear();
     this.playerTrail.length = 0;
@@ -715,6 +718,18 @@ export class Game {
     }
     this.stockSeen.clear();
     for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
+    // answered + dangling receivers ride the checkpoint too — a reload
+    // can't re-offer the read or un-ring the line you left open
+    for (const ap of cp?.answeredPhones ?? []) this.answeredPhones.add(ap);
+    for (const oh of cp?.offHook ?? []) {
+      this.offHookPhones.add(oh.key);
+      this.answeredPhones.add(oh.key);
+      if (oh.fuse > 0) {
+        const until = this.clock.time + oh.fuse;
+        const at = oh.fuse > 6.5 ? until - 6.5 : this.clock.time;
+        this.hookRings.push({ key: oh.key, pos: { x: oh.x, y: 1.4, z: oh.z }, at, until, lastRing: 0 });
+      } else this.spentPhones.add(oh.key);
+    }
     // the count's locker keeps its tag — seized goods stay claimable
     // at the cage across a reload (a fresh run mints nothing)
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
@@ -2175,6 +2190,15 @@ export class Game {
               kind: 'phone', id: `phone-${key}`,
               pos: { x: wx, y: 1.4, z: wz },
               prompt: 'Lift the receiver', holdTime: 1.0, enabled: true, priority: 2,
+            });
+          } else if (isPhone && !this.offHookPhones.has(key) && !this.spentPhones.has(key)) {
+            // sprint 400 — an answered phone can be left dangling: the line
+            // rings it back 20-34s later, loud enough to pull whoever listens
+            // — a planted lure on a fuse, priced by the walk-away.
+            this.interaction.add({
+              kind: 'offHook', id: `offHook-${key}`,
+              pos: { x: wx, y: 1.4, z: wz },
+              prompt: 'Leave it off the hook — it will ring', holdTime: 1.2, enabled: true, priority: 2,
             });
           } else if (isTrap) {
             // some of the house's traps are set — seeded per trap, stable
@@ -3653,6 +3677,22 @@ export class Game {
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'ambient', caption: '' });
         return;
       }
+      case 'offHook': {
+        // sprint 400 — leave the receiver dangling: the line rings the
+        // phone back on a 20-34s fuse, ~6.5s of 'distraction' bursts at its
+        // spot — a lure you planted and aren't standing next to. The clack
+        // of the arm itself is the only cost up front.
+        it.enabled = false;
+        const key = it.id.replace(/^offHook-/, '');
+        this.offHookPhones.add(key);
+        const at = { x: it.pos.x, y: 1.4, z: it.pos.z };
+        const scare = this.streams.roomStream('scare', this.currentRoom * 823 + 17);
+        const ringAt = this.clock.time + 20 + scare.range(0, 14);
+        this.hookRings.push({ key, pos: at, at: ringAt, until: ringAt + 6.5, lastRing: 0 });
+        this.cue('phone-stop', at, '[the receiver dangles — the line stays open]');
+        this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.25, category: 'item', caption: '' });
+        return;
+      }
       case 'trap': {
         it.enabled = false;
         this.priedTraps.add(it.id.replace(/^trap-/, ''));
@@ -4979,6 +5019,16 @@ export class Game {
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
+      answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,
+      // the dangling receiver keeps its remaining fuse — a reload can't
+      // un-arm a lure already planted (fuse = seconds until the line dies)
+      offHook: this.offHookPhones.size > 0
+        ? [...this.offHookPhones].map((key) => {
+            const hr = this.hookRings.find((r) => r.key === key);
+            return { key, x: hr?.pos.x ?? 0, z: hr?.pos.z ?? 0,
+              fuse: hr ? Math.max(0, hr.until - this.clock.time) : 0 };
+          })
+        : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -6202,6 +6252,13 @@ export class Game {
   private nextHiss = 0;
   private litHearths = new Set<string>();
   private answeredPhones = new Set<string>();
+  // sprint 400 — the receiver stays off: an answered phone can be left
+  // dangling; the line rings it back loud enough to pull whoever listens.
+  // The player's only planted lure besides the desk bell — longer fuse,
+  // placed wherever the house hung a phone.
+  private offHookPhones = new Set<string>();
+  private spentPhones = new Set<string>();
+  private hookRings: { key: string; pos: Vec3; at: number; until: number; lastRing: number }[] = [];
   private armedTraps = new Map<string, boolean>();
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
@@ -7967,6 +8024,24 @@ export class Game {
         this.cue('phone-stop', pr.pos, '[the ringing stopped]', 'warn');
         this.phoneRing = null;
       }
+    }
+
+    // sprint 400 — off-the-hook receivers ring back: 'distraction' bursts
+    // at the phone's spot (a planted lure, not the house's ambient scare),
+    // then the line goes dead for good.
+    for (const hr of this.hookRings) {
+      if (tA < hr.at || tA < hr.lastRing) continue;
+      hr.lastRing = tA + 1.05;
+      this.audio.play('phone-ring', hr.pos,
+        tA - hr.at < 0.2 ? '[a phone rings — somebody left it off the hook]' : '');
+      this.sound.emit({ x: hr.pos.x, y: hr.pos.y, z: hr.pos.z, intensity: 0.85, category: 'distraction', caption: '' });
+    }
+    for (let i = this.hookRings.length - 1; i >= 0; i--) {
+      if (tA < this.hookRings[i].until) continue;
+      const hr = this.hookRings[i];
+      this.cue('phone-stop', hr.pos, '[the ringing stopped — the line went dead]', 'warn');
+      this.spentPhones.add(hr.key);
+      this.hookRings.splice(i, 1);
     }
 
     // The falling book — drops off the shelf, lands flat, stays behind.

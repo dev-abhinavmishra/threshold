@@ -5285,3 +5285,32 @@ product bugs worth the writeup:
 Gates: tsc, lint, vitest 273, sim 5/5, build. e2e: entities+hazards+
 economy+books+doors — 37 passed, 2 designed skips, 2 infra flakes
 (300s newContext timeouts, green on retry).
+
+## Sprint 400 — the receiver stays off
+An answered phone mints 'Leave it off the hook — it will ring' (1.2s
+hold): the receiver dangles, then the line rings it back on a 20–34s
+fuse — ~6.5s of 'distraction' bursts (0.85, the rouse category the
+bell/piano use) at the phone's spot, then the line goes dead for good.
+The player's first planted lure besides the desk bell — the draw is
+you're elsewhere when it sounds. `offHookPhones`/`spentPhones`/
+`hookRings` ride the checkpoint (`answeredPhones` + `offHook` fields,
+fuse = seconds until the line dies — the wantedRepostS convention);
+`answeredPhones` also persists for the first time (the once-flag class
+rule — a reload can't re-offer a read it already sold you).
+
+- The mint chain order matters: `!answered` → Lift, `answered &&
+  !offHook && !spent` → offHook. A spent (rung-out) phone mints
+  nothing — dead props stay dead.
+- The house's ambient scare-ring (`maybePhoneRing`) emits 'ambient'
+  0.55 — deliberately weaker than the planted lure's 'distraction'
+  0.85: the scare is flavor, the lure is a tool.
+- e2e/props.spec gained the leg: answer → arm → jump `g.clock.time` to
+  the fuse → assert ≥4 'distraction' emits at the phone spot +
+  spentPhones grows. The drive aims at the phone verb's y=1.4 anchor
+  (pos.y+0.55 convention) — a fixed downward pitch misses the 0.86
+  align band and only the 1.1m prox admit could save it.
+- Restore semantics: `fuse = until - now` at save; >6.5 means the
+  ring hadn't started (rearm at `now + (fuse-6.5)`), ≤6.5 means it
+  was ringing (rearm `at=now`). Mid-ring saves resume mid-ring.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.

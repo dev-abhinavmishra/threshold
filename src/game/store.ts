@@ -210,6 +210,12 @@ export interface CheckpointSave {
   // the house only teaches once — first-exposure captions already shown
   // stay shown across a death, same once-flag class as stockSeen
   taught?: string[];
+  // receivers already answered — same once-flag class as stockSeen;
+  // a reload can't re-offer the read
+  answeredPhones?: string[];
+  // receivers left off the hook — a planted lure keeps its remaining
+  // seconds on the fuse (fuse<=0 means the line already went dead)
+  offHook?: { key: string; x: number; z: number; fuse: number }[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {
