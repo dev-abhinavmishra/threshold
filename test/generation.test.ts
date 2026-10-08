@@ -2524,3 +2524,33 @@ describe('the carpet kept the burns (sprint 459)', () => {
     expect(n, 'no burn marks').toBeGreaterThan(0);
   });
 });
+
+describe('the tape never got peeled (sprint 460)', () => {
+  it('wartime X\'s still cross some panes', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'pane-tape') n++; });
+      }
+    }
+    expect(n, 'no pane tape').toBeGreaterThan(0);
+  });
+});
+
+describe('the wax held at the thresholds (sprint 460)', () => {
+  it('polish arcs shine between the doors of lived-in rooms', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'wax-sheen') n++; });
+      }
+    }
+    expect(n, 'no wax sheen').toBeGreaterThan(0);
+  });
+});

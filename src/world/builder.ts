@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1862,6 +1862,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       bm.rotation.z = rng.float() * Math.PI * 2;
       bm.position.set((rng.float() - 0.5) * (w - 2), 0.009, (rng.float() - 0.5) * (d - 2));
       group.add(bm);
+    }
+
+    // The wax held at the thresholds — half-moon sheen arcs where a
+    // polisher last buffed the boards between the doors.
+    if (livedIn && doorPositions.length >= 2 && rng.float() < 0.3) {
+      const ws = decalQuad(waxSheen(rng), 1.3 + rng.float() * 0.4, 0.9 + rng.float() * 0.2);
+      ws.name = 'wax-sheen';
+      ws.rotation.x = -Math.PI / 2;
+      ws.rotation.z = rng.float() * Math.PI;
+      ws.position.set((rng.float() - 0.5) * (w - 2.4), 0.0095, (rng.float() - 0.5) * (d - 2.4));
+      group.add(ws);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

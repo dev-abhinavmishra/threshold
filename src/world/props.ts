@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -286,6 +286,16 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       fog.name = 'glass-fog';
       fog.userData.decalMat = true;
       g.add(fog);
+    }
+    // The house put tape on the glass once — an X that never got
+    // peeled, weathered cream, lifting at the corners.
+    if (!boarded && rng.bool(0.16)) {
+      const pt = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.24),
+        new THREE.MeshStandardMaterial({ map: paneTape(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -5 }));
+      pt.name = 'pane-tape';
+      pt.userData.decalMat = true;
+      pt.position.set(0, 0, 0.071);
+      g.add(pt);
     }
     // Boarded up — rough planks nailed across the panes; the night glow
     // still leaks through the gaps, which is the whole point.

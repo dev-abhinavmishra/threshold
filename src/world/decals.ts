@@ -2673,3 +2673,82 @@ export function burnMarks(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Pane tape — the masking-tape X a wartime house puts on its glass:
+ * two cream strips crossing, frayed ends, edges lifting. */
+export function paneTape(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const tape = (x0: number, y0: number, x1: number, y1: number, wdt: number) => {
+      // the strip — cream with translucent edges
+      ctx.strokeStyle = 'rgba(216,204,178,0.55)';
+      ctx.lineWidth = wdt;
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+      // torn edge shading along one side
+      ctx.strokeStyle = 'rgba(150,138,116,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 + wdt * 0.4, y0);
+      ctx.lineTo(x1 + wdt * 0.4, y1);
+      ctx.stroke();
+      // frayed ends — ragged little flags past the glass edge
+      ctx.strokeStyle = 'rgba(216,204,178,0.7)';
+      ctx.lineWidth = wdt * 0.55;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 + (rng.float() - 0.5) * 6, y1 + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    };
+    tape(6, 6, 88, 122, 5 + rng.float() * 2);
+    tape(88, 8, 10, 120, 5 + rng.float() * 2);
+    // the cross point — a dab where they overlap
+    ctx.fillStyle = 'rgba(216,204,178,0.5)';
+    ctx.beginPath();
+    ctx.arc(47 + (rng.float() - 0.5) * 6, 64, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // lifting corners — tiny gaps where tape peeled off
+    for (const [px, py] of [[8, 8], [86, 10], [10, 118]]) {
+      if (rng.bool(0.5)) {
+        ctx.fillStyle = 'rgba(40,36,30,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 3, 2, rng.float(), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/** Wax sheen — the half-moons a polisher left at a threshold: soft
+ * overlapping arcs of sheen where the floor was last buffed. */
+export function waxSheen(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // polish arcs — overlapping crescents, pale sheen
+    const arcs = 5 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < arcs; i++) {
+      const ax = 20 + i * (88 / arcs) + (rng.float() - 0.5) * 8;
+      const ay = 30 + rng.float() * 36;
+      const ar = 14 + rng.float() * 12;
+      ctx.strokeStyle = `rgba(230,222,200,${0.12 + rng.float() * 0.12})`;
+      ctx.lineWidth = 5 + rng.float() * 4;
+      ctx.beginPath();
+      ctx.arc(ax, ay, ar, Math.PI + (rng.float() - 0.5) * 0.5, Math.PI * 2 + (rng.float() - 0.5) * 0.3);
+      ctx.stroke();
+    }
+    // the haze — broad soft sheen field under the arcs
+    const haze = ctx.createRadialGradient(64, 52, 10, 64, 52, 56);
+    haze.addColorStop(0, 'rgba(230,222,200,0.1)');
+    haze.addColorStop(1, 'rgba(230,222,200,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, 128, 96);
+    // the dry edge — where the wax wasn't reached
+    ctx.strokeStyle = 'rgba(90,80,64,0.2)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(10, 82);
+    ctx.quadraticCurveTo(64, 86 + rng.float() * 6, 118, 80);
+    ctx.stroke();
+  });
+}
