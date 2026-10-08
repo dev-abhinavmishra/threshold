@@ -427,6 +427,7 @@ export class Warden extends Entity {
   private expireT = 120;
   private investigate: Vec3 | null = null;   // a heard noise it walks to check
   private investigateScan = 0;
+  private investigateKind: string | null = null; // which sign it's checking (noise checks carry none)
   private scentT = 0;                          // evidence polling
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
@@ -482,6 +483,7 @@ export class Warden extends Entity {
       if (!noiseRoom || !atRoomDoor(noiseRoom, this.pos, 2.2)) return;
     }
     this.investigate = v3(e.x, 0, e.z);
+    this.investigateKind = null;
     this.investigateScan = 0;
     c.cue('floor-creak', this.pos, '[it turns toward the noise]', { severity: 'warn' });
     this.rig?.play('move', 0.1);
@@ -604,6 +606,7 @@ export class Warden extends Entity {
       if (this.doorOnPath() === 'blocked') {
         // A held or locked leaf answers the shoulder — it gives the check up.
         this.investigate = null;
+        this.investigateKind = null;
         this.ctx.cue('door-locked', this.pos, '[it turns from the held door]', { severity: 'info' });
         return;
       }
@@ -620,7 +623,18 @@ export class Warden extends Entity {
       } else {
         this.investigateScan += dt;
         if (this.mesh) this.mesh.rotation.y += dt * 2.4;
-        if (this.investigateScan > (this.learned ? 2.6 : 1.8)) this.investigate = null;
+        if (this.investigateScan > (this.learned ? 2.6 : 1.8)) {
+          // sprint 410 — the house re-lays its wire: a read that ends on
+          // dead wire sign ties the snare back. Your defuses and your
+          // trips both feed it — and a re-laid wire trips walkers again.
+          if (this.investigateKind === 'wire'
+            && this.ctx.rearmSnare?.(this.investigate.x, this.investigate.z)) {
+            this.ctx.cue('floor-creak', this.investigate,
+              '[it bends and re-lays the wire — the floor relearns your walk]', { severity: 'warn' });
+          }
+          this.investigate = null;
+          this.investigateKind = null;
+        }
       }
       return;
     }
@@ -651,6 +665,7 @@ export class Warden extends Entity {
         }
         this.investigate = v3(ev.pos.x, 0, ev.pos.z);
         this.investigateScan = 0;
+        this.investigateKind = ev.kind;
         c.cue('floor-creak', this.pos, named
           ? '[the register\'s face is on this sign — it knows these hands]'
           : '[it reads the sign — someone has been here]', { severity: 'warn' });

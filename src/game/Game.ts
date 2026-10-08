@@ -1075,6 +1075,18 @@ export class Game {
         for (const e of out) if (!e.wiped) e.readBy.push(key);
         return out;
       },
+      // sprint 410 — the house re-lays its wire: a reader that reached a
+      // dead snare's sign bends and ties it back. The snare's own armed
+      // flag is the source of truth — a re-laid wire simply leaves the
+      // deadHazards checkpoint list, and the tug-of-war is symmetric:
+      // the re-armed wire trips walkers again too.
+      rearmSnare: (x, z) => {
+        const s = this.hazard.snares.find((hz) =>
+          !hz.armed && Math.hypot(hz.pos.x - x, hz.pos.z - z) < 1.4);
+        if (!s) return false;
+        s.armed = true;
+        return true;
+      },
     };
   }
 

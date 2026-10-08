@@ -104,6 +104,11 @@ export interface EntityCtx {
    *  so each hunter reads each sign once. Optional for headless ctxs. */
   hazardEvidence?: (readerKey: string, x: number, z: number, radius: number)
     => { pos: Vec3; room: number; kind: string; t: number; old?: boolean; weak?: boolean; wiped?: boolean }[];
+  /** The house re-lays its own wire: a floorkeeper that reads a tripped
+   *  or cut snare's sign can re-arm the dead one near that spot.
+   *  Returns true when a snare actually came back. Optional for
+   *  headless ctxs. */
+  rearmSnare?: (x: number, z: number) => boolean;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

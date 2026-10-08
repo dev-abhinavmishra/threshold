@@ -5506,3 +5506,19 @@ Clean sources stay clean by design: washer payouts, floor loot, fence
 pay, purse change — coin no book filed a line for.
 
 Gates: tsc, lint (batched with the next commits).
+
+## Sprint 410 — the house re-lays its wire
+The hazard war is now two-sided: the warden's sign-read that ends on
+dead wire sign re-arms the snare it read (`investigateKind` remembers
+which sign it walked to; `rearmSnare` ctx callback arms the nearest
+dead snare within 1.4m). Your defuses AND your entity-trips both feed
+it — and the tug-of-war is symmetric: a re-laid wire trips walkers
+again (s405), trips you, and just leaves the deadHazards checkpoint
+list (armed is the source of truth). The wipe shadow still wins: a
+doubted read never investigates, so a poisoned floor's wire stays
+dead — emergent counterplay for free.
+
+The floor is now a contested surface: you cut/snare/trip, the house
+reads the sign and re-lays where you walked.
+
+Gates: tsc, lint (batched with the next commits).
