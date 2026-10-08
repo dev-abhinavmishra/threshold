@@ -1798,3 +1798,18 @@ describe("the inspector tally (sprint 430)", () => {
     expect(tallies, 'no tallies').toBeGreaterThan(4);
   });
 });
+
+describe('the drip keeps time (sprint 431)', () => {
+  it('wet rings gather under cable and pipe runs', () => {
+    let drips = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drip-keeps-time') drips++; });
+      }
+    }
+    expect(drips, 'no drip spots').toBeGreaterThan(8);
+  });
+});
