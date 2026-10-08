@@ -1801,8 +1801,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // height: the knuckle ring, the plaster bulge, the cracks.
     if (doorPositions.length > 0 && rng.float() < 0.35) {
       const port = doorPositions[Math.floor(rng.float() * doorPositions.length)];
+      const lp2 = portLocalPos(port, w, d);
+      const along = port.wall === 'e' || port.wall === 'w' ? lp2.z : lp2.x;
       wallDecal(port.wall, fistMark(rng), 0.62 + rng.float() * 0.14, 0.62 + rng.float() * 0.14,
-        port.along + (rng.float() < 0.5 ? -1 : 1) * (0.85 + rng.float() * 0.5),
+        along + (rng.float() < 0.5 ? -1 : 1) * (0.85 + rng.float() * 0.5),
         1.4 + rng.float() * 0.3);
       const fm = group.children[group.children.length - 1];
       if (fm && !fm.name) fm.name = 'fist-mark';
