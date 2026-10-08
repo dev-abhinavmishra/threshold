@@ -4665,3 +4665,36 @@ Game.die() from the same five fields.
 - Vitest 262: 'the house remembers routes' — both variants exist across
   seeds, >90% of arrows aim within ~30° of a real port.
 - Gates: tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
+||||||| 972d1a1
+
+## sprint 381 — the count's shelf
+
+- The rot's endgame: a fenced tag's goods reach the Broker's shelf —
+  `fencedTake` fills on rot and a `buyback` verb mints on his fig's
+  far flank (waist-height, book's mirror). 'Buy back the fenced take
+  — N marginalia' costs `10 + 6×units`: the house's margin was the
+  point. Through the fence it launders — the take returns unmarked.
+  The shutter covers it ('the floor is closed for the count').
+- Full loop closed: seize → tag → claim (priced+filed) | cut (free,
+  marked, filed deeper) | rot → fence → buyback (margin, laundered).
+- `fencedTake` rides the checkpoint + joins the epitaph's seized
+  count — unbought goods are still the count's at the end.
+- e2e trap: the rot seize strips EVERY stack of the marked id —
+  earlier claimed-back stacks fence too; price asserts must read
+  fencedUnits live, not constants.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
+## sprint 382 — the tag itemizes
+
+- The coin the seize stripped vanished silently — a fiction lie.
+  `seizedCoin` now rides the locker: the claim prices it at par on
+  top of the fee (`8 + seizedCoin`, prompt reads the live price) and
+  it rides back clean on a claim. The cut can't hand back coin —
+  the count swallowed it outright (the cut cue admits it). Rot
+  keeps it too: coin doesn't fence — fungible, the count keeps it.
+- Coin-only seizes mint a tag now (was: stashSeized early-returned
+  on empty items, so a pure-coin seize vanished with no locker).
+- The join path updates the minted verb's prompt when more coin
+  rides in, and `coin` rides the checkpoint's seizedTake block.
+- Book readout: 'a tag keeps N of yours — C coin itemized'.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
