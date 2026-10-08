@@ -721,6 +721,8 @@ export class Game {
     // the fuse rides too — a reload can't launder a rotting tag
     this.seizedFuse = cp?.seizedTake?.fuse ?? 0;
     this.seizedFading = false;
+    // what the count fenced stays fenced — the shelf survives a reload
+    this.fencedTake = cp?.fencedTake?.map((s) => ({ ...s })) ?? [];
     this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1059,6 +1061,9 @@ export class Game {
   // book readout says so while it can still be answered
   private seizedFuse = 0;
   private seizedFading = false;
+  /** Sprint 381 — what the count kept: a rotted tag's goods get fenced
+   *  to the Broker's shelf, buyable back at the house's markup. */
+  private fencedTake: { id: ItemId; count: number }[] = [];
   /** Boards the player tore mid-episode — the clerk re-pins THESE
    *  slots, so a partial tear is answered like a clean sweep. */
   private bareBoards = new Map<number, { x: number; z: number }>();
@@ -1530,6 +1535,22 @@ export class Game {
           },
           prompt: 'Ask what the book says — 3 marginalia',
           holdTime: 0.8, enabled: true, priority: 2,
+          data: { roomIndex },
+        });
+        // The fenced take — what a rotted tag fed the count resurfaces
+        // on HIS shelf, priced at the house's margin. Mirrors 'book'
+        // on the fig's other flank, waist-level: the pitch band keeps
+        // it off the fix/read lines.
+        const fencedUnits = this.fencedTake.reduce((n, s) => n + s.count, 0);
+        this.interaction.add({
+          kind: 'buyback', id: `buyback-${this.space}:${roomIndex}`,
+          pos: {
+            x: fig.position.x - (lx / ll) * 0.8,
+            y: fig.position.y + 0.55,
+            z: fig.position.z - (lz / ll) * 0.8,
+          },
+          prompt: `Buy back the fenced take — ${10 + 6 * fencedUnits} marginalia`,
+          holdTime: 0.9, enabled: fencedUnits > 0, priority: 2,
           data: { roomIndex },
         });
       }
@@ -2377,6 +2398,33 @@ export class Game {
         this.cue('drawer', it.pos, take.length === 1
           ? '[the till takes its own back — the wrap never left the shelf]'
           : `[the till takes its own back — ${take.length} wraps never left the shelf]`);
+        return;
+      }
+      case 'buyback': {
+        // sprint 381 — the count resells what it kept: your own take
+        // on the Broker's shelf at the house's margin. Through the
+        // fence it launders — the take returns unmarked, like his stock.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        const units = this.fencedTake.reduce((n, s) => n + s.count, 0);
+        if (units === 0) return;
+        const bPrice = 10 + 6 * units;
+        if (this.marginalia < bPrice) {
+          this.cue('door-locked', it.pos,
+            `[the fenced take costs ${bPrice} marginalia — the house's margin was the point]`, 'warn');
+          return;
+        }
+        this.marginalia -= bPrice;
+        const back = this.fencedTake
+          .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
+          .join(' · ');
+        for (const s of this.fencedTake) this.giveItem(s.id, s.count);
+        this.fencedTake = [];
+        this.cue('purchase', it.pos,
+          `[the broker sells your own take back without a word — the house's margin was the point · ${back}]`);
         return;
       }
       case 'book': {
@@ -4675,6 +4723,8 @@ export class Game {
             x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z,
             fuse: this.seizedFuse }
         : undefined,
+      fencedTake: this.fencedTake.length > 0
+        ? this.fencedTake.map((s) => ({ ...s })) : undefined,
       chalkMarks: [...this.chalkMarks].map(
         ([k, v]): [string, { x: number; y: number; z: number; yaw: number; label: string }] =>
           [k, { x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, label: v.label }]),
@@ -4747,7 +4797,7 @@ export class Game {
           books: {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
-            seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
+            seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
           },
         },
         documents: this.loadDocs(),
@@ -4778,7 +4828,7 @@ export class Game {
         thefts: this.unpaidTheft,
         held: this.unpaidHeld,
         asks: this.paperTrail,
-        seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
+        seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
       },
@@ -5198,11 +5248,14 @@ export class Game {
         this.cue('chalk-mark', this.seizedAt, "[the tag's ink is fading — the count prices patience]", 'warn');
       }
       if (this.seizedFuse <= 0) {
+        // the count doesn't eat them — they reach the Broker's shelf,
+        // buyable back at the house's own margin
+        this.fencedTake.push(...this.seizedTake);
         this.seizedTake = [];
         this.seizedAt = null;
         this.seizedFading = false;
         this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-'));
-        this.cue('chalk-mark', null, '[the tag reads settled — the count keeps the goods]', 'warn');
+        this.cue('chalk-mark', null, '[the tag reads settled — the count keeps the goods for its shelf]', 'warn');
       }
     }
 
