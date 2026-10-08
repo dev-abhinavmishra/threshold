@@ -4581,3 +4581,21 @@ Game.die() from the same five fields.
   the fade line, asserts fading→fenced→verb-gone.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
 
+
+## sprint 416 — the ones before you
+
+- Chalk scrawl now marks cover: a new `chalkMark` decal (tally
+  clusters, arrows, ringed dots, X's — hand-drawn wobble, dust
+  smudge) lands beside ~45% of `room.hidingSpots`. Spot hugging a
+  wall (<1.6m) gets the mark on that wall face at chest height;
+  mid-room cover gets a floor scrawl instead. Trapped spots mark
+  at the SAME rate — chalk stays ambiguous: refuge or bait is the
+  player's read, the marks never rat out a trap.
+- `spot.volume` is a min/max Aabb — mark anchors use its center,
+  world→local via R(-yaw) same as the door decals. Named
+  'chalk-mark'.
+- Vitest 259: 'the ones before you' counts named decals vs hiding
+  spots across seeds — marks exist everywhere, never outnumber
+  cover (the 0.45 gate holds).
+- Gates: tsc, lint, vitest 259, sim 5/5. Visual dressing only —
+  no e2e leg.

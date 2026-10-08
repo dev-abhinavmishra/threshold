@@ -674,3 +674,67 @@ export function thresholdWear(rng: Rng): THREE.Texture | null {
     ctx.globalCompositeOperation = 'source-over';
   });
 }
+
+/* ---------- chalk mark — the ones before you scrawled where to hide ---------- */
+
+export function chalkMark(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const chalk = (a: number) => `rgba(232,226,208,${a})`;
+    ctx.strokeStyle = chalk(0.55 + rng.float() * 0.25);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2.4 + rng.float() * 1.2;
+    const wob = () => (rng.float() - 0.5) * 4;
+    const variant = rng.int(0, 3);
+    if (variant === 0) {
+      // tally cluster — 3..5 strokes and a diagonal slash across
+      const n = 3 + rng.int(0, 2);
+      for (let i = 0; i < n; i++) {
+        const x = 24 + i * 10 + wob();
+        ctx.beginPath();
+        ctx.moveTo(x, 26 + wob());
+        ctx.lineTo(x + wob(), 68 + wob());
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(18 + wob(), 60 + wob());
+      ctx.lineTo(24 + n * 10 + wob(), 34 + wob());
+      ctx.stroke();
+    } else if (variant === 1) {
+      // arrow — shaft + two-head, pointing a random direction
+      const a = rng.float() * Math.PI * 2;
+      const cx = 48, cy = 48, r = 26;
+      const dx = Math.cos(a), dy = Math.sin(a);
+      ctx.beginPath();
+      ctx.moveTo(cx - dx * r, cy - dy * r);
+      ctx.lineTo(cx + dx * r, cy + dy * r);
+      ctx.stroke();
+      const ha = 0.5;
+      for (const s of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + dx * r, cy + dy * r);
+        ctx.lineTo(cx + dx * r - Math.cos(a + s * ha) * 12, cy + dy * r - Math.sin(a + s * ha) * 12);
+        ctx.stroke();
+      }
+    } else if (variant === 2) {
+      // ringed dot — 'here'
+      ctx.beginPath();
+      ctx.arc(48, 44, 20 + rng.float() * 6, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = chalk(0.7);
+      ctx.beginPath();
+      ctx.arc(48, 44, 4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // a bare X
+      ctx.beginPath();
+      ctx.moveTo(28 + wob(), 28 + wob());
+      ctx.lineTo(68 + wob(), 68 + wob());
+      ctx.moveTo(68 + wob(), 28 + wob());
+      ctx.lineTo(28 + wob(), 68 + wob());
+      ctx.stroke();
+    }
+    // dust smudge under the strokes
+    ctx.fillStyle = chalk(0.05);
+    ctx.fillRect(14, 70, 68, 14);
+  });
+}
