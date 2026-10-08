@@ -1672,3 +1672,18 @@ describe('the drag (sprint 422)', () => {
     expect(trails, 'no drag trails anywhere').toBeGreaterThan(8);
   });
 });
+
+describe('the notices (sprint 423)', () => {
+  it('paperwork stays pinned beside doors in the lived-in biomes', () => {
+    let notices = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'wall-notice') notices++; });
+      }
+    }
+    expect(notices, 'no notices pinned').toBeGreaterThan(10);
+  });
+});

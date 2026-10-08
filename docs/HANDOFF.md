@@ -4736,3 +4736,13 @@ Game.die() from the same five fields.
   random-angle 1.4-3m out, clamped in-room; named 'drag-trail'.
 - Vitest 264: 'the drag'. Gates: tsc, lint, sim 5/5. Visual dressing
   only — no e2e leg.
+
+## sprint 423 — the notices
+
+- `wallNotice` decal: 2-3 pinned papers (header bar, ruled lines, pin,
+  curled shadow) — the building's paperwork left up.
+- 30% in corridor/records/lobby/unlit/guest: `wallDecal` beside a
+  random port's leaf (along = port.offset ± 1.15-1.85, clamped to the
+  wall span), y ~1.45-1.7. Named 'wall-notice'.
+- Vitest 265: 'the notices'. Gates: tsc, lint, sim 5/5. Visual
+  dressing only — no e2e leg.

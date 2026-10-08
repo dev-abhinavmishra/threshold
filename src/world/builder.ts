@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1518,6 +1518,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         m.position.set(mx, 0.0065, mz);
         group.add(m);
       }
+    }
+
+    // The notices — the building's paperwork pinned beside its doors.
+    if (['corridor', 'records', 'lobby', 'unlit', 'guest'].includes(spec.biome) && rng.float() < 0.3) {
+      const port = [spec.entry, ...spec.exits][Math.floor(rng.float() * (1 + spec.exits.length))];
+      const side = rng.float() < 0.5 ? -1 : 1;
+      const span = (port.wall === 'e' || port.wall === 'w' ? d : w) / 2 - 0.7;
+      const along = Math.max(-span, Math.min(span, port.offset + side * (1.15 + rng.float() * 0.7)));
+      wallDecal(port.wall, wallNotice(rng), 0.55 + rng.float() * 0.15, 0.6 + rng.float() * 0.15, along, 1.45 + rng.float() * 0.25);
+      const last = group.children[group.children.length - 1];
+      if (last) last.name = 'wall-notice';
     }
 
     // The house remembers routes — at junctions a dragged arrow points

@@ -806,3 +806,39 @@ export function dragTrail(rng: Rng): THREE.Texture | null {
     ctx.fillRect(200, 8, 56, 80);
   });
 }
+
+/** A cluster of pinned house notices — ruled paper, curled corners,
+ *  the building's paperwork left up past anyone who could read it. */
+export function wallNotice(rng: Rng): THREE.Texture | null {
+  return canvasTex(160, 160, (ctx) => {
+    const papers = 2 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < papers; i++) {
+      const x = 20 + i * 34 + (rng.float() - 0.5) * 14;
+      const y = 24 + (rng.float() - 0.5) * 20 + i * 10;
+      const rot = (rng.float() - 0.5) * 0.22;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+      const pw = 42 + rng.float() * 14, ph = 58 + rng.float() * 16;
+      // drop shadow + paper (aged stock)
+      ctx.fillStyle = 'rgba(20,16,10,0.4)';
+      ctx.fillRect(-pw / 2 + 3, -ph / 2 + 4, pw, ph);
+      const paper = rng.float();
+      ctx.fillStyle = paper < 0.3 ? 'rgba(226,214,186,0.95)' : 'rgba(238,232,216,0.95)';
+      ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+      // header bar + ruled lines — deliberately unreadable at distance
+      ctx.fillStyle = 'rgba(96,60,40,0.75)';
+      ctx.fillRect(-pw / 2 + 5, -ph / 2 + 6, pw - 10, 5);
+      ctx.fillStyle = 'rgba(70,60,50,0.7)';
+      const lines = 4 + Math.floor(rng.float() * 3);
+      for (let l = 0; l < lines; l++) {
+        const lw = pw - 10 - rng.float() * 16;
+        ctx.fillRect(-pw / 2 + 5, -ph / 2 + 16 + l * 8, lw, 2);
+      }
+      // pin
+      ctx.fillStyle = 'rgba(140,40,32,0.95)';
+      ctx.beginPath(); ctx.arc(0, -ph / 2 + 3, 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  });
+}
