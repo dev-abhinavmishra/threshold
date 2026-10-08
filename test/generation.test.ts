@@ -1632,3 +1632,28 @@ describe('the house remembers routes (sprint 420)', () => {
     expect(aimed / (honest + lies)).toBeGreaterThan(0.9);
   });
 });
+
+describe('the lodge keeps watch (sprint 421)', () => {
+  it('porter-lodge generates as a rare records room and dresses itself', () => {
+    let found = 0, dressed = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (room.templateId !== 'porter-lodge') continue;
+        found++;
+        expect(room.spec!.biome).toBe('records');
+        expect(room.hidingSpots.length).toBeGreaterThanOrEqual(2);
+        const kinds = new Set(room.spec!.props.map((p) => p.kind));
+        expect(kinds.has('desk'), 'porter desk missing').toBe(true);
+        expect(kinds.has('keyRack'), 'key rack missing').toBe(true);
+        const built = buildRoomMesh(room, room.spec!, room.index, 'high');
+        let meshes = 0;
+        built.group.traverse((o) => { if ((o as { isMesh?: boolean }).isMesh) meshes++; });
+        expect(meshes, 'lodge built empty').toBeGreaterThan(60);
+        dressed++;
+      }
+    }
+    expect(found, 'porter-lodge never generates').toBeGreaterThan(0);
+    expect(dressed).toBe(found);
+  });
+});

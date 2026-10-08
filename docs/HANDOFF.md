@@ -4698,3 +4698,15 @@ Game.die() from the same five fields.
   rides in, and `coin` rides the checkpoint's seizedTake block.
 - Book readout: 'a tag keeps N of yours — C coin itemized'.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
+## sprint 421 — the lodge keeps watch
+
+- New room template `porter-lodge` (records biome, 6×7, weight 3,
+  minRoom 18): the keeper's office — desk facing the entry, `keyRack`
+  behind it, `hallTree`/`umbrellaStand`, `drawerUnit`/`filing`, a
+  `window` peep to the corridor. 0-2 per seed (flavor rarity).
+- `register` prop is a cash till — used `paperStack`/`books` for the
+  ledger instead. Prop meshes aren't named by kind; spec asserts on
+  `room.spec.props` kinds + a mesh count.
+- Vitest 263: 'the lodge keeps watch'. Gates: tsc, lint, sim 5/5.
+  Content addition, single template — no e2e leg.

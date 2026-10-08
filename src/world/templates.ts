@@ -2901,6 +2901,45 @@ const roomStaffDining: RoomTemplate = {
   }),
 };
 
+const roomPorter: RoomTemplate = {
+  id: 'porter-lodge',
+  build: (rng) => spec('porter-lodge', 'records', 6, 7, 2.9, {
+    props: [
+      // the keeper's desk faces the entry — he watched the doors for a living
+      { kind: 'desk', x: 0.3, z: 1.3, yaw: Math.PI },
+      { kind: 'deskLamp', x: 0.75, z: 1.15, y: 0.8 },
+      { kind: 'paperStack', x: -0.3, z: 1.15, y: 0.8 },
+      { kind: 'books', x: 0.15, z: 1.45, y: 0.8 },
+      { kind: 'chair', x: 0.3, z: 2.3, yaw: Math.PI },
+      { kind: 'keyRack', x: -2.9, z: 1.0, y: 1.55, yaw: Math.PI / 2 },
+      { kind: 'hallTree', x: 2.5, z: 2.5, yaw: -0.4 },
+      { kind: 'umbrellaStand', x: 2.9, z: 2.0 },
+      { kind: 'sideTable', x: 2.5, z: -2.5 },
+      { kind: 'kettle', x: 2.5, z: -2.5, y: 0.82 },
+      { kind: 'drawerUnit', x: -2.55, z: -2.4, yaw: Math.PI / 2 },
+      { kind: 'filing', x: -2.8, z: -0.2, yaw: Math.PI / 2 },
+      { kind: 'wallClock', x: 2.93, z: 0.2, y: 2.15, yaw: -Math.PI / 2 },
+      { kind: 'window', x: 2.93, z: -1.0, y: 1.65, yaw: -Math.PI / 2 },
+      { kind: 'bin', x: 1.1, z: 1.9 },
+      { kind: 'rug', x: 0.2, z: 0.5, scale: 1.6 },
+      ...wallProps(6, 7, rng, ['wallSconce', 'painting'], 3),
+    ],
+    sockets: [...drawerSockets([[0.3, 1.3]]), ...lootSockets([[2.5, -2.5], [-2.55, -2.4]])],
+    hiding: [
+      { kind: 'underFurniture', x: 0.3, z: 1.3, yaw: Math.PI, propKind: 'desk' },
+      { kind: 'cabinet', x: -2.55, z: 2.5, yaw: Math.PI / 2, propKind: 'cabinet' },
+    ],
+    lights: [
+      { x: 0.3, y: 2.5, z: 1.2, color: 0xffb061, intensity: 0.7, range: 5.5, group: 'main', breakable: true },
+      { x: -2.0, y: 2.5, z: -1.8, color: 0xdde4ee, intensity: 0.4, range: 5, group: 'dim', breakable: true },
+    ],
+    weight: 3,
+    minRoom: 18,
+    perf: 3,
+    wall: 'wallpaper',
+  }),
+};
+
 export const MAIN_TEMPLATES: RoomTemplate[] = [
   corridorStraight, corridorWide, corridorL, corridorZig, corridorJunction,
   guestRoom, guestTwin, suiteSplit, bathAnte,
@@ -2917,7 +2956,7 @@ export const MAIN_TEMPLATES: RoomTemplate[] = [
   roomMorgue, roomLaundry, roomBoilerDetail, roomCubicleOffice, roomLibraryStacks,
   roomKitchen, roomScullery, roomStaffDining,
   roomProjection, roomGrandSuite, roomFabShop, roomCheckpoint, roomWaiting, roomBanquet, roomBunker, roomLobbyFoyer, roomSanctuary, roomCathedral,
-  roomChapel,
+  roomChapel, roomPorter,
   // milestone shells — weight 0, placed explicitly
   roomClinic, roomConservatory, roomIndexAntechamber, roomDecompress, roomFinalAnte,
 ];
