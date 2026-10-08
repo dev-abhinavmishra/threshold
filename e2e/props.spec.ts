@@ -832,26 +832,48 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
     (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string }) => void): void } })
       .sound.on((e) => { if (e.category === 'distraction') em.push(e); });
 
-    const standAndArm = (ph: { room: GRoom; wpos: { x: number; z: number } }, cap: number) => {
+    const standAndArm = (ph: { room: GRoom; wpos: { x: number; z: number } }, cap: number, skipLift = false) => {
       const dx = ph.room.origin.x - ph.wpos.x, dz = ph.room.origin.z - ph.wpos.z;
       const L = Math.hypot(dx, dz) || 1;
       g.player.teleport(ph.wpos.x + (dx / L) * 1.2, 0, ph.wpos.z + (dz / L) * 1.2);
       g.currentRoom = ph.room.index;
       for (let f = 0; f < 40; f++) g.frame();
       // counts are relative — an earlier phone's keys already sit in the sets
-      const aBefore = rec.answeredPhones.size;
-      const p1 = drive(ph.wpos, /lift the receiver/i,
-        () => rec.answeredPhones.size > aBefore, cap);
-      if (rec.answeredPhones.size <= aBefore) return { ok: false as const, p1 };
+      let p1 = '';
+      if (!skipLift) {
+        const aBefore = rec.answeredPhones.size;
+        p1 = drive(ph.wpos, /lift the receiver/i,
+          () => rec.answeredPhones.size > aBefore, cap);
+        if (rec.answeredPhones.size <= aBefore) return { ok: false as const, p1 };
+      }
       const oBefore = rec.offHookPhones.size;
       const p2 = drive(ph.wpos, /leave it off the hook/i,
         () => rec.offHookPhones.size > oBefore, cap);
       return { ok: rec.offHookPhones.size > oBefore, p1, p2 };
     };
 
-    // Phone A: the full ring.
-    const a = standAndArm(phones[0], 200);
-    if (!a.ok) return { stage: 'arm-failed', a };
+    // Phone A phase 1 (sprint 402): a live scare-ring dies at the lift —
+    // the house can't ring a phone already in your hand.
+    let ringCut = false;
+    {
+      const ph = phones[0];
+      const dx = ph.room.origin.x - ph.wpos.x, dz = ph.room.origin.z - ph.wpos.z;
+      const L = Math.hypot(dx, dz) || 1;
+      g.player.teleport(ph.wpos.x + (dx / L) * 1.2, 0, ph.wpos.z + (dz / L) * 1.2);
+      g.currentRoom = ph.room.index;
+      for (let f = 0; f < 40; f++) g.frame();
+      (g as unknown as { phoneRing: unknown }).phoneRing =
+        { pos: { x: ph.wpos.x, y: 1.4, z: ph.wpos.z }, at: g.clock.time, until: g.clock.time + 30, lastRing: 0 };
+      const aBefore = rec.answeredPhones.size;
+      drive(ph.wpos, /lift the receiver/i, () => rec.answeredPhones.size > aBefore, 200);
+      ringCut = rec.answeredPhones.size > aBefore
+        && (g as unknown as { phoneRing: unknown }).phoneRing === null;
+    }
+
+    // Phone A phase 2: arm it and let the planted ring run out.
+    // (phase 1 already answered this phone — 'Lift' is un-minted here)
+    const a = standAndArm(phones[0], 200, true);
+    if (!a.ok) return { stage: 'arm-failed', a, ringCut };
     const hr = rec.hookRings[0];
     if (!hr) return { stage: 'no-ring-armed' };
     const fuseLen = hr.until - hr.at;
@@ -884,6 +906,7 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
       lures: luresA.length,
       lureIntensity: luresA[0]?.intensity ?? 0,
       spent: rec.spentPhones.size,
+      ringCut,
       secondPhone: phones.length > 1,
       hungUp, silenced, p3,
     };
@@ -894,6 +917,7 @@ test('leave it off the hook — the planted ring pulls', async ({ page }) => {
   expect(result.lures, 'the planted ring emits distraction lure bursts').toBeGreaterThanOrEqual(4);
   expect(result.lureIntensity).toBeCloseTo(0.85, 2);
   expect(result.spent, 'the line went dead after the ring').toBeGreaterThanOrEqual(1);
+  expect(result.ringCut, 'lifting the receiver cuts a live scare-ring').toBe(true);
   if (result.secondPhone) {
     expect(result.hungUp, JSON.stringify(result)).toBe(true);
     expect(result.silenced, 'a hung-up receiver never rings').toBe(true);

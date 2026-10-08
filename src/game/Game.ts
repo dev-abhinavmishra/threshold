@@ -3692,6 +3692,13 @@ export class Game {
           : '[a voice: rooms away — keep walking]';
         this.audio.play('whisper-voice', at, line, 'warn');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.5, category: 'ambient', caption: '' });
+        // sprint 402 — the answer cuts the ring: a live scare-ring at this
+        // phone ends the moment the receiver lifts — the house can't ring
+        // a phone that's already in your hand.
+        if (this.phoneRing && Math.hypot(this.phoneRing.pos.x - at.x, this.phoneRing.pos.z - at.z) < 0.8) {
+          this.cue('phone-stop', at, '[the ringing stops — dead line]', 'warn');
+          this.phoneRing = null;
+        }
         return;
       }
       case 'offHook': {
@@ -6649,6 +6656,12 @@ export class Game {
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || this.currentRoom < 4) return;
     const prop = room.spec?.props.find((p) => p.kind === 'payphone');
     if (!prop) return;
+    // sprint 402 — the house rings live phones only: a receiver already
+    // answered, off the hook, or rung out has nothing left to ring.
+    const phoneOrd = (room.spec?.props.slice(0, room.spec.props.indexOf(prop))
+      .filter((p) => p.kind === 'payphone').length) ?? 0;
+    const pkey = `${this.space}:${room.index}:${phoneOrd}`;
+    if (this.answeredPhones.has(pkey) || this.offHookPhones.has(pkey) || this.spentPhones.has(pkey)) return;
     const scare = this.streams.roomStream('scare', this.currentRoom + 199 + (under ? 977 : 0));
     if (!scare.bool(0.3)) return;
     const cs = Math.cos(room.yaw), sn = Math.sin(room.yaw);

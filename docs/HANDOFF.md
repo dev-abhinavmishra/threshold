@@ -5339,3 +5339,24 @@ lowest precedence below every live tread.
   at frame 0 without ever pressing.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
+## Sprint 402 — the answer cuts the ring
+Two honesty gaps in the ring systems closed: 'Lift the receiver' now
+ends a live scare-ring at that phone ('[the ringing stops — dead
+line]' — the house can't ring a phone already in your hand), and
+`maybePhoneRing` never picks a receiver that's answered, off the
+hook, or rung out — the seeded scare keeps to live lines only.
+
+- Dead-phone gate rebuilds the mint key by prop ordinal:
+  `${space}:${room.index}:${payphoneIndexInSpec}` — the same `n`
+  counter the mint loop derives for `phone-${key}`.
+- The whisper still fires on a scare-cut lift — 'Lift the receiver'
+  pays its read either way; the dead line is the scare's cost, not
+  the verb's.
+- e2e phase: inject `g.phoneRing` at phone A's pos, drive 'Lift',
+  assert `phoneRing === null` — the injected ring needs no seed roll.
+- Trap logged: helper phases that answer a phone consume 'Lift' —
+  later drives on the same phone need `skipLift`, else the lift-drive
+  stalls on a prompt that already reads 'Leave it off the hook'.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
