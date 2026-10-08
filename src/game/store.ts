@@ -210,6 +210,10 @@ export interface CheckpointSave {
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean }[];
+  // wound clocks still counting — a paid windAlarm shouldn't die unrung
+  // on a reload; `t` is the fuse left in seconds, restored onto the
+  // live clock like dialedRings/hookRings
+  armedLures?: { x: number; y: number; z: number; t: number }[];
   // counters gone cold — a rifled till doesn't re-warm its clerk on a
   // reload (sold wares still restock: you paid for those)
   closedCounters?: number[];

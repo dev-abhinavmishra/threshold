@@ -5939,3 +5939,12 @@ wire: the house re-ties the coil as its own — 'Pull the wire free'
 reads 'Cut the seal', and the cut yields nothing (the house took it).
 Your wire is only yours while you watch it: leave a dead one lying and
 the tug-of-war can take the coil itself, not just the arm.
+
+## Sprint 430 — the wound clock outlives you too
+
+`armedLures` rides the checkpoint now — the last piece of carried kit
+a reload still laundered. Each live lure saves its remaining fuse
+(`t` seconds) and restores mid-count with its clock-mesh rebuilt,
+re-timed onto the live clock like `dialedRings`/`hookRings`. A paid
+windAlarm no longer dies unrung for the price of a checkpoint —
+`Math.max(0.5, until − now)` keeps a dead-on-arrival fuse honest.

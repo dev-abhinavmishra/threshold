@@ -795,6 +795,17 @@ export class Game {
       }
       this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
     }
+    // wound clocks restore mid-fuse — a paid alarm doesn't die unrung
+    // on a reload; `t` was the fuse left, re-timed onto the live clock
+    for (const al of cp?.armedLures ?? []) {
+      const pos = v3(al.x, al.y, al.z);
+      const mesh = modelInstance('wallClock', 0.6) ?? new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.22, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x8a6d4a, roughness: 0.8 }));
+      mesh.position.copy(pos);
+      this.entityGroup.add(mesh);
+      this.lures.push({ pos, mesh, until: this.clock.time + al.t, nextTick: this.clock.time + 0.8, rang: false });
+    }
     this.lampOn = false;
     this.pulseLampOn = false;
     // the seal stays armed — it was paid for and hasn't refused yet
@@ -5474,6 +5485,13 @@ export class Game {
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
           .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted })) : undefined,
+      // sprint 430 — a live lure keeps its fuse through the save:
+      // `t` is seconds left on the clock, re-timed at restore
+      armedLures: this.lures.some((l) => !l.rang)
+        ? this.lures.filter((l) => !l.rang)
+          .map((l) => ({ x: l.pos.x, y: l.pos.y, z: l.pos.z,
+            t: Math.max(0.5, l.until - this.clock.time) }))
+        : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,

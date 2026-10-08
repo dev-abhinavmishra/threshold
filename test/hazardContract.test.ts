@@ -239,6 +239,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // mints 'Cut the seal' like any house snare and yields no coil
     expect(gameSrc).toMatch(/kind === 'wire'[\s\S]*?s\.planted = false/);
   });
+
+  it('the wound clock outlives you too — a paid alarm keeps its fuse', () => {
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('armedLures');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the save carries each live lure's remaining fuse; the restore
+    // re-times it onto the live clock with its clock-mesh rebuilt
+    expect(gameSrc).toMatch(/armedLures: this\.lures\.some/);
+    expect(gameSrc).toMatch(/cp\?\.armedLures[\s\S]*?this\.lures\.push/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
