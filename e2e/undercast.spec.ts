@@ -1389,3 +1389,103 @@ test('the quiet amendment — bury the count before it rings (sprint 308)', asyn
   expect(result.walked, JSON.stringify(result)).toBe(false); // nobody walked
   expect(errors).toEqual([]);
 });
+
+// sprint 370 — the deep tier below: six thefts and the machines hold
+// their stock; six questions and the index closes its own papers.
+test('the deep tier — the machines read the boards, the index closes', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      enterUnderscript(): void; godMode: boolean; currentRoom: number;
+      marginalia: number; imprints: number; keys: Set<string>;
+      unpaidTheft: number; paperTrail: number;
+      interaction: { focused?: { prompt?: string; kind?: string } };
+    };
+    ga.enterUnderscript();
+    ga.godMode = true;
+    const hold = (at: { x: number; y: number; z: number }, frames: number): string => {
+      let prompt = '';
+      for (let f = 0; f < frames; f++) {
+        const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
+        g.player.yaw = Math.atan2(ax, az);
+        const eyeY = g.player.pos.y + g.player.eyeHeight;
+        g.player.pitch = Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+        g.frame();
+        if (f < 5) prompt = ga.interaction.focused?.prompt ?? prompt;
+        if (f === 5) ga.keys.add('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      return prompt;
+    };
+
+    // 1. the tally's deep tier — the vend holds its stock
+    const vendRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.vend === true && s.meta.taken !== true));
+    let vendRefused = false, vendCap = '', vendPrompt = '', vendSold = false;
+    if (vendRoom) {
+      const vend = (vendRoom.sockets ?? []).find((s) => s.meta?.vend === true && s.meta.taken !== true);
+      if (!vend?.meta) return { stage: 'no-vend' } as const;
+      ga.unpaidTheft = 6;
+      ga.imprints = 60;
+      g.player.teleport(vendRoom.origin.x, 0, vendRoom.origin.z);
+      ga.currentRoom = vendRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const vx = vendRoom.origin.x - vend.pos.x, vz = vendRoom.origin.z - vend.pos.z;
+      const vl = Math.hypot(vx, vz) || 1;
+      g.player.teleport(vend.pos.x + (vx / vl) * 0.9, 0, vend.pos.z + (vz / vl) * 0.9);
+      const cap0 = caps.length;
+      vendPrompt = hold(vend.pos, 50);
+      vendRefused = vend.meta.taken !== true && ga.imprints === 60;
+      vendCap = caps.slice(cap0).find((c) => /reads the boards/.test(c)) ?? '';
+      // the tier lifts with the book
+      ga.unpaidTheft = 0;
+      hold(vend.pos, 60);
+      vendSold = vend.meta.taken === true;
+      ga.unpaidTheft = 0;
+    }
+
+    // 2. the index's deep tier — the asking papers hold their pages
+    const boardRoom = g.route.underRooms.find((r) =>
+      (r.sockets ?? []).some((s) => s.meta?.crewBoard));
+    let boardRefused = false, boardCap = '', boardPrompt = '';
+    if (boardRoom) {
+      const board = (boardRoom.sockets ?? []).find((s) => s.meta?.crewBoard);
+      if (!board?.meta) return { stage: 'no-board' } as const;
+      ga.paperTrail = 6;
+      const m0 = (ga.marginalia = 40);
+      g.player.teleport(boardRoom.origin.x, 0, boardRoom.origin.z);
+      ga.currentRoom = boardRoom.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const bx = boardRoom.origin.x - board.pos.x, bz = boardRoom.origin.z - board.pos.z;
+      const bl = Math.hypot(bx, bz) || 1;
+      g.player.teleport(board.pos.x + (bx / bl) * 0.9, 0, board.pos.z + (bz / bl) * 0.9);
+      const cap0 = caps.length;
+      boardPrompt = hold(board.pos, 50);
+      boardRefused = board.meta.taken !== true && ga.marginalia === m0;
+      boardCap = caps.slice(cap0).find((c) => /index closes to you/.test(c)) ?? '';
+      ga.paperTrail = 0;
+    }
+    return { stage: 'done' as const, vendRefused, vendCap, vendPrompt, vendSold,
+      boardRefused, boardCap, boardPrompt, caps: caps.slice(-8) };
+  });
+
+  if (result.stage !== 'done') test.skip();
+  // the tally at six — the machine holds its stock, then sells clean at zero
+  expect(result.vendRefused, result.vendPrompt).toBe(true);
+  expect(result.vendCap).toMatch(/holds its stock/);
+  expect(result.vendSold).toBe(true);
+  // the file at six — the asking paper holds its page, no spend
+  expect(result.boardRefused, result.boardPrompt).toBe(true);
+  expect(result.boardCap).toMatch(/index closes to you/);
+  expect(errors).toEqual([]);
+});
+

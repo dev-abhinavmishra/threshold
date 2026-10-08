@@ -548,8 +548,38 @@ test('vend machine refuses on short funds, sells on exact pay', async ({ page })
     const hotAfter = gh.hotImprints;
     const inv = g.inventory.find((s) => s.id === item);
     const sold = sock.meta.taken === true && g.imprints === 0 && !!inv;
+
+    // sprint 369 — the machines read the books too: a face six lines
+    // deep in the register gets nothing from the machine. Second vend
+    // socket (the first is spent), refused while deep, sells clean after.
+    const gv = g as unknown as { unpaidHeld: number };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    let sock2: GSock | null = null, room2: GRoom | null = null;
+    for (const r of g.route.rooms) {
+      const s = r.sockets.find((x) => x.meta?.vend === true && x.meta.taken !== true && x !== sock);
+      if (s) { sock2 = s; room2 = r; break; }
+    }
+    let deepRefused = false, deepCap = '', liftedSold = false, promptsB = '';
+    if (sock2 && room2) {
+      gv.unpaidHeld = 6;
+      g.imprints = 50;
+      g.currentRoom = room2.index;
+      standAt(room2, sock2.pos);
+      const cap0 = caps.length;
+      promptsB = drive(sock2.pos, /feed the machine/i, () => false, 50);
+      deepRefused = sock2.meta.taken !== true && g.imprints === 50;
+      deepCap = caps.slice(cap0).find((c) => /reads the register/.test(c)) ?? '';
+      gv.unpaidHeld = 0;
+      standAt(room2, sock2.pos);
+      drive(sock2.pos, /feed the machine/i, () => sock2.meta.taken === true, 70);
+      liftedSold = sock2.meta.taken === true;
+      gv.unpaidHeld = 0;
+    }
     return { stage: 'done', price, item, promptsA, refused, sold, imprints: g.imprints,
-      inv: g.inventory.map((s) => s.id), markedRang, markedAt, hotAfter };
+      inv: g.inventory.map((s) => s.id), markedRang, markedAt, hotAfter,
+      deepRefused, deepCap, liftedSold, promptsB };
   });
 
   expect(result.stage, JSON.stringify(result)).toBe('done');
@@ -559,6 +589,10 @@ test('vend machine refuses on short funds, sells on exact pay', async ({ page })
   expect(result.markedRang, JSON.stringify(result)).toBe(true);
   expect(result.markedAt).toBeLessThan(0.8);
   expect(result.hotAfter).toBe(0);
+  // sprint 369 — the deep tier: refused at six lines, open again at zero
+  expect(result.deepRefused, result.promptsB).toBe(true);
+  expect(result.deepCap).toMatch(/holds its stock/);
+  expect(result.liftedSold).toBe(true);
   expect(errors).toEqual([]);
 });
 

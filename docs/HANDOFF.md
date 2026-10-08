@@ -4362,3 +4362,15 @@ Game.die() from the same five fields.
   or blind the player. All three books now have a deep tier: held →
   counters + machines, theft → machines, trail → asking papers.
 - Gates: tsc, lint, vitest 121 (entities+persistence+wanted), sim 5/5.
+
+## sprint 371 — e2e: the deep-tier legs
+
+- The vend leg (economy) gained the deep-tier phase: a second unspent
+  vend socket, `unpaidHeld=6` → refused 'the machine reads the
+  register — it holds its stock' + no charge, then `=0` → sells
+  clean (the tier lifts with the book, not permanently).
+- New undercast leg 'the deep tier — the machines read the boards,
+  the index closes': `unpaidTheft=6` → under vend refused + `=0` →
+  sells; `paperTrail=6` → crew board refused 'the index closes to
+  you' + no marginalia spent. Both legs green first try.
+- Gates: tsc, lint; touched specs only per cadence.
