@@ -23,7 +23,7 @@ import { SeedStreams, Rng } from '../engine/rng';
 import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aabb } from '../engine/math';
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
-import { wantedNotice } from '../world/decals';
+import { wantedNotice, thresholdSpill } from '../world/decals';
 import { pickWantedHosts } from './wanted';
 import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
@@ -4003,6 +4003,20 @@ export class Game {
     return Game.wantedMat;
   }
 
+  private static spillMat: THREE.MeshBasicMaterial | null | undefined;
+  /** Under-door light spill — warm strip a primed set piece leaks into the
+   *  hall. Additive so it reads as light escaping, not a decal. */
+  private static spillMaterial(): THREE.MeshBasicMaterial | null {
+    if (typeof document === 'undefined') return null;
+    if (Game.spillMat === undefined) {
+      const tex = thresholdSpill();
+      Game.spillMat = tex
+        ? new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
+        : null;
+    }
+    return Game.spillMat;
+  }
+
   /** Room-local position for a world point — children added to a built
    *  room group live in the room's yaw frame, not the world's. */
   private roomLocal(built: { group: THREE.Group }, x: number, y: number, z: number): THREE.Vector3 {
@@ -4012,6 +4026,36 @@ export class Game {
 
   /** A wanted sheet pinned to the face of a crew-board prop, turned to
    *  the room's middle so it reads on approach. */
+  /** A primed milestone is mid-work before the door opens — its entry door
+   *  leaks light under the seam. Reads "it heard you" from the hall. */
+  private ensurePrimedSpill(roomIndex: number, built: { group: THREE.Group }): void {
+    const ms = this.milestones.get(roomIndex);
+    if (!ms?.primed) return;
+    if (built.group.getObjectByName('primed-spill')) return;
+    const room = this.activeRooms()[roomIndex];
+    if (!room) return;
+    const mat = Game.spillMaterial();
+    if (!mat) return;
+    let door: Door | null = null;
+    let bd = Infinity;
+    for (const d of room.doors) {
+      const dd = (d.pos.x - room.entryPos.x) ** 2 + (d.pos.z - room.entryPos.z) ** 2;
+      if (dd < bd) { bd = dd; door = d; }
+    }
+    if (!door) return;
+    // push the strip just inside the room, across the threshold
+    const ix = room.origin.x - door.pos.x, iz = room.origin.z - door.pos.z;
+    const il = Math.hypot(ix, iz) || 1;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.55), mat);
+    m.name = 'primed-spill';
+    m.rotation.x = -Math.PI / 2;
+    // flat quads take in-plane yaw on z; long axis lies along the door's width
+    m.rotation.z = room.yaw - door.yaw - Math.PI / 2;
+    m.position.copy(this.roomLocal(built, door.pos.x + (ix / il) * 0.1, 0.03, door.pos.z + (iz / il) * 0.1));
+    m.renderOrder = 2;
+    built.group.add(m);
+  }
+
   private ensureWanted(roomIndex: number, built: { group: THREE.Group }): void {
     const host = this.wantedRooms.get(roomIndex);
     if (!this.wantedActive || !host) return;
@@ -4673,6 +4717,7 @@ export class Game {
       const built = this.streamer.get(i);
       if (!built) continue;
       this.ensureWanted(i, built);
+      this.ensurePrimedSpill(i, built);
       this.ensureChalkMarks(i, built);
       this.ensureGateMark(i, built);
       this.ensureDeepVoid(i, built);
