@@ -150,7 +150,20 @@ export class Bellman extends Entity {
     p.eyePos(eye);
     const room = this.roomAt(p.pos);
     const blockers = room ? room.losBlockers : [];
-    return hasLineOfSight(v3(this.pos.x, 1.7, this.pos.z), eye, blockers);
+    if (!hasLineOfSight(v3(this.pos.x, 1.7, this.pos.z), eye, blockers)) return false;
+    // sprint 399 — the stare must meet his eyes through air: a shut leaf
+    // between them blocks the gaze even though room losBlockers can't know
+    // the leaf is there (door state is runtime, not room geometry). Without
+    // this the fold always beat the keys pass — the player could banish him
+    // through a locked door he was still keying, for free.
+    const his = this.roomAt(this.pos);
+    for (const r of [room, his]) {
+      if (!r) continue;
+      for (const dor of r.doors) {
+        if (!dor.opening && (dor.openT ?? 0) < 0.5 && doorBetween(dor, this.pos, p.pos)) return false;
+      }
+    }
+    return true;
   }
 
   private knockDoor(): void {

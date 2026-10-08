@@ -979,17 +979,46 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     const item = sock.meta.clerkItem as string;
     const figPresent = ga.clerkFigs?.has(clerked.index) === true;
 
+    // A priority-3 book (guest ledger, slips, counter-claims) sharing the
+    // counter shadows 'Buy at the counter' inside the focus band — seeded
+    // drift decides which. When a drive wants one specific verb, hunt the
+    // stand where it actually focuses instead of trusting the origin side.
+    // …and the pitch matters too: a waist-height anchor (askReg) loses to
+    // a same-figure head verb at eye-level aim, so the hunt also scans aim
+    // drops and returns the working (stand, drop) pair.
+    const standFor = (at: { x: number; y: number; z: number }, want: RegExp):
+      { x: number; z: number; dy: number } | null => {
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const sx = at.x + Math.sin(a) * 1.1, sz = at.z + Math.cos(a) * 1.1;
+        for (const dy of [0, -0.25, -0.5, -0.75]) {
+          g.player.teleport(sx, 0, sz);
+          g.player.yaw = Math.atan2(at.x - sx, at.z - sz);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          const hd = Math.hypot(at.x - sx, at.z - sz) || 1;
+          g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 + dy - eyeY, hd)));
+          g.frame();
+          if (want.test(g.interaction.focused?.prompt ?? '')) return { x: sx, z: sz, dy };
+        }
+      }
+      return null;
+    };
     const drive = (at: { x: number; y: number; z: number }, done: () => boolean, cap: number,
-      toward: { x: number; z: number } = clerked.origin): string => {
+      toward: { x: number; z: number } = clerked.origin, want?: RegExp): string => {
+      let lockStand: { x: number; z: number } | null = null, aimDy = 0;
+      if (want) {
+        const st = standFor(at, want);
+        if (st) { lockStand = st; aimDy = st.dy; }
+      }
       const seen: string[] = [];
       for (let f = 0; f < cap && !done(); f++) {
         const dx = toward.x - at.x, dz = toward.z - at.z;
         const L = Math.hypot(dx, dz) || 1;
-        g.player.teleport(at.x + (dx / L) * 1.0, 0, at.z + (dz / L) * 1.0);
+        g.player.teleport(lockStand?.x ?? at.x + (dx / L) * 1.0, 0, lockStand?.z ?? at.z + (dz / L) * 1.0);
         const ax = at.x - g.player.pos.x, az = at.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         const eyeY = g.player.pos.y + g.player.eyeHeight;
-        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 - eyeY, Math.hypot(ax, az) || 1)));
+        g.player.pitch = Math.max(-1.45, Math.min(1.45, Math.atan2(at.y + 0.6 + aimDy - eyeY, Math.hypot(ax, az) || 1)));
         const prompt = g.interaction.focused?.prompt ?? '';
         if (f % 10 === 0) seen.push(prompt);
         if (/counter|buy|wares|take|ask|clerk|rifle|till|ring|bell|purse|change/i.test(prompt)) {
@@ -1004,7 +1033,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
 
     // Short: refuse.
     g.imprints = Math.max(0, price - 3);
-    drive(sock.pos, () => sock.meta.sold === true, 50);
+    drive(sock.pos, () => sock.meta.sold === true, 50, clerked.origin, /buy at the counter/i);
     const refused = sock.meta.sold !== true && g.imprints === Math.max(0, price - 3);
     const refuseCap = caps.find((t) => /imprints required/.test(t)) ?? '';
 
@@ -1014,7 +1043,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     gHot.hotImprints = 1;
     const heldHot = ga.unpaidHeld;
     g.imprints = price;
-    drive(sock.pos, () => sock.meta.sold === true, 50);
+    drive(sock.pos, () => sock.meta.sold === true, 50, clerked.origin, /buy at the counter/i);
     const sold = sock.meta.sold === true;
     const tillCap = caps.find((t) => /till rings/.test(t)) ?? '';
     // sprint 335 — the marked coin testifies twice: hot drained by the
@@ -1035,7 +1064,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       // quote the rate via a refusal (keeps the ware unsold for the
       // cold-counter phase below — a sold socket presses silently)
       g.imprints = expected2 - 1;
-      drive(sock2.pos, () => caps.some((t) => /register's rate is/.test(t)), 50);
+      drive(sock2.pos, () => caps.some((t) => /register's rate is/.test(t)), 50, clerked.origin, /buy at the counter/i);
       rateCap = caps.find((t) => /register's rate is/.test(t)) ?? '';
       const quoted = Number(/register's rate is (\d+)/.exec(rateCap)?.[1]);
       ratePaid = quoted === expected2 && sock2.meta.sold !== true
@@ -1052,11 +1081,11 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       g.imprints = 40;
       const capMark = caps.length;
       drive(ask.pos, () => caps.slice(capMark).some((t) =>
-        /duty sheet|ledger of faults|held-file/.test(t)), 60);
+        /duty sheet|ledger of faults|held-file/.test(t)), 60, clerked.origin, /ask the clerk/i);
       askCap = caps.slice(capMark).find((t) => /duty sheet|ledger of faults|held-file/.test(t)) ?? '';
       askPaid = askCap !== '' && g.imprints === 40 - ((sock.meta.clerkQPrice as number) ?? 6);
       // one-shot: a second ask reads nothing more
-      drive(ask.pos, () => caps.some((t) => /said what it knows/.test(t)), 80);
+      drive(ask.pos, () => caps.some((t) => /said what it knows/.test(t)), 80, clerked.origin, /ask the clerk/i);
       askTwice = caps.find((t) => /said what it knows/.test(t)) ?? '';
       for (let f = 0; f < 6; f++) {
         g.frame();
@@ -1073,16 +1102,16 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       ga.unpaidHeld = 0;
       g.imprints = 20;
       const regMark = caps.length;
-      drive(askReg.pos, () => caps.slice(regMark).some((t) => /no line on you/.test(t)), 60);
+      drive(askReg.pos, () => caps.slice(regMark).some((t) => /no line on you/.test(t)), 60, clerked.origin, /ask what the register/i);
       regCleanCap = caps.slice(regMark).find((t) => /no line on you/.test(t)) ?? '';
       regPaid = g.imprints;
       ga.unpaidHeld = 4;
       const regMark2 = caps.length;
-      drive(askReg.pos, () => caps.slice(regMark2).some((t) => /register on you — 4/.test(t)), 60);
+      drive(askReg.pos, () => caps.slice(regMark2).some((t) => /register on you — 4/.test(t)), 60, clerked.origin, /ask what the register/i);
       regFiledCap = caps.slice(regMark2).find((t) => /register on you — 4/.test(t)) ?? '';
       // repeatable — a second filed read answers again (not one-shot)
       const regMark3 = caps.length;
-      drive(askReg.pos, () => caps.slice(regMark3).some((t) => /register on you — 4/.test(t)), 60);
+      drive(askReg.pos, () => caps.slice(regMark3).some((t) => /register on you — 4/.test(t)), 60, clerked.origin, /ask what the register/i);
       regAgain = caps.slice(regMark3).find((t) => /register on you — 4/.test(t)) ?? '';
       ga.unpaidHeld = 0;
     }
@@ -1103,16 +1132,16 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       const purseAt = { x: purse.pos.x - (pcx / pL) * 0.4, y: purse.pos.y,
         z: purse.pos.z - (pcz / pL) * 0.4 };
       g.marginalia = 20; g.imprints = 10;
-      purseSeen = drive(purseAt, () => g.imprints === 16, 60);
+      purseSeen = drive(purseAt, () => g.imprints === 16, 60, clerked.origin, /change the purse/i);
       pursePaid = g.imprints === 16 && g.marginalia === 12;
       purseCleanCap = caps.find((t) => /purse changes/.test(t)) ?? '';
       ga.unpaidHeld = 2; // a filed face — the register sours the change
-      drive(purseAt, () => g.imprints === 20, 50);
+      drive(purseAt, () => g.imprints === 20, 50, clerked.origin, /change the purse/i);
       purseSour = g.imprints === 20 && g.marginalia === 4;
       purseSourCap = caps.find((t) => /counts your coins twice|rate sours/.test(t)) ?? '';
       ga.unpaidHeld = 0;
       g.marginalia = 5; g.imprints = 20;
-      drive(purseAt, () => caps.some((t) => /purse wants/.test(t)), 40);
+      drive(purseAt, () => caps.some((t) => /purse wants/.test(t)), 40, clerked.origin, /change the purse/i);
       purseShortCap = caps.find((t) => /purse wants/.test(t)) ?? '';
     }
     // Rifle the till — the staffed-register rummage: pays once, files
@@ -1154,7 +1183,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       }
       headPre = clerkHead ? Math.abs(clerkHead.rotation.y - h0) : -1;
       if (bell && clerkFig && clerkHead) {
-        drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60);
+        drive(bell.pos, () => caps.some((t) => /note rolls/.test(t)), 60, clerked.origin, /ring the desk bell/i);
         for (let f = 0; f < 20; f++) g.frame();
         relBellN = normRel(bell.pos.x - clerkFig.position.x,
           bell.pos.z - clerkFig.position.z, clerkFig.rotation.y);
@@ -1168,7 +1197,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       const tdl = Math.hypot(tdx, tdz) || 1;
       tillSeen = drive({ x: till.pos.x - (tdx / tdl) * 0.3, y: till.pos.y,
         z: till.pos.z - (tdz / tdl) * 0.3 },
-        () => caps.some((t) => /off the till/.test(t)), 80);
+        () => caps.some((t) => /off the till/.test(t)), 80, clerked.origin, /rifle the till/i);
       rifleCap = caps.find((t) => /off the till/.test(t)) ?? '';
       tillPaid = rifleCap !== '' && (g.imprints > 0 || g.inventory.length > 0);
       tillHeld = ga.unpaidHeld;
@@ -1207,7 +1236,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         const rdl = Math.hypot(rdx, rdz) || 1;
         drive({ x: restock.pos.x - (rdx / rdl) * 0.3, y: restock.pos.y,
           z: restock.pos.z - (rdz / rdl) * 0.3 },
-          () => caps.some((t) => /takes its own back/.test(t)), 50);
+          () => caps.some((t) => /takes its own back/.test(t)), 50, clerked.origin, /slip the take back/i);
         restockCap = caps.find((t) => /takes its own back/.test(t)) ?? '';
         restockDone = restockCap !== '' && (ga.hotItems?.size ?? -1) === 0
           && !g.inventory.some((s) => s.id === 'tonic')
@@ -1227,7 +1256,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       };
       // the warm ring's caption is already in caps — wait for a NEW one
       const ringsBefore = caps.filter((t) => /note rolls/.test(t)).length;
-      drive(bell.pos, () => caps.filter((t) => /note rolls/.test(t)).length > ringsBefore, 60);
+      drive(bell.pos, () => caps.filter((t) => /note rolls/.test(t)).length > ringsBefore, 60, clerked.origin, /ring the desk bell/i);
       bellCap = caps.find((t) => /note rolls/.test(t)) ?? '';
       bellRang = rings.length;
       bellDist = rings.length
@@ -1245,7 +1274,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         bellLookCold = clerkHead.rotation.y;
       }
       // inside the cooldown a second ring only clicks
-      drive(bell.pos, () => caps.some((t) => /tired click/.test(t)), 60);
+      drive(bell.pos, () => caps.some((t) => /tired click/.test(t)), 60, clerked.origin, /ring the desk bell/i);
       bellTiredCap = caps.find((t) => /tired click/.test(t)) ?? '';
       snd.emit = origEmit;
     }
@@ -1255,23 +1284,23 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
     let coldWareCap = '', coldWareSold = true, coldAskCap = '', coldImprints = -1, coldBellCap = '', coldPurseCap = '';
     g.imprints = 99;
     if (sock2) {
-      drive(sock2.pos, () => caps.some((t) => /folds its hands/.test(t)), 50);
+      drive(sock2.pos, () => caps.some((t) => /folds its hands/.test(t)), 50, clerked.origin, /buy at the counter/i);
       coldWareCap = caps.find((t) => /folds its hands/.test(t)) ?? '';
       coldWareSold = sock2.meta.sold === true;
       coldImprints = g.imprints;
     }
     if (ask) {
-      drive(ask.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 2, 60);
+      drive(ask.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 2, 60, clerked.origin, /ask the clerk/i);
       const folds = caps.filter((t) => /folds its hands/.test(t));
       coldAskCap = folds[folds.length - 1] ?? '';
     }
     if (bell) {
-      drive(bell.pos, () => caps.some((t) => /tired click|note rolls/.test(t)), 60);
+      drive(bell.pos, () => caps.some((t) => /tired click|note rolls/.test(t)), 60, clerked.origin, /ring the desk bell/i);
       coldBellCap = caps.find((t) => /tired click|note rolls/.test(t)) ?? '';
     }
     // the purse is the clerk's service too — a cold counter folds it
     if (purse) {
-      drive(purse.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 3, 60);
+      drive(purse.pos, () => caps.filter((t) => /folds its hands/.test(t)).length >= 3, 60, clerked.origin, /change the purse/i);
       const folds = caps.filter((t) => /folds its hands/.test(t));
       coldPurseCap = folds[folds.length - 1] ?? '';
     }
@@ -1344,15 +1373,15 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       if (bell2 && till2) {
         const rollsBefore = caps.filter((t) => /note rolls/.test(t)).length;
         drive(bell2.pos, () => caps.filter((t) => /note rolls/.test(t)).length > rollsBefore, 60,
-          clerked2.origin);
+          clerked2.origin, /ring the desk bell/i);
         ring2Ok = caps.filter((t) => /note rolls/.test(t)).length > rollsBefore;
         // inside the eye's window — reach the till before ~3.5s passes
-        const t2dx = clerked2.origin.x - till2.pos.x, t2dz = clerked2.origin.z - till2.pos.z;
-        const t2dl = Math.hypot(t2dx, t2dz) || 1;
         const tillsBefore = caps.filter((t) => /off the till/.test(t)).length;
-        unfiledSeen = drive({ x: till2.pos.x + (t2dx / t2dl) * 0.4, y: till2.pos.y,
-          z: till2.pos.z + (t2dz / t2dl) * 0.4 },
-          () => caps.filter((t) => /off the till/.test(t)).length > tillsBefore, 80, clerked2.origin);
+        // aim at the till itself — offset anchors land on whatever book
+        // shares the counter and the hunt then scans the wrong circle
+        unfiledSeen = drive(till2.pos,
+          () => caps.filter((t) => /off the till/.test(t)).length > tillsBefore, 80, clerked2.origin,
+          /rifle the till/i);
         // probe the gate: dist/align/prox of the till candidate as focus() sees it
         const liveTill = local()?.find((i) => i.kind === 'till' && i.data?.roomIndex === idxB) as
           { pos: { x: number; y: number; z: number }; enabled?: boolean } | undefined;
@@ -1372,6 +1401,8 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         }
         // is the planned stand itself inside a collider? teleport there
         // bare and diff pre/post-frame positions
+        const t2dx = clerked2.origin.x - till2.pos.x, t2dz = clerked2.origin.z - till2.pos.z;
+        const t2dl = Math.hypot(t2dx, t2dz) || 1;
         const planX = till2.pos.x + (t2dx / t2dl) * 1.4, planZ = till2.pos.z + (t2dz / t2dl) * 1.4;
         g.player.teleport(planX, 0, planZ);
         ejectProbe = {

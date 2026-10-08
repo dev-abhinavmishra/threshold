@@ -652,19 +652,31 @@ test('the cast hears you — pebble pulls the bellman, a lure pulls the warden, 
     const gRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'groundswell'));
     if (!gRoom) return { stage: 'no-groundswell', sniffed, wardReached } as const;
     g.player.hiddenSpot = null;
-    enterRoom(gRoom.index);
-    const swell = gi.entities.find((e) => e.id === 'groundswell' && e.state === 'engage');
-    if (!swell) return { stage: 'no-swell-spawn', sniffed, wardReached } as const;
-    // Sprint down the room axis — footfall emits 'sprint' @0.85 each stride.
+    const gPrev = g.route.rooms[gRoom.index - 1];
+    g.player.teleport(gPrev.origin.x, 0, gPrev.origin.z);
+    for (let f = 0; f < 30; f++) g.frame();
+    // Sprint in as the entry itself: the first wave launches at
+    // engage+2.5s and hear() only provokes while the next wave isn't
+    // imminent (waveAt > now+0.7), so the provoke window is the first
+    // ~1.8s in the room — idle past it and the sprint lands mid-wave,
+    // where heavy noise is ignored by design.
     const ex = gRoom.exitPos, en = gRoom.entryPos;
-    g.player.teleport(en.x + 1.0, 0, en.z + 1.0);
-    g.player.yaw = Math.atan2(ex.x - en.x, ex.z - en.z);
+    const ax = ex.x - en.x, az = ex.z - en.z;
+    const len = Math.hypot(ax, az) || 1;
+    const ux = ax / len, uz = az / len;
+    g.player.teleport(en.x + ux * 1.2, 0, en.z + uz * 1.2);
+    g.player.yaw = Math.atan2(ux, uz);
     g.keys.add('KeyW'); g.keys.add('ShiftLeft');
     const capsAt = caps.length;
-    for (let f = 0; f < 80; f++) g.frame();
+    // Stay inside: sprint no farther than ~len-3m at ~5.5 m/s — leaving the
+    // room retires the swell before its provoked wave can launch.
+    const sprintF = Math.max(12, Math.min(26, Math.floor(((len - 3) / 5.5) * 30)));
+    for (let f = 0; f < sprintF; f++) g.frame();
     g.keys.delete('KeyW'); g.keys.delete('ShiftLeft');
+    const swell = gi.entities.find((e) => e.id === 'groundswell' && e.state === 'engage');
+    if (!swell) return { stage: 'no-swell-spawn', sniffed, wardReached } as const;
     let launched = false;
-    for (let f = 0; f < 120; f++) {
+    for (let f = 0; f < 140; f++) {
       g.frame();
       const front = (swell as unknown as { front?: number }).front;
       if (front !== undefined && front >= 0) { launched = true; break; }

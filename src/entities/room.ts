@@ -909,7 +909,9 @@ export class HazardField {
       if (s.meta.hazard === 'puddle') this.puddles.push({ pos: s.pos, room: room.index, radius: 1.1 });
       if (s.meta.hazard === 'steam') {
         // deterministic per-vent rhythm — same seed, same beat
-        const hsh = ((s.pos.x * 7 + s.pos.z * 13 + room.index * 5) % 10) / 10;
+        // sprint 399 — % keeps the sign in JS: negative-coord rooms fed a
+        // negative hsh and ran cycles below their floors.
+        const hsh = (((s.pos.x * 7 + s.pos.z * 13 + room.index * 5) % 10) + 10) % 10 / 10;
         const cycle = 4.5 + hsh * 3.0;
         const spent = s.meta.spent === true;
         this.steams.push({ pos: s.pos, room: room.index, phase: hsh * cycle, cycle, dead: spent });
@@ -928,7 +930,10 @@ export class HazardField {
       if (p.kind !== 'securityCam' && p.kind !== 'searchlight') continue;
       const wx = room.origin.x + p.x * c + p.z * s;
       const wz = room.origin.z - p.x * s + p.z * c;
-      const hsh = ((wx * 7 + wz * 13 + room.index * 5) % 10) / 10;
+      // sprint 399 — same sign trap: a negative hsh shrank the pan cycle
+      // below ~6s, so no single in-cone pass could reach the 0.9s settle —
+      // eyes in negative-coord rooms could never report anyone.
+      const hsh = (((wx * 7 + wz * 13 + room.index * 5) % 10) + 10) % 10 / 10;
       const cam = p.kind === 'securityCam';
       this.watchers.push({
         pos: v3(wx, p.y ?? (cam ? 2.35 : 1.4), wz),
