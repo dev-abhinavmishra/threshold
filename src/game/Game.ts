@@ -555,6 +555,8 @@ export class Game {
     this.entities = [];
     for (const l of this.lures) this.entityGroup.remove(l.mesh);
     this.lures = [];
+    this.droppedCoils = [];
+    this.wireStrains.clear();
     for (const cr of this.crossers) this.entityGroup.remove(cr.mesh);
     this.crossers = [];
     if (this.bookDrop?.mesh) this.entityGroup.remove(this.bookDrop.mesh);
@@ -770,6 +772,8 @@ export class Game {
     this.mintWedgeDrops();
     this.droppedWraps = cp?.droppedWraps?.map((w) => ({ ...w })) ?? [];
     this.mintWrapDrops();
+    this.droppedCoils = cp?.droppedCoils?.map((w) => ({ ...w })) ?? [];
+    this.mintCoilDrops();
     // the grafter's grafts stay grafted — planted wire survives a
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
@@ -1175,6 +1179,30 @@ export class Game {
         }
         return null;
       },
+      strainWire: (x, z) => {
+        // sprint 433 — the warden's answer to your bind: he works it
+        // over two contacts (a kicked chock is seconds; wire is work),
+        // then it parts and the coil drops where it was cut
+        const cluster = this.doorsAt(v3(x, 0, z));
+        if (!cluster.some((d) => d.heldBy === 'wired')) return null;
+        const key = `wire:${Math.round(x * 7)}x${Math.round(z * 7)}`;
+        const n = (this.wireStrains.get(key) ?? 0) + 1;
+        this.wireStrains.set(key, n);
+        if (n < 2) {
+          this.cue('floor-creak', { x, y: 0.6, z },
+            '[it works at the wire on the leaf]', 'warn');
+          this.sound.emit({ x, y: 0.6, z, intensity: 0.3, category: 'item', caption: '[wire strained]' });
+          return 'strained';
+        }
+        this.wireStrains.delete(key);
+        for (const d of cluster) if (d.heldBy === 'wired') d.heldBy = undefined;
+        this.droppedCoils.push({ x, z });
+        this.mintCoilDrops();
+        this.cue('door-creak', { x, y: 0.6, z },
+          '[the wire parts under its hands — the leaf swings free]', 'warn');
+        this.sound.emit({ x, y: 0.6, z, intensity: 0.3, category: 'item', caption: '[wire worked loose]' });
+        return 'freed';
+      },
     };
   }
 
@@ -1185,6 +1213,12 @@ export class Game {
   /** Door chocks the bellman kicked loose — they slid under the leaf
    *  and lie as gatherable loot until walked back for. */
   private kickedWedges: { x: number; z: number }[] = [];
+  /** Coils the house worked off a bound leaf — same drop convention:
+   *  wire isn't destroyed by the strain, it lands as loot. */
+  private droppedCoils: { x: number; z: number }[] = [];
+  /** First-touch strains on bound leaves, keyed by door pos — the
+   *  second contact parts the wire (a kick is fast; wire is work). */
+  private wireStrains = new Map<string, number>();
 
   /** The Auditor's tally — each marginalia claim drawn, sledge pick, and
    *  basket steal below is pilferage the under's clerks can read. Settled
@@ -1339,6 +1373,20 @@ export class Game {
    *  is space-agnostic: `this.space` may still carry the dead run's floor
    *  at checkpoint-restore time, and a mismatched prefix would strand
    *  stale verbs alongside fresh ones. */
+  private mintCoilDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('coil-drop-'));
+    this.droppedCoils.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'coilDrop', id: `coil-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the wire',
+        holdTime: 0.6, enabled: true, priority: 1,
+        // pos-keyed: the array shifts on gather, the pos doesn't
+        data: { x: Number(w.x.toFixed(2)), z: Number(w.z.toFixed(2)) },
+      });
+    });
+  }
+
   private mintWedgeDrops(): void {
     this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wedge-drop-'));
     this.kickedWedges.forEach((w, i) => {
@@ -1600,6 +1648,16 @@ export class Game {
       return { sfx: 'printer-whir', sev: 'info' as const,
         text: ticking.rang ? '[an alarm rings beyond — the clock you wound]'
           : '[a small clock counts down beyond — the lure you planted]' };
+    }
+    // sprint 435 — and the seam reads your own bind: a leaf you wired
+    // reports its hold at the lowest tier, warn when the house is
+    // mid-strain on it — you hear your denial being dismantled
+    if (door.heldBy === 'wired') {
+      const strained = (this.wireStrains.get(
+        `wire:${Math.round(door.pos.x * 7)}x${Math.round(door.pos.z * 7)}`) ?? 0) > 0;
+      return { sfx: 'floor-creak', sev: strained ? 'warn' as const : 'info' as const,
+        text: strained ? '[hands work your wire beyond — the bind strains]'
+          : '[your wire still holds — nothing else moves]' };
     }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
@@ -2260,7 +2318,7 @@ export class Game {
         data: ent as unknown as Record<string, unknown>,
       });
     }
-    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos);
+    if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos, this.inventory.some((i) => i.id === 'wireCoil' && i.count > 0));
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -2817,6 +2875,18 @@ export class Game {
             : '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
+      case 'coilDrop': {
+        // pos-keyed: the drop list shifts on gather, the pos doesn't
+        const dd = it.data as { x: number; z: number };
+        const ci = this.droppedCoils.findIndex((w) =>
+          Math.abs(w.x - dd.x) < 0.05 && Math.abs(w.z - dd.z) < 0.05);
+        if (ci < 0) { it.enabled = false; return; }
+        this.droppedCoils.splice(ci, 1);
+        this.giveItem('wireCoil', 1);
+        this.cue('item', it.pos, '[the coil comes back to your hand]');
+        this.mintCoilDrops();
+        return;
+      }
       case 'wedgeDrop': {
         // sprint 393 — walk the chock back: the kicked wedge returns to
         // the pocket, free — the price was the leaf it stopped holding.
@@ -3183,6 +3253,36 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'door', caption: '' });
         return;
       }
+      case 'wireDoor': {
+        // sprint 432 — the wire is a brace you can leave: the coil binds
+        // the leaf shut for both sides until it's cut. Walkers read it
+        // 'blocked' like any held leaf and route elsewhere; nobody kicks
+        // wire loose — it takes a blade.
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        if (cluster.some((d) => d.heldBy)) {
+          this.cue('door-locked', it.pos, '[something already holds it]', 'warn');
+          return;
+        }
+        const coil = this.inventory.find((i) => i.id === 'wireCoil');
+        if (!coil || coil.count <= 0) return;
+        coil.count--;
+        for (const d of cluster) d.heldBy = 'wired';
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
+          room: this.currentRoom, kind: 'work', t: this.clock.time,
+          readBy: ['player'] });
+        this.cue('door-creak', it.pos, '[you work the coil around the leaf — the wire holds it]');
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.3, category: 'door', caption: '' });
+        return;
+      }
+      case 'unwireDoor': {
+        const cluster = this.doorsAt((it.data as RoomInstance['doors'][number]).pos);
+        for (const d of cluster) if (d.heldBy === 'wired') d.heldBy = undefined;
+        this.giveItem('wireCoil', 1);
+        this.cue('door-creak', it.pos, '[the coil comes back to your hand]');
+        this.audio.play('trap-click', { x: it.pos.x, y: 0.4, z: it.pos.z }, '[a quiet snip]');
+        this.sound.emit({ x: it.pos.x, y: 0.6, z: it.pos.z, intensity: 0.25, category: 'item', caption: '' });
+        return;
+      }
       case 'door': {
         const door = it.data as RoomInstance['doors'][number];
         if (door.falseDoor) {
@@ -3200,6 +3300,10 @@ export class Game {
         // you set holds it from this side — pull it free instead.
         if (cluster.some((d) => d.heldBy === 'wedge')) {
           this.cue('door-locked', it.pos, '[the wedge holds it — pull it free first]', 'warn');
+          return;
+        }
+        if (cluster.some((d) => d.heldBy === 'wired')) {
+          this.cue('door-locked', it.pos, '[the wire binds it — cut it free first]', 'warn');
           return;
         }
         if (cluster.some((d) => d.heldBy && d.heldBy !== 'player')) {
@@ -5485,6 +5589,8 @@ export class Game {
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
+      droppedCoils: this.droppedCoils.length > 0
+        ? this.droppedCoils.map((w) => ({ ...w })) : undefined,
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
           .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted })) : undefined,
@@ -8116,16 +8222,21 @@ export class Game {
     }
 
     // Wind-up alarms — tick loud enough to pull sound-hunters, then ring once.
+    // sprint 434 — the boards listen for YOUR noise too: while the
+    // sheets name you, every sound you planted pulls half again as
+    // far — a lure works better and betrays you harder, same tax the
+    // filings take.
+    const wantedPull = this.wantedActive ? 1.5 : 1;
     for (const lure of this.lures) {
       if (tA < lure.nextTick) continue;
       lure.nextTick = tA + 1.2;
       if (tA < lure.until) {
         this.cue('alarm-tick', lure.pos, '', 'info');
-        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 0.9, category: 'distraction', caption: '' });
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 0.9 * wantedPull, category: 'distraction', caption: '' });
       } else if (!lure.rang) {
         lure.rang = true;
         this.cue('alarm-ring', lure.pos, '[the alarm rings — somewhere else]', 'info');
-        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 1.6, category: 'distraction', caption: '[alarm ringing]' });
+        this.sound.emit({ x: lure.pos.x, y: lure.pos.y, z: lure.pos.z, intensity: 1.6 * wantedPull, category: 'distraction', caption: '[alarm ringing]' });
       } else {
         this.entityGroup.remove(lure.mesh);
       }
@@ -8707,7 +8818,7 @@ export class Game {
       hr.lastRing = tA + 1.05;
       this.audio.play('phone-ring', hr.pos,
         tA - hr.at < 0.2 ? '[a phone rings — somebody left it off the hook]' : '');
-      this.sound.emit({ x: hr.pos.x, y: hr.pos.y, z: hr.pos.z, intensity: 0.85, category: 'distraction', caption: '' });
+      this.sound.emit({ x: hr.pos.x, y: hr.pos.y, z: hr.pos.z, intensity: 0.85 * wantedPull, category: 'distraction', caption: '' });
     }
     for (let i = this.hookRings.length - 1; i >= 0; i--) {
       if (tA < this.hookRings[i].until) continue;

@@ -6010,3 +6010,41 @@ like your own spent line. Same slack the grafter strips to carry:
 dead wire is now a real two-ways resource fight — gather it first
 and the under's splice pool shrinks; leave it and the grafter
 re-plants it on your path. Armed grafts still read 'Cut the splice'.
+
+## Sprint 432 — the wire is a brace you can leave
+
+'Wire Door N shut' mints on closed, unlocked, unheld leaves while you
+carry a coil (crouch-minted, beside the wedge slot): the coil binds
+the leaf via `heldBy: 'wired'` — the paid, walk-away twin of 'Brace'.
+Walkers read it 'blocked' like any held leaf and route elsewhere —
+nobody kicks wire loose, it takes a blade. 'Cut the wired leaf free'
+hands the coil back (un-plant symmetry). The bind signs 'work' on
+the leaf like every hands-on the floor. Releases on reload like the
+wedge — a held leaf never rode the checkpoint.
+
+## Sprint 433 — the house works wire free
+
+A walker reaching a coil-bound leaf doesn't just bounce: the warden
+works the bind over two contacts (a kicked chock is seconds; wire is
+work — the denial's real price), cued on the first strain. When it
+parts, `heldBy` clears and the coil drops as gatherable loot
+(`droppedCoils` + 'Gather the wire', pos-keyed like alarmDrop —
+checkpointed like the kicked chock). Wire outranks the wedge as
+denial: chock = seconds, wire = two visits of hands-on work.
+
+## Sprint 434 — the boards listen for your noise
+
+While `wantedActive`, every sound the player planted pulls ×1.5 —
+the alarm tick (0.9), the ring (1.6), and the phone bursts (0.85)
+all take `wantedPull`. The boards' tax reaches the lure layer too:
+a lure works better and betrays you harder — same double-edge rule
+the named filings follow (asks count double, claims count double).
+
+## Sprint 435 — the seam reads your own bind
+
+A wired leaf answers the door-listen at the lowest tier (below every
+tread, the armed line, and your own tick): '[your wire still holds —
+nothing else moves]' when quiet, and '[hands work your wire beyond —
+the bind strains]' at warn while `wireStrains` has a first-contact
+count on that leaf. You hear your denial being dismantled before it
+parts — the ear-to-the-seam family now covers the player's own work.

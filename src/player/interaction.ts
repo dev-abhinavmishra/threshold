@@ -8,10 +8,10 @@ import type { Door, HidingSpot, Socket, RoomInstance, ItemId } from '../game/typ
 import { PLAYER } from '../game/config';
 
 export type InteractKind =
-  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
+  | 'door' | 'peek' | 'listen' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift' | 'houseLine'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'alarmDrop' | 'keyring' | 'askTally';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'alarmDrop' | 'coilDrop' | 'keyring' | 'askTally';
 
 export interface Interactable {
   kind: InteractKind;
@@ -249,7 +249,7 @@ export class InteractionSystem {
  *  The seam sits one step off the leaf's edge — position-disambiguated so a
  *  door's centre still reads Open (crouch+quiet-open survives) and its edge
  *  reads Listen. False doors keep their seam: listening is the counter-tell. */
-export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = false, playerPos?: Vec3): void {
+export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = false, playerPos?: Vec3, hasWire = false): void {
   for (const it of sys.interactables) {
     const d = it.data as Door | undefined;
     if (it.kind !== 'door' || !d) continue;
@@ -290,6 +290,19 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
             data: d, enabled: true, priority: 4,
           });
         }
+        // sprint 432 — the wire is a brace you can leave: a closed,
+        // unlocked, unheld leaf can be bound shut with a coil. The
+        // paid twin of 'Brace' — your weight walks away with you.
+        if (hasWire && !d.locked && (d.openT ?? 0) < 0.1 && !d.opening) {
+          const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+          const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
+          sys.add({
+            kind: 'wireDoor', id: `wire-${it.id}`,
+            pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
+            prompt: `Wire Door ${d.label} shut`, holdTime: 1.2,
+            data: d, enabled: true, priority: 4,
+          });
+        }
       } else if (!d.falseDoor && d.heldBy === 'wedge') {
         // Yours — pull it free to reclaim it. Same side rule as the set.
         const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
@@ -298,6 +311,16 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
           kind: 'unwedge', id: `unwedge-${it.id}`,
           pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
           prompt: 'Pull the wedge free', holdTime: 0.5,
+          data: d, enabled: true, priority: 4,
+        });
+      } else if (!d.falseDoor && d.heldBy === 'wired') {
+        // your wire, your snip — cutting the bind hands the coil back
+        const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+        const side = playerPos ? Math.sign((playerPos.x - it.pos.x) * nX + (playerPos.z - it.pos.z) * nZ) || 1 : 1;
+        sys.add({
+          kind: 'unwireDoor', id: `unwire-${it.id}`,
+          pos: { x: it.pos.x + nX * side * 0.45, y: it.pos.y - 0.12, z: it.pos.z + nZ * side * 0.45 },
+          prompt: 'Cut the wired leaf free', holdTime: 0.9,
           data: d, enabled: true, priority: 4,
         });
       }

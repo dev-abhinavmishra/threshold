@@ -257,6 +257,55 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(gameSrc).toMatch(/!hz\.armed && !hz\.planted && !hz\.grafted/);
     expect(gameSrc).toMatch(/hz\.grafted \? \(hz\.armed \? 'Cut the splice' : 'Gather the wire'\)/);
   });
+
+  it('the wire is a brace you can leave — the leaf binds shut', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const intSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const typeSrc = readFileSync('src/game/types.ts', 'utf8');
+    // a closed, unlocked, unheld leaf mints 'Wire Door N shut' while
+    // you carry a coil; the bind rides heldBy like the wedge does
+    expect(intSrc).toContain('Wire Door');
+    expect(typeSrc).toContain("'wired'");
+    // the press consumes the coil and signs the work; the snip hands
+    // it back; opening reads the bind, not a stranger's grip
+    expect(gameSrc).toMatch(/d\.heldBy = 'wired'/);
+    expect(gameSrc).toContain('the wire binds it — cut it free first');
+    expect(gameSrc).toMatch(/unwireDoor[\s\S]*?giveItem\('wireCoil', 1\)/);
+  });
+
+  it('the house works wire free — two contacts, and the coil drops', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const corSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    // the warden doesn't kick wire loose — a bound leaf strains first,
+    // parts on the next contact, and the coil lands as gatherable loot
+    expect(corSrc).toMatch(/heldBy === 'wired'[\s\S]*?strainWire/);
+    expect(gameSrc).toMatch(/strainWire: \(x, z\)/);
+    expect(gameSrc).toContain('the wire parts under its hands');
+    expect(gameSrc).toMatch(/droppedCoils\.push/);
+    expect(storeSrc).toContain('droppedCoils');
+    // the drop is pos-keyed — the list shifts on gather, the pos doesn't
+    expect(gameSrc).toMatch(/coilDrop[\s\S]*?findIndex[\s\S]*?wireCoil/);
+  });
+
+  it('the boards listen for your noise — a named lure pulls half again as far', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // while the sheets name you, planted sounds reach further — the
+    // tick, the ring, and the phone bursts all take the same pull
+    expect(gameSrc).toContain('wantedPull');
+    expect(gameSrc).toMatch(/0\.9 \* wantedPull/);
+    expect(gameSrc).toMatch(/1\.6 \* wantedPull/);
+    expect(gameSrc).toMatch(/0\.85 \* wantedPull/);
+  });
+
+  it('the seam reads your own bind — holds report, strains warn', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a wired leaf answers the listen at the lowest tier: quiet when
+    // it holds, warn when the house is mid-strain on it
+    expect(gameSrc).toMatch(/door\.heldBy === 'wired'[\s\S]*?wireStrains\.get/);
+    expect(gameSrc).toContain('the bind strains');
+    expect(gameSrc).toContain('your wire still holds');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
