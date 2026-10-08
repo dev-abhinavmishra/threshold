@@ -4314,3 +4314,13 @@ Game.die() from the same five fields.
   `go in the wash`). Grafter untouched: killPlayer means death —
   seizing pre-death is moot, the checkpoint still holds the take.
 - Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 367 — its doors stick
+
+- While `wantedActive`, under doors swing at 0.6× openRate — the
+  crew's doors read the boards. The stall announces once per door
+  (`stuckAnnounced`), and the wanted-sheet readout now names this
+  tax too ('its doors stick until the count settles'). A chase
+  through a stuck door is the wanted episode's last unpriced gap —
+  counters were taxed (s353/354) but passage wasn't.
+- Gates: tsc, lint, vitest 255, sim 5/5.

@@ -1147,6 +1147,8 @@ export class Game {
 
   /** Doors that already pre-spawned their roused encounters (one-shot). */
   private rousedSpawned = new Set<string>();
+  /** Under doors that already announced their named-face stick. */
+  private readonly stuckAnnounced = new Set<string>();
   /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
    *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
   private playerTrail: Vec3[] = [];
@@ -3517,7 +3519,7 @@ export class Game {
       case 'wanted': {
         // the sheet prints what the tally says about you — the boards'
         // readout of the clerk's book, free to read, still named
-        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder and every counter reads the boards until the count settles]`, 'warn');
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder, every counter reads the boards, and its doors stick until the count settles]`, 'warn');
         return;
       }
       case 'wantedTear': {
@@ -4791,7 +4793,14 @@ export class Game {
       if (!r) continue;
       for (const d of r.doors) {
         if (d.opening && d.openT < 1) {
-          d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1));
+          // The crew's doors read the boards — a named face's under
+          // doors stick to three-fifths their swing. Once per door.
+          const stick = this.space === 'under' && this.wantedActive ? 0.6 : 1;
+          if (stick < 1 && !this.stuckAnnounced.has(d.id)) {
+            this.stuckAnnounced.add(d.id);
+            this.cue('door-locked', d.pos, '[the crew\'s door reads the boards — it sticks]', 'warn');
+          }
+          d.openT = Math.min(1, d.openT + dt * 1.8 * (d.openRate ?? 1) * stick);
           // Roused encounters pre-spawn as soon as the leaf has swung —
           // the thing beyond is live before the player crosses in.
           if (d.openT >= 0.6 && !this.rousedSpawned.has(d.id)) {
