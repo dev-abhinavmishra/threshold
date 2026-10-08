@@ -4727,3 +4727,12 @@ Game.die() from the same five fields.
   the tag rots and the count keeps it).
 - Gates: tsc, lint, vitest (+1 auditor collect-seize spec), sim,
   build. Locker leg untouched — mechanic sits upstream of it.
+
+## sprint 422 — the drag
+
+- `dragTrail` decal: twin heel-gouge lines + end smear, runs +X.
+- 30% of rooms with cover get a trail ending AT a hiding spot —
+  whoever scratched the chalk didn't always finish. Start point is
+  random-angle 1.4-3m out, clamped in-room; named 'drag-trail'.
+- Vitest 264: 'the drag'. Gates: tsc, lint, sim 5/5. Visual dressing
+  only — no e2e leg.

@@ -772,3 +772,37 @@ export function wayArrow(rng: Rng) {
     ctx.fillRect(8, 58, 60, 16);
   });
 }
+
+/** Two heel-drag lines + a smear where the feet left the ground —
+ *  the floor remembers someone who didn't walk out. Runs +X. */
+export function dragTrail(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 96, (ctx) => {
+    const dark = (a: number) => `rgba(40,32,22,${a})`;
+    const wob = () => rng.float() * 4 - 2;
+    // twin gouges, wobbling, slightly diverging
+    for (const side of [-14, 14]) {
+      ctx.strokeStyle = dark(0.42);
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(6, 48 + side + wob());
+      for (let x = 40; x <= 250; x += 40) ctx.lineTo(x, 48 + side + wob() * 2);
+      ctx.stroke();
+      // heel chisel marks between the lines
+      ctx.strokeStyle = dark(0.3);
+      ctx.lineWidth = 3;
+      for (let x = 24; x < 230; x += 34 + rng.float() * 18) {
+        ctx.beginPath();
+        ctx.moveTo(x, 48 + side * 0.6 + wob());
+        ctx.lineTo(x + 10, 48 + side * 0.4 + wob());
+        ctx.stroke();
+      }
+    }
+    // the smear at the end — where nothing pressed down again
+    const smear = ctx.createRadialGradient(240, 48, 4, 240, 48, 30);
+    smear.addColorStop(0, dark(0.5));
+    smear.addColorStop(1, dark(0));
+    ctx.fillStyle = smear;
+    ctx.fillRect(200, 8, 56, 80);
+  });
+}

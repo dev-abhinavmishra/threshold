@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1494,6 +1494,30 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           Math.max(-d / 2 + 0.5, Math.min(d / 2 - 0.5, lz + (rng.float() - 0.5) * 0.8)));
       }
       group.add(m);
+    }
+
+    // The drag — a heel-trail ends at a hiding spot: whoever scratched
+    // the chalk didn't always finish the lesson.
+    if (room.hidingSpots.length && rng.float() < 0.3) {
+      const spot = room.hidingSpots[Math.floor(rng.float() * room.hidingSpots.length)];
+      const cx = (spot.volume.minX + spot.volume.maxX) / 2 - room.origin.x;
+      const cz = (spot.volume.minZ + spot.volume.maxZ) / 2 - room.origin.z;
+      const dc = Math.cos(-room.yaw), dsn = Math.sin(-room.yaw);
+      const lx = cx * dc + cz * dsn, lz = -cx * dsn + cz * dc;
+      const ang = rng.float() * Math.PI * 2;
+      const len = 1.4 + rng.float() * 1.6;
+      const sx = Math.max(-w / 2 + 0.4, Math.min(w / 2 - 0.4, lx - Math.cos(ang) * len));
+      const sz = Math.max(-d / 2 + 0.4, Math.min(d / 2 - 0.4, lz - Math.sin(ang) * len));
+      const mx = (sx + lx) / 2, mz = (sz + lz) / 2;
+      const run = Math.hypot(lx - sx, lz - sz);
+      if (run > 0.8) {
+        const m = decalQuad(dragTrail(rng), run, 0.55);
+        m.name = 'drag-trail';
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = Math.atan2(-(lz - sz), lx - sx);
+        m.position.set(mx, 0.0065, mz);
+        group.add(m);
+      }
     }
 
     // The house remembers routes — at junctions a dragged arrow points
