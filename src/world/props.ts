@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1688,6 +1688,34 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     mb.position.set((rng.float() - 0.5) * 0.15, 0.05, 0.048);
     prop.group.add(mb);
     if (!prop.group.name) prop.group.name = 'mirror-blind';
+  }
+  // The taps calcified — lime crust and verdigris on the spouts.
+  if ((spec.kind === 'basinSink' || spec.kind === 'washStand' || spec.kind === 'dishDrainer') && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const tc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.24),
+      new THREE.MeshStandardMaterial({ map: tapCalc(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tc.name = 'tap-calc';
+    tc.userData.decalMat = true;
+    tc.position.set((rng.float() - 0.5) * 0.1, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.006);
+    prop.group.add(tc);
+    if (!prop.group.name) prop.group.name = 'tap-calc';
+  }
+  // The porcelain crazed — crackle hairlines and rust bleeds on
+  // the basins that held decades of water.
+  if ((spec.kind === 'basinSink' || spec.kind === 'washStand') && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const pc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.42),
+      new THREE.MeshStandardMaterial({ map: porcelainCraze(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pc.name = 'porcelain-craze';
+    pc.userData.decalMat = true;
+    pc.rotation.x = -Math.PI / 2;
+    pc.position.set(0, (dc?.[1] ?? 0.9) - 0.02, 0);
+    prop.group.add(pc);
+    if (!prop.group.name) prop.group.name = 'porcelain-craze';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

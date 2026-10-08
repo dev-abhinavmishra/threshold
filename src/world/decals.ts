@@ -4855,3 +4855,133 @@ export function doorDent(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Tap calc — the lime a tap carries where it always drips: white
+ * calcified crust at the spout's mouth, streaks down the neck. */
+export function tapCalc(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // calc crust — white crusted lump at the spout mouth
+    const cy = 74 + rng.float() * 6;
+    ctx.fillStyle = `rgba(206,204,190,${0.5 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(32, cy, 9 + rng.float() * 3, 5 + rng.float() * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // crust texture — gritty dots in the lump
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(190,190,176,${0.4 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(26 + rng.float() * 12, cy - 3 + rng.float() * 8, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // calc streaks — drips down the neck that crystallized
+    for (let i = 0; i < 4; i++) {
+      const sx = 26 + rng.float() * 12;
+      ctx.strokeStyle = `rgba(200,198,184,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.2 + rng.float() * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sx, cy - 6);
+      ctx.lineTo(sx + (rng.float() - 0.5) * 4, cy - 20 - rng.float() * 24);
+      ctx.stroke();
+    }
+    // verdigris bloom — copper pipes corrode green
+    if (rng.bool(0.5)) {
+      ctx.fillStyle = 'rgba(96,140,110,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(32 + (rng.float() - 0.5) * 8, cy - 14, 5, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the drip — one wet drop still hanging
+    ctx.fillStyle = 'rgba(190,204,200,0.55)';
+    ctx.beginPath();
+    ctx.arc(32, cy + 7, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Rust halo — the ring a floor drain keeps: orange oxidation
+ * bleeding out from the grate, a dark wet center. */
+export function rustHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48, cy = 48;
+    // the halo — rust bloom radiating from the drain rim
+    const g = ctx.createRadialGradient(cx, cy, 8, cx, cy, 40);
+    g.addColorStop(0, 'rgba(44,36,28,0.5)');
+    g.addColorStop(0.35, `rgba(120,70,38,${0.4 + rng.float() * 0.15})`);
+    g.addColorStop(0.7, 'rgba(120,70,38,0.16)');
+    g.addColorStop(1, 'rgba(120,70,38,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the wet center — still-damp dark pool
+    ctx.fillStyle = 'rgba(30,26,22,0.55)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.fill();
+    // oxide flecks — rust dust scattered on the halo
+    for (let i = 0; i < 20; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 10 + Math.pow(rng.float(), 0.7) * 30;
+      ctx.fillStyle = `rgba(140,80,42,${0.3 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.6 + rng.float() * 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // drip channels — rust running outward along grout lines
+    for (let i = 0; i < 3; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(110,64,34,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8);
+      ctx.lineTo(cx + Math.cos(a) * (30 + rng.float() * 12), cy + Math.sin(a) * (30 + rng.float() * 12));
+      ctx.stroke();
+    }
+  });
+}
+
+/** Porcelain crazing — the crackle an old basin wears: fine
+ * intersecting hairlines like ice crackle, rust bleeds at nodes. */
+export function porcelainCraze(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the crackle — fine intersecting hairlines over the surface
+    for (let i = 0; i < 14; i++) {
+      let x = rng.float() * 96;
+      let y = rng.float() * 96;
+      let a = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(70,64,54,${0.3 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let s = 0; s < 4; s++) {
+        a += (rng.float() - 0.5) * 1.4;
+        x += Math.cos(a) * (4 + rng.float() * 8);
+        y += Math.sin(a) * (4 + rng.float() * 8);
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // node bleeds — rust stains at the deep cracks' crossings
+    for (let i = 0; i < 6; i++) {
+      const nx = 12 + rng.float() * 72;
+      const ny = 12 + rng.float() * 72;
+      ctx.fillStyle = `rgba(116,72,42,${0.26 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(nx, ny, 1.6 + rng.float() * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      // short bleed run
+      ctx.strokeStyle = 'rgba(116,72,42,0.3)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny);
+      ctx.lineTo(nx + (rng.float() - 0.5) * 8, ny + 4 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // lime smear — a pale wash where the water sat
+    if (rng.bool(0.6)) {
+      const g = ctx.createRadialGradient(48, 30, 4, 48, 30, 34);
+      g.addColorStop(0, 'rgba(200,198,184,0.18)');
+      g.addColorStop(1, 'rgba(200,198,184,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 96, 96);
+    }
+  });
+}

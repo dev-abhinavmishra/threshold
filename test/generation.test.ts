@@ -3364,3 +3364,48 @@ describe('the doors dented the wall (sprint 478)', () => {
     expect(n, 'no door dents').toBeGreaterThan(0);
   });
 });
+
+describe('the taps calcified (sprint 479)', () => {
+  it('lime crust sits on the spouts', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'tap-calc') n++; });
+      }
+    }
+    expect(n, 'no tap calc').toBeGreaterThan(0);
+  });
+});
+
+describe('the drains rusted (sprint 479)', () => {
+  it('oxidation halos ring the floor grates', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'rust-halo') n++; });
+      }
+    }
+    expect(n, 'no rust halos').toBeGreaterThan(0);
+  });
+});
+
+describe('the porcelain crazed (sprint 479)', () => {
+  it('crackle lines mark the old basins', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'porcelain-craze') n++; });
+      }
+    }
+    expect(n, 'no porcelain crazing').toBeGreaterThan(0);
+  });
+});
