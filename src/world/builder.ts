@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, cornerScuff } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,28 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The runners slide — crescent scuffs swept into corridor corners
+    // where bodies cut the turn at speed: sole-drags and heel digs.
+    if (['corridor', 'lobby', 'maintenance', 'underscript'].includes(spec.biome)) {
+      for (const crn of [[-w / 2, -d / 2], [w / 2, -d / 2], [-w / 2, d / 2], [w / 2, d / 2]]) {
+        if (rng.float() >= 0.3) continue;
+        const sz = 0.9 + rng.float() * 0.5;
+        const qx = crn[0], qz = crn[1];
+        const m = decalQuad(cornerScuff(rng), sz, sz);
+        m.name = 'corner-scuff';
+        m.rotation.x = -Math.PI / 2;
+        // texture's top-left corner anchors the arc at the wall corner;
+        // +u/+v both point along the walls INTO the room. Same-sign
+        // corners take U on the x-wall, opposite-sign corners on z.
+        let ux = 0, uz = 0;
+        if (Math.sign(qx) === Math.sign(qz)) { ux = -Math.sign(qx); }
+        else { uz = -Math.sign(qz); }
+        m.rotation.z = Math.atan2(-uz, ux);
+        m.position.set(qx - Math.sign(qx) * sz * 0.46, 0.007, qz - Math.sign(qz) * sz * 0.46);
+        group.add(m);
+      }
     }
 
     // The votive — where a spot is watched, someone has kept vigil:

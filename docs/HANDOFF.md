@@ -5141,3 +5141,12 @@ Game.die() from the same five fields.
 - NB: footprintInDoorLane=true means IN lane — check the inversion
   (first cut had it backwards).
 - Vitest 281: 'the votive'. Gates: tsc, lint, generation 97/97.
+
+## sprint 436 — the runners slide
+
+- Crescent scuff arcs in room corners (30% per corner, corridor/lobby/
+  maintenance/underscript): sole-drag rings + heel digs, anchored with
+  the texture's top-left corner on the wall corner; +u/+v point along
+  the walls inward — same-sign corners map U to the x-wall, opposite to
+  z. Named 'corner-scuff'.
+- Vitest 283: 'the runners slide'. Gates: tsc, lint, 99/99.

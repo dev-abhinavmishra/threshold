@@ -1075,3 +1075,29 @@ export function votiveWax(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The corner scuff — a crescent smear where bodies cut the turn hard:
+ * sole-drag arcs and a low heel-mark at the wall base. */
+export function cornerScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    // sweeping arc around the corner (texture corner at 8,8 = wall corner)
+    const cx = 8, cy = 8;
+    ctx.strokeStyle = 'rgba(58,52,44,0.35)';
+    for (let i = 0; i < 4; i++) {
+      ctx.lineWidth = 5 + rng.float() * 4;
+      const r = 46 + i * 12 + rng.float() * 6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0.05 + rng.float() * 0.2, Math.PI / 2 - rng.float() * 0.15);
+      ctx.stroke();
+    }
+    // heel digs along the sweep
+    for (let i = 0; i < 5; i++) {
+      const a = 0.1 + rng.float() * 1.3;
+      const r = 50 + rng.float() * 50;
+      ctx.fillStyle = 'rgba(46,40,34,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 4, 2, a + Math.PI / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

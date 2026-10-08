@@ -1858,3 +1858,18 @@ describe('the votive (sprint 434)', () => {
     expect(votives, 'no votives').toBeGreaterThan(4);
   });
 });
+
+describe('the runners slide (sprint 436)', () => {
+  it('corridor corners carry crescent scuff arcs', () => {
+    let scuffs = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'corner-scuff') scuffs++; });
+      }
+    }
+    expect(scuffs, 'no corner scuffs').toBeGreaterThan(10);
+  });
+});
