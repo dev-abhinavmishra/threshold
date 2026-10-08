@@ -6507,3 +6507,37 @@ question, wire-cut e2e coverage gap, route-wide sight-scan perf flag.
 synthetic test rooms without the field crashed the grafter rise spec.
 Contract spec updated: `s.claimed = true` replaces the pinned
 `s.planted = false` shape, plus !claimed guards on reclaim verbs.
+
+## Sprints 455-460 — the eye tells the rest of the cast
+
+The stoop-sighting surface (s450-453) now reaches the six cast members
+that plausibly watch a crack. Each answers in its own idiom — the
+watcher's temperament decides whether the kneel endangers you or it:
+
+- **s455 the pipes tell her** (Laundress): a kneel at her leaf thumps
+  down the plumbing she works — she leaves the basin to sniff at HER
+  side of the door (`alerted` at the leaf pos — never the player's
+  room, same room-bound rule as her hearing).
+- **s456 a face on file** (Filer): a face she can see is a face she
+  can file — the kneel opens the index (`openIndex`) without waiting
+  for her own look. Once filed+posted, further kneels tell nothing.
+- **s457 the ledger opens early** (Auditor): a kneel at his leaf while
+  `claimsOwed > 0` demands on the sighting — a debtor presenting
+  themselves. A clean face is only a kneel.
+- **s458 the lantern locks on the crack** (Commissionaire): the pin
+  machinery hears the sighting like a noise, but holds 5s — longer
+  than any thrown lure — aimed at the leaf you knelt at.
+- **s459 the keys turn toward your door** (Inspector): it glances up
+  off its current lid test and retargets to the unchecked hiding spot
+  NEAREST your leaf — the sighting endangers the cover closest to
+  where you knelt.
+- **s460 the shy thing flinches** (Whisper): the only watcher whose
+  answer is to leave — a sighted whisper relocates on the spot and
+  loses the ambush bearing it had.
+
+**Notes:** eyeTell already receives `(playerPos, leafPos)` — the leaf
+param is what keeps room-bound watchers honest (they walk to their
+side, never wall-walk to yours). The asymmetry is the point: predators
+come to the told point, clerks open their books, the shy lose their
+spot. Watcher selection is `bestE` — nearest live threatPos within
+2.6m of the leaf, same 0.22/door seeded roll as s450.

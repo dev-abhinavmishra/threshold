@@ -1108,6 +1108,18 @@ export class Laundress extends Entity {
     this.sniffUntil = this.ctx.now + 5;
   }
 
+  /** The eye at the crack: she doesn't read faces — but a kneel at her
+   *  leaf thumps down the plumbing she works. The pipes tell her where,
+   *  and she leaves the basin to sniff at her side of the door. Same
+   *  room-bound rule as her hearing: the point is HER side of the leaf,
+   *  never the player's. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.alerted = v3(leaf.x, 0, leaf.z);
+    this.sniffUntil = this.ctx.now + 5;
+    this.ctx.cue('puddle-splash', this.pos, '[the pipes told her — she leaves the basin]', { severity: 'warn' });
+  }
+
   /** The drain press reaches her — she takes the hand on the crank. */
   aggravate(p: Vec3): void {
     const c = this.ctx;
@@ -1276,6 +1288,16 @@ export class Auditor extends Entity {
 
   private settleId(): string { return `audit-${this.spawnRoom}`; }
   private tallyId(): string { return `tally-${this.spawnRoom}`; }
+
+  /** The eye at the crack: a kneel at his leaf while you owe is a debtor
+   *  presenting themselves — the ledger opens on the sighting, earlier
+   *  than his own room rule would fire it. A clean face is only a kneel. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state === 'done' || this.demanded || this.homebound) return;
+    const owed = this.ctx.claimsOwed?.() ?? 0;
+    if (owed <= 0) return;
+    this.openLedger();
+  }
 
   /** Hands in his drawer — the book slaps open at your name on the spot. */
   rifledTally(): void {
@@ -1833,6 +1855,14 @@ export class Filer extends Entity {
 
   private squareId(): string { return `square-${this.spawnRoom}`; }
   private docketId(): string { return `docket-${this.spawnRoom}`; }
+
+  /** The eye at the crack: a face she can see is a face she can file —
+   *  the kneel opens the index without waiting for her own look. Once
+   *  filed and posted, further kneels tell her nothing new. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage' || this.filed || this.homebound) return;
+    this.openIndex();
+  }
 
   private openIndex(): void {
     const c = this.ctx;

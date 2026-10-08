@@ -151,6 +151,15 @@ export class Whisper extends Entity {
     }
   }
 
+  /** The eye at the crack: the shy thing that met you through the gap
+   *  flinches — the sighting costs it the ambush spot it had. The only
+   *  watcher whose answer is to leave rather than come. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage') return;
+    this.relocate();
+    this.ctx.cue('moth-flutter', this.pos, '[the shadow flinches — it is somewhere else now]', { severity: 'warn' });
+  }
+
   protected override onSpawn(): void {
     const c = this.ctx;
     const rng = new Rng(c.seed);
@@ -1598,6 +1607,33 @@ export class Inspector extends Entity {
     this.state = 'engage';
   }
 
+  /** The eye at the crack: the kneel read like a noise to it — it glances
+   *  up off whatever lid it holds, then walks its keys to the cover
+   *  nearest YOUR door instead of whatever was next. The sighting
+   *  endangers the spot closest to where you knelt. */
+  override eyeTell(at: Vec3, leaf?: Vec3): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.expireT <= c.now) return;
+    const room = c.rooms[c.currentRoomIndex];
+    if (!room || room.index !== this.hostRoom) return;
+    if (this.testing && this.testT > 1.2) this.testT = 1.2;
+    const near = leaf ?? at;
+    let best: RoomInstance['hidingSpots'][number] | null = null;
+    let bestD = Infinity;
+    for (const s of room.hidingSpots) {
+      if (this.checked.has(s.id) || s.trappedBy) continue;
+      const d = v3dist(near, s.exitPos);
+      if (d < bestD) { bestD = d; best = s; }
+    }
+    if (best) {
+      this.target = { exitPos: best.exitPos, id: best.id, spot: best };
+      if (this.glanceCd <= c.now) {
+        this.glanceCd = c.now + 8;
+        c.cue('collector-rattle', this.pos, '[it glances up — the keys turn toward your door]', { severity: 'warn' });
+      }
+    }
+  }
+
   /** A loud noise makes it cut the current lid test short — it glances up
    *  and moves to the next spot. Noise buys you seconds at the lid it is
    *  on, at the price of hurrying it toward yours. */
@@ -1863,6 +1899,21 @@ export class Commissionaire extends Entity {
     this.rig?.play('idle', 0.1);
     this.noiseUnsub = c.sound.on((e) => this.hear(e));
     this.state = 'engage';
+  }
+
+  /** The eye at the crack: the lantern answers the kneel the way it
+   *  answers a noise — the light locks on your leaf and holds longer
+   *  than a thrown sound could buy it. While it watches the crack,
+   *  the far arc stays blind. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    const c = this.ctx;
+    if (this.state !== 'engage' || this.chasing || this.returning || !leaf) return;
+    this.pinYaw = Math.atan2(leaf.x - this.pos.x, leaf.z - this.pos.z);
+    this.pinUntil = c.now + 5;
+    if (this.pinCd <= 0) {
+      this.pinCd = 6;
+      c.cue('floor-creak', this.pos, '[the light locks on the crack]', { severity: 'warn' });
+    }
   }
 
   /** It never leaves its post for a noise — but the light turns to look,

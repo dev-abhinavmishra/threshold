@@ -2991,3 +2991,157 @@ describe('the gaze needs air (sprint 442)', () => {
     wh.dispose();
   });
 });
+
+describe('the eye tells — the rest of the cast (sprints 455-460)', () => {
+  const washRoom = {
+    index: 0, templateId: 'u-server', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 11, flooded: true,
+    entryPos: { x: 0, y: 0, z: -5 }, exitPos: { x: 0, y: 0, z: 5 }, navNodes: [],
+    spec: { width: 9, depth: 11, props: [{ kind: 'pipeManifold', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+  const deskRoom = {
+    index: 0, templateId: 'u-records-cage', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 10, depth: 12,
+    entryPos: { x: 0, y: 0, z: -6 }, exitPos: { x: 0, y: 0, z: 6 }, navNodes: [],
+    spec: { width: 10, depth: 12, props: [{ kind: 'filing', x: 2.5, z: 3.0, yaw: 0 }] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance;
+
+  it('the pipes tell her — a kneel at her leaf pulls her off the basin (sprint 455)', async () => {
+    const { Laundress } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([washRoom], { currentRoomIndex: 0, isRoomDrained: () => false });
+    const w = new Laundress();
+    w.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; w.update(0.05); }
+    expect(w.guarding, 'she holds the drain').toBe(true);
+    const leaf = v3(-3.5, 0, -2);
+    w.eyeTell!(v3(30, 0, 30), leaf); // your kneel carries down the plumbing
+    expect(w.guarding, 'the basin is unwatched').toBe(false);
+    const wp = (w as unknown as { pos: { x: number; z: number } }).pos;
+    const d0 = Math.hypot(wp.x - leaf.x, wp.z - leaf.z);
+    for (let i = 0; i < 120; i++) { ctx.now += 0.05; w.update(0.05); }
+    const d1 = Math.hypot(wp.x - leaf.x, wp.z - leaf.z);
+    expect(d1, 'she walks to HER side of the leaf').toBeLessThan(d0);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /pipes told her/.test(c))).toBe(true);
+    w.dispose();
+  });
+
+  it('a face at her crack is a face on file — the index opens (sprint 456)', async () => {
+    const { Filer } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const f = new Filer();
+    f.spawn(ctx);
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; f.update(0.05); }
+    expect(f.filed, 'the drawer is still shut on you').toBe(false);
+    f.eyeTell!(v3(0, 0, -5)); // the kneel gives her your face
+    expect(f.filed, 'your name is on a card').toBe(true);
+    expect(f.posted, 'the word goes out on foot').toBe(true);
+    f.eyeTell!(v3(0, 0, -5)); // filed once — further kneels tell nothing
+    f.dispose();
+  });
+
+  it('a debtor at his crack opens the ledger early (sprint 457)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, claimsOwed: () => 2,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    expect(a.demanded, 'the tally is still shut').toBe(false);
+    a.eyeTell!(v3(0, 0, -5)); // a debtor presenting themselves
+    expect(a.demanded, 'the ledger comes out on the sighting').toBe(true);
+    a.dispose();
+  });
+
+  it('a clean face at his crack is only a kneel (sprint 457)', async () => {
+    const { Auditor } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([deskRoom], {
+      currentRoomIndex: 0, claimsOwed: () => 0,
+      addInteractable: vi.fn(), removeInteractable: vi.fn(),
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    const a = new Auditor();
+    a.spawn(ctx);
+    a.eyeTell!(v3(0, 0, -5));
+    expect(a.demanded, 'nothing owed — the book stays shut').toBe(false);
+    a.dispose();
+  });
+
+  it('the lantern locks on the crack (sprint 458)', () => {
+    const entryRoom = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: -14 }, yaw: 0,
+      width: 8, depth: 8,
+      entryPos: { x: 0, y: 0, z: -17 }, exitPos: { x: 0, y: 0, z: -11 }, navNodes: [],
+      spec: { width: 8, depth: 8, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const room = {
+      index: 1, templateId: 'u-hall', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 8, depth: 8,
+      entryPos: { x: 0, y: 0, z: -3 }, exitPos: { x: 0, y: 0, z: 3 }, navNodes: [],
+      spec: { width: 8, depth: 8, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([entryRoom, room], { currentRoomIndex: 1 });
+    const cm = new Commissionaire();
+    cm.spawn(ctx);
+    const leaf = v3(room.exitPos.x - 1, 0, room.exitPos.z);
+    cm.eyeTell!(v3(30, 0, 30), leaf);
+    const pin = cm as unknown as { pinYaw: number | null; pinUntil: number };
+    expect(pin.pinYaw, 'the light holds a bearing').not.toBeNull();
+    expect(pin.pinUntil, 'the pin outlasts a thrown sound').toBeGreaterThan(ctx.now + 4);
+    // post = exitPos + sin/cos(baseYaw)·1.0, baseYaw = atan2(entry−exit)
+    const baseYaw = Math.atan2(room.entryPos.x - room.exitPos.x, room.entryPos.z - room.exitPos.z);
+    const post = { x: room.exitPos.x + Math.sin(baseYaw), z: room.exitPos.z + Math.cos(baseYaw) };
+    const want = Math.atan2(leaf.x - post.x, leaf.z - post.z);
+    expect(Math.abs(pin.pinYaw! - want), 'the lantern aims at your leaf').toBeLessThan(0.3);
+    cm.dispose();
+  });
+
+  it('the keys turn toward your door (sprint 459)', () => {
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 12, depth: 12,
+      entryPos: { x: 0, y: 0, z: -5 }, exitPos: { x: 0, y: 0, z: 5 }, navNodes: [],
+      spec: { width: 12, depth: 12, props: [] },
+      doors: [], sockets: [],
+      hidingSpots: [
+        { id: 'far', kind: 'cabinet', exitPos: { x: 4, y: 0, z: 4 } },
+        { id: 'near', kind: 'cabinet', exitPos: { x: -4, y: 0, z: -4 } },
+      ],
+      scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0 });
+    const insp = new Inspector();
+    insp.spawn(ctx);
+    const leaf = v3(-4.5, 0, -4.5); // the crack sits beside the 'near' lid
+    insp.eyeTell!(v3(30, 0, 30), leaf);
+    const tgt = (insp as unknown as { target: { id: string } | null }).target;
+    expect(tgt?.id, 'it walks to the cover nearest your door').toBe('near');
+    insp.dispose();
+  });
+
+  it('the shy thing flinches — a sighting costs it the spot (sprint 460)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    ctx.player.pos.x = room.origin.x; ctx.player.pos.z = room.origin.z;
+    const wh = new Whisper();
+    wh.spawn(ctx);
+    const wp = wh as unknown as { pos: { x: number; z: number } };
+    const before = { x: wp.pos.x, z: wp.pos.z };
+    wh.eyeTell!(v3(30, 0, 30));
+    const moved = Math.hypot(wp.pos.x - before.x, wp.pos.z - before.z);
+    expect(moved, 'it abandons the spot you saw').toBeGreaterThan(0.5);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shadow flinches/.test(c))).toBe(true);
+    wh.dispose();
+  });
+});
