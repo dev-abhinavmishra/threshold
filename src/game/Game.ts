@@ -959,6 +959,14 @@ export class Game {
         this.unpaidHeld += 1;
       },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
+      seizeMarked: () => {
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
+        if (take.length === 0 && this.hotImprints <= 0) return false;
+        for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.hotImprints = 0;
+        return true;
+      },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —

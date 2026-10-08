@@ -86,6 +86,10 @@ export interface EntityCtx {
   /** True while the player carries marked wares (a hotItems stack with
    *  count > 0). Optional for headless ctxs. */
   carriesMarked?: () => boolean;
+  /** Repossess the marked take — strips every hotItems stack and the
+   *  marked coin. Returns false when there was nothing to take (honest:
+   *  callers cue only on a real seizure). Optional for headless ctxs. */
+  seizeMarked?: () => boolean;
   /** Consult tally — paid reads of the under's own paper (work order,
    *  crew board, claim register) the player hasn't squared for. The
    *  Filer's ledger: questions asked, not goods taken. */
