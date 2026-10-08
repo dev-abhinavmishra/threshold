@@ -44,6 +44,7 @@ export class Curator extends Entity {
    *  toward the door the player came through. */
   prime(at: Vec3): void {
     v3copy(this.target, { x: at.x, y: 0, z: at.z });
+    this.pathTo(this.target);
   }
 
   setLevel(l: 1 | 2): void {
@@ -148,7 +149,7 @@ export class Curator extends Entity {
   /** Recompute a simple path through the containment room's nav graph. */
   private pathTo(dest: Vec3): void {
     const room = this.containmentRoom;
-    if (!room || !room.navNodes.length) {
+    if (!room?.navNodes?.length) {
       this.pathPts = [v3(dest.x, 0, dest.z)];
       this.pathI = 0;
       return;

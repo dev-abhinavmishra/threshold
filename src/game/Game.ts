@@ -623,6 +623,8 @@ export class Game {
     this.unpaidTheft = cp?.unpaidTheft ?? 0;
     this.unpaidHeld = cp?.unpaidHeld ?? 0;
     this.paperTrail = cp?.paperTrail ?? 0;
+    this.wantedActive = false;
+    this.wantedRooms.clear();
     this.hotImprints = cp?.hotImprints ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
@@ -3951,6 +3953,13 @@ export class Game {
     return Game.wantedMat;
   }
 
+  /** Room-local position for a world point — children added to a built
+   *  room group live in the room's yaw frame, not the world's. */
+  private roomLocal(built: { group: THREE.Group }, x: number, y: number, z: number): THREE.Vector3 {
+    built.group.updateWorldMatrix(true, false);
+    return built.group.worldToLocal(new THREE.Vector3(x, y, z));
+  }
+
   /** A wanted sheet pinned to the face of a crew-board prop, turned to
    *  the room's middle so it reads on approach. */
   private ensureWanted(roomIndex: number, built: { group: THREE.Group }): void {
@@ -3965,8 +3974,8 @@ export class Game {
     const ol = Math.hypot(ox, oz) || 1;
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.56), mat);
     m.name = 'wanted-notice';
-    m.position.set(host.x + (ox / ol) * 0.14, 1.35, host.z + (oz / ol) * 0.14);
-    m.rotation.y = Math.atan2(ox, oz);
+    m.position.copy(this.roomLocal(built, host.x + (ox / ol) * 0.14, 1.35, host.z + (oz / ol) * 0.14));
+    m.rotation.y = Math.atan2(ox, oz) - room.yaw;
     m.renderOrder = 2;
     built.group.add(m);
   }
@@ -3982,7 +3991,7 @@ export class Game {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), mat);
     m.name = 'gate-mark';
     m.rotation.x = -Math.PI / 2;
-    m.position.set(sock.pos.x, 0.03, sock.pos.z + 0.55);
+    m.position.copy(this.roomLocal(built, sock.pos.x, 0.03, sock.pos.z + 0.55));
     m.renderOrder = 2;
     built.group.add(m);
   }
@@ -4002,8 +4011,8 @@ export class Game {
       );
       m.name = name;
       // sit just inside the closet, normal facing back toward the parent room
-      m.position.set(d.pos.x - Math.sin(d.yaw) * 0.4, 1.15, d.pos.z - Math.cos(d.yaw) * 0.4);
-      m.rotation.y = d.yaw + Math.PI;
+      m.position.copy(this.roomLocal(built, d.pos.x - Math.sin(d.yaw) * 0.4, 1.15, d.pos.z - Math.cos(d.yaw) * 0.4));
+      m.rotation.y = d.yaw + Math.PI - room.yaw;
       m.renderOrder = 3;
       built.group.add(m);
     }
@@ -4070,13 +4079,13 @@ export class Game {
       m.name = name;
       // face the room's interior — chalk lives on the side you marked from
       const inward = Math.atan2(room.origin.x - d.pos.x, room.origin.z - d.pos.z);
-      m.rotation.y = inward;
+      m.rotation.y = inward - room.yaw;
       const off = 0.07;
-      m.position.set(
+      m.position.copy(this.roomLocal(built,
         d.pos.x + Math.sin(inward) * off,
         d.pos.y + 1.62,
         d.pos.z + Math.cos(inward) * off,
-      );
+      ));
       m.renderOrder = 2;
       built.group.add(m);
     }
