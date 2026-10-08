@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1357,6 +1357,17 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     prop.group.name = 'wrong-room';
     prop.group.add(wr);
   }
+  // The words worked into the glass — a pin, a nail, the pressure
+  // changing mid-letter. Mirrors only; sits under the wrong-room pane.
+  if (spec.kind === 'mirror' && rng.bool(0.22)) {
+    const sw = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.MeshStandardMaterial({ map: scratchWriting(rng) ?? undefined, transparent: true, roughness: 0.3, metalness: 0.1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    sw.name = 'scratch-writing';
+    sw.userData.decalMat = true;
+    sw.position.set(0, 0.32, 0.045);
+    prop.group.add(sw);
+    if (!prop.group.name) prop.group.name = 'scratch-writing';
+  }
   // The wood keeps the water — rings where generations of glasses were
   // set down and one honest spill that soaked through the varnish.
   const TOPS: Partial<Record<PropSpec['kind'], number>> = {
@@ -1377,6 +1388,23 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     rs.rotation.z = rng.float() * Math.PI * 2;
     rs.position.set((rng.float() - 0.5) * 0.3, topY, (rng.float() - 0.5) * 0.15);
     prop.group.add(rs);
+  }
+  // The dust wrote the months — a date finger-traced through the film
+  // on a tabletop somebody never came back to wipe.
+  if (spec.kind in TOPS && rng.bool(0.16)) {
+    const dc = modelCollider(spec.kind);
+    const dustY = (dc?.[1] ?? TOPS[spec.kind as keyof typeof TOPS]!) + 0.005;
+    const dd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: dustDate(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    dd.name = 'dust-date';
+    dd.userData.decalMat = true;
+    dd.rotation.x = -Math.PI / 2;
+    dd.rotation.z = rng.float() * Math.PI * 2;
+    dd.position.set((rng.float() - 0.5) * 0.4, dustY, (rng.float() - 0.5) * 0.2);
+    prop.group.add(dd);
+    if (!prop.group.name) prop.group.name = 'dust-date';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {

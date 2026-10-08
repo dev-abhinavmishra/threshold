@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -811,6 +811,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const kp = new THREE.Mesh(texBox(port.width - 0.16, 0.3, 0.02), MAT.steelDark());
       kp.position.set(0, -0.88, 0.05);
       leaf.add(kp);
+    }
+    // The door was kicked in once — the split by the latch, the
+    // splinters still raised, the shoe shadow under the blow.
+    if (!industrial && rng.float() < 0.15) {
+      const ks = decalQuad(kickSplit(rng), 0.5, 0.75);
+      ks.name = 'kick-split';
+      ks.position.set(port.width / 2 - 0.5, -1.3, 0.052);
+      leaf.add(ks);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -1759,6 +1767,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const sl = group.children[group.children.length - 1];
         if (sl && !sl.name) sl.name = 'soot-stain';
       }
+      // The ceiling kept the smoke — the greasy film above where
+      // the fire ran, browner than the paint around it ever was.
+      if (rng.float() < 0.45) {
+        const ss = decalQuad(smokeStain(rng), 1.5 + rng.float() * 0.4, 1.5 + rng.float() * 0.4);
+        ss.name = 'smoke-stain';
+        ss.rotation.x = Math.PI / 2;
+        ss.rotation.z = rng.float() * Math.PI;
+        const hy = p.yaw ?? 0;
+        ss.position.set(p.x + Math.sin(hy) * 0.3, h - 0.058, p.z + Math.cos(hy) * 0.3);
+        group.add(ss);
+      }
       if (rng.float() >= 0.55) continue;
       const m = decalQuad(ashPile(rng), 0.9 + rng.float() * 0.4, 0.75 + rng.float() * 0.3);
       m.name = 'cold-hearth';
@@ -1773,6 +1792,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(m);
     }
 
+    // The curtains kept the sun — the wall stayed dark where a
+    // drape hung, bleached pale around its fold edges.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const dww: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const dAlong = dww === 'e' || dww === 'w' ? p.z : p.x;
+      wallDecal(dww, drapeGhost(rng), 0.6 + rng.float() * 0.15, 1.5 + rng.float() * 0.3,
+        dAlong + (rng.float() < 0.5 ? -1 : 1) * (0.8 + rng.float() * 0.25),
+        1.35 + rng.float() * 0.25);
+      const dg = group.children[group.children.length - 1];
+      if (dg && !dg.name) dg.name = 'drape-ghost';
+    }
+
     // The water line — a room that flooded once keeps the tide mark:
     // sediment band and a sharp top edge at baseboard height.
     const wetRoom = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
@@ -1784,6 +1818,30 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const wl = group.children[group.children.length - 1];
         if (wl && !wl.name) wl.name = 'waterline';
       }
+    }
+
+    // The count chalked a body — where someone was found, the
+    // outline stayed. Maintenance bones and the under rooms only.
+    if ((spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder) && rng.float() < 0.22) {
+      const bo = decalQuad(bodyOutline(rng), 1.0, 1.7);
+      bo.name = 'body-outline';
+      bo.rotation.x = -Math.PI / 2;
+      bo.rotation.z = rng.float() * Math.PI * 2;
+      bo.position.set((rng.float() - 0.5) * (w - 2.2), 0.0095, (rng.float() - 0.5) * (d - 2.2));
+      group.add(bo);
+    }
+
+    // The wall kept the fist — somewhere a blow landed at striking
+    // height: the knuckle ring, the plaster bulge, the cracks.
+    if (doorPositions.length > 0 && rng.float() < 0.35) {
+      const port = doorPositions[Math.floor(rng.float() * doorPositions.length)];
+      const lp2 = portLocalPos(port, w, d);
+      const along = port.wall === 'e' || port.wall === 'w' ? lp2.z : lp2.x;
+      wallDecal(port.wall, fistMark(rng), 0.62 + rng.float() * 0.14, 0.62 + rng.float() * 0.14,
+        along + (rng.float() < 0.5 ? -1 : 1) * (0.85 + rng.float() * 0.5),
+        1.4 + rng.float() * 0.3);
+      const fm = group.children[group.children.length - 1];
+      if (fm && !fm.name) fm.name = 'fist-mark';
     }
 
     // The inspector's tally — beside a hollow's seat, scratch-counts kept
@@ -2437,6 +2495,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const fy = p.yaw ?? 0;
         dh.position.set(p.x + Math.sin(fy) * 0.15, 0.0085, p.z + Math.cos(fy) * 0.15);
         group.add(dh);
+      }
+      // Under the bed — whatever the room kept pushed under the
+      // frame: a box, a case, the dust that never got swept.
+      if (p.kind === 'bed' && rng.float() < 0.35) {
+        const ub = decalQuad(underBed(rng), 0.95, 0.6);
+        ub.name = 'under-bed';
+        ub.rotation.x = -Math.PI / 2;
+        const by = p.yaw ?? 0;
+        ub.rotation.z = -by + (rng.float() - 0.5) * 0.3;
+        const side = rng.bool(0.5) ? 1 : -1;
+        ub.position.set(p.x + Math.cos(by) * 0.5 * side, 0.008, p.z - Math.sin(by) * 0.5 * side);
+        group.add(ub);
       }
       // The letters never sent — a dropped envelope where someone
       // slept, dressed, or was paid out.
