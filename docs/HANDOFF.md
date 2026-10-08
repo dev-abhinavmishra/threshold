@@ -5188,3 +5188,11 @@ Game.die() from the same five fields.
   stays light by design. No tuning needed — the dressing batch moved
   no dials.
 - npm run balance is the repeatable audit; run it at each round number.
+
+## sprint 441 — the route reads
+
+- Traffic-worn lanes on corridor/lobby floors (40% when an exit exists):
+  a pale strip from entry to first exit, width 0.8-1.1, length minus
+  door pads. rotation.z=atan2(ux,uz) maps texture +v to the walk
+  direction. Named 'worn-lane'.
+- Vitest 287: 'the route reads'. Gates: tsc, lint, 103/103.

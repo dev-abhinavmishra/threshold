@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The route reads — feet wear a lane where they always walk it: a
+    // pale traffic strip from the door you came in to the one you leave.
+    if (['corridor', 'lobby'].includes(spec.biome) && spec.exits.length > 0 && rng.float() < 0.4) {
+      const a = portLocalPos(spec.entry, w, d);
+      const b = portLocalPos(spec.exits[0], w, d);
+      const dx = b.x - a.x, dz = b.z - a.z;
+      const len = Math.hypot(dx, dz) - 1.4;
+      if (len > 1.2) {
+        const ux = dx / (len + 1.4), uz = dz / (len + 1.4);
+        const m = decalQuad(wornLane(rng), 0.8 + rng.float() * 0.3, len);
+        m.name = 'worn-lane';
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = Math.atan2(ux, uz);
+        m.position.set((a.x + b.x) / 2, 0.0064, (a.z + b.z) / 2);
+        group.add(m);
+      }
     }
 
     // The fan sheds — dust rings under ceiling fans and vents, what the

@@ -1933,3 +1933,18 @@ describe('the fan sheds (sprint 439)', () => {
     expect(falls, 'no dust falls').toBeGreaterThan(6);
   });
 });
+
+describe('the route reads (sprint 441)', () => {
+  it('corridors wear a traffic lane door to door', () => {
+    let lanes = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'worn-lane') lanes++; });
+      }
+    }
+    expect(lanes, 'no worn lanes').toBeGreaterThan(8);
+  });
+});

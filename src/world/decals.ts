@@ -1218,3 +1218,29 @@ export function dustFall(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** The traffic lane — the pale worn strip feet make on a route walked
+ * ten thousand times: slight sheen, dragged edges, gaps where boards
+ * took the wear instead. */
+export function wornLane(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 256, (ctx) => {
+    // long soft lane down v
+    for (let i = 0; i < 22; i++) {
+      const t = i / 22;
+      const w = 26 + Math.sin(t * Math.PI) * 14 + rng.float() * 6;
+      ctx.fillStyle = `rgba(150,142,126,${0.05 + rng.float() * 0.08})`;
+      ctx.beginPath();
+      ctx.ellipse(64 + (rng.float() - 0.5) * 10, 20 + t * 216, w / 2, 10 + rng.float() * 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // edge drags
+    ctx.strokeStyle = 'rgba(120,112,98,0.14)';
+    for (let s = -1; s <= 1; s += 2) {
+      ctx.lineWidth = 3 + rng.float() * 3;
+      ctx.beginPath();
+      ctx.moveTo(64 + s * 16, 30);
+      ctx.quadraticCurveTo(64 + s * (20 + rng.float() * 6), 128, 64 + s * 16, 226);
+      ctx.stroke();
+    }
+  });
+}
