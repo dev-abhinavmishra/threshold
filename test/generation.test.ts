@@ -2008,3 +2008,18 @@ describe('the mouth it eats from (sprint 445)', () => {
     expect(holes, 'no mouse holes').toBeGreaterThan(6);
   });
 });
+
+describe('the wall was opened (sprint 446)', () => {
+  it('service walls carry re-plastered chase patches', () => {
+    let patches = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'chase-patch') patches++; });
+      }
+    }
+    expect(patches, 'no chase patches').toBeGreaterThan(5);
+  });
+});

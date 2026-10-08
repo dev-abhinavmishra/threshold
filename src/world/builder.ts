@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1769,6 +1769,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         wallDecal(spot.wall, nailRow(rng), dw, dw * 0.6, spot.along, 1.6 + rng.float() * 0.25);
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'nail-row';
+      }
+    }
+
+    // The wall was opened — a wiring-chase patch, re-plastered: pale
+    // rectangle inside a hairline border crack.
+    if (['maintenance', 'records', 'corridor'].includes(spec.biome) && rng.float() < 0.3) {
+      const dw = 0.5 + rng.float() * 0.3;
+      const spot = pickWallSpot(dw);
+      if (spot) {
+        wallDecal(spot.wall, chasePatch(rng), dw, dw * (1.5 + rng.float() * 0.6), spot.along, 1.4 + rng.float() * 0.4);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'chase-patch';
       }
     }
 

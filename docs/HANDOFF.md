@@ -5227,3 +5227,10 @@ Game.die() from the same five fields.
   guest/lobby/records/maintenance): dark opening, gnawed rim, tooth
   nicks, crumb specks. Named 'mouse-hole'.
 - Vitest 291: 'the mouth it eats from'. Gates: tsc, lint, 107/107.
+
+## sprint 446 — the wall was opened
+
+- Re-plastered chase patches in maintenance/records/corridor (30% per
+  room): pale rectangle fill inside a hairline border crack with a sag
+  corner and dust track. Named 'chase-patch'.
+- Vitest 292: 'the wall was opened'. Gates: tsc, lint, 108/108.
