@@ -5514,6 +5514,26 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 476–478 — the sheets kept the shape, the flue stained & the doors dented the wall
+
+Sprint 476: `sheetShape` — sleeper outlines on bed/bedOld/daybed
+(~45%); `knotHoles` — plank seams + knot eyes on lived-in floors
+(~40%); `dustShaft` — light trapezoids + motes beside windows
+(~35%).
+
+Sprint 477: `flueStain` — soot columns above fireplaces (~50%);
+`labelGhost` — peeled-label grids on apothecary/pantry fronts
+(~45%); `candleDrip` — wax trails on candle/candelabra/candelabrum/
+mantelClock (~50%).
+
+Sprint 478: `plasterBulge` — damp blisters + crack crowns on
+non-lived-in walls (~55%); `mirrorBlind` — silvering-loss tarnish
+on mirrors (~40%); `doorDent` — impact pits behind door swings
+(~30% per doorPosition).
+
+Gates: tsc, lint, generation tests (9 new cases, 401 total).
+Full suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 473–475 — the shelves kept the gaps, the drawers kept their slits & the hearth spilled
 
 Sprint 473: `bookGap` — dark slots in shelf rows (bookshelf/

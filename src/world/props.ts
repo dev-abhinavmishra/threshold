@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1632,6 +1632,62 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ds.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.1) * (0.3 + rng.float() * 0.5), (dc?.[2] ?? 0.4) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'drawer-slit';
+  }
+  // The sheets kept the shape — the sleeper's faint outline on
+  // mattresses and beds that kept one.
+  if ((spec.kind === 'bed' || spec.kind === 'bedOld' || spec.kind === 'daybed') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const sh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.62, 0.62),
+      new THREE.MeshStandardMaterial({ map: sheetShape(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sh.name = 'sheet-shape';
+    sh.userData.decalMat = true;
+    sh.rotation.x = -Math.PI / 2;
+    sh.rotation.z = rng.float() * Math.PI * 2;
+    sh.position.set(0, (dc?.[1] ?? 0.5) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(sh);
+    if (!prop.group.name) prop.group.name = 'sheet-shape';
+  }
+  // The labels peeled — pale ghost grids on apothecary shelves.
+  if ((spec.kind === 'apothecaryCabinet' || spec.kind === 'pantryShelf') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const lg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.42),
+      new THREE.MeshStandardMaterial({ map: labelGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    lg.name = 'label-ghost';
+    lg.userData.decalMat = true;
+    lg.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(lg);
+    if (!prop.group.name) prop.group.name = 'label-ghost';
+  }
+  // The candles dripped — wax trails down holders and pools at
+  // their bases.
+  const CANDLES: ReadonlySet<PropSpec['kind']> = new Set(['candle', 'candelabra', 'candelabrum', 'mantelClock']);
+  if (CANDLES.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const cd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.42),
+      new THREE.MeshStandardMaterial({ map: candleDrip(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cd.name = 'candle-drip';
+    cd.userData.decalMat = true;
+    cd.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(cd);
+    if (!prop.group.name) prop.group.name = 'candle-drip';
+  }
+  // The mirrors blinded — silvering lost to tarnish and fog.
+  if (spec.kind === 'mirror' && rng.bool(0.4)) {
+    const mb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: mirrorBlind(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    mb.name = 'mirror-blind';
+    mb.userData.decalMat = true;
+    mb.position.set((rng.float() - 0.5) * 0.15, 0.05, 0.048);
+    prop.group.add(mb);
+    if (!prop.group.name) prop.group.name = 'mirror-blind';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
