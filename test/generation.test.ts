@@ -1424,3 +1424,31 @@ describe('the undertow (sprint 408)', () => {
     }
   });
 });
+
+describe('the set-piece approach (sprint 409)', () => {
+  it('rooms before chases, the lens hall and baggage bleed that piece\u2019s tells', () => {
+    const MAP: Record<string, string> = {
+      'ms-chase1': 'pursuer', 'ms-chase2': 'pursuer',
+      'ms-lens-hall': 'curator', 'ms-baggage': 'hauler',
+    };
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (let i = 0; i + 1 < route.rooms.length; i++) {
+        const next = route.rooms[i + 1].templateId;
+        const want = MAP[next];
+        if (want && !route.rooms[i].templateId.startsWith('ms-')) {
+          expect(route.rooms[i].milestoneTell, `${seed} room ${route.rooms[i].index} before ${next}`).toBe(want);
+          expect(route.rooms[i].foreshadow, `${seed} room ${route.rooms[i].index} double-tells`).toBeUndefined();
+        } else {
+          expect(route.rooms[i].milestoneTell, `${seed} room ${route.rooms[i].index} stray tell`).toBeUndefined();
+        }
+      }
+      // every keyed milestone actually has an approach room marked
+      for (const ms of Object.keys(MAP)) {
+        const pos = route.rooms.findIndex((r) => r.templateId === ms);
+        expect(pos, `${seed} missing ${ms}`).toBeGreaterThan(0);
+        expect(route.rooms[pos - 1].milestoneTell, `${seed} approach to ${ms}`).toBe(MAP[ms]);
+      }
+    }
+  });
+});

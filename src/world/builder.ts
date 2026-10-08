@@ -1396,11 +1396,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(m);
     }
 
-    // The house tells on itself — the entity scheduled in the NEXT room
-    // leaves its mark in this one: prints, scuffs, drag-lines a careful
-    // player learns to read before the door.
-    if (room.foreshadow && rng.float() < 0.8) {
-      for (const t of FORESHADOW_TELLS[room.foreshadow] ?? []) {
+    // The house tells on itself — the entity or set piece in the NEXT
+    // room leaves its mark in this one: prints, scuffs, drag-lines a
+    // careful player learns to read before the door.
+    const approachTell = room.foreshadow ?? room.milestoneTell;
+    if (approachTell && rng.float() < 0.8) {
+      for (const t of FORESHADOW_TELLS[approachTell] ?? []) {
         for (let n = 0; n < (t.n ?? 1); n++) {
           if (t.wall) {
             const spot = pickWallSpot(t.w);
