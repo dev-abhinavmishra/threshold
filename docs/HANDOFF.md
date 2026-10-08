@@ -4324,3 +4324,18 @@ Game.die() from the same five fields.
   through a stuck door is the wanted episode's last unpriced gap —
   counters were taxed (s353/354) but passage wasn't.
 - Gates: tsc, lint, vitest 255, sim 5/5.
+
+## sprint 368 — the face buys nothing past six lines
+
+- `clerkRefuses(roomIndex, pos)` — one refusal check behind buy/ask/
+  purse: cold counter folds (`closedCounters`), and `unpaidHeld >= 6`
+  closes EVERY staffed counter to the named face — `[she reads the
+  register — the face buys nothing past six lines · the desk is the
+  only answer]`. The register's escalation now matches the under's:
+  deep debt ends service, not just prices it.
+- askReg and slip-back deliberately stay open — a readout is
+  information, and undoing the crime isn't commerce. The register
+  readout declares the tier: '…the counters are closed to you' at 6+.
+- The only house relief past six lines: the Detective's desk or the
+  affidavit's −1. Reaching it takes 3 rifled tills or 6 witness lines.
+- Gates: tsc, lint, vitest 255, sim 5/5.
