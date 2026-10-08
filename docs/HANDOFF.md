@@ -6362,3 +6362,17 @@ boards' tax can wake what a plain toss never could. Cooldown-spent reads
 Focus contention hasn't surfaced in tests but the lattice is dense —
 next verb should weigh a new gate (locked, held, room kind) not a 6th
 same-gate anchor.
+
+## Sprint 448 — the eye at the crack
+
+The stoop's consequence, in the peekEye pattern: when a live threat is
+already within 2.6m of the leaf on the far side, a seeded per-door roll
+(0.22, roomStream 'scare') can put ITS eye to the gap — '[a low eye meets
+yours at the crack — it was watching]' (danger). The price is honest:
+your flinch is a real UNSOURCED 'impact' emit at YOUR position (0.6 ×
+wantedPull) — it can rouse what your listen never could. One roll per
+door per run (`stoopEyeUsed`, cleared on startRun, not checkpointed —
+the eye either was there or it wasn't, and a death is a new door).
+**Notes:** the roll fires inside stoopUnder BEFORE the lamp/proximity
+read, so a lit lamp's presence is never masked by the eye. Eye odds
+only while a live threat is close — an empty room can't sprout one.

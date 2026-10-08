@@ -341,6 +341,8 @@ export class Game {
   private peek: { eye: Vec3; dir: Vec3; t: number; baseFov: number; doorKey: string; eyeDone: boolean } | null = null;
   private peekEyeDecisions = new Map<string, boolean>();
   private peekEyeUsed = new Set<string>();
+  /** Per-door 'was an eye already at the crack' roll for the stoop (s448). */
+  private stoopEyeUsed = new Set<string>();
   private peekEye: THREE.Group | null = null;
   private composer: EffectComposer | null = null;
   private grainUniforms: Record<string, THREE.IUniform> | null = null;
@@ -592,6 +594,7 @@ export class Game {
     this.peek = null;
     this.peekEyeDecisions.clear();
     this.peekEyeUsed.clear();
+    this.stoopEyeUsed.clear();
     this.chalkMarks.clear();
     this.visitedRooms.clear();
     this.listenAcc.clear();
@@ -1688,6 +1691,20 @@ export class Game {
       if (ri < 0 || roam[ri] !== target) continue;
       const d = v3dist(tp, door.pos);
       if (d < best) best = d;
+    }
+    // sprint 448 — the crack watches back: when a live thing is already
+    // close to the leaf, a seeded per-door decision can put ITS eye to the
+    // gap instead of its shadow. One roll per door — the eye either was
+    // there or it wasn't.
+    if (best <= 2.6 && !this.stoopEyeUsed.has(door.id)) {
+      const eye = this.streams.roomStream('scare', this.currentRoom * 131 + 97).bool(0.22);
+      this.stoopEyeUsed.add(door.id);
+      if (eye) {
+        // the flinch is real: your scramble back off the crack is genuine
+        // noise at YOUR position — unsourced, so the house can rouse on it
+        this.sound.emit({ x: this.player.pos.x, y: 0.3, z: this.player.pos.z, intensity: 0.6 * this.wantedPull, category: 'impact', caption: '' });
+        return { text: '[a low eye meets yours at the crack — it was watching]', sev: 'danger' as const };
+      }
     }
     // and the count's own lamp — its low glow reads through the crack even
     // in a room too dark to show a shadow
