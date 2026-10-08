@@ -427,4 +427,16 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('this.nextToss');
     expect(game).toContain("category: 'distraction'");
   });
+
+  it('the seam speaks — the call lands at the shared leaf itself (sprint 465)', () => {
+    const interaction = readFileSync('src/player/interaction.ts', 'utf8');
+    const game = readFileSync('src/game/Game.ts', 'utf8');
+    expect(interaction).toContain("kind: 'call'");
+    expect(interaction).toContain('Call through the crack');
+    expect(game).toContain("case 'call'");
+    // the voice emits AT the leaf — heard in both rooms — and shares the
+    // free-lure channel's breath with the pebble
+    expect(game).toContain('x: door.pos.x, y: 0.15, z: door.pos.z');
+    expect(game).toContain('this.nextToss');
+  });
 });

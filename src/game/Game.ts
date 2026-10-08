@@ -3335,6 +3335,22 @@ export class Game {
         this.sound.emit({ x, y: 0.1, z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
         return;
       }
+      case 'call': {
+        // sprint 465 — the seam speaks: your voice goes under the leaf and
+        // lands AT the shared door — a tighter pull than the pebble's toss.
+        // It is heard in BOTH rooms: the far side hears a whisper at its
+        // door, and your own side hears you talking to the seam. Shares the
+        // free-lure channel's breath with the pebble.
+        if (this.clock.time < this.nextToss) {
+          this.cue('door-locked', it.pos, '[your breath needs a moment — the seam heard you already]', 'warn');
+          return;
+        }
+        this.nextToss = this.clock.time + 8;
+        const door = it.data as Door;
+        this.cue('whisper-voice', door.pos, '[your voice goes under the leaf — a whisper at its foot]', 'warn');
+        this.sound.emit({ x: door.pos.x, y: 0.15, z: door.pos.z, intensity: 0.6 * this.wantedPull, category: 'distraction', caption: '' });
+        return;
+      }
       case 'brace': {
         // Brace the whole doorway cluster: your weight on this leaf holds
         // both sides. Released by stepping away, or by opening it yourself.
