@@ -3743,3 +3743,17 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   un-primes after.
 - Gates: tsc, lint, 237 vitest, 5-seed sim, doors 1/1 (+primed leg),
   build.
+  undercast 11/11 (tallySign + docketSign), build.
+## sprint 402 — calls closed, host pick extracted (sheet verb → s339)
+
+- DESIGN_CALLS.md deleted — all three calls settled and built in 401.
+- pickWantedHosts extracted to src/game/wanted.ts (pure: downstream
+  rooms only, first crew-board prop per room, cap 5, yaw-projected)
+  with 6 unit tests; raiseWanted calls it.
+- SUPERSEDED: my 'wantedSheet' read verb dropped — sibling sprint 339
+  landed 'Read the wanted sheet' (kind 'wanted', room-scoped host
+  lookup, priority 1, y=0.75) first; theirs stays end-to-end.
+- Gates: tsc, lint, vitest scoped (10/10) — green.
+||||||| 949df78
+  undercast 11/11 (tallySign + docketSign), build.
+||||||| f7fea37

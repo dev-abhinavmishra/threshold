@@ -24,6 +24,7 @@ import { v3, v3copy, v3dist, aabb, aabbContainsPoint, clamp, type Vec3, type Aab
 import { generateRoute, type GeneratedRoute } from '../world/generator';
 import { plateMaterial } from '../world/builder';
 import { wantedNotice } from '../world/decals';
+import { pickWantedHosts } from './wanted';
 import { buildProp } from '../world/props';
 import { RoomStreamer } from '../world/streamer';
 import { preloadModels, modelInstance } from '../world/modelLibrary';
@@ -3922,19 +3923,8 @@ export class Game {
    *  the tally is settled (ctx.wanted widens their notice reach). */
   private raiseWanted(): void {
     this.wantedActive = true;
-    const HOSTS = new Set(['keyCabinet', 'cabinet', 'locker', 'stackShelf', 'cubicle']);
-    const rooms = this.activeRooms();
-    let marked = 0;
-    for (let i = this.currentRoom + 1; i < rooms.length && marked < 5; i++) {
-      const r = rooms[i];
-      const host = r.spec?.props.find((pp) => HOSTS.has(pp.kind));
-      if (!host) continue;
-      const cyr = Math.cos(r.yaw), syr = Math.sin(r.yaw);
-      this.wantedRooms.set(i, {
-        x: r.origin.x + host.x * cyr + host.z * syr,
-        z: r.origin.z - host.x * syr + host.z * cyr,
-      });
-      marked++;
+    for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
+      this.wantedRooms.set(h.roomIdx, { x: h.x, z: h.z });
     }
     this.cue('chalk-mark', null, '[sheets go up on the boards ahead — your hands are named]', 'warn');
   }
