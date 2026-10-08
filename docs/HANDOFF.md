@@ -4710,3 +4710,20 @@ Game.die() from the same five fields.
   `room.spec.props` kinds + a mesh count.
 - Vitest 263: 'the lodge keeps watch'. Gates: tsc, lint, sim 5/5.
   Content addition, single template — no e2e leg.
+||||||| 31fdb2e
+
+## sprint 383 — the clerk's hands take it too / the till keeps count
+
+- The Auditor's `collect()` was the one catch that didn't strip:
+  the lamp, the swamper, and the laundress all seize the marked
+  take under `wanted`, but the tally's own clerk laid hands on a
+  debtor and only marked refusal. Now his catch seizes too — same
+  wanted gate, same tag on the nearest cage, its own cue.
+- `coinKept` — the count's running tally of coin it swallowed
+  outright (a cut tag's forfeit, a rotted tag's loss). It never
+  comes back so the books remember it: rides the checkpoint and
+  the epitaph reads 'C of your coins stay in the count's till'
+  (a live tag's listed coin counts too — dead or at the door,
+  the tag rots and the count keeps it).
+- Gates: tsc, lint, vitest (+1 auditor collect-seize spec), sim,
+  build. Locker leg untouched — mechanic sits upstream of it.

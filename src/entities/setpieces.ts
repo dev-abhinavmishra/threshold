@@ -1224,6 +1224,11 @@ export class Auditor extends Entity {
     c.sound.emit({ x: this.pos.x, y: 1, z: this.pos.z, intensity: 0.45, category: 'impact', caption: '[the book slaps shut]', source: 'auditor' });
     c.damagePlayer(this.tuning.damage, 'auditor', 'The Auditor collects in kind — settle his ledger at the desk, or carry your hands past a friendlier door.');
     c.cue('chalk-mark', this.pos, '[the clerk marks your refusal — the tally stands]', { severity: 'warn' });
+    // the boards name you — his hands strip the marked take for the
+    // count's locker, same as the lamp and the wash do
+    if (this.ctx.wanted?.() && c.seizeMarked?.()) {
+      c.cue('chalk-mark', this.pos, '[his hands take what the sheets describe — a tag hangs on the nearest cage for it]', { severity: 'warn' });
+    }
     // a beaten debtor walks home; the debt still stands for the next clerk
     this.pursuing = false;
     this.demanded = false;

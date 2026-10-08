@@ -141,6 +141,8 @@ export interface BooksClosed {
   hotGoods: number;
   /** wares still hanging in the count's locker at the end */
   seized?: number;
+  /** coin the count swallowed outright — cut tags, rotted tags */
+  coinKept?: number;
 }
 
 export interface CheckpointSave {
@@ -183,6 +185,8 @@ export interface CheckpointSave {
   // what a rotted tag fed the count — fenced goods waiting on the
   // Broker's shelf ride the checkpoint like the debts that put them there
   fencedTake?: { id: ItemId; count: number }[];
+  // coin the count already swallowed — kept outright, no road back
+  coinKept?: number;
   // chalk tally marks the player left on doors — authored state, not
   // a consumable: reloading shouldn't erase what they drew
   chalkMarks?: [string, { x: number; y: number; z: number; yaw: number; label: string }][];
