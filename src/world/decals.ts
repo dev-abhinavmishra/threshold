@@ -2481,3 +2481,122 @@ export function drapeGhost(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Switch polish — the grease halo a decade of hands leaves around a
+ * switch or latch: a dark smudge core, a lighter wipe ring. */
+export function switchPolish(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32 + (rng.float() - 0.5) * 8;
+    const cy = 32 + (rng.float() - 0.5) * 8;
+    // wipe ring — the cleaner reached out to here, rarely past it
+    const ring = ctx.createRadialGradient(cx, cy, 8, cx, cy, 26);
+    ring.addColorStop(0, 'rgba(70,60,46,0)');
+    ring.addColorStop(0.7, 'rgba(216,206,184,0.18)');
+    ring.addColorStop(1, 'rgba(216,206,184,0)');
+    ctx.fillStyle = ring;
+    ctx.fillRect(0, 0, 64, 64);
+    // the smudge — layered palm-grease, darkest dead centre
+    const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, 13);
+    core.addColorStop(0, 'rgba(56,46,36,0.5)');
+    core.addColorStop(0.6, 'rgba(56,46,36,0.28)');
+    core.addColorStop(1, 'rgba(56,46,36,0)');
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 14, 17, (rng.float() - 0.5) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // finger smear trails — the swipe arcs of reaching hands
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(66,55,42,${0.1 + rng.float() * 0.12})`;
+      ctx.lineWidth = 2 + rng.float() * 1.5;
+      const a = -0.6 + i * 0.24 + rng.float() * 0.1;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, 15 + i, a, a + 0.5 + rng.float() * 0.4);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Growth marks — the pencil ticks a parent kept on the door frame:
+ * short ruled lines ascending, a year scrawled beside a few. */
+export function growthMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 128, (ctx) => {
+    ctx.strokeStyle = 'rgba(52,44,34,0.75)';
+    ctx.lineCap = 'round';
+    let y = 108;
+    const ticks = 4 + Math.floor(rng.float() * 5);
+    for (let i = 0; i < ticks; i++) {
+      const tx = 18 + (rng.float() - 0.5) * 6;
+      ctx.lineWidth = 1.3 + rng.float() * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(tx, y);
+      ctx.lineTo(tx + 14 + rng.float() * 6, y + (rng.float() - 0.5) * 1.5);
+      ctx.stroke();
+      // a tiny year beside one in three
+      if (rng.bool(0.35)) {
+        ctx.lineWidth = 0.8;
+        ctx.strokeStyle = 'rgba(52,44,34,0.5)';
+        ctx.beginPath();
+        ctx.moveTo(tx + 18, y - 3); ctx.lineTo(tx + 26, y - 3 + rng.float());
+        ctx.moveTo(tx + 18, y + 1); ctx.lineTo(tx + 24, y + 1);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(52,44,34,0.75)';
+      }
+      y -= 12 + rng.float() * 9;
+      if (y < 14) break;
+    }
+    // the last mark sits highest and is freshest — darker, surer
+    ctx.strokeStyle = 'rgba(40,34,26,0.85)';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(16, y + 4); ctx.lineTo(34, y + 4);
+    ctx.stroke();
+  });
+}
+
+/** Sill damp — the rain the sill kept letting in: damp fans running
+ * down from a leak line, tide edge where the plaster stayed wet. */
+export function sillDamp(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const top = 10 + rng.float() * 6;
+    // damp fans — soft dark streaks splaying downward
+    const fans = 4 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < fans; i++) {
+      const fx = 12 + (i / fans) * 74 + (rng.float() - 0.5) * 8;
+      const flen = 40 + rng.float() * 60;
+      const g = ctx.createLinearGradient(fx, top, fx + (rng.float() - 0.5) * 10, top + flen);
+      g.addColorStop(0, 'rgba(84,72,56,0.4)');
+      g.addColorStop(0.75, 'rgba(96,84,64,0.12)');
+      g.addColorStop(1, 'rgba(96,84,64,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(fx - 3, top);
+      ctx.lineTo(fx + 3, top);
+      ctx.lineTo(fx + 6 + rng.float() * 4, top + flen);
+      ctx.lineTo(fx - 6 - rng.float() * 4, top + flen);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // the tide edge — a darker wavy line where the wet stopped
+    ctx.strokeStyle = 'rgba(70,58,44,0.4)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    const tideY = 84 + rng.float() * 20;
+    ctx.moveTo(6, tideY);
+    for (let x = 6; x < 90; x += 8)
+      ctx.quadraticCurveTo(x + 4, tideY + (rng.float() - 0.5) * 5, x + 8, tideY + (rng.float() - 0.5) * 3);
+    ctx.stroke();
+    // the bloom beneath — plaster that never dried pale
+    const bloom = ctx.createLinearGradient(0, tideY, 0, 128);
+    bloom.addColorStop(0, 'rgba(160,150,130,0.2)');
+    bloom.addColorStop(1, 'rgba(160,150,130,0)');
+    ctx.fillStyle = bloom;
+    ctx.fillRect(6, tideY, 84, 128 - tideY);
+    // mineral speckles in the tide
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(200,194,180,${0.12 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, tideY - 4 + rng.float() * 14, 0.5 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
