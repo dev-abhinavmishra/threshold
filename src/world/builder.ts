@@ -1881,9 +1881,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     unlit: [['paperScatter', 0.8], ['carton', 0.2]],
     gallery: [['paperScatter', 0.5], ['books', 0.3], ['carton', 0.2]],
     maintenance: [['carton', 0.4], ['paperScatter', 0.25], ['rubblePile', 0.2], ['bleachBottle', 0.15]],
+    // the under drifts too — service-camp debris on top of the litter
+    // drift: work-cartons, ration bottles and cans, broken rubble
+    underscript: [['carton', 0.3], ['papers', 0.3], ['wineBottles', 0.15], ['rubblePile', 0.15], ['foodCans', 0.1]],
   };
   const clutter = CLUTTER_BY_BIOME[spec.biome];
-  if (!isUnder && clutter) {
+  if (clutter && (!isUnder || spec.biome === 'underscript')) {
     const n = Math.min(7, Math.floor((w * d) / 15) + rng.int(0, 2));
     for (let i = 0; i < n; i++) {
       const cx = (rng.float() - 0.5) * (w - 1.6);

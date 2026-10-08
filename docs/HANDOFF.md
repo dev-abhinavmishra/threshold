@@ -4599,3 +4599,20 @@ Game.die() from the same five fields.
   cover (the 0.45 gate holds).
 - Gates: tsc, lint, vitest 259, sim 5/5. Visual dressing only —
   no e2e leg.
+
+## sprint 417 — the under drifts too
+
+- The s415 clutter pass was gated `!isUnder` — under rooms got
+  paper litter drift but never bulky floor dressing, and the
+  audit showed the thin end is all under: u-dead-end-loot ~7,
+  partition-maze ~9, stair-landing 9, print-shop 10.
+  `CLUTTER_BY_BIOME` gains an 'underscript' vocabulary — camp
+  debris the upper floors never carry: cartons, papers, ration
+  bottles/cans, rubble piles (all wall-biased bar papers). The
+  gate now keys on the biome entry, not the floor: under rooms
+  dress like everyone else.
+- Vitest 260: 'the under drifts too' builds every under room
+  across seeds — carton/papers land, plus at least one camp kind
+  (wineBottles/foodCans/rubblePile).
+- Gates: tsc, lint, vitest 260, sim 5/5. Visual dressing only —
+  no e2e leg.
