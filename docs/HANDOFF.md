@@ -5514,6 +5514,27 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 479–481 — the taps calcified, the bells rusted dumb & the webs veiled the tops
+
+Sprint 479: `tapCalc` — lime crust + verdigris on basin/tap fronts
+(~50%); `rustHalo` — oxidation rings around grate drains (~50%);
+`porcelainCraze` — crackle lines + rust bleeds on basins (~40%).
+Also fixed the sibling's tsc break in e2e/doors.spec.ts:267
+(door?.pos / door?.yaw null-safe — it had landed on main).
+
+Sprint 480: `hookSag` — plaster pull-halos under ceiling/meat
+hooks (~50%); `chainShine` — worn bright lines on chain/rope props
+(~40%); `ropeFray` — snapped fibers on barrier ropes (~45%).
+
+Sprint 481: `leafLitter` — blown litter under broken windows
+(~30%); `bellRose` — servant-bell rosettes high on lived-in walls
+(~30%); `webDrape` — spider fans bridging tall furniture and walls
+(~40%).
+
+Gates: tsc (incl. doors.spec fix), lint, generation tests (9 new
+cases, 410 total). Full suite + sim + build before push.
+Dressing only — no e2e leg.
+
 ## Sprint 476–478 — the sheets kept the shape, the flue stained & the doors dented the wall
 
 Sprint 476: `sheetShape` — sleeper outlines on bed/bedOld/daybed
