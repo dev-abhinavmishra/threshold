@@ -162,3 +162,10 @@ pick; deciles hold the safe 0-9 opening. Under runs 62-73 scheduled per
 121 by design. Newer cast all appear on real seeds; editor pinned at 1,
 laundress 0-2 (flooded-only), detective/inspector 1-3. No tuning needed —
 rerun after roster or pacing changes.
+
+## Third count (sprint 418 — `npm run balance`)
+
+Post-379 roster still holds: main maxGap ≤9 (sable 6, moth 9), under
+≤6, ~19-20 distinct ids per main seed, no dominant pick, deciles hold
+the safe 0-9 opening. Under: redline/margin/stillframe top as designed,
+editor pinned at 1, laundress 0-2. No tuning needed.

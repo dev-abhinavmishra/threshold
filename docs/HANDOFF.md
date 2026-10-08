@@ -4616,3 +4616,11 @@ Game.die() from the same five fields.
   (wineBottles/foodCans/rubblePile).
 - Gates: tsc, lint, vitest 260, sim 5/5. Visual dressing only —
   no e2e leg.
+
+## sprint 418 — the third count
+
+- Periodic balance re-audit after the sibling's 378/379 locker-count
+  batch: main maxGap ≤9, under ≤6, ~19-20 distinct ids per seed, no
+  dominant pick, safe opening decile holds, editor still pinned at 1.
+  Numbers appended to BALANCE.md. No tuning needed.
+- Gates: balance output only — docs sprint.
