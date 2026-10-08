@@ -139,6 +139,8 @@ export interface BooksClosed {
   asks: number;
   hotCoin: number;
   hotGoods: number;
+  /** wares still hanging in the count's locker at the end */
+  seized?: number;
 }
 
 export interface CheckpointSave {
