@@ -4509,3 +4509,17 @@ Game.die() from the same five fields.
   asserts strip→locker→minted verb. vitest spec asserts the hook
   fires once per dispatch.
 - Gates: tsc, lint, vitest 255, sim 5/5, checker leg green, build.
+
+## sprint 379 — the tag rots
+
+- The count's locker was a free store — seized goods hung claimable
+  forever. Now `seizedFuse` (300s) ticks down: at 60s a warn cue
+  ('[the tag's ink is fading — the count prices patience]') + the
+  book readout gains '· the ink is fading'; at 0 the tag reads
+  settled, the count keeps the goods, the verb is swept.
+- Honest both ways: a fresh catch re-hangs fresh ink (fuse restarts
+  even when the take joins a standing locker), and the fuse rides
+  the checkpoint — a reload can't launder a rotting tag.
+- e2e: the locker leg's new rot phase seizes, shortens the fuse past
+  the fade line, asserts fading→fenced→verb-gone.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.

@@ -113,6 +113,11 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
 /** Pipe-family props a flooded room's water can be drained through. */
 const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
 
+/** The count's locker: an unclaimed tag rots — the count fences the
+ *  goods when the ink dries. Fading is told a minute out. */
+const SEIZED_FUSE_S = 300;
+const SEIZED_FADE_S = 60;
+
 const ROUSED_LINES: Record<EntityId, string> = {
   sweep: '[floor-creaks racing the boards — it heard you]',
   reprise: '[the creaking doubles back — it heard you]',
@@ -713,6 +718,9 @@ export class Game {
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
     this.seizedAt = cp?.seizedTake
       ? { x: cp.seizedTake.x, y: cp.seizedTake.y, z: cp.seizedTake.z } : null;
+    // the fuse rides too — a reload can't launder a rotting tag
+    this.seizedFuse = cp?.seizedTake?.fuse ?? 0;
+    this.seizedFading = false;
     this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1046,6 +1054,11 @@ export class Game {
    *  claim on crew-held effects: priced, filed, counted like any bag. */
   private seizedTake: { id: ItemId; count: number }[] = [];
   private seizedAt: { x: number; y: number; z: number } | null = null;
+  // sprint 379 — the tag rots: the count fences an unclaimed locker
+  // after a fuse. Honest to a fault: the ink fading is cued and the
+  // book readout says so while it can still be answered
+  private seizedFuse = 0;
+  private seizedFading = false;
   /** Boards the player tore mid-episode — the clerk re-pins THESE
    *  slots, so a partial tear is answered like a clean sweep. */
   private bareBoards = new Map<number, { x: number; z: number }>();
@@ -1076,6 +1089,10 @@ export class Game {
     if (items.length === 0) return;
     // one locker per run — a second catch doesn't re-hang the tag at a
     // nearer cage while the first still claims; the take just joins it
+    // a fresh catch hangs fresh ink — the fuse restarts even when the
+    // take joins a locker that already stands
+    this.seizedFuse = SEIZED_FUSE_S;
+    this.seizedFading = false;
     if (this.seizedAt) {
       this.seizedTake.push(...items);
       return;
@@ -2362,7 +2379,9 @@ export class Game {
         // the book knows the locker too — a pending seize tag reads
         // through the same paid readout instead of only at the cage
         const locker = this.seizedTake.reduce((n, s) => n + s.count, 0);
-        const lockerBit = locker > 0 ? ` · a tag keeps ${locker} of yours at the cages` : '';
+        const lockerBit = locker > 0
+          ? ` · a tag keeps ${locker} of yours at the cages${this.seizedFuse <= SEIZED_FADE_S ? ' · the ink is fading' : ''}`
+          : '';
         this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
           ? '[the book holds one line on you — this one]'
           : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}]`);
@@ -2785,6 +2804,8 @@ export class Game {
         for (const s of this.seizedTake) this.giveItem(s.id, s.count);
         this.seizedTake = [];
         this.seizedAt = null;
+        this.seizedFuse = 0;
+        this.seizedFading = false;
         this.dynamicInteractables = this.dynamicInteractables.filter((x) => x.id !== it.id);
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
@@ -4608,7 +4629,8 @@ export class Game {
       wardArmed: this.wardArmed,
       seizedTake: this.seizedAt && this.seizedTake.length > 0
         ? { items: this.seizedTake.map((s) => ({ ...s })),
-            x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z }
+            x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z,
+            fuse: this.seizedFuse }
         : undefined,
       chalkMarks: [...this.chalkMarks].map(
         ([k, v]): [string, { x: number; y: number; z: number; yaw: number; label: string }] =>
@@ -5121,6 +5143,23 @@ export class Game {
         this.bareBoards.clear();
         this.wantedRepostT = 0;
         this.cue('chalk-mark', null, '[fresh sheets go up on the boards ahead — the clerk has more paper]', 'warn');
+      }
+    }
+
+    // the tag rots — the count fences an unclaimed locker when its
+    // ink dries. The fading is told while it can still be answered
+    if (this.seizedTake.length > 0) {
+      this.seizedFuse -= dt;
+      if (!this.seizedFading && this.seizedFuse <= SEIZED_FADE_S) {
+        this.seizedFading = true;
+        this.cue('chalk-mark', this.seizedAt, "[the tag's ink is fading — the count prices patience]", 'warn');
+      }
+      if (this.seizedFuse <= 0) {
+        this.seizedTake = [];
+        this.seizedAt = null;
+        this.seizedFading = false;
+        this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('seized-claim'));
+        this.cue('chalk-mark', null, '[the tag reads settled — the count keeps the goods]', 'warn');
       }
     }
 

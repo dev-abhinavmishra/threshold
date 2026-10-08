@@ -1580,7 +1580,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       entityCtx(): { seizeMarked(): boolean };
       seizedAt: { x: number; y: number; z: number } | null;
       seizedTake: { id: string; count: number }[];
-      wantedActive: boolean;
+      wantedActive: boolean; seizedFuse: number;
       dynamicInteractables: { id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
       interaction: { focused?: { prompt?: string; kind?: string } };
       input: { interactPressed: boolean };
@@ -1706,9 +1706,28 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       ga.wantedActive = false;
       ga.unpaidTheft = 0;
     }
+    // sprint 379 — the tag rots: a third catch whose ink dries is
+    // fenced by the count — fading told while it can still be answered
+    let rotted = false, fadingSeen = false, fencedSeen = false;
+    ga.inventory.push({ id: 'doorChock', count: 1 });
+    ga.hotItems = new Set(['doorChock']);
+    ga.entityCtx().seizeMarked();
+    ga.seizedFuse = 61; // cross the fade line on the next tick
+    for (let f = 0; f < 80 && !fadingSeen; f++) {
+      g.frame();
+      fadingSeen = caps.some((c) => /ink is fading/.test(c));
+    }
+    ga.seizedFuse = 1;
+    for (let f = 0; f < 40 && !fencedSeen; f++) {
+      g.frame();
+      fencedSeen = caps.some((c) => /count keeps the goods/.test(c));
+    }
+    rotted = ga.seizedTake.length === 0 && ga.seizedAt === null
+      && !ga.dynamicInteractables.some((x) => x.id.startsWith('seized-claim'));
     return { stage: 'done' as const, didSeize, spared, stripped,
       minted: !!verb, prompt, seen, claimed, filed, cap,
       joined, namedFiled, namedCap, lockerPos, seen2,
+      rotted, fadingSeen, fencedSeen,
       seizedN: ga.seizedTake.length,
       spentMarg: ga.marginalia,
       caps: caps.slice(-6) };
@@ -1727,6 +1746,10 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.joined, JSON.stringify(result)).toBe(true); // second catch joins the tag, no re-hang
   expect(result.namedFiled).toBe(2);    // the sheets name you — the tag files double
   expect(result.namedCap).toMatch(/name twice/);
+  // sprint 379 — the rot: fading told, then the count keeps the goods
+  expect(result.fadingSeen, JSON.stringify(result)).toBe(true);
+  expect(result.fencedSeen, JSON.stringify(result)).toBe(true);
+  expect(result.rotted, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
 
