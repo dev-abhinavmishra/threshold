@@ -132,6 +132,43 @@ export function poster(rng: Rng): THREE.Texture | null {
     // corner wear
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(18, 0); ctx.lineTo(0, 22); ctx.fill();
+    // tape — yellowed masking strips on the top corners
+    for (const tx of [4, 106]) {
+      if (rng.bool(0.75)) {
+        ctx.save();
+        ctx.translate(tx + 8, 0);
+        ctx.rotate((rng.float() - 0.5) * 0.5);
+        ctx.fillStyle = 'rgba(198,186,150,0.55)';
+        ctx.fillRect(-3, -4, 18, 14);
+        ctx.restore();
+      }
+    }
+    // a lifted lower corner — peel shadow with the pale underside
+    if (rng.bool(0.45)) {
+      const side = rng.bool(0.5) ? 1 : -1;
+      const px = side > 0 ? 128 : 0;
+      const lift = 14 + rng.float() * 22;
+      ctx.fillStyle = 'rgba(12,10,8,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(px, 176 - lift - 4);
+      ctx.lineTo(px, 176);
+      ctx.lineTo(px - side * (lift + 8), 176);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(214,206,186,0.85)';
+      ctx.beginPath();
+      ctx.moveTo(px, 176 - lift);
+      ctx.quadraticCurveTo(px - side * lift * 0.6, 176 - lift * 0.4, px - side * (lift + 4), 176);
+      ctx.lineTo(px, 176);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // torn edge — a bite out of one side
+    if (rng.bool(0.3)) {
+      const ey = 40 + rng.float() * 110;
+      const bite = 4 + rng.float() * 9;
+      ctx.clearRect(rng.bool(0.5) ? 0 : 128 - bite, ey, bite, 6 + rng.float() * 14);
+    }
   });
 }
 

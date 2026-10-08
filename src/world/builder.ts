@@ -13,7 +13,7 @@ import { aabb } from '../engine/math';
 import { portLocalPos, portOutwardDir, footprintInDoorLane, footprintInDoorLeaf } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { modelInstance } from './modelLibrary';
+import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
 import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs } from './decals';
@@ -515,7 +515,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         new THREE.Vector3(sx + (rng.float() - 0.5) * 0.2, h - sag - 0.02, sz + (rng.float() - 0.5) * 0.2),
       );
       const wire = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.012, 5), MAT.charcoal());
-      group.add(wire);
+      // hang the run from its ceiling anchor so a loose line can drift
+      wire.geometry.translate(-sx, -(h - 0.06), -sz);
+      const pivot = new THREE.Group();
+      pivot.name = 'cable-drop';
+      pivot.position.set(sx, h - 0.06, sz);
+      pivot.add(wire);
+      if (rng.bool(0.45)) {
+        pivot.userData.anim = 'sway';
+        pivot.userData.animAmp = 0.012 + rng.float() * 0.012;
+        pivot.userData.animSeed = rng.float() * 100;
+      }
+      group.add(pivot);
     }
   }
   // Vent registers — small louvered grilles on suspended ceilings too.
@@ -857,6 +868,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   {
     const wallDecal = (wall: 'n' | 's' | 'e' | 'w', tex: THREE.Texture | null, dw: number, dh: number, along: number, cy: number) => {
       const m = decalQuad(tex, dw, dh);
+      if (dw <= 0.78) m.userData.paperWall = true;
       if (wall === 'e') { m.rotation.y = -Math.PI / 2; m.position.set(w / 2 - 0.013, cy, along); }
       else if (wall === 'w') { m.rotation.y = Math.PI / 2; m.position.set(-w / 2 + 0.013, cy, along); }
       else if (wall === 'n') { m.rotation.y = Math.PI; m.position.set(along, cy, d / 2 - 0.013); }
@@ -864,12 +876,35 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       group.add(m);
     };
     const portOffsetsOn = (wall: string) => [spec.entry, ...spec.exits].filter((p) => p.wall === wall).map((p) => p.offset);
+    // A wall spot is clean only if nothing tall stands in front of it:
+    // decals buried behind wardrobes are clutter you never see (and
+    // z-fight when the furniture crowds the plaster).
+    const tallCoverOn = (wall: 'n' | 's' | 'e' | 'w', along: number, dw: number) => {
+      for (const p of spec.props) {
+        const c = modelCollider(p.kind);
+        const ph = (c?.[1] ?? 0) + (p.y ?? 0);
+        if (ph < 1.05) continue;
+        const pw = (c ? Math.max(c[0], c[2]) : 0.8) / 2 + 0.25;
+        if (wall === 'e' || wall === 'w') {
+          const wx = wall === 'e' ? w / 2 : -w / 2;
+          if (Math.abs(p.x - wx) < pw + 0.45 && Math.abs(along - p.z) < dw / 2 + pw) return true;
+        } else {
+          const wz = wall === 'n' ? d / 2 : -d / 2;
+          if (Math.abs(p.z - wz) < pw + 0.45 && Math.abs(along - p.x) < dw / 2 + pw) return true;
+        }
+      }
+      return false;
+    };
     const pickWallSpot = (dw: number): { wall: 'n' | 's' | 'e' | 'w'; along: number } | null => {
+      // paper-sized pieces must sit in the open; big streaks and
+      // repairs may legitimately run behind furniture
+      const avoidCover = dw <= 0.75;
       for (let tries = 0; tries < 4; tries++) {
         const wall = (['n', 's', 'e', 'w'] as const)[Math.floor(rng.float() * 4)];
         const span = (wall === 'e' || wall === 'w' ? d : w) - dw - 0.4;
         const along = (rng.float() - 0.5) * Math.max(0.2, span);
-        if (portOffsetsOn(wall).every((o) => Math.abs(along - o) > dw / 2 + 0.9)) return { wall, along };
+        if (portOffsetsOn(wall).every((o) => Math.abs(along - o) > dw / 2 + 0.9)
+          && (!avoidCover || !tallCoverOn(wall, along, dw))) return { wall, along };
       }
       return null;
     };
@@ -885,6 +920,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const spot = pickWallSpot(0.62);
       if (!spot) break;
       wallDecal(spot.wall, poster(rng), 0.5, 0.68, spot.along, 1.35 + rng.float() * 0.35);
+      const pn = group.children[group.children.length - 1];
+      if (pn && !pn.name) pn.name = 'poster';
     }
 
     // Grime streaks — every room gets some; service spaces heavier.
@@ -1541,6 +1578,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         if (!spot) break;
         const cy = 1.5 + rng.float() * 0.7;
         wallDecal(spot.wall, rustStreak(rng), 0.4 + rng.float() * 0.25, 0.9 + rng.float() * 0.5, spot.along, cy + 0.4);
+        const rs = group.children[group.children.length - 1];
+        if (rs && !rs.name) rs.name = 'rust-streak';
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'rust-streak';
       }
@@ -1564,12 +1603,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The notices — the building's paperwork pinned beside its doors.
     if (['corridor', 'records', 'lobby', 'unlit', 'guest'].includes(spec.biome) && rng.float() < 0.3) {
       const port = [spec.entry, ...spec.exits][Math.floor(rng.float() * (1 + spec.exits.length))];
+      const dw = 0.55 + rng.float() * 0.15;
       const side = rng.float() < 0.5 ? -1 : 1;
       const span = (port.wall === 'e' || port.wall === 'w' ? d : w) / 2 - 0.7;
-      const along = Math.max(-span, Math.min(span, port.offset + side * (1.15 + rng.float() * 0.7)));
-      wallDecal(port.wall, wallNotice(rng), 0.55 + rng.float() * 0.15, 0.6 + rng.float() * 0.15, along, 1.45 + rng.float() * 0.25);
-      const last = group.children[group.children.length - 1];
-      if (last) last.name = 'wall-notice';
+      let along = Math.max(-span, Math.min(span, port.offset + side * (1.15 + rng.float() * 0.7)));
+      if (tallCoverOn(port.wall, along, dw)) {
+        along = Math.max(-span, Math.min(span, port.offset - side * (1.15 + rng.float() * 0.7)));
+      }
+      if (!tallCoverOn(port.wall, along, dw)) {
+        wallDecal(port.wall, wallNotice(rng), dw, 0.6 + rng.float() * 0.15, along, 1.45 + rng.float() * 0.25);
+        const last = group.children[group.children.length - 1];
+        if (last) last.name = 'wall-notice';
+      }
     }
 
     // The house remembers routes — at junctions a dragged arrow points
@@ -1654,6 +1699,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const spot = pickWallSpot(0.6);
       if (spot) {
         wallDecal(spot.wall, frameGhost(rng), 0.55 + rng.float() * 0.2, 0.7 + rng.float() * 0.2, spot.along, 1.65 + rng.float() * 0.3);
+        const fg = group.children[group.children.length - 1];
+        if (fg && !fg.name) fg.name = 'frame-ghost';
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'fallen-frame';
         const inset = 0.3 + rng.float() * 0.25;
@@ -1675,6 +1722,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // the room. Nothing here has burned in a long time.
     for (const p of spec.props) {
       if (p.kind !== 'fireplace' && p.kind !== 'stove' && p.kind !== 'stoveRange' && p.kind !== 'firePit') continue;
+      // the rare grate that is NOT dead — a banked coal still breathing
+      // ember-light under the ash, breathing slow enough you doubt it
+      if (!isUnder && rng.float() < 0.18) {
+        const py = p.yaw ?? 0;
+        const coal = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
+          new THREE.MeshStandardMaterial({ color: 0x1c0d06, emissive: 0xff5718, emissiveIntensity: 0.85, roughness: 1 }));
+        coal.scale.y = 0.4;
+        coal.position.set(p.x + Math.sin(py) * 0.3, 0.09, p.z + Math.cos(py) * 0.3);
+        coal.name = 'live-ember';
+        coal.userData.anim = 'ember';
+        coal.userData.animSeed = rng.float() * 100;
+        group.add(coal);
+      }
       if (rng.float() >= 0.55) continue;
       const m = decalQuad(ashPile(rng), 0.9 + rng.float() * 0.4, 0.75 + rng.float() * 0.3);
       m.name = 'cold-hearth';
@@ -1830,12 +1890,24 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         [fallenSpecs, 0.45, 'left-specs'],
       ];
       const [tex, size, name] = picks[Math.floor(rng.float() * picks.length)];
-      const m = decalQuad(tex(rng), size, size);
-      m.name = name;
-      m.rotation.x = -Math.PI / 2;
-      m.rotation.z = rng.float() * Math.PI * 2;
-      m.position.set((rng.float() - 0.5) * (w - 1.8), 0.008, (rng.float() - 0.5) * (d - 1.8));
-      group.add(m);
+      // belongings drop in open floor — not under the furniture where
+      // nobody (and nothing) would ever find them
+      for (let tries = 0; tries < 3; tries++) {
+        const lx = (rng.float() - 0.5) * (w - 1.8), lz = (rng.float() - 0.5) * (d - 1.8);
+        const buried = spec.props.some((p) => {
+          const c = modelCollider(p.kind);
+          const pr = (c ? Math.max(c[0], c[2]) : 0.5) / 2 + size / 2;
+          return Math.hypot(p.x - lx, p.z - lz) < pr;
+        });
+        if (buried) continue;
+        const m = decalQuad(tex(rng), size, size);
+        m.name = name;
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI * 2;
+        m.position.set(lx, 0.008, lz);
+        group.add(m);
+        break;
+      }
     }
 
     // The map nobody trusts — a framed route plan under old glass; the
@@ -1879,14 +1951,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const port = spec.exits.length > 0 ? spec.exits[Math.floor(rng.float() * spec.exits.length)] : spec.entry;
       const side = rng.bool() ? 1 : -1;
       const span = (port.wall === 'e' || port.wall === 'w' ? d : w) / 2 - 0.4;
-      const off = Math.max(-span, Math.min(span, port.offset + side * (port.width / 2 + 0.35)));
-      const m2 = decalQuad(inspectionStamp(rng), 0.3 + rng.float() * 0.12, 0.3 + rng.float() * 0.12);
-      m2.name = 'inspection-stamp';
-      if (port.wall === 'e') { m2.rotation.y = -Math.PI / 2; m2.position.set(w / 2 - 0.013, 1.35 + rng.float() * 0.5, off); }
-      else if (port.wall === 'w') { m2.rotation.y = Math.PI / 2; m2.position.set(-w / 2 + 0.013, 1.35 + rng.float() * 0.5, off); }
-      else if (port.wall === 'n') { m2.rotation.y = Math.PI; m2.position.set(off, 1.35 + rng.float() * 0.5, d / 2 - 0.013); }
-      else { m2.position.set(off, 1.35 + rng.float() * 0.5, -d / 2 + 0.013); }
-      group.add(m2);
+      const sDw = 0.3 + rng.float() * 0.12;
+      let off = Math.max(-span, Math.min(span, port.offset + side * (port.width / 2 + 0.35)));
+      if (tallCoverOn(port.wall, off, sDw)) {
+        off = Math.max(-span, Math.min(span, port.offset - side * (port.width / 2 + 0.35)));
+      }
+      if (!tallCoverOn(port.wall, off, sDw)) {
+        const m2 = decalQuad(inspectionStamp(rng), sDw, 0.3 + rng.float() * 0.12);
+        m2.name = 'inspection-stamp';
+        if (port.wall === 'e') { m2.rotation.y = -Math.PI / 2; m2.position.set(w / 2 - 0.013, 1.35 + rng.float() * 0.5, off); }
+        else if (port.wall === 'w') { m2.rotation.y = Math.PI / 2; m2.position.set(-w / 2 + 0.013, 1.35 + rng.float() * 0.5, off); }
+        else if (port.wall === 'n') { m2.rotation.y = Math.PI; m2.position.set(off, 1.35 + rng.float() * 0.5, d / 2 - 0.013); }
+        else { m2.position.set(off, 1.35 + rng.float() * 0.5, -d / 2 + 0.013); }
+        group.add(m2);
+      }
     }
 
     // The numbers changed — a painted room numeral over the frame, the

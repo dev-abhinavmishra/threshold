@@ -5825,6 +5825,17 @@ export class Game {
           mat.emissiveIntensity = ((o.userData.baseEm as number) ?? mat.emissiveIntensity) * deviceMul;
         } else if (kind === 'spin') {
           o.rotation.y += dt * ((o.userData.animSpeed as number) ?? 2.2);
+        } else if (kind === 'spinZ') {
+          // wall-mounted rotors — the face axis, not the floor normal;
+          // powered on the room's mains like any fixture
+          o.rotation.z += dt * ((o.userData.animSpeed as number) ?? 2.2) * deviceMul;
+        } else if (kind === 'ember') {
+          // a banked coal — breathes slow enough to doubt: long low swells,
+          // the odd brighter lick, no rhythm a watch can settle into
+          const mat = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+          const breath = Math.sin(t * 0.6 + s) * 0.5 + Math.sin(t * 0.23 + s * 1.7) * 0.5;
+          const lick = Math.max(0, Math.sin(t * 2.9 + s * 3.3)) ** 4 * 0.35;
+          mat.emissiveIntensity = 0.55 + Math.max(0, breath) * 0.55 + lick;
         } else if (kind === 'sway') {
           const a = (o.userData.animAmp as number) ?? 0.03;
           o.rotation.z = Math.sin(t * 1.4 + s) * a;
