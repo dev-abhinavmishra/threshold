@@ -660,6 +660,18 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
         .hazard.evidence.some((e) => e.kind === 'work'
           && Math.hypot(e.pos.x - tearRooms[0][1].x, e.pos.z - tearRooms[0][1].z) < 1.2)
       : false;
+    // --- 2.9 the clerk has more paper — bare boards get re-sheeted ---
+    // sprint 344 — the tear buys ~30s of silence, not a permanent deafen:
+    // after the window the fresh sheets go back up downstream.
+    if (reachDead) {
+      // wait it out back at the desk — the repost picks hosts downstream
+      // of where you stand, and his room has more route after it than
+      // the last torn board does
+      g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
+      ga.currentRoom = aRoom.index;
+      for (let f = 0; f < 1100 && wG.wantedRooms.size === 0; f++) g.frame();
+    }
+    const reposted = wG.wantedRooms.size > 0 && caps.some((c) => /fresh sheets go up/.test(c));
     // back to his room — the settle point only mints at his desk
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
@@ -687,7 +699,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
-      wantedUp, sheets, sheetRead, stepNamed, torn, reachDead, lastDown, tearSign, tearDbg,
+      wantedUp, sheets, sheetRead, stepNamed, torn, reachDead, lastDown, tearSign, tearDbg, reposted,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -704,6 +716,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     expect(result.reachDead, JSON.stringify(result)).toBe(true); // the boards forget your face
     expect(result.lastDown, JSON.stringify(result)).toBe(true);
     expect(result.tearSign, JSON.stringify(result)).toBe(true); // pulling paper is work sign
+    expect(result.reposted, JSON.stringify(result)).toBe(true); // the clerk has more paper
   }
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
