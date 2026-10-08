@@ -619,6 +619,47 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
         stepNamed = caps.find((c) => /the boards named your step/.test(c)) ?? '';
       }
     }
+    // --- 2.85 tear the sheets — the reach reads the boards, not the ---
+    // --- flag: pull all of them and the crew's wider ear dies ---
+    // sprint 343 — 'Tear the sheet down' sits beside the read verb,
+    // one-shot per room; the last tear ends the reach everywhere.
+    const tearRooms = [...wG.wantedRooms.entries()];
+    let torn = 0;
+    const tearDbg: { idx: number; minted: boolean; seen: string[] }[] = [];
+    for (const [tIdx, tHost] of tearRooms) {
+      g.player.teleport(tHost.x, 0, tHost.z);
+      ga.currentRoom = tIdx;
+      for (let f = 0; f < 25; f++) g.frame();
+      const tRoom = g.route.underRooms[tIdx];
+      const tx0 = (tRoom?.origin.x ?? tHost.x) - tHost.x, tz0 = (tRoom?.origin.z ?? tHost.z) - tHost.z;
+      const tl0 = Math.hypot(tx0, tz0) || 1;
+      // the tear anchor sits 0.55m beside the sheet face on the board line
+      const vx = tHost.x - (tz0 / tl0) * 0.55, vz = tHost.z + (tx0 / tl0) * 0.55;
+      const seen: string[] = [];
+      for (let f = 0; f < 110 && wG.wantedRooms.has(tIdx); f++) {
+        // stand 0.7m toward the room's middle, aimed at the verb
+        g.player.teleport(vx + (tx0 / tl0) * 0.7, 0, vz + (tz0 / tl0) * 0.7);
+        g.player.yaw = Math.atan2(vx - g.player.pos.x, vz - g.player.pos.z);
+        g.player.pitch = Math.atan2(1.35 - (g.player.pos.y + g.player.eyeHeight), 0.7);
+        g.frame();
+        const fp = ga.interaction.focused?.prompt ?? '';
+        if (f % 20 === 0 && seen.length < 6) seen.push(fp);
+        if (/Tear the sheet down/.test(fp)) ga.keys.add('KeyE');
+        else ga.keys.delete('KeyE');
+      }
+      ga.keys.delete('KeyE');
+      const minted = (ga as unknown as { interaction: { interactables: { kind: string }[] } })
+        .interaction.interactables.some((i) => i.kind === 'wantedTear');
+      tearDbg.push({ idx: tIdx, minted, seen });
+      if (!wG.wantedRooms.has(tIdx)) torn++;
+    }
+    const reachDead = wG.wantedRooms.size === 0;
+    const lastDown = caps.some((c) => /the last sheet comes down/.test(c));
+    const tearSign = tearRooms.length > 0
+      ? (ga as unknown as { hazard: { evidence: { kind: string; room: number; pos: { x: number; z: number } }[] } })
+        .hazard.evidence.some((e) => e.kind === 'work'
+          && Math.hypot(e.pos.x - tearRooms[0][1].x, e.pos.z - tearRooms[0][1].z) < 1.2)
+      : false;
     // back to his room — the settle point only mints at his desk
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
@@ -646,7 +687,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     ga.keys.delete('KeyE');
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
-      wantedUp, sheets, sheetRead, stepNamed,
+      wantedUp, sheets, sheetRead, stepNamed, torn, reachDead, lastDown, tearSign, tearDbg,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -658,6 +699,12 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
   expect(result.wantedUp, JSON.stringify(result)).toBe(true); // the ledger named you — sheets up
   if ((result.sheets ?? 0) > 0) expect(result.sheetRead, JSON.stringify(result)).toMatch(/the sheet names your hands — 2 thefts/);
   expect(result.stepNamed, JSON.stringify(result)).toMatch(/the boards named your step/);
+  if ((result.sheets ?? 0) > 0) {
+    expect(result.torn, JSON.stringify(result)).toBe(result.sheets); // every sheet comes down
+    expect(result.reachDead, JSON.stringify(result)).toBe(true); // the boards forget your face
+    expect(result.lastDown, JSON.stringify(result)).toBe(true);
+    expect(result.tearSign, JSON.stringify(result)).toBe(true); // pulling paper is work sign
+  }
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
   expect(result.spent, JSON.stringify(result)).toBe(true);

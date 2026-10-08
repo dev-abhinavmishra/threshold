@@ -880,7 +880,7 @@ export class Game {
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
-      wanted: () => this.wantedActive,
+      wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
       eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
@@ -1417,6 +1417,23 @@ export class Game {
             pos: { x: host.x, y: 0.75, z: host.z },
             prompt: 'Read the wanted sheet',
             holdTime: 0.8, enabled: true, priority: 1,
+            data: {},
+          });
+          // Tear the sheet down — the reach reads the boards, not the
+          // flag: each torn sheet deafens the crew's wider ear a share,
+          // and the last one ends it outright (the ledger still names
+          // you until the tally settles). Aimed off-center so the
+          // lighter 'read' verb stays the ambient touch.
+          const tox = this.player.pos.x - host.x, toz = this.player.pos.z - host.z;
+          const trm = this.activeRooms()[this.currentRoom];
+          const tx0 = (trm ? trm.origin.x : this.player.pos.x + tox) - host.x;
+          const tz0 = (trm ? trm.origin.z : this.player.pos.z + toz) - host.z;
+          const tl = Math.hypot(tx0, tz0) || 1;
+          this.interaction.add({
+            kind: 'wantedTear', id: `wantedTear-${this.space}:${this.currentRoom}`,
+            pos: { x: host.x - (tz0 / tl) * 0.55, y: 0.75, z: host.z + (tx0 / tl) * 0.55 },
+            prompt: 'Tear the sheet down',
+            holdTime: 1.1, enabled: true, priority: 3,
             data: {},
           });
         }
@@ -3303,6 +3320,22 @@ export class Game {
         // the sheet prints what the tally says about you — the boards'
         // readout of the clerk's book, free to read, still named
         this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
+        return;
+      }
+      case 'wantedTear': {
+        // the boards carry the wider ear — pull the sheet and the room
+        // forgets your face; the last sheet ends the reach everywhere.
+        // The ledger itself is untouched: the tally still wants a settle.
+        this.wantedRooms.delete(this.currentRoom);
+        it.enabled = false;
+        const built = this.streamer.get(this.currentRoom);
+        const notice = built?.group.getObjectByName('wanted-notice');
+        if (built && notice) built.group.remove(notice);
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
+        this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
+          ? '[the last sheet comes down — the boards forget your face]'
+          : '[the sheet comes down — the boards have one fewer name for you]', 'warn');
         return;
       }
       case 'stripCheck': {
