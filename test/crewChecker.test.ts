@@ -13,14 +13,16 @@ function hooks() {
   const emitted: SoundEvent[] = [];
   const cues: string[] = [];
   const witnessed = vi.fn();
+  const seized = vi.fn(() => true);
   const h: CheckerHooks = {
     addMesh: vi.fn(),
     removeMesh: vi.fn(),
     cue: vi.fn((_n, _a, caption: string) => { cues.push(caption); }),
     emit: vi.fn((e: SoundEvent) => { emitted.push(e); }),
     witnessed,
+    seizeMarked: seized,
   };
-  return { h, emitted, cues, witnessed };
+  return { h, emitted, cues, witnessed, seized };
 }
 
 function step(c: CrewChecker, rooms: RoomInstance[], h: CheckerHooks, seconds: number, player = { pos: v3(9e9, 0, 9e9), room: -1, exposed: false }) {
@@ -30,7 +32,7 @@ function step(c: CrewChecker, rooms: RoomInstance[], h: CheckerHooks, seconds: n
 describe('CrewChecker (the count answered)', () => {
   it('walks to the rung socket and cries the find to the room when it catches an exposed lingerer', () => {
     const rooms = underRooms();
-    const { h, emitted, witnessed } = hooks();
+    const { h, emitted, witnessed, seized } = hooks();
     const c = new CrewChecker();
     const ri = 30;
     const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
@@ -49,6 +51,9 @@ describe('CrewChecker (the count answered)', () => {
     expect(found!.intensity).toBeGreaterThanOrEqual(0.55); // over the rouse threshold
     // the find enters the house book — a witness line, once per dispatch
     expect(witnessed).toHaveBeenCalledTimes(1);
+    // and the lamp reads the marks on your back — the count receipts
+    // your take into its locker on the same find (sprint 378)
+    expect(seized).toHaveBeenCalledTimes(1);
     // then it finishes its count and walks out
     step(c, rooms, h, 30, player);
     expect(c.stage).toBe('outbound');

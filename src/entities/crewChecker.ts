@@ -29,6 +29,10 @@ export interface CheckerHooks {
   /** The lamp held your face through a full spot — a witness line lands
    *  in the house register upstairs. Fires once per dispatch, on the find. */
   witnessed?: () => void;
+  /** The lamp reads the marks on your back — rifled stock the count
+   *  receipts into its locker. Fires once per dispatch, on the find;
+   *  false when you carry nothing marked (the seize is skipped). */
+  seizeMarked?: () => boolean;
 }
 
 export interface CheckerPlayer {
@@ -188,6 +192,13 @@ export class CrewChecker {
           });
           // a face in the lamp is a witness statement — it lands upstairs
           hooks.witnessed?.();
+          // and the lamp doesn't just see the face — the count reads
+          // the marks on your back and receipts them into its locker
+          if (hooks.seizeMarked?.()) {
+            hooks.cue('chalk-mark', player.pos,
+              '[the lamp reads the marks on you — the count takes its own]',
+              { severity: 'warn' });
+          }
         }
       } else {
         this.spotT = 0;

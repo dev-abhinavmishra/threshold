@@ -4495,6 +4495,7 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 255, sim 5/5, build.
 
 
+
 ## sprint 413 — the seam bleeds
 
 - The s409/412 marks stopped at room edges — a jittered set piece's
@@ -4511,3 +4512,21 @@ Game.die() from the same five fields.
   set piece.
 - Gates: tsc, lint, vitest 256, sim 5/5. Visual dressing only — no
   e2e leg.
+||||||| 86c3548
+
+
+## sprint 378 — the lamp reads the marks on you
+
+- The checker's find now seizes: `CheckerHooks.seizeMarked` fires once
+  per dispatch alongside `witnessed` — a lamp that spots you carrying
+  rifled stock receipts it into the count's locker on the spot
+  ('[the lamp reads the marks on you — the count takes its own]').
+  Not wanted-gated: the lamp literally reads the mark — the count's
+  own counter is the one place the boards don't matter.
+- Game wires it through the same `entityCtx().seizeMarked` path the
+  grabs use — same strip/spare semantics, same locker mint.
+- e2e: the checker leg now carries a marked latchpick into the find —
+  asserts strip→locker→minted verb. vitest spec asserts the hook
+  fires once per dispatch.
+- Gates: tsc, lint, vitest 255, sim 5/5, checker leg green, build.
+
