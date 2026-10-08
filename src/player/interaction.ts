@@ -275,10 +275,13 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
       // doorway lane won't let anyone stand at the leaf's own line).
       sys.add({
         kind: 'stoop', id: `stoop-${it.id}`,
-        // y sits at crack height — door anchors are floor-level (pos.y=0)
-        // and the focus score is dist-dominated: anchor the crack where
-        // the eye actually looks or it can never beat the seam verbs
-        pos: { x: it.pos.x + nX * side * 0.25, y: it.pos.y + 0.42, z: it.pos.z + nZ * side * 0.25 },
+        // sprint 469 — the eye reads the seam where it meets your face:
+        // crouch eye height is ~0.9, so floor-line crack anchors sit AT
+        // eye level and always enter focus on proximity alone — the
+        // nearer flank won every stand. Lift the whole seam lattice
+        // above the doorway so only aim separates LOOK at the seam
+        // (centre) from REACH through its edges (the flanks).
+        pos: { x: it.pos.x + nX * side * 0.25, y: it.pos.y + 0.95, z: it.pos.z + nZ * side * 0.25 },
         prompt: `Stoop to the crack — Door ${d.label}`, holdTime: 1.0,
         // p5 — kneeling AT a leaf puts the crack where your face is; the
         // seam verbs still win at their own edge anchors (distance rules)
@@ -290,9 +293,10 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
       if (!d.falseDoor) {
         sys.add({
           kind: 'slip', id: `slip-${it.id}`,
-          // same crack height — it shares the stoop's line of sight,
-          // one hand's-width off centre toward the seam's far hinge
-          pos: { x: it.pos.x - latX * 0.28 + nX * side * 0.25, y: it.pos.y + 0.42, z: it.pos.z - latZ * 0.28 + nZ * side * 0.25 },
+          // same seam line as the stoop, one hand's-width off centre
+          // toward the far hinge — high enough that proximity alone
+          // can't focus it: you aim at the edge your hand goes under
+          pos: { x: it.pos.x - latX * 0.28 + nX * side * 0.25, y: it.pos.y + 1.05, z: it.pos.z - latZ * 0.28 + nZ * side * 0.25 },
           prompt: `Slip a pebble under Door ${d.label}`, holdTime: 0.8,
           // same p5 as the stoop — the two crack verbs split centre/edge
           // on distance, and both stay under a verb you walk up to use
@@ -304,7 +308,7 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
         // the door too. Mirrored the slip's hand's-width, other hinge.
         sys.add({
           kind: 'call', id: `call-${it.id}`,
-          pos: { x: it.pos.x + latX * 0.28 + nX * side * 0.25, y: it.pos.y + 0.42, z: it.pos.z + latZ * 0.28 + nZ * side * 0.25 },
+          pos: { x: it.pos.x + latX * 0.28 + nX * side * 0.25, y: it.pos.y + 1.05, z: it.pos.z + latZ * 0.28 + nZ * side * 0.25 },
           prompt: `Call through the crack — Door ${d.label}`, holdTime: 1.2,
           data: d, enabled: true, priority: 5,
         });

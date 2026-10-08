@@ -113,7 +113,34 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
     if (!room) return { stage: 'no-dark-flood' } as const;
     const snares = room.sockets!.filter((sk) => sk.meta?.hazard === 'snare' && !sk.meta?.spent);
     ga.godMode = true; // keep the room's swamper out of the signal — we read roots, not blood
+    const hzf = g as unknown as {
+      hazard: { snares: { pos: { x: number; z: number }; room: number; armed: boolean }[] };
+    };
+    const inUnderRoom = (x: number, z: number) =>
+      Math.abs(x - room.origin.x) <= (room.width ?? 0) / 2 && Math.abs(z - room.origin.z) <= (room.depth ?? 0) / 2;
+    // s405 made every wire a shared resource: a walker crossing an armed
+    // snare spends it — and its '[paper screams]' plays where it trips,
+    // not where you stand. The room's swamper can spend the seeded wire
+    // during the setup frames, out of earshot. Pin every walker in this
+    // room to its far corner BEFORE any frame ticks, then re-tie the
+    // wire: the leg reads the player's trip, not the world's luck.
+    for (const e of g.entities) {
+      const tp = e.threatPos?.();
+      if (!tp || !inUnderRoom(tp.x, tp.z)) continue;
+      const epos = e.pos as { x: number; z: number } | undefined;
+      if (!epos) continue;
+      const corner = { x: room.origin.x - (snares[0].pos.x - room.origin.x), z: room.origin.z - (snares[0].pos.z - room.origin.z) };
+      epos.x = corner.x; epos.z = corner.z;
+      const camp = e as unknown as { roamT?: number; crackCampUntil?: number; target?: unknown };
+      if ('roamT' in camp) camp.roamT = 0;
+      camp.crackCampUntil = g.clock.time + 60;
+    }
+    for (const s of hzf.hazard.snares) {
+      if (s.room !== room.index) continue;
+      if (!s.armed && Math.hypot(s.pos.x - snares[0].pos.x, s.pos.z - snares[0].pos.z) < 0.5) s.armed = true;
+    }
 
+    const wadeDiag: string[] = [];
     const wadeOnto = (s: { x: number; z: number }, crouched: boolean) => {
       // seeded drift can wall off any one lane — prop colliders shift
       // between sprints. Try each cardinal approach until the wire is
@@ -123,13 +150,38 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
         g.player.teleport(s.x + ox, 0, s.z + oz);
         g.player.yaw = Math.atan2(-ox, -oz);
         ga.currentRoom = room.index;
-        for (let f = 0; f < 20; f++) g.frame();
-        const rooted0 = ga.player.rootedUntil;
         if (crouched) g.keys.add('KeyC');
+        // rooted0 reads BEFORE the settle: a collider eject that walks the
+        // player onto the wire IS the trip the leg is about — it counts.
+        const rooted0 = ga.player.rootedUntil;
+        for (let f = 0; f < 20; f++) g.frame();
+        // entities spawn on proximity — a swamper appearing mid-settle can
+        // spend the shared wire under s405's two-way rule. Re-pin anything
+        // in the room after the settle, and re-tie the wire: the leg reads
+        // the player's trip, not the world's luck.
+        for (const e of g.entities) {
+          const tp = e.threatPos?.();
+          if (!tp || !inUnderRoom(tp.x, tp.z)) continue;
+          const ep = e.pos as { x: number; z: number } | undefined;
+          if (!ep) continue;
+          ep.x = room.origin.x - (s.x - room.origin.x);
+          ep.z = room.origin.z - (s.z - room.origin.z);
+          const c2 = e as unknown as { roamT?: number; crackCampUntil?: number };
+          if ('roamT' in c2) c2.roamT = 0;
+          c2.crackCampUntil = g.clock.time + 60;
+        }
+        if (!hzf.hazard.snares.find((sn) => sn.room === room.index
+          && Math.hypot(sn.pos.x - s.x, sn.pos.z - s.z) < 0.5)!.armed
+          && rooted0 === ga.player.rootedUntil) {
+          hzf.hazard.snares.find((sn) => sn.room === room.index
+            && Math.hypot(sn.pos.x - s.x, sn.pos.z - s.z) < 0.5)!.armed = true;
+        }
         g.keys.add('KeyW');
         let reached = false;
+        let closest = 99;
         for (let f = 0; f < 70; f++) {
           g.frame();
+          closest = Math.min(closest, Math.hypot(g.player.pos.x - s.x, g.player.pos.z - s.z));
           if (Math.hypot(g.player.pos.x - s.x, g.player.pos.z - s.z) < 0.65) reached = true;
           if (ga.player.rootedUntil > rooted0 || (reached && !crouched) || (reached && f > 30)) break;
         }
@@ -137,14 +189,18 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
         g.keys.delete('KeyC');
         at = { x: g.player.pos.x, z: g.player.pos.z };
         const rooted = ga.player.rootedUntil > rooted0;
+        wadeDiag.push(`${ox},${oz}->closest${closest.toFixed(2)}${reached ? 'R' : ''}`);
         if (rooted || reached) return { rooted, at };
       }
       return { rooted: false, at };
     };
 
-    // The wire hides from an upright wader: stand next to a live one and
-    // no 'snip' mints — check BEFORE tripping spends the room's only wire.
-    g.player.teleport(snares[0].pos.x + 0.6, 0, snares[0].pos.z + 0.6);
+    // The wire hides from an upright wader: stand near a live one and no
+    // 'snip' mints — check BEFORE tripping spends the room's only wire.
+    // Stand 2.4m off: close enough to mint (the radius is 4.6m), far
+    // enough that a collider eject can't walk the player onto the wire
+    // and self-trip before the wade begins.
+    g.player.teleport(snares[0].pos.x + 2.4, 0, snares[0].pos.z);
     for (let f = 0; f < 20; f++) g.frame();
     const blindNoPrompt = !g.interaction.interactables.some((i) => i.kind === 'snip');
 
@@ -175,8 +231,13 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
     }
     g.keys.delete('KeyE');
     g.keys.delete('KeyC');
+    const nearCols = (room.colliders ?? []).filter((c) =>
+      Math.hypot((c.minX + c.maxX) / 2 - snares[0].pos.x, (c.minZ + c.maxZ) / 2 - snares[0].pos.z) < 1.6)
+      .map((c) => `${((c.minX + c.maxX) / 2).toFixed(2)},${((c.minZ + c.maxZ) / 2).toFixed(2)} ${(c.maxX - c.minX).toFixed(1)}x${(c.maxZ - c.minZ).toFixed(1)}`);
     return { stage: 'done', room: room.index, nSnares: snares.length, tripped, felt,
-      blindNoPrompt, cut, caps: caps.slice(-16) } as const;
+      blindNoPrompt, cut, caps: caps.slice(-16), wadeDiag, nearCols,
+      snareAt: { x: snares[0].pos.x, z: snares[0].pos.z },
+      armed: hzf.hazard.snares.find((s) => s.room === room.index && Math.hypot(s.pos.x - snares[0].pos.x, s.pos.z - snares[0].pos.z) < 0.5)?.armed } as const;
   });
 
   if (result.stage === 'no-dark-flood') test.skip();
@@ -1286,5 +1347,179 @@ test('the splice reads as the under\'s work — cut it, and the dust keeps a han
   expect(result.laid, 'the coil unwinds at your feet').toBe(true);
   expect(result.pullMinted, 'your own wire offers Pull the wire free').toBe(true);
   expect(result.reclaimed, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+// sprint 469 — the review's coverage hole: a warden mid-strain on a wired
+// leaf loses the bind to the player's own snip. The first strain leaves him
+// standing in 'working' (~2.2s, hands in the bind); cutting inside that
+// window frees the leaf under his hands — he shoulders the now-free leaf
+// through instead of parting it, and the coil comes back to your hand, not
+// the floor.
+test('the cut answers mid-strain — the warden\'s bound leaf walks free under its hands', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // 's'
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    type GRoom = (typeof g.route.rooms)[number];
+    const inRoom = (r: GRoom, x: number, z: number) => {
+      const w = (r.width ?? 0) / 2, d = (r.depth ?? 0) / 2;
+      return Math.abs(x - r.origin.x) <= w - 0.4 && Math.abs(z - r.origin.z) <= d - 0.4;
+    };
+    const ga = g as unknown as {
+      entities: { id: string; state: string; threatPos(): { x: number; z: number } | null }[];
+      giveItem(id: string, n?: number): void;
+      inventory: { id: string; count: number }[];
+      spawnById(id: string): void;
+      currentRoom: number;
+    };
+    ga.giveItem('wireCoil', 2);
+    const coilCount = () => ga.inventory.find((i) => i.id === 'wireCoil')?.count ?? -1;
+
+    const aimHold = (id: string, done: () => boolean, frames = 90): boolean => {
+      const lp = g.player as unknown as { lookDir(out: { x: number; y: number; z: number }): void };
+      const orig = lp.lookDir.bind(lp);
+      const sys = g.interaction as unknown as {
+        focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+        focused: unknown;
+      };
+      const origFocus = sys.focus.bind(sys);
+      let seen = false;
+      for (let f = 0; f < frames && !done(); f++) {
+        const pt = g.interaction.interactables.find((i) => i.id === id);
+        if (!pt) { g.frame(); continue; }
+        seen = true;
+        lp.lookDir = (out) => {
+          const dx = pt.pos.x - g.player.pos.x, dy = pt.pos.y + 0.6 - g.player.eyeHeight, dz = pt.pos.z - g.player.pos.z;
+          const L = Math.hypot(dx, dy, dz) || 1;
+          out.x = dx / L; out.y = dy / L; out.z = dz / L;
+        };
+        sys.focus = (eye, look, pos) => {
+          const here = g.interaction.interactables.find((i) => i.id === id);
+          const r = here ?? origFocus(eye, look, pos);
+          sys.focused = r ?? null;
+          return r;
+        };
+        if ((g.interaction.focused as { id?: string } | null)?.id === id) g.keys.add('KeyE');
+        g.frame();
+      }
+      lp.lookDir = orig;
+      sys.focus = origFocus;
+      g.keys.delete('KeyE');
+      return seen;
+    };
+
+    const main = g.route.rooms.filter((r) => r.index >= 0).sort((a, b) => a.index - b.index);
+    let host: GRoom | null = null, next: GRoom | null = null;
+    let door: { id: string; pos: { x: number; z: number }; yaw: number; heldBy?: string; locked?: boolean; falseDoor?: boolean; openT?: number; opening?: boolean } | null = null;
+    let intoHost = { x: 0, z: 0 };
+    for (let i = 0; i < main.length - 1 && !door; i++) {
+      const cand = main[i + 1].doors?.find((d) => d.id === `door-${main[i + 1].index}-in`
+        && !d.locked && !d.falseDoor && (d.openT ?? 0) <= 0.4);
+      if (!cand) continue;
+      const hx = main[i].origin.x - cand.pos.x, hz = main[i].origin.z - cand.pos.z;
+      const L = Math.hypot(hx, hz) || 1;
+      // the leaf must sit well inside the shared wall — player stands 0.9m
+      // in, the noise lands 1.8m in, the warden parks 1.5m out
+      if (!inRoom(main[i], cand.pos.x + (hx / L) * 1.8, cand.pos.z + (hz / L) * 1.8)) continue;
+      if (!inRoom(main[i + 1], cand.pos.x - (hx / L) * 1.5, cand.pos.z - (hz / L) * 1.5)) continue;
+      host = main[i]; next = main[i + 1]; door = cand;
+      intoHost = { x: hx / L, z: hz / L };
+    }
+    if (!door || !host || !next) return { stage: 'no-door-pair' } as const;
+
+    // stand just inside host, crouched — wire the leaf
+    g.player.teleport(door.pos.x + intoHost.x * 0.9, 0, door.pos.z + intoHost.z * 0.9);
+    ga.currentRoom = host.index;
+    g.keys.add('KeyC');
+    for (let f = 0; f < 10; f++) g.frame();
+    if (!aimHold(`wire-${door.id}`, () => door!.heldBy === 'wired', 120)) {
+      return { stage: 'no-wire-verb', caps: caps.slice(-6) } as const;
+    }
+    const bound = door.heldBy === 'wired';
+    const coilsAfterBind = coilCount();
+
+    // the warden patrols the room beyond — park it by the leaf. Slice off
+    // the entities list first: the seed's own warden may already walk
+    // another floor, and only the NEW one anchors here.
+    g.player.teleport(next.origin.x, 0, next.origin.z);
+    ga.currentRoom = next.index;
+    for (let f = 0; f < 10; f++) g.frame();
+    const beforeEnts = ga.entities.length;
+    ga.spawnById('warden');
+    for (let f = 0; f < 16; f++) g.frame();
+    const wd = ga.entities.slice(beforeEnts).find((e) => e.id === 'warden' && e.state === 'engage') as unknown as
+      { id: string; state: string; pos: { x: number; y: number; z: number }; threatPos(): { x: number; z: number };
+        investigate: { x: number; y: number; z: number } | null } | undefined;
+    if (!wd) return { stage: 'no-warden', ents: ga.entities.map((e) => e.id), bound } as const;
+    wd.pos.x = door.pos.x - intoHost.x * 1.5; wd.pos.z = door.pos.z - intoHost.z * 1.5;
+
+    // player back at the leaf — and a noise deep into host pulls the warden
+    // in. `hear` gates cross-room noise on an atRoomDoor check whose host-side
+    // leaf isn't guaranteed on every boundary shape; set the same investigate
+    // field it writes — the check it walks to is what the strain answers.
+    g.player.teleport(door.pos.x + intoHost.x * 0.9, 0, door.pos.z + intoHost.z * 0.9);
+    for (let f = 0; f < 8; f++) g.frame();
+    wd.investigate = { x: door.pos.x + intoHost.x * 1.8, y: 0, z: door.pos.z + intoHost.z * 1.8 };
+
+    // he walks the leaf and puts his hands in the bind — the strain cue
+    let strained = false;
+    for (let f = 0; f < 200 && !strained; f++) {
+      g.frame();
+      if (caps.some((c) => /works at the wire/.test(c))) strained = true;
+    }
+    if (!strained) {
+      const tp = wd.pos;
+      return { stage: 'no-strain', bound, wdAt: { x: tp.x, z: tp.z },
+        dist: Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z),
+        caps: caps.slice(-8) } as const;
+    }
+
+    // mid-strain: 'Cut the wired leaf free' — ~0.9s inside his ~2.2s work
+    const countBeforeCut = coilCount();
+    const cutSeen = aimHold(`unwire-${door.id}`, () => door!.heldBy === undefined, 70);
+    const cut = door.heldBy === undefined;
+    const coilsAfterCut = coilCount();
+    const cutCue = caps.some((c) => /coil comes back to your hand/.test(c));
+
+    // the leaf frees under his hands — he shoulders the now-free leaf
+    // through and the bind never 'parts'
+    let crossed = false, leafOpen = false;
+    for (let f = 0; f < 300 && !crossed; f++) {
+      g.frame();
+      if ((door.opening ?? false) || (door.openT ?? 0) > 0.05) leafOpen = true;
+      const tp = wd.pos;
+      if ((tp.x - door.pos.x) * intoHost.x + (tp.z - door.pos.z) * intoHost.z > 0.5) crossed = true;
+    }
+    g.keys.delete('KeyC');
+    const partsCue = caps.some((c) => /wire parts under its hands/.test(c));
+
+    return { stage: 'done', bound, coilsAfterBind, cutSeen, cut, cutCue,
+      countBeforeCut, coilsAfterCut, leafOpen, crossed, partsCue,
+      wireCaps: caps.filter((c) => /wire|leaf|bind|strain|coil|shoulder/i.test(c)),
+      caps: caps.slice(-10) } as const;
+  });
+
+  if (result.stage === 'no-door-pair' || result.stage === 'no-warden') test.skip();
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const tail = (result.wireCaps ?? []).join(' | ') + ' // ' + (result.caps ?? []).join(' | ');
+  expect(result.bound, 'the leaf never bound').toBe(true);
+  expect(result.coilsAfterBind).toBe(1);
+  expect(result.cutSeen, `the snip never minted on the strained leaf — ${tail}`).toBe(true);
+  expect(result.cut, `the leaf never freed under your snip — ${tail}`).toBe(true);
+  expect(result.cutCue, `the coil never came back to hand — ${tail}`).toBe(true);
+  expect(result.coilsAfterCut).toBe(2);
+  expect(result.partsCue, `the warden parted it anyway — ${tail}`).toBe(false);
+  expect(result.leafOpen, `the leaf never swung free — ${tail}`).toBe(true);
+  expect(result.crossed, `the warden never walked through — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -27,6 +27,7 @@ export interface ThresholdG {
     pos: { x: number; y: number; z: number };
     yaw: number; pitch: number; eyeHeight: number; health: number; dead: boolean;
     teleport(x: number, y: number, z: number, yaw?: number): void;
+    eyePos(out: { x: number; y: number; z: number }): { x: number; y: number; z: number };
     hiddenSpot: { id: string } | null;
     crouching: boolean;
   };
@@ -40,7 +41,7 @@ export interface ThresholdG {
     focused?: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; holdTime?: number; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } } | null;
     interactables: { kind: string; id: string; pos: { x: number; y: number; z: number }; prompt: string; enabled?: boolean; data?: { meta?: Record<string, number | string | boolean> } }[];
   };
-  entities: { id: string; state: string }[];
+  entities: { id: string; state: string; pos?: { x: number; y: number; z: number }; threatPos?(): { x: number; y: number; z: number } | null }[];
   route: { rooms: GRoom[]; branchRooms?: GRoom[]; underRooms: GRoom[] };
   // interact journals (private fields — reachable at runtime)
   litTVs: Set<string>;
@@ -78,4 +79,5 @@ export interface GRoom {
   spec?: { width?: number; depth?: number; w?: number; d?: number; props: { kind: string; x: number; z: number; y?: number }[] };
   hidingSpots: { id: string; exitPos: { x: number; y: number; z: number }; trappedBy?: string }[];
   sockets?: { meta?: Record<string, unknown>; pos: { x: number; y: number; z: number } }[];
+  colliders?: { minX: number; minY: number; minZ: number; maxX: number; maxY: number; maxZ: number }[];
 }
