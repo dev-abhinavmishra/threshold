@@ -3857,3 +3857,22 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   when a milestone sits in reach). The s278 vitest now asserts the
   emitted ring itself has no source.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 346 — the boards keep their tears
+
+- s332 carried the ledgers past death but the wanted EPISODE (sibling
+  s401) still laundered for free: `unpaidTheft` persisted while
+  `wantedActive`/`wantedRooms`/`wantedRepostT` didn't, so a reload
+  mid-tug-of-war repinned every torn board and re-armed the whole
+  raise. CheckpointSave now carries `wantedActive`,
+  `wantedRooms` as `[roomIdx, {x,z}][]` (the decal + verbs re-derive
+  from the map through `ensureWanted`, so the restore needs nothing
+  else), and `wantedRepostS` = REMAINING seconds
+  (`repostT - clock.time`, clamped ≥0) — the absolute field is
+  clock-relative and a saved epoch would mis-fire on the new clock;
+  restore re-arms as `clock.time + repostS`.
+- e2e: audit leg 2.9 — `cpArmed` asserts a checkpoint written inside
+  the armed window carries `wantedActive` + empty map + repostS > 0;
+  `cpWanted` asserts one written after the repost mirrors the refilled
+  board map 1:1. Both bind only when their phase held.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast audit leg, build.

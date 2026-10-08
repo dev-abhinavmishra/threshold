@@ -663,6 +663,14 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     // --- 2.9 the clerk has more paper — bare boards get re-sheeted ---
     // sprint 344 — the tear buys ~30s of silence, not a permanent deafen:
     // after the window the fresh sheets go back up downstream.
+    // sprint 346 — the episode outlives you: a checkpoint written inside
+    // the armed window carries the repost's remaining seconds, and one
+    // written after the repost carries the refilled board map.
+    const cpAt = () => (g as { makeCheckpoint?: (n: number) => unknown })
+      .makeCheckpoint?.(0) as { wantedActive?: boolean;
+      wantedRooms?: [number, unknown][]; wantedRepostS?: number } | undefined;
+    const cpArmed = !reachDead || (() => { const cp = cpAt(); return !!cp && cp.wantedActive === true
+      && (cp.wantedRooms?.length ?? -1) === 0 && (cp.wantedRepostS ?? 0) > 0; })();
     if (reachDead) {
       // wait it out back at the desk — the repost picks hosts downstream
       // of where you stand, and his room has more route after it than
@@ -672,6 +680,10 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
       for (let f = 0; f < 1100 && wG.wantedRooms.size === 0; f++) g.frame();
     }
     const reposted = wG.wantedRooms.size > 0 && caps.some((c) => /fresh sheets go up/.test(c));
+    // a checkpoint after the repost carries the refilled board map
+    const cpAfter = cpAt();
+    const cpWanted = !reposted || (!!cpAfter && cpAfter.wantedActive === true
+      && (cpAfter.wantedRooms?.length ?? -1) === wG.wantedRooms.size);
     // back to his room — the settle point only mints at his desk
     g.player.teleport(aRoom.origin.x, 0, aRoom.origin.z);
     ga.currentRoom = aRoom.index;
@@ -700,6 +712,7 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     const paid = caps.some((c) => /paid \d+ — the clerk turns the page/.test(c));
     return { stage: 'done' as const, demanded, theftAfterSlip, theftAfterDrawer, tallySign, settlePrompt, paid,
       wantedUp, sheets, sheetRead, stepNamed, torn, reachDead, lastDown, tearSign, tearDbg, reposted,
+      cpArmed, cpWanted,
       spent: ga.marginalia < m0, pursuing: clerk?.pursuing === true };
   });
 
@@ -717,6 +730,8 @@ test('the audit — the clerk totals your hands, the ledger walks', async ({ pag
     expect(result.lastDown, JSON.stringify(result)).toBe(true);
     expect(result.tearSign, JSON.stringify(result)).toBe(true); // pulling paper is work sign
     expect(result.reposted, JSON.stringify(result)).toBe(true); // the clerk has more paper
+    expect(result.cpArmed, JSON.stringify(result)).toBe(true); // the armed repost rides the checkpoint
+    expect(result.cpWanted, JSON.stringify(result)).toBe(true); // the board map rides the checkpoint
   }
   expect(result.settlePrompt, JSON.stringify(result)).toMatch(/Settle the ledger/);
   expect(result.paid, JSON.stringify(result)).toBe(true);
