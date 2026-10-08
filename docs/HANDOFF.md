@@ -4240,3 +4240,21 @@ Game.die() from the same five fields.
   book they answer to: warden ↔ register (362), grafter ↔ tally
   (363).
 - Gates: tsc, lint, vitest 106 entities (+1 spec).
+
+## sprint 364 — the boards' courier knows your face
+
+- The reposter carries your name in the bundle but walked past the
+  thief: while `wanted()` and you stand in his room unhidden (<7m),
+  the look stills the walk a beat (`spotT` — travel AND pins hold,
+  he turns to face you) and he cries the location down the spine —
+  a REAL SoundEvent emit at HIS position (entity-cue 0.55) so the
+  under's listeners rouse. Once per walk (`sawNamed`). Hidden reads
+  as furniture — no cry.
+- ReposterHooks gained `wanted?: () => boolean` + `emit?: (e:
+  SoundEvent) => void`; the update's player arg grew `room`/
+  `hidden`. His room derives via `pointInRoom` on underRooms —
+  `player.room === currentRoom` (the under index while under).
+- Honesty note: the emit carries `caption: ''` — the recognition
+  text already shows via cue; the sound is physics, not narration.
+  The counterplay is being seen, not a ledger line.
+- Gates: tsc, lint, vitest 254 (+1 reposter spec), sim 5/5.
