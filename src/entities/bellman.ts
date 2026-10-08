@@ -66,12 +66,35 @@ export class Bellman extends Entity {
   private knocked = new Set<object>();
   private noiseCrumb: Vec3 | null = null;  // a loud sound it detours to sniff
   private noiseUnsub: (() => void) | null = null;
+  /** sprint 396 — the ring was cut: no more keys. Locked leaves are
+   *  walls for him now, same as for you. */
+  private keysCut = false;
+
+  /** True while he stands yielded under a close, unbroken stare — the
+   *  one moment the keyring can be cut. The Game mints 'Cut the
+   *  keyring' on his chest while this holds. */
+  get cuttable(): boolean {
+    return this.state === 'engage' && !this.keysCut && this.underGaze();
+  }
+
+  /** The ring parts — the house's master keys scatter on the floor.
+   *  Gone, not taken: the reward is his hobbling, not your pocket. The
+   *  chime pulls his eyes down a beat (a stagger — the escape window
+   *  you earn for reaching this far). */
+  cutKeys(): void {
+    const c = this.ctx;
+    this.keysCut = true;
+    this.stagger(1.6);
+    c.cue('item', v3(this.pos.x, 0.5, this.pos.z), "[the ring parts — the house's keys scatter at his feet]", { severity: 'warn' });
+    c.sound.emit({ x: this.pos.x, y: 0.5, z: this.pos.z, intensity: 0.35, category: 'item', caption: '[keys scatter on the floor]', source: this.id });
+  }
 
   constructor() { super('bellman', ENTITY_TUNING.bellman); }
 
   protected onSpawn(): void {
     const c = this.ctx;
     this.rng = new Rng(c.seed);
+    this.keysCut = false;
     // Start at the live head of the trail — it picks up where the player is
     // now, not where the run began.
     this.crumb = Math.max(0, (c.playerTrail?.length ?? 0) - 1);
@@ -203,7 +226,9 @@ export class Bellman extends Entity {
     // Observation freeze — the counterplay. Being watched yields after 2.6s.
     const frozen = this.underGaze();
     if (frozen) {
-      this.watchT += dt;
+      // At arm's reach the stare pins him — he cannot fold away from a
+      // gaze this close (sprint 396: this is the cut-the-keyring window).
+      if (d >= 1.7) this.watchT += dt;
       if (c.now - this.gazeCueAt > 7 && d < 9) {
         this.gazeCueAt = c.now;
         c.cue('hide-creak', v3(this.pos.x, 1.4, this.pos.z), GAZE_LINES[this.rng.int(0, GAZE_LINES.length - 1)], { severity: 'info' });
@@ -253,11 +278,12 @@ export class Bellman extends Entity {
             return;
           }
         }
-      } else if (blocking?.locked) {
+      } else if (blocking?.locked && !this.keysCut) {
         // The house's own ring: a locked leaf is a pause, not a wall.
         // The keys work for a beat, the lock turns for it, and it comes
         // through the seam — the leaf never opens and stays locked for
-        // you. Locks save you from guests, not from the staff.
+        // you. Locks save you from guests, not from the staff. (With the
+        // ring cut he has no keys — a locked leaf is just a wall now.)
         this.doorHoldT += dt;
         this.rattleT -= dt;
         if (this.rattleT <= 0) {

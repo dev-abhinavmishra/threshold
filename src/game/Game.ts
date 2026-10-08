@@ -1968,6 +1968,25 @@ export class Game {
         });
       }
     }
+    // Cut the keyring — while the bellman stands yielded under a close
+    // stare, the ring on his belt is reachable (sprint 396). The close
+    // gaze holds him — the fold clock only runs at range — and the cut
+    // scatters the house's keys for good, then staggers him: your one
+    // beat to be gone.
+    for (const ent of this.entities) {
+      if (ent.id !== 'bellman') continue;
+      const b = ent as unknown as { cuttable: boolean; pos: Vec3; cutKeys: () => void };
+      if (!b.cuttable) continue;
+      const dx = b.pos.x - this.player.pos.x, dz = b.pos.z - this.player.pos.z;
+      if (dx * dx + dz * dz > 1.7 * 1.7) continue;
+      this.interaction.add({
+        kind: 'keyring', id: `keyring-${this.space}`,
+        pos: { x: b.pos.x, y: 1.0, z: b.pos.z },
+        prompt: 'Cut the keyring — hold the gaze',
+        holdTime: 1.8, enabled: true, priority: 5,
+        data: ent as unknown as Record<string, unknown>,
+      });
+    }
     // While the laundress sniffs a splash: 'Search the wash' on her basin.
     for (const ent of this.entities) {
       if (ent.id !== 'laundress' || ent.state !== 'engage') continue;
@@ -3694,6 +3713,11 @@ export class Game {
         this.giveItem('doorChock', 1);
         this.cue('item', it.pos, '[the chock works free — the blades remember how to spin]');
         this.sound.emit({ x: f.pos.x, y: 1.1, z: f.pos.z, intensity: 0.45, category: 'machine', caption: '[the wheel grinds back to life]' });
+        return;
+      }
+      case 'keyring': {
+        it.enabled = false;
+        (it.data as unknown as { cutKeys?: () => void }).cutKeys?.();
         return;
       }
       case 'basket': {

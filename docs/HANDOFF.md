@@ -4992,3 +4992,27 @@ Game.die() from the same five fields.
 - vitest: Warden 'holds mid-stride under the house's own glass' — frozen
   through the window, paces after. e2e batched per pace directive.
 - Gates: tsc, lint, vitest 271, sim 5/5, build.
+
+## sprint 396 — cut the keyring
+
+- The gaze counterplay only ever bought safety: hold the stare 2.6s and
+  he folds away. Now the yield has a second layer — a CLOSE stare pins
+  him: `watchT` only accrues at d>=1.7, so at arm's reach he cannot
+  fold, and while `cuttable` (frozen + uncut + engage) the Game mints
+  'Cut the keyring — hold the gaze' at his chest (1.8s, priority 5).
+  The fiction: distant gaze buys retreat, close gaze buys the theft.
+- The reward is his hobbling, not your pocket — the keys scatter, gone:
+  `keysCut` flips his locked-door branch to the generic blocked path,
+  so a locked leaf becomes the same wall it is for you (bounded 8s,
+  'lost interest'). It stays locked for you too — you cut his ring,
+  you don't gain one.
+- The escape window is the chime: `cutKeys()` staggers him 1.6s
+  (sprint 395's surface, first reuse) — he looks down at the fallen
+  ring while you're already moving. Price: the approach itself —
+  closing to 1.7m of a killer under unbroken gaze; any aim break
+  un-mints the verb and unfroze at that range is death-adjacent.
+- vitest: pin spec (no fold at close range, folds when you step back)
+  + keyless spec (never through the seam, 'lost interest', leaf stays
+  locked). e2e batched per pace directive — the existing bellman legs
+  are unaffected (they drive at range / pin watchT=0).
+- Gates: tsc, lint, vitest 273, sim 5/5, build.

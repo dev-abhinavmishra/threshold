@@ -404,6 +404,60 @@ describe('Bellman (sprint 232)', () => {
     expect(entry.locked).toBe(true);          // still locked for you
     b.dispose();
   });
+
+  it('holds under a close stare — the fold clock only runs at range (sprint 396)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: [] });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(room.origin.x, 0, room.origin.z);
+    player.yaw = Math.atan2(entry.x - room.origin.x, entry.z - room.origin.z); // face the entry he comes through
+    const b = new Bellman();
+    b.spawn(ctx);
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 60; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('engage');
+    // step into arm's reach with the gaze held — the stare pins him now:
+    // the fold clock only accrues at range, so the 2.6s fold never lands
+    player.pos = v3(pos.x - Math.sin(player.yaw) * 1.4, 0, pos.z - Math.cos(player.yaw) * 1.4);
+    for (let i = 0; i < 80; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; } // 4s — past any fold
+    expect(b.state).toBe('engage');
+    expect((b as unknown as { cuttable: boolean }).cuttable).toBe(true);
+    // step back to range — the stare still holds, the clock resumes, he folds
+    player.pos = v3(pos.x - Math.sin(player.yaw) * 6, 0, pos.z - Math.cos(player.yaw) * 6);
+    let steps = 0;
+    while (b.state !== 'done' && steps++ < 400) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('done');
+    b.dispose();
+  });
+
+  it('a cut ring turns a locked leaf into a wall (sprint 396)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.locked = true;
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // well away, unseen
+    const b = new Bellman();
+    b.spawn(ctx);
+    b.cutKeys(); // the ring scatters before he ever reaches the seam
+    const pos = (b as unknown as { pos: { x: number; z: number } }).pos;
+    const nx = Math.sin(entry.yaw), nz = Math.cos(entry.yaw);
+    const side = (p: { x: number; z: number }) => (p.x - entry.pos.x) * nx + (p.z - entry.pos.z) * nz;
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 500) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state).toBe('done');
+    expect(Math.abs(side(pos))).toBeLessThan(0.2); // never through the seam
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /lost interest/.test(c))).toBe(true);
+    expect(captions.every((c) => !/keys works the lock|lock turns for it/.test(c))).toBe(true);
+    expect(entry.locked).toBe(true); // still locked for you too — the keys are spent, not yours
+    b.dispose();
+  });
 });
 
 describe('Porter (sprint 233)', () => {
