@@ -680,7 +680,17 @@ export class Game {
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
     this.stockFiled = new Set(cp?.stockFiled ?? []);
+    // the rifled till stays rifled — cold counters + the stock-reads
+    // already testified ride the checkpoint with the debt that priced them
+    this.closedCounters.clear();
+    for (const ci of cp?.closedCounters ?? []) {
+      this.closedCounters.add(ci);
+      const tillSock = this.route.rooms[ci]?.sockets
+        .find((s) => s.meta.clerk === 'slot0');
+      if (tillSock) tillSock.meta.tillTaken = true;
+    }
     this.stockSeen.clear();
+    for (const si of cp?.stockSeen ?? []) this.stockSeen.add(si);
     this.lampOn = false;
     this.pulseLampOn = false;
     this.wardArmed = false;
@@ -2128,8 +2138,10 @@ export class Game {
         // window (~3.5s), the clerk's eye is on the ringing bell, not
         // your hands — the till still opens and still smells, but the
         // register never writes you. The lure is a real steal-window.
+        // sprint 359 — the window is for strangers: once the register
+        // holds your face the bell can't buy his eye off it.
         const rung = this.bellRung.get(roomIndex);
-        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5;
+        const unfiled = rung !== undefined && this.clock.time - rung.t < 3.5 && this.unpaidHeld === 0;
         if (!unfiled) this.unpaidHeld += 2;
         it.enabled = false;
         // sprint 333 — the take goes back: the emptied till takes its
@@ -2174,7 +2186,9 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.cue('drawer', it.pos, unfiled
           ? '[it was watching the bell — your hands go unfiled]'
-          : '[the clerk watches your hands — the register writes you twice]', 'warn');
+          : rung !== undefined && this.clock.time - rung.t < 3.5
+            ? '[the register already holds your face — the bell can\'t buy his eye off it]'
+            : '[the clerk watches your hands — the register writes you twice]', 'warn');
         return;
       }
       case 'restock': {
@@ -3395,7 +3409,7 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
           kind: 'work', t: this.clock.time, readBy: [] });
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'distraction',
-          caption: '[paper scattering in the corridor]', source: 'player' });
+          caption: '[paper scattering in the corridor]' });
         this.wantedRepostT = this.clock.time + 30;
         return;
       }
@@ -4395,6 +4409,8 @@ export class Game {
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
+      closedCounters: [...this.closedCounters],
+      stockSeen: [...this.stockSeen],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -5171,11 +5187,14 @@ export class Game {
           // landing visibly), and after the rifle it ignores the bell
           // entirely — the cold counter's face finds your hands.
           let tx = this.player.pos.x, tz = this.player.pos.z;
+          // sprint 359 — a filed face is a known face: warm clerks
+          // watch the register's mark, not their own bell
           let watches = o.userData.broker === true
-            || this.closedCounters.has(o.userData.clerkRoomIndex as number);
+            || this.closedCounters.has(o.userData.clerkRoomIndex as number)
+            || (o.userData.clerk === true && this.unpaidHeld > 0);
           if (o.userData.clerk === true && !watches) {
             const rung = this.bellRung.get(o.userData.clerkRoomIndex as number);
-            if (rung && this.clock.time - rung.t < 3.5) {
+            if (rung && this.clock.time - rung.t < 3.5 && this.unpaidHeld === 0) {
               tx = rung.x; tz = rung.z; watches = true;
             } else if (this.hotItems.size > 0
                 && this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0)) {

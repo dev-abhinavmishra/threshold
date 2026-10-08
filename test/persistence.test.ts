@@ -101,6 +101,8 @@ describe('checkpoint', () => {
       deadHazards: [{ room: 4, kind: 'snare', x: 0, z: 1 }, { room: 6, kind: 'eye', x: 2, z: 3, filed: true }],
       drainedRooms: ['main:8'],
       stockFiled: [11],
+      closedCounters: [3],
+      stockSeen: [3, 7],
     });
     const cp = loadCheckpoint()!;
     expect(cp.wantedActive).toBe(true);
@@ -113,6 +115,8 @@ describe('checkpoint', () => {
     expect(cp.deadHazards![1].filed).toBe(true);
     expect(cp.drainedRooms).toEqual(['main:8']);
     expect(cp.stockFiled).toEqual([11]);
+    expect(cp.closedCounters).toEqual([3]);
+    expect(cp.stockSeen).toEqual([3, 7]);
   });
 });
 

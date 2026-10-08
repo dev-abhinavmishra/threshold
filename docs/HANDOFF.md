@@ -4150,7 +4150,46 @@ Game.die() from the same five fields.
   like any rummage) and emits a positional rustle ('[paper scattering
   in the corridor]') — the counterplay is loud, just not fee-bearing:
   crew paper isn't your theft, but spilled sheets don't stay quiet.
-- Trap worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
-  name) — the emit uses 'distraction'.
+- Traps worth keeping: 'rustle' is NOT a SoundCategory (it's a cue
+  name) — the emit uses 'distraction'. And a `source`-tagged emit is
+  FICTION (every hear gate rejects `e.source`) — the spill carries no
+  `source` so the crew physically hears the paper hit the floor.
 - Gates: tsc, lint, vitest 249.
 >>>>>>> devin/1791426766-threshold-s356
+
+## sprint 359 — the window is for strangers
+
+- s328's bell-window worked for anyone: ring, rifle inside ~3.5s, the
+  register never writes. But the register prices filed faces
+  everywhere else — the window should too. `unfiled` now requires
+  `unpaidHeld === 0`: once the register holds your face the bell
+  can't buy his eye off it (rifle in-window while filed → +2 held and
+  '[the register already holds your face — the bell can't buy his eye
+  off it]'). House-book gated, not under-book — the boards don't reach
+  upstairs; the register does.
+- The eye matches the mechanic: warm clerk head-track now watches a
+  filed face (`unpaidHeld > 0` counts as a watch reason beside
+  Broker/cold/stock-tell) and ignores its own bell entirely.
+- Leg fix: `headPre` read absolute head yaw — an unwatched head holds
+  its last bearing (no decay path, s337 same trap). The probe now
+  proves no-retrack: zero the book + drain `hotItems`/`hotImprints`,
+  stand at a mirrored bearing, assert the head doesn't swing.
+- Gates: tsc, lint, vitest 251, economy clerk leg green (unfiled path
+  unchanged for a clean book).
+
+## sprint 360 — the cold stays cold
+
+- Same checkpoint hole as 346-351, last of the class: `tillTaken`,
+  `closedCounters` and `stockSeen` were run-state a reload laundered —
+  a rifled till re-warmed its clerk while `unpaidHeld` still punished.
+  `CheckpointSave.closedCounters` restores the cold set AND re-stamps
+  `meta.tillTaken` on each room's clerk socket; `stockSeen` carries the
+  already-testified stock-reads. Sold wares still restock (paid, not
+  stolen — the deliberate leniency).
+- Known edge: the s333 'Slip the take back' verb is minted at rifle
+  time and doesn't survive reload — post-reload the take stays fenced
+  or carried. Same once-flag class as one-shot papers; noted, not
+  closed.
+- Trap: `route.rooms` exists by ~532 but the room restore block sits
+  at ~680 — the stamp loop must live there, not earlier in startRun.
+- Gates: tsc, lint, vitest 251 (+2 persistence fields).
