@@ -475,3 +475,182 @@ test('the door chock holds while you walk away — until something worries it lo
   expect(r.gathered, `gathering the kicked wedge didn't return the chock — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });
+
+// sprint 440 — the wired leaf end-to-end: the coil binds a leaf for
+// both sides; the bellman can't kick it — a visit's work strains the
+// bind and he walks away with the leaf still held, and only a LATER
+// visit's work parts it (the coil drops as loot where it was cut).
+test('the wired leaf: the knocker works the bind a visit at a time', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page); // seed 's': bellman @32
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const gi = g as unknown as {
+      entities: { id: string; state: string; threatPos(): { x: number; y: number; z: number } | null }[];
+      giveItem(id: string, n?: number): void;
+      inventory: { id: string; count: number }[];
+      spawnById(id: string): void;
+    };
+    gi.giveItem('wireCoil', 2);
+    const coilCount = () => gi.inventory.find((i) => i.id === 'wireCoil')?.count ?? -1;
+
+    const bRoom = g.route.rooms.find((r) => r.scheduled?.some((s) => s.entity === 'bellman'));
+    if (!bRoom) return { stage: 'no-bellman' } as const;
+    const prev = g.route.rooms[bRoom.index - 1];
+
+    // Rehearsal on a quiet branch leaf: bind it, then cut your own wire.
+    const qRoom = g.route.branchRooms?.find((r) => !(r.scheduled?.length) && r.doors.some((d) => !d.locked && !d.falseDoor && (d.openT ?? 0) <= 0.4));
+    const rehearseIn = qRoom ?? prev;
+    const pDoor = rehearseIn.doors.find((d) => !d.locked && !d.falseDoor && (d.openT ?? 0) <= 0.4);
+    if (!pDoor) return { stage: 'no-rehearsal-door' } as const;
+    g.player.teleport(rehearseIn.origin.x, 0, rehearseIn.origin.z);
+    for (let f = 0; f < 6; f++) g.frame();
+    const toP = { x: rehearseIn.origin.x - pDoor.pos.x, z: rehearseIn.origin.z - pDoor.pos.z };
+    const LP = Math.hypot(toP.x, toP.z) || 1;
+    g.player.teleport(pDoor.pos.x + (toP.x / LP) * 0.9, 0, pDoor.pos.z + (toP.z / LP) * 0.9);
+    g.keys.add('KeyC');
+    for (let f = 0; f < 4; f++) g.frame();
+    const aimHold = (id: string, done: () => boolean, frames = 90, each?: () => void): boolean => {
+      const lp = g.player as unknown as { lookDir(out: { x: number; y: number; z: number }): void };
+      const orig = lp.lookDir.bind(lp);
+      const sys = g.interaction as unknown as {
+        focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+      };
+      const origFocus = sys.focus.bind(sys);
+      let seen = false;
+      for (let f = 0; f < frames && !done(); f++) {
+        each?.();
+        const pt = g.interaction.interactables.find((i) => i.id === id);
+        if (!pt) { g.frame(); continue; }
+        seen = true;
+        lp.lookDir = (out) => {
+          const dx = pt.pos.x - g.player.pos.x, dy = pt.pos.y + 0.6 - g.player.eyeHeight, dz = pt.pos.z - g.player.pos.z;
+          const L = Math.hypot(dx, dy, dz) || 1;
+          out.x = dx / L; out.y = dy / L; out.z = dz / L;
+        };
+        sys.focus = (eye, look, pos) => {
+          const here = g.interaction.interactables.find((i) => i.id === id);
+          const r = here ?? origFocus(eye, look, pos);
+          (sys as { focused?: unknown }).focused = r ?? null;
+          return r;
+        };
+        if (g.interaction.focused?.id === id) g.keys.add('KeyE');
+        g.frame();
+      }
+      lp.lookDir = orig;
+      sys.focus = origFocus;
+      g.keys.delete('KeyE');
+      return seen;
+    };
+    if (!aimHold(`wire-${pDoor.id}`, () => pDoor.heldBy === 'wired')) return { stage: 'no-wire-point', caps: caps.slice(-6) } as const;
+    const wiredRehearsal = pDoor.heldBy === 'wired';
+    const countAfterBind = coilCount();
+    if (!aimHold(`unwire-${pDoor.id}`, () => pDoor.heldBy === undefined)) return { stage: 'no-unwire-point', caps: caps.slice(-6) } as const;
+    const unwired = pDoor.heldBy === undefined;
+    const countAfterCut = coilCount();
+    g.keys.delete('KeyC');
+
+    // The real thing: inside the knock room, wire the entry leaf, then
+    // stand off — the whole point vs the brace.
+    g.player.teleport(bRoom.origin.x, 0, bRoom.origin.z);
+    for (let f = 0; f < 8; f++) g.frame();
+    const bell = gi.entities.find((e) => e.id === 'bellman');
+    if (!bell) return { stage: 'no-bellman-spawn', caps: caps.slice(-8) } as const;
+    const door = bRoom.doors.find((d) => d.id === `door-${bRoom.index}-in`);
+    if (!door) return { stage: 'no-door' } as const;
+    const toC = { x: bRoom.origin.x - door.pos.x, z: bRoom.origin.z - door.pos.z };
+    const L = Math.hypot(toC.x, toC.z) || 1;
+    g.player.teleport(door.pos.x + (toC.x / L) * 0.9, 0, door.pos.z + (toC.z / L) * 0.9);
+    g.keys.add('KeyC');
+    for (let f = 0; f < 4; f++) g.frame();
+    const unwatch = () => { (bell as { watchT?: number }).watchT = 0; };
+    aimHold(`wire-${door.id}`, () => door.heldBy === 'wired', 90, unwatch);
+    g.keys.delete('KeyC');
+    if (door.heldBy !== 'wired') return { stage: 'wire-failed', prompt: g.interaction.focused?.prompt, crouch: g.player.crouching } as const;
+
+    g.player.teleport(door.pos.x + (toC.x / L) * 2.4, 0, door.pos.z + (toC.z / L) * 2.4);
+    g.player.yaw = Math.atan2(toC.x, toC.z);
+    g.player.pitch = 0;
+    const cluster = [...prev.doors, ...bRoom.doors]
+      .filter((d) => Math.hypot(d.pos.x - door.pos.x, d.pos.z - door.pos.z) < 0.6);
+    const trace: string[] = [];
+    // Visit one: he works the wire >6s, strains it, and walks away —
+    // the leaf stays bound.
+    let strained = false, faded = false;
+    for (let f = 0; f < 900 && !faded; f++) {
+      unwatch();
+      g.frame();
+      if (caps.some((c) => /works at the wire/.test(c))) strained = true;
+      if (caps.some((c) => /bind held/.test(c))) faded = true;
+      if (f % 40 === 0) {
+        const tp = (bell as unknown as { pos?: { x: number; z: number } }).pos ?? bell.threatPos();
+        const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
+        const faced = tp ? [...prev.doors, ...bRoom.doors]
+          .filter((d) => Math.hypot(d.pos.x - tp.x, d.pos.z - tp.z) < 1.4)
+          .map((d) => `${d.id.split('-').pop()}=${d.heldBy ?? '-'}`).join(',') : '';
+        trace.push(`f${f} bell@${dd.toFixed(2)} hold=${door.heldBy} strained=${strained} [${faced}]`);
+      }
+    }
+    const heldAfterVisit = door.heldBy;
+    // diagnostics: which leaves did the knocker actually face?
+    const bp = (bell as unknown as { pos?: { x: number; z: number } }).pos;
+    const near = bp ? [...prev.doors, ...bRoom.doors]
+      .filter((d) => Math.hypot(d.pos.x - bp.x, d.pos.z - bp.z) < 2.5)
+      .map((d) => `${d.id}=${d.heldBy ?? '-'}@${Math.hypot(d.pos.x - bp.x, d.pos.z - bp.z).toFixed(1)}`) : [];
+
+    // Visit two: a fresh dispatch — this visit's work parts the bind.
+    gi.spawnById('bellman');
+    let freed = false;
+    for (let f = 0; f < 900 && !freed; f++) {
+      g.frame();
+      if (caps.some((c) => /wire parts under its hands/.test(c))) freed = true;
+      if (f % 40 === 0) {
+        const tp = gi.entities.filter((e) => e.id === 'bellman').map((e) => e.threatPos()).find(Boolean);
+        const dd = tp ? Math.hypot(tp.x - door.pos.x, tp.z - door.pos.z) : -1;
+        trace.push(`v2 f${f} bell@${dd.toFixed(2)} hold=${door.heldBy} freed=${freed}`);
+      }
+    }
+    const opened = cluster.some((d) => d.opening || (d.openT ?? 0) > 0.05) || door.heldBy === undefined;
+
+    // The coil lies where it was cut — gather it back. The mint lands
+    // on the next frame's interactable rebuild, so let a few settle.
+    for (let f = 0; f < 6; f++) g.frame();
+    let dropSeen = false, gathered = false;
+    const dropsNow = (g as unknown as { droppedCoils?: { x: number; z: number }[] }).droppedCoils?.length ?? -1;
+    const dropKinds = g.interaction.interactables.filter((i) => /drop|coil/i.test(i.kind)).map((i) => i.id);
+    const drop = g.interaction.interactables.find((i) => i.kind === 'coilDrop');
+    if (drop) {
+      dropSeen = true;
+      g.player.teleport(drop.pos.x + (toC.x / L) * 0.9, 0, drop.pos.z + (toC.z / L) * 0.9);
+      const before = coilCount();
+      aimHold(drop.id, () => coilCount() > before, 90);
+      gathered = coilCount() > before;
+    }
+    return { stage: 'done', wiredRehearsal, countAfterBind, unwired, countAfterCut, strained, faded, heldAfterVisit, near, freed, opened, dropsNow, dropKinds, dropSeen, gathered, dead: g.player.dead, trace, wireCaps: caps.filter((c) => /wire|bind|strain/i.test(c)), caps: caps.slice(-16) } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  if (result.stage !== 'done') return;
+  const r = result as { wiredRehearsal: boolean; countAfterBind: number; unwired: boolean; countAfterCut: number; strained: boolean; faded: boolean; heldAfterVisit?: string; near: string[]; freed: boolean; opened: boolean; dropsNow: number; dropKinds: string[]; dropSeen: boolean; gathered: boolean; dead: boolean; trace: string[]; wireCaps: string[]; caps: string[] };
+  const tail = r.caps.join(' | ') + ' wireCaps: ' + r.wireCaps.join(' | ') + ' drops: ' + r.dropsNow + ' kinds: ' + r.dropKinds.join(',') + ' near: ' + r.near.join(', ') + ' trace: ' + r.trace.join(' ; ');
+  expect(r.wiredRehearsal, 'the wire never bound').toBe(true);
+  expect(r.countAfterBind).toBe(1);
+  expect(r.unwired, 'cut the wired leaf free did not release it').toBe(true);
+  expect(r.countAfterCut).toBe(2);   // the coil comes back to your hand
+  expect(r.strained, `the knocker never worked the wire — ${tail}`).toBe(true);
+  expect(r.faded, `the knocker never gave up on the first visit — ${tail}`).toBe(true);
+  expect(r.heldAfterVisit, `the first visit parted the wire — ${tail}`).toBe('wired');
+  expect(r.freed, `the second visit never parted the bind — ${tail}`).toBe(true);
+  expect(r.opened, `the leaf never freed after the wire gave — ${tail}`).toBe(true);
+  expect(r.dropSeen, `the worked coil never landed as loot — ${tail}`).toBe(true);
+  expect(r.gathered, `gather never returned the coil — ${tail}`).toBe(true);
+  expect(errors).toEqual([]);
+});

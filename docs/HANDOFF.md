@@ -6084,3 +6084,23 @@ unwire-and-rewire doesn't inherit the work the house already put
 into the last bind on that leaf.
 **Notes:** the key is leaf-pos-derived (`wire:${round(x*7)}x...`),
 keyed on `bindDoor.pos` not the verb anchor (anchors sit 0.45m off).
+
+### sprint 440 — the knocker finds the bind from any side
+**Done:** `blockingDoorNear` was slipping on a held leaf once the
+bellman stood inside its swing: `doorBetween` fails with him ON the
+leaf (pos inside the door's span), the held leaf fell out of the
+scan, a closed sibling won `blocking`, and the shared `doorHoldT`
+turned wire-work patience into knocked-door patience — he gave up
+at 8s with the wire still on. Now held leaves bypass `doorBetween`
+within 1.2m and a `lastBlock` sticky target (1.6m hysteresis) keeps
+the same leaf as he wobbles; `knocked.delete` on 'freed' so he can
+knock the leaf he just worked open.
+**Notes:** the wait-branch (>8s) and held-branch (>14s) print the
+SAME '[its steps fade down the hall — it lost interest]' cue —
+indistinguishable in captions; only the trace positions told them
+apart. E2E trap: the 'freed' mint lands on the next frame's
+interactable rebuild — checking `interactables` in the same frame
+as the cue reads a pre-mint array; settle ~4-6 frames before
+looking for a coilDrop/wedgeDrop. The doorBetween dead spot is
+why every door-scan needs the held-bypass: any entity that ends
+its approach ON the leaf is inside the span, not behind it.
