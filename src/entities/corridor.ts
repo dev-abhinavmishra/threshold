@@ -624,13 +624,28 @@ export class Warden extends Entity {
         this.investigateScan += dt;
         if (this.mesh) this.mesh.rotation.y += dt * 2.4;
         if (this.investigateScan > (this.learned ? 2.6 : 1.8)) {
-          // sprint 410 — the house re-lays its wire: a read that ends on
-          // dead wire sign ties the snare back. Your defuses and your
-          // trips both feed it — and a re-laid wire trips walkers again.
-          if (this.investigateKind === 'wire'
-            && this.ctx.rearmSnare?.(this.investigate.x, this.investigate.z)) {
-            this.ctx.cue('floor-creak', this.investigate,
-              '[it bends and re-lays the wire — the floor relearns your walk]', { severity: 'warn' });
+          // sprint 410-411 — the house re-lays its work: a read that
+          // ends on a dead hazard's sign brings it back — wire re-tied,
+          // bled lines re-pressurized, wheels re-engaged, felt stripped
+          // off its eyes (the wrap is pocketed, not returned).
+          if (this.investigateKind === 'wire' || this.investigateKind === 'line'
+            || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
+            const kind = this.investigateKind;
+            const restored = this.ctx.rearmHazard?.(kind, this.investigate.x, this.investigate.z);
+            if (restored) {
+              this.ctx.cue('floor-creak', this.investigate,
+                restored === 'snare' ? '[it bends and re-lays the wire — the floor relearns your walk]'
+                  : restored === 'steam' ? '[it works the valve back open — the line breathes again]'
+                    : restored === 'fan' ? '[it re-engages the wheel — the blades turn again]'
+                      : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+              // the house's work is audible like yours — re-tying wire
+              // rustles where it happens, tagged to him so he doesn't
+              // pull to his own hands
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.5, z: this.investigate.z,
+                intensity: 0.35, category: 'item', caption: '[wire retied]',
+                source: this.id });
+            }
           }
           this.investigate = null;
           this.investigateKind = null;

@@ -1075,17 +1075,39 @@ export class Game {
         for (const e of out) if (!e.wiped) e.readBy.push(key);
         return out;
       },
-      // sprint 410 — the house re-lays its wire: a reader that reached a
-      // dead snare's sign bends and ties it back. The snare's own armed
-      // flag is the source of truth — a re-laid wire simply leaves the
-      // deadHazards checkpoint list, and the tug-of-war is symmetric:
-      // the re-armed wire trips walkers again too.
-      rearmSnare: (x, z) => {
-        const s = this.hazard.snares.find((hz) =>
-          !hz.armed && Math.hypot(hz.pos.x - x, hz.pos.z - z) < 1.4);
-        if (!s) return false;
-        s.armed = true;
-        return true;
+      // sprint 410-411 — the house re-lays its own work: a reader that
+      // reached a dead hazard's sign brings it back — wire re-tied, bled
+      // lines re-pressurized, wheels re-engaged, felt stripped off its
+      // eyes. Death flags are the source of truth: a restored hazard
+      // simply leaves the deadHazards checkpoint list, and the
+      // tug-of-war is symmetric — restored work threatens walkers too.
+      rearmHazard: (kind, x, z) => {
+        const near = (p: { x: number; z: number }) => Math.hypot(p.x - x, p.z - z) < 1.4;
+        if (kind === 'wire') {
+          const s = this.hazard.snares.find((hz) => !hz.armed && near(hz.pos));
+          if (!s) return null;
+          s.armed = true;
+          return 'snare';
+        }
+        if (kind === 'line') {
+          const s = this.hazard.steams.find((st) => st.dead && near(st.pos));
+          if (!s) return null;
+          s.dead = false;
+          return 'steam';
+        }
+        if (kind === 'fan') {
+          const f = this.hazard.fans.find((ff) => ff.dead && near(ff.pos));
+          if (!f) return null;
+          f.dead = false;
+          return 'fan';
+        }
+        if (kind === 'blind') {
+          const w = this.hazard.watchers.find((ww) => ww.dead && near(ww.pos));
+          if (!w) return null;
+          w.dead = false; // the felt is confiscated — the house pockets your wrap
+          return 'eye';
+        }
+        return null;
       },
     };
   }

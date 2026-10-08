@@ -5522,3 +5522,19 @@ The floor is now a contested surface: you cut/snare/trip, the house
 reads the sign and re-lays where you walked.
 
 Gates: tsc, lint (batched with the next commits).
+
+## Sprint 411 — the floorkeeper's whole kit
+The re-lay generalizes to every dead-hazard kind via `rearmHazard`:
+a read ending on 'line' sign re-pressurizes the bled steam, on 'fan'
+sign re-engages the killed wheel, and on 'blind' sign it peels your
+felt off the eye — and pockets the wrap (confiscated, not returned:
+the house keeps the tool you parked on it). Each restoration cues its
+own line; the untape/tape verbs re-mint off `w.dead` so a stripped
+eye's mount flips back correctly.
+
+Wipe-shadowed reads still can't investigate (poisoned reads = no
+restore); 'work' and 'water' sign carry nothing to re-lay — the
+flooded hall's drain stays drained (re-flooding a hall is heavier
+work than tying wire; left out deliberately).
+
+Gates: tsc, lint.
