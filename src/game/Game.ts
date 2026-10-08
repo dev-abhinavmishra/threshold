@@ -2832,6 +2832,7 @@ export class Game {
         // answers CARGO: which rooms still hold unclaimed stock, and where
         // the egress is stamped.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 5;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -2872,6 +2873,7 @@ export class Game {
         // The crew board — who is signed on down the line: the under's
         // entity foresight, told in crew euphemisms. One read per board.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 5;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -2913,6 +2915,7 @@ export class Game {
         // CLAIMS: which tagged effects in the next stretch are still held
         // and which the crew already drew.
         const sock = it.data as Socket;
+        if (this.indexClosed(it.pos)) return;
         const price = (sock.meta.price as number) ?? 4;
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
@@ -4162,6 +4165,17 @@ export class Game {
    *  the tally is settled (ctx.wanted widens their notice reach).
    *  Tear every sheet and he reaches for fresh paper: `repost` re-arms
    *  the same raise on new downstream boards after a beat. */
+  /** The index's deep tier — a file six questions deep stops answering
+   *  the asks that dig it: the asking papers (work order, crew board,
+   *  claim register) hold their pages. Relief papers and the desk stay
+   *  open — closing the file's own valves would strand the player. */
+  private indexClosed(pos: Vec3 | null): boolean {
+    if (this.paperTrail < 6) return false;
+    this.cue('door-locked', pos,
+      '[the index closes to you — six questions is a file, not a curiosity]', 'warn');
+    return true;
+  }
+
   /** Service refusal at a staffed counter — a cold counter folds its
    *  hands; a face six lines deep in the register buys nothing at any
    *  counter (the desk is the only answer, and the affidavit's rate).
