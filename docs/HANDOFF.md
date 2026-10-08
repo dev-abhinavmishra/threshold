@@ -3916,3 +3916,72 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
   first; world long-axis = roomYaw − θ).
 - Doors are NOT left ajar — `d.openT` decays to shut in <0.1s, and
   leaf-collider/peek semantics were left untouched on purpose.
+
+## sprint 347 — the dead line stays dead
+
+- Same hole class as s332/346, entity-side this time: `lineDead` lived
+  on the Detective instance — a checkpoint reload re-scheduled him
+  fresh, and the pulled junction box re-minted mesh + verb, un-deading
+  the wire for free (box literally hung back on the wall).
+- Game-level `deadLines: Set<number>` keyed by the detective's
+  `spawnRoom` (carried on `data.roomIdx` at mint); `case 'houseLine'`
+  adds it post-pull; new ctx hook `lineDeadFor(roomIdx)` — `onSpawn`
+  consults it BEFORE minting box/verb, so a dead line never hangs in
+  the first place (`lineDead = true` set from the hook). CheckpointSave
+  carries `deadLines?: number[]`.
+- e2e: dead-line leg — post-pull `makeCheckpoint` asserts
+  `deadLines` includes the detective's room index.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, economy dead-line leg, build.
+
+## sprint 348 — the sign stays written
+
+- The scent board laundered for free: `hazard.evidence` (fresh work /
+  kill / wipe / blind marks the hunters read) is run-state, and a
+  checkpoint reload rebuilt it empty — the warden's trail of YOU went
+  blank while the ledgers kept your name.
+- `CheckpointSave.evidence` carries only non-`old` entries — authored
+  spent-socket sign re-derives from `addFromRoom` on restore, so it
+  isn't duplicated. `readBy`/`weak`/`wiped` ride along (a read mark
+  stays read, a wiped mark stays doubted); positions save as x/z,
+  `pos.y` restored 0 like every writer.
+- Gates: tsc, lint (vitest/sim batched with the next commits, per the
+  new cadence).
+
+## sprint 349 — the dead stay dead
+
+- Biggest remaining reload lie: hazard kill-state was run-memory. A
+  snipped wire re-armed, a bled line re-hissed, a choked wheel spun
+  again, and a settled eye could file a SECOND witness line on the
+  same face — the rooms you made safe were dangerous again and the
+  register double-billed the same eye.
+- `CheckpointSave.deadHazards` carries positional kill-state —
+  `!armed` snares, `dead` steams/fans, and watchers that are `dead` OR
+  `filed` (`filed` persists so a survivor can't be billed twice).
+  `addFromRoom` runs upfront on startRun so restore marks entries
+  directly: same-room + 0.35m positional match.
+- `drainedRooms` was the same class of physical state (drained halls
+  re-flooded on reload) — now persisted as `string[]` keys
+  (`${space}:${idx}`).
+- Gates: tsc, lint (vitest/sim/e2e batched at the next major commit).
+
+## sprint 350 — the register can't bill the same manifest twice
+
+- The Detective's `stockNoted` was per-instance: a checkpoint reload
+  re-sighted your marked wares and filed a SECOND `unpaidHeld` line
+  for the same manifest. `stockSighted` now takes the room key and
+  dedupes against a persisted `stockFiled` set — the cue can re-fire
+  (honest: he re-notes), the line can't.
+- Gates: tsc, lint (batched verification with the next commits).
+
+## sprint 351 — the boards talk to the index
+
+- The wanted sheets named your hands to the swamper/hauler/laundress/
+  grafter ears — but the under's third book heard nothing. While
+  `wantedActive` stands, every consult of the under's paper now files
+  DOUBLE: `fileQuestion()` (a `wantedActive ? 2 : 1` helper) replaces
+  the six inline `paperTrail += 1` sites (book ask, wash, fence, work
+  order, crew board, claim register). The docket rifle's `+= 2` stays
+  — it was always the loudest ask.
+- Readable: the wanted state is announced by the sheets and the
+  extended-band catches; the book readout prints the live count.
+- Gates: tsc, lint (batched verify follows).

@@ -71,13 +71,18 @@ export interface EntityCtx {
    *  billed as damages: +1 line in the Detective's book.
    *  Optional for headless ctxs. */
   lineCut?: () => void;
+  /** A pulled line stays dead across a checkpoint — the Game remembers
+   *  which detective rooms lost their wire; a fresh spawn skips the
+   *  junction box entirely when this returns true. Optional. */
+  lineDeadFor?: (roomIdx: number) => boolean;
   /** A wall eye's settle report went upstairs — a witness statement in
    *  the register: +1 line in the Detective's book. Fires once per eye.
    *  Optional for headless ctxs. */
   eyeFiled?: () => void;
   /** The Detective sighted marked stock on the player — the register
-   *  wrote that manifest; the sighting files +1 line. Optional. */
-  stockSighted?: () => void;
+   *  wrote that manifest; the sighting files +1 line, once per
+   *  detective room even across a checkpoint. Optional. */
+  stockSighted?: (roomIdx: number) => void;
   /** True while the player carries marked wares (a hotItems stack with
    *  count > 0). Optional for headless ctxs. */
   carriesMarked?: () => boolean;
