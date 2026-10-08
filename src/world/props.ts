@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2010,6 +2010,55 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pb.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
     prop.group.add(pb);
     if (!prop.group.name) prop.group.name = 'panel-bow';
+  }
+  // Someone sat — seat dust broken by one clean wipe where a body
+  // last landed and steadied itself.
+  const SEAT_KINDS = new Set(['armchair', 'chair', 'bench', 'stool']);
+  if (SEAT_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const sw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: seatWipe(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sw.name = 'seat-wipe';
+    sw.userData.decalMat = true;
+    sw.rotation.x = -Math.PI / 2;
+    sw.rotation.z = (rng.float() - 0.5) * 0.6;
+    sw.position.set(0, (dc?.[1] ?? 0.9) * 0.52, 0);
+    prop.group.add(sw);
+    if (!prop.group.name) prop.group.name = 'seat-wipe';
+  }
+  // The book dried open — warped covers and a dead page fan on the
+  // books nobody closed.
+  if ((spec.kind === 'books' || spec.kind === 'bookCart') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const pf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.34),
+      new THREE.MeshStandardMaterial({ map: pageFan(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pf.name = 'page-fan';
+    pf.userData.decalMat = true;
+    pf.rotation.x = -Math.PI / 2;
+    pf.position.set(0, (dc?.[1] ?? 0.5) + 0.006, 0);
+    prop.group.add(pf);
+    if (!prop.group.name) prop.group.name = 'page-fan';
+  }
+  // The pages curled — damp pulled the corners up and ran the ink
+  // on the loose paperwork.
+  const PAPER_KINDS = new Set(['papers', 'paperStack', 'paperScatter', 'paper']);
+  if (PAPER_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const pc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: paperCurl(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pc.name = 'paper-curl';
+    pc.userData.decalMat = true;
+    pc.rotation.x = -Math.PI / 2;
+    pc.rotation.z = rng.float() * Math.PI * 2;
+    pc.position.set(0, (dc?.[1] ?? 0.2) + 0.006, 0);
+    prop.group.add(pc);
+    if (!prop.group.name) prop.group.name = 'paper-curl';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

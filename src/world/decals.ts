@@ -6550,3 +6550,386 @@ export function panelBow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 493 — the claws raked low: three-furrow scratches at the door's foot, something wanted through. */
+export function clawMarks(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // three parallel furrows — gouged deep, brighter where the wood split
+    for (let f = 0; f < 3; f++) {
+      const x0 = cx - 16 + f * 16 + rng.range(-3, 3);
+      const lean = rng.range(-0.15, 0.15);
+      // the gouge
+      g.strokeStyle = 'rgba(30,24,18,0.85)';
+      g.lineWidth = 2.6;
+      g.beginPath();
+      g.moveTo(x0, 70);
+      g.quadraticCurveTo(x0 + lean * 30, 46, x0 + lean * 48, 20 + rng.range(-4, 6));
+      g.stroke();
+      // the splintered edge — bright torn grain beside the gouge
+      g.strokeStyle = 'rgba(170,152,124,0.6)';
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.moveTo(x0 + 2.4, 68);
+      g.quadraticCurveTo(x0 + lean * 30 + 2, 46, x0 + lean * 48 + 2, 24);
+      g.stroke();
+      // torn fibers fanning at the top of each rake
+      g.strokeStyle = 'rgba(120,104,84,0.5)';
+      for (let i = 0; i < 3; i++) {
+        g.beginPath();
+        g.moveTo(x0 + lean * 48, 22);
+        g.lineTo(x0 + lean * 48 + rng.range(-6, 6), 12 + rng.range(-3, 4));
+        g.stroke();
+      }
+    }
+    // smeared pad-drag below the rakes
+    g.fillStyle = 'rgba(44,36,28,0.35)';
+    g.beginPath(); g.ellipse(cx, 78, 22, 6, 0, 0, Math.PI * 2); g.fill();
+    // wood splinters dropped at the foot
+    g.fillStyle = 'rgba(140,124,100,0.55)';
+    for (let i = 0; i < 10; i++) {
+      g.save();
+      g.translate(cx + rng.range(-24, 24), 84 + rng.range(-3, 6));
+      g.rotate(rng.range(0, Math.PI));
+      g.fillRect(-2.5, -0.5, rng.range(3, 7), 1);
+      g.restore();
+    }
+  });
+}
+
+/** Sprint 493 — the lamp smoked the ceiling: a soot ring and smoke smudge above the hanging light. */
+export function lampSoot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // the ring — soot halo where the flame's heat bloomed upward
+    const ring = g.createRadialGradient(cx, cy, 8, cx, cy, 38);
+    ring.addColorStop(0, 'rgba(30,26,22,0.15)');
+    ring.addColorStop(0.55, 'rgba(34,28,24,0.55)');
+    ring.addColorStop(1, 'rgba(34,28,24,0)');
+    g.fillStyle = ring;
+    g.fillRect(0, 0, 96, 96);
+    // the core — a dense disc right above the mantle
+    const core = g.createRadialGradient(cx, cy, 1, cx, cy, 12);
+    core.addColorStop(0, 'rgba(22,18,15,0.75)');
+    core.addColorStop(1, 'rgba(22,18,15,0)');
+    g.fillStyle = core;
+    g.fillRect(cx - 14, cy - 14, 28, 28);
+    // the lean — smoke smudge drifting off-axis toward the room's draft
+    const la = rng.range(0, Math.PI * 2);
+    g.strokeStyle = 'rgba(38,32,26,0.35)';
+    g.lineWidth = 5;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(la) * 10, cy + Math.sin(la) * 10);
+    g.quadraticCurveTo(
+      cx + Math.cos(la) * 26 + rng.range(-4, 4), cy + Math.sin(la) * 26 + rng.range(-4, 4),
+      cx + Math.cos(la) * 42, cy + Math.sin(la) * 42);
+    g.stroke();
+    // flyspecks caught in the soot
+    g.fillStyle = 'rgba(20,16,14,0.6)';
+    for (let i = 0; i < 18; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(8, 34);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.9, 0.9);
+    }
+    // plaster heat-crackle — hairlines at the ring's edge
+    g.strokeStyle = 'rgba(50,44,38,0.4)';
+    g.lineWidth = 0.7;
+    for (let i = 0; i < 6; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30);
+      g.lineTo(cx + Math.cos(a) * rng.range(36, 44), cy + Math.sin(a) * rng.range(36, 44));
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 493 — someone sat: seat dust with one clean wipe where a body last landed. */
+export function seatWipe(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 48;
+    // the dust field — thick, undisturbed except for the wipe
+    g.fillStyle = 'rgba(156,146,130,0.5)';
+    g.fillRect(8, 8, 80, 80);
+    // edge drifts
+    g.fillStyle = 'rgba(166,156,140,0.55)';
+    g.beginPath(); g.ellipse(14, 20, 12, 8, 0.3, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(80, 74, 13, 9, -0.2, 0, Math.PI * 2); g.fill();
+    // dust speckle texture
+    g.fillStyle = 'rgba(120,110,96,0.4)';
+    for (let i = 0; i < 60; i++) {
+      g.fillRect(rng.range(10, 86), rng.range(10, 86), 1, 0.9);
+    }
+    // THE WIPE — the clean oval where someone sat down: the cushion
+    // shows through in a body-shaped absence of dust
+    const wx = cx + rng.range(-6, 6), wy = cy + rng.range(-4, 4);
+    g.fillStyle = 'rgba(58,48,38,0.75)';
+    g.beginPath(); g.ellipse(wx, wy, 22, 17, rng.range(-0.15, 0.15), 0, Math.PI * 2); g.fill();
+    // wipe fringe — dust pushed outward at the oval's lip
+    g.strokeStyle = 'rgba(140,130,114,0.55)';
+    g.lineWidth = 2.4;
+    g.beginPath(); g.ellipse(wx, wy, 23.5, 18.5, 0, 0, Math.PI * 2); g.stroke();
+    // hand-drag at the wipe's edge — they steadied themselves sitting
+    g.strokeStyle = 'rgba(70,58,46,0.5)';
+    g.lineWidth = 1.4;
+    for (let i = 0; i < 4; i++) {
+      const hx = wx + 20 + rng.range(-2, 3);
+      g.beginPath(); g.moveTo(hx, wy - 8 + i * 3.4); g.lineTo(hx + 7 + rng.float() * 4, wy - 9 + i * 3.4); g.stroke();
+    }
+  });
+}
+
+/** Sprint 494 — the book dried open: warped cover wings and a page fan that never went back. */
+export function pageFan(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    const cx = 48;
+    // warped cover — the two boards sprung open like wings
+    for (const s of [-1, 1]) {
+      g.save();
+      g.translate(cx, 44);
+      g.rotate(s * (0.5 + rng.float() * 0.2));
+      g.fillStyle = 'rgba(70,58,44,0.85)';
+      g.fillRect(s * 4, -26, s * 30, 12);
+      // gilt edge on the cover lip
+      g.fillStyle = 'rgba(180,150,80,0.4)';
+      g.fillRect(s * 4, s * -1 - 15, s * 30, 1.4);
+      g.restore();
+    }
+    // the page fan — leaves sprung up from the spine in a dead arc
+    for (let i = 0; i < 9; i++) {
+      const t = i / 8;
+      const a = -0.7 + t * 1.4;
+      g.save();
+      g.translate(cx, 42);
+      g.rotate(a + rng.range(-0.03, 0.03));
+      g.fillStyle = `rgba(196,188,170,${0.5 + t * 0.3})`;
+      g.fillRect(-0.8, -34, 1.6, 34);
+      g.restore();
+    }
+    // spine shadow
+    g.fillStyle = 'rgba(30,24,20,0.7)';
+    g.beginPath(); g.ellipse(cx, 44, 6, 3, 0, 0, Math.PI * 2); g.fill();
+    // damp tide along the lower page edges
+    g.strokeStyle = 'rgba(120,104,80,0.4)';
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.moveTo(cx - 22, 30);
+    g.quadraticCurveTo(cx, 26 + rng.range(-2, 3), cx + 22, 30);
+    g.stroke();
+    // foxing spots — the rust of old paper
+    g.fillStyle = 'rgba(120,90,50,0.45)';
+    for (let i = 0; i < 8; i++) {
+      g.beginPath(); g.arc(cx + rng.range(-16, 16), 14 + rng.range(-6, 16), rng.range(0.7, 1.6), 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 494 — the pages curled: damp pulled the corners up, the ink ran a little. */
+export function paperCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // the sheet — a pale quadrilateral, corners lifting
+    g.fillStyle = 'rgba(198,190,172,0.85)';
+    g.beginPath();
+    g.moveTo(16, 18); g.lineTo(80, 14); g.lineTo(84, 78); g.lineTo(20, 82);
+    g.closePath(); g.fill();
+    // corner curls — dark scoops where each corner rolls up
+    for (const [cx0, cy0] of [[20, 20], [78, 16], [20, 78], [82, 76]] as const) {
+      const curl = g.createRadialGradient(cx0, cy0, 1, cx0, cy0, 10);
+      curl.addColorStop(0, 'rgba(60,52,44,0.55)');
+      curl.addColorStop(1, 'rgba(60,52,44,0)');
+      g.fillStyle = curl;
+      g.fillRect(cx0 - 11, cy0 - 11, 22, 22);
+    }
+    // text lines — faded, wavering where the damp warped the sheet
+    g.strokeStyle = 'rgba(70,62,54,0.45)';
+    g.lineWidth = 0.9;
+    for (let i = 0; i < 9; i++) {
+      const y = 26 + i * 6;
+      g.beginPath();
+      g.moveTo(24, y);
+      g.quadraticCurveTo(48, y + rng.range(-1.5, 1.5), 76 - rng.float() * 12, y + rng.range(-1, 1));
+      g.stroke();
+    }
+    // the ink that ran — one line bled into a bloom
+    g.fillStyle = 'rgba(50,56,80,0.4)';
+    g.beginPath(); g.ellipse(52 + rng.range(-6, 6), 44 + rng.range(-6, 6), 5, 3.4, rng.range(-0.4, 0.4), 0, Math.PI * 2); g.fill();
+    // edge stains — the damp came from below
+    g.strokeStyle = 'rgba(120,104,80,0.4)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(20, 82); g.lineTo(84, 78); g.stroke();
+    // a single fingerprint in the margin
+    g.fillStyle = 'rgba(60,52,44,0.3)';
+    g.beginPath(); g.ellipse(70, 60, 2.2, 3, 0.3, 0, Math.PI * 2); g.fill();
+  });
+}
+
+/** Sprint 494 — the ceiling bloomed: a water ring, stain map and blistered plaster overhead. */
+export function plasterBloom(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48 + rng.range(-10, 10), cy = 48 + rng.range(-8, 8);
+    // concentric tide rings — the leak came and went in seasons
+    for (let i = 0; i < 3; i++) {
+      const r = 12 + i * 11 + rng.range(-2, 2);
+      g.strokeStyle = `rgba(96,78,56,${0.5 - i * 0.12})`;
+      g.lineWidth = 2.2 - i * 0.5;
+      g.beginPath();
+      // wobbly ring — not a true circle
+      for (let a = 0; a <= 32; a++) {
+        const t = (a / 32) * Math.PI * 2;
+        const rr = r + Math.sin(t * 3 + i) * 2.4;
+        const x = cx + Math.cos(t) * rr, y = cy + Math.sin(t) * rr * 0.8;
+        if (a) g.lineTo(x, y); else g.moveTo(x, y);
+      }
+      g.closePath(); g.stroke();
+    }
+    // the stain's heart — darkest where the drip stood longest
+    const heart = g.createRadialGradient(cx, cy, 2, cx, cy, 14);
+    heart.addColorStop(0, 'rgba(84,66,44,0.55)');
+    heart.addColorStop(1, 'rgba(84,66,44,0)');
+    g.fillStyle = heart;
+    g.fillRect(cx - 16, cy - 16, 32, 32);
+    // plaster blisters — small raised dots inside the oldest ring
+    g.fillStyle = 'rgba(150,140,124,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = rng.range(0, Math.PI * 2), r = rng.range(4, 13);
+      g.beginPath(); g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, 1.1, 0, Math.PI * 2); g.fill();
+    }
+    // one blister burst — a bright pit
+    g.fillStyle = 'rgba(180,170,156,0.6)';
+    g.beginPath(); g.arc(cx + rng.range(-8, 8), cy + rng.range(-6, 6), 1.6, 0, Math.PI * 2); g.fill();
+    // crack tails leaving the bloom
+    g.strokeStyle = 'rgba(58,50,42,0.4)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const a = rng.range(0, Math.PI * 2);
+      g.beginPath();
+      g.moveTo(cx + Math.cos(a) * 34, cy + Math.sin(a) * 27);
+      g.lineTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 38);
+      g.stroke();
+    }
+  });
+}
+
+/** Sprint 495 — the embers jumped: scorch pits and coal shadows on the floor past the hearth's edge. */
+export function emberPits(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // ash wash — grey film thickest near the hearth (bottom of the tex)
+    const wash = g.createLinearGradient(0, 64, 0, 20);
+    wash.addColorStop(0, 'rgba(140,134,124,0.4)');
+    wash.addColorStop(1, 'rgba(140,134,124,0)');
+    g.fillStyle = wash;
+    g.fillRect(0, 20, 96, 44);
+    // scorch pits — small black craters where a live coal landed
+    for (let i = 0; i < 6; i++) {
+      const x = 14 + i * 13 + rng.range(-4, 4);
+      const y = 30 + rng.range(0, 26);
+      const r = 2.2 + rng.float() * 2;
+      const pit = g.createRadialGradient(x, y, 0.4, x, y, r + 2);
+      pit.addColorStop(0, 'rgba(16,12,10,0.9)');
+      pit.addColorStop(0.5, 'rgba(30,24,20,0.6)');
+      pit.addColorStop(1, 'rgba(30,24,20,0)');
+      g.fillStyle = pit;
+      g.fillRect(x - r - 3, y - r - 3, r * 2 + 6, r * 2 + 6);
+      // the roll mark — the coal skidded before it died
+      g.strokeStyle = 'rgba(36,28,22,0.5)';
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(x - rng.range(3, 8), y + rng.range(-2, 3)); g.lineTo(x, y); g.stroke();
+    }
+    // ember ghosts — faint orange ember-crackles frozen in the grain
+    g.strokeStyle = 'rgba(160,80,30,0.3)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 4; i++) {
+      const x = rng.range(16, 80), y = rng.range(30, 54);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rng.range(-4, 4), y + rng.range(2, 6)); g.stroke();
+    }
+    // kicked ash fans
+    g.fillStyle = 'rgba(150,144,134,0.3)';
+    for (let i = 0; i < 3; i++) {
+      const x = rng.range(20, 76);
+      g.beginPath(); g.ellipse(x, 56 + rng.range(-2, 4), 8, 3, rng.range(-0.3, 0.3), 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 495 — someone traced the wall: one finger line dragged through the dust, dust piled at its end. */
+export function fingerTrace(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the dust field — the wall's skin of grey
+    const field = g.createLinearGradient(0, 0, 0, 48);
+    field.addColorStop(0, 'rgba(158,148,132,0.3)');
+    field.addColorStop(1, 'rgba(158,148,132,0.15)');
+    g.fillStyle = field;
+    g.fillRect(0, 0, 96, 48);
+    // speckle
+    g.fillStyle = 'rgba(130,120,106,0.3)';
+    for (let i = 0; i < 40; i++) {
+      g.fillRect(rng.range(4, 92), rng.range(4, 44), 1, 0.9);
+    }
+    // THE LINE — a clean dragged channel through the dust, slightly
+    // wavering like a finger, ending in a dust ridge
+    const y0 = 20 + rng.range(-6, 6);
+    const up = rng.bool(0.3);
+    g.strokeStyle = 'rgba(56,48,40,0.7)';
+    g.lineWidth = 3.2;
+    g.beginPath(); g.moveTo(12, y0);
+    for (let i = 1; i <= 8; i++) {
+      g.lineTo(12 + i * 8, y0 + Math.sin(i * 0.9) * 2 + rng.range(-1, 1) + (up ? -i * 1.2 : 0));
+    }
+    g.stroke();
+    // the dust piled where the finger stopped
+    const ex = 12 + 8 * 8;
+    const ey = y0 + Math.sin(8 * 0.9) * 2 + (up ? -9.6 : 0);
+    g.fillStyle = 'rgba(150,140,124,0.7)';
+    g.beginPath(); g.ellipse(ex + 2, ey, 5, 3, 0.2, 0, Math.PI * 2); g.fill();
+    // a second fainter line — they came back once
+    if (rng.bool(0.5)) {
+      g.strokeStyle = 'rgba(60,52,44,0.4)';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(16, y0 + 9); g.lineTo(60 + rng.range(-8, 8), y0 + 9 + rng.range(-3, 3)); g.stroke();
+    }
+    // fingertip prints beside the line
+    g.fillStyle = 'rgba(60,52,44,0.35)';
+    for (let i = 0; i < 3; i++) {
+      g.beginPath(); g.ellipse(20 + i * 8 + rng.range(-2, 2), y0 - 8 + rng.range(-2, 2), 1.6, 2.1, 0.2, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 495 — the mop dried mid-sweep: curved stroke arcs and a water edge that never finished. */
+export function mopArcs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48, cy = 50;
+    // mop strokes — concentric arcs fanned from the sweeper's stance
+    for (let i = 0; i < 6; i++) {
+      const r = 18 + i * 9;
+      const a0 = Math.PI * (1.1 + rng.range(-0.08, 0.08));
+      const a1 = Math.PI * (1.75 + rng.range(-0.08, 0.08));
+      g.strokeStyle = `rgba(120,116,108,${0.4 - i * 0.04})`;
+      g.lineWidth = 2.6;
+      g.beginPath(); g.arc(cx, cy, r, a0, a1); g.stroke();
+      // bristle streaks within the stroke
+      g.strokeStyle = 'rgba(140,134,124,0.2)';
+      g.lineWidth = 0.7;
+      g.beginPath(); g.arc(cx, cy, r + 2, a0 + 0.05, a1 - 0.05); g.stroke();
+    }
+    // the water edge — the tide line where the wet work stopped
+    g.strokeStyle = 'rgba(66,60,52,0.55)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(10, 30);
+    g.quadraticCurveTo(48, 24 + rng.range(-3, 3), 86, 32);
+    g.stroke();
+    // damp sheen above the edge — the floor still drying
+    const sheen = g.createLinearGradient(0, 8, 0, 30);
+    sheen.addColorStop(0, 'rgba(110,104,96,0.25)');
+    sheen.addColorStop(1, 'rgba(110,104,96,0)');
+    g.fillStyle = sheen;
+    g.fillRect(8, 8, 80, 22);
+    // grit the mop gathered at stroke ends
+    g.fillStyle = 'rgba(70,62,52,0.5)';
+    for (let i = 0; i < 12; i++) {
+      const a = rng.range(Math.PI * 1.6, Math.PI * 1.95);
+      const r = rng.range(20, 66);
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4, 1);
+    }
+  });
+}
