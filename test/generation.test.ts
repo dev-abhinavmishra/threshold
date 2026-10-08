@@ -1690,3 +1690,33 @@ describe('the notices (sprint 423)', () => {
     expect(notices, 'no notices pinned').toBeGreaterThan(10);
   });
 });
+
+describe('the rust keeps score (sprint 424)', () => {
+  it('service walls bleed oxidation streaks', () => {
+    let streaks = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'rust-streak') streaks++; });
+      }
+    }
+    expect(streaks, 'no rust streaks').toBeGreaterThan(15);
+  });
+});
+
+describe('the wiring shows (sprint 425)', () => {
+  it('service ceilings carry drooping cable runs', () => {
+    let cables = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'ceiling-cable') cables++; });
+      }
+    }
+    expect(cables, 'no ceiling cables').toBeGreaterThan(10);
+  });
+});

@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1517,6 +1517,35 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         m.rotation.z = Math.atan2(-(lz - sz), lx - sx);
         m.position.set(mx, 0.0065, mz);
         group.add(m);
+      }
+    }
+
+    // The rust keeps score — oxidation bleeding down from fixtures in
+    // the service bones of the place.
+    if (['maintenance', 'underscript', 'unlit', 'corridor'].includes(spec.biome) && rng.float() < 0.4) {
+      const drops = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < drops; i++) {
+        const spot = pickWallSpot(0.5);
+        if (!spot) break;
+        const cy = 1.5 + rng.float() * 0.7;
+        wallDecal(spot.wall, rustStreak(rng), 0.4 + rng.float() * 0.25, 0.9 + rng.float() * 0.5, spot.along, cy + 0.4);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'rust-streak';
+      }
+    }
+
+    // The wiring shows — drooping cable runs in the service bones,
+    // kept off the door lanes.
+    if (['maintenance', 'underscript', 'unlit'].includes(spec.biome) && rng.float() < 0.4) {
+      const runs = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < runs; i++) {
+        const cx = (rng.float() - 0.5) * (w - 2), cz = (rng.float() - 0.5) * (d - 2);
+        if (footprintInDoorLane(spec, cx, cz, 0.5, 0.5)) continue;
+        try {
+          const cb = buildProp({ kind: rng.float() < 0.3 ? 'conduitRun' : 'hangingCable', x: cx, z: cz, y: h - 0.28, yaw: rng.float() * Math.PI }, rng.fork(6600 + i));
+          cb.group.name = 'ceiling-cable';
+          group.add(cb.group);
+        } catch { /* dressing only */ }
       }
     }
 

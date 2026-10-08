@@ -4744,6 +4744,15 @@ Game.die() from the same five fields.
 - Vitest 265: 'the notices'. Gates: tsc, lint, sim 5/5. Visual
   dressing only — no e2e leg.
 
+## sprint 424 — the rust keeps score
+
+- `rustStreak` decal: ochre drips wobbling down from a fixture head,
+  thinning to nothing. Anchors at the texture top edge.
+- 40% in maintenance/underscript/unlit/corridor: 1-2 `pickWallSpot`
+  streaks at cy 1.9-2.6 (fixture height). Named 'rust-streak'.
+- Vitest 266: 'the rust keeps score' (main + under rooms). Gates:
+  tsc, lint, sim 5/5. Visual dressing only — no e2e leg.
+
 ## sprint 384 — the shelf holds your take / the tag outranks the cage
 
 - `buyback` predated s373's deep tier — the fenced shelf sold back
@@ -4782,3 +4791,14 @@ Game.die() from the same five fields.
   guards re-pinned (conn>=2, fans>=3), four entity specs made
   geometry-resilient (any multi-door room, in-room emit points,
   axis>=14 groundswell room).
+
+## sprint 425 — the wiring shows
+
+- Ceiling depth in the service bones: 40% of maintenance/underscript/
+  unlit rooms get 1-2 `hangingCable`/`conduitRun` props at y h-0.28,
+  door-lane-cleared via `footprintInDoorLane(spec, ...)`. Named
+  'ceiling-cable'.
+- `footprintInDoorLane` takes the spec shape ({width,depth,entry,
+  exits}) — pass `spec` directly, not doorPositions.
+- Vitest 267: 'the wiring shows' (main + under). Gates: tsc, lint,
+  sim 5/5. Visual dressing only — no e2e leg.
