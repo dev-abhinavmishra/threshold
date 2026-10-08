@@ -5342,6 +5342,8 @@ export class Game {
   }
 
   private readonly visitedRooms = new Set<number>();
+  /** Rooms each book has already muttered in — once per room per book. */
+  private readonly murmured = new Set<string>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
   private lowBattWarned = false;
@@ -5996,6 +5998,38 @@ export class Game {
     if (!scare.bool(0.11)) return;
     this.breathingRoom = this.currentRoom;
     this.cue('room-breathe', null, scare.bool(0.4) ? '[the room breathes]' : '', 'warn');
+  }
+
+  /** The books mutter — a deep ledger makes its home rooms whisper. Once per
+   *  room per book: the register rustles where its desks live (a clerked
+   *  counter or a desk-family room), the tally/index murmur in the under
+   *  halls, and a named face makes the boards themselves lean. Fiction only
+   *  — every murmur is gated on real book state, never invented. */
+  private maybeMutter(under: boolean): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || !room.spec || room.spec.special) return;
+    if (this.currentRoom < 6) return;
+    const mutter = (book: string, text: string) => {
+      const k = `${under ? 'u' : 'm'}:${this.currentRoom}:${book}`;
+      if (this.murmured.has(k)) return;
+      this.murmured.add(k);
+      this.cue('whisper', null, text, 'info');
+    };
+    if (under) {
+      if (this.unpaidTheft >= 2) {
+        mutter('tally', "[the tally's ink hasn't dried — the under counts you]");
+      }
+      if (this.paperTrail >= 3) {
+        mutter('index', "[the index keeps your questions — the clerks' hands stop when you pass]");
+      }
+      if (this.wantedActive) {
+        mutter('boards', '[the boards have your face — the halls lean when you pass]');
+      }
+    } else if (this.unpaidHeld >= 2
+      && (room.sockets.some((s) => s.meta.clerk !== undefined)
+        || room.biome === 'records' || room.biome === 'lobby')) {
+      mutter('register', "[the register's pages rustle at the desks — your name is in them]");
+    }
   }
 
   /** The Broker: one robed figure per u-lobby, behind the counter, head that
@@ -6717,6 +6751,7 @@ export class Game {
       this.maybeLuggage();
       this.maybeStatueShift();
       this.maybeCreakyRoom();
+      this.maybeMutter(false);
     }
     this.tickEchoQueue();
     this.tickOccupant();
@@ -6737,6 +6772,7 @@ export class Game {
         this.maybeEchoRoom(true);
         this.maybePhoneRing(true);
         this.maybeShade(true);
+        this.maybeMutter(true);
       }
     }
     // death echo: the building remembers where it took you
