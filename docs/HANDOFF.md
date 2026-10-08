@@ -3816,3 +3816,23 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   flag + focused-prompt samples per room — room 6's counter-claim
   (priority 3) stole focus until the tear went to 3.
 - Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 344 — the clerk has more paper
+
+- s343's tear made the deafen free and permanent — this closes the
+  loop: when the last sheet comes down, `wantedRepostT` starts a 30s
+  window; at expiry, `raiseWanted(true)` re-arms the same raise on
+  fresh downstream hosts with `[fresh sheets go up on the boards
+  ahead — the clerk has more paper]`. The tug-of-war: every repost is
+  another trip to another board for the tearer.
+- `wantedRepostT` is armed only by the size→0 transition inside
+  `wantedTear` (not by settle — `lowerWanted` clears active anyway,
+  and the `> 0` guard keeps a settled episode from reposting). 30s
+  matches the cost model: relief is time-bound, not free.
+- Emergent: entities' `sheetNamed` resets while the boards stand bare,
+  so a repost's extended catches announce again on their own.
+- e2e: audit leg phase 2.9 — after tearing all sheets, wait out the
+  window at the desk (repost picks hosts downstream of where you
+  stand — his room has more route after it), assert `wantedRooms`
+  refills + the fresh-sheets caption.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.

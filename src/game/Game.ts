@@ -928,6 +928,9 @@ export class Game {
    *  your face. The under-crew notices a tier harder until you settle. */
   private wantedActive = false;
   private wantedRooms = new Map<number, { x: number; z: number }>();
+  /** The clerk has more paper — once the boards stand bare this clock
+   *  starts a repost window (fresh sheets downstream). */
+  private wantedRepostT = 0;
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -3336,6 +3339,8 @@ export class Game {
         this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
           ? '[the last sheet comes down — the boards forget your face]'
           : '[the sheet comes down — the boards have one fewer name for you]', 'warn');
+        // the boards stand bare — the clerk reaches for fresh paper
+        if (this.wantedRooms.size === 0) this.wantedRepostT = this.clock.time + 30;
         return;
       }
       case 'stripCheck': {
@@ -3955,13 +3960,17 @@ export class Game {
 
   /** The clerk's ledger named you — wanted sheets go up on the crew
    *  boards downstream, and the under-crew listens a tier harder until
-   *  the tally is settled (ctx.wanted widens their notice reach). */
-  private raiseWanted(): void {
+   *  the tally is settled (ctx.wanted widens their notice reach).
+   *  Tear every sheet and he reaches for fresh paper: `repost` re-arms
+   *  the same raise on new downstream boards after a beat. */
+  private raiseWanted(repost = false): void {
     this.wantedActive = true;
     for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
       this.wantedRooms.set(h.roomIdx, { x: h.x, z: h.z });
     }
-    this.cue('chalk-mark', null, '[sheets go up on the boards ahead — your hands are named]', 'warn');
+    this.cue('chalk-mark', null, repost
+      ? '[fresh sheets go up on the boards ahead — the clerk has more paper]'
+      : '[sheets go up on the boards ahead — your hands are named]', 'warn');
   }
 
   private lowerWanted(): void {
@@ -4632,6 +4641,14 @@ export class Game {
       for (const e of this.entities) {
         if (e instanceof Auditor && e.demanded) { this.raiseWanted(); break; }
       }
+    }
+    // the boards stand bare — the clerk reaches for fresh paper and the
+    // sheets go back up on new boards downstream (the tug-of-war: every
+    // repost is another trip to another board for the tearer)
+    else if (this.wantedActive && this.wantedRooms.size === 0 && this.space === 'under'
+      && this.clock.time >= this.wantedRepostT && this.wantedRepostT > 0) {
+      this.raiseWanted(true);
+      this.wantedRepostT = 0;
     }
 
     for (const i of this.streamer.builtIndices) {
