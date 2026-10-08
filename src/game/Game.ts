@@ -3365,7 +3365,16 @@ export class Game {
         this.nextToss = this.clock.time + 8;
         const door = it.data as Door;
         this.cue('whisper-voice', door.pos, '[your voice goes under the leaf — a whisper at its foot]', 'warn');
-        this.sound.emit({ x: door.pos.x, y: 0.15, z: door.pos.z, intensity: 0.6 * this.wantedPull, category: 'distraction', caption: '' });
+        // The whisper is heard under the leaf's far edge, not on the seam
+        // itself — room-gated hearing owns an emit to one room, and the
+        // leaf's own line resolves to YOUR side. A hand's-depth under the
+        // far lip keeps the voice in the room you called into.
+        const nX = Math.sin(door.yaw), nZ = Math.cos(door.yaw);
+        const side = Math.sign((this.player.pos.x - door.pos.x) * nX + (this.player.pos.z - door.pos.z) * nZ) || 1;
+        const fx = door.pos.x - nX * side * 0.3, fz = door.pos.z - nZ * side * 0.3;
+        this.sound.emit({ x: fx, y: 0.15, z: fz, intensity: 0.6 * this.wantedPull, category: 'distraction', caption: '' });
+        // — and it carries back: your own room hears you talk to the door.
+        this.sound.emit({ x: it.pos.x, y: 0.15, z: it.pos.z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
         // sprint 466 — the voice tells: whisper into a leaf a watcher is
         // already pressed against and the seam betrays the knee for real.
         // Same surface the crack's watching eye uses — but no seeded roll:
@@ -3391,7 +3400,7 @@ export class Game {
         const callRoom = this.roomBeyondDoor(door);
         if (callRoom) {
           const roam = this.activeRooms();
-          const heard = { x: door.pos.x, y: 0.15, z: door.pos.z, intensity: 0.6 * this.wantedPull, category: 'distraction' as const, caption: '' };
+          const heard = { x: fx, y: 0.15, z: fz, intensity: 0.6 * this.wantedPull, category: 'distraction' as const, caption: '' };
           let inEar = false;
           for (const e of this.entities) {
             if (e.state === 'done') continue;

@@ -434,9 +434,10 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(interaction).toContain("kind: 'call'");
     expect(interaction).toContain('Call through the crack');
     expect(game).toContain("case 'call'");
-    // the voice emits AT the leaf — heard in both rooms — and shares the
+    // the voice emits under the far lip — room-gated hearing owns an emit
+    // to one room — plus a quieter tell on your side; shares the
     // free-lure channel's breath with the pebble
-    expect(game).toContain('x: door.pos.x, y: 0.15, z: door.pos.z');
+    expect(game).toContain('fx, y: 0.15, z: fz');
     expect(game).toContain('this.nextToss');
   });
 
