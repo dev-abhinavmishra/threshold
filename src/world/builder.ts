@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2437,6 +2437,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const fy = p.yaw ?? 0;
         dh.position.set(p.x + Math.sin(fy) * 0.15, 0.0085, p.z + Math.cos(fy) * 0.15);
         group.add(dh);
+      }
+      // The letters never sent — a dropped envelope where someone
+      // slept, dressed, or was paid out.
+      if ((p.kind === 'bed' || p.kind === 'nightstand' || p.kind === 'dresser' || p.kind === 'desk' || p.kind === 'till') && rng.float() < 0.12) {
+        const ll = decalQuad(lostLetter(rng), 0.28, 0.28);
+        ll.name = 'lost-letter';
+        ll.rotation.x = -Math.PI / 2;
+        ll.rotation.z = rng.float() * Math.PI * 2;
+        const la = rng.float() * Math.PI * 2, lr = 0.55 + rng.float() * 0.3;
+        ll.position.set(p.x + Math.cos(la) * lr, 0.009, p.z + Math.sin(la) * lr);
+        group.add(ll);
       }
       // Ceiling rosette under hanging fixtures — plaster medallion + ring
       // where the chain meets the slab.

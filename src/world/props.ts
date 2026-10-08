@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1377,6 +1377,20 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     rs.rotation.z = rng.float() * Math.PI * 2;
     rs.position.set((rng.float() - 0.5) * 0.3, topY, (rng.float() - 0.5) * 0.15);
     prop.group.add(rs);
+  }
+  // Slept-in — some mattresses keep the shadow of whoever lay too long.
+  if (spec.kind === 'bed' && rng.bool(0.3)) {
+    const si = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 1.6),
+      new THREE.MeshStandardMaterial({ map: sleptIn(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    si.name = 'slept-in';
+    si.userData.decalMat = true;
+    si.rotation.x = -Math.PI / 2;
+    si.rotation.z = (rng.float() - 0.5) * 0.5;
+    si.position.set(0, 0.585, 0.1);
+    prop.group.add(si);
+    if (!prop.group.name) prop.group.name = 'slept-in';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

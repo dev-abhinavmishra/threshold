@@ -2073,3 +2073,77 @@ export function sootStain(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Slept-in — the sweat-shadow a sleeper leaves on the sheet: a head
+ * oval, a shoulder spread, the faint trough of a body that lay too long. */
+export function sleptIn(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 160, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 8;
+    // yellowed body bloom — biggest at the torso, fading to the knees
+    const g = ctx.createRadialGradient(cx, 62, 6, cx, 62, 52);
+    g.addColorStop(0, 'rgba(120,104,68,0.28)');
+    g.addColorStop(0.6, 'rgba(118,102,66,0.14)');
+    g.addColorStop(1, 'rgba(118,102,66,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, 66, 26, 48, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the head — a darker oval where a pillow would sit
+    ctx.fillStyle = 'rgba(96,80,52,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 6, 20, 11 + rng.float() * 3, 9, (rng.float() - 0.5) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // the trough — a crease-line down the spine of the mattress
+    ctx.strokeStyle = 'rgba(88,74,46,0.22)';
+    ctx.lineWidth = 3 + rng.float();
+    ctx.beginPath();
+    ctx.moveTo(cx + (rng.float() - 0.5) * 4, 40);
+    ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 10, 80, cx + (rng.float() - 0.5) * 8, 126);
+    ctx.stroke();
+    // hair-strand specks near the pillow mark
+    for (let i = 0; i < 7; i++) {
+      ctx.strokeStyle = 'rgba(60,48,34,0.35)';
+      ctx.lineWidth = 0.6;
+      const hx = cx - 8 + rng.float() * 16, hy = 14 + rng.float() * 12;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx + (rng.float() - 0.5) * 6, hy + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Lost letter — a cream envelope dropped face-up: stamp square,
+ * three address lines, one bad crease from being stepped over. */
+export function lostLetter(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // envelope body — aged cream, slight skew
+    ctx.fillStyle = 'rgba(226,214,186,0.92)';
+    ctx.fillRect(8, 20, 48, 32);
+    ctx.strokeStyle = 'rgba(140,124,96,0.6)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 20, 48, 32);
+    // flap crease — the V of a sealed envelope
+    ctx.beginPath();
+    ctx.moveTo(8, 22); ctx.lineTo(32, 38); ctx.lineTo(56, 22);
+    ctx.stroke();
+    // the stamp — a small dark square, half peeled
+    ctx.fillStyle = 'rgba(120,90,80,0.8)';
+    ctx.fillRect(46, 24, 7, 7);
+    // address lines — uneven ink scrawl, third line trails off
+    ctx.strokeStyle = 'rgba(50,44,36,0.7)';
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(13, 30); ctx.lineTo(13 + 16 + rng.float() * 6, 30 + (rng.float() - 0.5) * 2);
+    ctx.moveTo(13, 36); ctx.lineTo(13 + 20 + rng.float() * 4, 36);
+    ctx.moveTo(13, 42); ctx.lineTo(13 + 10 + rng.float() * 8, 42 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // the crease — a fold scar across a corner
+    ctx.strokeStyle = 'rgba(160,148,120,0.5)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(10, 50); ctx.lineTo(50 + rng.float() * 4, 22);
+    ctx.stroke();
+  });
+}

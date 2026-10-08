@@ -2299,3 +2299,33 @@ describe('the soot (sprint 453)', () => {
     expect(n, 'no soot stains').toBeGreaterThan(0);
   });
 });
+
+describe('the beds were slept in (sprint 454)', () => {
+  it('some mattresses keep the sleeper\'s shadow', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'slept-in') n++; });
+      }
+    }
+    expect(n, 'no slept-in stains').toBeGreaterThan(0);
+  });
+});
+
+describe('the letters never sent (sprint 454)', () => {
+  it('dropped envelopes wait by beds and tills', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'lost-letter') n++; });
+      }
+    }
+    expect(n, 'no lost letters').toBeGreaterThan(0);
+  });
+});
