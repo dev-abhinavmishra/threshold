@@ -7988,6 +7988,67 @@ export class Game {
       }
     }
 
+    // sprint 407 — the blast, the blades, and the amber water don't
+    // check whose shoulders they take either: a walker inside a firing
+    // steam vent, under a live belt-wheel, or wading live water is
+    // staggered like standing flesh is cut — one lurch per source, and
+    // the bite carries to the next room.
+    const curRoomIdx = this.activeRooms()[this.currentRoom]?.index;
+    for (const pu of this.hazard.puddles) {
+      if (pu.room !== curRoomIdx) continue;
+      const rm = this.activeRooms().find((r) => r.index === pu.room);
+      if (!rm?.flooded || this.drainedRooms.has(`${this.space}:${pu.room}`)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - pu.pos.x, edz = epos.z - pu.pos.z;
+        if (edx * edx + edz * edz >= pu.radius * pu.radius) continue;
+        ent.stagger(0.4);
+        if (tA - (pu.entT ?? -10) > 3) {
+          pu.entT = tA;
+          this.audio.play('steam-hiss', { x: pu.pos.x, y: 0.2, z: pu.pos.z },
+            '[the water crackles — something else is in it]', 'warn');
+          this.sound.emit({ x: pu.pos.x, y: 0.2, z: pu.pos.z, intensity: 0.45, category: 'machine', caption: '[the water arcs]' });
+        }
+        break;
+      }
+    }
+    for (const st of this.hazard.steams) {
+      if (st.dead || st.room !== curRoomIdx || st.phase >= 1.8) continue;
+      if (tA - (st.entT ?? -1) <= 1.6) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - st.pos.x, edz = epos.z - st.pos.z;
+        if (edx * edx + edz * edz >= 1.3 * 1.3) continue;
+        st.entT = tA;
+        ent.stagger(0.9);
+        this.audio.play('steam-hiss', { x: st.pos.x, y: 0.5, z: st.pos.z },
+          '[the blast takes his shoulders — a scalding that was not yours]', 'warn');
+        this.sound.emit({ x: st.pos.x, y: 0.5, z: st.pos.z, intensity: 0.5, category: 'machine', caption: '[a line vents]' });
+        break;
+      }
+    }
+    for (const f of this.hazard.fans) {
+      if (f.dead || f.room !== curRoomIdx) continue;
+      if (tA - (f.entT ?? -1) <= 1.4) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - f.pos.x, edz = epos.z - f.pos.z;
+        if (edx * edx + edz * edz >= 1.0) continue;
+        f.entT = tA;
+        ent.stagger(1.2);
+        this.audio.play('steam-hiss', { x: f.pos.x, y: 1.2, z: f.pos.z },
+          '[the wheel bites — a shoulder that was not yours]', 'warn');
+        this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.55, category: 'machine', caption: '[the wheel bites]' });
+        break;
+      }
+    }
+
     // The pipes tick — ironwork answers a near threat, faster as it closes
     if (this.liveTickProps.length && tA >= this.pipeTickNext) {
       let nearest = Infinity;

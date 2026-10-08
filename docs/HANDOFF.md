@@ -5438,6 +5438,21 @@ the same 'stumble'/'splash' emits.
 
 Gates: tsc, lint, build; hazards leg 1/1.
 
+## Sprint 407 — the blast and the blades don't check whose shoulders
+The last player-only hazard teeth: steam blasts, belt-wheels, and
+electrified water bit only the player. A walker inside a firing vent
+(phase<1.8, within 1.3m), under live blades (1.0m — he never ducks),
+or wading amber water (radius, flooded && !drained) is staggered like
+standing flesh is cut — one lurch per source on entT cooldowns, and
+every bite emits at the hazard.
+
+- Nothing persists: blasts/wheels/water are cyclic hazards, not spent
+  consumables — dead ones already ride `deadHazards`.
+- e2e: shipped on vitest/sim gates (small addition per the pace call);
+  the same grafter-teleport pattern covers it if legs are wanted later.
+
+Gates: tsc, lint, build.
+
 ## Sprint 448 — the paper trail & the things they left
 First BIG-format sprint (his new directive: big worked-on PRs, not tiny
 ones — cluster several dressing systems per PR). Two related batches:
