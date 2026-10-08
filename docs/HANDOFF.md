@@ -4580,6 +4580,7 @@ Game.die() from the same five fields.
 - e2e: the locker leg's new rot phase seizes, shortens the fuse past
   the fade line, asserts fading→fenced→verb-gone.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+<<<<<<< HEAD
 
 
 ## sprint 416 — the ones before you
@@ -4624,3 +4625,20 @@ Game.die() from the same five fields.
   dominant pick, safe opening decile holds, editor still pinned at 1.
   Numbers appended to BALANCE.md. No tuning needed.
 - Gates: balance output only — docs sprint.
+||||||| e84761c
+=======
+
+## sprint 380 — cut the tag free
+
+- The count's locker now has a second way back: `seizedCut` mints
+  beside the honest tag (0.3m along the cage's front tangent) —
+  'Cut the tag free — your take comes back marked'. No price, but
+  the count's paper had claimed them: the take returns marked
+  (`hotItems.add`) — warm clerks read it like rifled stock — and
+  the theft files deeper (+2, +4 under sheets vs the claim's +1/+2).
+- Both verbs sweep together (prefix `seized-`) on claim, cut, or rot.
+- e2e trap: `hotItems` is a Set of IDS — a seize strips EVERY stack
+  of a marked id, so re-marking 'feltWrap' mid-leg strips the
+  claimed-back count too. Assert count>=1 on returns.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+>>>>>>> devin/1791437388-threshold-s380
