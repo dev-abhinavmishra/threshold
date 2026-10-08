@@ -4494,3 +4494,20 @@ Game.die() from the same five fields.
   tag phrasing.
 - Gates: tsc, lint, vitest 255, sim 5/5, build.
 
+
+## sprint 413 — the seam bleeds
+
+- The s409/412 marks stopped at room edges — a jittered set piece's
+  drawn gap-corridor (`connectorIn`) still read clean right up to the
+  door. `MILESTONE_TELLS` is now module-scope + exported from
+  generator.ts; the builder's connector block keys off it and lays
+  the same `FORESHADOW_TELLS` decals along the run: floor marks sit
+  on the door-half of each leg (`t = len*(0.5..0.95)`), wall marks
+  flush on either face, and the leg landing on the threshold gets
+  one extra mark — the trail deepens INTO the seam it pointed at.
+- `FORESHADOW_TELLS` exported from builder.ts for the test.
+- Vitest 256: 'the seam bleeds' asserts every keyed ms- template
+  maps to a drawable tell and every seed's route carries each keyed
+  set piece.
+- Gates: tsc, lint, vitest 256, sim 5/5. Visual dressing only — no
+  e2e leg.

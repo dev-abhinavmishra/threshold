@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { generateRoute } from '../src/world/generator';
+import { generateRoute, MILESTONE_TELLS } from '../src/world/generator';
+import { FORESHADOW_TELLS } from '../src/world/builder';
 import { SAFE_ROOM_TEMPLATES, ENTITY_TUNING, DEATH_NAMES, DEATH_HINTS } from '../src/game/config';
 import { TELLS } from '../src/world/foreshadow';
 import { validateRoute } from '../src/world/validation';
@@ -1456,6 +1457,22 @@ describe('the set-piece approach (sprints 409/412)', () => {
           `${seed} room ${r.index} tell/dist mismatch`,
         ).toBe(true);
         if (r.milestoneDist === 0) expect(r.foreshadow, `${seed} room ${r.index} double-tells`).toBeUndefined();
+      }
+    }
+  });
+});
+
+describe('the seam bleeds (sprint 413)', () => {
+  it('every keyed set piece resolves to a drawable tell for its gap-corridor', () => {
+    for (const [tpl, tell] of Object.entries(MILESTONE_TELLS)) {
+      expect(tpl.startsWith('ms-'), `${tpl} keyed but not a milestone`).toBe(true);
+      expect(FORESHADOW_TELLS[tell], `${tpl} tell '${tell}' missing from FORESHADOW_TELLS`).toBeDefined();
+    }
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      const ids = new Set(route.rooms.map((r) => r.templateId));
+      for (const tpl of Object.keys(MILESTONE_TELLS)) {
+        expect(ids.has(tpl), `${seed} route missing keyed set piece ${tpl}`).toBe(true);
       }
     }
   });
