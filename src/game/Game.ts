@@ -2699,6 +2699,34 @@ export class Game {
           : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
         return;
       }
+      case 'askTally': {
+        // sprint 408 — the tally answers back too: the Auditor's own
+        // ledger reads you out loud, priced like the other two books.
+        // The asking is itself a filed question (the index counts this
+        // one) — and the readout knows what the tally's book cares
+        // about: the thefts owed, whether the boards still listen, and
+        // the tag the count keeps.
+        if (this.space !== 'under') return;
+        if (this.checker.active) {
+          this.cue('door-locked', it.pos, '[the floor is closed for the count]', 'warn');
+          return;
+        }
+        if (this.marginalia < 3) {
+          this.cue('door-locked', it.pos, '[the tally wants 3 marginalia — even questions have a price]', 'warn');
+          return;
+        }
+        this.marginalia -= 3;
+        this.fileQuestion();
+        const th2 = this.unpaidTheft;
+        const tagN = this.seizedTake.reduce((n, s) => n + s.count, 0);
+        const boardsBit = this.wantedActive ? ' · the boards still listen' : '';
+        const deepBit = th2 >= 6 ? ' · the tills hold their stock' : '';
+        const tagBit = tagN > 0 ? ` · the count keeps ${tagN} of yours tagged` : '';
+        this.cue('whisper', it.pos, th2 === 0 && !this.wantedActive && tagN === 0
+          ? '[the tally keeps no line on you — clean hands]'
+          : `[the tally on you — ${th2} theft${th2 === 1 ? '' : 's'} owed${boardsBit}${deepBit}${tagBit}]`);
+        return;
+      }
       case 'purse': {
         if (this.space !== 'under') {
           // The clerk changes the other way — 8 marginalia for

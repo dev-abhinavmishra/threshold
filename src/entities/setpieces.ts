@@ -1159,6 +1159,17 @@ export class Auditor extends Entity {
       data: { stock: 1, keeper: this as unknown as Record<string, unknown> },
       enabled: true, priority: 3, // outrank desk loot sockets — his own drawer
     });
+    // sprint 408 — the tally answers back too: the third book reads you
+    // on his own fig, waist-height off the lateral so the pitch band
+    // keeps it off the drawer's priority-3 line (same trick as the
+    // Broker's 'book' at waist vs the head-height fix).
+    c.addInteractable({
+      kind: 'askTally', id: `askTally-${this.spawnRoom}`,
+      pos: v3(this.pos.x + (-oz / ol) * 0.5, 0.85, this.pos.z + (ox / ol) * 0.5),
+      prompt: 'Ask what the tally says — 3 marginalia',
+      holdTime: 0.8, enabled: true, priority: 2,
+      data: {},
+    });
     this.state = 'engage';
   }
 

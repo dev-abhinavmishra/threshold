@@ -5475,3 +5475,19 @@ a named mesh (`register-page`, `eviction-slip`, `repair-ticket`,
 Tests count the named meshes across SEEDS on 'high' detail.
 
 Gates: tsc, lint, vitest 298, build. No e2e leg — dressing only.
+
+## Sprint 408 — the tally answers back
+The third book gets its readout: 'Ask what the tally says — 3
+marginalia' mints on the Auditor's fig (waist-height at 0.5·lateral —
+the pitch band keeps it off the p3 tallyDrawer line, same trick as the
+Broker's 'book'). Reads what the tally's book cares about: thefts
+owed, '· the boards still listen' while wantedActive, '· the tills
+hold their stock' at the deep tier, and '· the count keeps N of yours
+tagged' while a seize tag pends. The asking is itself a filed
+question (fileQuestion — the index counts this one); the checker's
+shutter covers it like the other two.
+
+The readout trio is complete: book (index — trail+theft+locker+shelf),
+register (held face), tally (theft book + boards + tag).
+
+Gates: tsc, lint (batched verification with the next commits).
