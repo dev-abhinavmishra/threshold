@@ -1975,7 +1975,8 @@ export class Game {
           this.cue('door-locked', it.pos, '[your slate is clean — nothing to fix]', 'info');
           return;
         }
-        const price = Math.min(6 + worst * 3, 18);
+        // The boards tax the call too — a named face pays two more.
+        const price = Math.min(6 + worst * 3, 18) + (this.wantedActive ? 2 : 0);
         if (this.marginalia < price) {
           this.cue('door-locked', it.pos,
             `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
@@ -2221,7 +2222,11 @@ export class Game {
           return;
         }
         const dirty = this.unpaidTheft > 0 || this.unpaidHeld > 0 || this.paperTrail > 0;
-        const gain = dirty ? 6 : 8;
+        // The boards carry your face to the counter too — while the
+        // wanted sheets stand, the Broker's rate drops two steps:
+        // named and clean pays the dirty price; named and dirty pays
+        // the register's sour.
+        const gain = Math.max(4, (dirty ? 6 : 8) - (this.wantedActive ? 2 : 0));
         this.imprints -= 6;
         // sprint 329 — the under launders: the Broker takes the till's
         // marked coin without asking — hot imprints die here, silent.
@@ -2233,10 +2238,12 @@ export class Game {
         this.marginalia += gain;
         this.stats.marginaliaEarned += gain;
         this.cue('purchase', it.pos, washed > 0
-          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia]`
-          : dirty
-            ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
-            : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
+          ? `[the purse weighs the marked coin — the under's book opens a line · 6 imprints → ${gain} marginalia${this.wantedActive ? ' · the boards sour it too' : ''}]`
+          : this.wantedActive
+            ? `[the broker reads the boards, not just your coin — 6 imprints → ${gain} marginalia]`
+            : dirty
+              ? `[the broker reads your books — the rate sours · 6 imprints → ${gain} marginalia]`
+              : `[the purse changes — 6 imprints → ${gain} marginalia]`, 'info');
         return;
       }
       case 'fence': {
@@ -2256,7 +2263,9 @@ export class Game {
           return;
         }
         const count = take.reduce((n, i) => n + i.count, 0);
-        const pay = 4 * count;
+        // Named hands move marked goods slower — the boards tax the
+        // take a step while they stand.
+        const pay = Math.max(2, 4 - (this.wantedActive ? 1 : 0)) * count;
         for (const i of take) {
           this.hotItems.delete(i.id);
           i.count = 0;

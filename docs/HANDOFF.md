@@ -3999,3 +3999,16 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
   named you' (ring captions are written at push-time). The quiet
   amendment reads `pending` either way — a fast loss is still a loss.
 - Gates: tsc, lint (batched verify follows).
+
+## sprint 353/354 — the boards tax everything
+
+- While `wantedActive` stands, the under's whole counter sours:
+  the Broker's purse pays `Math.max(4, gain − 2)` (named+clean pays
+  the dirty price; named+dirty hits the register's sour floor of 4),
+  the fix's call runs `price + 2`, and the fence's take pays
+  `Math.max(2, 4 − 1)` per stack. Captions name the boards.
+- Settles stay exempt by design — the audit/square tolls are the
+  redemption that LOWERS the wanted state; taxing the exit would be
+  perverse. Main-route prices untouched (the house reads the
+  register, not the under's boards).
+- Gates: tsc, lint (batched verify follows).
