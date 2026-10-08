@@ -468,10 +468,18 @@ export class Grafter extends Entity {
       const evs = c.hazardEvidence?.(`grafter:${this.spawnRoom}`, this.pos.x, this.pos.z, 40) ?? [];
       for (const ev of evs) {
         if (this.roomOf(ev.pos) !== this.spawnRoom) continue;
-        this.markReads += 1;
+        // The tally's mark is on the sign — while the Auditor's book
+        // holds a line on you (claimsOwed > 0), every fresh mark below
+        // has a name attached and teaches the rubble double: the
+        // register's face on the sign, one floor down.
+        const owed = (c.claimsOwed?.() ?? 0) > 0;
+        this.markReads += owed ? 2 : 1;
         this.target = v3(ev.pos.x, 0, ev.pos.z);
         this.roamT = 0;
-        c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]' : ev.weak ? '[stone snuffles the ash — it smells hands]' : '[stone drags to the fresh sign]', { severity: 'warn' });
+        c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]'
+          : owed ? '[the tally\'s mark is on this sign — stone knows these hands]'
+          : ev.weak ? '[stone snuffles the ash — it smells hands]'
+          : '[stone drags to the fresh sign]', { severity: 'warn' });
         break;
       }
       if (this.eager && !this.eagerCued) {

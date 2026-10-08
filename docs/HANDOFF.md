@@ -4226,3 +4226,17 @@ Game.die() from the same five fields.
   corridor entities read it the same optional way (`c.heldOwed?.()
   ?? 0`) — makeCtx specs inject it as `heldOwed: () => 3`.
 - Gates: tsc, lint, vitest 105 entities (+1 spec), sim 5/5.
+
+## sprint 363 — the tally's mark is on the sign
+
+- The under-side mirror of 362: the Grafter's `markReads` (eager at
+  2) reads `ctx.claimsOwed()` — while the Auditor's book holds a line
+  on you, one fresh mark below teaches what two strangers' marks
+  used to. Tell: '[the tally's mark is on this sign — stone knows
+  these hands]'. `old` marks still read as unknowing (the boards'
+  pre-dated sign is ash); `weak` keeps the ash-snuffle line.
+- `claimsOwed` = `unpaidTheft`, already on EntityCtx for the
+  Auditor's own reads. Both corridor hunters now price sign off the
+  book they answer to: warden ↔ register (362), grafter ↔ tally
+  (363).
+- Gates: tsc, lint, vitest 106 entities (+1 spec).
