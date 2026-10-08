@@ -6933,3 +6933,156 @@ export function mopArcs(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The ladder left its rub — two parallel polish streaks where the
+ *  rails always lean, rung shadows, foot scuffs at the baseboard. */
+export function ladderRub(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const lx = 34 + rng.float() * 26;
+    const lean = rng.range(-0.06, 0.06);
+    // The rails rubbed the same spots a hundred times — twin sheen bars.
+    for (const off of [-9, 9]) {
+      const sheen = g.createLinearGradient(lx + off - 2, 10, lx + off + 2, 10);
+      sheen.addColorStop(0, 'rgba(186,168,138,0)');
+      sheen.addColorStop(0.5, `rgba(196,178,148,${0.3 + rng.float() * 0.15})`);
+      sheen.addColorStop(1, 'rgba(186,168,138,0)');
+      g.fillStyle = sheen;
+      g.save();
+      g.translate(lx + off, 48);
+      g.rotate(lean);
+      g.fillRect(-2.4, -34, 4.8, 68);
+      g.restore();
+    }
+    // Where the rails met the wall the paint wore off — bright caps.
+    for (const off of [-9, 9]) {
+      g.fillStyle = `rgba(206,190,162,${0.3 + rng.float() * 0.2})`;
+      g.beginPath();
+      g.ellipse(lx + off + lean * -30, 14 + rng.float() * 6, 2.4, 3.2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Rung ghosts — faint horizontal marks between the rails.
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle = `rgba(170,154,126,${0.08 + rng.float() * 0.1})`;
+      g.fillRect(lx - 9, 22 + i * 14 + rng.range(-2, 2), 18, 1.1);
+    }
+    // The feet kicked and dug — scuffs and divots down at the floor line.
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(64,52,38,${0.16 + rng.float() * 0.2})`;
+      g.save();
+      g.translate(lx + rng.range(-14, 14), 82 + rng.range(-3, 6));
+      g.rotate(rng.range(-0.5, 0.5));
+      g.fillRect(-3, -1, 6 + rng.float() * 4, 2);
+      g.restore();
+    }
+    for (const off of [-9, 9]) {
+      g.fillStyle = 'rgba(52,42,32,0.35)';
+      g.beginPath();
+      g.ellipse(lx + off, 86 + rng.range(-1.5, 1.5), 2, 1.2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Dust settled heavy right where the ladder stands.
+    const dust = g.createRadialGradient(lx, 88, 2, lx, 88, 18);
+    dust.addColorStop(0, 'rgba(120,106,86,0.3)');
+    dust.addColorStop(1, 'rgba(120,106,86,0)');
+    g.fillStyle = dust;
+    g.fillRect(lx - 18, 70, 36, 26);
+  });
+}
+
+/** The sill peeled — paint flakes curling off the window board
+ *  where the weather got at it, damp streaks dropping below. */
+export function sillPeel(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // The bare board shows through where the paint let go.
+    g.fillStyle = 'rgba(98,82,62,0.5)';
+    g.fillRect(6, 6, 84, 14);
+    // Flakes — lifted chips, some still curled at an edge.
+    for (let i = 0; i < 12; i++) {
+      const fx = 8 + rng.float() * 80;
+      const fy = 7 + rng.float() * 11;
+      g.fillStyle = `rgba(214,204,188,${0.35 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.moveTo(fx, fy);
+      g.lineTo(fx + 3 + rng.float() * 4, fy + rng.range(-1, 1));
+      g.lineTo(fx + 2 + rng.float() * 3, fy + 2.5 + rng.float() * 2);
+      g.closePath();
+      g.fill();
+      g.strokeStyle = 'rgba(70,58,44,0.3)';
+      g.lineWidth = 0.4;
+      g.stroke();
+    }
+    // Chips that fell and kept lying on the board.
+    for (let i = 0; i < 5; i++) {
+      g.fillStyle = `rgba(206,196,180,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(10 + rng.float() * 76, 16 + rng.float() * 3, 1.5 + rng.float() * 2, 0.8 + rng.float() * 1);
+    }
+    // Damp ran down the reveal — thin drip trails under the sill.
+    for (let i = 0; i < 4; i++) {
+      const dx = 14 + rng.float() * 68;
+      const len = 8 + rng.float() * 16;
+      const drip = g.createLinearGradient(0, 20, 0, 20 + len);
+      drip.addColorStop(0, 'rgba(80,66,50,0.4)');
+      drip.addColorStop(1, 'rgba(80,66,50,0)');
+      g.fillStyle = drip;
+      g.fillRect(dx, 20, 1.1 + rng.float() * 0.7, len);
+    }
+    // The bottom edge stays dark where the wall keeps the shadow.
+    g.fillStyle = 'rgba(40,32,24,0.28)';
+    g.fillRect(6, 44, 84, 2);
+  });
+}
+
+/** The drawers kept the scratches — ring-pull rubs, scraped fronts,
+ *  and the finger-groove grime of a thousand openings. */
+export function drawerScars(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // Grime worked into the groove under each pull.
+    for (const py of [18, 44]) {
+      const px = 48 + rng.range(-8, 8);
+      const grim = g.createRadialGradient(px, py, 1, px, py, 9);
+      grim.addColorStop(0, 'rgba(60,48,34,0.5)');
+      grim.addColorStop(0.7, 'rgba(60,48,34,0.18)');
+      grim.addColorStop(1, 'rgba(60,48,34,0)');
+      g.fillStyle = grim;
+      g.beginPath();
+      g.arc(px, py, 9, 0, Math.PI * 2);
+      g.fill();
+      // The pull's own rub — a bright ring where the metal swung.
+      g.strokeStyle = 'rgba(196,184,164,0.4)';
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.arc(px, py + 1.5, 3.5 + rng.float() * 0.8, 0.1, Math.PI - 0.1);
+      g.stroke();
+      // Fingernail scratches arcing away from the grip.
+      for (let s = 0; s < 4; s++) {
+        g.strokeStyle = `rgba(210,198,176,${0.14 + rng.float() * 0.18})`;
+        g.lineWidth = 0.35;
+        g.beginPath();
+        g.moveTo(px + rng.range(-4, 4), py + 3 + rng.range(-1, 1));
+        g.quadraticCurveTo(px + rng.range(-8, 8), py + 7 + rng.range(-1, 1), px + rng.range(-10, 10), py + 9 + rng.range(-1.5, 1.5));
+        g.stroke();
+      }
+    }
+    // Long scuffs across the fronts — furniture dragged, boxes slid.
+    for (let i = 0; i < 6; i++) {
+      g.strokeStyle = `rgba(186,172,148,${0.08 + rng.float() * 0.14})`;
+      g.lineWidth = 0.5 + rng.float() * 0.6;
+      g.beginPath();
+      const sy = 8 + rng.float() * 52;
+      g.moveTo(4 + rng.float() * 20, sy);
+      g.lineTo(60 + rng.float() * 30, sy + rng.range(-3, 3));
+      g.stroke();
+    }
+    // The seam between drawers reads darker — dust in the gap.
+    g.fillStyle = 'rgba(44,36,26,0.4)';
+    g.fillRect(6, 30.5, 84, 1.2);
+    // Corner knocks — chipped spots at the vulnerable edges.
+    for (const [cx, cy] of [[8, 8], [88, 8], [8, 58], [88, 58]] as const) {
+      if (!rng.bool(0.6)) continue;
+      g.fillStyle = 'rgba(90,72,52,0.4)';
+      g.beginPath();
+      g.arc(cx + rng.range(-1.5, 1.5), cy + rng.range(-1.5, 1.5), 1.2 + rng.float() * 1.4, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
+}

@@ -4184,3 +4184,48 @@ describe('the mop dried mid-sweep (sprint 495)', () => {
     expect(n, 'no mop arcs').toBeGreaterThan(0);
   });
 });
+
+describe('the ladder left its rub (sprint 496)', () => {
+  it('twin polish streaks mark service walls where the ladder leans', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'ladder-rub') n++; });
+      }
+    }
+    expect(n, 'no ladder rub').toBeGreaterThan(0);
+  });
+});
+
+describe('the sill peeled (sprint 496)', () => {
+  it('paint flakes curl off the window board', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'sill-peel') n++; });
+      }
+    }
+    expect(n, 'no sill peel').toBeGreaterThan(0);
+  });
+});
+
+describe('the drawers kept the scratches (sprint 496)', () => {
+  it('pull-rub rings and scuffs mark the drawer fronts', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drawer-scars') n++; });
+      }
+    }
+    expect(n, 'no drawer scars').toBeGreaterThan(0);
+  });
+});
