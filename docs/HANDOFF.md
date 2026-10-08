@@ -5514,6 +5514,34 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 485–488 — the walls opened, the paper let go, the pegs kept the shapes & the feet wicked the damp
+
+Sprint 485: `lathExpose` — plaster wounds showing wood lath on
+neglected walls (!livedIn ~50%); `drainRust` — rust rings + drip
+channels under floor grates/scuttles (~45%); `underbedHaze` —
+dust pelt + lost buttons/coins/moths at bed edges (~40%).
+
+Sprint 486: `paperPeel` — wallpaper flap + paste stain on lived-in
+walls (~35%); `tileCrack` — crack webs + dark grout on wet-room
+floors (~40%); `coalDust` — coal lumps + scuffed circles at
+scuttles/fireplaces/stoves (~40%).
+
+Sprint 487: `coatGhost` — hat/coat silhouettes at pegRail/hallTree
+(~40%); `boxRot` — damp bloom + pulp smear under cartons (~40%);
+`caseDust` — dust film + wiped arc on displayCase (~45%).
+
+Sprint 488: `carpetFray` — frayed edge threads on rugs (~40%);
+`pinScars` — pin pocks + paper ghosts on boards (~50%); `legRings` —
+damp tide rings at furniture feet in wet rooms (~35%).
+
+Gotchas: `grep -o "'[a-z]*'"` on spec.ts catches EVERY string
+literal, not just PropKind union members — 'carpet' is a
+floorMaterial, not a kind (TS2367 caught it). Inline wetRoom-style
+predicates when placing blocks above the waterline anchor.
+
+Gates: tsc, lint, generation tests (12 new, 448 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 482–484 — the keyholes kept the fumbles, the moths ate the drapes & the pots kept their rings
 
 Sprint 482: `keyholeWear` — polish ring + fumble-scratch fan on
