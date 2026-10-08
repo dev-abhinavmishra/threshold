@@ -3063,3 +3063,118 @@ export function bedpostNotches(rng: Rng): THREE.Texture | null {
     ctx.fillRect(0, 0, 64, 96);
   });
 }
+
+/** Pane writing — a finger dragged through condensation once: wiped
+ * streaks and the crude letters somebody spelled with them. */
+export function paneWriting(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // wiped field — pale tracery where the moisture was cleared
+    const g = ctx.createRadialGradient(48, 40, 6, 48, 40, 44);
+    g.addColorStop(0, 'rgba(210,216,210,0.22)');
+    g.addColorStop(0.7, 'rgba(210,216,210,0.1)');
+    g.addColorStop(1, 'rgba(210,216,210,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the letters — crude finger-writing, 2–4 strokes per glyph
+    const letters = 2 + Math.floor(rng.float() * 3);
+    const lh = 26;
+    for (let li = 0; li < letters; li++) {
+      const lx = 16 + li * (60 / letters) + (rng.float() - 0.5) * 4;
+      const ly = 26 + (rng.float() - 0.5) * 6;
+      const strokes = 2 + Math.floor(rng.float() * 2);
+      for (let s = 0; s < strokes; s++) {
+        ctx.strokeStyle = `rgba(224,230,222,${0.5 + rng.float() * 0.25})`;
+        ctx.lineWidth = 2.4 + rng.float();
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (s === 0) { ctx.moveTo(lx, ly); ctx.lineTo(lx, ly + lh); }
+        else if (s === 1) { ctx.moveTo(lx, ly); ctx.lineTo(lx + 10 + rng.float() * 5, ly + (rng.float() - 0.5) * 3); }
+        else { ctx.moveTo(lx, ly + lh * 0.5); ctx.lineTo(lx + 9 + rng.float() * 4, ly + lh * 0.5 + (rng.float() - 0.5) * 3); }
+        ctx.stroke();
+      }
+    }
+    // drip runs — the wiped water slid off the letters' heels
+    for (let i = 0; i < 6; i++) {
+      const dx = 18 + rng.float() * 60;
+      ctx.strokeStyle = `rgba(210,216,210,${0.15 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dx, 52);
+      ctx.lineTo(dx + (rng.float() - 0.5) * 2, 52 + 10 + rng.float() * 18);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Table scratches — a worktop keeps its knife years: a field of
+ * crossed cuts, some pale, some dark with old stains in the grooves. */
+export function tableScratches(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the worked patch — faintly polished ground in the middle
+    const g = ctx.createRadialGradient(48, 48, 8, 48, 48, 42);
+    g.addColorStop(0, 'rgba(200,188,160,0.12)');
+    g.addColorStop(1, 'rgba(200,188,160,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the cuts — crossed scores, mixed direction
+    const cuts = 10 + Math.floor(rng.float() * 8);
+    for (let i = 0; i < cuts; i++) {
+      const x0 = 12 + rng.float() * 56;
+      const y0 = 14 + rng.float() * 62;
+      const len = 10 + rng.float() * 26;
+      const ang = rng.float() * Math.PI;
+      const dark = rng.bool(0.4);
+      ctx.strokeStyle = dark ? `rgba(58,48,38,${0.25 + rng.float() * 0.2})` : `rgba(212,198,168,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.7 + rng.float() * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0 + Math.cos(ang) * len, y0 + Math.sin(ang) * len * 0.4);
+      ctx.stroke();
+    }
+    // gouge pits — the hard ones
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(54,44,34,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(18 + rng.float() * 60, 20 + rng.float() * 56, 1.4, 0.8, rng.float() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Phone ghost — a wall phone left its case: pale rectangle where the
+ * box sat, cord shadow looping down, the bell holes that stayed. */
+export function phoneGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 44 + (rng.float() - 0.5) * 12;
+    // surround halo — aged paint where the case stood off
+    const g = ctx.createRadialGradient(cx, 34, 6, cx, 34, 34);
+    g.addColorStop(0, 'rgba(206,196,172,0.26)');
+    g.addColorStop(1, 'rgba(206,196,172,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the case ghost — spared rectangle with a scuffed rim
+    ctx.fillStyle = 'rgba(212,202,178,0.3)';
+    ctx.fillRect(cx - 13, 16, 26, 38);
+    ctx.strokeStyle = 'rgba(88,78,62,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 13, 16, 26, 38);
+    // bell holes — the twin screws that outlived the box
+    ctx.fillStyle = 'rgba(54,46,38,0.55)';
+    ctx.beginPath(); ctx.arc(cx - 6, 10, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 6, 10, 1.6, 0, Math.PI * 2); ctx.fill();
+    // the cord's loop shadow — the wire's drape worn into the paint
+    ctx.strokeStyle = 'rgba(80,70,56,0.35)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 8, 54);
+    ctx.bezierCurveTo(cx + 14 + rng.float() * 6, 66, cx + 6, 78, cx + 10, 88);
+    ctx.stroke();
+    // receiver cradle wear — two contact dabs
+    for (const dx of [-8, 8]) {
+      ctx.fillStyle = 'rgba(96,84,66,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(cx + dx, 20, 2.6, 1.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -296,6 +296,16 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       pt.userData.decalMat = true;
       pt.position.set(0, 0, 0.071);
       g.add(pt);
+    }
+    // The glass kept the word — a finger dragged through the sweat
+    // spelled something once; the wiped field never fully fogged back.
+    if (!boarded && rng.bool(0.1)) {
+      const pw = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.72),
+        new THREE.MeshStandardMaterial({ map: paneWriting(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6 }));
+      pw.name = 'pane-writing';
+      pw.userData.decalMat = true;
+      pw.position.set(0, -0.1, 0.0705);
+      g.add(pw);
     }
     // Boarded up — rough planks nailed across the panes; the night glow
     // still leaks through the gaps, which is the whole point.
@@ -1415,6 +1425,23 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     dd.position.set((rng.float() - 0.5) * 0.4, dustY, (rng.float() - 0.5) * 0.2);
     prop.group.add(dd);
     if (!prop.group.name) prop.group.name = 'dust-date';
+  }
+  // The boards kept the knives — a worked patch of crossed cuts on
+  // surfaces that did years of service.
+  if (spec.kind in TOPS && rng.bool(0.14)) {
+    const dc = modelCollider(spec.kind);
+    const cutY = (dc?.[1] ?? TOPS[spec.kind as keyof typeof TOPS]!) + 0.006;
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.42),
+      new THREE.MeshStandardMaterial({ map: tableScratches(rng) ?? undefined, transparent: true, roughness: 0.92, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ts.name = 'table-scratches';
+    ts.userData.decalMat = true;
+    ts.rotation.x = -Math.PI / 2;
+    ts.rotation.z = rng.float() * Math.PI * 2;
+    ts.position.set((rng.float() - 0.5) * 0.3, cutY, (rng.float() - 0.5) * 0.2);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'table-scratches';
   }
   // The chairs kept the heads — a pomade sheen on the back of a seat
   // someone leaned into for years.
