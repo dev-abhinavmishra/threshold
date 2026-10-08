@@ -1927,3 +1927,84 @@ export function mothDrift(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Ring stains — years of set-down glasses: thin mug rings, one honest
+ * spill where something soaked through the varnish. */
+export function ringStains(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const n = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < n; i++) {
+      const x = 20 + rng.float() * 56, y = 20 + rng.float() * 56;
+      const r = 7 + rng.float() * 6;
+      const a = 0.16 + rng.float() * 0.2;
+      // the ring itself — varnish lifted at the water line
+      ctx.strokeStyle = `rgba(88,66,40,${a})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      ctx.beginPath();
+      ctx.ellipse(x, y, r, r * (0.85 + rng.float() * 0.2), rng.float() * 0.4, 0, Math.PI * 2);
+      ctx.stroke();
+      // pale tide mark just outside it
+      ctx.strokeStyle = `rgba(190,175,140,${a * 0.7})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r + 1.6, (r + 1.6) * 0.9, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    if (rng.float() < 0.4) {
+      // the spill — irregular bloom, darker at the rim
+      const bx = 30 + rng.float() * 36, by = 30 + rng.float() * 36;
+      const br = 10 + rng.float() * 10;
+      ctx.strokeStyle = 'rgba(78,58,34,0.2)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.35) {
+        const rr = br + Math.sin(t * 3 + rng.float() * 3) * 3;
+        const px = bx + Math.cos(t) * rr, py = by + Math.sin(t) * rr * 0.8;
+        if (t === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(96,74,44,0.1)';
+      ctx.beginPath();
+      ctx.ellipse(bx, by, br * 0.8, br * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Drain halo — verdigris and rust fanning out from where the water
+ * finds its way down: green-blue core ring, oxidised streaks below. */
+export function drainHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48, cy = 40;
+    // wet sheen field — floor stays darker where it never dries
+    const sheen = ctx.createRadialGradient(cx, cy, 4, cx, cy, 44);
+    sheen.addColorStop(0, 'rgba(40,48,44,0.4)');
+    sheen.addColorStop(1, 'rgba(40,48,44,0)');
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, 96, 96);
+    // verdigris ring — the copper bloom where water sits
+    ctx.strokeStyle = `rgba(82,124,106,${0.3 + rng.float() * 0.2})`;
+    ctx.lineWidth = 4 + rng.float() * 3;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 14 + rng.float() * 4, 10 + rng.float() * 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // oxidised streaks running down-drift
+    for (let i = 0; i < 5; i++) {
+      const sx = cx - 14 + rng.float() * 28;
+      ctx.strokeStyle = `rgba(${120 + rng.float() * 30},${74 + rng.float() * 16},${40 + rng.float() * 14},${0.18 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.4 + rng.float() * 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx, cy + 6);
+      ctx.quadraticCurveTo(sx + (rng.float() - 0.5) * 6, cy + 16 + rng.float() * 8, sx + (rng.float() - 0.5) * 10, cy + 26 + rng.float() * 14);
+      ctx.stroke();
+    }
+    // dark rim speckle
+    for (let i = 0; i < 18; i++) {
+      const a = rng.float() * Math.PI * 2, r = 13 + rng.float() * 5;
+      ctx.fillStyle = `rgba(30,34,30,${0.3 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.75, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2402,6 +2402,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
             group.add(moth);
           }
         }
+      }
+      // The drains drink — verdigris bloom and a floor that never
+      // quite dries, pooling out from under the basin.
+      if (p.kind === 'basinSink' && rng.float() < 0.5) {
+        const dh = decalQuad(drainHalo(rng), 1.1, 1.1);
+        dh.name = 'drain-halo';
+        dh.rotation.x = -Math.PI / 2;
+        dh.rotation.z = (p.yaw ?? 0) + (rng.float() - 0.5) * 0.4;
+        const fy = p.yaw ?? 0;
+        dh.position.set(p.x + Math.sin(fy) * 0.15, 0.0085, p.z + Math.cos(fy) * 0.15);
+        group.add(dh);
       }
       // Ceiling rosette under hanging fixtures — plaster medallion + ring
       // where the chain meets the slab.

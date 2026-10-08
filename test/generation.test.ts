@@ -2239,3 +2239,33 @@ describe('the sill keeps the moths (sprint 451)', () => {
     expect(n, 'no moth drifts').toBeGreaterThan(0);
   });
 });
+
+describe('the wood keeps the water (sprint 452)', () => {
+  it('worked surfaces carry ring stains', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'ring-stain') n++; });
+      }
+    }
+    expect(n, 'no ring stains').toBeGreaterThan(0);
+  });
+});
+
+describe('the drains drink (sprint 452)', () => {
+  it('basins pool a verdigris halo at their feet', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drain-halo') n++; });
+      }
+    }
+    expect(n, 'no drain halos').toBeGreaterThan(0);
+  });
+});
