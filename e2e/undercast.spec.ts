@@ -1581,6 +1581,8 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       seizedAt: { x: number; y: number; z: number } | null;
       seizedTake: { id: string; count: number }[];
       wantedActive: boolean; seizedFuse: number;
+      fencedTake: { id: string; count: number }[];
+      brokerFigs?: Map<number, { position: { x: number; y: number; z: number } }>;
       dynamicInteractables: { id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
       interaction: { focused?: { prompt?: string; kind?: string } };
       input: { interactPressed: boolean };
@@ -1763,7 +1765,50 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     }
     rotted = ga.seizedTake.length === 0 && ga.seizedAt === null
       && !ga.dynamicInteractables.some((x) => x.id.startsWith('seized-'));
+    // sprint 381 — what the count kept reaches the Broker's shelf:
+    // buy back your own take at the house's margin, laundered clean
+    let fencedHeld = false, boughtBack = false, buySpent = 0, buyClean = false, fencedUnits = 0;
+    fencedHeld = ga.fencedTake.length > 0;
+    fencedUnits = ga.fencedTake.reduce((n, s) => n + s.count, 0);
+    const lobbyR = g.route.underRooms.find((r) => r.templateId === 'u-lobby'
+      && (r.sockets ?? []).some((s) => s.meta?.broker !== undefined));
+    const fig0 = [...(ga.brokerFigs?.values() ?? [])][0];
+    if (fencedHeld && lobbyR) {
+      g.player.teleport(lobbyR.origin.x, 0, lobbyR.origin.z);
+      ga.currentRoom = lobbyR.index;
+      for (let f = 0; f < 30; f++) g.frame();
+      const fig = [...(ga.brokerFigs?.values() ?? [])][0] ?? fig0;
+      const bs = lobbyR.sockets.filter((s) => s.meta?.broker !== undefined);
+      if (fig && bs.length >= 2) {
+        const lx = bs[1].pos.x - bs[0].pos.x, lz = bs[1].pos.z - bs[0].pos.z;
+        const ll = Math.hypot(lx, lz) || 1;
+        const vpos = { x: fig.position.x - (lx / ll) * 0.8, y: fig.position.y + 0.55,
+          z: fig.position.z - (lz / ll) * 0.8 };
+        const dx = lobbyR.origin.x - vpos.x, dz = lobbyR.origin.z - vpos.z;
+        const dl = Math.hypot(dx, dz) || 1;
+        const sx = vpos.x + (dx / dl) * 0.9, sz = vpos.z + (dz / dl) * 0.9;
+        const m0 = ga.marginalia;
+        for (let f = 0; f < 80 && !boughtBack; f++) {
+          g.player.teleport(sx, 0, sz);
+          const ax = vpos.x - g.player.pos.x, az = vpos.z - g.player.pos.z;
+          g.player.yaw = Math.atan2(ax, az);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          g.player.pitch = Math.atan2(vpos.y + 0.6 - eyeY, Math.hypot(ax, az) || 1);
+          g.frame();
+          const fp = ga.interaction.focused?.prompt ?? '';
+          if (/buy back the fenced take/i.test(fp)) ga.keys.add('KeyE');
+          else ga.keys.delete('KeyE');
+          boughtBack = ga.fencedTake.length === 0
+            && ga.inventory.some((i) => i.id === 'doorChock' && i.count >= 1);
+        }
+        ga.keys.delete('KeyE');
+        buySpent = m0 - ga.marginalia;
+        // through the fence it launders — the take returns unmarked
+        buyClean = !ga.hotItems.has('doorChock');
+      }
+    }
     return { stage: 'done' as const, didSeize, spared, stripped,
+      fencedHeld, boughtBack, buySpent, buyClean, fencedUnits,
       minted: !!verb, prompt, seen, claimed, filed, cap,
       joined, namedFiled, namedCap, lockerPos, seen2,
       rotted, fadingSeen, fencedSeen,
@@ -1781,7 +1826,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.prompt).toMatch(/Claim your seized take/);
   expect(result.claimed, JSON.stringify(result)).toBe(true);
   expect(result.filed).toBe(1);         // claiming back files a fresh line
-  expect(result.spentMarg).toBe(24);    // 40 − 8 − 8 — two claims, priced like bags
+  expect(result.spentMarg).toBe(24 - (10 + 6 * result.fencedUnits)); // claims − buyback
   expect(result.cap).toMatch(/hangs on your back again/);
   expect(result.joined, JSON.stringify(result)).toBe(true); // second catch joins the tag, no re-hang
   expect(result.namedFiled).toBe(2);    // the sheets name you — the tag files double
@@ -1795,6 +1840,11 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.fadingSeen, JSON.stringify(result)).toBe(true);
   expect(result.fencedSeen, JSON.stringify(result)).toBe(true);
   expect(result.rotted, JSON.stringify(result)).toBe(true);
+  // sprint 381 — the count's shelf: fenced goods sell back at margin
+  expect(result.fencedHeld, JSON.stringify(result)).toBe(true);
+  expect(result.boughtBack, JSON.stringify(result)).toBe(true);
+  expect(result.buySpent).toBe(10 + 6 * result.fencedUnits); // the house's margin
+  expect(result.buyClean, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });
 

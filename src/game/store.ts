@@ -180,6 +180,9 @@ export interface CheckpointSave {
   // the count's locker — goods a named catch stripped hang claimable
   // at a cage under a fresh tag; a reload keeps the tag, not the loss
   seizedTake?: { items: { id: ItemId; count: number }[]; x: number; y: number; z: number; fuse?: number };
+  // what a rotted tag fed the count — fenced goods waiting on the
+  // Broker's shelf ride the checkpoint like the debts that put them there
+  fencedTake?: { id: ItemId; count: number }[];
   // chalk tally marks the player left on doors — authored state, not
   // a consumable: reloading shouldn't erase what they drew
   chalkMarks?: [string, { x: number; y: number; z: number; yaw: number; label: string }][];

@@ -4651,3 +4651,20 @@ Game.die() from the same five fields.
   of a marked id, so re-marking 'feltWrap' mid-leg strips the
   claimed-back count too. Assert count>=1 on returns.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
+## sprint 381 — the count's shelf
+
+- The rot's endgame: a fenced tag's goods reach the Broker's shelf —
+  `fencedTake` fills on rot and a `buyback` verb mints on his fig's
+  far flank (waist-height, book's mirror). 'Buy back the fenced take
+  — N marginalia' costs `10 + 6×units`: the house's margin was the
+  point. Through the fence it launders — the take returns unmarked.
+  The shutter covers it ('the floor is closed for the count').
+- Full loop closed: seize → tag → claim (priced+filed) | cut (free,
+  marked, filed deeper) | rot → fence → buyback (margin, laundered).
+- `fencedTake` rides the checkpoint + joins the epitaph's seized
+  count — unbought goods are still the count's at the end.
+- e2e trap: the rot seize strips EVERY stack of the marked id —
+  earlier claimed-back stacks fence too; price asserts must read
+  fencedUnits live, not constants.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
