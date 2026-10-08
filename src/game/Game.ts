@@ -1396,6 +1396,24 @@ export class Game {
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });
     }
+    // Read the wanted sheet — once the clerk's ledger names you, the
+    // boards ahead print your tally on their faces. Reading is free;
+    // the naming stays until the tally settles.
+    if (this.wantedActive) {
+      const host = this.wantedRooms.get(this.currentRoom);
+      if (host) {
+        const dx = host.x - this.player.pos.x, dz = host.z - this.player.pos.z;
+        if (dx * dx + dz * dz <= 2.2 * 2.2) {
+          this.interaction.add({
+            kind: 'wanted', id: `wanted-${this.space}:${this.currentRoom}`,
+            pos: { x: host.x, y: 0.75, z: host.z },
+            prompt: 'Read the wanted sheet',
+            holdTime: 0.8, enabled: true, priority: 1,
+            data: {},
+          });
+        }
+      }
+    }
     // Bleed the line — a live steam fitting can be bled quiet at the
     // valve; the blast stops, the corridor calms.
     for (const st of this.hazard.steams) {
@@ -3271,6 +3289,12 @@ export class Game {
         // its lamp is crew property too — stripped or scavenged, it counts
         this.crewCount.push(it.pos.x, it.pos.z, this.clock.time,
           '[the drag\'s lamp is marked gone — the count is short]');
+        return;
+      }
+      case 'wanted': {
+        // the sheet prints what the tally says about you — the boards'
+        // readout of the clerk's book, free to read, still named
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
         return;
       }
       case 'stripCheck': {
