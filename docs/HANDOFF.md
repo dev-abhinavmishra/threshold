@@ -5387,3 +5387,26 @@ coin AND a sound where you stand.
   'the call dies' → all-others-spent refuses free.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
+## Sprint 448 — the paper trail & the things they left
+First BIG-format sprint (his new directive: big worked-on PRs, not tiny
+ones — cluster several dressing systems per PR). Two related batches:
+
+- Paper trail (walls): `registerPage` pinned guest-ledger (lobby/guest/
+  records), `evictionSlip` dispossession notices with typed-lines +
+  stamped seal + dotted name field (guest/lobby/records/corridor),
+  `repairTicket` torn maintenance stubs — stamped job NO + ticked
+  checkboxes + red verdict slash + grease thumb (maintenance/unlit/
+  underscript/corridor), `photoStrip` four-frame booth strip whose face
+  dissolves frame over frame (guest/lobby/records).
+- Left behind (floors): `droppedGlove`/`inkSpill`/`fallenSpecs` — one
+  flat decal per room at leftP, random kind/yaw; the dropped belongings
+  read where someone stopped carrying them.
+
+Conventions used: each decal is canvasTex+rng in decals.ts; wall pieces
+go through pickWallSpot/wallDecal with per-biome probability tables and
+a named mesh (`register-page`, `eviction-slip`, `repair-ticket`,
+`photo-strip`); floor pieces ride decalQuad+rotation.x=-π/2 at y=0.008.
+Tests count the named meshes across SEEDS on 'high' detail.
+
+Gates: tsc, lint, vitest 298, build. No e2e leg — dressing only.

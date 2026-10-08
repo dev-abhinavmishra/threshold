@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1770,6 +1770,72 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'nail-row';
       }
+    }
+
+    // The register — a pinned ledger page: neat early signatures that
+    // degrade to scrawl, margin tallies in red.
+    if (['lobby', 'guest', 'records'].includes(spec.biome) && rng.float() < 0.35) {
+      const spot = pickWallSpot(0.6);
+      if (spot) {
+        wallDecal(spot.wall, registerPage(rng), 0.55, 0.72, spot.along, 1.55 + rng.float() * 0.2);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'register-page';
+      }
+    }
+
+    // The eviction slip — the notice that dispossesses you, letterhead
+    // intact, name field still dotted. Guest/lobby doors deserve it.
+    const evictionP = ({ guest: 0.4, lobby: 0.3, records: 0.2, corridor: 0.12 } as Record<string, number>)[spec.biome] ?? 0;
+    if (rng.float() < evictionP) {
+      const spot = pickWallSpot(0.6);
+      if (spot) {
+        wallDecal(spot.wall, evictionSlip(rng), 0.5, 0.7, spot.along, 1.5 + rng.float() * 0.2);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'eviction-slip';
+      }
+    }
+
+    // The repair ticket — torn stubs the maintenance wing keeps filing:
+    // stamped job number, ticked boxes, a verdict in red.
+    const ticketP = ({ maintenance: 0.45, unlit: 0.3, underscript: 0.2, corridor: 0.1 } as Record<string, number>)[spec.biome] ?? 0;
+    if (rng.float() < ticketP) {
+      const spot = pickWallSpot(0.55);
+      if (spot) {
+        wallDecal(spot.wall, repairTicket(rng), 0.5, 0.5, spot.along, 1.45 + rng.float() * 0.25);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'repair-ticket';
+      }
+    }
+
+    // The photo strip — four frames pinned askew in the rooms that once
+    // held people: a face that washes out exposure by exposure.
+    const stripP = ({ guest: 0.3, lobby: 0.15, records: 0.12 } as Record<string, number>)[spec.biome] ?? 0;
+    if (rng.float() < stripP) {
+      const spot = pickWallSpot(0.4);
+      if (spot) {
+        wallDecal(spot.wall, photoStrip(rng), 0.24, 0.66, spot.along, 1.6 + rng.float() * 0.15);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'photo-strip';
+      }
+    }
+
+    // The things they left — dropped belongings on the floorboards:
+    // a glove slid off mid-flight, a pen that broke its ink, spectacles
+    // cracked where the owner stopped wearing them.
+    const leftP = ({ guest: 0.3, lobby: 0.28, records: 0.22, safe: 0.15, corridor: 0.1 } as Record<string, number>)[spec.biome] ?? 0;
+    if (rng.float() < leftP) {
+      const picks: [(r: import('../engine/rng').Rng) => THREE.Texture | null, number, string][] = [
+        [droppedGlove, 0.45, 'left-glove'],
+        [inkSpill, 0.45, 'left-pen'],
+        [fallenSpecs, 0.45, 'left-specs'],
+      ];
+      const [tex, size, name] = picks[Math.floor(rng.float() * picks.length)];
+      const m = decalQuad(tex(rng), size, size);
+      m.name = name;
+      m.rotation.x = -Math.PI / 2;
+      m.rotation.z = rng.float() * Math.PI * 2;
+      m.position.set((rng.float() - 0.5) * (w - 1.8), 0.008, (rng.float() - 0.5) * (d - 1.8));
+      group.add(m);
     }
 
     // The map nobody trusts — a framed route plan under old glass; the
