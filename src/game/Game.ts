@@ -253,6 +253,10 @@ export class Game {
       cue: (name, at, caption, opts) => this.cue(name, at, caption, opts?.severity),
       // a sheet went back up mid-walk — the board carries the name again
       repost: (roomIdx, host) => { this.wantedRooms.set(roomIdx, { x: host.x, z: host.z }); this.bareBoards.delete(roomIdx); },
+      // the boards name the face he carries — seeing it stills the walk
+      wanted: () => this.wantedActive,
+      // the cry down the spine is a real sound — the under rouses to it
+      emit: (e) => this.sound.emit(e),
     };
   }
   private canvas: HTMLCanvasElement;
@@ -965,6 +969,14 @@ export class Game {
         this.unpaidHeld += 1;
       },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
+      seizeMarked: () => {
+        const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
+        if (take.length === 0 && this.hotImprints <= 0) return false;
+        for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.hotImprints = 0;
+        return true;
+      },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -5357,6 +5369,8 @@ export class Game {
   }
 
   private readonly visitedRooms = new Set<number>();
+  /** Rooms each book has already muttered in — once per room per book. */
+  private readonly murmured = new Set<string>();
   private deathEcho: { room: number; space: 'main' | 'under'; fired: boolean } | null = null;
   private lures: { pos: Vec3; mesh: THREE.Object3D; until: number; nextTick: number; rang: boolean }[] = [];
   private lowBattWarned = false;
@@ -6011,6 +6025,38 @@ export class Game {
     if (!scare.bool(0.11)) return;
     this.breathingRoom = this.currentRoom;
     this.cue('room-breathe', null, scare.bool(0.4) ? '[the room breathes]' : '', 'warn');
+  }
+
+  /** The books mutter — a deep ledger makes its home rooms whisper. Once per
+   *  room per book: the register rustles where its desks live (a clerked
+   *  counter or a desk-family room), the tally/index murmur in the under
+   *  halls, and a named face makes the boards themselves lean. Fiction only
+   *  — every murmur is gated on real book state, never invented. */
+  private maybeMutter(under: boolean): void {
+    const room = this.activeRooms()[this.currentRoom];
+    if (!room || !room.spec || room.spec.special) return;
+    if (this.currentRoom < 6) return;
+    const mutter = (book: string, text: string) => {
+      const k = `${under ? 'u' : 'm'}:${this.currentRoom}:${book}`;
+      if (this.murmured.has(k)) return;
+      this.murmured.add(k);
+      this.cue('whisper', null, text, 'info');
+    };
+    if (under) {
+      if (this.unpaidTheft >= 2) {
+        mutter('tally', "[the tally's ink hasn't dried — the under counts you]");
+      }
+      if (this.paperTrail >= 3) {
+        mutter('index', "[the index keeps your questions — the clerks' hands stop when you pass]");
+      }
+      if (this.wantedActive) {
+        mutter('boards', '[the boards have your face — the halls lean when you pass]');
+      }
+    } else if (this.unpaidHeld >= 2
+      && (room.sockets.some((s) => s.meta.clerk !== undefined)
+        || room.biome === 'records' || room.biome === 'lobby')) {
+      mutter('register', "[the register's pages rustle at the desks — your name is in them]");
+    }
   }
 
   /** The Broker: one robed figure per u-lobby, behind the counter, head that
@@ -6732,6 +6778,7 @@ export class Game {
       this.maybeLuggage();
       this.maybeStatueShift();
       this.maybeCreakyRoom();
+      this.maybeMutter(false);
     }
     this.tickEchoQueue();
     this.tickOccupant();
@@ -6752,6 +6799,7 @@ export class Game {
         this.maybeEchoRoom(true);
         this.maybePhoneRing(true);
         this.maybeShade(true);
+        this.maybeMutter(true);
       }
     }
     // death echo: the building remembers where it took you
@@ -7442,7 +7490,10 @@ export class Game {
     }
     // the reposter walks when the boards stand bare: pin by pin
     if (this.reposter.active && this.route) {
-      this.reposter.update(dt, this.route.underRooms, { pos: this.player.pos }, this.reposterHooks());
+      this.reposter.update(dt, this.route.underRooms, {
+        pos: this.player.pos, room: this.currentRoom,
+        hidden: this.player.protection === 'hidden',
+      }, this.reposterHooks());
     }
     for (const e of [...this.entities]) {
       e.update(dt);

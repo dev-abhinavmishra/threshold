@@ -14,10 +14,12 @@
  */
 import * as THREE from 'three';
 import { corridorPath, followPath } from './base';
+import { pointInRoom } from '../engine/doorGeo';
 import { riggedFigure, type RiggedFigure } from './rigged';
 import { MAT } from '../world/materials';
 import { v3, v3copy } from '../engine/math';
 import type { Vec3 } from '../engine/math';
+import type { SoundEvent } from '../engine/events';
 import type { RoomInstance } from '../game/types';
 
 export interface ReposterHooks {
@@ -26,6 +28,12 @@ export interface ReposterHooks {
   cue: (name: string, at: Vec3 | null, caption: string, opts?: { severity?: 'info' | 'warn' | 'danger' }) => void;
   /** The reposter pinned a fresh sheet on this room's board. */
   repost: (roomIdx: number, host: { x: number; z: number }) => void;
+  /** True while the boards name the player's face — the walk only ever
+   *  happens named (the repost itself is the wanted episode's answer),
+   *  but the caller supplies it so headless tests can toggle it. */
+  wanted?: () => boolean;
+  /** The clerk's cry is a REAL sound — listeners rouse to it. */
+  emit?: (e: SoundEvent) => void;
 }
 
 export interface ReposterHost {
@@ -52,6 +60,11 @@ export class Reposter {
   private pos = v3();
   private mesh: THREE.Group | null = null;
   private rig: RiggedFigure | null = null;
+  /** The boards' courier reads his own cargo — spotting the named face
+   *  stills the walk a beat and cries the location down the spine
+   *  (once per walk). */
+  private sawNamed = false;
+  private spotT = 0;
 
   get active(): boolean { return this.state !== 'idle'; }
   get stage(): string { return this.state; }
@@ -80,6 +93,8 @@ export class Reposter {
     this.pinAt = this.stops[0].at;
     this.pinT = 0;
     this.travel = 0;
+    this.sawNamed = false;
+    this.spotT = 0;
     v3copy(this.pos, this.path[0]);
     const g = new THREE.Group();
     const rig = riggedFigure('hooded');
@@ -102,8 +117,35 @@ export class Reposter {
     return true;
   }
 
-  update(dt: number, _rooms: RoomInstance[], _player: { pos: Vec3 }, hooks: ReposterHooks): void {
+  update(dt: number, rooms: RoomInstance[], player: { pos: Vec3; room?: number; hidden?: boolean }, hooks: ReposterHooks): void {
     if (!this.active) return;
+    // He carries your name in the bundle — seeing the face it belongs
+    // to stills him a beat, and he cries the location down the spine:
+    // a REAL sound at his position the under rouses to. Once per walk —
+    // and the cry is the price of being seen, so stay out of his room
+    // while named, or cut the walk before he reaches you.
+    if (!this.sawNamed && this.spotT <= 0 && hooks.wanted?.() && !player.hidden) {
+      const myRoom = rooms.find((r) => r.spec && pointInRoom(r, this.pos.x, this.pos.z))?.index;
+      const dd = Math.hypot(player.pos.x - this.pos.x, player.pos.z - this.pos.z);
+      if (player.room !== undefined && player.room === myRoom && dd < 7) {
+        this.sawNamed = true;
+        this.spotT = 1.2;
+        hooks.cue('chalk-mark', this.pos, '[the clerk sees whose name he\'s carrying — he cries it down the spine]', { severity: 'warn' });
+        // 'distraction', not 'entity-cue' — entity-cue is excluded from
+        // ROUSE_CATEGORIES (it marks rouse tells, anti-cascade), so the cry
+        // would rouse nobody. A shouted name is a real disturbance.
+        hooks.emit?.({ x: this.pos.x, y: 1.4, z: this.pos.z, intensity: 0.55, category: 'distraction', caption: '' });
+      }
+    }
+    if (this.spotT > 0) {
+      // the look — travel and the pin both hold while he names you
+      this.spotT -= dt;
+      if (this.mesh) this.mesh.rotation.y = Math.atan2(
+        player.pos.x - this.pos.x, player.pos.z - this.pos.z);
+      this.rig?.play('idle');
+      this.rig?.update(dt);
+      return;
+    }
     if (this.state === 'inbound') {
       this.travel += WALK * dt;
       const f = followPath(this.path, this.travel);

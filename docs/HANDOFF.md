@@ -4265,3 +4265,53 @@ Game.die() from the same five fields.
   so a death doesn't re-lecture. Fresh runs teach from zero.
 - Gates: tsc, lint, 253 tests (persistence round-trip covers taught),
   sim 5/5, build. Runtime-only layer — no e2e leg.
+
+## sprint 364 — the boards' courier knows your face
+
+- The reposter carries your name in the bundle but walked past the
+  thief: while `wanted()` and you stand in his room unhidden (<7m),
+  the look stills the walk a beat (`spotT` — travel AND pins hold,
+  he turns to face you) and he cries the location down the spine —
+  a REAL SoundEvent emit at HIS position (entity-cue 0.55) so the
+  under's listeners rouse. Once per walk (`sawNamed`). Hidden reads
+  as furniture — no cry.
+- ReposterHooks gained `wanted?: () => boolean` + `emit?: (e:
+  SoundEvent) => void`; the update's player arg grew `room`/
+  `hidden`. His room derives via `pointInRoom` on underRooms —
+  `player.room === currentRoom` (the under index while under).
+- Honesty note: the emit carries `caption: ''` — the recognition
+  text already shows via cue; the sound is physics, not narration.
+  The counterplay is being seen, not a ledger line.
+- Gates: tsc, lint, vitest 254 (+1 reposter spec), sim 5/5.
+
+## sprint 365 — the books mutter
+
+- `maybeMutter(under)` rides the room-enter block both spaces — once per
+  room per book (`murmured` set keyed space:room:book): register rustles
+  in clerked/`records`/`lobby` rooms while `unpaidHeld >= 2`; the tally
+  murmurs under while `unpaidTheft >= 2`; the index while `paperTrail
+  >= 3`; the boards themselves lean while `wantedActive`. Whisper cues,
+  non-positional — pure fiction gated on real book state.
+- `murmured` deliberately does NOT ride the checkpoint: a reload
+  re-muttering once is honest (the books still mutter) — it is not a
+  consequence the player can launder.
+- Gates: tsc, lint, vitest 254, sim 5/5.
+
+## sprint 366 — the shout is a real sound; the sheets take the take
+
+- s364's reposter cry emitted `category: 'entity-cue'` — that category
+  is EXCLUDED from `ROUSE_CATEGORIES` (it marks rouse tells, the
+  anti-cascade guard), so the shout roused nobody. Now `'distraction'`
+  at intensity 0.55 (~7.7m) — a shouted name is a real disturbance.
+  The vitest spec now asserts `noiseCanRouse(emits[0])`. Trap: any
+  emit meant to be heard must use a ROUSE_CATEGORIES category —
+  sprint/door/impact/item/puzzle-fail/machine/distraction/drawer.
+- `EntityCtx.seizeMarked?: () => boolean` — repossess the marked take
+  (strips hotItems stacks + zeroes hotImprints; false when nothing to
+  take so callers cue honestly). Game impl mirrors the fence's strip.
+- Swamper + Laundress strikes: while `wanted()` the catch also calls
+  `seizeMarked` — the boards describe your face, the crew repossesses
+  what the sheets describe (`[the marked wares go to the count]` /
+  `go in the wash`). Grafter untouched: killPlayer means death —
+  seizing pre-death is moot, the checkpoint still holds the take.
+- Gates: tsc, lint, vitest 255, sim 5/5.

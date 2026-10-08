@@ -1359,6 +1359,41 @@ describe('Swamper (sprint 255)', () => {
     sw.dispose();
   });
 
+  it('the boards name you — a named catch takes the marked take (sprint 366)', async () => {
+    const { Swamper } = await import('../src/entities/setpieces');
+    const rooms = [floodRoom()];
+    const { ctx, emit, step } = hearingCtx(rooms);
+    ctx.player.pos.x = 0; ctx.player.pos.z = 6;
+    ctx.wanted = () => true;
+    ctx.seizeMarked = vi.fn(() => true);
+    const sw = new Swamper();
+    sw.spawn(ctx);
+    emit(0, 6);
+    step(sw, 20);
+    ctx.player.vel.x = 1.4;
+    step(sw, 140);
+    expect(ctx.damagePlayer).toHaveBeenCalledWith(25, 'swamper', expect.any(String));
+    expect(ctx.seizeMarked).toHaveBeenCalled();
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /goes? to the count|to the count/.test(c))).toBe(true);
+    sw.dispose();
+    // a stranger keeps his pockets — no seize while the boards don't name him
+    const rooms2 = [floodRoom()];
+    const { ctx: ctx2, emit: emit2, step: step2 } = hearingCtx(rooms2);
+    ctx2.player.pos.x = 0; ctx2.player.pos.z = 6;
+    ctx2.wanted = () => false;
+    ctx2.seizeMarked = vi.fn(() => true);
+    const sw2 = new Swamper();
+    sw2.spawn(ctx2);
+    emit2(0, 6);
+    step2(sw2, 20);
+    ctx2.player.vel.x = 1.4;
+    step2(sw2, 140);
+    expect(ctx2.damagePlayer).toHaveBeenCalled();
+    expect(ctx2.seizeMarked).not.toHaveBeenCalled();
+    sw2.dispose();
+  });
+
   it('a crouched wader stirs nothing — contact without a splash is safe', async () => {
     const { Swamper } = await import('../src/entities/setpieces');
     const rooms = [floodRoom()];
