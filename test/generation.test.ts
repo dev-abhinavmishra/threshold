@@ -1585,8 +1585,8 @@ describe('the lamps take sides (sprint 419)', () => {
             if (dd < bd) { bd = dd; best = lp; }
           }
           if (!best) return;
-          if (state === 'lit') (best.locked ? litLocked++ : litOpen++);
-          else if (state === 'dead' || state === 'smoke') (best.locked ? deadLocked++ : deadOpen++);
+          if (state === 'lit') { if (best.locked) litLocked++; else litOpen++; }
+          else if (state === 'dead' || state === 'smoke') { if (best.locked) deadLocked++; else deadOpen++; }
         });
       }
     }

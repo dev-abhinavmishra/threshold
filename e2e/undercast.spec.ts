@@ -1580,7 +1580,8 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       entityCtx(): { seizeMarked(): boolean };
       seizedAt: { x: number; y: number; z: number } | null;
       seizedTake: { id: string; count: number }[];
-      wantedActive: boolean; seizedFuse: number;
+      wantedActive: boolean; seizedFuse: number; seizedCoin: number;
+      imprints: number;
       fencedTake: { id: string; count: number }[];
       brokerFigs?: Map<number, { position: { x: number; y: number; z: number } }>;
       dynamicInteractables: { id: string; pos: { x: number; y: number; z: number }; prompt: string }[];
@@ -1589,7 +1590,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     };
     ga.enterUnderscript();
     ga.godMode = true;
-    ga.marginalia = 40;
+    ga.marginalia = 60;
     // a marked take on your back + one clean item the seize must spare
     ga.inventory.push({ id: 'feltWrap', count: 2 }, { id: 'latchpick', count: 1 });
     ga.hotItems = new Set(['feltWrap']);
@@ -1598,8 +1599,10 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     const spared = ga.inventory.find((i) => i.id === 'latchpick')?.count === 1;
     const stripped = !ga.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
       && ga.hotItems.size === 0 && ga.hotImprints === 0;
+    const imp0 = ga.imprints;
+    const coinItemized = ga.seizedCoin === 5;
     const verb = ga.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
-    let prompt = '', claimed = false, filed = 0, cap = '';
+    let prompt = '', claimed = false, filed = 0, cap = '', impGain = 0;
     const seen: string[] = [];
     if (verb) {
       // the tag hangs at the nearest cage — stand on the room-center
@@ -1634,6 +1637,8 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       ga.keys.delete('KeyE');
       filed = ga.unpaidTheft - t0;
       cap = caps.find((c) => /tag tears/.test(c)) ?? '';
+      // sprint 382 — the tag itemized the coin: it rode back at par
+      impGain = ga.imprints - imp0;
     }
     // sprint 376 — a second catch while the tag still hangs joins the
     // same locker, and a claim under the wanted sheets files double.
@@ -1778,7 +1783,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
       ga.currentRoom = lobbyR.index;
       for (let f = 0; f < 30; f++) g.frame();
       const fig = [...(ga.brokerFigs?.values() ?? [])][0] ?? fig0;
-      const bs = lobbyR.sockets.filter((s) => s.meta?.broker !== undefined);
+      const bs = (lobbyR.sockets ?? []).filter((s) => s.meta?.broker !== undefined);
       if (fig && bs.length >= 2) {
         const lx = bs[1].pos.x - bs[0].pos.x, lz = bs[1].pos.z - bs[0].pos.z;
         const ll = Math.hypot(lx, lz) || 1;
@@ -1810,6 +1815,7 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
     return { stage: 'done' as const, didSeize, spared, stripped,
       fencedHeld, boughtBack, buySpent, buyClean, fencedUnits,
       minted: !!verb, prompt, seen, claimed, filed, cap,
+      coinItemized, impGain,
       joined, namedFiled, namedCap, lockerPos, seen2,
       rotted, fadingSeen, fencedSeen,
       cutWorked, cutMarked, cutFiled, cutVerbsGone,
@@ -1823,10 +1829,10 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.stripped).toBe(true);   // every marked stack + the marked coin stripped
   expect(result.spared).toBe(true);     // clean goods untouched
   expect(result.minted, JSON.stringify(result)).toBe(true); // the tag hangs at a cage
-  expect(result.prompt).toMatch(/Claim your seized take/);
+  expect(result.prompt).toMatch(/Claim your seized take — 13/); // 8 + the 5 coin it itemized
   expect(result.claimed, JSON.stringify(result)).toBe(true);
   expect(result.filed).toBe(1);         // claiming back files a fresh line
-  expect(result.spentMarg).toBe(24 - (10 + 6 * result.fencedUnits)); // claims − buyback
+  expect(result.spentMarg).toBe(39 - (10 + 6 * result.fencedUnits)); // 60 − 13 − 8 claims − buyback
   expect(result.cap).toMatch(/hangs on your back again/);
   expect(result.joined, JSON.stringify(result)).toBe(true); // second catch joins the tag, no re-hang
   expect(result.namedFiled).toBe(2);    // the sheets name you — the tag files double
@@ -1840,6 +1846,9 @@ test("the count's locker — seized goods hang claimable at the cage", async ({ 
   expect(result.fadingSeen, JSON.stringify(result)).toBe(true);
   expect(result.fencedSeen, JSON.stringify(result)).toBe(true);
   expect(result.rotted, JSON.stringify(result)).toBe(true);
+  // sprint 382 — the tag itemizes: coin under the tag, back at par
+  expect(result.coinItemized, JSON.stringify(result)).toBe(true);
+  expect(result.impGain).toBe(5);
   // sprint 381 — the count's shelf: fenced goods sell back at margin
   expect(result.fencedHeld, JSON.stringify(result)).toBe(true);
   expect(result.boughtBack, JSON.stringify(result)).toBe(true);

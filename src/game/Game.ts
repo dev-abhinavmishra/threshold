@@ -723,6 +723,8 @@ export class Game {
     this.seizedFading = false;
     // what the count fenced stays fenced — the shelf survives a reload
     this.fencedTake = cp?.fencedTake?.map((s) => ({ ...s })) ?? [];
+    // and the tag's listed coin rides with it
+    this.seizedCoin = cp?.seizedTake?.coin ?? 0;
     this.mintSeizedClaim();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1000,10 +1002,12 @@ export class Game {
         const seized = take.map((i) => ({ id: i.id, count: i.count }));
         for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
         this.inventory = this.inventory.filter((i) => i.count > 0);
-        this.hotImprints = 0;
         // the take doesn't vanish — the count locks it in the nearest
-        // claim cage under a fresh tag, claimable back like any bag
-        this.stashSeized(seized);
+        // claim cage under a fresh tag, claimable back like any bag.
+        // The coin is itemized on the same tag — the count's paper
+        // lists what it swallowed (sprint 382).
+        this.stashSeized(seized, this.hotImprints);
+        this.hotImprints = 0;
         return true;
       },
       trailOwed: () => this.paperTrail,
@@ -1061,6 +1065,10 @@ export class Game {
   // book readout says so while it can still be answered
   private seizedFuse = 0;
   private seizedFading = false;
+  /** Sprint 382 — the tag itemizes: marked coin the seize strips is
+   *  held under the same tag, priced into the claim at par. The cut
+   *  can't hand back coin — the count swallowed it outright. */
+  private seizedCoin = 0;
   /** Sprint 381 — what the count kept: a rotted tag's goods get fenced
    *  to the Broker's shelf, buyable back at the house's markup. */
   private fencedTake: { id: ItemId; count: number }[] = [];
@@ -1090,8 +1098,10 @@ export class Game {
   /** The count's locker — seized goods hang under a fresh claim tag at
    *  the nearest under claim cage instead of vanishing. A seed with no
    *  cage keeps the take (the count swallowed it whole). */
-  private stashSeized(items: { id: ItemId; count: number }[]): void {
-    if (items.length === 0) return;
+  private stashSeized(items: { id: ItemId; count: number }[], coin = 0): void {
+    if (items.length === 0 && coin <= 0) return;
+    // the tag itemizes — the count's paper lists the coin it swallowed
+    this.seizedCoin += coin;
     // one locker per run — a second catch doesn't re-hang the tag at a
     // nearer cage while the first still claims; the take just joins it
     // a fresh catch hangs fresh ink — the fuse restarts even when the
@@ -1100,6 +1110,9 @@ export class Game {
     this.seizedFading = false;
     if (this.seizedAt) {
       this.seizedTake.push(...items);
+      // the tag's price reads what it now lists
+      const v = this.dynamicInteractables.find((x) => x.id.startsWith('seized-claim'));
+      if (v) v.prompt = `Claim your seized take — ${8 + this.seizedCoin} marginalia`;
       return;
     }
     let cage: { x: number; y: number; z: number } | null = null;
@@ -1119,7 +1132,7 @@ export class Game {
         }
       }
     }
-    if (!cage) return;
+    if (!cage) { this.seizedTake.push(...items); return; }
     this.seizedTake.push(...items);
     this.seizedAt = cage;
     this.mintSeizedClaim();
@@ -1131,14 +1144,14 @@ export class Game {
    *  had already claimed them: your take returns marked and filed
    *  deeper. The cut hangs a hand's breadth off the honest tag. */
   private mintSeizedClaim(): void {
-    if (!this.seizedAt || this.seizedTake.length === 0) return;
+    if (!this.seizedAt || (this.seizedTake.length === 0 && this.seizedCoin <= 0)) return;
     const id = `seized-claim-${this.space}`;
     const cutId = `seized-cut-${this.space}`;
     if (this.dynamicInteractables.some((x) => x.id === id || x.id === cutId)) return;
     this.dynamicInteractables.push({
       kind: 'seizedClaim', id,
       pos: { x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z },
-      prompt: 'Claim your seized take — 8 marginalia',
+      prompt: `Claim your seized take — ${8 + this.seizedCoin} marginalia`,
       holdTime: 0.8, enabled: true, priority: 1, data: {},
     });
     // the cut hangs beside the tag — offset along the cage's front
@@ -2447,8 +2460,8 @@ export class Game {
         // the book knows the locker too — a pending seize tag reads
         // through the same paid readout instead of only at the cage
         const locker = this.seizedTake.reduce((n, s) => n + s.count, 0);
-        const lockerBit = locker > 0
-          ? ` · a tag keeps ${locker} of yours at the cages${this.seizedFuse <= SEIZED_FADE_S ? ' · the ink is fading' : ''}`
+        const lockerBit = (locker > 0 || this.seizedCoin > 0)
+          ? ` · a tag keeps ${locker > 0 ? `${locker} of yours` : 'your coin'} at the cages${this.seizedCoin > 0 ? ` — ${this.seizedCoin} coin itemized` : ''}${this.seizedFuse <= SEIZED_FADE_S ? ' · the ink is fading' : ''}`
           : '';
         this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
           ? '[the book holds one line on you — this one]'
@@ -2854,7 +2867,7 @@ export class Game {
         // The count's locker — what a named catch stripped hangs under
         // a fresh tag at this cage. Claiming it back is a fresh claim
         // on crew-held effects: priced, filed, and the till rings late.
-        const sPrice = 8;
+        const sPrice = 8 + this.seizedCoin;
         if (this.marginalia < sPrice) {
           this.cue('door-locked', it.pos,
             `[the tag reads ${sPrice} marginalia — your own take costs what any bag costs]`, 'warn');
@@ -2870,6 +2883,9 @@ export class Game {
           .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
           .join(' · ');
         for (const s of this.seizedTake) this.giveItem(s.id, s.count);
+        // the coin rides back at par — the tag itemized it
+        this.imprints += this.seizedCoin;
+        this.seizedCoin = 0;
         this.seizedTake = [];
         this.seizedAt = null;
         this.seizedFuse = 0;
@@ -2893,6 +2909,8 @@ export class Game {
           .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
           .join(' · ');
         for (const s of this.seizedTake) { this.giveItem(s.id, s.count); this.hotItems.add(s.id); }
+        // the cut can't hand back coin — the count swallowed it outright
+        this.seizedCoin = 0;
         this.seizedTake = [];
         this.seizedAt = null;
         this.seizedFuse = 0;
@@ -2901,7 +2919,7 @@ export class Game {
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.5, category: 'machine', caption: '' });
         this.cue('chalk-mark', it.pos,
-          `[the tag's paper tears — your take hangs on your back, marked in the count's hand · ${back}${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'warn');
+          `[the tag's paper tears — your take hangs on your back, marked in the count's hand · ${back} · the coin stays with the count${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'warn');
         return;
       }
       case 'register': {
@@ -4718,10 +4736,10 @@ export class Game {
       taught: [...this.taught],
       deadLines: [...this.deadLines],
       wardArmed: this.wardArmed,
-      seizedTake: this.seizedAt && this.seizedTake.length > 0
+      seizedTake: this.seizedAt && (this.seizedTake.length > 0 || this.seizedCoin > 0)
         ? { items: this.seizedTake.map((s) => ({ ...s })),
             x: this.seizedAt.x, y: this.seizedAt.y, z: this.seizedAt.z,
-            fuse: this.seizedFuse }
+            fuse: this.seizedFuse, coin: this.seizedCoin }
         : undefined,
       fencedTake: this.fencedTake.length > 0
         ? this.fencedTake.map((s) => ({ ...s })) : undefined,
@@ -5249,8 +5267,10 @@ export class Game {
       }
       if (this.seizedFuse <= 0) {
         // the count doesn't eat them — they reach the Broker's shelf,
-        // buyable back at the house's own margin
+        // buyable back at the house's own margin. Coin doesn't fence —
+        // it's fungible; the count simply keeps it.
         this.fencedTake.push(...this.seizedTake);
+        this.seizedCoin = 0;
         this.seizedTake = [];
         this.seizedAt = null;
         this.seizedFading = false;

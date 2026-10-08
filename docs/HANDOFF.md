@@ -4668,3 +4668,18 @@ Game.die() from the same five fields.
   earlier claimed-back stacks fence too; price asserts must read
   fencedUnits live, not constants.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
+## sprint 382 — the tag itemizes
+
+- The coin the seize stripped vanished silently — a fiction lie.
+  `seizedCoin` now rides the locker: the claim prices it at par on
+  top of the fee (`8 + seizedCoin`, prompt reads the live price) and
+  it rides back clean on a claim. The cut can't hand back coin —
+  the count swallowed it outright (the cut cue admits it). Rot
+  keeps it too: coin doesn't fence — fungible, the count keeps it.
+- Coin-only seizes mint a tag now (was: stashSeized early-returned
+  on empty items, so a pure-coin seize vanished with no locker).
+- The join path updates the minted verb's prompt when more coin
+  rides in, and `coin` rides the checkpoint's seizedTake block.
+- Book readout: 'a tag keeps N of yours — C coin itemized'.
+- Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
