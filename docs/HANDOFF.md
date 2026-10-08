@@ -4838,3 +4838,16 @@ Game.die() from the same five fields.
   primed milestone > rovers > safe/dark/nothing. Primed stays above
   rovers — the one-shot mechanism read outranks a passing tread.
 - Gates: tsc, lint, vitest, sim, build.
+
+## sprint 389 — the boards tax every filing
+
+- The named-doubling rule only reached the index asks, the seize
+  tag's claim/cut, and the fix's price — every other tally filing
+  still wrote flat while the sheets were up. Now every `unpaidTheft`
+  filing obeys it: the tally's own drawer +4/+2 (with its cue
+  'the tally writes four — the boards make hands cost double'),
+  the porter's claim, the laundress's basket and drawer, both
+  sledge pilfers, and the lamp strip all +2/+1.
+- The house book stays flat by design — the register answers to
+  its own jurisdiction, not the crew's boards.
+- Gates: tsc, lint, vitest, sim, build.

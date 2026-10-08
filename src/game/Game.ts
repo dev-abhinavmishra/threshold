@@ -2881,7 +2881,7 @@ export class Game {
         }
         if (cur) this.marginalia -= price;
         else this.chargedImprints(price, it.pos.x, it.pos.z);
-        if (cur) this.unpaidTheft += 1; // a claim against somebody else's effects — the crew keeps score
+        if (cur) this.unpaidTheft += this.wantedActive ? 2 : 1; // a claim on somebody else's effects — the crew keeps score; named, the tag writes double
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
         sock.meta.taken = true;
         it.enabled = false;
@@ -3625,7 +3625,7 @@ export class Game {
         const w = it.data as unknown as { basketFull: boolean };
         if (!w.basketFull) { it.enabled = false; return; }
         w.basketFull = false;
-        this.unpaidTheft += 1; // her wash, your pockets — the clerks mark it
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // her wash, your pockets — the clerks mark it, double while the boards name you
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
@@ -3646,7 +3646,7 @@ export class Game {
         const h = it.data as unknown as { stock: number; sledgePos: Vec3 };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 1; // off the sledge, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the sledge, into the tally — double while the boards name you
         it.enabled = false;
         const roll = this.streams.stream('loot').range(0, 1);
         if (roll < 0.6) {
@@ -3675,7 +3675,7 @@ export class Game {
         const h = it.data as unknown as { stock: number };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 1; // out of her drawer, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // out of her drawer, into the tally — double while the boards name you
         this.paperTrail += 2;  // the index logs the rummage as two questions
         it.enabled = false;
         // hands in a staffed book leave the same smell as hands in a
@@ -3706,7 +3706,9 @@ export class Game {
         const h = it.data as unknown as { stock: number; keeper?: { rifledTally?: () => void } };
         if (h.stock <= 0) { it.enabled = false; return; }
         h.stock--;
-        this.unpaidTheft += 2;
+        // While the boards name you the book slaps open twice as hard —
+        // same named-filing rule the index asks and the seize tag follow.
+        this.unpaidTheft += this.wantedActive ? 4 : 2;
         it.enabled = false;
         // hands in a staffed book leave the same smell as hands in a
         // till — sign the under's scent-reader drags to.
@@ -3725,7 +3727,9 @@ export class Game {
           this.cue('pickup', it.pos, `[${ITEM_DEFS[item].name} — off the tally]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.4, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
-        this.cue('drawer', it.pos, '[the tally notes your hands — the book slaps open]', 'warn');
+        this.cue('drawer', it.pos, this.wantedActive
+          ? '[the tally writes four — the boards make hands cost double]'
+          : '[the tally notes your hands — the book slaps open]', 'warn');
         h.keeper?.rifledTally?.();
         return;
       }
@@ -3806,7 +3810,7 @@ export class Game {
         if (!h.lampLit) { it.enabled = false; return; }
         const scavenged = h.relit;
         h.stripLamp();
-        this.unpaidTheft += 1; // off the sledge, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the sledge, into the tally — double while the boards name you
         it.enabled = false;
         // the lamp IS the loot — a hooded hand lamp at half battery, or a
         // top-up for the one you carry (count is charge). A scavenged bulb
@@ -3853,7 +3857,7 @@ export class Game {
         const ch = it.data as unknown as { lampLit: boolean; stripLamp(h: CheckerHooks): number };
         if (!ch.lampLit) { it.enabled = false; return; }
         const charge = ch.stripLamp(this.checkerHooks());
-        this.unpaidTheft += 1; // off the crew's hands, into the tally
+        this.unpaidTheft += this.wantedActive ? 2 : 1; // off the crew's hands, into the tally — double while the boards name you
         it.enabled = false;
         this.giveItem('handLamp', charge);
         this.cue('pickup', it.pos, '[the count\'s lamp comes free — warm, still swinging]');
