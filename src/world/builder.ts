@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,20 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The house was hurt before — plaster plugs where the wall took a
+    // wound: pale repairs ringed with the cracks that caused them.
+    if (['lobby', 'guest', 'corridor', 'records', 'gallery'].includes(spec.biome) && rng.float() < 0.28) {
+      const n = 1 + Math.floor(rng.float() * 2);
+      for (let i = 0; i < n; i++) {
+        const dw = 0.4 + rng.float() * 0.35;
+        const spot = pickWallSpot(dw);
+        if (!spot) break;
+        wallDecal(spot.wall, patchPlug(rng), dw, dw * (0.9 + rng.float() * 0.3), spot.along, 0.7 + rng.float() * 1.2);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'patch-plug';
+      }
     }
 
     // The votive — where a spot is watched, someone has kept vigil:
