@@ -5388,6 +5388,23 @@ coin AND a sound where you stand.
 
 Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
 
+## Sprint 404 — the trap doesn't care whose foot
+Armed mousetraps were player-only: a hunter walked over a live spring
+for free. Now any entity with a threatPos inside the 0.55m snap radius
+eats it — `snappedTraps.add` + `ent.stagger(1.7)` + the same 0.55
+'footstep' pull, so the room's teeth cost everyone alike. The snap is
+loud on purpose: a staggers is bought with a summon.
+
+- Whichever foot lands first spends the spring (the player's own check
+  still wins by frame order — he can't retro-bite you).
+- `snappedTraps`/`priedTraps` now ride the checkpoint — a reload no
+  longer re-arms a spring anyone already spent (the s347 class of
+  laundering, closed for traps).
+- e2e leg plants a grafter on a live trap: snap → stagger flag →
+  pull emit at the trap → player's health untouched.
+
+Gates: tsc, lint, vitest 293, sim 5/5, build; props leg 1/1.
+
 ## Sprint 448 — the paper trail & the things they left
 First BIG-format sprint (his new directive: big worked-on PRs, not tiny
 ones — cluster several dressing systems per PR). Two related batches:

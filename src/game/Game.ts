@@ -738,6 +738,9 @@ export class Game {
       const at = dr.fuse > 7 ? until - 7 : this.clock.time;
       this.hookRings.push({ key: dr.key, pos: { x: dr.x, y: 1.4, z: dr.z }, at, until, lastRing: 0, dial: true });
     }
+    // sprint 404 — a spent or pried spring stays down across a reload
+    for (const st of cp?.snappedTraps ?? []) this.snappedTraps.add(st);
+    for (const pt of cp?.priedTraps ?? []) this.priedTraps.add(pt);
     // the count's locker keeps its tag — seized goods stay claimable
     // at the cage across a reload (a fresh run mints nothing)
     this.seizedTake = cp?.seizedTake?.items.map((s) => ({ ...s })) ?? [];
@@ -5152,6 +5155,8 @@ export class Game {
             fuse: Math.max(0, hr.until - this.clock.time),
           }))
         : undefined,
+      snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
+      priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
@@ -7892,6 +7897,26 @@ export class Game {
         this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
         this.player.health = Math.max(3, this.player.health - 4);
         this.player.panic = Math.min(1, this.player.panic + 0.08);
+      }
+    }
+
+    // sprint 404 — the trap doesn't care whose foot: a walker crossing a
+    // live trap eats the same snap — staggered mid-stride, loud enough
+    // that everything else hears the room has teeth.
+    for (const tp of this.liveTraps) {
+      if (this.snappedTraps.has(tp.key)) continue;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - tp.x, edz = epos.z - tp.z;
+        if (edx * edx + edz * edz >= 0.55 * 0.55) continue;
+        this.snappedTraps.add(tp.key);
+        ent.stagger(1.7);
+        const at = { x: tp.x, y: 0.05, z: tp.z };
+        this.audio.play('trap-snap', at, '[the trap fires — it found a foot that was not yours]', 'warn');
+        this.sound.emit({ x: tp.x, y: 0.1, z: tp.z, intensity: 0.55, category: 'footstep', caption: '[a trap fires]' });
+        break;
       }
     }
 

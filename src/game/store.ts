@@ -219,6 +219,10 @@ export interface CheckpointSave {
   // sprint 403 — calls you placed ride the checkpoint too: a paid ring
   // still lands after a reload (fuse = seconds until the far line dies)
   dialedRings?: { key: string; x: number; z: number; fuse: number }[];
+  // sprint 404 — a trap that already fired or was pried stays down
+  // (a reload can't re-arm a spent spring)
+  snappedTraps?: string[];
+  priedTraps?: string[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

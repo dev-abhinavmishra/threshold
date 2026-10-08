@@ -223,6 +223,63 @@ test('armed floor trap can be pried before it snaps', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+// sprint 404 — the trap doesn't care whose foot: a walker crossing a
+// live trap eats the same snap — staggered mid-stride, the pull real.
+test('the trap fires on a walker too — staggered, and it was not your foot', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page);
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    g.godMode = true;
+    const ga = g as unknown as {
+      entities: { id: string; state: string; pos?: { x: number; z: number };
+        threatPos?(): { x: number; z: number } | null; staggerUntil?: number }[];
+      snappedTraps: Set<string>;
+      spawnById(id: string): void;
+    };
+    const em: { x: number; z: number; caption?: string }[] = [];
+    (g as unknown as { sound: { on(cb: (e: { x: number; y: number; z: number; intensity: number; category: string; caption?: string }) => void): void } })
+      .sound.on((e) => { if (/trap/.test(e.caption ?? '')) em.push(e); });
+
+    // find an armed trap — same walk as the pry leg
+    let trap: { x: number; z: number; key: string } | null = null;
+    let trapRoom: GRoom | null = null;
+    for (const r of g.route.rooms) {
+      if (!r.spec?.props.some((p) => p.kind === 'mousetrap')) continue;
+      g.player.teleport(r.origin.x, 0, r.origin.z);
+      g.currentRoom = r.index;
+      for (let f = 0; f < 30 && !g.liveTraps.length; f++) g.frame();
+      if (g.liveTraps.length) { trap = g.liveTraps[0]; trapRoom = r; break; }
+    }
+    if (!trap || !trapRoom) return { stage: 'no-armed-trap' } as const;
+
+    // drop a roaming walker onto the trap — the grafter reads its own pos
+    ga.spawnById('grafter');
+    const ent = ga.entities.find((e) => e.id === 'grafter' && e.state !== 'done');
+    if (!ent?.pos) return { stage: 'no-walker' } as const;
+    const hp0 = (g as unknown as { player: { health: number } }).player.health;
+    ent.pos.x = trap.x; ent.pos.z = trap.z;
+    g.player.teleport(trapRoom.origin.x, 0, trapRoom.origin.z); // stand clear
+    for (let f = 0; f < 60 && !ga.snappedTraps.has(trap.key); f++) g.frame();
+    const snapped = ga.snappedTraps.has(trap.key);
+    const staggered = snapped && (ent.staggerUntil ?? 0) > g.clock.time;
+    const pullHeard = em.some((e) => Math.hypot(e.x - trap!.x, e.z - trap!.z) < 0.5);
+    const hpAfter = (g as unknown as { player: { health: number } }).player.health;
+    return { stage: 'done', snapped, staggered, pullHeard, spared: hpAfter === hp0 } as const;
+  });
+
+  expect(result.stage, JSON.stringify(result)).toBe('done');
+  expect(result.snapped, 'the trap snaps under the walker').toBe(true);
+  expect(result.staggered, 'the snap staggers the walker').toBe(true);
+  expect(result.pullHeard, 'the snap is a real pull at the trap').toBe(true);
+  expect(result.spared, 'it was not your foot — no bite for you').toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('hiding: enter + leave a safe spot; a hollow spot grips and spawns', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
