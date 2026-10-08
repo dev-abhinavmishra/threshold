@@ -2179,3 +2179,63 @@ describe('the clean walls (sprint 449)', () => {
     expect(buried, `${who.join(', ')} buried behind tall props`).toBe(0);
   });
 });
+
+describe('the glass keeps the wrong room (sprint 450)', () => {
+  it('some mirrors reflect a corridor that is not this one', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'wrong-room') n++; });
+      }
+    }
+    expect(n, 'no wrong-room panes').toBeGreaterThan(0);
+  });
+});
+
+describe('the plaster fall (sprint 450)', () => {
+  it('cracked walls drop crumbs at their feet', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'plaster-fall') n++; });
+      }
+    }
+    expect(n, 'no plaster fall').toBeGreaterThan(0);
+  });
+});
+
+describe('the glass sweats (sprint 451)', () => {
+  it('some windows fog over — and a few were touched', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'glass-fog') n++; });
+      }
+    }
+    expect(n, 'no fogged glass').toBeGreaterThan(0);
+  });
+});
+
+describe('the sill keeps the moths (sprint 451)', () => {
+  it('dead moths gather under sills that still glow', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'moth-drift') n++; });
+      }
+    }
+    expect(n, 'no moth drifts').toBeGreaterThan(0);
+  });
+});

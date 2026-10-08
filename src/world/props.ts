@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -272,6 +272,20 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
       rainMat.userData.decalMat = true;
       const rain = mesh(new THREE.PlaneGeometry(1.06, 1.44), rainMat, 0, 0, 0.068);
       g.add(rain);
+    }
+    // Inside fog — the warm room breathes on the cold glass; sometimes
+    // somebody wiped it, or dragged a finger through.
+    if (!boarded && rng.bool(0.45)) {
+      const fogMat = new THREE.MeshStandardMaterial({
+        map: glassFog(rng) ?? undefined, transparent: true,
+        roughness: 0.6, metalness: 0, depthWrite: false,
+        polygonOffset: true, polygonOffsetFactor: -4,
+      });
+      fogMat.userData.decalMat = true;
+      const fog = mesh(new THREE.PlaneGeometry(1.06, 1.44), fogMat, 0, 0, 0.069);
+      fog.name = 'glass-fog';
+      fog.userData.decalMat = true;
+      g.add(fog);
     }
     // Boarded up — rough planks nailed across the panes; the night glow
     // still leaks through the gaps, which is the whole point.
@@ -1326,6 +1340,22 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     gaze.userData.ly = 0.14;
     gaze.userData.gazed = false;
     prop.group.add(gaze);
+  }
+  // A few panes and canvases lie outright — the frame hangs a corridor
+  // that isn't in this room. An overlay on the glass, like the eyes but
+  // never shy: it doesn't care whether you look.
+  if ((spec.kind === 'mirror' && rng.bool(0.2)) || (spec.kind === 'painting' && rng.bool(0.07))) {
+    const portrait = spec.kind === 'mirror';
+    const wr = new THREE.Mesh(
+      new THREE.PlaneGeometry(portrait ? 0.52 : 0.62, portrait ? 1.2 : 0.5),
+      new THREE.MeshStandardMaterial({ map: wrongRoom(rng) ?? undefined, roughness: portrait ? 0.4 : 0.6, metalness: portrait ? 0.12 : 0 }),
+    );
+    wr.userData.decalMat = true;
+    wr.position.set(0, portrait ? 0 : 0.14, portrait ? 0.05 : 0.08);
+    // a named group survives the static-prop bake that would merge the
+    // overlay's identity away
+    prop.group.name = 'wrong-room';
+    prop.group.add(wr);
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

@@ -1751,3 +1751,179 @@ export function fallenSpecs(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** The glass keeps the wrong room — a dusty mirror that reflects a
+ * corridor that isn't this one: a lit doorway far off, and sometimes a
+ * figure that isn't you. Portrait-shaped for the mirror panel. */
+export function wrongRoom(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 160, (ctx) => {
+    // near-black reflective field, dimmer at the edges
+    const g = ctx.createRadialGradient(48, 80, 8, 48, 80, 95);
+    g.addColorStop(0, 'rgba(38,36,34,1)');
+    g.addColorStop(1, 'rgba(10,10,10,1)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 160);
+    // a corridor receding — converging wall lines, floor band
+    const vx = 40 + rng.float() * 16;
+    ctx.strokeStyle = 'rgba(90,84,74,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 30); ctx.lineTo(vx - 8, 70);
+    ctx.moveTo(96, 30); ctx.lineTo(vx + 8, 70);
+    ctx.moveTo(0, 150); ctx.lineTo(vx - 12, 118);
+    ctx.moveTo(96, 150); ctx.lineTo(vx + 12, 118);
+    ctx.stroke();
+    // the lit doorway that isn't here — warm rectangle at the far end
+    const dw = 12 + rng.float() * 5;
+    ctx.fillStyle = 'rgba(196,158,96,0.55)';
+    ctx.fillRect(vx - dw / 2, 70, dw, 48);
+    ctx.fillStyle = 'rgba(120,92,54,0.5)';
+    ctx.fillRect(vx - dw / 2, 70, 2, 48);
+    // sometimes: somebody in it — a tall stillness in the light
+    if (rng.bool(0.3)) {
+      ctx.fillStyle = 'rgba(16,12,10,0.9)';
+      const fh = 20 + rng.float() * 6;
+      ctx.beginPath();
+      ctx.ellipse(vx + (rng.float() - 0.5) * dw * 0.4, 118 - fh / 2, 3, fh / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // floor band catching the door light
+    ctx.fillStyle = 'rgba(140,110,66,0.18)';
+    ctx.beginPath();
+    ctx.moveTo(vx - dw, 118); ctx.lineTo(vx + dw, 118);
+    ctx.lineTo(vx + dw * 2.6, 160); ctx.lineTo(vx - dw * 2.6, 160);
+    ctx.fill();
+    // dust on the glass — sheen sweep + speckle, keeps the lie dim
+    ctx.fillStyle = 'rgba(200,205,215,0.08)';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(38, 0); ctx.lineTo(10, 160); ctx.lineTo(0, 160);
+    ctx.fill();
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = `rgba(190,185,175,${0.03 + rng.float() * 0.08})`;
+      ctx.fillRect(rng.float() * 96, rng.float() * 160, 1 + rng.float() * 2, 1);
+    }
+  });
+}
+
+/** Plaster fall — crumbs scattered under a cracked wall: a dense knot at
+ * the baseboard thinning outward, a few bigger chips. */
+export function plasterFall(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    for (let i = 0; i < 40; i++) {
+      const d = Math.pow(rng.float(), 1.8);
+      const a = rng.float() * Math.PI * 2;
+      const r = 4 + rng.float() * 6;
+      const t = 60 + rng.float() * 140;
+      ctx.fillStyle = `rgba(${t},${t - 8},${t - 24},${0.5 + rng.float() * 0.4})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + Math.cos(a) * d * 38, 30 + Math.sin(a) * d * 26 + d * 20, r * (0.4 + rng.float() * 0.6), r * 0.55, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a couple of chips with a flat face — broken plate, not gravel
+    ctx.fillStyle = 'rgba(185,178,160,0.85)';
+    for (let i = 0; i < 3; i++) {
+      const bx = cx + (rng.float() - 0.5) * 40, by = 34 + rng.float() * 30;
+      ctx.save(); ctx.translate(bx, by); ctx.rotate(rng.float() * Math.PI);
+      ctx.fillRect(-5, -2.5, 9 + rng.float() * 5, 4 + rng.float() * 3);
+      ctx.restore();
+    }
+    // dust halo under it all
+    ctx.fillStyle = 'rgba(120,112,96,0.16)';
+    ctx.beginPath();
+    ctx.ellipse(cx, 52, 42, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Glass fog — condensation on a pane, milky field with beaded edges;
+ * sometimes someone dragged a finger through it from the inside. */
+export function glassFog(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // milky field, denser toward the edges (cold glass, warm room)
+    const m = ctx.createLinearGradient(0, 0, 0, 128);
+    m.addColorStop(0, 'rgba(196,210,220,0.34)');
+    m.addColorStop(1, 'rgba(188,204,214,0.44)');
+    ctx.fillStyle = m;
+    ctx.fillRect(0, 0, 96, 128);
+    const edge = ctx.createRadialGradient(48, 64, 20, 48, 64, 78);
+    edge.addColorStop(0, 'rgba(200,214,224,0)');
+    edge.addColorStop(1, 'rgba(210,222,230,0.3)');
+    ctx.fillStyle = edge;
+    ctx.fillRect(0, 0, 96, 128);
+    // droplet rings — condensate beading, brighter rim than core
+    for (let i = 0; i < 46; i++) {
+      const x = rng.float() * 96, y = rng.float() * 128;
+      const r = 0.8 + rng.float() * 2.4;
+      ctx.strokeStyle = `rgba(228,238,244,${0.12 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const variant = rng.float();
+    if (variant < 0.45) {
+      // finger-drag: 2-4 arcs wiped clear — the dark night shows through
+      const n = 2 + Math.floor(rng.float() * 3);
+      for (let i = 0; i < n; i++) {
+        const sx = 30 + rng.float() * 36, sy = 44 + rng.float() * 30;
+        const len = 14 + rng.float() * 22, dir = rng.float() < 0.5 ? -1 : 1;
+        ctx.strokeStyle = 'rgba(10,18,26,0.72)';
+        ctx.lineWidth = 3.2 + rng.float() * 1.4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo(sx + dir * len * 0.5, sy - len * 0.3, sx + dir * len, sy + len * (0.5 + rng.float() * 0.4));
+        ctx.stroke();
+        // drip tails the wipe pushed down
+        ctx.strokeStyle = 'rgba(220,232,240,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(sx + dir * len, sy + len * 0.6);
+        ctx.lineTo(sx + dir * len + dir * 2, sy + len * 0.6 + 10 + rng.float() * 10);
+        ctx.stroke();
+      }
+    } else if (variant < 0.65) {
+      // half a hand — heel + two fingers dragged short, not a full print
+      ctx.fillStyle = 'rgba(12,20,28,0.6)';
+      const hx = 30 + rng.float() * 36, hy = 60 + rng.float() * 26;
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 9, 12, rng.float() * 0.6 - 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      for (let f = 0; f < 3; f++) {
+        const fx = hx - 8 + f * 7 + rng.float() * 2;
+        ctx.beginPath();
+        ctx.ellipse(fx, hy - 14 - rng.float() * 4, 2.6, 5 + rng.float() * 3, 0.1 * (f - 1), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/** Moth drift — dead moths and wing dust gathered under a sill. */
+export function mothDrift(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // pale dust band, heavier near the wall line (top of the quad)
+    const d = ctx.createLinearGradient(0, 0, 0, 64);
+    d.addColorStop(0, 'rgba(190,184,168,0.34)');
+    d.addColorStop(1, 'rgba(190,184,168,0)');
+    ctx.fillStyle = d;
+    ctx.fillRect(0, 0, 64, 64);
+    for (let i = 0; i < 14; i++) {
+      const x = 4 + rng.float() * 56, y = 4 + rng.float() * rng.float() * 52;
+      // a moth: two small wings angled out from a thin body
+      ctx.fillStyle = `rgba(${205 + rng.float() * 30},${198 + rng.float() * 26},${180 + rng.float() * 22},${0.5 + rng.float() * 0.35})`;
+      const a = rng.float() * Math.PI;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.ellipse(-1.6, 0, 2.4, 1.3, -0.5, 0, Math.PI * 2);
+      ctx.ellipse(1.6, 0, 2.4, 1.3, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(60,52,40,0.7)';
+      ctx.fillRect(-0.5, -2.6, 1, 5.2);
+      ctx.restore();
+    }
+  });
+}

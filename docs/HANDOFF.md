@@ -5512,6 +5512,42 @@ assert presence not rate — rng stream drift shifts seeded counts.
 Gates: tsc, lint, vitest 119-file pass, sim 5/5, build. No e2e leg —
 dressing/ambient only.
 
+## Sprint 450–451 — the glass lies & the glass sweats
+Two dressing arcs on one branch: reflective surfaces you can't trust
+and glass you can't quite see through.
+
+- The wrong room (decals.ts/props.ts): `wrongRoom` canvas texture — a
+  near-black corridor with converging lines and a lit doorway (30%
+  keep a figure in it). Overlay plane attaches at buildProp level for
+  `mirror` (20%) and `painting` (7%) — kind-wide overlays MUST be
+  buildProp-level, never in builders[], because GLB kinds resolve via
+  modelInstance first and never reach builders. Named `wrong-room` on
+  the prop group so it survives both the static-prop bake (unnamed
+  unanimated groups merge) and counting sweeps.
+- The plaster fall (decals.ts/builder.ts): `plasterFall` texture —
+  distance-falloff crumb scatter + flat chips + dust halo. Floor quad
+  `plaster-fall` lands just inside the wall under 45% of crack decals.
+- The glass sweats (decals.ts/props.ts): `glassFog` — milky condensate
+  field with beaded rings; variant draws a finger-drag wipe (45%) or a
+  half-hand drag (20%). Pane overlay `glass-fog` on 45% of unboarded
+  windows, in the window builder after the rain overlay.
+- The sill keeps the moths (decals.ts/builder.ts): `mothDrift` — dead
+  moths + wing dust gathered under glowing sills. Floor quad
+  `moth-drift` under 40% of template window props.
+
+Conventions learned the hard way this pair: (1) the room-level
+static consolidation (~line 3070) merges every mesh lacking
+`userData.anim`, `userData.decalMat` ON THE MESH OBJECT, or a
+keep-listed ancestor — material-level decalMat does NOT protect;
+named child meshes inside kept groups still merge unless the mesh
+itself carries decalMat. (2) Test-env canvasTex returns null — decal
+meshes must still be created/named for presence tests (pass
+`map: tex ?? undefined`). (3) Presence tests: assert >0 count of a
+named object, never a rate.
+
+Gates: tsc, lint, vitest 14-file/307-test pass, sim 5/5, build.
+No e2e leg — dressing only.
+
 ## Sprint 408 — the tally answers back
 The third book gets its readout: 'Ask what the tally says — 3
 marginalia' mints on the Auditor's fig (waist-height at 0.5·lateral —
