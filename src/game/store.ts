@@ -139,6 +139,7 @@ export interface BooksClosed {
   asks: number;
   hotCoin: number;
   hotGoods: number;
+  hotPages?: number;
   /** wares still hanging in the count's locker at the end */
   seized?: number;
   /** coin the count swallowed outright — cut tags, rotted tags */
@@ -161,6 +162,7 @@ export interface CheckpointSave {
   unpaidHeld?: number;
   paperTrail?: number;
   hotImprints?: number;
+  hotMarginalia?: number;
   hotItems?: ItemId[];
   // the wanted episode outlives you too — torn boards stay torn, an
   // armed repost keeps its remaining seconds

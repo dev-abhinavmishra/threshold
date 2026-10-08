@@ -5491,3 +5491,18 @@ The readout trio is complete: book (index — trail+theft+locker+shelf),
 register (held face), tally (theft book + boards + tag).
 
 Gates: tsc, lint (batched verification with the next commits).
+
+## Sprint 409 — the tally's coin testifies
+The hot-coin mechanic now reaches the under's own currency:
+marginalia gained by pilfering (basket hems, sledges, the index
+rummage, the tally drawer itself, the courier's satchel, the crew's
+claim cages) is torn-edged — `hotMarginalia` — and every marked page
+that lands in an under till files a question at the index via the new
+`chargedMarginalia` funnel (all `marginalia -=` sites routed). The
+count's seize sweeps torn pages into the tag alongside marked coin;
+the epitaphs read `hotPages`; the field rides the checkpoint.
+
+Clean sources stay clean by design: washer payouts, floor loot, fence
+pay, purse change — coin no book filed a line for.
+
+Gates: tsc, lint (batched with the next commits).

@@ -666,6 +666,7 @@ export class Game {
     this.spillMeshes.clear();
     this.primedStingDone.clear();
     this.hotImprints = cp?.hotImprints ?? 0;
+    this.hotMarginalia = cp?.hotMarginalia ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
     // the wanted episode rides the checkpoint too — torn boards stay
@@ -1035,16 +1036,17 @@ export class Game {
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
-        if (take.length === 0 && this.hotImprints <= 0) return false;
+        if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
         const seized = take.map((i) => ({ id: i.id, count: i.count }));
         for (const i of take) { this.hotItems.delete(i.id); i.count = 0; }
         this.inventory = this.inventory.filter((i) => i.count > 0);
         // the take doesn't vanish — the count locks it in the nearest
         // claim cage under a fresh tag, claimable back like any bag.
         // The coin is itemized on the same tag — the count's paper
-        // lists what it swallowed (sprint 382).
-        this.stashSeized(seized, this.hotImprints);
+        // lists what it swallowed (sprint 382), marked pages too (s409).
+        this.stashSeized(seized, this.hotImprints + this.hotMarginalia);
         this.hotImprints = 0;
+        this.hotMarginalia = 0;
         return true;
       },
       // sprint 393 — the kicked wedge rides under the leaf: the bellman's
@@ -2388,7 +2390,7 @@ export class Game {
         const marked = this.unpaidTheft > 0;
         const effPrice = marked ? price + Math.min(4 + this.unpaidTheft * 2, 14) : price;
         if (this.marginalia >= effPrice) {
-          this.marginalia -= effPrice;
+          this.chargedMarginalia(effPrice, it.pos.x, it.pos.z);
           sock.meta.sold = true;
           it.enabled = false;
           this.giveItem(item, 1);
@@ -2419,7 +2421,7 @@ export class Game {
             `[the fix runs ${price} marginalia — the crew does not write on credit]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         if (this.unpaidTheft >= this.unpaidHeld && this.unpaidTheft >= this.paperTrail) {
           this.unpaidTheft -= 1;
           this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the tally · ${price} marginalia]`, 'info');
@@ -2656,7 +2658,7 @@ export class Game {
             `[the fenced take costs ${bPrice} marginalia — the house's margin was the point]`, 'warn');
           return;
         }
-        this.marginalia -= bPrice;
+        this.chargedMarginalia(bPrice, it.pos.x, it.pos.z);
         const back = this.fencedTake
           .map((s) => `${s.count > 1 ? `${s.count}×` : ''}${ITEM_DEFS[s.id]?.name.toLowerCase() ?? s.id}`)
           .join(' · ');
@@ -2680,7 +2682,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the book wants ${bPrice} marginalia — even questions have a price]`, 'warn');
           return;
         }
-        this.marginalia -= bPrice;
+        this.chargedMarginalia(bPrice, it.pos.x, it.pos.z);
         this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
         // the book knows the locker too — a pending seize tag reads
@@ -2715,7 +2717,7 @@ export class Game {
           this.cue('door-locked', it.pos, '[the tally wants 3 marginalia — even questions have a price]', 'warn');
           return;
         }
-        this.marginalia -= 3;
+        this.chargedMarginalia(3, it.pos.x, it.pos.z);
         this.fileQuestion();
         const th2 = this.unpaidTheft;
         const tagN = this.seizedTake.reduce((n, s) => n + s.count, 0);
@@ -2742,7 +2744,7 @@ export class Game {
           }
           const filed = this.unpaidHeld > 0;
           const gain = filed ? 4 : 6;
-          this.marginalia -= 8;
+          this.chargedMarginalia(8, it.pos.x, it.pos.z);
           this.imprints += gain;
           this.stats.imprintsEarned += gain;
           this.cue('purchase', it.pos, filed
@@ -3081,7 +3083,7 @@ export class Game {
             `[the claim is ${price} ${cur ? 'marginalia' : 'imprints'} — ${price - (cur ? this.marginalia : this.imprints)} short]`, 'warn');
           return;
         }
-        if (cur) this.marginalia -= price;
+        if (cur) this.chargedMarginalia(price, it.pos.x, it.pos.z);
         else this.chargedImprints(price, it.pos.x, it.pos.z);
         if (cur) this.unpaidTheft += this.wantedActive ? 2 : 1; // a claim on somebody else's effects — the crew keeps score; named, the tag writes double
         else this.unpaidHeld += 1; // the house keeps its own book — the detective reads it
@@ -3097,6 +3099,7 @@ export class Game {
           const amt = (sock.meta.amount as number) ?? 8;
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // crew's purse — torn edges testify at the under's tills
           this.cue('pickup', it.pos, `[the effects held a purse — +${amt} marginalia]`);
         } else if (contains === 'imprints') {
           const amt = (sock.meta.amount as number) ?? 10;
@@ -3132,7 +3135,7 @@ export class Game {
             `[the tag reads ${sPrice} marginalia — your own take costs what any bag costs]`, 'warn');
           return;
         }
-        this.marginalia -= sPrice;
+        this.chargedMarginalia(sPrice, it.pos.x, it.pos.z);
         // like the index's asks — while the boards name you, the tag
         // reads in your own name and files double
         this.unpaidTheft += this.wantedActive ? 2 : 1;
@@ -3342,7 +3345,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the order costs ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3383,7 +3386,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the board wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3425,7 +3428,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the register wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         this.fileQuestion();
         sock.meta.taken = true;
         it.enabled = false;
@@ -3462,7 +3465,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the counter-claim wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.paperTrail = Math.max(0, this.paperTrail - 2) + 1;
@@ -3486,7 +3489,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the return slip wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         this.unpaidTheft = Math.max(0, this.unpaidTheft - 2) + 1;
@@ -3510,7 +3513,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the amendment wants ${price} marginalia — ${price - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= price;
+        this.chargedMarginalia(price, it.pos.x, it.pos.z);
         sock.meta.taken = true;
         it.enabled = false;
         const buried = this.crewCount.pending;
@@ -3627,7 +3630,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the ledger asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= toll;
+        this.chargedMarginalia(toll, it.pos.x, it.pos.z);
         this.unpaidTheft = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -3646,7 +3649,7 @@ export class Game {
           this.cue('door-locked', it.pos, `[the index asks ${toll} marginalia — ${toll - this.marginalia} short]`, 'warn');
           return;
         }
-        this.marginalia -= toll;
+        this.chargedMarginalia(toll, it.pos.x, it.pos.z);
         this.paperTrail = 0;
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
@@ -3702,7 +3705,7 @@ export class Game {
         if (this.imprints >= price) {
           this.chargedImprints(price, it.pos.x, it.pos.z); paid = true;
         }
-        else if (this.marginalia >= 1) { this.marginalia -= 1; paid = true; }
+        else if (this.marginalia >= 1) { this.chargedMarginalia(1, it.pos.x, it.pos.z); paid = true; }
         if (paid && d?.pay) {
           it.enabled = false;
           d.pay();
@@ -3831,7 +3834,7 @@ export class Game {
         }
         // a marked coin testifies in the slot like at any till (s335);
         // under, the page is just a page
-        if (under) this.marginalia -= 1; else this.chargedImprints(1, at.x, at.z);
+        if (under) this.chargedMarginalia(1, at.x, at.z); else this.chargedImprints(1, at.x, at.z);
         const scare = this.streams.roomStream('scare', this.currentRoom * 397 + 29);
         const ringAt = this.clock.time + 3.5 + scare.range(0, 3);
         this.hookRings.push({ key: target.key, pos: target.pos, at: ringAt, until: ringAt + 7, lastRing: 0, dial: true });
@@ -3949,6 +3952,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(8, 14);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // pilfered pages — torn edges testify at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — pins in the hem]`);
         }
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[linen lifted]' });
@@ -3965,6 +3969,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // pilfered pages testify at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the sledge]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -4000,6 +4005,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // its own pages — the index files the hands that spend them
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the index]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -4031,6 +4037,7 @@ export class Game {
           const amt = this.streams.stream('loot').int(4, 9);
           this.marginalia += amt;
           this.stats.marginaliaEarned += amt;
+          this.hotMarginalia += amt; // off HIS book — the torn edge testifies at the under's tills
           this.cue('pickup', it.pos, `[+${amt} marginalia — off the tally]`);
         } else {
           const pool = ['latchpick', 'doorChock', 'feltWrap', 'bandage', 'tonic'] as const;
@@ -4103,6 +4110,7 @@ export class Game {
         const amt = this.streams.stream('loot').int(3, 6);
         this.marginalia += amt;
         this.stats.marginaliaEarned += amt;
+        this.hotMarginalia += amt; // the crew's coin — torn edges testify at the under's tills
         this.cue('pickup', it.pos, `[+${amt} marginalia — off the courier]`);
         return;
       }
@@ -5137,6 +5145,7 @@ export class Game {
       unpaidHeld: this.unpaidHeld,
       paperTrail: this.paperTrail,
       hotImprints: this.hotImprints,
+      hotMarginalia: this.hotMarginalia,
       hotItems: [...this.hotItems],
       wantedActive: this.wantedActive,
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
@@ -5248,6 +5257,7 @@ export class Game {
           books: {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
+            hotPages: this.hotMarginalia,
             seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
             // dead — the live tag rots, so its listed coin is kept too
             coinKept: this.coinKept + this.seizedCoin,
@@ -5286,6 +5296,7 @@ export class Game {
         coinKept: this.coinKept + this.seizedCoin,
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
+        hotPages: this.hotMarginalia,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -6935,6 +6946,26 @@ export class Game {
       caption: '[a marked coin rings where it lands]' });
     this.cue('machine', v3(x, 1, z),
       '[the till knows its own coin — the register files the hands that fed it]', 'warn');
+  }
+
+  /** sprint 409 — the under's coin is marked too: marginalia off a
+   *  pilfered book or satchel is torn-edged, and every hot page that
+   *  lands in an under till testifies — the index files the hands that
+   *  fed it, the way the house's register files a marked imprint. */
+  private hotMarginalia = 0;
+
+  /** Spend marginalia at an under service — the marked pages go first,
+   *  and each one that lands files a question at the index. */
+  private chargedMarginalia(n: number, x: number, z: number): void {
+    this.marginalia -= n;
+    const hot = Math.min(n, this.hotMarginalia);
+    if (hot <= 0) return;
+    this.hotMarginalia -= hot;
+    this.fileQuestion();
+    this.sound.emit({ x, y: 1, z, intensity: 0.45, category: 'distraction',
+      caption: '[a torn edge lands where it fell]' });
+    this.cue('machine', v3(x, 1, z),
+      '[the book knows its own pages — the index files the hands that fed it]', 'warn');
   }
 
   /** The marked-stock pool only testifies while its units are still
