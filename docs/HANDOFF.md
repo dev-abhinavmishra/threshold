@@ -4461,3 +4461,17 @@ Game.die() from the same five fields.
   tally beside an Auditor room means the tag can't be pressed.
 - Gates: tsc, lint, vitest 255, sim 5/5, the locker leg extended
   (join + named-double phases), build.
+
+## sprint 377 — the book knows the locker
+
+- The seize cue now names the destination: both grab sites (Swamper,
+  Laundress) read '[she takes what the sheets describe — a tag hangs
+  on the nearest cage for it]' — the locker was previously only
+  discoverable by happening on the cage.
+- The under-book readout ('Ask what the book says') appends
+  '· a tag keeps N of yours at the cages' while seizedTake pends —
+  the locker is readable through the same paid readout as the
+  ledgers, no new geometry.
+- vitest: the s366 named-catch spec's caption regex updated to the
+  tag phrasing.
+- Gates: tsc, lint, vitest 255, sim 5/5, build.

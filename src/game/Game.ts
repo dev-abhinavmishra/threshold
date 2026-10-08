@@ -2356,9 +2356,13 @@ export class Game {
         this.marginalia -= bPrice;
         this.fileQuestion();
         const t = this.paperTrail, th = this.unpaidTheft;
-        this.cue('whisper', it.pos, t === 1 && th === 0
+        // the book knows the locker too — a pending seize tag reads
+        // through the same paid readout instead of only at the cage
+        const locker = this.seizedTake.reduce((n, s) => n + s.count, 0);
+        const lockerBit = locker > 0 ? ` · a tag keeps ${locker} of yours at the cages` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}]`);
         return;
       }
       case 'purse': {

@@ -639,7 +639,7 @@ export class Swamper extends Entity {
       c.damagePlayer(this.tuning.damage, 'swamper', 'The Swamper finds you by the water you move. Crouch-wade — or open the drain first.');
       // the boards name you — she takes the marked take for the count
       if (this.ctx.wanted?.() && c.seizeMarked?.()) {
-        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — the marked wares go to the count]', { severity: 'warn' });
+        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — a tag hangs on the nearest cage for it]', { severity: 'warn' });
       }
       // slip back to the far corner and lie again
       let bx = this.roomO.x, bz = this.roomO.z, best = -1;
@@ -1028,7 +1028,7 @@ export class Laundress extends Entity {
       c.damagePlayer(this.tuning.damage, 'laundress', 'The Laundress keeps her basin — pull her off the drain with a thrown sound before you touch the crank.');
       // the boards name you — the marked take goes in the wash
       if (this.ctx.wanted?.() && c.seizeMarked?.()) {
-        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — the marked wares go in the wash]', { severity: 'warn' });
+        c.cue('chalk-mark', this.pos, '[she takes what the sheets describe — a tag hangs on the nearest cage for it]', { severity: 'warn' });
       }
     }
   }
