@@ -103,6 +103,16 @@ export class Pursuer extends Entity {
     }
   }
 
+  /** The eye at the crack: the route it chases is scripted, but a kneel
+   *  it watched lands as an extra stop — the mass bends through the
+   *  point you knelt at, then resumes the corridor. Mid-chase only;
+   *  before `begin` it is still frames on a rack. */
+  override eyeTell(at: Vec3): void {
+    if (!this.active || this.wi >= this.waypoints.length) return;
+    this.waypoints.splice(this.wi, 0, v3copy(v3(), at));
+    this.ctx.cue('pursuer-crash', this.pos, '[the frames turn — it counted your kneel]', { severity: 'danger' });
+  }
+
   /** Chase over (player reached the end or died). */
   end(): void {
     this.active = false;
@@ -319,6 +329,17 @@ export class Editor extends Entity {
       c.killPlayer('editor', 'The Editor deletes whatever it touches. The floor it marks is already gone — keep moving.');
       this.done();
     }
+  }
+
+  /** The eye at the crack: it audits what it saw — the floor under your
+   *  kneel is red-lined on the spot. The zone is written on ITS side of
+   *  the leaf, so kneeling at that crack again (or stepping through the
+   *  moment the leaf moves) pays the deletion price. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.deletionZones.push({ x: leaf.x, z: leaf.z, r: 1.8 });
+    if (this.deletionZones.length > 8) this.deletionZones.shift();
+    this.ctx.cue('editor-delete', leaf, '[a deletion zone is being written — under the crack]', { severity: 'warn' });
   }
 
   protected override onDone(): void {

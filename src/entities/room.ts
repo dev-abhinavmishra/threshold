@@ -857,6 +857,21 @@ export class Husk extends Entity {
     this.state = 'engage';
   }
 
+  /** The eye at the crack: a sleeper doesn't chase sounds it can't reach,
+   *  but a kneel thumped through its floor works on it like the beam —
+   *  the crack feeds the same anger, and a sleeper near the edge wakes
+   *  on the sighting. Once it's up the kneel tells it nothing new. */
+  override eyeTell(_at: Vec3): void {
+    if (this.state !== 'engage' || this.mode !== 'dormant') return;
+    this.anger = Math.min(1.2, this.anger + 0.55);
+    if (!this.stirred && this.anger > 0.5) {
+      this.stirred = true;
+      this.ctx.duckTone?.(2.6);
+      this.ctx.cue('husk-stir', this.pos, '[the figure in the corner shifts — it felt the kneel]', { severity: 'warn' });
+      if (this.mesh) this.mesh.rotation.x = 0.08;
+    }
+  }
+
   protected override onUpdate(dt: number): void {
     const c = this.ctx;
     const p = c.player;

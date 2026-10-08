@@ -67,6 +67,8 @@ export class CorridorRunner extends Entity {
   private stepT = 0;
   private noiseUnsub: (() => void) | null = null;
   private bellAnswered = false;
+  /** A crack it was caught watching — the pass slows over that leaf once. */
+  private crackLeaf: Vec3 | null = null;
 
   constructor(id: EntityId, opts: CorridorOptions = {}) {
     super(id, ENTITY_TUNING[id]);
@@ -305,6 +307,14 @@ export class CorridorRunner extends Entity {
       // harder near-miss.
       if (p.hiddenSpot && !this.wasHidden) this.playerHidAt = c.now;
       this.wasHidden = !!p.hiddenSpot;
+      // sprint 464 — the eye told: a crack it met your kneel through
+      // slows the pass over that leaf — it sniffs the seam on the way by.
+      if (this.crackLeaf && v3dist(f.pos, this.crackLeaf) < 1.3) {
+        this.crackLeaf = null;
+        this.nearMissUntil = c.now + 2.2;
+        this.pendingTap = c.now + 0.8;
+        c.cue('door-breath', f.pos, '[it slows over the seam — it tasted the crack]', { severity: 'warn' });
+      }
       // Near-miss: passing the hide slows the thing — once per spot, so a
       // re-hide can still be grazed. Variants keep repeat encounters from
       // reading identically.
@@ -378,6 +388,14 @@ export class CorridorRunner extends Entity {
     if (this.state === 'resolve') {
       if (this.stateT > 0.6) this.done();
     }
+  }
+
+  /** The eye at the crack: a pass is rail-bound — it can't turn aside —
+   *  but a kneel it watched lands where the route already runs: it slows
+   *  through your leaf like it smelled the seam. One sniff per sighting. */
+  override eyeTell(_at: Vec3, leaf?: Vec3): void {
+    if (this.state !== 'engage' || !leaf) return;
+    this.crackLeaf = v3copy(v3(), leaf);
   }
 
   /** Read by the game: Maelstrom wants the stabilization minigame. */

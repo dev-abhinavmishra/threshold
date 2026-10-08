@@ -6541,3 +6541,30 @@ side, never wall-walk to yours). The asymmetry is the point: predators
 come to the told point, clerks open their books, the shy lose their
 spot. Watcher selection is `bestE` — nearest live threatPos within
 2.6m of the leaf, same 0.22/door seeded roll as s450.
+
+## Sprints 461-464 — the eye tells the hunters
+
+The intake surface closes: even the chase pieces answer a watched
+kneel now. With 455-460 the watching cast is complete — every entity
+that can plausibly put an eye to a crack responds in idiom.
+
+- **s461 the mass bends through your kneel** (Pursuer): mid-chase, a
+  sighted kneel splices in as the next waypoint — the route detours
+  through where you knelt, then resumes. Pre-`begin` it ignores you.
+- **s462 it red-lines the crack** (Editor): the audit writes a
+  deletion zone centered on the told leaf — re-kneeling there or
+  stepping through when the leaf moves pays the delete price.
+- **s463 the sleeper stirs on the kneel** (Husk): the kneel's thump
+  feeds `anger` like the beam does (+0.55, capped); dormant-only —
+  once it's up, the sighting tells it nothing new.
+- **s464 the pass slows over the told seam** (CorridorRunner): the
+  runner is rail-bound, so the crack lands where the route runs —
+  crossing the told leaf drops the pass to near-miss speed + a second
+  touch (`pendingTap`), once per sighting.
+
+**Notes:** eyeTell is a convention, not an interface requirement —
+the Game calls it only when the watcher is `bestE` (nearest live
+threatPos within 2.6m of the leaf under the seeded 0.22/door roll).
+Entities that can't plausibly watch (Swamper — submerged, Hollow —
+it IS the trap, Orrery — ceiling fixture, staged/ms entities) stay
+silent on purpose: the crack shows nothing that isn't there.

@@ -3145,3 +3145,97 @@ describe('the eye tells — the rest of the cast (sprints 455-460)', () => {
     wh.dispose();
   });
 });
+
+describe('the eye tells — hunters and mass (sprints 461-464)', () => {
+  it('the mass bends through your kneel (sprint 461)', async () => {
+    const { Pursuer } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    const p = new Pursuer();
+    p.spawn(ctx);
+    const wps = [v3(room.origin.x, 0, room.origin.z - 4), v3(room.origin.x, 0, room.origin.z + 4)];
+    p.begin(wps);
+    const kneel = v3(room.origin.x + 2, 0, room.origin.z);
+    p.eyeTell!(kneel);
+    const wi = (p as unknown as { wi: number }).wi;
+    expect((p as unknown as { waypoints: { x: number; z: number }[] }).waypoints[wi].x,
+      'the route detours through the told point').toBeCloseTo(kneel.x, 3);
+    p.end();
+  });
+
+  it('a kneel before it wakes the route is ignored (sprint 461)', async () => {
+    const { Pursuer } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const p = new Pursuer();
+    p.spawn(ctx);
+    p.eyeTell!(v3(1, 0, 1)); // no chase running — frames on a rack
+    expect((p as unknown as { waypoints: unknown[] }).waypoints.length).toBe(0);
+    p.dispose();
+  });
+
+  it('it red-lines the floor under the crack (sprint 462)', async () => {
+    const { Editor } = await import('../src/entities/setpieces');
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const e = new Editor();
+    e.spawn(ctx);
+    const leaf = v3(rooms[20].origin.x + 3, 0, rooms[20].origin.z + 2);
+    const n0 = e.zones.length;
+    e.eyeTell!(v3(30, 0, 30), leaf);
+    expect(e.zones.length, 'the audit writes a zone on the spot').toBe(n0 + 1);
+    const z = e.zones[e.zones.length - 1];
+    expect(Math.hypot(z.x - leaf.x, z.z - leaf.z), 'the zone covers the leaf').toBeLessThan(0.01);
+    e.dispose();
+  });
+
+  it('the sleeper stirs on the kneel — two sightings wake it (sprint 463)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const room = rooms[20];
+    ctx.player.pos.x = room.origin.x + 8; ctx.player.pos.z = room.origin.z + 8; // far corner, unstirring
+    ctx.player.lastMoveSpeed = 0;
+    const h = new Husk();
+    h.spawn(ctx);
+    const hp = (h as unknown as { pos: { x: number; z: number } }).pos;
+    // player 8+ meters out, lamp beam aimed away — dormant baseline
+    ctx.player.yaw = Math.atan2(room.origin.x - hp.x > 0 ? -1 : 1, 0); // face away
+    ctx.now += 0.05; h.update(0.05);
+    h.eyeTell!(v3(30, 0, 30));
+    const angered = (h as unknown as { anger: number }).anger;
+    expect(angered, 'the kneel thump works on it').toBeGreaterThan(0.4);
+    h.eyeTell!(v3(30, 0, 30));
+    // two tells is enough — the sleeper should be hunting now or one frame from it
+    ctx.now += 0.05; h.update(0.05);
+    const mode = (h as unknown as { mode: string }).mode;
+    expect(mode, 'the second crack woke it').toBe('hunt');
+    h.dispose();
+  });
+
+  it('the pass slows over the told seam (sprint 464)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    const cm = ctx as { now: number };
+    // run through the warning into the pass
+    for (let i = 0; i < 400 && sw.state === 'warn'; i++) { cm.now += 0.05; sw.update(0.05); }
+    expect(sw.state).toBe('engage');
+    // drop a told crack just ahead of the moving front
+    const f = sw as unknown as { pos?: unknown };
+    void f;
+    const path = (sw as unknown as { path: { x: number; z: number }[] }).path;
+    const leaf = v3(path[Math.min(2, path.length - 1)].x, 0, path[Math.min(2, path.length - 1)].z);
+    sw.eyeTell!(v3(30, 0, 30), leaf);
+    // run until the front reaches the told leaf — the pass should brake there
+    const nm = sw as unknown as { nearMissUntil: number };
+    let slowed = false;
+    for (let i = 0; i < 1200 && sw.state === 'engage'; i++) {
+      cm.now += 0.05; sw.update(0.05);
+      if (nm.nearMissUntil > cm.now) { slowed = true; break; }
+    }
+    expect(slowed, 'it braked over the seam it watched').toBe(true);
+    sw.dispose();
+  });
+});
