@@ -1833,8 +1833,22 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
   }
 
-  // Seeded floor clutter — scattered papers and debris; door lanes stay clear.
-  if (!isUnder && (spec.biome === 'corridor' || spec.biome === 'records' || spec.biome === 'guest' || spec.biome === 'unlit')) {
+  // Seeded floor clutter — scattered papers and debris; door lanes stay
+  // clear. Per-biome vocabulary: records/corridor paper; gallery sheds
+  // fallen catalogs and books; maintenance drifts cartons, rubble and
+  // cleaner bottles toward the walls. Non-paper kinds hug the walls so
+  // nothing sits mid-lane.
+  const CLUTTER_BY_BIOME: Record<string, [PropKind, number][]> = {
+    corridor: [['paperScatter', 0.85], ['carton', 0.15]],
+    records: [['paperScatter', 0.85], ['carton', 0.15]],
+    guest: [['paperScatter', 0.85], ['carton', 0.15]],
+    lobby: [['paperScatter', 0.8], ['carton', 0.2]],
+    unlit: [['paperScatter', 0.8], ['carton', 0.2]],
+    gallery: [['paperScatter', 0.5], ['books', 0.3], ['carton', 0.2]],
+    maintenance: [['carton', 0.4], ['paperScatter', 0.25], ['rubblePile', 0.2], ['bleachBottle', 0.15]],
+  };
+  const clutter = CLUTTER_BY_BIOME[spec.biome];
+  if (!isUnder && clutter) {
     const n = Math.min(7, Math.floor((w * d) / 15) + rng.int(0, 2));
     for (let i = 0; i < n; i++) {
       const cx = (rng.float() - 0.5) * (w - 1.6);
@@ -1844,11 +1858,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         return Math.hypot(cx - lp.x, cz - lp.z) < 1.5;
       });
       if (nearDoor) continue;
-      const kind: 'paperScatter' | 'carton' = rng.bool(0.85) ? 'paperScatter' : 'carton';
-      // bias cartons toward walls so they don't sit mid-lane
-      const px = kind === 'carton' ? Math.sign(cx || 1) * Math.max(Math.abs(cx), w * 0.3) : cx;
+      let roll = rng.float();
+      let kind: PropKind = clutter[clutter.length - 1][0];
+      for (const [k, p] of clutter) { if (roll < p) { kind = k; break; } roll -= p; }
+      // bias bulky kinds toward walls so they don't sit mid-lane
+      const px = kind === 'paperScatter' ? cx : Math.sign(cx || 1) * Math.max(Math.abs(cx), w * 0.3);
       try {
         const built = buildProp({ kind, x: px, z: cz, yaw: rng.float() * Math.PI }, rng.fork(9000 + i));
+        built.group.name = 'clutter-' + kind;
         group.add(built.group);
         wireColliders(built);
         groundShadow(built, px, cz);

@@ -4546,6 +4546,27 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 257 (worn-way spec green), sim 5/5.
   Visual dressing only — no e2e leg.
 
+
+## sprint 415 — the sparse pass
+
+- The seeded floor-clutter pass only dressed corridor/records/guest/
+  unlit — maintenance and gallery rooms (the thin end of the
+  template audit: maint-stairs ~6 props, puzzle-valve 7,
+  corridor-checkpoint 13, most records/gallery under 18) built
+  bare. `CLUTTER_BY_BIOME` now gives each biome its own vocabulary:
+  paper everywhere; gallery sheds fallen catalogs and `books`;
+  maintenance drifts `carton`/`rubblePile`/`bleachBottle` toward the
+  walls (all non-paper kinds wall-bias, never mid-lane); lobby +
+  unlit picked up too. Clutter groups are named `clutter-<kind>`
+  for tests/debug.
+- Vitest 258: 'the sparse pass' builds every maint/gallery room
+  across seeds — both carry clutter, gallery sheds books,
+  maintenance carries a bulky kind paper biomes never get.
+- Gates: tsc, lint, vitest 258, sim 5/5. Visual dressing only —
+  no e2e leg.
+||||||| 2dc32b1
+
+
 ## sprint 379 — the tag rots
 
 - The count's locker was a free store — seized goods hung claimable
@@ -4559,3 +4580,4 @@ Game.die() from the same five fields.
 - e2e: the locker leg's new rot phase seizes, shortens the fuse past
   the fade line, asserts fading→fenced→verb-gone.
 - Gates: tsc, lint, vitest, sim 5/5, locker leg green, build.
+
