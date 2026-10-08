@@ -374,6 +374,14 @@ function mainFloorPlan(shortRun: boolean): PlanEntry[] {
 
 /* ==================== GENERATION ==================== */
 
+/** Which FORESHADOW_TELLS key a set-piece door leaves in the rooms — and the
+ * gap-corridor — before it. Rooms that dress themselves (authored ante rooms,
+ * the wake) carry no entry. */
+export const MILESTONE_TELLS: Record<string, string> = {
+  'ms-chase1': 'pursuer', 'ms-chase2': 'pursuer',
+  'ms-lens-hall': 'curator', 'ms-baggage': 'hauler',
+};
+
 export function generateRoute(opts: GenOptions): GeneratedRoute {
   const streams = new SeedStreams(opts.seedText);
   const structRng = streams.stream('structure');
@@ -544,10 +552,6 @@ export function generateRoute(opts: GenOptions): GeneratedRoute {
   // Hall or the baggage hall bleed that piece's tell marks, graded as they
   // recede (no authored ante exists for these; the ante rooms at 49/99
   // dress themselves).
-  const MILESTONE_TELLS: Record<string, string> = {
-    'ms-chase1': 'pursuer', 'ms-chase2': 'pursuer',
-    'ms-lens-hall': 'curator', 'ms-baggage': 'hauler',
-  };
   for (let i = 0; i + 1 < mainRooms.length; i++) {
     const tell = MILESTONE_TELLS[mainRooms[i + 1].templateId];
     if (!tell) continue;

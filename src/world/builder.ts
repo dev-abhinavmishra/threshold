@@ -15,6 +15,7 @@ import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MILESTONE_TELLS } from './generator';
 import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal } from './decals';
 
 export interface BuiltRoom {
@@ -66,7 +67,7 @@ interface ForeshadowTell {
   tex: (r: import('../engine/rng').Rng) => THREE.Texture | null;
   w: number; h: number; n?: number; cy?: number;
 }
-const FORESHADOW_TELLS: Record<string, ForeshadowTell[]> = {
+export const FORESHADOW_TELLS: Record<string, ForeshadowTell[]> = {
   pursuer: [{ tex: footprintTrail, w: 0.9, h: 3.6 }, { wall: true, tex: scratchMarks, w: 0.9, h: 1.1 }],
   reprise: [{ tex: footprintTrail, w: 0.9, h: 4.0, n: 2 }],
   sweep: [{ tex: footprintTrail, w: 0.9, h: 3.8 }],
@@ -2199,6 +2200,34 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const suB = buildProp({ kind: 'doorSurround', x: lb.x - ux * 0.3, z: lb.z - uz * 0.3, y: 1.25, yaw: face(-ux, -uz) }, rng.fork(si * 67));
         suB.group.name = 'connTrim-doorSurround';
         corr.add(suB.group);
+      }
+
+      // The seam bleeds — a keyed set piece's tell reaches down its own
+      // gap-corridor into the door: marks sit on the door-half of each
+      // run, doubled on the leg that lands on the threshold.
+      const seamTell = MILESTONE_TELLS[room.templateId];
+      if (seamTell) {
+        const nx = -uz, nz = ux;
+        const lastLeg = si === pts.length - 2;
+        for (const t of FORESHADOW_TELLS[seamTell] ?? []) {
+          const marks = (t.n ?? 1) + (lastLeg ? 1 : 0);
+          for (let k = 0; k < marks; k++) {
+            const tt = len * (0.5 + rng.float() * 0.45);
+            if (t.wall) {
+              const side = rng.bool() ? 1 : -1;
+              const m = decalQuad(t.tex(rng), t.w, t.h);
+              m.position.set(la.x + ux * tt + nx * side * 1.17, t.cy ?? (1.2 + rng.float() * 0.9), la.z + uz * tt + nz * side * 1.17);
+              m.rotation.y = Math.atan2(-nx * side, -nz * side);
+              corr.add(m);
+            } else {
+              const m = decalQuad(t.tex(rng), t.w, t.h);
+              m.rotation.x = -Math.PI / 2;
+              m.rotation.z = t.h >= 2.5 ? Math.atan2(-ux, -uz) + (rng.float() - 0.5) * 0.3 : rng.float() * Math.PI;
+              m.position.set(la.x + ux * tt + nx * (rng.float() - 0.5) * 0.9, 0.008, la.z + uz * tt + nz * (rng.float() - 0.5) * 0.9);
+              corr.add(m);
+            }
+          }
+        }
       }
     }
     group.add(corr);
