@@ -3305,3 +3305,115 @@ export function luggageScuff(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Door drag — the crescent a sagging leaf scrapes into the floor at
+ * its swing's far reach: a worn arc, darker at the stall point. */
+export function doorDrag(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 64, (ctx) => {
+    // the sweep arc — worn finish along the swing circle
+    const cx = 20 + rng.float() * 20;
+    const cy = 56;
+    const r0 = 44 + rng.float() * 12;
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(190,176,150,${0.22 - i * 0.05})`;
+      ctx.lineWidth = 2.5 - i * 0.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r0 + i * 3, -Math.PI * (0.45 + rng.float() * 0.05), -Math.PI * 0.12);
+      ctx.stroke();
+    }
+    // the stall point — the darkest bite where the leaf hesitates
+    const sa = -Math.PI * (0.3 + rng.float() * 0.1);
+    ctx.fillStyle = 'rgba(70,60,48,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.cos(sa) * r0, cy + Math.sin(sa) * r0, 4, 2.4, sa, 0, Math.PI * 2);
+    ctx.fill();
+    // ground-in grit along the arc
+    for (let i = 0; i < 16; i++) {
+      const a = -Math.PI * (0.15 + rng.float() * 0.3);
+      ctx.fillStyle = `rgba(88,78,64,${0.14 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (r0 + (rng.float() - 0.5) * 6), cy + Math.sin(a) * (r0 + (rng.float() - 0.5) * 6), 0.5 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Soap scum — the tide line a basin keeps: a pale mineral ring on
+ * the rim and drip fingers running to the drain. */
+export function soapScum(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // rim ring — the scum tide where water stood
+    ctx.strokeStyle = 'rgba(200,196,180,0.5)';
+    ctx.lineWidth = 3 + rng.float();
+    ctx.beginPath();
+    ctx.ellipse(48, 30, 36, 16, 0, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.stroke();
+    // inner film — the bloom on the bowl floor
+    const g = ctx.createRadialGradient(48, 34, 4, 48, 34, 26);
+    g.addColorStop(0, 'rgba(196,192,176,0.16)');
+    g.addColorStop(1, 'rgba(196,192,176,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 64);
+    // drip fingers — runs down to the drain hole
+    for (let i = 0; i < 4; i++) {
+      const dx = 34 + i * 9 + (rng.float() - 0.5) * 4;
+      ctx.strokeStyle = `rgba(196,192,176,${0.22 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(dx, 34);
+      ctx.quadraticCurveTo(dx + (rng.float() - 0.5) * 4, 44, 48 + (rng.float() - 0.5) * 5, 50);
+      ctx.stroke();
+    }
+    // mineral speckle on the ring
+    for (let i = 0; i < 18; i++) {
+      const a = Math.PI * (1.05 + rng.float() * 0.9);
+      ctx.fillStyle = `rgba(210,206,190,${0.25 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * 36, 30 + Math.sin(a) * 16, 0.6 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Shaver smear — the soap-and-hair wipe somebody left on a mirror:
+ * a dragged hand-smear through film with bristle specks. */
+export function shaverSmear(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // soap film — a cloudy ground across the wipe zone
+    const g = ctx.createRadialGradient(48, 44, 6, 48, 44, 42);
+    g.addColorStop(0, 'rgba(206,208,196,0.2)');
+    g.addColorStop(1, 'rgba(206,208,196,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // the wipe — a hand dragged down through the film, darker where
+    // the heel pressed
+    for (let i = 0; i < 5; i++) {
+      const wx = 30 + i * 8 + (rng.float() - 0.5) * 4;
+      ctx.strokeStyle = `rgba(226,228,214,${0.34 + rng.float() * 0.2})`;
+      ctx.lineWidth = 3.4 + rng.float() * 1.6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(wx, 24 + rng.float() * 6);
+      ctx.quadraticCurveTo(wx + (rng.float() - 0.5) * 8, 46, wx + (rng.float() - 0.5) * 6, 66 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // lather dots — the flicked foam
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `rgba(230,232,220,${0.2 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, 12 + rng.float() * 72, 0.5 + rng.float() * 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // bristle specks — the dark hairs the razor left
+    for (let i = 0; i < 14; i++) {
+      const bx = 24 + rng.float() * 50;
+      const by = 30 + rng.float() * 44;
+      ctx.strokeStyle = `rgba(46,40,32,${0.4 + rng.float() * 0.3})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + (rng.float() - 0.5) * 4, by + 1 + rng.float() * 3);
+      ctx.stroke();
+    }
+  });
+}

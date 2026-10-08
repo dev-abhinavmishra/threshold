@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1995,6 +1995,21 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const ls = group.children[group.children.length - 1];
         if (ls && !ls.name) ls.name = 'luggage-scuff';
       }
+    }
+
+    // The doors dragged — a sagging leaf scrapes its swing's far
+    // reach into the floor, darkest where the leaf stalls.
+    for (const port of doorPositions) {
+      if (rng.float() >= 0.2) continue;
+      const lp = portLocalPos(port, w, d);
+      const inx = port.wall === 'n' ? 0 : port.wall === 's' ? 0 : port.wall === 'e' ? -0.55 : 0.55;
+      const inz = port.wall === 'n' ? 0.55 : port.wall === 's' ? -0.55 : 0;
+      const dg2 = decalQuad(doorDrag(rng), 1.1 + rng.float() * 0.3, 0.55);
+      dg2.name = 'door-drag';
+      dg2.rotation.x = -Math.PI / 2;
+      dg2.rotation.z = (port.wall === 'n' ? 0 : port.wall === 's' ? Math.PI : port.wall === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.3;
+      dg2.position.set(lp.x + inx, 0.0085, lp.z + inz);
+      group.add(dg2);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

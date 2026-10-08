@@ -5514,6 +5514,33 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 464–466 — the glass kept the word, the corners bloomed & the doors dragged
+
+Sprint 464: `paneWriting` — finger-writ smears on ~10% of unboarded
+windows (buildProp overlay at z=0.0705, named `pane-writing`);
+`tableScratches` — crossed knife cuts on ~14% of TOPS surfaces
+(named `table-scratches`); `phoneGhost` — wall-phone case ghost +
+cord shadow at ~18% of lived-in rooms (named `phone-ghost`).
+
+Sprint 465: `mouldBloom` — spore clusters at ceiling seams of
+non-lived-in/basin rooms at ~30% (named `mould-bloom`); `keyBoard` —
+pegboard ghost with swung key shadows at ~16% (named `key-board`);
+`luggageScuff` — belt-height drag bands at ~25% (named
+`luggage-scuff`).
+
+Sprint 466: `doorDrag` — swing crescents scraped into floors at
+~20% of doors, inward-offset by wall (named `door-drag`);
+`soapScum` — basin tide rings on ~40% of basinSink props
+(buildProp overlay, named `soap-scum`); `shaverSmear` — wiped soap
+film + bristle specks on ~18% of mirrors (named `shaver-smear`).
+
+Gotcha: `wetRoom` is a const declared in the waterline block —
+referencing it earlier in the dressing block throws TDZ errors at
+buildRoomMesh; inline the predicate or keep new blocks after it.
+
+Gates: tsc, lint, generation tests (9 new cases). Full suite + sim
+before push. No e2e leg — dressing only.
+
 ## Sprint 461–463 — the vents breathe, the clocks swung & the bedpost kept the count
 
 Sprint 461: `ventDust` — sooty halos + down-drift behind vent/
