@@ -6067,3 +6067,13 @@ he walks through). Two knocks of denial where the wedge gives one.
 **Notes:** the freed leaf drops the coil as loot like the warden's
 work does; the lose-interest cue is distinct so a player listening
 can tell "it gave up" from "it couldn't start".
+
+### sprint 438 — the gloved hand spends your holds
+**Done:** the Commissionaire's seal no longer eats holds: a wired leaf
+is worked free in one motion (two `strainWire` contacts — the coil
+drops as gatherable loot at the leaf); a chocked one skids loose via
+`wedgeKicked` (the chock lands as loot, kick-parity). The bind is
+spent, not vanished.
+**Notes:** 'player' braces still lose silently — the gloved hand
+outranks your weight and `releaseBracedDoors` drops your tracking
+without clearing 'commissionaire' (verified safe).

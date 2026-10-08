@@ -317,6 +317,15 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     expect(src).toContain('the bind held');
   });
 
+  it('the gloved hand spends your holds, it does not eat them', () => {
+    const src = readFileSync('src/entities/room.ts', 'utf8');
+    // sealing a wired leaf works the bind free (coil drops as loot);
+    // sealing a chocked one skids it loose like a kick — the Comm's
+    // grip answers 'wired' and 'wedge' before it takes 'commissionaire'
+    expect(src).toMatch(/heldBy === 'wired'[\s\S]*?strainWire/);
+    expect(src).toMatch(/heldBy === 'wedge'[\s\S]*?wedgeKicked/);
+  });
+
   it('the seam reads your own bind — holds report, strains warn', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     // a wired leaf answers the listen at the lowest tier: quiet when
