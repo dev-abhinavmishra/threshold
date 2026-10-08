@@ -1029,6 +1029,29 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
         askPrompt = g.interaction.focused?.prompt ?? askPrompt;
       }
     }
+    // Ask what the register says — the house's mirror of the Broker's
+    // book: flat 3 imprints, repeatable, reads your own file aloud.
+    const askReg = (g.interaction as { interactables?: { kind: string;
+      pos: { x: number; y: number; z: number } }[] }).interactables
+      ?.find((i) => i.kind === 'askReg');
+    let regCleanCap = '', regFiledCap = '', regPaid = -1, regAgain = '';
+    if (askReg) {
+      ga.unpaidHeld = 0;
+      g.imprints = 20;
+      const regMark = caps.length;
+      drive(askReg.pos, () => caps.slice(regMark).some((t) => /no line on you/.test(t)), 60);
+      regCleanCap = caps.slice(regMark).find((t) => /no line on you/.test(t)) ?? '';
+      regPaid = g.imprints;
+      ga.unpaidHeld = 4;
+      const regMark2 = caps.length;
+      drive(askReg.pos, () => caps.slice(regMark2).some((t) => /register on you — 4/.test(t)), 60);
+      regFiledCap = caps.slice(regMark2).find((t) => /register on you — 4/.test(t)) ?? '';
+      // repeatable — a second filed read answers again (not one-shot)
+      const regMark3 = caps.length;
+      drive(askReg.pos, () => caps.slice(regMark3).some((t) => /register on you — 4/.test(t)), 60);
+      regAgain = caps.slice(regMark3).find((t) => /register on you — 4/.test(t)) ?? '';
+      ga.unpaidHeld = 0;
+    }
     // Change the purse — the clerk's counter converts marginalia to
     // imprints: clean books 8→6, a filed face sours it to 8→4.
     const purse = (g.interaction as { interactables?: { kind: string;
@@ -1337,6 +1360,7 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
       hasItem: g.inventory.some((s) => s.id === item),
       twoSocks: !!sock2, ratePaid, rateCap, expected2,
       askFound: !!ask, askPrompt, askPaid, askCap, askTwice,
+      regFound: !!askReg, regCleanCap, regFiledCap, regPaid, regAgain,
       tillFound: !!till, tillPaid, tillHeld, tillRifleCap: rifleCap, tillGone, tillSeen,
       hotAfterRifle,
       workMark, headPre, headPost, bellLookWarm, relBellN, bellLookCold, relPlayerN,
@@ -1376,6 +1400,12 @@ test('the night clerk: short imprints refuses, paid sells, filed face pays the r
   expect(result.askCap, JSON.stringify(result)).toMatch(/duty sheet|ledger of faults|held-file/);
   expect(result.askPaid).toBe(true);
   expect(result.askTwice).toMatch(/said what it knows/);
+  // sprint 361 — ask what the register says: the house's live readout —
+  // flat 3 imprints, repeatable, reads clean/filed alike
+  expect(result.regCleanCap, JSON.stringify(result)).toMatch(/no line on you/);
+  expect(result.regPaid, JSON.stringify(result)).toBe(17);
+  expect(result.regFiledCap, JSON.stringify(result)).toMatch(/register on you — 4/);
+  expect(result.regAgain, JSON.stringify(result)).toMatch(/register on you — 4/);
   // sprint 320 — rifle the till: pays once, files your face twice, never re-offers
   expect(result.tillFound, JSON.stringify(result)).toBe(true);
   expect(result.tillPaid, JSON.stringify(result)).toBe(true);
