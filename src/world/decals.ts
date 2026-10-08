@@ -4478,3 +4478,133 @@ export function umbrellaRing(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Sheet shape — the faint shadow a sleeper leaves on linen: a pale
+ * head-pillow stain, a hip hollow, the fold shadow at the edge. */
+export function sheetShape(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // pillow stain — a dim yellowed oval where the head lay
+    ctx.fillStyle = `rgba(148,132,104,${0.18 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 20, 13 + rng.float() * 4, 8 + rng.float() * 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the body band — faint perspiration line down the center
+    const g = ctx.createLinearGradient(40, 26, 40, 80);
+    g.addColorStop(0, 'rgba(150,134,108,0)');
+    g.addColorStop(0.4, `rgba(150,134,108,${0.12 + rng.float() * 0.08})`);
+    g.addColorStop(1, 'rgba(150,134,108,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(30, 26, 30, 56);
+    // the hip hollow — a shallow depression shade
+    ctx.fillStyle = `rgba(140,124,100,${0.14 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 58, 20 + rng.float() * 6, 10 + rng.float() * 3, (rng.float() - 0.5) * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // fold shadows — where the linen creased under weight
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(120,108,88,${0.16 + rng.float() * 0.12})`;
+      ctx.lineWidth = 1.2;
+      const fy = 34 + i * 14;
+      ctx.beginPath();
+      ctx.moveTo(26, fy);
+      ctx.quadraticCurveTo(48, fy + 3 - rng.float() * 6, 70, fy + (rng.float() - 0.5) * 4);
+      ctx.stroke();
+    }
+    // sweat flecks — the faint print marks
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(140,124,100,${0.12 + rng.float() * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(32 + rng.float() * 32, 30 + rng.float() * 40, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Knot holes — the eyes the boards kept: dark knots with sap rings,
+ * a lifted splinter, a worn groove down the plank line. */
+export function knotHoles(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // plank seam — the dark line between two boards
+    const sx = 44 + rng.float() * 10;
+    ctx.fillStyle = 'rgba(30,24,18,0.45)';
+    ctx.fillRect(sx, 0, 1.8 + rng.float(), 96);
+    // the knots — dark rings with woodgrain halos
+    const knots = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < knots; i++) {
+      const kx = 14 + rng.float() * 68;
+      const ky = 14 + rng.float() * 68;
+      const kr = 3 + rng.float() * 3;
+      ctx.fillStyle = `rgba(34,26,18,${0.55 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(kx, ky, kr, kr * 0.75, rng.float() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+      // sap ring
+      ctx.strokeStyle = 'rgba(120,100,70,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(kx, ky, kr + 2.2, kr * 0.75 + 1.6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // grain lines bending around it
+      ctx.strokeStyle = 'rgba(90,74,54,0.22)';
+      ctx.beginPath();
+      ctx.moveTo(kx - kr - 8, ky - 3);
+      ctx.quadraticCurveTo(kx, ky - kr - 4, kx + kr + 8, ky - 3);
+      ctx.stroke();
+    }
+    // the lifted splinter — a pale torn line along the seam
+    ctx.strokeStyle = `rgba(170,150,116,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(sx + 4, 20);
+    ctx.lineTo(sx + 5 + rng.float() * 3, 40 + rng.float() * 20);
+    ctx.stroke();
+    // nail pairs at the joist lines
+    for (let i = 0; i < 3; i++) {
+      const ny = 18 + i * 28 + rng.float() * 6;
+      for (const off of [-2, 2]) {
+        ctx.fillStyle = 'rgba(26,20,16,0.55)';
+        ctx.beginPath();
+        ctx.arc(sx + 5 + off, ny, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  });
+}
+
+/** Dust shaft — the light a window throws onto the boards: a pale
+ * trapezoid with the dust motes caught inside it. */
+export function dustShaft(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // the shaft — a bright parallelogram, soft far edge
+    const g = ctx.createLinearGradient(24, 8, 72, 120);
+    g.addColorStop(0, `rgba(216,204,168,${0.24 + rng.float() * 0.12})`);
+    g.addColorStop(0.7, 'rgba(216,204,168,0.1)');
+    g.addColorStop(1, 'rgba(216,204,168,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(34, 6);
+    ctx.lineTo(66, 6);
+    ctx.lineTo(78, 122);
+    ctx.lineTo(46, 122);
+    ctx.closePath();
+    ctx.fill();
+    // the mullion bars — shadow slots inside the shaft
+    for (let i = 0; i < 2; i++) {
+      const t = 0.35 + i * 0.25;
+      ctx.fillStyle = 'rgba(90,80,64,0.22)';
+      ctx.fillRect(34 + t * 36, 6, 2.2, 116 - t * 4);
+    }
+    // the motes — dust dots drifting in the light
+    for (let i = 0; i < 22; i++) {
+      const mx = 36 + rng.float() * 38;
+      const my = 12 + rng.float() * 104;
+      ctx.fillStyle = `rgba(226,216,188,${0.2 + rng.float() * 0.24})`;
+      ctx.beginPath();
+      ctx.arc(mx, my, 0.5 + rng.float() * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the sill shadow — a darker band where the frame cuts the light
+    ctx.fillStyle = 'rgba(96,86,68,0.18)';
+    ctx.fillRect(30, 6, 44, 4);
+  });
+}

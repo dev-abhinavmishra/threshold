@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2236,6 +2236,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ur.rotation.z = rng.float() * Math.PI * 2;
       ur.position.set(p.x, 0.009, p.z);
       group.add(ur);
+    }
+
+    // The boards kept the knots — seam lines, knot eyes and nail
+    // pairs on the floor in lived-in rooms.
+    if (livedIn && rng.bool(0.4)) {
+      const kh = decalQuad(knotHoles(rng), 0.9 + rng.float() * 0.3, 0.9 + rng.float() * 0.3);
+      kh.name = 'knot-holes';
+      kh.rotation.x = -Math.PI / 2;
+      kh.rotation.z = rng.float() * Math.PI * 2;
+      kh.position.set((rng.float() - 0.5) * (w * 0.5), 0.0078, (rng.float() - 0.5) * (d * 0.5));
+      group.add(kh);
+    }
+    // The shafts fell — pale trapezoids of window light with the
+    // motes still in them, on the floor beside windows.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const sw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const inx = sw === 'e' ? -1 : sw === 'w' ? 1 : 0;
+      const inz = sw === 's' ? -1 : sw === 'n' ? 1 : 0;
+      const ds = decalQuad(dustShaft(rng), 0.7 + rng.float() * 0.15, 1.0 + rng.float() * 0.2);
+      ds.name = 'dust-shaft';
+      ds.rotation.x = -Math.PI / 2;
+      ds.rotation.z = Math.atan2(-inx, inz || 0.0001) + (rng.float() - 0.5) * 0.2;
+      ds.position.set(p.x + inx * 0.7, 0.0082, p.z + inz * 0.7);
+      group.add(ds);
     }
 
     // The water line — a room that flooded once keeps the tide mark:
