@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1714,6 +1714,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       m.rotation.z = rng.float() * Math.PI;
       m.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0072, p.z + (rng.float() - 0.5) * 0.4);
       group.add(m);
+    }
+
+    // The wall kept the hooks — a row of nail holes and sag shadows
+    // where the coat rail hung, one ripped out of the plaster.
+    if (['lobby', 'corridor', 'guest'].includes(spec.biome) && rng.float() < 0.3) {
+      const dw = 0.8 + rng.float() * 0.5;
+      const spot = pickWallSpot(dw);
+      if (spot) {
+        wallDecal(spot.wall, nailRow(rng), dw, dw * 0.6, spot.along, 1.6 + rng.float() * 0.25);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'nail-row';
+      }
     }
 
     // The numbers changed — a painted room numeral over the frame, the

@@ -1903,3 +1903,18 @@ describe('the numbers changed (sprint 437)', () => {
     expect(nums, 'no old numbers').toBeGreaterThan(15);
   });
 });
+
+describe('the wall kept the hooks (sprint 438)', () => {
+  it('lived-in walls carry rows of old nail holes', () => {
+    let rows = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'nail-row') rows++; });
+      }
+    }
+    expect(rows, 'no nail rows').toBeGreaterThan(6);
+  });
+});
