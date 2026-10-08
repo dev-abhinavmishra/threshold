@@ -927,6 +927,10 @@ export class Game {
       { id: 'latchpick', price: rng.int(24, 34) },
       { id: 'windAlarm', price: rng.int(28, 40) },
       { id: 'doorChock', price: rng.int(8, 14) },
+      // sprint 428 — the under sells its own pre-coiled wire: scrap
+      // cheaper than a latchpick because every grafter carries it —
+      // and it smells like their stock either way you came by it.
+      { id: 'wireCoil', price: rng.int(16, 24) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);

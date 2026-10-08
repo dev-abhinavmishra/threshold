@@ -222,6 +222,16 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // dead grafts restore wearing it too — no faceless wire anywhere
     expect(gameSrc).toMatch(/gw\.armed === false[\s\S]*?dead\.mesh = this\.buildSnareProp/);
   });
+
+  it('the under sells its own wire — the broker stocks the coil', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the coil sits in the broker's seeded stock, priced between felt and a pick
+    expect(gameSrc).toMatch(/populateBroker[\s\S]*?id: 'wireCoil', price: rng\.int\(/);
+    // but the house's own shelf never carries splice scrap — the
+    // upstairs twin stocks chocks and picks, not the under's wire
+    const clerk = gameSrc.match(/private populateClerk[\s\S]*?const stock[\s\S]*?\];/)?.[0] ?? '';
+    expect(clerk).not.toContain('wireCoil');
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

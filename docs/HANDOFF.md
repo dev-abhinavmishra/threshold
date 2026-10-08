@@ -5921,3 +5921,13 @@ the drop clatter (0.3 item, real sound — the room hears the coil slip).
 Dead grafts restoring from `graftedWires` rebuild the face too, and
 planted wires restore their face regardless of armed — the face is the
 wire's look, not its state. No faceless wire anywhere.
+
+## Sprint 428 — the under sells its own wire
+
+`wireCoil` joins the Broker's seeded stock (`populateBroker`, 16–24
+marginalia — scrap cheaper than a pick because every grafter carries
+it). The buy rides the generic ware path: `giveItem`, marginalia
+charge, the tally's deep-tier refusal intact. The house shelf stays
+off it — the clerk's stock is finished goods; splice scrap only sells
+below. Bought or cut, the coil smells the same: `playerCarries`
+doesn't launder the scent.
