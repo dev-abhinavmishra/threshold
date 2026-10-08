@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1629,6 +1629,29 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           try {
             const built = buildProp({ kind: rng.float() < 0.5 ? 'rubberBoots' : 'fishHat', x: hxo, z: hzo, yaw: rng.float() * Math.PI * 2 }, rng.fork(7800));
             built.group.name = 'fled-effects';
+            group.add(built.group);
+          } catch { /* dressing only */ }
+        }
+      }
+    }
+
+    // The fallen — a clean ghost where a picture hung for years, and the
+    // frame face-up at the wall's base. Whatever dropped it wasn't careful
+    // with the rest of the room either.
+    if (['guest', 'lobby', 'corridor', 'records', 'gallery'].includes(spec.biome) && rng.float() < 0.25) {
+      const spot = pickWallSpot(0.6);
+      if (spot) {
+        wallDecal(spot.wall, frameGhost(rng), 0.55 + rng.float() * 0.2, 0.7 + rng.float() * 0.2, spot.along, 1.65 + rng.float() * 0.3);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'fallen-frame';
+        const inset = 0.3 + rng.float() * 0.25;
+        const fx = spot.wall === 'e' ? w / 2 - inset : spot.wall === 'w' ? -w / 2 + inset : spot.along + (rng.float() - 0.5) * 0.4;
+        const fz = spot.wall === 'n' ? d / 2 - inset : spot.wall === 's' ? -d / 2 + inset : spot.along + (rng.float() - 0.5) * 0.4;
+        if (!footprintInDoorLane(spec, fx, fz, 0.5, 0.5)) {
+          try {
+            const built = buildProp({ kind: 'painting', x: fx, z: fz, y: 0.05, yaw: rng.float() * Math.PI * 2 }, rng.fork(7900));
+            built.group.rotation.x = -Math.PI / 2;
+            built.group.name = 'fallen-frame';
             group.add(built.group);
           } catch { /* dressing only */ }
         }

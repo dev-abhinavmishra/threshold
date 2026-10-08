@@ -5083,3 +5083,13 @@ Game.die() from the same five fields.
 - The verb lives only while the fire actually burns (`this.hearths`
   position-matched), so it un-mints when the burn dies naturally.
 - Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
+
+## sprint 428 — the fallen
+
+- Pictures that came down off lived-in walls (guest/lobby/corridor/records/
+  gallery, 25%): `frameGhost` decal — a pale clean rectangle + set nail +
+  dust skirt — at 1.65-1.95m, and the `painting` prop lying face-up at
+  the wall's base (center-anchored model; `group.rotation.x = -PI/2`,
+  y 0.05). Both named 'fallen-frame'. Door-lane cleared.
+- Vitest 275: 'the fallen'. Gates: tsc, lint, generation 91/91. Dressing
+  only — no e2e leg.
