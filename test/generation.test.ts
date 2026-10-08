@@ -1993,3 +1993,18 @@ describe('the inspection stamp (sprint 444)', () => {
     expect(stamps, 'no inspection stamps').toBeGreaterThan(6);
   });
 });
+
+describe('the mouth it eats from (sprint 445)', () => {
+  it('baseboards carry chewed mouse holes', () => {
+    let holes = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'mouse-hole') holes++; });
+      }
+    }
+    expect(holes, 'no mouse holes').toBeGreaterThan(6);
+  });
+});

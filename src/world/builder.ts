@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1769,6 +1769,18 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         wallDecal(spot.wall, nailRow(rng), dw, dw * 0.6, spot.along, 1.6 + rng.float() * 0.25);
         const last = group.children[group.children.length - 1];
         if (last && !last.name) last.name = 'nail-row';
+      }
+    }
+
+    // The mouth it eats from — a chewed arch at the baseboard, crumbs
+    // scattered: something small lives in these walls.
+    if (['corridor', 'guest', 'lobby', 'records', 'maintenance'].includes(spec.biome) && rng.float() < 0.3) {
+      const dw = 0.35 + rng.float() * 0.2;
+      const spot = pickWallSpot(dw);
+      if (spot) {
+        wallDecal(spot.wall, mouseHole(rng), dw, dw, spot.along, dw * 0.5);
+        const last = group.children[group.children.length - 1];
+        if (last && !last.name) last.name = 'mouse-hole';
       }
     }
 
