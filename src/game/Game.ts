@@ -1071,6 +1071,12 @@ export class Game {
    *  cage keeps the take (the count swallowed it whole). */
   private stashSeized(items: { id: ItemId; count: number }[]): void {
     if (items.length === 0) return;
+    // one locker per run — a second catch doesn't re-hang the tag at a
+    // nearer cage while the first still claims; the take just joins it
+    if (this.seizedAt) {
+      this.seizedTake.push(...items);
+      return;
+    }
     let cage: { x: number; y: number; z: number } | null = null;
     let best = Infinity;
     for (const r of this.route?.underRooms ?? []) {
@@ -2761,7 +2767,9 @@ export class Game {
           return;
         }
         this.marginalia -= sPrice;
-        this.unpaidTheft += 1;
+        // like the index's asks — while the boards name you, the tag
+        // reads in your own name and files double
+        this.unpaidTheft += this.wantedActive ? 2 : 1;
         this.queueLoss(it.pos.x, it.pos.z,
           '[a tag reads drawn early — the count is short]');
         const back = this.seizedTake
@@ -2774,7 +2782,7 @@ export class Game {
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.4, category: 'machine', caption: '' });
         this.cue('pickup', it.pos,
-          `[the tag tears — your take hangs on your back again · ${back}]`, 'info');
+          `[the tag tears — your take hangs on your back again · ${back}${this.wantedActive ? ' · the sheets write your name twice' : ''}]`, 'info');
         return;
       }
       case 'register': {
