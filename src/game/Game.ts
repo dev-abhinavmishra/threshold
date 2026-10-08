@@ -5147,6 +5147,14 @@ export class Game {
   }
 
   private currentRoomIndex(): number {
+    // A hidden player is inside the spot's room — the AABB skirt overlaps
+    // at seams and can pin them to the neighbour, which silences that
+    // room's spawnScheduled forever (sprint 399).
+    const hid = this.player.hiddenSpot;
+    if (hid) {
+      const hr = this.activeRooms().find((r) => r.index === hid.roomIndex);
+      if (hr) return hr.index;
+    }
     const rooms = this.activeRooms();
     for (const r of rooms) {
       if (aabbContainsPoint(this.roomAabb(r), this.player.pos.x, this.player.pos.y + 0.5, this.player.pos.z)) {

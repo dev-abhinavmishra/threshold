@@ -5241,3 +5241,47 @@ Game.die() from the same five fields.
   corridor spine + room blocks, stairs arrow, glass sheen, and a red
   YOU ARE HERE dot in the wrong place. Named 'old-map'.
 - Vitest 293: 'the map nobody trusts'. Gates: tsc, lint, 109/109.
+
+## sprint 399 — the flagged-leg repair (e2e harness + three real bugs)
+
+The sibling's audit flagged ~10 failing legs across entities/hazards/
+economy/books/doors. All resolved or designed-skips; three were real
+product bugs worth the writeup:
+
+- `currentRoomIndex()` resolves by room AABB, and `roomAabb` grows a
+  +0.5 skirt — adjacent rooms' boxes OVERLAP at seams, first index
+  wins. A hidden player near a seam pinned to the wrong room, which
+  permanently silenced that room's `spawnScheduled` (its trigger
+  room was never entered). Fix: prefer `player.hiddenSpot.roomIndex`
+  when set (falls through to AABB/branchOf for branch-closet spots).
+- JS `%` keeps the dividend's sign — the watcher/steam `hsh` hash
+  `((wx*7+wz*13+idx*5) % 10)/10` went negative in negative-coord
+  rooms, shrinking the eye's pan cycle below ~6s so no single
+  in-cone pass could reach the 0.9s settle: negative-coord watchers
+  could NEVER report anyone. Fixed with `(((x)%10)+10)%10/10` at
+  both hash sites. Any mod used as a phase/hash must normalize sign.
+- Groundswell provoke is a ~1.8s window after engage plus inter-wave
+  gaps (`waveAt > now+0.7` rejects noise mid-wave). A spec that
+  idles first lands its sprint mid-wave where heavy noise is ignored
+  by design — the leg now sprints on entry, bounded by lane length.
+- Focus-verb drives can't trust a fixed stand: a priority-3 book on
+  the same counter shadows 'Buy at the counter' (p1) and 'Hide in
+  cabinet' shadows fig verbs via the 1.1m prox admit. economy.spec
+  gained `standFor(at, want)` — scans 8 azimuths × aim drops
+  [0,-0.25,-0.5,-0.75] for a stand where `want` matches the focused
+  prompt; `drive(..., toward, want)` locks to that (stand, pitch)
+  pair. Every counter-family drive in the clerk leg now names its
+  verb. Aim offsets into `at.y + 0.6` — offset anchors can land ON
+  the shadowing prop (a till-0.4 anchor sat on the guest ledger).
+- hazards wade: the seed's -z approach lane was collider-blocked —
+  `wadeOnto` now tries four cardinal lanes until rooted/reached, and
+  the felt/cut asserts gate under nSnares>1 (a sprung wire offers no
+  snip by design; submerged requires crouching).
+- 'the swamper answers stirred water' is a designed skip — no
+  flooded swamper room exists on seed 's' (drift).
+- Reminder: kill leftover `vite preview` on :4173 before e2e —
+  `reuseExistingServer` will serve the stale dist.
+
+Gates: tsc, lint, vitest 273, sim 5/5, build. e2e: entities+hazards+
+economy+books+doors — 37 passed, 2 designed skips, 2 infra flakes
+(300s newContext timeouts, green on retry).

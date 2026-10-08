@@ -115,20 +115,38 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
     ga.godMode = true; // keep the room's swamper out of the signal — we read roots, not blood
 
     const wadeOnto = (s: { x: number; z: number }, crouched: boolean) => {
-      // approach along the corridor's long axis — side-on starts can sit
-      // behind a prop collider and pin the wade against the wall
-      g.player.teleport(s.x, 0, s.z + 0.9);
-      g.player.yaw = Math.atan2(s.x - s.x, s.z - (s.z + 0.9));
-      ga.currentRoom = room.index;
-      for (let f = 0; f < 25; f++) g.frame();
-      const rooted0 = ga.player.rootedUntil;
-      if (crouched) g.keys.add('KeyC');
-      g.keys.add('KeyW');
-      for (let f = 0; f < 70; f++) g.frame();
-      g.keys.delete('KeyW');
-      g.keys.delete('KeyC');
-      return { rooted: ga.player.rootedUntil > rooted0, at: { x: g.player.pos.x, z: g.player.pos.z } };
+      // seeded drift can wall off any one lane — prop colliders shift
+      // between sprints. Try each cardinal approach until the wire is
+      // underfoot; the trip reads distance, not the way you came in.
+      let at = { x: 0, z: 0 };
+      for (const [ox, oz] of [[0, 0.9], [0.9, 0], [0, -0.9], [-0.9, 0]] as const) {
+        g.player.teleport(s.x + ox, 0, s.z + oz);
+        g.player.yaw = Math.atan2(-ox, -oz);
+        ga.currentRoom = room.index;
+        for (let f = 0; f < 20; f++) g.frame();
+        const rooted0 = ga.player.rootedUntil;
+        if (crouched) g.keys.add('KeyC');
+        g.keys.add('KeyW');
+        let reached = false;
+        for (let f = 0; f < 70; f++) {
+          g.frame();
+          if (Math.hypot(g.player.pos.x - s.x, g.player.pos.z - s.z) < 0.65) reached = true;
+          if (ga.player.rootedUntil > rooted0 || (reached && !crouched) || (reached && f > 30)) break;
+        }
+        g.keys.delete('KeyW');
+        g.keys.delete('KeyC');
+        at = { x: g.player.pos.x, z: g.player.pos.z };
+        const rooted = ga.player.rootedUntil > rooted0;
+        if (rooted || reached) return { rooted, at };
+      }
+      return { rooted: false, at };
     };
+
+    // The wire hides from an upright wader: stand next to a live one and
+    // no 'snip' mints — check BEFORE tripping spends the room's only wire.
+    g.player.teleport(snares[0].pos.x + 0.6, 0, snares[0].pos.z + 0.6);
+    for (let f = 0; f < 20; f++) g.frame();
+    const blindNoPrompt = !g.interaction.interactables.some((i) => i.kind === 'snip');
 
     const up = wadeOnto(snares[0].pos, false);
     const tripped = up.rooted && caps.some((c) => /paper snare/.test(c));
@@ -137,11 +155,11 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
       const down = wadeOnto(snares[1].pos, true);
       felt = !down.rooted && caps.some((c) => /wire underfoot/.test(c));
     }
-    // and the wire can be cut — but only a crouched wader can find it
+    // and the wire can be cut — but only a crouched wader can find it.
+    // Needs a second armed wire: a single-snare room spends its only
+    // wire on the trip above, and a sprung wire offers no snip by design.
     const last = snares[snares.length - 1].pos;
     g.player.teleport(last.x + 0.6, 0, last.z + 0.6);
-    for (let f = 0; f < 20; f++) g.frame();
-    const blindNoPrompt = !g.interaction.interactables.some((i) => i.kind === 'snip');
     g.keys.add('KeyC');
     for (let f = 0; f < 30; f++) g.frame();
     let cut = false;
@@ -163,9 +181,11 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
 
   if (result.stage === 'no-dark-flood') test.skip();
   expect(result.tripped, JSON.stringify(result)).toBe(true);
-  if ((result.nSnares ?? 0) > 1) expect(result.felt, JSON.stringify(result)).toBe(true);
   expect(result.blindNoPrompt, JSON.stringify(result)).toBe(true);
-  expect(result.cut, JSON.stringify(result)).toBe(true);
+  if ((result.nSnares ?? 0) > 1) {
+    expect(result.felt, JSON.stringify(result)).toBe(true);
+    expect(result.cut, JSON.stringify(result)).toBe(true);
+  }
   expect(errors).toEqual([]);
 });
 
