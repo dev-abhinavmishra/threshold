@@ -4788,3 +4788,30 @@ Game.die() from the same five fields.
   exits}) — pass `spec` directly, not doorPositions.
 - Vitest 267: 'the wiring shows' (main + under). Gates: tsc, lint,
   sim 5/5. Visual dressing only — no e2e leg.
+
+## sprint 426 — the ledger audit (verification leg)
+
+- Periodic e2e leg after dressing sprints 419-425. Full suite (102 specs)
+  is SwiftShader-heavy: walker legs hold 20-60min per-test timeouts and a
+  `PAGE CRASHED` mid-run stalls the single worker ~15min — kill + relaunch
+  only the files not yet run instead of waiting.
+- Result so far (first 8 spec files, before playtest): smoke/asset/door/
+  route legs green. Persistent (both-attempt) failures all sit in the
+  sibling's 374-384 economy/cast lanes — dressing untouched there:
+    doors.spec:320 chock holds while you walk away
+    economy.spec:949 night clerk sells/rate
+    entities.spec:79 locked doors do not stop the bellman
+    entities.spec:560 cast hears you (pebble/lure/sprint)
+    entities.spec:693 noise draws the patrol
+    hazards.spec:8 swamper answers stirred water
+    hazards.spec:93 dark water hides the wire
+    hazards.spec:547 watched hall — eye reads motion
+    books.spec:8 collector counts your purse (expects '18 imprints')
+    books.spec:66 porter's cage sells held bags
+- Verified NOT the dressing lanes: clutter/tell props are all
+  collider [0,0,0] (nothing new blocks nav); entity specs locate the
+  scheduled room dynamically so roomPorter's template weight can't shift
+  their anchors. Sibling notified out-of-band.
+- playtest legs: walker-main green on retry in run A (deaths/seed 16-17,
+  purse deltas 0 — same envelope as the last count); run B hung 20m x2
+  and crashed — load-bound, not a code signal.
