@@ -4802,7 +4802,6 @@ Game.die() from the same five fields.
   exits}) — pass `spec` directly, not doorPositions.
 - Vitest 267: 'the wiring shows' (main + under). Gates: tsc, lint,
   sim 5/5. Visual dressing only — no e2e leg.
-<<<<<<< HEAD
 
 ## sprint 426 — the ledger audit (verification leg)
 
@@ -4830,8 +4829,6 @@ Game.die() from the same five fields.
 - playtest legs: walker-main green on retry in run A (deaths/seed 16-17,
   purse deltas 0 — same envelope as the last count); run B hung 20m x2
   and crashed — load-bound, not a code signal.
-||||||| 8953d96
-=======
 
 ## sprint 386 — the seam carries the lamp too
 
@@ -5062,4 +5059,3 @@ Game.die() from the same five fields.
 - Also closed a pre-existing hole: tvAnswerQueue never cleared on
   restart — a queued answer could fire into a dead run's stale pos.
 - Gates: tsc, lint, vitest, sim, build. e2e batched per pace directive.
->>>>>>> origin/main
