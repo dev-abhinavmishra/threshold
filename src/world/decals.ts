@@ -2008,3 +2008,68 @@ export function drainHalo(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Waterline — the tide the room survived: a darker line at the top
+ * edge of the flood band, sediment settling below it. */
+export function waterline(rng: Rng): THREE.Texture | null {
+  return canvasTex(256, 96, (ctx) => {
+    // the sharp top edge — where the water sat for days
+    const wy = 18 + rng.float() * 8;
+    ctx.strokeStyle = 'rgba(58,52,38,0.5)';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, wy);
+    for (let x = 0; x <= 256; x += 16) ctx.lineTo(x, wy + Math.sin(x * 0.05 + rng.float() * 4) * 2.4);
+    ctx.stroke();
+    // sediment band under it, streaky and uneven
+    for (let i = 0; i < 60; i++) {
+      const x = rng.float() * 256;
+      const top = wy + 2 + rng.float() * 6;
+      const len = 8 + rng.float() * rng.float() * 38;
+      ctx.strokeStyle = `rgba(${70 + rng.float() * 30},${60 + rng.float() * 26},${40 + rng.float() * 18},${0.06 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.5 + rng.float() * 3;
+      ctx.beginPath();
+      ctx.moveTo(x, top);
+      ctx.lineTo(x + (rng.float() - 0.5) * 4, top + len);
+      ctx.stroke();
+    }
+    // efflorescence flecks — salt pushed out of the plaster as it dried
+    for (let i = 0; i < 26; i++) {
+      ctx.fillStyle = `rgba(190,184,168,${0.08 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(rng.float() * 256, wy + 4 + rng.float() * 40, 1 + rng.float() * 2.5, 0.7 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Soot stain — the black bloom a dead fire breathed up the wall above
+ * its mouth for years: a dark core fingering upward into wisps. */
+export function sootStain(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    // dense core, wide and low
+    const core = ctx.createRadialGradient(cx, 108, 4, cx, 108, 40);
+    core.addColorStop(0, 'rgba(24,20,16,0.75)');
+    core.addColorStop(0.55, 'rgba(26,22,18,0.4)');
+    core.addColorStop(1, 'rgba(26,22,18,0)');
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 40, 96, 88);
+    // smoke fingers rising — darker at root, feathering out
+    for (let i = 0; i < 9; i++) {
+      const sx = cx + (rng.float() - 0.5) * 30;
+      const top = 12 + rng.float() * 40;
+      const w = 2.5 + rng.float() * 4;
+      const g = ctx.createLinearGradient(0, 108, 0, top);
+      g.addColorStop(0, `rgba(28,24,20,${0.35 + rng.float() * 0.2})`);
+      g.addColorStop(1, 'rgba(28,24,20,0)');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = w;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, 108);
+      ctx.quadraticCurveTo(sx + (rng.float() - 0.5) * 10, 60, sx + (rng.float() - 0.5) * 16, top);
+      ctx.stroke();
+    }
+  });
+}

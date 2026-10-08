@@ -2269,3 +2269,33 @@ describe('the drains drink (sprint 452)', () => {
     expect(n, 'no drain halos').toBeGreaterThan(0);
   });
 });
+
+describe('the water line (sprint 453)', () => {
+  it('rooms that flooded keep the tide mark', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'waterline') n++; });
+      }
+    }
+    expect(n, 'no waterlines').toBeGreaterThan(0);
+  });
+});
+
+describe('the soot (sprint 453)', () => {
+  it('dead hearths keep the bloom they breathed', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'soot-stain') n++; });
+      }
+    }
+    expect(n, 'no soot stains').toBeGreaterThan(0);
+  });
+});
