@@ -1539,14 +1539,16 @@ export class Detective extends Entity {
       this.lookT = 0;
     }
 
-    // the wire: each fresh room you enter inside reach rings ahead of you
+    // the wire: each fresh room you enter inside reach rings ahead of you —
+    // and the ring is a real sound at your position: whatever hears it
+    // walks to where it rang, and the seam's machinery primes on it. The
+    // wire's own voice, so it carries no entity tag — every ear hears it.
     if (this.warranted && owed > 0 && pRoom >= 0 && pRoom !== this.spawnRoom && pRoom !== this.lastPlayerRoom) {
       this.lastPlayerRoom = pRoom;
       if (Math.abs(pRoom - this.spawnRoom) <= 10) {
         c.sound.emit({
           x: p.x, y: 1, z: p.z, intensity: 0.55, category: 'impact',
           caption: '[the house phone rings ahead of you — they know your face]',
-          source: 'detective',
         });
       }
     }
