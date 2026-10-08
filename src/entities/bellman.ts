@@ -351,6 +351,22 @@ export class Bellman extends Entity {
             c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.85, category: 'door', caption: '[the wedge skids loose]', source: this.id });
             this.doorHoldT = 0;
           }
+        } else if (blocking.heldBy === 'player' && v3dist(c.player.pos, blocking.pos) <= 1.9) {
+          // sprint 446 — the weight is answered: a LIVE brace gets shouldered.
+          // Every few seconds of work shoves the holder a stride back off
+          // the leaf; pushed past the brace's own keep radius the grip
+          // fails on the Game's rule — he doesn't break the hold, he moves
+          // the holder. (A held flag with the player nowhere near is the
+          // old stale-mark case: rattle, then lose interest below.)
+          if (this.doorHoldT > 4.5) {
+            this.doorHoldT = 0;
+            const p = c.player;
+            const dx = p.pos.x - blocking.pos.x, dz = p.pos.z - blocking.pos.z;
+            const len = Math.hypot(dx, dz) || 1;
+            p.teleport(p.pos.x + (dx / len) * 0.55, 0, p.pos.z + (dz / len) * 0.55);
+            c.cue('door-slam', v3(blocking.pos.x, 1.2, blocking.pos.z), '[it shoulders the leaf — your grip slips]', { severity: 'danger' });
+            c.sound.emit({ x: blocking.pos.x, y: 1.2, z: blocking.pos.z, intensity: 0.8, category: 'door', caption: '[the leaf bows under a shoulder]', source: this.id });
+          }
         } else if (blocking.heldBy === 'wired') {
           // Wire isn't kicked — it's worked. A visit's labor strains the
           // bind once, then he loses interest; the NEXT visit's work

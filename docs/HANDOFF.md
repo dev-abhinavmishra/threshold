@@ -6328,3 +6328,20 @@ always danger (<=2m 'at this door'), blind sweeps fall back to proximity.
 listen/brace/wire — verb count per leaf is up to 5; if focus contention
 shows up, the leaf-normal side offset (wedge's `nX*side` pattern) is the
 free slot, not more lateral.
+
+## Sprint 446 — the weight is answered
+
+Your weight was the strongest hold in the house and nothing answered it:
+`heldBy === 'player'` fell into a 14s patience check, the warden's
+doorOnPath turned back untouched. Now a LIVE brace gets shouldered —
+the bellman works it every ~4.5s, the warden puts one shoulder in per
+visit (braceShoveT cooldown): each strain teleports the holder 0.55m
+straight off the leaf. Pushed past the brace's own 1.7m keep radius the
+grip fails on updateBraces' existing rule — the house moves the HOLDER,
+never touches the hold, and leaning back in between strains is the
+counterplay. A held flag with no player near (<1.9m) is the stale-mark
+case: rattle, then lose interest as before.
+**Notes:** the shove direction is `player - leaf` normalized — always
+the player's own side, so cluster leaves never throw you through the
+doorway. If future walkers join, keep the same convention (move the
+holder via teleport; don't clear heldBy entity-side).

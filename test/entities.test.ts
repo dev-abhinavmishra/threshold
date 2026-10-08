@@ -345,6 +345,52 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('shoulders a LIVE brace — each strain shoves the holder off the leaf (sprint 446)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';   // the player braced the leaf they came through
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    // standing AT the leaf on the near side, bracing it — a live hold
+    player.pos = v3(entry.pos.x + 0.8, 0, entry.pos.z + 0.5);
+    player.yaw = Math.PI; // face away — isolate the shove path
+    const b = new Bellman();
+    b.spawn(ctx);
+    const d0 = Math.hypot(player.pos.x - entry.pos.x, player.pos.z - entry.pos.z);
+    let t = step(b, ctx, 4);
+    expect(Math.hypot(player.pos.x - entry.pos.x, player.pos.z - entry.pos.z)).toBeCloseTo(d0, 5);
+    t = step(b, ctx, 3, t);   // first strain — one stride back
+    const d1 = Math.hypot(player.pos.x - entry.pos.x, player.pos.z - entry.pos.z);
+    expect(d1).toBeGreaterThan(d0 + 0.3);
+    step(b, ctx, 5, t);       // second strain — past the 1.7m keep radius
+    const d2 = Math.hypot(player.pos.x - entry.pos.x, player.pos.z - entry.pos.z);
+    expect(d2).toBeGreaterThan(1.7);  // the brace's own rule would release now
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shoulders the leaf/.test(c))).toBe(true);
+    b.dispose();
+  });
+
+  it('a stale held mark with the player away still ends in lost interest (sprint 446)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0];
+    entry.heldBy = 'player';
+    const trail = [v3(entry.pos.x, 0, entry.pos.z), v3(room.origin.x, 0, room.origin.z)];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(rooms[20].origin.x + 20, 0, rooms[20].origin.z); // nowhere near
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 400) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /shoulders the leaf/.test(c))).toBe(false); // no live brace — no shoulder
+    expect(captions.some((c) => /steps fade down the hall/.test(c))).toBe(true);
+    b.dispose();
+  });
+
   it('releases the hold and knocks normally once the brace is gone', () => {
     const rooms = routeRooms();
     const room = rooms[20];
