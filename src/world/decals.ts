@@ -7518,3 +7518,145 @@ export function seatSag(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The ribbon kept the words — an ink halo round the platen, the
+ *  ghost of typed lines where the carriage stopped mid-letter. */
+export function platenInk(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The ribbon smudge — a broad inked band across the platen line.
+    const band = g.createLinearGradient(0, 24, 0, 40);
+    band.addColorStop(0, 'rgba(20,18,24,0)');
+    band.addColorStop(0.5, 'rgba(20,18,24,0.4)');
+    band.addColorStop(1, 'rgba(20,18,24,0)');
+    g.fillStyle = band;
+    g.fillRect(14, 24, 68, 16);
+    // Ghost lines — the last page's rows impressed into the roller.
+    for (let i = 0; i < 4; i++) {
+      const y = 27 + i * 3 + rng.range(-0.5, 0.5);
+      for (let x = 20; x < 76; x += 2 + rng.float() * 3) {
+        g.fillStyle = `rgba(30,26,36,${0.2 + rng.float() * 0.3})`;
+        g.fillRect(x, y, 1 + rng.float() * 1.6, 0.7);
+      }
+    }
+    // The strike zone — densest ink where the keys hit the same spot.
+    const zone = g.createRadialGradient(48, 32, 1, 48, 32, 10);
+    zone.addColorStop(0, 'rgba(14,12,20,0.55)');
+    zone.addColorStop(1, 'rgba(14,12,20,0)');
+    g.fillStyle = zone;
+    g.beginPath();
+    g.arc(48, 32, 10, 0, Math.PI * 2);
+    g.fill();
+    // Key fingerprints on the hood — smudged dust where hands rest.
+    for (let i = 0; i < 6; i++) {
+      const fx = 20 + rng.float() * 56;
+      g.fillStyle = `rgba(60,54,44,${0.14 + rng.float() * 0.2})`;
+      g.beginPath();
+      g.ellipse(fx, 50 + rng.range(-3, 4), 3 + rng.float() * 2, 1.2 + rng.float() * 0.8, rng.range(-0.3, 0.3), 0, Math.PI * 2);
+      g.fill();
+    }
+    // The ribbon fray — a stray thread of ink escaping the band.
+    g.strokeStyle = 'rgba(24,20,30,0.4)';
+    g.lineWidth = 0.5;
+    g.beginPath();
+    g.moveTo(76, 32);
+    g.quadraticCurveTo(84, 34 + rng.range(-2, 2), 90, 38 + rng.range(-3, 3));
+    g.stroke();
+  });
+}
+
+/** The breaker kept the burn — a scorch bloom round the failed
+ *  fuse and the finger-smut of every reset since. */
+export function sparkScorch(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The blowout — a starburst of carbon around the row that went.
+    const sx = 34 + rng.float() * 28;
+    const sy = 26 + rng.float() * 20;
+    const burn = g.createRadialGradient(sx, sy, 1, sx, sy, 16);
+    burn.addColorStop(0, 'rgba(12,10,10,0.8)');
+    burn.addColorStop(0.4, 'rgba(22,18,16,0.45)');
+    burn.addColorStop(1, 'rgba(22,18,16,0)');
+    g.fillStyle = burn;
+    g.beginPath();
+    g.arc(sx, sy, 16, 0, Math.PI * 2);
+    g.fill();
+    // The spray — carbon threads licking away from the fault.
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const len = 6 + rng.float() * 14;
+      g.strokeStyle = `rgba(26,22,20,${0.25 + rng.float() * 0.3})`;
+      g.lineWidth = 0.5 + rng.float() * 0.5;
+      g.beginPath();
+      g.moveTo(sx, sy);
+      g.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len * 0.8);
+      g.stroke();
+    }
+    // The fault's eye — a melted pinpoint at the centre.
+    g.fillStyle = 'rgba(6,6,8,0.9)';
+    g.beginPath();
+    g.arc(sx, sy, 2 + rng.float(), 0, Math.PI * 2);
+    g.fill();
+    // Reset smuts — finger trails down the toggle line.
+    for (let i = 0; i < 4; i++) {
+      const fx = 26 + rng.float() * 44;
+      g.fillStyle = `rgba(70,60,50,${0.18 + rng.float() * 0.2})`;
+      g.save();
+      g.translate(fx, 62 + rng.range(-6, 6));
+      g.rotate(rng.range(-0.15, 0.15));
+      g.fillRect(-1, -6, 2 + rng.float(), 12);
+      g.restore();
+    }
+    // Melted sheen flecks where the plastic blistered.
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(140,130,110,${0.14 + rng.float() * 0.18})`;
+      g.beginPath();
+      g.arc(sx + rng.range(-10, 10), sy + rng.range(-8, 8), 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
+}
+
+/** The wheels kept their ruts — twin polished tracks and a skid
+ *  where the chair or gurney always rolls to its rest. */
+export function wheelRuts(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const bend = rng.range(-0.2, 0.2);
+    // Twin tracks — the same two lines worn pale every trip.
+    for (const off of [-8, 8]) {
+      g.strokeStyle = `rgba(178,160,130,${0.3 + rng.float() * 0.14})`;
+      g.lineWidth = 2 + rng.float() * 0.8;
+      g.beginPath();
+      g.moveTo(6, 48 + off + bend * -20);
+      g.quadraticCurveTo(48, 48 + off + bend * 30, 90, 48 + off + bend * 20);
+      g.stroke();
+      // A darker hair inside each track — the tyre's centre wear.
+      g.strokeStyle = `rgba(120,104,82,${0.2 + rng.float() * 0.16})`;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.moveTo(6, 48 + off + bend * -20);
+      g.quadraticCurveTo(48, 48 + off + bend * 30, 90, 48 + off + bend * 20);
+      g.stroke();
+    }
+    // The skid — a dark jag where a wheel locked once.
+    const kx = 30 + rng.float() * 40;
+    g.strokeStyle = 'rgba(50,42,32,0.45)';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(kx, 48 + rng.range(-6, 6));
+    g.lineTo(kx + 6 + rng.float() * 8, 48 + rng.range(-6, 6));
+    g.stroke();
+    // Grime pushed up between the tracks.
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(70,58,44,${0.12 + rng.float() * 0.2})`;
+      g.fillRect(10 + rng.float() * 76, 44 + rng.range(-4, 10), 1 + rng.float() * 1.4, 0.8);
+    }
+    // The rest point — a smudge where the wheels stop and stay.
+    const rx = 66 + rng.range(-8, 12);
+    const rest = g.createRadialGradient(rx, 48 + bend * 18, 1, rx, 48 + bend * 18, 8);
+    rest.addColorStop(0, 'rgba(140,120,96,0.4)');
+    rest.addColorStop(1, 'rgba(140,120,96,0)');
+    g.fillStyle = rest;
+    g.beginPath();
+    g.arc(rx, 48 + bend * 18, 8, 0, Math.PI * 2);
+    g.fill();
+  });
+}

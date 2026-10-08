@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2193,6 +2193,34 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sg.position.set(0, (dc?.[1] ?? 0.85) * 0.55 + 0.006, 0);
     prop.group.add(sg);
     if (!prop.group.name) prop.group.name = 'seat-sag';
+  }
+  // The ribbon kept the words — an ink halo and ghosted lines on
+  // the typewriter platen.
+  if (spec.kind === 'typewriter' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const pi = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: platenInk(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pi.name = 'platen-ink';
+    pi.userData.decalMat = true;
+    pi.position.set(0, (dc?.[1] ?? 0.25) * 0.7, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    prop.group.add(pi);
+    if (!prop.group.name) prop.group.name = 'platen-ink';
+  }
+  // The breaker kept the burn — a carbon bloom on the panel face
+  // where a fuse let go, smuts where fingers reset the rest.
+  if (spec.kind === 'breakerPanel' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ss = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: sparkScorch(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ss.name = 'spark-scorch';
+    ss.userData.decalMat = true;
+    ss.position.set(0, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(ss);
+    if (!prop.group.name) prop.group.name = 'spark-scorch';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
