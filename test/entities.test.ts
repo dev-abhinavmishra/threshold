@@ -527,6 +527,36 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('the register\'s face is on the sign — a filed face teaches double (sprint 362)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28, heldOwed: () => 3 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const evidence = { pos: v3(mid.x + 1.2, 0, mid.z), room: 28, kind: 'line', t: 0, readBy: [] as string[] };
+    (ctx as { hazardEvidence?: EntityCtx['hazardEvidence'] }).hazardEvidence =
+      (key, x, z, r) => {
+        const out = !evidence.readBy.includes(key)
+          && Math.hypot(evidence.pos.x - x, evidence.pos.z - z) < r ? [evidence] : [];
+        for (const e of out) e.readBy.push(key);
+        return out;
+      };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 3, 0, room.entryPos.z - 3);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { signReads: number };
+    let t = 0;
+    for (let i = 0; i < 400 && w.signReads < 2; i++) t = step(warden, ctx, 0.05, t);
+    // ONE named mark teaches what two strangers' marks used to —
+    // signReads 2 == learned in a single read
+    expect(w.signReads, 'one filed-face mark weighs two').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((s) => /register's face is on this sign/.test(s)),
+      'the read names whose hands').toBe(true);
+    warden.dispose();
+  });
+
   it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
