@@ -4258,3 +4258,16 @@ Game.die() from the same five fields.
   text already shows via cue; the sound is physics, not narration.
   The counterplay is being seen, not a ledger line.
 - Gates: tsc, lint, vitest 254 (+1 reposter spec), sim 5/5.
+
+## sprint 365 — the books mutter
+
+- `maybeMutter(under)` rides the room-enter block both spaces — once per
+  room per book (`murmured` set keyed space:room:book): register rustles
+  in clerked/`records`/`lobby` rooms while `unpaidHeld >= 2`; the tally
+  murmurs under while `unpaidTheft >= 2`; the index while `paperTrail
+  >= 3`; the boards themselves lean while `wantedActive`. Whisper cues,
+  non-positional — pure fiction gated on real book state.
+- `murmured` deliberately does NOT ride the checkpoint: a reload
+  re-muttering once is honest (the books still mutter) — it is not a
+  consequence the player can launder.
+- Gates: tsc, lint, vitest 254, sim 5/5.
