@@ -4951,3 +4951,21 @@ Game.die() from the same five fields.
   minted on the player's side → gather → chock back at 2. First run
   hit the known 300s browser-newContext infra flake; green on retry.
 - Gates: tsc, lint, vitest 270, sim 5/5, doors 4/4 e2e, build.
+
+## sprint 394 — the jam isn't welded
+
+- The belt-wheel jam was a one-way trip: 'Chock the blades' spent the
+  chock and `f.dead` was forever. A dead wheel now offers 'Work the
+  chock free — the wheel spins up' (1.4s, same anchor/priority): the
+  chock returns to the pocket AND `f.dead = false` — the blades come
+  back alive. The recovery is priced in the live hazard and its wake
+  sound (0.45 'machine' — a real rouse ~6m), not the tool. A live fan
+  simply doesn't deadHazard-match on a reload, so an un-jammed wheel
+  stays spinning across checkpoints for free.
+- Trap logged (harness): a 'Hide in cabinet' verb out-scored the
+  unchock verb at the leg's stand — prop-leg presses near props must
+  pin focus to the minted id (the doors.spec aimHold pattern), not
+  trust blind pose + KeyE, or a nearer hide verb eats the press.
+- e2e: the fan leg now drives jam → dead → unchock mint → hold →
+  blades live + chock back (spent chock returned to pocket).
+- Gates: tsc, lint, vitest 270, sim 5/5, props leg e2e, build.

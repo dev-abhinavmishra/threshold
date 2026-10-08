@@ -1862,10 +1862,23 @@ export class Game {
     // beside any closed one (see addCrouchedDoorInteracts).
     // Standing at a live belt-wheel: 'Chock the blades' — a door chock
     // dropped in the wheel stills it quiet (and leaves readable sign).
+    // A jammed wheel offers the way back instead: work the chock free
+    // and the blades remember how to spin — the recovery is priced in
+    // the live hazard, not the tool.
     for (const f of this.hazard.fans) {
-      if (f.dead || !this.streamer.builtIndices.includes(f.room)) continue;
+      if (!this.streamer.builtIndices.includes(f.room)) continue;
       const dx = f.pos.x - this.player.pos.x, dz = f.pos.z - this.player.pos.z;
       if (dx * dx + dz * dz > 2.6 * 2.6) continue;
+      if (f.dead) {
+        this.interaction.add({
+          kind: 'unchock', id: `unchock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+          pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
+          prompt: 'Work the chock free — the wheel spins up',
+          holdTime: 1.4, enabled: true, priority: 4,
+          data: f,
+        });
+        continue;
+      }
       this.interaction.add({
         kind: 'chock', id: `chock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
         pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
@@ -3669,6 +3682,18 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
+        return;
+      }
+      case 'unchock': {
+        // sprint 394 — the jam isn't welded: work the chock free and the
+        // wheel spins back up. The blades' wake is a real sound — the
+        // recovery prices the noise and the live hazard, not the tool.
+        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        f.dead = false;
+        it.enabled = false;
+        this.giveItem('doorChock', 1);
+        this.cue('item', it.pos, '[the chock works free — the blades remember how to spin]');
+        this.sound.emit({ x: f.pos.x, y: 1.1, z: f.pos.z, intensity: 0.45, category: 'machine', caption: '[the wheel grinds back to life]' });
         return;
       }
       case 'basket': {
