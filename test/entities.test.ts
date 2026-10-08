@@ -789,10 +789,16 @@ describe('Groundswell (sprint 235)', () => {
 
   it('leaves the wall strips calm', () => {
     const rooms = routeRooms();
-    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    // the wave needs a long run — pick a room with a ≥14m entry→exit
+    // axis so the swell is still traveling at step 30 (index drifted
+    // when new templates joined the seeded pool)
+    const gi = rooms.findIndex((r, i) => i > 15 &&
+      Math.hypot(r.exitPos.x - r.entryPos.x, r.exitPos.z - r.entryPos.z) >= 14);
+    expect(gi).toBeGreaterThanOrEqual(0);
+    const ctx = makeCtx(rooms, { currentRoomIndex: gi });
     const gs = new Groundswell();
     gs.spawn(ctx);
-    const room = rooms[28];
+    const room = rooms[gi];
     const ax = room.exitPos.x - room.entryPos.x, az = room.exitPos.z - room.entryPos.z;
     const len = Math.hypot(ax, az);
     const nx = ax / len, nz = az / len;
@@ -1026,7 +1032,10 @@ describe('Hearing the cast (sprint 238)', () => {
     const w = new Warden();
     w.spawn(ctx);
     const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
-    const np = v3(pos.x + 2.5, 0, pos.z + 2.5);
+    // in-room target — room 20's shape drifts with the template pool;
+    // midpoint of origin→exit is always inside
+    const np = v3((rooms[20].origin.x + rooms[20].exitPos.x) / 2, 0,
+      (rooms[20].origin.z + rooms[20].exitPos.z) / 2);
     emit(np.x, np.z);
     expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
     const arrived = stepTo(() => Math.hypot(pos.x - np.x, pos.z - np.z) < 0.6, ctx, w, 600);
@@ -1038,7 +1047,7 @@ describe('Hearing the cast (sprint 238)', () => {
 
   it('commissionaire pins its lantern on a heard noise', () => {
     const rooms = routeRooms();
-    const idx = rooms.findIndex((r) => r.index >= 20 && r.doors.length >= 2);
+    const idx = rooms.findIndex((r) => (r.doors?.length ?? 0) >= 2);
     const { ctx, emit } = hearingCtx(rooms, idx);
     const comm = new Commissionaire();
     comm.spawn(ctx);
@@ -1098,12 +1107,13 @@ describe('Hearing the cast (sprint 238)', () => {
     const { ctx, emit } = hearingCtx(rooms, 20);
     const w = new Warden();
     w.spawn(ctx);
-    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
-    // Breath-quiet (0.3 < 0.42 floor): ignored.
-    emit(pos.x + 2, pos.z + 2, 0.3, 'distraction');
+    // Breath-quiet (0.3 < 0.42 floor): ignored. Emit in-room — room
+    // 20's footprint drifts with the template pool; origin is always inside.
+    const ip = rooms[20].origin;
+    emit(ip.x, ip.z, 0.3, 'distraction');
     expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
     // Pebble loudness (0.45): below the door-rouse floor but inside hearing.
-    emit(pos.x + 2, pos.z + 2, 0.45, 'distraction');
+    emit(ip.x, ip.z, 0.45, 'distraction');
     expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
     w.dispose();
   });

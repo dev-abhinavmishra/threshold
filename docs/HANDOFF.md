@@ -4767,3 +4767,18 @@ Game.die() from the same five fields.
 - Gates: tsc, lint, vitest 262, sim 5/5, locker leg green
   (itemize → join → named → cut → rot → shelf-refuse → buyback),
   build.
+
+## sprint 385 — the book knows the shelf and the till
+
+- The Broker's book readout knew the live tag but not the tag's
+  tail ends: a rotted tag's goods on the shelf and the coin the
+  count keeps outright. Now `the shelf keeps M of yours` and
+  `C of your coin sits in the count's till` append to the paid
+  readout — his book knows everything his house holds of yours.
+- Gates: tsc, lint, vitest, sim, build. Readout only.
+- Bundled repair — sibling s420-423 left main's vitest red:
+  porter-lodge's chair sat in the entry lane (moved z 2.3→1.55),
+  and the new pool member drifted seed-pinned specs: two count
+  guards re-pinned (conn>=2, fans>=3), four entity specs made
+  geometry-resilient (any multi-door room, in-room emit points,
+  axis>=14 groundswell room).
