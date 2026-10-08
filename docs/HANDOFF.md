@@ -3745,6 +3745,7 @@ hazards, not corridors. hider-main 9/8/12, same profile.
 - Gates: tsc, lint, 237 vitest, 5-seed sim, doors 1/1 (+primed leg),
   build.
   undercast 11/11 (tallySign + docketSign), build.
+
 ## sprint 402 — calls closed, host pick extracted (sheet verb → s339)
 
 - DESIGN_CALLS.md deleted — all three calls settled and built in 401.
@@ -3755,6 +3756,127 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   landed 'Read the wanted sheet' (kind 'wanted', room-scoped host
   lookup, priority 1, y=0.75) first; theirs stays end-to-end.
 - Gates: tsc, lint, vitest scoped (10/10) — green.
+
+## sprint 341 — he knows marked stock
+
+- The Detective's slow look now feeds on marked wares, not just debt:
+  `pRoom === spawnRoom && (owed > 0 || carriesMarked())` — carrying
+  rifled goods into his room on a clean ledger clocks him anyway. His
+  register wrote the manifest of what was rifled, so the sighting
+  files itself: `stockSighted()` → unpaidHeld +1, once per detective
+  (`stockNoted`), cue `[he knows marked stock — the register gains a
+  line]`.
+- Two new ctx hooks, same witness-filing shape as eyeFiled/wordFiled/
+  lineCut: `carriesMarked` (inventory has a hotItems id with count > 0
+  — respects s337's pruned-mark semantics) and `stockSighted` (+1 line).
+- Emergent completeness: the marked-goods carry now prices everywhere —
+  warm clerks read stock on you (s331), the Broker fences it, and the
+  Detective sight-files it. The carry is testimony on all three floors.
+- e2e: detective leg phase 0 marks 'tonic' + carries it in clean →
+  asserts the stock caption + held 0→1 → then the register rifle still
+  lands +2 (heldAfterDrawer 3 — sighting stacks with the pilfer).
+- Gates: tsc, lint, 237 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 342 — the boards name your face
+
+- The wanted sheet's ×1.5 notice extension (s401) is now honest: a
+  catch in the EXTENDED band announces the boards bought it, once per
+  wanted episode per entity (`sheetNamed`, reset when wanted drops).
+  Grafter's gaze → '[the boards named your face — it reads you past
+  its reach]'; hauler/laundress ears → '[the boards named your step]'.
+  Normal-band catches keep their existing tells — the naming is only
+  for what the sheets sold.
+- No semantic change to ctx.wanted — the three callsites still widen
+  ×1.5; this sprint adds the readable tell, not counterplay. A per-room
+  'tear the sheet down' would need per-room deafen semantics (wanted
+  is a global flag) — still deferred.
+- e2e: audit leg phase 2.75 — with wanted up, teleport to the hauler's
+  room, emit a slam ~8.5m away (inside room bounds, yaw-aware — the
+  same math as pointInRoom), assert the boards caption. The grafter's
+  face-band is the same hook shape, not separately driven.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 343 — tear the sheet down
+
+- 'Tear the sheet down' mints beside 'Read the wanted sheet' on each
+  posted board (priority 3, 1.1s, one-shot, offset 0.55m along the
+  board line so 'read' keeps the center aim — papers are priority 3,
+  so anything lower than the tear loses to a neighbor desk).
+- The reach now reads the boards, not the flag: `ctx.wanted` →
+  `wantedActive && wantedRooms.size > 0`. Each tear removes that
+  room's map entry + decal; the last one ends the ×1.5 extension
+  everywhere — `[the last sheet comes down — the boards forget your
+  face]`. The ledger is untouched: `wantedActive` still holds until
+  the tally settles (settle still mints; lowerWanted still sweeps).
+  Pulling paper is 'work' sign at the host.
+- This is additive on the sibling's s401 semantics, not a narrowing:
+  the sheets physically carry the word — none up, no wider ear.
+- e2e: audit leg phase 2.85 tears every sheet room-by-room (perp-side
+  stand, focus-gated hold) → torn === sheets, reach dead, last-sheet
+  caption, 'work' sign at a host. Diagnostics (tearDbg) record minted
+  flag + focused-prompt samples per room — room 6's counter-claim
+  (priority 3) stole focus until the tear went to 3.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 344 — the clerk has more paper
+
+- s343's tear made the deafen free and permanent — this closes the
+  loop: when the last sheet comes down, `wantedRepostT` starts a 30s
+  window; at expiry, `raiseWanted(true)` re-arms the same raise on
+  fresh downstream hosts with `[fresh sheets go up on the boards
+  ahead — the clerk has more paper]`. The tug-of-war: every repost is
+  another trip to another board for the tearer.
+- `wantedRepostT` is armed only by the size→0 transition inside
+  `wantedTear` (not by settle — `lowerWanted` clears active anyway,
+  and the `> 0` guard keeps a settled episode from reposting). 30s
+  matches the cost model: relief is time-bound, not free.
+- Emergent: entities' `sheetNamed` resets while the boards stand bare,
+  so a repost's extended catches announce again on their own.
+- e2e: audit leg phase 2.9 — after tearing all sheets, wait out the
+  window at the desk (repost picks hosts downstream of where you
+  stand — his room has more route after it), assert `wantedRooms`
+  refills + the fresh-sheets caption.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast 11/11, build.
+
+## sprint 345 — the wire betrays you
+
+- The wire ring was `source: 'detective'`, and every hear gate in the
+  codebase rejects sourced events (`noiseCanBeHeard`/`noiseCanRouse`
+  both `!e.source`) — the phone rang *fictionally* but the house could
+  not physically hear it. Dropped the tag: the ring is the wire's own
+  voice at your position — a real 0.55 'impact', so whatever stands
+  within ~7.7m walks to where it rang, and `onRouseNoise` primes the
+  seam's milestones +1..+3 and rattles closed doors in reach.
+- The under's wanted sheets widen entity bands by a flag; the wire is
+  the main-route mirror — no flag, just positional sound at you on
+  every fresh room entry while `warranted`. Counterplay unchanged:
+  pull the line (s309) and `warranted` never sets, outrun +10 rooms,
+  or settle. "They know your face" is now mechanically true.
+- e2e: detective leg phase 3 subscribes `ga.sound.on` — asserts the
+  ring carries no `source` (every ear hears it) and that the
+  milestones within +3 of the entered room primed (assert only binds
+  when a milestone sits in reach). The s278 vitest now asserts the
+  emitted ring itself has no source.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, economy 7/7, build.
+
+## sprint 346 — the boards keep their tears
+
+- s332 carried the ledgers past death but the wanted EPISODE (sibling
+  s401) still laundered for free: `unpaidTheft` persisted while
+  `wantedActive`/`wantedRooms`/`wantedRepostT` didn't, so a reload
+  mid-tug-of-war repinned every torn board and re-armed the whole
+  raise. CheckpointSave now carries `wantedActive`,
+  `wantedRooms` as `[roomIdx, {x,z}][]` (the decal + verbs re-derive
+  from the map through `ensureWanted`, so the restore needs nothing
+  else), and `wantedRepostS` = REMAINING seconds
+  (`repostT - clock.time`, clamped ≥0) — the absolute field is
+  clock-relative and a saved epoch would mis-fire on the new clock;
+  restore re-arms as `clock.time + repostS`.
+- e2e: audit leg 2.9 — `cpArmed` asserts a checkpoint written inside
+  the armed window carries `wantedActive` + empty map + repostS > 0;
+  `cpWanted` asserts one written after the repost mirrors the refilled
+  board map 1:1. Both bind only when their phase held.
+- Gates: tsc, lint, 243 vitest, 5-seed sim, undercast audit leg, build.
 
 ## sprint 403 — the fixes the review earned (s401 review debt)
 

@@ -2075,8 +2075,13 @@ describe('the House Detective (sprint 278)', () => {
     emit.mockClear();
     ctx.player.pos.x = 0; ctx.player.pos.z = 12; // slips into the next room
     for (let i = 0; i < 10; i++) { ctx.now += 0.05; d.update(0.05); }
-    expect(emit.mock.calls.some((c) => (c[0] as { source?: string }).source === 'detective'),
-      'the room rings ahead of you').toBe(true);
+    // the ring is a real sound — no entity tag, so every ear hears it
+    // and the wire betrays where it rang
+    const ring = emit.mock.calls.find((c) =>
+      /house phone rings/.test((c[0] as { caption?: string }).caption ?? ''));
+    expect(ring, 'the room rings ahead of you').toBeTruthy();
+    expect((ring![0] as { source?: string }).source,
+      'the wire carries no entity tag — every ear hears it').toBeUndefined();
     d.dispose();
   });
 

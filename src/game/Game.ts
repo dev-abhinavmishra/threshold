@@ -628,6 +628,12 @@ export class Game {
     this.hotImprints = cp?.hotImprints ?? 0;
     this.hotItems.clear();
     for (const id of cp?.hotItems ?? []) this.hotItems.add(id);
+    // the wanted episode rides the checkpoint too — torn boards stay
+    // torn, an armed repost keeps its remaining seconds on this clock
+    this.wantedActive = cp?.wantedActive ?? false;
+    this.wantedRooms = new Map(cp?.wantedRooms ?? []);
+    const repostS = cp?.wantedRepostS ?? 0;
+    this.wantedRepostT = repostS > 0 ? this.clock.time + repostS : 0;
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -882,10 +888,12 @@ export class Game {
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
       heldOwed: () => this.unpaidHeld,
-      wanted: () => this.wantedActive,
+      wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
       lineCut: () => { this.unpaidHeld += 1; }, // the dead wire goes in his book as damages
       eyeFiled: () => { this.unpaidHeld += 1; }, // a held settle is a witness line in the register
+      stockSighted: () => { this.unpaidHeld += 1; }, // he knows marked stock — the manifest is his
+      carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -928,6 +936,9 @@ export class Game {
    *  your face. The under-crew notices a tier harder until you settle. */
   private wantedActive = false;
   private wantedRooms = new Map<number, { x: number; z: number }>();
+  /** The clerk has more paper — once the boards stand bare this clock
+   *  starts a repost window (fresh sheets downstream). */
+  private wantedRepostT = 0;
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -1417,6 +1428,23 @@ export class Game {
             pos: { x: host.x, y: 0.75, z: host.z },
             prompt: 'Read the wanted sheet',
             holdTime: 0.8, enabled: true, priority: 1,
+            data: {},
+          });
+          // Tear the sheet down — the reach reads the boards, not the
+          // flag: each torn sheet deafens the crew's wider ear a share,
+          // and the last one ends it outright (the ledger still names
+          // you until the tally settles). Aimed off-center so the
+          // lighter 'read' verb stays the ambient touch.
+          const tox = this.player.pos.x - host.x, toz = this.player.pos.z - host.z;
+          const trm = this.activeRooms()[this.currentRoom];
+          const tx0 = (trm ? trm.origin.x : this.player.pos.x + tox) - host.x;
+          const tz0 = (trm ? trm.origin.z : this.player.pos.z + toz) - host.z;
+          const tl = Math.hypot(tx0, tz0) || 1;
+          this.interaction.add({
+            kind: 'wantedTear', id: `wantedTear-${this.space}:${this.currentRoom}`,
+            pos: { x: host.x - (tz0 / tl) * 0.55, y: 0.75, z: host.z + (tx0 / tl) * 0.55 },
+            prompt: 'Tear the sheet down',
+            holdTime: 1.1, enabled: true, priority: 3,
             data: {},
           });
         }
@@ -3305,6 +3333,24 @@ export class Game {
         this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder until the count settles]`, 'warn');
         return;
       }
+      case 'wantedTear': {
+        // the boards carry the wider ear — pull the sheet and the room
+        // forgets your face; the last sheet ends the reach everywhere.
+        // The ledger itself is untouched: the tally still wants a settle.
+        this.wantedRooms.delete(this.currentRoom);
+        it.enabled = false;
+        const built = this.streamer.get(this.currentRoom);
+        const notice = built?.group.getObjectByName('wanted-notice');
+        if (built && notice) built.group.remove(notice);
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: this.currentRoom,
+          kind: 'work', t: this.clock.time, readBy: [] });
+        this.cue('chalk-mark', it.pos, this.wantedRooms.size === 0
+          ? '[the last sheet comes down — the boards forget your face]'
+          : '[the sheet comes down — the boards have one fewer name for you]', 'warn');
+        // the boards stand bare — the clerk reaches for fresh paper
+        if (this.wantedRooms.size === 0) this.wantedRepostT = this.clock.time + 30;
+        return;
+      }
       case 'stripCheck': {
         // Stealing the light mid-count — it feels it die instantly, and
         // the lamp is crew property: the strip files ANOTHER loss-report.
@@ -3922,13 +3968,17 @@ export class Game {
 
   /** The clerk's ledger named you — wanted sheets go up on the crew
    *  boards downstream, and the under-crew listens a tier harder until
-   *  the tally is settled (ctx.wanted widens their notice reach). */
-  private raiseWanted(): void {
+   *  the tally is settled (ctx.wanted widens their notice reach).
+   *  Tear every sheet and he reaches for fresh paper: `repost` re-arms
+   *  the same raise on new downstream boards after a beat. */
+  private raiseWanted(repost = false): void {
     this.wantedActive = true;
     for (const h of pickWantedHosts(this.activeRooms(), this.currentRoom)) {
       this.wantedRooms.set(h.roomIdx, { x: h.x, z: h.z });
     }
-    this.cue('chalk-mark', null, '[sheets go up on the boards ahead — your hands are named]', 'warn');
+    this.cue('chalk-mark', null, repost
+      ? '[fresh sheets go up on the boards ahead — the clerk has more paper]'
+      : '[sheets go up on the boards ahead — your hands are named]', 'warn');
   }
 
   private lowerWanted(): void {
@@ -4165,6 +4215,9 @@ export class Game {
       paperTrail: this.paperTrail,
       hotImprints: this.hotImprints,
       hotItems: [...this.hotItems],
+      wantedActive: this.wantedActive,
+      wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
+      wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
     };
   }
 
@@ -4606,6 +4659,14 @@ export class Game {
       for (const e of this.entities) {
         if (e instanceof Auditor && e.demanded) { this.raiseWanted(); break; }
       }
+    }
+    // the boards stand bare — the clerk reaches for fresh paper and the
+    // sheets go back up on new boards downstream (the tug-of-war: every
+    // repost is another trip to another board for the tearer)
+    else if (this.wantedActive && this.wantedRooms.size === 0 && this.space === 'under'
+      && this.clock.time >= this.wantedRepostT && this.wantedRepostT > 0) {
+      this.raiseWanted(true);
+      this.wantedRepostT = 0;
     }
 
     for (const i of this.streamer.builtIndices) {
