@@ -4667,6 +4667,7 @@ export class Game {
           books: {
             thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
             hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
+            seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
           },
         },
         documents: this.loadDocs(),
@@ -4697,6 +4698,7 @@ export class Game {
         thefts: this.unpaidTheft,
         held: this.unpaidHeld,
         asks: this.paperTrail,
+        seized: this.seizedTake.reduce((n, s) => n + s.count, 0),
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
       },

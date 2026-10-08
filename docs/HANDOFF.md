@@ -4431,3 +4431,12 @@ Game.die() from the same five fields.
   focused prompt.
 - Gates: tsc, lint, vitest 255, sim 5/5, undercast 'the count's
   locker' leg green, build.
+
+## sprint 375 — the locker reads at the end
+
+- `BooksClosed` gained `seized` (optional — older saves/UI payloads
+  parse clean): the count's locker joins the epitaph. Both payloads
+  (death `books`, victory `books`) sum `seizedTake` units.
+- `bookLines` adds 'N seized wares still hang in the count's locker'
+  — the reclaim path has its reckoning on both end screens.
+- Gates: tsc, lint, vitest, sim, build (batched with the sprint).
