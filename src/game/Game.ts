@@ -641,6 +641,26 @@ export class Game {
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
       });
     }
+    // the dead stay dead — disarmed/bled/choked/killed hazards don't
+    // resurrect; positions key the match within a room
+    for (const h of cp?.deadHazards ?? []) {
+      const near = (p: { x: number; z: number }) =>
+        Math.hypot(p.x - h.x, p.z - h.z) < 0.35;
+      if (h.kind === 'snare') {
+        const s = this.hazard.snares.find((x) => x.room === h.room && near(x.pos));
+        if (s) s.armed = false;
+      } else if (h.kind === 'steam') {
+        const s = this.hazard.steams.find((x) => x.room === h.room && near(x.pos));
+        if (s) s.dead = true;
+      } else if (h.kind === 'fan') {
+        const f = this.hazard.fans.find((x) => x.room === h.room && near(x.pos));
+        if (f) f.dead = true;
+      } else {
+        const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
+        if (w) { if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true; }
+      }
+    }
+    this.drainedRooms = new Set(cp?.drainedRooms ?? []);
     this.stockSeen.clear();
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -4224,6 +4244,15 @@ export class Game {
       wantedRooms: [...this.wantedRooms].map(([k, v]) => [k, { x: v.x, z: v.z }]),
       wantedRepostS: Math.max(0, this.wantedRepostT - this.clock.time),
       deadLines: [...this.deadLines],
+      deadHazards: [
+        ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
+        ...this.hazard.steams.filter((s) => s.dead).map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z })),
+        ...this.hazard.fans.filter((f) => f.dead).map((f) => ({ room: f.room, kind: 'fan' as const, x: f.pos.x, z: f.pos.z })),
+        ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
+          room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
+          dead: w.dead || undefined, filed: w.filed || undefined })),
+      ],
+      drainedRooms: [...this.drainedRooms],
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,

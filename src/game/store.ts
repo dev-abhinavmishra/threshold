@@ -171,6 +171,12 @@ export interface CheckpointSave {
   evidence?: { room: number;
     kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work';
     t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
+  // the dead stay dead — hazards you spent a tool or a risk on don't
+  // resurrect on a reload (positions key the match within a room)
+  deadHazards?: { room: number; kind: 'snare' | 'steam' | 'fan' | 'eye';
+    x: number; z: number; dead?: boolean; filed?: boolean }[];
+  // drained flooded halls — physical water state, same class as deadLines
+  drainedRooms?: string[];
 }
 
 export function saveCheckpoint(c: CheckpointSave): void {

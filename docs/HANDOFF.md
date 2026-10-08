@@ -3906,3 +3906,20 @@ hazards, not corridors. hider-main 9/8/12, same profile.
   `pos.y` restored 0 like every writer.
 - Gates: tsc, lint (vitest/sim batched with the next commits, per the
   new cadence).
+
+## sprint 349 — the dead stay dead
+
+- Biggest remaining reload lie: hazard kill-state was run-memory. A
+  snipped wire re-armed, a bled line re-hissed, a choked wheel spun
+  again, and a settled eye could file a SECOND witness line on the
+  same face — the rooms you made safe were dangerous again and the
+  register double-billed the same eye.
+- `CheckpointSave.deadHazards` carries positional kill-state —
+  `!armed` snares, `dead` steams/fans, and watchers that are `dead` OR
+  `filed` (`filed` persists so a survivor can't be billed twice).
+  `addFromRoom` runs upfront on startRun so restore marks entries
+  directly: same-room + 0.35m positional match.
+- `drainedRooms` was the same class of physical state (drained halls
+  re-flooded on reload) — now persisted as `string[]` keys
+  (`${space}:${idx}`).
+- Gates: tsc, lint (vitest/sim/e2e batched at the next major commit).
