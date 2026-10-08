@@ -1545,6 +1545,39 @@ describe('Grafter (sprint 256)', () => {
     g.dispose();
     b.dispose();
   });
+
+  it('the tally\'s mark is on the sign — an owed name teaches double (sprint 363)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const room = {
+      index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([room], { currentRoomIndex: 0, claimsOwed: () => 2 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    (ctx.player as unknown as { hiddenSpot: unknown }).hiddenSpot = { id: 'cab' };
+    ctx.player.protection = 'hidden';
+    const records = [
+      { pos: v3(2.8, 0, 2.8), room: 0, kind: 'wire' as const, t: 0, readBy: [] as string[] },
+    ];
+    ctx.hazardEvidence = (key, x, z, r) => {
+      const out = records.filter((e) => !e.readBy.includes(key)
+        && Math.hypot(e.pos.x - x, e.pos.z - z) < r).slice(0, 1);
+      for (const e of out) e.readBy.push(key);
+      return out;
+    };
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { markReads: number };
+    for (let i = 0; i < 900 && gi.markReads < 2; i++) { ctx.now += 0.05; g.update(0.05); }
+    // ONE mark under an owed tally teaches what two strangers' marks
+    // used to — markReads 2 == eager in a single read
+    expect(gi.markReads, 'one tally-named mark weighs two').toBeGreaterThanOrEqual(2);
+    const cues = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(cues.some((t) => /tally's mark is on this sign/.test(t)),
+      'the read names whose hands').toBe(true);
+    g.dispose();
+  });
 });
 
 
