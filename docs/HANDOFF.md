@@ -5514,6 +5514,33 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 467–469 — the treads wore thin, the grout darkened & the sun bleached the boards
+
+Sprint 467: `stairWear` — polished tread centers on stairs/
+stairLanding/grandStair props at ~50% (buildProp overlay, named
+`stair-wear`); `hookWear` — greasy halos behind keyRack/ceilingHook
+at ~45% (named `hook-wear`); `ceilingHair` — wandering plaster
+hairlines at ~25% (ceiling quad, named `ceiling-hair`).
+
+Sprint 468: `cartTracks` — twin wheel rails on non-lived floors at
+~35% (named `cart-tracks`); `groutLines` — darkening tile seams in
+wet/non-lived rooms at ~30% (named `grout-lines`); `counterDrips` —
+spill trails down case-fronts for 16 cabinet-ish kinds at ~20%
+(buildProp overlay at +z face, named `counter-drips`).
+
+Sprint 469: `sunFade` — bleached floor parallelograms under ~40% of
+windows (named `sun-fade`); `hingeRust` — oxide runs at the leaf's
+hinge edge on ~18% non-industrial doors (named `hinge-rust`);
+`lampGhost` — spared floor rings where lamps stood at ~25% of
+lived-in rooms (named `lamp-ghost`).
+
+Gotcha: Port is only {wall, offset, width} — portLocalPos takes a
+synthesized literal directly for wall+along → room-space points
+(floor offsets under wall decals, e.g. sun-fade/lamp-ghost).
+
+Gates: tsc, lint, generation tests (9 new cases). Full suite + sim
+before push. No e2e leg — dressing only.
+
 ## Sprint 464–466 — the glass kept the word, the corners bloomed & the doors dragged
 
 Sprint 464: `paneWriting` — finger-writ smears on ~10% of unboarded
