@@ -534,6 +534,20 @@ export class Grafter extends Entity {
     if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2 || this.lifeT > (this.eager ? 120 : 75)) this.done();
   }
 
+  /** A carried coil is lost work — it goes down, the splice spills
+   *  unlaid at its feet. Dead wire again: strippable by the next
+   *  scavenger — or by this one once it rises. */
+  override stagger(seconds: number): void {
+    super.stagger(seconds);
+    if (this.carrying > 0) {
+      this.carrying = 0;
+      const pr = this.roomOf(this.pos);
+      if (pr >= 0) this.ctx.spillSnare?.(this.pos, pr);
+      this.ctx.cue('grafter-grind', this.pos,
+        '[the coil slips free — it falls slack where it drops]', { severity: 'warn' });
+    }
+  }
+
   private roomOf(p: Vec3): number {
     const rooms = this.ctx.rooms;
     for (let i = 0; i < rooms.length; i++) {

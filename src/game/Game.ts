@@ -774,8 +774,14 @@ export class Game {
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
     for (const gw of cp?.graftedWires ?? []) {
+      if (gw.armed === false) {
+        // a spilled coil restores as dead work — no face, no fresh sign;
+        // its mark was written when it dropped (the splice signs a live
+        // laying, never a rehydration)
+        this.hazard.snares.push({ pos: v3(gw.x, 0, gw.z), room: gw.room, armed: false, grafted: true });
+        continue;
+      }
       this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
-      if (gw.armed === false) this.hazard.snares[this.hazard.snares.length - 1].armed = false;
     }
     this.lampOn = false;
     this.pulseLampOn = false;
@@ -1079,6 +1085,7 @@ export class Game {
         return true;
       },
       plantSnare: (pos, room, planterKey) => this.plantSnare(pos, room, planterKey),
+      spillSnare: (pos, room) => this.spillSnare(pos, room),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1341,14 +1348,27 @@ export class Game {
     // sprint 418 — the splice signs itself: fresh work marks the floor for
     // the under's other hunters, the way a rifled till does. The planter
     // gets it pre-read under its own key so it doesn't chase its own coil.
-    this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-      t: this.clock.time, readBy: planterKey ? [planterKey] : [] });
+    // Only a live planting signs — checkpoint restores pass no key and
+    // re-mint the wire silently (the mark was written when it was laid).
+    if (planterKey) {
+      this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
+        t: this.clock.time, readBy: [planterKey] });
+    }
     const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
     const fy = this.activeRooms()[room]?.origin.y ?? 0;
     built.group.position.set(pos.x, fy, pos.z);
     built.group.rotation.y = ((pos.x * 7.31 + pos.z * 13.7) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
     this.entityGroup.add(built.group);
     this.graftedMeshes.push(built.group);
+  }
+
+  /** sprint 419 — a dropped coil is dead wire again: no arm, no prop
+   *  face (a live-looking wire would lie), just the splice-sign a
+   *  tripped one would leave — reclaimable by the next scavenger. */
+  private spillSnare(pos: Vec3, room: number): void {
+    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: false, grafted: true });
+    this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'wire',
+      t: this.clock.time, readBy: [] });
   }
 
   private spawnEntity(e: Entity): void {

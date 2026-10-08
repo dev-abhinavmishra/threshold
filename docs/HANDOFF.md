@@ -5721,3 +5721,15 @@ weld. Chains are already emergent: a tripped graft is a dead wire,
 and dead wire is what grafters strip — a coil can ride two backs.
 
 Gates: tsc, lint, contract spec +1 (batched).
+
+## Sprint 419 — the spill scatters the coil
+Carried work is losable work — the grafter's coil now mirrors the
+floorkeeper's felt: stagger a carrier and the splice falls slack as a
+dead graft at its feet (no arm, no prop face — a live-looking wire
+would lie). It signs 'wire' like any kill, and dead wire is what
+scavengers strip — the next grafter, or this one once it rises, can
+re-carry it. Checkpoint honesty: grafts save their armed flag (s415),
+so a spill restores as dead work — silent, no face, no re-signed mark
+(the splice signs a live laying, never a rehydration).
+
+Gates: tsc, lint, contract spec +1 (batched).

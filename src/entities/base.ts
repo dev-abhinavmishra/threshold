@@ -120,6 +120,9 @@ export interface EntityCtx {
    *  plant arms a new (grafted) one at pos in room. */
   stripSnare?: (x: number, z: number) => boolean;
   plantSnare?: (pos: Vec3, room: number, planterKey?: string) => void;
+  /** sprint 419 — a carried coil is lost work: a staggered carrier
+   *  drops it unlaid — a dead graft at its feet, reclaimable wire. */
+  spillSnare?: (pos: Vec3, room: number) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

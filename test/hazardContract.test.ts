@@ -141,6 +141,18 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     // the splice reads as the under's work at the cut verb, not the house's weld
     expect(gameSrc).toContain('Cut the splice');
   });
+
+  it('the spill scatters the coil — a staggered carrier drops its work unlaid', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const spSrc = readFileSync(new URL('../src/entities/setpieces.ts', import.meta.url), 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // carried work is losable work — the grafter mirrors the floorkeeper's spill
+    expect(baseSrc).toContain('spillSnare');
+    expect(spSrc).toContain('override stagger');
+    expect(spSrc).toContain('coil slips free');
+    // a dropped coil is dead wire: unarmed, unpropped, signed like a kill
+    expect(gameSrc).toMatch(/spillSnare[\s\S]*armed: false[\s\S]*kind: 'wire'/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {
