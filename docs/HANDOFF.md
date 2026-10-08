@@ -3985,3 +3985,13 @@ the ear gets s340's seam hum, the eye gets light escaping a shut door.
 - Readable: the wanted state is announced by the sheets and the
   extended-band catches; the book readout prints the live count.
 - Gates: tsc, lint (batched verify follows).
+
+## sprint 405 — the sting behind the seam
+
+The primed tell now lands: opening a door onto a primed set piece cues
+'[the work was already running — it heard you]' once per room
+(`primedStingDone`, cleared on startRun; gated on the player being
+outside `d.roomIndex` so leaving the room never re-stings). The s404
+spill breathes too — `spillMeshes` (per-room cloned material) pulses
+opacity 0.6±0.4 on the ensure loop, so a primed door reads alive from
+the hall, not just lit.
