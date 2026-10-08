@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1965,6 +1965,36 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sl.position.set(0, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.35) / 2 + 0.006);
     prop.group.add(sl);
     if (!prop.group.name) prop.group.name = 'shelf-lip';
+  }
+  // The rail kept the hands — a darkened grip band worn into the
+  // handrail where decades of hands slid down.
+  if (spec.kind === 'railing' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const rgm = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.3),
+      new THREE.MeshStandardMaterial({ map: railGrime(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    rgm.name = 'rail-grime';
+    rgm.userData.decalMat = true;
+    rgm.rotation.x = -Math.PI / 2;
+    rgm.position.set(0, (dc?.[1] ?? 0.9) + 0.006, 0);
+    prop.group.add(rgm);
+    if (!prop.group.name) prop.group.name = 'rail-grime';
+  }
+  // The doors took the boots — heel scuffs and finger drags on the
+  // metal leaves of the lifts and shutters.
+  const METAL_DOORS = new Set(['liftDoors', 'dumbWaiterDoor', 'shutterDoor']);
+  if (METAL_DOORS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ls = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.8),
+      new THREE.MeshStandardMaterial({ map: liftScuff(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ls.name = 'lift-scuff';
+    ls.userData.decalMat = true;
+    ls.position.set(0, (dc?.[1] ?? 1.8) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(ls);
+    if (!prop.group.name) prop.group.name = 'lift-scuff';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

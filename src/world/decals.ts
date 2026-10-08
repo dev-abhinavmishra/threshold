@@ -6315,3 +6315,114 @@ export function baseGrime(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Sprint 491 — the rail kept the hands: a darkened grip band and polish sheen worn into the handrail. */
+export function railGrime(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the grip band — decades of hands darkened the wood along the top
+    const band = g.createLinearGradient(0, 8, 0, 26);
+    band.addColorStop(0, 'rgba(52,40,28,0.65)');
+    band.addColorStop(0.6, 'rgba(56,44,30,0.35)');
+    band.addColorStop(1, 'rgba(56,44,30,0)');
+    g.fillStyle = band;
+    g.fillRect(4, 8, 88, 18);
+    // polish sheen — the rubbed highlights between darker spans
+    g.fillStyle = 'rgba(190,170,140,0.3)';
+    for (let i = 0; i < 5; i++) {
+      const x = 10 + i * 18 + rng.range(-3, 3);
+      g.beginPath(); g.ellipse(x, 14, 6 + rng.float() * 4, 2.4, 0, 0, Math.PI * 2); g.fill();
+    }
+    // finger drag marks — short darker strokes across the band
+    g.strokeStyle = 'rgba(36,28,20,0.5)';
+    g.lineWidth = 1.1;
+    for (let i = 0; i < 8; i++) {
+      const x = rng.range(8, 86);
+      g.beginPath(); g.moveTo(x, 11); g.lineTo(x + rng.range(-3, 3), 20 + rng.float() * 4); g.stroke();
+    }
+    // ring dents where knuckles rapped the rail
+    g.fillStyle = 'rgba(28,22,18,0.5)';
+    for (let i = 0; i < 4; i++) {
+      g.beginPath(); g.ellipse(rng.range(12, 84), 13 + rng.range(-1, 3), 1.6, 0.9, 0, 0, Math.PI * 2); g.fill();
+    }
+    // dust in the underside shadow
+    g.fillStyle = 'rgba(150,140,124,0.3)';
+    for (let i = 0; i < 12; i++) {
+      g.fillRect(rng.range(6, 90), rng.range(28, 40), 1, 0.8);
+    }
+  });
+}
+
+/** Sprint 491 — the doors took the boots: heel scuffs, finger drags and a kicked dent on the lift metal. */
+export function liftScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48;
+    // heel scuffs — dark rubber arcs low on the door
+    g.strokeStyle = 'rgba(28,24,20,0.7)';
+    for (let i = 0; i < 5; i++) {
+      const x = cx + rng.range(-28, 28);
+      const y = 78 + rng.range(-6, 10);
+      g.lineWidth = 2 + rng.float() * 1.4;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + rng.range(4, 10), y - rng.range(3, 8), x + rng.range(10, 18), y - rng.range(2, 6));
+      g.stroke();
+    }
+    // the kicked dent — a shallow bright scrape
+    g.fillStyle = 'rgba(160,150,132,0.35)';
+    g.beginPath(); g.ellipse(cx + rng.range(-10, 10), 74, 6, 3, rng.range(-0.3, 0.3), 0, Math.PI * 2); g.fill();
+    // finger drags — greasy smears at push height
+    g.strokeStyle = 'rgba(48,40,32,0.45)';
+    g.lineWidth = 1.6;
+    for (let i = 0; i < 6; i++) {
+      const x = cx + rng.range(-24, 24);
+      g.beginPath(); g.moveTo(x, 46 + rng.range(-4, 4)); g.lineTo(x + rng.range(-2, 2), 60 + rng.range(-4, 8)); g.stroke();
+    }
+    // the seam shadow between the leaves
+    g.strokeStyle = 'rgba(22,18,16,0.65)';
+    g.lineWidth = 2.4;
+    g.beginPath(); g.moveTo(cx, 4); g.lineTo(cx, 92); g.stroke();
+    // oil crescents along the bottom track
+    g.fillStyle = 'rgba(30,26,22,0.5)';
+    for (let i = 0; i < 7; i++) {
+      g.beginPath(); g.ellipse(10 + i * 12, 91 + rng.range(-1, 2), 3, 1.4, 0, 0, Math.PI * 2); g.fill();
+    }
+  });
+}
+
+/** Sprint 491 — the gap kept the drift: dust, grit and a dead leaf that blew under the door. */
+export function doorDrift(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // the drift — a wind-combed ridge heaped against the door foot
+    const drift = g.createLinearGradient(0, 12, 0, 40);
+    drift.addColorStop(0, 'rgba(160,150,134,0.55)');
+    drift.addColorStop(0.7, 'rgba(150,140,124,0.3)');
+    drift.addColorStop(1, 'rgba(150,140,124,0)');
+    g.fillStyle = drift;
+    g.fillRect(6, 12, 84, 28);
+    // combed ripple lines — the draft shaped them
+    g.strokeStyle = 'rgba(120,110,96,0.4)';
+    g.lineWidth = 0.8;
+    for (let i = 0; i < 5; i++) {
+      g.beginPath();
+      g.moveTo(8, 16 + i * 5);
+      g.quadraticCurveTo(48, 14 + i * 5 + rng.range(-2, 3), 88, 16 + i * 5);
+      g.stroke();
+    }
+    // a dead leaf pinned in the drift
+    g.fillStyle = 'rgba(96,80,50,0.6)';
+    const lx = 30 + rng.float() * 36;
+    g.beginPath(); g.ellipse(lx, 20, 4.5, 2.2, rng.range(-0.5, 0.5), 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(60,48,30,0.5)';
+    g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(lx - 4, 20); g.lineTo(lx + 4, 20); g.stroke();
+    // grit and splinters in the ridge
+    g.fillStyle = 'rgba(70,62,52,0.55)';
+    for (let i = 0; i < 16; i++) {
+      g.fillRect(rng.range(10, 86), rng.range(14, 34), 1.3, 1);
+    }
+    // the shadow seam under the door itself
+    g.strokeStyle = 'rgba(24,20,18,0.7)';
+    g.lineWidth = 2;
+    g.beginPath(); g.moveTo(4, 10); g.lineTo(92, 10); g.stroke();
+  });
+}
