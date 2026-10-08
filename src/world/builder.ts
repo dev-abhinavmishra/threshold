@@ -10,7 +10,7 @@ import { buildProp } from './props';
 import { MAT } from './materials';
 import { SeedStreams } from '../engine/rng';
 import { aabb } from '../engine/math';
-import { portLocalPos, footprintInDoorLane, footprintInDoorLeaf } from './spec';
+import { portLocalPos, portOutwardDir, footprintInDoorLane, footprintInDoorLeaf } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
@@ -34,6 +34,8 @@ export interface BuiltRoom {
   animated: THREE.Object3D[];
   /** Falling drip particles (leak spots) — animated by the game. */
   drips: THREE.Points | null;
+  /** Door-seam draft motes (foreshadowed onward doors) — animated. */
+  draft: THREE.Points | null;
 }
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -189,6 +191,16 @@ const blobMat = new THREE.MeshBasicMaterial({
 });
 blobMat.userData.decalMat = true;
 const blobGeo = new THREE.PlaneGeometry(1, 1);
+// Cold draft through a watched door's seam — cooler, finer than dust.
+const draftMat = new THREE.PointsMaterial({
+  color: 0xc4ccd8,
+  size: 0.035,
+  transparent: true,
+  opacity: 0.5,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+
 const dripMat = new THREE.PointsMaterial({
   color: 0xa8bfd0, size: 0.02, transparent: true, opacity: 0.5,
   depthWrite: false, sizeAttenuation: true,
@@ -2910,7 +2922,37 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
   }
 
-  return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated, drips };
+  // The seam breathes — a cold draft slides through the onward door's
+  // gap when something waits past it: motes blown inward off the seam,
+  // wrapping a short run. Only rooms carrying a foreshadow or set-piece
+  // tell — the tell marks the wall, this marks the air.
+  let draft: THREE.Points | null = null;
+  if ((room.foreshadow || room.milestoneTell) && spec.exits.length > 0) {
+    const port = spec.exits[0];
+    const lp = portLocalPos(port, w, d);
+    const od = portOutwardDir(port);
+    const ix = -od.x, iz = -od.z;
+    const n = 22;
+    const pos = new Float32Array(n * 3);
+    const speeds = new Float32Array(n), phases = new Float32Array(n), spread = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = lp.x + (rng.float() - 0.5) * port.width * 0.8;
+      pos[i * 3 + 1] = 0.02 + rng.float() * 0.22;
+      pos[i * 3 + 2] = lp.z + (rng.float() - 0.5) * port.width * 0.8;
+      speeds[i] = 0.25 + rng.float() * 0.3;
+      phases[i] = rng.float();
+      spread[i] = (rng.float() - 0.5) * 0.3;
+    }
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    draft = new THREE.Points(dg, draftMat);
+    draft.userData.dirx = ix; draft.userData.dirz = iz;
+    draft.userData.ox = lp.x; draft.userData.oz = lp.z;
+    draft.userData.speeds = speeds; draft.userData.phases = phases; draft.userData.spread = spread;
+    group.add(draft);
+  }
+
+  return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated, drips, draft };
 }
 
 export function disposeRoom(built: BuiltRoom): void {
