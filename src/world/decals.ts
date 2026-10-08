@@ -902,3 +902,39 @@ export function frameGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Ash spill at a cold hearth — pale gray mound ringed by charcoal flecks,
+ * thin dust blown out across the floor. */
+export function ashPile(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    // blown-out dust halo
+    const halo = ctx.createRadialGradient(64, 76, 8, 64, 76, 60);
+    halo.addColorStop(0, 'rgba(140,135,128,0.30)');
+    halo.addColorStop(1, 'rgba(140,135,128,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.ellipse(64, 76, 60, 46, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the mound itself, denser at the grate mouth (top of texture)
+    const mound = ctx.createRadialGradient(64, 56, 4, 64, 56, 34);
+    mound.addColorStop(0, 'rgba(185,180,170,0.75)');
+    mound.addColorStop(0.7, 'rgba(120,115,108,0.5)');
+    mound.addColorStop(1, 'rgba(90,85,80,0)');
+    ctx.fillStyle = mound;
+    ctx.beginPath();
+    ctx.ellipse(64, 58, 40, 30, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // charcoal flecks strewn downhill
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(25,22,20,${0.5 + rng.float() * 0.3})`;
+      ctx.fillRect(40 + rng.float() * 52, 34 + rng.float() * 60, 1.5 + rng.float() * 3.5, 1 + rng.float() * 2);
+    }
+    // a few stray cinders carried outward
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(60,55,50,${0.35 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 90, 85 + rng.float() * 35, 1 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

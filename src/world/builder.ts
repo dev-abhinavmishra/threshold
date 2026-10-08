@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1656,6 +1656,25 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           } catch { /* dressing only */ }
         }
       }
+    }
+
+    // The cold hearth — every dead grate kept its last fire's business:
+    // an ash mound spilling from the grate mouth, dust blown out into
+    // the room. Nothing here has burned in a long time.
+    for (const p of spec.props) {
+      if (p.kind !== 'fireplace' && p.kind !== 'stove' && p.kind !== 'stoveRange' && p.kind !== 'firePit') continue;
+      if (rng.float() >= 0.55) continue;
+      const m = decalQuad(ashPile(rng), 0.9 + rng.float() * 0.4, 0.75 + rng.float() * 0.3);
+      m.name = 'cold-hearth';
+      m.rotation.x = -Math.PI / 2;
+      // grate mouth faces the prop's forward (+z rotated by yaw)
+      const py = p.yaw ?? 0;
+      m.rotation.z = -py;
+      m.position.set(
+        p.x + Math.sin(py) * 0.55,
+        0.007,
+        p.z + Math.cos(py) * 0.55);
+      group.add(m);
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:
