@@ -4374,7 +4374,14 @@ export class Game {
     setTimeout(() => {
       useGameStore.setState({
         phase: 'DEAD', paused: true,
-        deathInfo: { cause: source, hint: DEATH_HINTS[source] ?? hint, entity: source },
+        deathInfo: {
+          cause: source, hint: DEATH_HINTS[source] ?? hint, entity: source,
+          // the books stay open on a death — the tally outlives you
+          books: {
+            thefts: this.unpaidTheft, held: this.unpaidHeld, asks: this.paperTrail,
+            hotCoin: this.hotImprints, hotGoods: this.hotItems.size,
+          },
+        },
         documents: this.loadDocs(),
       });
       document.exitPointerLock?.();

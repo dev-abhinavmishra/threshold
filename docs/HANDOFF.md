@@ -4004,3 +4004,11 @@ the leg legitimately returned `none` — a real fail on some seeds. It now
 returns `untested` (assertion skipped) when at least one primed room
 existed but all were entity-scheduled; still fails hard when no primed
 set piece exists at all.
+
+## sprint 407 — the books stay open on you
+
+Death screen now reads the same ledger epitaph the victory screen does
+(s336's `BooksClosed`), inverted: victory closes the books, death leaves
+them open — "the books stay open on you:" followed by the unpaid tally.
+`bookLines()` shared in App.tsx; `deathInfo.books` populated in
+Game.die() from the same five fields.

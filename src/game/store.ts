@@ -36,7 +36,7 @@ export interface GameUi {
   settings: SettingsData;
   difficulty: Difficulty;
   documents: Document[];
-  deathInfo: { cause: string; hint: string; entity: string } | null;
+  deathInfo: { cause: string; hint: string; entity: string; books?: BooksClosed } | null;
   victoryInfo: { stats: RunStats; books?: BooksClosed } | null;
   shopItems: { id: ItemId; price: number; slot: number; sold: boolean }[];
   shopOpen: boolean;
