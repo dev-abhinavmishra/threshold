@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -827,6 +827,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       ksh.name = 'knob-shine';
       ksh.position.set(port.width / 2 - 0.14, 0.02, 0.054);
       leaf.add(ksh);
+    }
+    // The hinges bled — oxidised runs dragged down the face from
+    // each knuckle that wept for years.
+    if (!industrial && rng.float() < 0.18) {
+      const hr = decalQuad(hingeRust(rng), 0.16, 0.9);
+      hr.name = 'hinge-rust';
+      hr.position.set(-(port.width / 2) + 0.14, -0.1, 0.052);
+      leaf.add(hr);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -1829,6 +1837,19 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const rg = group.children[group.children.length - 1];
         if (rg && !rg.name) rg.name = 'rail-ghost';
       }
+      // The sun bleached the boards — a parallelogram of pale wood
+      // pooled on the floor under the sill.
+      if (rng.float() < 0.4) {
+        const sf = decalQuad(sunFade(rng), 1.3 + rng.float() * 0.3, 1.0 + rng.float() * 0.25);
+        sf.name = 'sun-fade';
+        sf.rotation.x = -Math.PI / 2;
+        sf.rotation.z = (dww === 'n' ? Math.PI : dww === 's' ? 0 : dww === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.2;
+        const six = dww === 'e' ? -1.0 : dww === 'w' ? 1.0 : 0;
+        const siz = dww === 'n' ? 1.0 : dww === 's' ? -1.0 : 0;
+        const sp2 = portLocalPos({ wall: dww, offset: dAlong, width: 0.9 }, w, d);
+        sf.position.set(sp2.x + six, 0.0095, sp2.z + siz);
+        group.add(sf);
+      }
     }
 
     // The switches kept the hands — a decade of reaching leaves a
@@ -2010,6 +2031,144 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       dg2.rotation.z = (port.wall === 'n' ? 0 : port.wall === 's' ? Math.PI : port.wall === 'e' ? Math.PI / 2 : -Math.PI / 2) + (rng.float() - 0.5) * 0.3;
       dg2.position.set(lp.x + inx, 0.0085, lp.z + inz);
       group.add(dg2);
+    }
+
+    // The hooks kept the coats — greasy halos and swing arcs behind
+    // the pegs that still stand.
+    for (const p of spec.props) {
+      if ((p.kind !== 'keyRack' && p.kind !== 'ceilingHook') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, hookWear(rng), 0.55 + rng.float() * 0.15, 0.85 + rng.float() * 0.15, along, 1.6 + rng.float() * 0.15);
+      const hwk = group.children[group.children.length - 1];
+      if (hwk && !hwk.name) hwk.name = 'hook-wear';
+    }
+    // The ceiling keeps its hairlines — a plaster crack that wandered
+    // and set, pale dust along its lip.
+    if (rng.float() < 0.25) {
+      const ch = decalQuad(ceilingHair(rng), 1.4 + rng.float() * 0.5, 1.0 + rng.float() * 0.3);
+      ch.name = 'ceiling-hair';
+      ch.rotation.x = Math.PI / 2;
+      ch.rotation.z = rng.float() * Math.PI * 2;
+      ch.position.set((rng.float() - 0.5) * (w - 3), h - 0.056, (rng.float() - 0.5) * (d - 3));
+      group.add(ch);
+    }
+
+    // The carts tracked their lanes — twin wheel rails ground into
+    // the service floors, dust ridge between the treads.
+    if (!livedIn && rng.float() < 0.35) {
+      const ct = decalQuad(cartTracks(rng), 1.3 + rng.float() * 0.3, 1.6 + rng.float() * 0.4);
+      ct.name = 'cart-tracks';
+      ct.rotation.x = -Math.PI / 2;
+      ct.rotation.z = (rng.bool(0.5) ? 0 : Math.PI / 2) + (rng.float() - 0.5) * 0.4;
+      ct.position.set((rng.float() - 0.5) * (w - 3), 0.009, (rng.float() - 0.5) * (d - 3));
+      group.add(ct);
+    }
+    // The grout darkened — the damp follows the seams between the
+    // tile courses in the wet rooms.
+    if ((spec.props.some(p => p.kind === 'basinSink' || p.kind === 'puddle') || !livedIn) && rng.float() < 0.3) {
+      const spot = pickWallSpot(1.5);
+      if (spot) {
+        wallDecal(spot.wall, groutLines(rng), 1.5 + rng.float() * 0.3, 1.1 + rng.float() * 0.2, spot.along, 1.0 + rng.float() * 0.2);
+        const gl = group.children[group.children.length - 1];
+        if (gl && !gl.name) gl.name = 'grout-lines';
+      }
+    }
+
+    // The lamps left their rings — a spared circle of boards where
+    // a standing lamp kept the dark off for years.
+    if (livedIn && rng.float() < 0.25) {
+      const spot = pickWallSpot(0.6);
+      if (spot) {
+        const lp = portLocalPos({ wall: spot.wall, offset: spot.along, width: 0.9 }, w, d);
+        const ix = spot.wall === 'e' ? -0.7 : spot.wall === 'w' ? 0.7 : 0;
+        const iz = spot.wall === 'n' ? 0.7 : spot.wall === 's' ? -0.7 : 0;
+        const lg = decalQuad(lampGhost(rng), 0.75 + rng.float() * 0.2, 0.75 + rng.float() * 0.2);
+        lg.name = 'lamp-ghost';
+        lg.rotation.x = -Math.PI / 2;
+        lg.rotation.z = rng.float() * Math.PI * 2;
+        lg.position.set(lp.x + ix, 0.009, lp.z + iz);
+        group.add(lg);
+      }
+    }
+
+    // The rockers swung — twin crescents carved under the runners of
+    // chairs that rocked a decade of nights.
+    for (const p of spec.props) {
+      if ((p.kind !== 'armchair' && p.kind !== 'chair')
+        || rng.float() >= 0.25) continue;
+      const ra = decalQuad(rockerArcs(rng), 0.9 + rng.float() * 0.15, 0.85 + rng.float() * 0.15);
+      ra.name = 'rocker-arcs';
+      ra.rotation.x = -Math.PI / 2;
+      ra.rotation.z = rng.float() * Math.PI;
+      ra.position.set(p.x + (rng.float() - 0.5) * 0.2, 0.0085, p.z + (rng.float() - 0.5) * 0.2);
+      group.add(ra);
+    }
+    // The cords wore thin — greasy drags down the reveals where pull
+    // cords hung for decades. In the window loop instead of a wall pick.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const cww: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = cww === 'e' || cww === 'w' ? p.z : p.x;
+      wallDecal(cww, cordWear(rng), 0.35 + rng.float() * 0.1, 1.3 + rng.float() * 0.3,
+        along + (rng.float() < 0.5 ? -1 : 1) * (0.68 + rng.float() * 0.15), 1.5);
+      const cw = group.children[group.children.length - 1];
+      if (cw && !cw.name) cw.name = 'cord-wear';
+    }
+    // The nightstands kept the glow — a warm amber bloom on the wall
+    // behind the bedside light that burned every night.
+    for (const p of spec.props) {
+      if ((p.kind !== 'nightstand' && p.kind !== 'deskLamp' && p.kind !== 'lamp' && p.kind !== 'washStand')
+        || rng.float() >= 0.35) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const nw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = nw === 'e' || nw === 'w' ? p.z : p.x;
+      wallDecal(nw, nightGlow(rng), 0.85 + rng.float() * 0.2, 0.85 + rng.float() * 0.2, along, 1.4 + rng.float() * 0.15);
+      const ng = group.children[group.children.length - 1];
+      if (ng && !ng.name) ng.name = 'night-glow';
+    }
+
+    // The lace threw its net — a dappled lattice on the wall beside
+    // windows that once hung fine curtains.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.3) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const lw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = lw === 'e' || lw === 'w' ? p.z : p.x;
+      wallDecal(lw, laceShadow(rng), 0.8 + rng.float() * 0.2, 0.9 + rng.float() * 0.2,
+        along + (rng.float() < 0.5 ? -1 : 1) * (0.75 + rng.float() * 0.2), 1.5 + rng.float() * 0.3);
+      const ls2 = group.children[group.children.length - 1];
+      if (ls2 && !ls2.name) ls2.name = 'lace-shadow';
+    }
+    // The grease hung — an oily bloom on the ceiling above every
+    // range that fed the house for years.
+    for (const p of spec.props) {
+      if ((p.kind !== 'stove' && p.kind !== 'kitchenRange' && p.kind !== 'stoveRange')
+        || rng.float() >= 0.5) continue;
+      const gc = decalQuad(greaseCloud(rng), 1.1 + rng.float() * 0.3, 1.1 + rng.float() * 0.3);
+      gc.name = 'grease-cloud';
+      gc.rotation.x = Math.PI / 2;
+      gc.rotation.z = rng.float() * Math.PI * 2;
+      gc.position.set(p.x, h - 0.057, p.z);
+      group.add(gc);
+    }
+
+    // The rugs curled — a dark lip and trapped grit where the edge
+    // lifted and never lay back down.
+    for (const p of spec.props) {
+      if (p.kind !== 'rug' || rng.float() >= 0.4) continue;
+      const rc = decalQuad(rugCurl(rng), 0.85 + rng.float() * 0.2, 0.4 + rng.float() * 0.1);
+      rc.name = 'rug-curl';
+      rc.rotation.x = -Math.PI / 2;
+      rc.rotation.z = rng.float() * Math.PI * 2;
+      rc.position.set(p.x + (rng.float() - 0.5) * 0.5, 0.011, p.z + (rng.float() - 0.5) * 0.5);
+      group.add(rc);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

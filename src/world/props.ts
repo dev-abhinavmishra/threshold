@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1498,6 +1498,80 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sm.position.set((rng.float() - 0.5) * 0.1, 0.26, 0.043);
     prop.group.add(sm);
     if (!prop.group.name) prop.group.name = 'shaver-smear';
+  }
+  // The treads wore thin — polished centers and ground noses on
+  // steps that carried a million feet.
+  if ((spec.kind === 'stairs' || spec.kind === 'stairLanding' || spec.kind === 'grandStair') && rng.bool(0.5)) {
+    const sw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.85),
+      new THREE.MeshStandardMaterial({ map: stairWear(rng) ?? undefined, transparent: true, roughness: 0.92, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    sw.name = 'stair-wear';
+    sw.userData.decalMat = true;
+    sw.rotation.x = -Math.PI / 2;
+    sw.position.set(0, 0.36, 0);
+    prop.group.add(sw);
+    if (!prop.group.name) prop.group.name = 'stair-wear';
+  }
+  // The counters dripped — spills that escaped the top streak the
+  // face below the lip.
+  const CASED: ReadonlySet<PropSpec['kind']> = new Set(['cabinet', 'apothecaryCabinet', 'chest', 'dresser', 'drawerUnit', 'sideboard', 'wardrobe', 'vintageCabinet', 'modernCabinet', 'keyCabinet', 'toolChest', 'washStand', 'nightstand', 'vanityTable', 'counter', 'merchantCounter']);
+  if (CASED.has(spec.kind) && rng.bool(0.2)) {
+    const dc = modelCollider(spec.kind);
+    const cd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.36, 0.5),
+      new THREE.MeshStandardMaterial({ map: counterDrips(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    cd.name = 'counter-drips';
+    cd.userData.decalMat = true;
+    cd.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.005);
+    prop.group.add(cd);
+    if (!prop.group.name) prop.group.name = 'counter-drips';
+  }
+  // The flour never left — a pale film and kneaded patch on the
+  // tops that fed the kitchen.
+  const KITCHEN_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['counter', 'merchantCounter', 'breakTable', 'sculleryRack', 'table', 'diningTable', 'picnicTable', 'schoolDesk']);
+  if (KITCHEN_TOPS.has(spec.kind) && rng.bool(0.16)) {
+    const dc = modelCollider(spec.kind);
+    const fd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.48, 0.44),
+      new THREE.MeshStandardMaterial({ map: flourDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    fd.name = 'flour-dust';
+    fd.userData.decalMat = true;
+    fd.rotation.x = -Math.PI / 2;
+    fd.rotation.z = rng.float() * Math.PI * 2;
+    fd.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.85) + 0.004, (rng.float() - 0.5) * 0.16);
+    prop.group.add(fd);
+    if (!prop.group.name) prop.group.name = 'flour-dust';
+  }
+  // The tub kept the ring — a mineral tide line and caught hair on
+  // the basin that never drained clean.
+  if ((spec.kind === 'basinSink' || spec.kind === 'washStand') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const br = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.2),
+      new THREE.MeshStandardMaterial({ map: bathRing(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }),
+    );
+    br.name = 'bath-ring';
+    br.userData.decalMat = true;
+    br.position.set(0, (dc?.[1] ?? 0.6) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.004);
+    prop.group.add(br);
+    if (!prop.group.name) prop.group.name = 'bath-ring';
+  }
+  // The wardrobe kept the dark — the crack the light never reached
+  // between doors that haven't opened since it arrived.
+  if ((spec.kind === 'wardrobe' || spec.kind === 'cabinet' || spec.kind === 'vintageCabinet' || spec.kind === 'apothecaryCabinet' || spec.kind === 'keyCabinet') && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const wd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.22, 0.9),
+      new THREE.MeshStandardMaterial({ map: wardrobeDark(rng) ?? undefined, transparent: true, roughness: 1, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    wd.name = 'wardrobe-dark';
+    wd.userData.decalMat = true;
+    wd.position.set(0, (dc?.[1] ?? 1.8) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    prop.group.add(wd);
+    if (!prop.group.name) prop.group.name = 'wardrobe-dark';
   }
   // Slept-in — some mattresses keep the shadow of whoever lay too long.
   if (spec.kind === 'bed' && rng.bool(0.3)) {
