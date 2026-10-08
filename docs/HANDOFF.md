@@ -5860,3 +5860,64 @@ riding along: wiped 'work' sign stays silent to the player's fresh-read
 — the felt's shadow poisons the reader the same as every hunter.
 
 Gates: tsc, lint, build, splice leg green (batched vitest+sim next).
+
+## Sprint 423 — the coil changes hands (PR pending)
+
+Cut a splice → `wireCoil` joins the pack ('the splice parts — the coil
+is yours'). Slot-use 'Lay the coil' pays out the wire ~1.05m ahead on
+the horizontal — just past the 0.7m trip radius so the hand that paid
+it out never snaps its own wire on the lay (step into it after and it
+takes your foot like anyone's — honest two-ways). Planted wires mint
+'Pull the wire free' (live, 0.9s) / 'Gather the wire' (dead, 1.4s) →
+`removeSnare` + the coil back. Dead planted wires stay grafter-strippable:
+your wire → tripped → under strips it → grafts it → you cut it again —
+the coil circulates.
+
+- `removeSnare(hz)` bound the prop face to the wire (`snare.mesh`) —
+  pulling/cutting a graft no longer ghosts the face; structural param
+  type so both call sites typecheck.
+- `graftedWires` checkpoint carries `planted` (planted → silent direct
+  push + face if armed; dead graft → silent push; live graft → plantSnare
+  re-signs via the s418 path — restores never re-sign).
+- e2e: splice leg phase 2 drives cut→carry→lay→pull live; contract spec
+  pins the mint, the item, and the planted restore.
+- Harness note: `activeSlot` indexes the FILTERED slotItems list
+  (ITEM_DEFS.slotItem), not raw inventory — compute the index over the
+  same filter or the active item silently isn't the one you set.
+
+## Sprint 424 — the alarm winds down into your hand
+
+'Pick the alarm up' mints on a live windAlarm lure (0.8s, pos-keyed —
+indices shift as lures die). Un-planting returns the item whole; a
+rung clock is scrap and stops offering itself the moment it spends.
+The carried kit's un-plant family is symmetric now: wire (pull/gather),
+receiver (hang up), chock (gather the kicked wedge), alarm (pick up).
+
+## Sprint 425 — the coil testifies
+
+Carried `wireCoil` reads to the grafter's scent poll as sign on the
+move: same-room + 40m, it retargets `this.target` to your live pos
+each 1.6s beat and cues '[stone turns toward the hands holding its
+wire]'. The hide covers you, not your coil — hiding doesn't mask the
+smell (kill is still gaze-gated by protection). It drags WITHOUT
+feeding markReads — one smell isn't twenty marks; the rubble tracks
+your hands but doesn't go eager on a coil that never lands. New ctx
+`playerCarries(id)` answers from the pack, not the sign list.
+
+## Sprint 426 — the seam carries the tick
+
+A door-listen now answers a live windAlarm lure in the room beyond:
+'[a small clock counts down beyond — the lure you planted]', and while
+it pays out '[an alarm rings beyond — the clock you wound]'. Same info
+tier as the armed-line hum — below every tread, above the room-type
+reads. The ear-to-the-seam family: sched > lamp > paper > primed >
+tread > armed line > your tick > template.
+
+## Sprint 427 — the fallen coil lies there
+
+`spillSnare` now rebuilds the slack face (dead wire looks like dead
+wire everywhere — seeded trips, planted pulls, spills alike) and emits
+the drop clatter (0.3 item, real sound — the room hears the coil slip).
+Dead grafts restoring from `graftedWires` rebuild the face too, and
+planted wires restore their face regardless of armed — the face is the
+wire's look, not its state. No faceless wire anywhere.

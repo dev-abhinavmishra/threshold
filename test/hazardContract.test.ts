@@ -163,6 +163,65 @@ describe('hazard contract — every hazard carries a tell and a defuse', () => {
     const pushes = gameSrc.match(/kind: 'work', t: this\.clock\.time, readBy: \['player'\]/g) ?? [];
     expect(pushes.length).toBeGreaterThanOrEqual(6);
   });
+
+  it('the coil changes hands — cutting a splice yields wire you can lay yourself', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const configSrc = readFileSync('src/game/config.ts', 'utf8');
+    const storeSrc = readFileSync(new URL('../src/game/store.ts', import.meta.url), 'utf8');
+    // the coil is a real item, slot-usable like the wind-up alarm
+    expect(configSrc).toContain("wireCoil: { name: 'Wire Coil'");
+    // a cut splice leaves the floor and rides the pack — no scrap left to strip
+    expect(gameSrc).toContain('the splice parts — the coil is yours');
+    // your own wire mints reclaim verbs, never ghosts a prop face
+    expect(gameSrc).toContain('Pull the wire free');
+    expect(gameSrc).toContain('removeSnare');
+    // laid wires ride the checkpoint under the same flag that carried grafts
+    expect(storeSrc).toContain('planted?: boolean');
+    expect(gameSrc).toMatch(/gw\.planted[\s\S]*armed: gw\.armed, planted: true/);
+  });
+
+  it('the alarm winds down into your hand — a live lure can be un-planted', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // live lures mint the reclaim verb; a ringing clock is scrap and stops offering
+    expect(gameSrc).toContain('Pick the alarm up');
+    expect(gameSrc).toContain('mintAlarmDrops');
+    // picking it up returns the item whole and frees the floor
+    expect(gameSrc).toContain('the alarm winds down into your hand');
+    expect(gameSrc).toMatch(/case 'alarmDrop'[\s\S]*giveItem\('windAlarm', 1\)/);
+    // rang lures never mint — a sprung clock is spent
+    expect(gameSrc).toMatch(/this\.lures\.forEach[\s\S]*if \(l\.rang\) return/);
+  });
+
+  it('the coil testifies — carried splice-scrap drags the grafter to your hands', () => {
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the under reads its own wire off your back — same room, same 40m scent reach
+    expect(spSrc).toContain("playerCarries?.('wireCoil')");
+    expect(spSrc).toContain('the hands holding its wire');
+    // it drags toward you without learning hunger from a smell that never lands
+    expect(spSrc).toMatch(/playerCarries[\s\S]*?this\.target = v3\(p\.pos\.x/);
+    // ctx answers it from the pack, not the sign list
+    expect(baseSrc).toContain('playerCarries?:');
+    expect(gameSrc).toContain('playerCarries: (id) => this.inventory.some');
+  });
+
+  it('the seam carries the tick — a door-listen answers your wound clock', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    expect(gameSrc).toContain('a small clock counts down beyond');
+    expect(gameSrc).toContain('an alarm rings beyond — the clock you wound');
+    // the listen reads the live lures list, lowest precedence — below every tread
+    expect(gameSrc).toMatch(/this\.lures\.find\(\(l\) => \{\s*const ri = underRoomOf\(roam, l\.pos\)/);
+  });
+
+  it('the fallen coil lies there — spilled and restored wire wear the slack face', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // a spilled splice rebuilds its face like every dead snare keeps
+    expect(gameSrc).toMatch(/spillSnare\(pos: Vec3, room: number\)[\s\S]*?snare\.mesh = this\.buildSnareProp/);
+    expect(gameSrc).toContain('a coil of wire drops');
+    // dead grafts restore wearing it too — no faceless wire anywhere
+    expect(gameSrc).toMatch(/gw\.armed === false[\s\S]*?dead\.mesh = this\.buildSnareProp/);
+  });
 });
 
 describe('coaxed drawers (sprint 268)', () => {

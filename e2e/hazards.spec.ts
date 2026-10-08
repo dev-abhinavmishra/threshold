@@ -1165,7 +1165,7 @@ test('the splice reads as the under\'s work — cut it, and the dust keeps a han
     (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
     const ga = g as unknown as {
       godMode: boolean; currentRoom: number; keys: Set<string>;
-      hazard: { snares: { room: number; armed: boolean; grafted?: boolean; pos: { x: number; y: number; z: number } }[];
+      hazard: { snares: { room: number; armed: boolean; grafted?: boolean; planted?: boolean; pos: { x: number; y: number; z: number } }[];
         evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string;
           t: number; readBy: string[]; old?: boolean; wiped?: boolean }[] };
     };
@@ -1214,8 +1214,64 @@ test('the splice reads as the under\'s work — cut it, and the dust keeps a han
       cut = caps.some((c) => /splice parts|seal parts/.test(c));
     }
     ga.keys.delete('KeyE');
+    const gAny = g as unknown as {
+      activeSlot: number; useActiveSlot(): void;
+      inventory: { id: string; count: number }[] };
+    const coilCarried = gAny.inventory.some((i) => i.id === 'wireCoil' && i.count > 0);
+    const spliceGone = !ga.hazard.snares.some((s) => s.grafted === true && s.room === room.index);
+    // phase 2 — the coil changes hands: lay it yourself, pull it free
+    let laid = false, pullMinted = false, reclaimed = false;
+    if (coilCarried) {
+      // activeSlot indexes the filtered slot-item list, not raw inventory
+      const NONSLOT = new Set(['imprints', 'marginalia']);
+      const slotIdx = gAny.inventory.filter((i) => !NONSLOT.has(i.id))
+        .findIndex((i) => i.id === 'wireCoil');
+      gAny.activeSlot = slotIdx;
+      g.player.teleport(room.origin.x - 1.5, 0, room.origin.z - 1.5);
+      g.player.yaw = Math.atan2(room.origin.x - g.player.pos.x, room.origin.z - g.player.pos.z);
+      g.player.pitch = -0.9;
+      gAny.useActiveSlot();
+      g.frame();
+      laid = ga.hazard.snares.some((s) => s.planted === true && s.armed && s.room === room.index);
+      for (let f = 0; f < 10; f++) g.frame();
+      pullMinted = g.interaction.interactables.some(
+        (i) => i.kind === 'snip' && /pull the wire free/i.test(i.prompt ?? ''));
+      // pull it back — reuse the hunt loop on the planted wire
+      const pw = ga.hazard.snares.find((s) => s.planted === true && s.armed && s.room === room.index);
+      if (pw) {
+        let lock2: { x: number; z: number; dy: number } | null = null;
+        for (let k = 0; k < 12 && !lock2; k++) {
+          const a = (k / 12) * Math.PI * 2;
+          const sx = pw.pos.x + Math.sin(a) * 1.1, sz = pw.pos.z + Math.cos(a) * 1.1;
+          for (const dy of [0.7, 0.45, 0.2, 0]) {
+            g.player.teleport(sx, 0, sz);
+            g.player.yaw = Math.atan2(pw.pos.x - sx, pw.pos.z - sz);
+            const eyeY = g.player.pos.y + g.player.eyeHeight;
+            g.player.pitch = Math.max(-1.45, Math.min(1.45,
+              Math.atan2(0.06 + dy - eyeY, Math.hypot(pw.pos.x - sx, pw.pos.z - sz) || 1)));
+            g.frame();
+            if (/pull the wire free/i.test(g.interaction.focused?.prompt ?? '')) { lock2 = { x: sx, z: sz, dy }; break; }
+          }
+        }
+        for (let f = 0; f < 140 && !reclaimed && lock2; f++) {
+          const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled
+            && /pull the wire free/i.test(i.prompt ?? ''));
+          if (!it) break;
+          g.player.teleport(lock2.x, 0, lock2.z);
+          g.player.yaw = Math.atan2(it.pos.x - lock2.x, it.pos.z - lock2.z);
+          const eyeY = g.player.pos.y + g.player.eyeHeight;
+          g.player.pitch = Math.max(-1.45, Math.min(1.45,
+            Math.atan2(it.pos.y + lock2.dy - eyeY, Math.hypot(it.pos.x - lock2.x, it.pos.z - lock2.z) || 1)));
+          if (/pull the wire free/i.test(g.interaction.focused?.prompt ?? '')) ga.keys.add('KeyE');
+          g.frame();
+          reclaimed = caps.some((c) => /comes back to your hand/.test(c))
+            && !ga.hazard.snares.some((s) => s.planted === true && s.room === room.index);
+        }
+        ga.keys.delete('KeyE');
+      }
+    }
     return { stage: 'done', dustRead, spliceMinted, hunted: !!lock, cut,
-      disarmed: !ga.hazard.snares.find((s) => s.grafted === true && s.room === room.index)?.armed,
+      disarmed: spliceGone, coilCarried, laid, pullMinted, reclaimed,
       caps: caps.slice(-10) } as const;
   });
 
@@ -1226,5 +1282,9 @@ test('the splice reads as the under\'s work — cut it, and the dust keeps a han
   expect(result.hunted, JSON.stringify(result)).toBe(true);
   expect(result.cut, JSON.stringify(result)).toBe(true);
   expect(result.disarmed, JSON.stringify(result)).toBe(true);
+  expect(result.coilCarried, 'a cut splice rides the pack').toBe(true);
+  expect(result.laid, 'the coil unwinds at your feet').toBe(true);
+  expect(result.pullMinted, 'your own wire offers Pull the wire free').toBe(true);
+  expect(result.reclaimed, JSON.stringify(result)).toBe(true);
   expect(errors).toEqual([]);
 });

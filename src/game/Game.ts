@@ -774,11 +774,23 @@ export class Game {
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
     for (const gw of cp?.graftedWires ?? []) {
+      if (gw.planted) {
+        // your own laid wire restores wearing your flag and its face —
+        // silently: the laying signed when you laid it
+        const snare = { pos: v3(gw.x, 0, gw.z), room: gw.room, armed: gw.armed, planted: true,
+          mesh: undefined as THREE.Object3D | undefined };
+        this.hazard.snares.push(snare);
+        snare.mesh = this.buildSnareProp(snare.pos, gw.room);
+        continue;
+      }
       if (gw.armed === false) {
-        // a spilled coil restores as dead work — no face, no fresh sign;
-        // its mark was written when it dropped (the splice signs a live
-        // laying, never a rehydration)
-        this.hazard.snares.push({ pos: v3(gw.x, 0, gw.z), room: gw.room, armed: false, grafted: true });
+        // a spilled coil restores as dead work — same slack face dead
+        // snares keep, no fresh sign; its mark was written when it
+        // dropped (the splice signs a live laying, never a rehydration)
+        const dead = { pos: v3(gw.x, 0, gw.z), room: gw.room, armed: false, grafted: true,
+          mesh: undefined as THREE.Object3D | undefined };
+        this.hazard.snares.push(dead);
+        dead.mesh = this.buildSnareProp(dead.pos, gw.room);
         continue;
       }
       this.plantSnare(v3(gw.x, 0, gw.z), gw.room);
@@ -1041,6 +1053,7 @@ export class Game {
       purse: () => this.imprints,
       isRoomDrained: (i) => this.drainedRooms.has(`${this.space}:${i}`),
       claimsOwed: () => this.unpaidTheft,
+      playerCarries: (id) => this.inventory.some((i) => i.id === id && i.count > 0),
       heldOwed: () => this.unpaidHeld,
       wanted: () => this.wantedActive && this.wantedRooms.size > 0,
       wordFiled: () => { this.unpaidHeld += 1; }, // the courier's card lands in the register
@@ -1338,13 +1351,54 @@ export class Game {
     });
   }
 
+  /** sprint 424 — a live planted alarm still ticks for you: picking it
+   *  up before the ring takes the lure back whole. Re-minted per frame
+   *  — a ringing lure stops offering itself the moment it spends. */
+  private mintAlarmDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('alarm-drop-'));
+    this.lures.forEach((l, i) => {
+      if (l.rang) return;   // a sprung clock is scrap, not a coil you wind back
+      this.dynamicInteractables.push({
+        kind: 'alarmDrop', id: `alarm-drop-${this.space}-${i}`,
+        pos: { x: l.pos.x, y: 0.15, z: l.pos.z },
+        prompt: 'Pick the alarm up', holdTime: 0.8, enabled: true, priority: 1,
+        data: { x: Number(l.pos.x.toFixed(2)), z: Number(l.pos.z.toFixed(2)) },
+      });
+    });
+  }
+
   /** sprint 414 — the grafter lays a stripped coil where the living
    *  walk. The graft is a normal armed snare wearing the same paper-
    *  and-amber face the seed ones do, tagged `grafted` so the
    *  checkpoint can rebuild it after a reload. */
   private graftedMeshes: THREE.Object3D[] = [];
+  /** The paper-and-amber face a laid wire wears (graft or planted).
+   *  Bound to the snare so pulling the wire takes its face with it. */
+  private buildSnareProp(pos: Vec3, room: number): THREE.Object3D {
+    const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
+    const fy = this.activeRooms()[room]?.origin.y ?? 0;
+    built.group.position.set(pos.x, fy, pos.z);
+    built.group.rotation.y = ((pos.x * 7.31 + pos.z * 13.7) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+    this.entityGroup.add(built.group);
+    this.graftedMeshes.push(built.group);
+    return built.group;
+  }
+
+  /** A snare leaving the floor takes its prop face with it — a pulled
+   *  or reclaimed wire can't leave a ghost visual lying there. */
+  private removeSnare(hz: { pos: Vec3; room: number; armed: boolean; grafted?: boolean; planted?: boolean; mesh?: THREE.Object3D }): void {
+    if (hz.mesh) {
+      this.entityGroup.remove(hz.mesh);
+      const gi = this.graftedMeshes.indexOf(hz.mesh);
+      if (gi >= 0) this.graftedMeshes.splice(gi, 1);
+    }
+    this.hazard.snares.splice(this.hazard.snares.indexOf(hz), 1);
+  }
+
   private plantSnare(pos: Vec3, room: number, planterKey?: string): void {
-    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: true, grafted: true });
+    const snare = { pos: v3(pos.x, 0, pos.z), room, armed: true, grafted: true,
+      mesh: undefined as THREE.Object3D | undefined };
+    this.hazard.snares.push(snare);
     // sprint 418 — the splice signs itself: fresh work marks the floor for
     // the under's other hunters, the way a rifled till does. The planter
     // gets it pre-read under its own key so it doesn't chase its own coil.
@@ -1354,21 +1408,23 @@ export class Game {
       this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
         t: this.clock.time, readBy: [planterKey] });
     }
-    const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
-    const fy = this.activeRooms()[room]?.origin.y ?? 0;
-    built.group.position.set(pos.x, fy, pos.z);
-    built.group.rotation.y = ((pos.x * 7.31 + pos.z * 13.7) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
-    this.entityGroup.add(built.group);
-    this.graftedMeshes.push(built.group);
+    snare.mesh = this.buildSnareProp(pos, room);
   }
 
-  /** sprint 419 — a dropped coil is dead wire again: no arm, no prop
-   *  face (a live-looking wire would lie), just the splice-sign a
-   *  tripped one would leave — reclaimable by the next scavenger. */
+  /** sprint 419 — a dropped coil is dead wire again: the splice-sign a
+   *  tripped one would leave, reclaimable by the next scavenger.
+   *  sprint 427 — and it lies there visible like every fallen wire:
+   *  same slack face dead snares keep, plus the small clatter of the
+   *  drop so the room knows the coil slipped. */
   private spillSnare(pos: Vec3, room: number): void {
-    this.hazard.snares.push({ pos: v3(pos.x, 0, pos.z), room, armed: false, grafted: true });
+    const snare = { pos: v3(pos.x, 0, pos.z), room, armed: false, grafted: true,
+      mesh: undefined as THREE.Object3D | undefined };
+    this.hazard.snares.push(snare);
+    snare.mesh = this.buildSnareProp(pos, room);
     this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'wire',
       t: this.clock.time, readBy: [] });
+    this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.3,
+      category: 'item', caption: '[a coil of wire drops]' });
   }
 
   private spawnEntity(e: Entity): void {
@@ -1512,6 +1568,18 @@ export class Game {
     if (armedLine) {
       return { sfx: 'printer-whir', sev: 'info' as const,
         text: armedLine.dial ? '[a phone rings beyond — the line you paid for]' : '[a line hums beyond — somebody left it off the hook]' };
+    }
+    // sprint 426 — and the seam carries the tick: your own wound clock
+    // counts down behind a closed leaf — the ear knows its lure's room
+    // before the ring ever pays it out
+    const ticking = this.lures.find((l) => {
+      const ri = underRoomOf(roam, l.pos);
+      return ri >= 0 && roam[ri] === target;
+    });
+    if (ticking) {
+      return { sfx: 'printer-whir', sev: 'info' as const,
+        text: ticking.rang ? '[an alarm rings beyond — the clock you wound]'
+          : '[a small clock counts down beyond — the lure you planted]' };
     }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
@@ -1901,7 +1969,9 @@ export class Game {
     // under live floodwater the wire only shows itself to a wader
     // crouched low enough to feel for it.
     for (const hz of this.hazard.snares) {
-      if (!hz.armed) continue;
+      // sprint 423 — your own laid wire mints too, live or dead: pull it
+      // free for the coil back, or gather the spent trip-line
+      if (!hz.armed && !hz.planted) continue;
       const rm = rooms.find((r) => r.index === hz.room) ?? this.route?.branchRooms.find((r) => r.index === hz.room);
       if (!rm) continue;
       const submerged = !!rm.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
@@ -1911,9 +1981,10 @@ export class Game {
       this.interaction.add({
         kind: 'snip', id: `snip-${this.space}:${rm.index}:${Math.round(hz.pos.x * 7)}x${Math.round(hz.pos.z * 7)}`,
         pos: { x: hz.pos.x, y: 0.06, z: hz.pos.z },
-        prompt: hz.grafted ? 'Cut the splice'
+        prompt: hz.planted ? (hz.armed ? 'Pull the wire free' : 'Gather the wire')
+          : hz.grafted ? 'Cut the splice'
           : submerged ? 'Feel for the wire — cut it' : 'Cut the seal',
-        holdTime: 1.4, enabled: true, priority: 2,
+        holdTime: hz.planted ? 0.9 : 1.4, enabled: true, priority: 2,
         data: { room: rm.index, sx: hz.pos.x, sz: hz.pos.z },
       });
     }
@@ -2746,6 +2817,24 @@ export class Game {
         this.mintWrapDrops();
         this.giveItem('feltWrap', n);
         this.cue('pickup', it.pos, `[felt wrap${n > 1 ? ` ×${n}` : ''} — back off the floor]`);
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
+      case 'alarmDrop': {
+        // sprint 424 — un-plant the clock: a live alarm comes back to
+        // the pocket whole. It was never heard, never spent — the lure
+        // you meant to place is yours to place again.
+        const dx = (it.data as { x?: number }).x ?? 0;
+        const dz = (it.data as { z?: number }).z ?? 0;
+        const li = this.lures.findIndex((l) => !l.rang
+          && Math.abs(l.pos.x - dx) < 0.05 && Math.abs(l.pos.z - dz) < 0.05);
+        if (li < 0) { it.enabled = false; this.mintAlarmDrops(); return; }
+        const l = this.lures.splice(li, 1)[0];
+        this.entityGroup.remove(l.mesh);
+        it.enabled = false;
+        this.mintAlarmDrops();
+        this.giveItem('windAlarm', 1);
+        this.cue('pickup', it.pos, '[the alarm winds down into your hand]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
@@ -4006,12 +4095,34 @@ export class Game {
         const d = it.data as { room: number; sx: number; sz: number };
         const hsn = this.hazard.snares.find((hz) => hz.room === d.room
           && Math.hypot(hz.pos.x - d.sx, hz.pos.z - d.sz) < 0.45);
+        const rm = this.activeRooms()[this.currentRoom];
+        const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
+        if (hsn?.planted) {
+          // your own wire is re-deployable — pull or gather returns the
+          // coil whole; it leaves no dead scrap for the under to strip
+          this.removeSnare(hsn);
+          this.giveItem('wireCoil', 1);
+          this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
+            '[the wire comes back to your hand]');
+          this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
+          return;
+        }
+        if (hsn?.grafted) {
+          // cutting the splice severs the under's coil loose — the wire
+          // leaves the floor and rides your pack instead of lying as scrap
+          this.removeSnare(hsn);
+          this.giveItem('wireCoil', 1);
+          this.hazard.evidence.push({ pos: v3(d.sx, 0, d.sz), room: d.room, kind: 'work',
+            t: this.clock.time, readBy: ['player'] });
+          this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
+            '[the splice parts — the coil is yours]');
+          this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
+          return;
+        }
         if (hsn) {
           hsn.armed = false;
           this.hazard.evidence.push({ pos: v3(hsn.pos.x, 0, hsn.pos.z), room: hsn.room, kind: 'wire', t: this.clock.time, readBy: [] });
         }
-        const rm = this.activeRooms()[this.currentRoom];
-        const sub = !!rm?.flooded && !this.drainedRooms.has(`${this.space}:${rm.index}`);
         this.audio.play('trap-click', { x: d.sx, y: 0.1, z: d.sz },
           sub ? '[the wire comes loose under the water]' : '[the seal parts — the wire goes slack]');
         this.sound.emit({ x: d.sx, y: 0.2, z: d.sz, intensity: 0.3, category: 'item', caption: '[a quiet snip]' });
@@ -4844,6 +4955,32 @@ export class Game {
       case 'doorChock':
         this.cue('ui-click', null, '[set it under a shut door — crouch at one]', 'info');
         return;
+      case 'wireCoil': {
+        // sprint 423 — lay the stolen coil where the living walk. The
+        // wire is honest scrap: armed wire trips whoever steps on it,
+        // you included; the laying is real work that signs for hunters.
+        // It lands just past the trip radius on the horizontal — a level
+        // lay never snaps shut under the hand that paid it out, but step
+        // into it and it takes your foot like anyone's.
+        const rm = this.activeRooms()[this.currentRoom];
+        if (!rm) return;
+        const fwd = v3();
+        this.player.lookDir(fwd);
+        const hl = Math.hypot(fwd.x, fwd.z) || 1;
+        const pos = v3(this.player.pos.x + (fwd.x / hl) * 1.05, 0,
+          this.player.pos.z + (fwd.z / hl) * 1.05);
+        item.count--;
+        const snare = { pos, room: rm.index, armed: true, planted: true,
+          mesh: undefined as THREE.Object3D | undefined };
+        this.hazard.snares.push(snare);
+        snare.mesh = this.buildSnareProp(pos, rm.index);
+        this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room: rm.index, kind: 'work',
+          t: this.clock.time, readBy: ['player'] });
+        this.audio.play('trap-click', { x: pos.x, y: 0.1, z: pos.z },
+          '[the coil unwinds at your feet — fresh wire]');
+        this.sound.emit({ x: pos.x, y: 0.2, z: pos.z, intensity: 0.4, category: 'item', caption: '[wire laid]' });
+        return;
+      }
       case 'windAlarm': {
         item.count--;
         // Plant a ticking lure ~1.2m ahead on the floor. It ticks for 14s
@@ -5325,9 +5462,9 @@ export class Game {
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
-      graftedWires: this.hazard.snares.some((s) => s.grafted)
-        ? this.hazard.snares.filter((s) => s.grafted)
-          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed })) : undefined,
+      graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
+        ? this.hazard.snares.filter((s) => s.grafted || s.planted)
+          .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted })) : undefined,
       closedCounters: [...this.closedCounters],
       stockSeen: [...this.stockSeen],
       answeredPhones: this.answeredPhones.size > 0 ? [...this.answeredPhones] : undefined,
@@ -7964,6 +8101,7 @@ export class Game {
       }
     }
     this.lures = this.lures.filter((l) => !l.rang || tA < l.until + 2.5);
+    this.mintAlarmDrops();
 
     // Hollow off-hum — a trapped hiding spot is audible before it is legible.
     if (tA >= this.nextHollowHum) {
