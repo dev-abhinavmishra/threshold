@@ -2488,9 +2488,14 @@ export class Game {
         const lockerBit = (locker > 0 || this.seizedCoin > 0)
           ? ` · a tag keeps ${locker > 0 ? `${locker} of yours` : 'your coin'} at the cages${this.seizedCoin > 0 ? ` — ${this.seizedCoin} coin itemized` : ''}${this.seizedFuse <= SEIZED_FADE_S ? ' · the ink is fading' : ''}`
           : '';
-        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0
+        // sprint 385 — and the book knows the tag's tail ends: the
+        // shelf a rotted tag fed, and the coin the count keeps outright
+        const fenced = this.fencedTake.reduce((n, s) => n + s.count, 0);
+        const shelfBit = fenced > 0 ? ` · the shelf keeps ${fenced} of yours` : '';
+        const tillBit = this.coinKept > 0 ? ` · ${this.coinKept} of your coin sits in the count's till` : '';
+        this.cue('whisper', it.pos, t === 1 && th === 0 && locker === 0 && fenced === 0 && this.coinKept === 0
           ? '[the book holds one line on you — this one]'
-          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}]`);
+          : `[the book on you — ${t} question${t === 1 ? '' : 's'} filed · ${th} theft${th === 1 ? '' : 's'} tallied — the asking files too${th >= 6 ? ' · the tills are closed to you' : ''}${lockerBit}${shelfBit}${tillBit}]`);
         return;
       }
       case 'purse': {
