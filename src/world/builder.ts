@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -1459,6 +1459,41 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           group.add(m);
         }
       }
+    }
+
+    // The ones before you — chalk scrawl near cover: tallies, arrows,
+    // ringed dots where someone hid and lived to mark it. Trapped spots
+    // mark at the same rate — chalk stays ambiguous: refuge or bait.
+    for (const spot of room.hidingSpots) {
+      if (rng.float() >= 0.45) continue;
+      const hx = (spot.volume.minX + spot.volume.maxX) / 2 - room.origin.x;
+      const hz = (spot.volume.minZ + spot.volume.maxZ) / 2 - room.origin.z;
+      const hc = Math.cos(-room.yaw), hs = Math.sin(-room.yaw);
+      const lx = hx * hc + hz * hs, lz = -hx * hs + hz * hc;
+      const m = decalQuad(chalkMark(rng), 0.5 + rng.float() * 0.15, 0.5 + rng.float() * 0.15);
+      m.name = 'chalk-mark';
+      // nearest wall face wins when the cover hugs it; mid-room cover
+      // gets a floor scrawl beside the spot instead
+      const wx = w / 2 - Math.abs(lx), wz = d / 2 - Math.abs(lz);
+      const edge = Math.min(wx, wz);
+      if (edge < 1.6) {
+        const onX = wx < wz;
+        const sgn = onX ? Math.sign(lx || 1) : Math.sign(lz || 1);
+        const along = onX ? lz : lx;
+        const lim = (onX ? d : w) / 2 - 0.4;
+        m.position.set(
+          onX ? sgn * (w / 2 - 0.04) : Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)),
+          0.95 + rng.float() * 0.45,
+          onX ? Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)) : sgn * (d / 2 - 0.04));
+        m.rotation.y = onX ? -sgn * Math.PI / 2 : (sgn > 0 ? Math.PI : 0);
+      } else {
+        m.rotation.x = -Math.PI / 2;
+        m.rotation.z = rng.float() * Math.PI;
+        m.position.set(
+          Math.max(-w / 2 + 0.5, Math.min(w / 2 - 0.5, lx + (rng.float() - 0.5) * 0.8)), 0.0065,
+          Math.max(-d / 2 + 0.5, Math.min(d / 2 - 0.5, lz + (rng.float() - 0.5) * 0.8)));
+      }
+      group.add(m);
     }
 
     // The undertow — rooms flanking an under-passage pick up its damp:

@@ -1524,3 +1524,22 @@ describe('the sparse pass (sprint 415)', () => {
     expect(bulky, 'maintenance carries no bulky clutter').toBe(true);
   });
 });
+
+describe('the ones before you (sprint 416)', () => {
+  it('chalk scrawl appears near cover — ambiguous whether refuge or bait', () => {
+    let marks = 0, spots = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route)) {
+        if (!room.spec || !room.hidingSpots.length) continue;
+        spots += room.hidingSpots.length;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'chalk-mark') marks++; });
+      }
+    }
+    expect(spots, 'fixture produced no cover — drifted').toBeGreaterThan(50);
+    expect(marks, 'no chalk marks anywhere').toBeGreaterThan(30);
+    // the 0.45 gate per spot bounds density — never denser than cover itself
+    expect(marks, 'chalk outnumbers the cover it marks').toBeLessThan(spots);
+  });
+});
