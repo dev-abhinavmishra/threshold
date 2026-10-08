@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1356,6 +1356,17 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     // overlay's identity away
     prop.group.name = 'wrong-room';
     prop.group.add(wr);
+  }
+  // The words worked into the glass — a pin, a nail, the pressure
+  // changing mid-letter. Mirrors only; sits under the wrong-room pane.
+  if (spec.kind === 'mirror' && rng.bool(0.22)) {
+    const sw = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.MeshStandardMaterial({ map: scratchWriting(rng) ?? undefined, transparent: true, roughness: 0.3, metalness: 0.1, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+    sw.name = 'scratch-writing';
+    sw.userData.decalMat = true;
+    sw.position.set(0, 0.32, 0.045);
+    prop.group.add(sw);
+    if (!prop.group.name) prop.group.name = 'scratch-writing';
   }
   // The wood keeps the water — rings where generations of glasses were
   // set down and one honest spill that soaked through the varnish.

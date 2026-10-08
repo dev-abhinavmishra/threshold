@@ -2264,3 +2264,143 @@ export function underBed(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Kick split — the door that was forced once: a vertical split in the
+ * leaf skin beside the latch, splinters raised pale, shoe shadow below. */
+export function kickSplit(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32 + (rng.float() - 0.5) * 6;
+    const cy = 55 + (rng.float() - 0.5) * 8;
+    // shoe shadow — the dark oval where the sole landed
+    const sole = ctx.createRadialGradient(cx, cy + 6, 2, cx, cy + 6, 16);
+    sole.addColorStop(0, 'rgba(40,32,24,0.45)');
+    sole.addColorStop(1, 'rgba(40,32,24,0)');
+    ctx.fillStyle = sole;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 6, 12, 9, (rng.float() - 0.5) * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // the split — a jag running up from the blow
+    ctx.strokeStyle = 'rgba(30,24,18,0.7)';
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 14);
+    let px = cx, py = cy + 14;
+    while (py > cy - 26) {
+      py -= 5 + rng.float() * 6;
+      px = cx + (rng.float() - 0.5) * 5;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    // splinters — pale raised slivers flanking the split
+    for (let i = 0; i < 7; i++) {
+      const sy = cy + 10 - i * 5.5;
+      const side = i % 2 === 0 ? 1 : -1;
+      ctx.strokeStyle = 'rgba(212,196,160,0.55)';
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(cx + side * 1.5, sy);
+      ctx.lineTo(cx + side * (4 + rng.float() * 5), sy - 3 - rng.float() * 3);
+      ctx.stroke();
+    }
+    // wood dust at the base of the blow
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(160,140,104,${0.15 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 10 + rng.float() * 20, cy + 14 + rng.float() * 6, 0.5 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Scratch writing — the words worked into the glass with a pin or a
+ * nail: thin pale strokes, uneven, the pressure changing mid-letter. */
+export function scratchWriting(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    ctx.strokeStyle = 'rgba(235,235,235,0.75)';
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = 'round';
+    const line = (x: number, y: number, len: number, tilt: number) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(tilt) * len, y + Math.sin(tilt) * len);
+      ctx.stroke();
+    };
+    // crude block letters spelled one stroke at a time
+    const y0 = 30 + (rng.float() - 0.5) * 10;
+    let x = 18 + rng.float() * 8;
+    const letters = Math.min(4, 2 + Math.floor(rng.float() * 4));
+    for (let l = 0; l < letters; l++) {
+      const w = 9 + rng.float() * 3, h = 14 + rng.float() * 4;
+      const wob = () => (rng.float() - 0.5) * 2.5;
+      // left stem
+      line(x + wob(), y0, h, Math.PI / 2 + wob() * 0.05);
+      // top bar
+      if (rng.bool(0.85)) line(x, y0, w, wob() * 0.08);
+      // mid bar
+      if (rng.bool(0.6)) line(x + wob(), y0 + h * 0.5, w * (0.7 + rng.float() * 0.3), wob() * 0.06);
+      // bottom bar / right stem decide the glyph
+      if (rng.bool(0.75)) line(x, y0 + h, w, wob() * 0.08);
+      if (rng.bool(0.5)) line(x + w, y0, h, Math.PI / 2);
+      x += w + 5 + rng.float() * 3;
+    }
+    // the underline — one long scrape under the word, tailing off
+    ctx.strokeStyle = 'rgba(235,235,235,0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(14, y0 + 24);
+    ctx.quadraticCurveTo(64, y0 + 28 + (rng.float() - 0.5) * 4, 14 + rng.float() * 90, y0 + 26);
+    ctx.stroke();
+    // stray pin scratches
+    for (let i = 0; i < 6; i++) {
+      line(10 + rng.float() * 108, 10 + rng.float() * 76, 4 + rng.float() * 10, rng.float() * Math.PI);
+    }
+  });
+}
+
+/** Body outline — the chalk line a count left on the floor where
+ * someone was found: a fallen figure drawn in one shaky stroke. */
+export function bodyOutline(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 160, (ctx) => {
+    const cx = 48 + (rng.float() - 0.5) * 10;
+    ctx.strokeStyle = 'rgba(225,220,205,0.72)';
+    ctx.lineWidth = 2.2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    // head
+    ctx.ellipse(cx, 18, 10, 9, (rng.float() - 0.5) * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
+    // body + limbs — one continuous outline
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, 26);
+    ctx.lineTo(cx - 16 - rng.float() * 4, 44);          // left arm out
+    ctx.lineTo(cx - 20, 62);
+    ctx.lineTo(cx - 11, 66);
+    ctx.lineTo(cx - 12, 86);                           // left hip
+    ctx.lineTo(cx - 14 - rng.float() * 6, 126);        // left leg
+    ctx.lineTo(cx - 8, 138);
+    ctx.lineTo(cx + 2, 130);                           // between feet
+    ctx.lineTo(cx + 6, 140);
+    ctx.lineTo(cx + 14 + rng.float() * 4, 134);
+    ctx.lineTo(cx + 10, 88);                           // right hip
+    ctx.lineTo(cx + 14, 68);                           // right arm across body
+    ctx.lineTo(cx + 6, 60);
+    ctx.lineTo(cx + 12, 44);
+    ctx.lineTo(cx + 4, 26);
+    ctx.stroke();
+    // the shakiness — a second fainter trace offset a hair
+    ctx.strokeStyle = 'rgba(225,220,205,0.28)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(cx + 1.5, 19, 10, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // chalk dust dribbles off the outline
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(225,220,205,${0.1 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(14 + rng.float() * 70, 20 + rng.float() * 120, 0.4 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

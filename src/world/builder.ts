@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, scratchWriting, bodyOutline } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -811,6 +811,14 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const kp = new THREE.Mesh(texBox(port.width - 0.16, 0.3, 0.02), MAT.steelDark());
       kp.position.set(0, -0.88, 0.05);
       leaf.add(kp);
+    }
+    // The door was kicked in once — the split by the latch, the
+    // splinters still raised, the shoe shadow under the blow.
+    if (!industrial && rng.float() < 0.15) {
+      const ks = decalQuad(kickSplit(rng), 0.5, 0.75);
+      ks.name = 'kick-split';
+      ks.position.set(port.width / 2 - 0.5, -1.3, 0.052);
+      leaf.add(ks);
     }
     // Light seeping under the door — the thin emissive seam at the leaf's
     // bottom edge reads as a lit space beyond, warm indoors / cold service.
@@ -1795,6 +1803,17 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const wl = group.children[group.children.length - 1];
         if (wl && !wl.name) wl.name = 'waterline';
       }
+    }
+
+    // The count chalked a body — where someone was found, the
+    // outline stayed. Maintenance bones and the under rooms only.
+    if ((spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder) && rng.float() < 0.22) {
+      const bo = decalQuad(bodyOutline(rng), 1.0, 1.7);
+      bo.name = 'body-outline';
+      bo.rotation.x = -Math.PI / 2;
+      bo.rotation.z = rng.float() * Math.PI * 2;
+      bo.position.set((rng.float() - 0.5) * (w - 2.2), 0.0095, (rng.float() - 0.5) * (d - 2.2));
+      group.add(bo);
     }
 
     // The wall kept the fist — somewhere a blow landed at striking
