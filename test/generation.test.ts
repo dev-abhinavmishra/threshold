@@ -1477,3 +1477,27 @@ describe('the seam bleeds (sprint 413)', () => {
     }
   });
 });
+
+describe('the worn way (sprint 414)', () => {
+  it('thresholds carry wear decals and locked leaves scar the wall beside them', () => {
+    let worn = 0, scars = 0, scarRooms = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed });
+      for (const room of mainRooms(route).slice(0, 40)) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'worn-threshold') worn++;
+          if (o.name === 'lock-scars') scars++;
+        });
+        if (room.doors.some((d) => d.locked)) scarRooms++;
+      }
+    }
+    // every seed lays wear on most main-route leaves — never zero
+    expect(worn, 'no threshold wear laid anywhere').toBeGreaterThan(20);
+    // locked leaves exist on every route; when a locked room built, scars
+    // should appear somewhere across the suite (0.75 gate per leaf)
+    expect(scarRooms, 'no locked doors generated — fixture drifted').toBeGreaterThan(0);
+    expect(scars, 'locked doors never scarred').toBeGreaterThan(0);
+  });
+});

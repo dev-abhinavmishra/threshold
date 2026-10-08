@@ -4530,3 +4530,18 @@ Game.die() from the same five fields.
   fires once per dispatch.
 - Gates: tsc, lint, vitest 255, sim 5/5, checker leg green, build.
 
+
+## sprint 414 — the worn way
+
+- Thresholds now carry the traffic: every leaf lays a `thresholdWear`
+  strip just inside the room (85% main-route, 45% branch) — a new
+  decal fn (polished traffic band + drag scuffs, feathered edges) —
+  and a LOCKED leaf scars the wall beside it at handle height
+  (75%: scratchMarks; toll leaves get handPrints ×2 — crowds tried).
+  Door decals use the Game.ts convention: world door pos → room-local
+  via R(-yaw), long axis `room.yaw - door.yaw - PI/2` across the leaf.
+  Decals are named (`worn-threshold`, `lock-scars`) for tests/debug.
+- Vitest 257: 'the worn way' builds the first 40 main rooms ×5 seeds,
+  counts named decals — wear everywhere, scars on locked rooms.
+- Gates: tsc, lint, vitest 257 (worn-way spec green), sim 5/5.
+  Visual dressing only — no e2e leg.
