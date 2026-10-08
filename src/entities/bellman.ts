@@ -299,8 +299,16 @@ export class Bellman extends Entity {
           return;
         }
       } else if (blocking) {
-        // Waiting for a knocked leaf to swing — a pause, not a stall.
-        this.doorHoldT = 0;
+        // Waiting for a knocked leaf to swing — a pause, not a stall, and
+        // bounded: a leaf that swung and shut behind it stays in `knocked`,
+        // so it never re-knocks — without a bound the walk parks here
+        // forever on a leaf that never answers.
+        this.doorHoldT += dt;
+        if (this.doorHoldT > 8) {
+          c.cue('knock', v3(this.pos.x, 1.4, this.pos.z), '[its steps fade down the hall — it lost interest]', { severity: 'info' });
+          this.done();
+          return;
+        }
       } else {
         this.doorHoldT = 0;
         const to = v3(target.x - this.pos.x, 0, target.z - this.pos.z);

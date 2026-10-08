@@ -1162,6 +1162,38 @@ describe('Hearing the cast (sprint 238)', () => {
     w.dispose();
   });
 
+  it('a wedged leaf in the same seam still turns it — the shove skips held leaves', () => {
+    const rooms = routeRooms();
+    const { ctx, emit } = hearingCtx(rooms, 20);
+    const w = new Warden();
+    w.spawn(ctx);
+    // Cluster doors stack in the seam: two registrations of one aperture.
+    // No generated seed produces pairs <0.7m apart, so synthesize them —
+    // a wedged leaf beside a merely-closed twin. Iteration order must not
+    // decide: pre-fix, the free twin could answer first and the cluster
+    // shove swung the wedged leaf open for free.
+    const next = rooms[21];
+    const door = next.doors.find((d) => d.id.endsWith('-in')) ?? next.doors[0];
+    const twin = { ...door, id: `${door.id}-twin` };
+    twin.pos = { ...door.pos, x: door.pos.x + 0.4 };
+    next.doors.push(twin);
+    door.heldBy = 'wedge';
+    const pos = (w as unknown as { pos: { x: number; z: number } }).pos;
+    pos.x = door.pos.x; pos.z = door.pos.z;
+    emit(next.origin.x, next.origin.z);
+    expect((w as unknown as { investigate: unknown }).investigate).not.toBeNull();
+    let t = 0; const ctxMut = ctx as { now: number };
+    for (let i = 0; i < 120 && (w as unknown as { investigate: unknown }).investigate; i++) {
+      ctxMut.now = t; w.update(0.05); t += 0.05;
+    }
+    expect((w as unknown as { investigate: unknown }).investigate).toBeNull();
+    expect(door.opening).toBe(false);
+    expect(twin.opening).toBe(false);
+    const captions = (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+    expect(captions.some((c) => /turns from the held door/.test(c))).toBe(true);
+    w.dispose();
+  });
+
   it('cross-room noise it cannot reach leaves the warden on its line', () => {
     const rooms = routeRooms();
     const { ctx, emit } = hearingCtx(rooms, 20);

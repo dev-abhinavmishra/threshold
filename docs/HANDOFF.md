@@ -4878,14 +4878,19 @@ Game.die() from the same five fields.
     pt.id` never matched. Disabling rivals is futile — interactables
     re-mint every frame. The spec now steers until ANY claim holds
     focus and takes that bag (both are valid sale targets).
-  - 'the door chock holds': TWO real bugs. (1) `killPlayer` ignored
-    `godMode` — entity touch-kills call it directly and bypassed the
-    flag `damagePlayer` honored, so the debug flag didn't protect
-    specs. (2) `blockingDoorNear` returned the FIRST blocking leaf in
-    a cluster — a merely-closed unknocked sibling — and the
-    wait-for-swing branch has no timeout, so the walk parked at a
-    wedged door's seam forever and never rattled the chock. Held
-    leaves now outrank merely-closed ones.
+  - 'the door chock holds': one product bug + one spec bug. (1) `killPlayer`
+    ignored `godMode` — entity touch-kills call it directly and bypassed
+    the flag `damagePlayer` honored, so the debug flag didn't protect
+    specs (player died mid-hold: `dead=true` at f0). (2) The post-wedge
+    teleport faced the player AT the door (`atan2(-toC,-toC)` is the
+    to-door bearing, not the into-room one) — a held gaze then froze the
+    bellman via `underGaze`, which returns before ALL door progress:
+    no rattle, no kick, static forever at the seam. Fixed yaw into the
+    room + a per-frame `unwatch` reset (the leg tests the wedge, not
+    the gaze counterplay). Latent hardening folded in: `blockingDoorNear`
+    now prefers held leaves over merely-closed ones (first-match order
+    used to decide; no generated seed actually produces door pairs
+    <1.2m, so this was never the observed failure).
   - Harness: `aimHold` gained an `each` per-frame hook (resets
     `bell.watchT` — the leg tests the wedge, not the gaze counterplay)
     and the post-wedge teleport now faces INTO the room (the
@@ -4900,3 +4905,27 @@ Game.die() from the same five fields.
   files separately for a batch check.
 - Gates: tsc, lint, vitest 269, sim 5/5, books 9/9 + doors 4/4 e2e,
   build.
+
+## sprint 392 — the door helpers answer held leaves
+
+- The bellman fix-up audit for the same class: entity "which door blocks
+  me" helpers picked leaves by first-match iteration order.
+- `Warden.doorOnPath` (corridor.ts): now scans every leaf on the path
+  across all rooms before deciding — a braced or locked leaf turns it
+  back even when a merely-closed twin of the same aperture iterates
+  first — and the cluster shove (`d2.opening = true` within 0.7m)
+  skips held/locked/false leaves: a shoulder used to swing a chocked
+  leaf open for free because `updateDoors` doesn't gate `opening` on
+  `heldBy`. Player-side 'door' already guarded the cluster.
+- `Bellman`: the wait-for-swing branch had no `doorHoldT` accumulation —
+  a leaf that swung open then auto-shut behind it stays in `knocked`
+  and never re-knocks, parking the walk forever on a leaf that never
+  answers. Bounded at 8s → 'lost interest', same idiom as the braced
+  branch's 14s.
+- Honesty note: no generated seed produces door pairs closer than
+  ~2m (min observed 2.01m), so these are latent-correctness fixes —
+  the s391 chock failure itself was the godMode/gaze pair, not leaf
+  selection.
+- vitest +1: synthetic seam twin (wedged + closed) — the warden turns
+  from the held door and neither leaf opens.
+- Gates: tsc, lint, vitest 270, sim, build.

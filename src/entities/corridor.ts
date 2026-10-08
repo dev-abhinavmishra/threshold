@@ -491,24 +491,31 @@ export class Warden extends Entity {
    *  back; everything else it puts a shoulder through and keeps walking. */
   private doorOnPath(): 'blocked' | null {
     if (!this.investigate) return null;
-    for (const r of this.ctx.rooms) {
+    const c = this.ctx;
+    // Cluster doors stack in the seam — scan every leaf on the path across
+    // all rooms before deciding, or iteration order decides: a braced or
+    // locked leaf turns it back even when a merely-closed sibling of the
+    // same aperture would otherwise answer first.
+    let free: { pos: Vec3 } | null = null;
+    for (const r of c.rooms) {
       for (const d of r.doors) {
         if (d.opening || d.openT > 0.5 || d.falseDoor) continue;
         if (v3dist(this.pos, d.pos) > 1.1 || !doorBetween(d, this.pos, this.investigate)) continue;
         if (d.heldBy || d.locked) return 'blocked';
-        // The doorway is one physical leaf whatever the stack — shove the
-        // whole cluster so both side leaves swing together.
-        const c = this.ctx;
-        for (const r2 of c.rooms) {
-          for (const d2 of r2.doors) {
-            if (Math.hypot(d2.pos.x - d.pos.x, d2.pos.z - d.pos.z) < 0.7) d2.opening = true;
-          }
-        }
-        c.cue('door-slam', { x: d.pos.x, y: 1.2, z: d.pos.z }, '[the Warden puts a shoulder through the door]', { severity: 'warn' });
-        c.sound.emit({ x: d.pos.x, y: 1.2, z: d.pos.z, intensity: 1.1, category: 'impact', caption: '[door slammed]', source: this.id });
-        return null;
+        free ??= d;
       }
     }
+    if (!free) return null;
+    // The doorway is one physical leaf whatever the stack — shove the
+    // cluster's free leaves so both side leaves swing together; braced or
+    // locked leaves hold.
+    for (const r2 of c.rooms) {
+      for (const d2 of r2.doors) {
+        if (Math.hypot(d2.pos.x - free.pos.x, d2.pos.z - free.pos.z) < 0.7 && !d2.heldBy && !d2.locked && !d2.falseDoor) d2.opening = true;
+      }
+    }
+    c.cue('door-slam', { x: free.pos.x, y: 1.2, z: free.pos.z }, '[the Warden puts a shoulder through the door]', { severity: 'warn' });
+    c.sound.emit({ x: free.pos.x, y: 1.2, z: free.pos.z, intensity: 1.1, category: 'impact', caption: '[door slammed]', source: this.id });
     return null;
   }
 
