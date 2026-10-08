@@ -5476,6 +5476,42 @@ Tests count the named meshes across SEEDS on 'high' detail.
 
 Gates: tsc, lint, vitest 298, build. No e2e leg — dressing only.
 
+## Sprint 449 — the house still breathes & the clean walls
+Two related arcs on one branch: ambient motion everywhere + placement
+hygiene for wall decals.
+
+- Ambient motion (builder.ts/props.ts/Game.ts): wall fans rebuilt with a
+  `rotor` group — 78% still work the mains (`anim='spinZ'`, rotation.z,
+  speed 1.2–3.6, deviceMul-scaled; 30% run a bent hub). Hung paper signs
+  ride a top-edge `pivot` — 40% swing (`anim='swing'`, amp 0.03–0.06).
+  Drooping cable runs translate to a ceiling anchor pivot
+  (`name='cable-drop'`); 45% sway. Dead grates sometimes keep one live
+  coal — squashed sphere `name='live-ember'`, `anim='ember'` breathing
+  emissive (two sines + a flicker lick term).
+- Game.ts anim loop gained two kinds: `spinZ` (rotation.z, ×deviceMul)
+  and `ember` (emissiveIntensity 0.55–1.45 two-tone breath + lick).
+- Clean walls (builder.ts): `tallCoverOn(wall, along, dw)` checks every
+  spec prop's modelCollider — wall-mounted paper pieces (dw ≤ 0.75) now
+  retry pickWallSpot until they land clear of tall furniture (wardrobes,
+  presses, tall curtains). Fixed-position paper (wall notices,
+  inspection stamps beside door frames) flips to the other side of the
+  port before giving up. Things-they-left floor pieces reject spots
+  under furniture footprints (3 tries via modelCollider radius).
+- New decal mesh names for counting: `poster`, `frame-ghost`,
+  `rust-streak`, `cable-drop`, `live-ember`, `sign-hang`.
+- Poster upgrade (decals.ts): tape corners 75%, lifted peel corner 45%,
+  torn-edge bite 30%.
+
+Test conventions: `sweep(match)` helper counts objects by name/userData
+across SEEDS; the clean-walls invariant marks pickWallSpot paper decals
+`userData.paperWall` and asserts none sits with its centre inside a
+tall-prop silhouette (`inspector-tally`/`oldNumber`/`dustShadow`/
+chalk marks are authored placements — exempt). Authored-count tests now
+assert presence not rate — rng stream drift shifts seeded counts.
+
+Gates: tsc, lint, vitest 119-file pass, sim 5/5, build. No e2e leg —
+dressing/ambient only.
+
 ## Sprint 408 — the tally answers back
 The third book gets its readout: 'Ask what the tally says — 3
 marginalia' mints on the Auditor's fig (waist-height at 0.5·lateral —

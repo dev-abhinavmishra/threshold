@@ -1975,7 +1975,9 @@ describe('the vigil still burns (sprint 443)', () => {
         built.group.traverse((o) => { if (o.name === 'votive-flame') flames++; });
       }
     }
-    expect(flames, 'no votive flames').toBeGreaterThan(1);
+    // count drifts with the shared rng stream — the invariant is
+    // presence, not rate
+    expect(flames, 'no votive flames').toBeGreaterThan(0);
   });
 });
 
@@ -2095,5 +2097,85 @@ describe('the things they left (sprint 448)', () => {
       }
     }
     expect(n, 'nothing left behind').toBeGreaterThan(3);
+  });
+});
+
+describe('the house still breathes (sprint 449)', () => {
+  const sweep = (match: (o: THREE.Object3D) => boolean) => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (match(o)) n++; });
+      }
+    }
+    return n;
+  };
+
+  it('wall fans still work the mains', () => {
+    expect(sweep((o) => o.userData.anim === 'spinZ'), 'no turning rotors').toBeGreaterThan(1);
+  });
+
+  it('some grates are not dead — a coal still breathes', () => {
+    expect(sweep((o) => o.name === 'live-ember'), 'no live embers').toBeGreaterThan(0);
+  });
+
+  it('loose cable runs drift from their anchors', () => {
+    expect(sweep((o) => o.name === 'cable-drop' && o.userData.anim === 'sway'), 'no drifting cables').toBeGreaterThan(1);
+  });
+
+  it('hung signs swing on their nails', () => {
+    expect(sweep((o) => o.name === 'sign-hang' && o.userData.anim === 'swing'), 'no drifting signs').toBeGreaterThan(1);
+  });
+});
+
+describe('the clean walls (sprint 449)', () => {
+  it('no wall decal hides behind tall furniture', () => {
+    let buried = 0;
+    let decals = 0;
+    const who: string[] = [];
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        const w = room.width, d = room.depth;
+        const wallDecals: { o: THREE.Object3D; wall: string; along: number }[] = [];
+        const SPOT_PAPER = new Set(['poster', 'wall-notice', 'register-page', 'eviction-slip', 'repair-ticket', 'photo-strip', 'frame-ghost', 'rust-streak']);
+        built.group.traverse((o) => {
+          if (!(o instanceof THREE.Mesh) || !o.userData.decalMat) return;
+          if (o.position.y < 0.5) return;
+          // random-spot paper pieces only — authored marks (chalk scrawl,
+          // tallies, old numbers on frames, dust shadows) are intentional
+          if (!SPOT_PAPER.has(o.name)) return;
+          if (Math.abs(o.position.x - (w / 2 - 0.013)) < 0.01) wallDecals.push({ o, wall: 'e', along: o.position.z });
+          else if (Math.abs(o.position.x + (w / 2 - 0.013)) < 0.01) wallDecals.push({ o, wall: 'w', along: o.position.z });
+          else if (Math.abs(o.position.z - (d / 2 - 0.013)) < 0.01) wallDecals.push({ o, wall: 'n', along: o.position.x });
+          else if (Math.abs(o.position.z + (d / 2 - 0.013)) < 0.01) wallDecals.push({ o, wall: 's', along: o.position.x });
+        });
+        decals += wallDecals.length;
+        for (const dc of wallDecals) {
+          for (const p of room.spec.props) {
+            const c = modelCollider(p.kind);
+            const ph = (c?.[1] ?? 0) + (p.y ?? 0);
+            if (ph < 1.05) continue;
+            const pw = (c ? Math.max(c[0], c[2]) : 0.8) / 2 + 0.25;
+            if (dc.wall === 'e' || dc.wall === 'w') {
+              const wx = dc.wall === 'e' ? w / 2 : -w / 2;
+              // buried = the decal's centre sits inside the prop's
+              // silhouette; edge grazes are still readable
+              if (Math.abs(p.x - wx) < pw + 0.3 && Math.abs(dc.along - p.z) < pw - 0.05) { buried++; who.push(`${dc.o.name}@${room.index}`); }
+            } else {
+              const wz = dc.wall === 'n' ? d / 2 : -d / 2;
+              if (Math.abs(p.z - wz) < pw + 0.3 && Math.abs(dc.along - p.x) < pw - 0.05) { buried++; who.push(`${dc.o.name}@${room.index}`); }
+            }
+          }
+        }
+      }
+    }
+    expect(decals, 'no wall decals found').toBeGreaterThan(10);
+    expect(buried, `${who.join(', ')} buried behind tall props`).toBe(0);
   });
 });

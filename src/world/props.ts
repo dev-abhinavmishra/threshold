@@ -358,11 +358,21 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     }
     return { group: g, colliders: [] };
   },
-  sign: (_s) => {
+  sign: (_s, rng) => {
     const g = new THREE.Group();
-    g.add(mesh(box(0.5, 0.3, 0.03), MAT.paperOld(), 0, 0, 0));
-    g.add(mesh(box(0.4, 0.05, 0.01), MAT.ink(), 0, 0.04, 0.02));
-    g.add(mesh(box(0.3, 0.04, 0.01), MAT.ink(), 0, -0.06, 0.02));
+    // hung on a nail at the top edge — a loose sign drifts in the draft
+    const pivot = new THREE.Group();
+    pivot.add(mesh(box(0.5, 0.3, 0.03), MAT.paperOld(), 0, -0.15, 0));
+    pivot.add(mesh(box(0.4, 0.05, 0.01), MAT.ink(), 0, -0.11, 0.02));
+    pivot.add(mesh(box(0.3, 0.04, 0.01), MAT.ink(), 0, -0.21, 0.02));
+    pivot.name = 'sign-hang';
+    if (rng.bool(0.4)) {
+      pivot.userData.anim = 'swing';
+      pivot.userData.animAmp = 0.03 + rng.float() * 0.03;
+      pivot.userData.animSeed = rng.float() * 100;
+      pivot.rotation.x = (rng.float() - 0.5) * 0.1;
+    }
+    g.add(pivot);
     return { group: g, colliders: [] };
   },
   pillar: (s) => {
@@ -969,14 +979,27 @@ const builders: Partial<Record<PropSpec['kind'], Builder>> = {
     g.add(mesh(box(0.25, 0.05, 0.25), MAT.steel(), 0, 0.42, 0));
     return { group: g, colliders: [{ x: 0, z: 0, w: 0.35, d: 0.35, h: 0.45 }] };
   },
-  fan: (_s) => {
+  fan: (_s, rng) => {
     const g = new THREE.Group();
     g.add(mesh(new THREE.TorusGeometry(0.45, 0.05, 6, 18), MAT.steelDark(), 0, 0, 0));
+    // rotor on its own group so the blades can keep turning — most vent
+    // fans still work the mains; a few are seized or wobble on a bent hub
+    const rotor = new THREE.Group();
     for (let i = 0; i < 4; i++) {
       const blade = mesh(box(0.12, 0.5, 0.02), MAT.steel(), 0, 0, 0);
       blade.rotation.z = (i / 4) * Math.PI * 2;
-      g.add(blade);
+      rotor.add(blade);
     }
+    if (!rng.bool(0.22)) {
+      rotor.userData.anim = 'spinZ';
+      rotor.userData.animSpeed = 1.2 + rng.float() * 2.4;
+      if (rng.bool(0.3)) {
+        // bent hub — the rotor cants and drags
+        rotor.rotation.x = 0.08 + rng.float() * 0.1;
+        rotor.userData.animSpeed = (rotor.userData.animSpeed as number) * 0.35;
+      }
+    }
+    g.add(rotor);
     return { group: g, colliders: [] };
   },
   brokenFloor: (_s) => {
