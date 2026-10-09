@@ -150,6 +150,10 @@ export interface EntityCtx {
    *  plant arms a new (grafted) one at pos in room. */
   stripSnare?: (x: number, z: number) => boolean;
   plantSnare?: (pos: Vec3, room: number, planterKey?: string) => void;
+  /** Push a 'work' evidence mark at pos, pre-read under signerKey so
+   *  the signer doesn't chase its own sign — the splice's own signing
+   *  convention, shared for non-snare work (shell-stripping etc.). */
+  signWork?: (pos: Vec3, signerKey: string) => void;
   /** sprint 419 — a carried coil is lost work: a staggered carrier
    *  drops it unlaid — a dead graft at its feet, reclaimable wire. */
   spillSnare?: (pos: Vec3, room: number) => void;
@@ -164,10 +168,10 @@ export interface EntityCtx {
    *  The spill window is a race, not a timer: beat it back to your own
    *  coin or it keeps the money. */
   nearestSpill?: (x: number, z: number, maxD: number,
-    kinds?: ('pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp')[])
-    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp'; bait?: boolean } | null;
-  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean; wedge?: boolean; lamp?: boolean })
-    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | { kind: 'wedge' } | { kind: 'lamp'; batt: number } | null;
+    kinds?: ('pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell')[])
+    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell'; bait?: boolean } | null;
+  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean; wedge?: boolean; lamp?: boolean; shell?: boolean })
+    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | { kind: 'wedge' } | { kind: 'lamp'; batt: number } | { kind: 'shell' } | null;
   /** sprint 489 — a confiscated chock is carried too: a staggered
    *  floorkeeper spills pocketed chocks back as kicked-wedge drops. */
   spillChocks?: (pos: Vec3, n: number) => void;

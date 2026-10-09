@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -186,6 +186,11 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
   const lamps = books.lampsLeft ?? 0;
   if (lamps > 0) lines.push(
     `${lamps === 1 ? 'a lamp still burns' : `${lamps} lamps still burn`} where you left ${lamps === 1 ? 'it' : 'them'} — the floor holds your light`);
+  // sprint 556 — and the litter: every shell you burned out waits on
+  // the under's scavenger — dead lamps are graft feedstock below.
+  const shells = books.shellsLeft ?? 0;
+  if (shells > 0) lines.push(
+    `${shells === 1 ? 'a dead lamp lies' : `${shells} dead lamps lie`} where ${shells === 1 ? 'it' : 'they'} burned out — the under will make wire of ${shells === 1 ? 'it' : 'them'}`);
   return lines;
 }
 

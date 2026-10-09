@@ -1199,6 +1199,13 @@ export class Game {
         return true;
       },
       plantSnare: (pos, room, planterKey) => this.plantSnare(pos, room, planterKey),
+      signWork: (pos, signerKey) => {
+        const room = this.activeRooms().find((r) => pointInRoom(r, pos.x, pos.z))?.index
+          ?? this.route?.branchRooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
+          ?? this.currentRoom;
+        this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
+          t: this.clock.time, readBy: [signerKey] });
+      },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
       // grafter drops it where it goes down, gatherable like any spill.
@@ -1207,7 +1214,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1235,6 +1242,16 @@ export class Game {
           if (w.batt <= 0) continue;
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'lamp' }; }
+        }
+        // sprint 553 — the under eats what the house ignores: a DEAD
+        // shell is litter to the warden but graft feedstock below —
+        // dead glass and wire is coil to a scavenger. 'shell' is the
+        // inverse filter of 'lamp': only burned-out lamps read.
+        if (kinds.includes('shell')) for (const w of this.litLamps) {
+          if (w.space !== this.space) continue;
+          if (w.batt > 0) continue;
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'shell' }; }
         }
         return best;
       },
@@ -1278,6 +1295,19 @@ export class Game {
             this.syncLampLights();
             this.mintLampDrops();
             return { kind: 'lamp', batt: lamp.batt };
+          }
+        }
+        // sprint 553 — the dead-shell take: only the scavenger asks for
+        // it, and only a burned-out lamp answers.
+        if (take.shell) {
+          const si = this.litLamps.findIndex((l) => l.space === this.space
+            && l.batt <= 0
+            && Math.hypot(l.x - x, l.z - z) < 0.55);
+          if (si >= 0) {
+            this.litLamps.splice(si, 1);
+            this.syncLampLights();
+            this.mintLampDrops();
+            return { kind: 'shell' };
           }
         }
         return null;
@@ -2250,6 +2280,14 @@ export class Game {
     if (best < Infinity) return { text: '[a lit seam — something stirs deep in that room]' };
     if (roomLamp) return {
       text: '[your lamp burns on in there — nothing crosses the seam]' };
+    // sprint 555 — the crack reads the shell too: a dead lamp lying
+    // past the leaf is still YOUR litter — the seam testifies to what
+    // burned out where you left it.
+    const shellNear = this.litLamps.find((l) => l.space === this.space
+      && l.batt <= 0 && l.room === target.index
+      && v3dist({ x: l.x, y: 0, z: l.z }, door.pos) < 2.5);
+    if (shellNear) return {
+      text: '[a dead lamp lies just past the crack — your litter, waiting on the under]' };
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { text: '[still floor — a resting place]' };
     return { text: '[a lit seam — nothing crosses it]' };
   }
@@ -7282,6 +7320,8 @@ export class Game {
                 .reduce((a, i) => a + i.count, 0), 0),
             // sprint 544 — and the lamps you left burning to it
             lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
+            // sprint 556 — and the litter the under will make wire of
+            shellsLeft: this.litLamps.filter((l) => l.batt <= 0).length || undefined,
           },
         },
         documents: this.loadDocs(),
