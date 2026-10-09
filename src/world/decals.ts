@@ -9591,3 +9591,107 @@ export function keyGhost(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Vend kick — the marks a vending unit keeps: shoe scuffs at the
+ * drop flap, coin-cup wear, finger glass trails by the buttons. */
+export function vendKick(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // shoe kicks — arcs low on the machine face
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      const x = 10 + rng.float() * 44;
+      ctx.beginPath();
+      ctx.arc(x, 92, 5 + rng.float() * 4, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+    }
+    // coin-cup wear — the scratch ring where change got scooped
+    ctx.strokeStyle = `rgba(70,62,50,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(32, 72, 7 + rng.float(), Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+    // button rub — a greasy column beside the buttons
+    const g = ctx.createLinearGradient(0, 20, 0, 55);
+    g.addColorStop(0, `rgba(80,72,60,${0.3 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(80,72,60,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(44, 20, 10, 36);
+    // glass trails — fingers that pointed through the pane
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.2 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(10 + rng.float() * 20, 12 + rng.float() * 14);
+      ctx.lineTo(10 + rng.float() * 20, 20 + rng.float() * 14);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Trap set — the marks a mousetrap keeps: bait ghosts, sprung
+ * dust blowback, drag lines where it slid once. */
+export function trapSet(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 26;
+    // bait ghost — the dark square where the cheese sat
+    ctx.fillStyle = `rgba(80,60,30,${0.4 + rng.float() * 0.18})`;
+    ctx.fillRect(cx - 4, cy - 4, 8, 7);
+    // sprung blowback — dust ring blown outward around the trap
+    ctx.strokeStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 18, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // snap arc — the wire's swing shadow
+    ctx.strokeStyle = `rgba(50,44,36,${0.42 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, 11, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.stroke();
+    // drag lines — it slid once, spraying dust
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(140,134,122,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy + 10 + i * 3);
+      ctx.lineTo(cx + 16, cy + 12 + i * 2 + (rng.float() - 0.5) * 2);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Tape curl — the marks a dropped tape measure keeps: a curled
+ * end ghost, measure ticks, and the sweep line it drew in dust. */
+export function tapeCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 32, (ctx) => {
+    // the sweep — a measuring line drawn through the dust
+    ctx.strokeStyle = `rgba(150,144,132,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(6, 16 + (rng.float() - 0.5) * 3);
+    ctx.lineTo(80, 16 + (rng.float() - 0.5) * 3);
+    ctx.stroke();
+    // measure ticks — the blade's increments bitten off
+    for (let i = 0; i < 9; i++) {
+      const x = 10 + i * 8;
+      ctx.strokeStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.16})`;
+      ctx.lineWidth = i % 4 === 0 ? 1.8 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 13);
+      ctx.lineTo(x, 13 + (i % 4 === 0 ? 6 : 3.4));
+      ctx.stroke();
+    }
+    // curled end — the hook's dark curl
+    ctx.strokeStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(84, 16, 5, -Math.PI * 0.4, Math.PI * 0.6);
+    ctx.stroke();
+    // housing scuff where it was dropped
+    ctx.fillStyle = `rgba(80,72,60,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(10, 24, 7, 3, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
