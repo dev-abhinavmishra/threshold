@@ -1050,6 +1050,10 @@ export class HazardField {
     filed: boolean; lampCued: boolean }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
+  /** sprint 560 — the beam's charge readout, per lamp position, on a
+   *  decay (the fuse burns down — re-reading a burning lamp after a
+   *  while reports a lower batt and that's the point). */
+  private lampBeamRead = new Map<string, number>();
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -1242,29 +1246,74 @@ export class HazardField {
     }
     // Old sign the PLAYER can read: a sprung wire or a bled line from
     // before you arrived reads as history — someone else worked here.
+    // sprint 558 — and the beam reads it at range: aimed lamp light
+    // picks old scars out of the dust before you're standing in them.
     for (const ev of this.evidence) {
       if (!ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
-      if (v3dist(p.pos, ev.pos) > 3) continue;
+      const d = v3dist(p.pos, ev.pos);
+      const aimed = d <= 9 && (ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false);
+      if (d > 3 && !aimed) continue;
       ev.readBy.push('player');
-      ctx.cue('floor-creak', ev.pos, ev.kind === 'wire'
-        ? '[a sprung wire, long dry — someone else took this step]'
-        : ev.kind === 'line'
-          ? '[a bled line, long cold — somebody worked here]'
-          : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
+      ctx.cue('floor-creak', ev.pos, aimed
+        ? '[the beam picks an old scar — somebody worked here, long ago]'
+        : ev.kind === 'wire'
+          ? '[a sprung wire, long dry — someone else took this step]'
+          : ev.kind === 'line'
+            ? '[a bled line, long cold — somebody worked here]'
+            : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
     }
     // sprint 421 — fresh sign reads too: 'work' marks are hands at
     // hand-height — a grafted splice, the rubble's maintenance — and
     // the dust testifies while it's still warm. Your own work comes
     // pre-read so the floor doesn't narrate your hands back to you.
+    // sprint 557 — aimed light reaches it too: the beam finds the
+    // hand before your ankle does.
     for (const ev of this.evidence) {
       // wiped sign reads as scrubbed dust — the felt's shadow poisons
       // the player's fresh-read the same as every hunter's
       if (ev.old || ev.wiped || ev.room !== ctx.currentRoomIndex || ev.kind !== 'work'
         || ev.readBy.includes('player')) continue;
-      if (v3dist(p.pos, ev.pos) > 2.6) continue;
+      const d = v3dist(p.pos, ev.pos);
+      const aimed = d <= 9 && (ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false);
+      if (d > 2.6 && !aimed) continue;
       ev.readBy.push('player');
-      ctx.cue('floor-creak', ev.pos,
-        '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+      ctx.cue('floor-creak', ev.pos, aimed
+        ? '[the beam finds a hand in the dust — worked here, recently]'
+        : '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+    }
+    // sprint 559 — the beam reads what the ankle can't: hunter-sign
+    // (fresh wire/line/fan kills) and wiped floors are invisible to a
+    // player on foot, but aimed light catches the fresh break or the
+    // scrubbed patch — the wipe's shadow reads back under the beam.
+    for (const ev of this.evidence) {
+      if (ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
+      if (!(ev.wiped || ev.kind === 'wire' || ev.kind === 'line' || ev.kind === 'fan')) continue;
+      const d = v3dist(p.pos, ev.pos);
+      if (d > 9 || !(ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false)) continue;
+      ev.readBy.push('player');
+      ctx.cue('floor-creak', ev.pos, ev.wiped
+        ? '[the dust is scrubbed clean under the beam — someone wiped this]'
+        : ev.kind === 'wire'
+          ? '[the beam finds a fresh cut — wire died here, recently]'
+          : ev.kind === 'line'
+            ? '[the beam finds a bled line — somebody worked it, recently]'
+            : '[the beam finds a stilled wheel — somebody stopped the blades]', { severity: 'info' });
+    }
+    // sprint 560 — and the beam reads your own lamps' charge: aim at a
+    // dropped lamp and its fuse reads back across the room — burning,
+    // doused-but-charged, or dead shell. Re-reads decay with the lamp:
+    // a burning lamp is worth checking again as the batt runs down.
+    for (const l of ctx.floorLamps?.(ctx.currentRoomIndex) ?? []) {
+      const key = `${l.x.toFixed(2)},${l.z.toFixed(2)}`;
+      const d = v3dist(p.pos, { x: l.x, y: 0, z: l.z });
+      if (d > 9 || !(ctx.beamCovers?.({ x: l.x, y: 0, z: l.z }, 9, 0.75) ?? false)) continue;
+      if (ctx.now - (this.lampBeamRead.get(key) ?? -60) < 45) continue;
+      this.lampBeamRead.set(key, ctx.now);
+      ctx.cue('floor-creak', { x: l.x, y: 0.4, z: l.z }, l.batt <= 0
+        ? '[a dead lamp under the beam — the shell still holds its shape]'
+        : !l.lit
+          ? `[your lamp waits dark — ${Math.round(l.batt)} charge in the bottle]`
+          : `[the beam finds your lamp — burning, ${Math.round(l.batt)} left]`, { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {

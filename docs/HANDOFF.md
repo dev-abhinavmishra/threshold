@@ -7680,3 +7680,39 @@ like any dead snare. Your lamp's corpse is the under's raw material.
   then currentRoom) — same triple-resolution as spillLamps; entity
   positions can be off-map, so the fallback must stay `currentRoom`
   not `0` or evidence lands in the wrong room's scent radius.
+
+## Sprints 557–560 — the beam reads the scars
+
+- **s557 the beam finds the hand** — `beamCovers(pos, maxD, minDot)` is
+  the s444 cover rules extracted (lamp on, in cone, in reach, sight
+  clear of walls and shut leaves) as a shared ctx hook; aimed light
+  extends the fresh-'work' dust-read from 2.6m to 9m with its own
+  caption '[the beam finds a hand in the dust — worked here,
+  recently]'.
+- **s558 the beam picks old scars** — same reach for `ev.old` sign:
+  3m → 9m aimed, '[the beam picks an old scar — somebody worked here,
+  long ago]'.
+- **s559 the beam reads what the ankle can't** — hunter-sign (fresh
+  wire/line/fan kills) and wiped floors were player-invisible; aimed
+  light reads them: fresh cuts, bled lines, stilled wheels, and the
+  wipe's shadow itself — '[the dust is scrubbed clean under the beam
+  — someone wiped this]'.
+- **s560 the beam reads your lamps' charge** — `floorLamps(room)` ctx
+  hook (the unfiltered lamp pile — `litLamps` stays the burning-only
+  view the eyes drink): aim at a dropped lamp and its fuse reads back
+  across the room — 'burning, N left' / 'waits dark — N in the
+  bottle' / 'a dead lamp under the beam'. Re-reads on a 45s decay per
+  lamp position — the fuse burns down, that's the point.
+
+Contract: the held lamp's second job — it doesn't just light the
+way, it interrogates the floor. Sign is dust; light is the question.
+
+**Traps:**
+- `beamCovers` minDot: entity cover (repel/wake) keeps the s444 0.4
+  cone, but READS need a real aim — sign/lamp reads pass 0.75 (~41°)
+  or they cue at the screen edge. The default stays 0.4 for s444
+  compat.
+- `litLamps` vs `floorLamps`: the eyes drink burning-only; reads need
+  the whole pile (doused, dead). Two hooks, don't broaden the first.
+- Beam-read marks are `readBy:['player']`-consumed exactly like ankle
+  reads — the beam doesn't get a second narrate walking in later.

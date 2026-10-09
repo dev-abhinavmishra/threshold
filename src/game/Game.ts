@@ -1167,6 +1167,10 @@ export class Game {
       litLamps: (room) => this.litLamps
         .filter((l) => l.room === room && l.space === this.space && l.lit && l.batt > 0)
         .map((l) => ({ x: l.x, z: l.z })),
+      beamCovers: (pos, maxD = 11, minDot = 0.4) => this.beamCovers(pos, maxD, minDot),
+      floorLamps: (room) => this.litLamps
+        .filter((l) => l.room === room && l.space === this.space)
+        .map((l) => ({ x: l.x, z: l.z, batt: l.batt, lit: l.lit })),
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
@@ -1934,6 +1938,28 @@ export class Game {
   private graftedMeshes: THREE.Object3D[] = [];
   /** The paper-and-amber face a laid wire wears (graft or planted).
    *  Bound to the snare so pulling the wire takes its face with it. */
+  /** sprint 557 — the held beam as a reader, shared by entity
+   *  lightOnIt (s444's rules, extracted) and ctx.beamCovers: a held
+   *  lamp is on, pos is inside its cone and reach, and the sight line
+   *  is clear of walls and shut leaves. */
+  private beamCovers(pos: Vec3, maxD = 11, minDot = 0.4): boolean {
+    if (!this.lampOn && !this.pulseLampOn) return false;
+    const dx = pos.x - this.player.pos.x, dz = pos.z - this.player.pos.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist >= maxD) return false;
+    const dir = v3();
+    this.player.lookDir(dir);
+    const dn = dist || 1;
+    if ((dir.x * dx + dir.z * dz) / dn <= minDot) return false;
+    const eye = v3();
+    this.player.eyePos(eye);
+    const rooms = this.activeRooms();
+    const inRoom = rooms.find((r) => pointInRoom(r, pos.x, pos.z)) ?? rooms[this.currentRoom];
+    const blockers = (inRoom ? inRoom.losBlockers : []).concat(
+      shutLeafBlockers(rooms, this.player.pos, pos));
+    return hasLineOfSight(eye, v3(pos.x, 1.2, pos.z), blockers);
+  }
+
   private buildSnareProp(pos: Vec3, room: number): THREE.Object3D {
     const built = buildProp({ kind: 'snare', x: 0, z: 0 }, new Rng(0x6fa1f + this.hazard.snares.length * 97));
     const fy = this.activeRooms()[room]?.origin.y ?? 0;
@@ -11048,32 +11074,9 @@ export class Game {
         e.inputHeld = this.keys.size > 0;
       }
       if (e instanceof Inkling || e instanceof Husk || e instanceof Lurker) {
-        // sprint 444 — the beam needs air: the flag was lamp-on-OR-off,
-        // so the beam repelled, agitated, and woke things through shut
-        // leaves and walls alike. Now it means the beam actually covers
-        // it: lamp on, in the cone, in reach, and sight clear.
         e.lightOnIt = 0;
-        if (this.lampOn || this.pulseLampOn) {
-          const tp = e.threatPos();
-          if (tp) {
-            const dx = tp.x - this.player.pos.x, dz = tp.z - this.player.pos.z;
-            const dist = Math.hypot(dx, dz);
-            if (dist < 11) {
-              const dir = v3();
-              this.player.lookDir(dir);
-              const dn = dist || 1;
-              if ((dir.x * dx + dir.z * dz) / dn > 0.4) {
-                const eye = v3();
-                this.player.eyePos(eye);
-                const rooms = this.activeRooms();
-                const inRoom = rooms.find((r) => pointInRoom(r, tp.x, tp.z)) ?? rooms[this.currentRoom];
-                const blockers = (inRoom ? inRoom.losBlockers : []).concat(
-                  shutLeafBlockers(rooms, this.player.pos, tp));
-                if (hasLineOfSight(eye, v3(tp.x, 1.2, tp.z), blockers)) e.lightOnIt = 1;
-              }
-            }
-          }
-        }
+        if ((this.lampOn || this.pulseLampOn) && e.threatPos()
+          && this.beamCovers(e.threatPos()!)) e.lightOnIt = 1;
       }
     }
 

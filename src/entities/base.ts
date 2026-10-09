@@ -112,6 +112,17 @@ export interface EntityCtx {
    *  lamp's bearing instead of travelling the room. Optional for
    *  headless ctxs. */
   litLamps?: (room: number) => { x: number; z: number }[];
+  /** sprint 560 — every dropped lamp in a room, burning or not, for
+   *  the beam's charge readout. litLamps stays the burning-only view
+   *  the eyes drink; this is the whole pile. Optional for headless
+   *  ctxs. */
+  floorLamps?: (room: number) => { x: number; z: number; batt: number; lit: boolean }[];
+  /** sprint 557 — the held beam as a reader: true when a held lamp is
+   *  on, pos is inside its cone (same s444 cover rules: in reach, in
+   *  the cone, sight clear of walls and shut leaves). Sign-readers use
+   *  it to extend dust-reads to aimed range. Optional for headless
+   *  ctxs. */
+  beamCovers?: (pos: Vec3, maxD?: number, minDot?: number) => boolean;
   /** Repossess the marked take — strips every hotItems stack and the
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */

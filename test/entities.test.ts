@@ -3558,3 +3558,84 @@ describe('the eye tells — hunters and mass (sprints 461-464)', () => {
     sw.dispose();
   });
 });
+
+describe('the beam reads sign (sprints 557-560)', () => {
+  const plainRoom = (): RoomInstance => ({
+    index: 0, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 14, depth: 14, spec: { width: 14, depth: 14, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded: false,
+    sockets: [],
+  } as unknown as RoomInstance);
+
+  const cueTexts = (ctx: EntityCtx) =>
+    (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+
+  it('a fresh work mark reads under aimed light beyond ankle reach', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => true });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [] });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0; // 5m — past the 2.6 ankle read
+    h.update(ctx, 0.05);
+    expect(cueTexts(ctx).some((t) => t.includes('the beam finds a hand'))).toBe(true);
+    expect(h.evidence[0].readBy).toContain('player');
+  });
+
+  it('no beam, no far read — sign stays for the ankle', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => false });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [] });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    expect(cueTexts(ctx).some((t) => t.includes('dust keeps a hand') || t.includes('beam finds'))).toBe(false);
+    expect(h.evidence[0].readBy).not.toContain('player');
+  });
+
+  it('hunter-sign reads ONLY under the beam — wire, wiped, and the scrubbed patch', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => true });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'wire', t: 0, readBy: [] });
+    h.evidence.push({ pos: v3(-5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [], wiped: true });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    const texts = cueTexts(ctx);
+    expect(texts.some((t) => t.includes('wire died here'))).toBe(true);
+    expect(texts.some((t) => t.includes('scrubbed clean'))).toBe(true);
+  });
+
+  it('the beam reads a dropped lamp\'s charge — burning, dark, or shell', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      beamCovers: () => true,
+      floorLamps: () => [
+        { x: 4, z: 0, batt: 62, lit: true },
+        { x: -4, z: 0, batt: 30, lit: false },
+        { x: 0, z: 4, batt: 0, lit: false },
+      ],
+    });
+    const h = new HazardField();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    const texts = cueTexts(ctx);
+    expect(texts.some((t) => t.includes('burning, 62 left'))).toBe(true);
+    expect(texts.some((t) => t.includes('waits dark — 30 charge'))).toBe(true);
+    expect(texts.some((t) => t.includes('dead lamp under the beam'))).toBe(true);
+    // and without the lamp on, the lamps keep their silence
+    const ctx2 = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      beamCovers: () => false,
+      floorLamps: () => [{ x: 4, z: 0, batt: 62, lit: true }],
+    });
+    const h2 = new HazardField();
+    ctx2.player.pos.x = 0; ctx2.player.pos.z = 0;
+    h2.update(ctx2, 0.05);
+    expect(cueTexts(ctx2).some((t) => t.includes('your lamp'))).toBe(false);
+  });
+});
