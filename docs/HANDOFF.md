@@ -1,4 +1,16 @@
-# THRESHOLD — session handoff prompt
+# THRESH
+
+## Sprint 533–535 — the beams shed, the tags stayed on & the fans kept their blades
+
+Another room-history decal batch — wear where equipment lived.
+- **533**: beam-dust streaks on ceiling beams, can-rings under oil/paint cans, peg wear around coat pegs.
+- **534**: pull-tag flags on extinguishers, pin-line clutter on the routing board, damp rings under buckets.
+- **535**: blade films on fans, drag arcs + chafe beside wall hoses, dust blooms on stored bottles/glass.
+
+Gotcha: `'bucket'` and `'wallHose'` are real PropKinds but sparse — gate by kind AND spawn rate; verify counts across all SEEDS before committing. Import-merge regexes must match the ACTUAL import tail (sibling merges shift names around) — print the tail line before regexing.
+
+*Branch devin/…-sprint-533+ — 535 total decal wiring points after this batch.*
+OLD — session handoff prompt
 
 Paste this into a fresh session to continue the autonomous sprint work with full
 context. Keep it updated when conventions change.
