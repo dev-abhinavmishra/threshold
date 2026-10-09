@@ -10665,3 +10665,83 @@ export function splatFilm(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+// ---------- sprint 558: the saw kept its dust, the wrench kept its prints ----------
+
+export function sawdustFan(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // dust fan — a drift thrown sideways by the stroke
+    for (let i = 0; i < 50; i++) {
+      const t = rng.float();
+      const x = 8 + t * 48, y = 30 - Math.sin(t * Math.PI) * 14 + rng.float() * 8;
+      ctx.fillStyle = `rgba(178,148,104,${0.2 + rng.float() * 0.24})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.5 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // cut kerf — the line the teeth left in the bench
+    ctx.strokeStyle = `rgba(70,56,38,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(10, 34);
+    ctx.lineTo(54, 30 + rng.float() * 4);
+    ctx.stroke();
+    // piled heap — the drift under the last cut
+    ctx.fillStyle = `rgba(186,156,110,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(46, 38, 8, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+export function oilyGrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    // palm sheen — dark polish where the hand closed
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(46,40,34,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(16 + rng.float() * 16, 14 + i * 8, 4 + rng.float() * 2, 2.2, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // finger ghosts — four drag marks along the haft
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(56,48,40,${0.22 + rng.float() * 0.18})`;
+      ctx.fillRect(14 + i * 5, 8, 2.4, 8 + rng.float() * 4);
+    }
+    // wipe streak — a rag passed once
+    ctx.strokeStyle = `rgba(160,152,138,${0.24 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(8, 40);
+    ctx.quadraticCurveTo(24, 36 + rng.float() * 4, 42, 38);
+    ctx.stroke();
+    // rust freckles where the knuckles knocked it
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(112,60,28,${0.24 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 32, 6 + rng.float() * 10, 0.7 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+export function haftShine(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    // hand polish — the long bright burnish of seasons of work
+    ctx.fillStyle = `rgba(190,166,124,${0.26 + rng.float() * 0.18})`;
+    ctx.fillRect(18, 14, 12, 34);
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(200,178,134,${0.14 + rng.float() * 0.14})`;
+      ctx.fillRect(20 + rng.float() * 8, 16 + rng.float() * 28, 2, 3);
+    }
+    // sweat dark — grime packed above and below the grip
+    ctx.fillStyle = `rgba(60,48,34,${0.3 + rng.float() * 0.18})`;
+    ctx.fillRect(18, 8, 12, 4);
+    ctx.fillRect(18, 50, 12, 5);
+    // chip marks where it was leaned against stone
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(96,76,50,${0.3 + rng.float() * 0.2})`;
+      ctx.fillRect(16 + rng.float() * 14, 56 + rng.float() * 5, 1.6, 1.4);
+    }
+  });
+}

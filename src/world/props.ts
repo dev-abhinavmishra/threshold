@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -3155,6 +3155,47 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sf.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.35) / 2 + 0.004);
     prop.group.add(sf);
     if (!prop.group.name) prop.group.name = 'splat-film';
+  }
+  // The saw kept its dust — a fan thrown sideways by the stroke.
+  if (spec.kind === 'handsaw' && rng.bool(0.6)) {
+    const sf2 = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.5),
+      new THREE.MeshStandardMaterial({ map: sawdustFan(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sf2.name = 'sawdust-fan';
+    sf2.userData.decalMat = true;
+    sf2.rotation.x = -Math.PI / 2;
+    sf2.position.set(0.1, 0.007, 0.2);
+    prop.group.add(sf2);
+    if (!prop.group.name) prop.group.name = 'sawdust-fan';
+  }
+  // The wrench kept its prints — palm sheen and finger ghosts.
+  const HANDTOOLS: ReadonlySet<PropSpec['kind']> = new Set(['wrench', 'hammer', 'pliers', 'screwdrivers']);
+  if (HANDTOOLS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const og = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, 0.24),
+      new THREE.MeshStandardMaterial({ map: oilyGrip(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    og.name = 'oily-grip';
+    og.userData.decalMat = true;
+    og.position.set(0, (dc?.[1] ?? 0.1) * 0.4, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    prop.group.add(og);
+    if (!prop.group.name) prop.group.name = 'oily-grip';
+  }
+  // The haft kept its shine — seasons of hands burnished the wood.
+  const HAFTS: ReadonlySet<PropSpec['kind']> = new Set(['pickaxe', 'sledge', 'spade', 'axe', 'broom', 'machete']);
+  if (HAFTS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const hs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.14, 0.5),
+      new THREE.MeshStandardMaterial({ map: haftShine(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    hs.name = 'haft-shine';
+    hs.userData.decalMat = true;
+    hs.position.set(0, (dc?.[1] ?? 0.9) * 0.5, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    prop.group.add(hs);
+    if (!prop.group.name) prop.group.name = 'haft-shine';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
