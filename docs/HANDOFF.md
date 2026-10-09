@@ -7339,3 +7339,36 @@ priority ties to first-minted, silently killing the second verb.
 - `it.data.room` now rides stash verbs for the sign push — verbs
   minted in the room loop know `room.index`; use it for any
   room-scoped evidence rather than re-resolving via pos.
+
+## Sprints 529–532 — the take is followed
+
+Sibling: the last seams of the load/marked systems — the take is
+read at the threshold, held behind the trap, itemized at the end,
+and the lid remembers its robbery.
+
+- **s529 the stair knows your weight** — crossing floors either way
+  past the rattle tier (≥8) lands a real positional emit at the
+  arrival threshold ('[the stair knows your weight]' down / '[the
+  stair lets your weight go]' up). Player-worn emit convention:
+  noiseMul·maskMul·wantedPull.
+- **s530 a held lid pays nobody** — 'Recover the stash' now refuses
+  on a `trappedBy` spot: '[it holds the lid shut — the take waits
+  behind its hands]'. The full-lid hide-deny's other half: a
+  trapped+stashed lid is a take you can't reach AND can't hide in.
+- **s531 the epitaph marks the parked take** — `BooksClosed.
+  stashedMarked` (both epitaph sites) — 'N goods stay parked in the
+  lids — M of it still marked'. The epitaph's itemization contract
+  (the count's coin, loose goods, carried, parked) now reads marks.
+- **s532 the lid remembers the robbery** — stash records carry
+  `robbedWire` (set in `robStashWire`, rides the checkpoint) and
+  'Peep the lid' reports it: `· its wire walked`.
+
+**Contract:** the lid's verbs read/write a real record — items,
+marks, AND its history. A stash is never anonymous: books count it,
+the register counts its act, the seam hums it, the lid remembers
+who worked it.
+
+**Traps:**
+- `enterUnderscript`/`exitUnderscript` both run `this.space` flips
+  BEFORE their emits — emit at the ARRIVAL pos in the NEW space, or
+  the sound lands on the wrong floor's listeners.
