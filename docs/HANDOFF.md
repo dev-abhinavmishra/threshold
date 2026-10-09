@@ -7043,3 +7043,29 @@ never tie at player.pos.
 feet (player sprint, walker stride), never pocket themselves under a
 non-reader, and never land inside a collider. Scatter = noise +
 relocation; claim = read + stoop + take.
+
+## Sprints 497-500 — the floor moves the pile
+
+- **s497 drag the pile** — crouched within 0.5–1.6m, every pile mints a
+  second verb anchored 0.34m TOWARD you: 'Drag the pile closer' (0.5s
+  hold) slides it a step toward the kneeler instead of pocketing it.
+  Quiet work — a 0.14 scrape (wantedPull-taxed), no sign. The deliberate
+  twin of the kick: slow and silent vs fast and testifying.
+- **s498 the tide takes the spill** — a pouch lying in a flooded,
+  un-drained room drifts on a slow deterministic pull (per-room hash
+  angle, collider-guarded, stops at the dry edge). Gather verbs ride the
+  moving pile; the grafter's seek chases it — floor pinball in the under.
+  The water whispers near-ear: '[coin slides in the water]'.
+- **s499 the drain's surge** — an opened crank pulls every pile in the
+  room toward it through the 6s drain-out (~0.6m/s, collider-guarded);
+  they settle within 0.5m of the crank — the drain is where the tide
+  ends. `drainedSpots` remembers where the water left.
+- **s500 the books count the spill** — `BooksClosed.spilled` sums every
+  loose good left lying (pouch coin + marked, wraps, chocks, coils);
+  the epitaph reads `N loose goods still lie on the floor — the house
+  will tidy them` at death or the door.
+
+**Contract:** a pile has four movers — you can KICK it (fast, loud,
+signs), DRAG it (slow, quiet), the WATER pulls it (tide + drain surge),
+and WALKERS boot it (scatterSpill). It never teleports, never lands in
+a collider, and the books count it at the end.

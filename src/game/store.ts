@@ -144,6 +144,8 @@ export interface BooksClosed {
   seized?: number;
   /** coin the count swallowed outright — cut tags, rotted tags */
   coinKept?: number;
+  /** loose goods the floor still holds — spilled piles left lying */
+  spilled?: number;
 }
 
 export interface CheckpointSave {

@@ -151,13 +151,14 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
   const coinKept = books.coinKept ?? 0;
   const hotPages = books.hotPages ?? 0;
-  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + hotPages + seized + coinKept;
+  const spilled = books.spilled ?? 0;
+  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + hotPages + seized + coinKept + spilled;
   if (total === 0) {
     lines.push('every book closed before the door did');
   } else {
@@ -170,6 +171,8 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
     // the count's locker keeps what it caught — unclaimed at the end
     if (seized > 0) lines.push(`${seized} seized ${seized === 1 ? 'ware' : 'wares'} still hang in the count's locker`);
     if (coinKept > 0) lines.push(`${coinKept} of your ${coinKept === 1 ? 'coin stays' : 'coins stay'} in the count's till`);
+    // sprint 500 — the floor keeps what fell: spills nobody reclaimed
+    if (spilled > 0) lines.push(`${spilled} loose ${spilled === 1 ? 'good' : 'goods'} still lie on the floor — the house will tidy them`);
   }
   return lines;
 }
