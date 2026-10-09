@@ -7371,3 +7371,438 @@ export function hingeWear(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The head kept its oil — a dark bloom on the headboard where the
+ *  same head rested a thousand nights, hair oil worked in deep. */
+export function headGrease(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The rest-bloom — a broad dark oval where the head always lies.
+    const hx = 48 + rng.range(-6, 6);
+    const bloom = g.createRadialGradient(hx, 30, 3, hx, 30, 26);
+    bloom.addColorStop(0, 'rgba(52,40,28,0.55)');
+    bloom.addColorStop(0.6, 'rgba(52,40,28,0.28)');
+    bloom.addColorStop(1, 'rgba(52,40,28,0)');
+    g.fillStyle = bloom;
+    g.beginPath();
+    g.ellipse(hx, 30, 26, 18, 0, 0, Math.PI * 2);
+    g.fill();
+    // The polish ring — hair oil wicks an edge around the bloom.
+    g.strokeStyle = 'rgba(80,60,40,0.35)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    g.ellipse(hx, 30, 24 + rng.float() * 3, 16 + rng.float() * 2, 0, 0, Math.PI * 2);
+    g.stroke();
+    // The pressure never stays even — darker lobes where it leaned.
+    for (let i = 0; i < 3; i++) {
+      const lx = hx + rng.range(-10, 10);
+      const lobe = g.createRadialGradient(lx, 30 + rng.range(-4, 4), 1, lx, 30 + rng.range(-4, 4), 8);
+      lobe.addColorStop(0, 'rgba(44,34,22,0.4)');
+      lobe.addColorStop(1, 'rgba(44,34,22,0)');
+      g.fillStyle = lobe;
+      g.beginPath();
+      g.arc(lx, 30 + rng.range(-4, 4), 8, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Stray hairs stuck in the sheen — fine arcs near the top edge.
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = `rgba(30,24,18,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.35;
+      g.beginPath();
+      const sx = hx + rng.range(-16, 16);
+      g.moveTo(sx, 18 + rng.range(-4, 4));
+      g.quadraticCurveTo(sx + rng.range(-4, 4), 22 + rng.range(-3, 3), sx + rng.range(-6, 6), 26 + rng.range(-3, 3));
+      g.stroke();
+    }
+    // The rail line below — dust shadow under the head's reach.
+    g.fillStyle = 'rgba(40,32,22,0.28)';
+    g.fillRect(hx - 26, 56 + rng.range(-1, 1), 52, 1.6);
+  });
+}
+
+/** The frame knocked the wall — rub arcs and paint chips where the
+ *  headboard bangs the plaster when the bed moves. */
+export function frameRattle(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // Two contact zones — the headboard's posts hit the same spots.
+    for (const cx of [30, 66]) {
+      const cy = 40 + rng.range(-6, 6);
+      // The rub — a crescent of polished plaster.
+      const rub = g.createRadialGradient(cx, cy, 1, cx, cy, 12);
+      rub.addColorStop(0, 'rgba(186,170,142,0.5)');
+      rub.addColorStop(0.6, 'rgba(186,170,142,0.2)');
+      rub.addColorStop(1, 'rgba(186,170,142,0)');
+      g.fillStyle = rub;
+      g.beginPath();
+      g.arc(cx, cy, 12, 0, Math.PI * 2);
+      g.fill();
+      // The chips — knocked-out plaster divots in the rub zone.
+      for (let i = 0; i < 4; i++) {
+        g.fillStyle = `rgba(196,186,168,${0.4 + rng.float() * 0.3})`;
+        g.beginPath();
+        g.arc(cx + rng.range(-6, 6), cy + rng.range(-8, 8), 0.8 + rng.float() * 1.6, 0, Math.PI * 2);
+        g.fill();
+      }
+      // The knock ring — an arc of dented paint around the sweet spot.
+      g.strokeStyle = `rgba(96,80,60,${0.3 + rng.float() * 0.2})`;
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.arc(cx, cy, 8 + rng.float() * 2, rng.float() * 2, rng.float() * 2 + 1.6 + rng.float());
+      g.stroke();
+    }
+    // Swing arcs — the paths the posts drag on each shove.
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(160,144,118,${0.12 + rng.float() * 0.14})`;
+      g.lineWidth = 0.6;
+      const side = rng.bool(0.5) ? 30 : 66;
+      g.beginPath();
+      g.moveTo(side + rng.range(-5, 5), 46 + rng.range(-3, 3));
+      g.quadraticCurveTo(side + rng.range(-3, 3), 54 + rng.range(-3, 3), side + rng.range(-8, 8), 62 + rng.range(-4, 4));
+      g.stroke();
+    }
+    // Fallen plaster dust caught at the base.
+    for (let i = 0; i < 9; i++) {
+      g.fillStyle = `rgba(180,168,146,${0.2 + rng.float() * 0.24})`;
+      g.fillRect(24 + rng.float() * 48, 74 + rng.float() * 12, 0.9 + rng.float(), 0.9 + rng.float() * 0.6);
+    }
+  });
+}
+
+/** The cushions learned the body — a dip-shadow on the seat where
+ *  the weight always settles, button dimples and edge grime. */
+export function seatSag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The dip — a broad settle-shadow across the cushion middle.
+    const dip = g.createRadialGradient(48, 44, 4, 48, 44, 30);
+    dip.addColorStop(0, 'rgba(58,46,34,0.4)');
+    dip.addColorStop(0.7, 'rgba(58,46,34,0.16)');
+    dip.addColorStop(1, 'rgba(58,46,34,0)');
+    g.fillStyle = dip;
+    g.beginPath();
+    g.ellipse(48, 44, 30, 22, 0, 0, Math.PI * 2);
+    g.fill();
+    // Seat-edges catch a sheen — front lip where legs swing over.
+    const lip = g.createLinearGradient(0, 78, 0, 88);
+    lip.addColorStop(0, 'rgba(150,134,110,0)');
+    lip.addColorStop(0.6, `rgba(158,142,116,${0.2 + rng.float() * 0.12})`);
+    lip.addColorStop(1, 'rgba(158,142,116,0)');
+    g.fillStyle = lip;
+    g.fillRect(20, 78, 56, 10);
+    // Button dimples pulled deep by years of sitting.
+    for (const [bx, by] of [[34, 36], [62, 36], [48, 52]] as const) {
+      if (!rng.bool(0.7)) continue;
+      g.fillStyle = 'rgba(34,26,18,0.5)';
+      g.beginPath();
+      g.arc(bx + rng.range(-2, 2), by + rng.range(-2, 2), 1.6 + rng.float(), 0, Math.PI * 2);
+      g.fill();
+      // The pull creases — short lines radiating from each button.
+      for (let c = 0; c < 4; c++) {
+        g.strokeStyle = `rgba(46,36,26,${0.18 + rng.float() * 0.14})`;
+        g.lineWidth = 0.4;
+        const a = (c / 4) * Math.PI * 2 + rng.range(-0.4, 0.4);
+        g.beginPath();
+        g.moveTo(bx + Math.cos(a) * 2.2, by + Math.sin(a) * 2.2);
+        g.lineTo(bx + Math.cos(a) * (5 + rng.float() * 2), by + Math.sin(a) * (5 + rng.float() * 2));
+        g.stroke();
+      }
+    }
+    // The crumb line — what fell between the cushions and stayed.
+    g.strokeStyle = 'rgba(40,32,22,0.4)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    g.moveTo(16, 46 + rng.range(-1.5, 1.5));
+    g.quadraticCurveTo(48, 49 + rng.range(-1.5, 1.5), 80, 46 + rng.range(-1.5, 1.5));
+    g.stroke();
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(60,48,34,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(20 + rng.float() * 56, 46 + rng.range(-2, 3), 0.8, 0.8);
+    }
+  });
+}
+
+/** The ribbon kept the words — an ink halo round the platen, the
+ *  ghost of typed lines where the carriage stopped mid-letter. */
+export function platenInk(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The ribbon smudge — a broad inked band across the platen line.
+    const band = g.createLinearGradient(0, 24, 0, 40);
+    band.addColorStop(0, 'rgba(20,18,24,0)');
+    band.addColorStop(0.5, 'rgba(20,18,24,0.4)');
+    band.addColorStop(1, 'rgba(20,18,24,0)');
+    g.fillStyle = band;
+    g.fillRect(14, 24, 68, 16);
+    // Ghost lines — the last page's rows impressed into the roller.
+    for (let i = 0; i < 4; i++) {
+      const y = 27 + i * 3 + rng.range(-0.5, 0.5);
+      for (let x = 20; x < 76; x += 2 + rng.float() * 3) {
+        g.fillStyle = `rgba(30,26,36,${0.2 + rng.float() * 0.3})`;
+        g.fillRect(x, y, 1 + rng.float() * 1.6, 0.7);
+      }
+    }
+    // The strike zone — densest ink where the keys hit the same spot.
+    const zone = g.createRadialGradient(48, 32, 1, 48, 32, 10);
+    zone.addColorStop(0, 'rgba(14,12,20,0.55)');
+    zone.addColorStop(1, 'rgba(14,12,20,0)');
+    g.fillStyle = zone;
+    g.beginPath();
+    g.arc(48, 32, 10, 0, Math.PI * 2);
+    g.fill();
+    // Key fingerprints on the hood — smudged dust where hands rest.
+    for (let i = 0; i < 6; i++) {
+      const fx = 20 + rng.float() * 56;
+      g.fillStyle = `rgba(60,54,44,${0.14 + rng.float() * 0.2})`;
+      g.beginPath();
+      g.ellipse(fx, 50 + rng.range(-3, 4), 3 + rng.float() * 2, 1.2 + rng.float() * 0.8, rng.range(-0.3, 0.3), 0, Math.PI * 2);
+      g.fill();
+    }
+    // The ribbon fray — a stray thread of ink escaping the band.
+    g.strokeStyle = 'rgba(24,20,30,0.4)';
+    g.lineWidth = 0.5;
+    g.beginPath();
+    g.moveTo(76, 32);
+    g.quadraticCurveTo(84, 34 + rng.range(-2, 2), 90, 38 + rng.range(-3, 3));
+    g.stroke();
+  });
+}
+
+/** The breaker kept the burn — a scorch bloom round the failed
+ *  fuse and the finger-smut of every reset since. */
+export function sparkScorch(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The blowout — a starburst of carbon around the row that went.
+    const sx = 34 + rng.float() * 28;
+    const sy = 26 + rng.float() * 20;
+    const burn = g.createRadialGradient(sx, sy, 1, sx, sy, 16);
+    burn.addColorStop(0, 'rgba(12,10,10,0.8)');
+    burn.addColorStop(0.4, 'rgba(22,18,16,0.45)');
+    burn.addColorStop(1, 'rgba(22,18,16,0)');
+    g.fillStyle = burn;
+    g.beginPath();
+    g.arc(sx, sy, 16, 0, Math.PI * 2);
+    g.fill();
+    // The spray — carbon threads licking away from the fault.
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const len = 6 + rng.float() * 14;
+      g.strokeStyle = `rgba(26,22,20,${0.25 + rng.float() * 0.3})`;
+      g.lineWidth = 0.5 + rng.float() * 0.5;
+      g.beginPath();
+      g.moveTo(sx, sy);
+      g.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len * 0.8);
+      g.stroke();
+    }
+    // The fault's eye — a melted pinpoint at the centre.
+    g.fillStyle = 'rgba(6,6,8,0.9)';
+    g.beginPath();
+    g.arc(sx, sy, 2 + rng.float(), 0, Math.PI * 2);
+    g.fill();
+    // Reset smuts — finger trails down the toggle line.
+    for (let i = 0; i < 4; i++) {
+      const fx = 26 + rng.float() * 44;
+      g.fillStyle = `rgba(70,60,50,${0.18 + rng.float() * 0.2})`;
+      g.save();
+      g.translate(fx, 62 + rng.range(-6, 6));
+      g.rotate(rng.range(-0.15, 0.15));
+      g.fillRect(-1, -6, 2 + rng.float(), 12);
+      g.restore();
+    }
+    // Melted sheen flecks where the plastic blistered.
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(140,130,110,${0.14 + rng.float() * 0.18})`;
+      g.beginPath();
+      g.arc(sx + rng.range(-10, 10), sy + rng.range(-8, 8), 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
+}
+
+/** The wheels kept their ruts — twin polished tracks and a skid
+ *  where the chair or gurney always rolls to its rest. */
+export function wheelRuts(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const bend = rng.range(-0.2, 0.2);
+    // Twin tracks — the same two lines worn pale every trip.
+    for (const off of [-8, 8]) {
+      g.strokeStyle = `rgba(178,160,130,${0.3 + rng.float() * 0.14})`;
+      g.lineWidth = 2 + rng.float() * 0.8;
+      g.beginPath();
+      g.moveTo(6, 48 + off + bend * -20);
+      g.quadraticCurveTo(48, 48 + off + bend * 30, 90, 48 + off + bend * 20);
+      g.stroke();
+      // A darker hair inside each track — the tyre's centre wear.
+      g.strokeStyle = `rgba(120,104,82,${0.2 + rng.float() * 0.16})`;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.moveTo(6, 48 + off + bend * -20);
+      g.quadraticCurveTo(48, 48 + off + bend * 30, 90, 48 + off + bend * 20);
+      g.stroke();
+    }
+    // The skid — a dark jag where a wheel locked once.
+    const kx = 30 + rng.float() * 40;
+    g.strokeStyle = 'rgba(50,42,32,0.45)';
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(kx, 48 + rng.range(-6, 6));
+    g.lineTo(kx + 6 + rng.float() * 8, 48 + rng.range(-6, 6));
+    g.stroke();
+    // Grime pushed up between the tracks.
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(70,58,44,${0.12 + rng.float() * 0.2})`;
+      g.fillRect(10 + rng.float() * 76, 44 + rng.range(-4, 10), 1 + rng.float() * 1.4, 0.8);
+    }
+    // The rest point — a smudge where the wheels stop and stay.
+    const rx = 66 + rng.range(-8, 12);
+    const rest = g.createRadialGradient(rx, 48 + bend * 18, 1, rx, 48 + bend * 18, 8);
+    rest.addColorStop(0, 'rgba(140,120,96,0.4)');
+    rest.addColorStop(1, 'rgba(140,120,96,0)');
+    g.fillStyle = rest;
+    g.beginPath();
+    g.arc(rx, 48 + bend * 18, 8, 0, Math.PI * 2);
+    g.fill();
+  });
+}
+
+/** The plants died standing — a shed-leaf ring and stem scuff
+ *  where the pot kept a green thing that nobody watered. */
+export function plantDeath(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The leaf-fall ring — dropped fronds scattered in a halo.
+    for (let i = 0; i < 22; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 16 + rng.float() * 18;
+      g.fillStyle = `rgba(${96 + Math.floor(rng.float() * 40)},${64 + Math.floor(rng.float() * 24)},${28 + Math.floor(rng.float() * 14)},${0.35 + rng.float() * 0.3})`;
+      g.save();
+      g.translate(48 + Math.cos(a) * r, 48 + Math.sin(a) * r);
+      g.rotate(rng.float() * Math.PI);
+      g.beginPath();
+      g.ellipse(0, 0, 2.2 + rng.float() * 1.6, 0.9 + rng.float() * 0.7, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    // One curled leaf kept its curl — a brighter crescent.
+    g.strokeStyle = `rgba(140,104,52,${0.4 + rng.float() * 0.2})`;
+    g.lineWidth = 1.2;
+    g.beginPath();
+    g.arc(48 + rng.range(-18, 18), 48 + rng.range(-18, 18), 4 + rng.float() * 2, 0, Math.PI * 1.4);
+    g.stroke();
+    // Pot-shadow ring — the soil line where the pot sits.
+    g.strokeStyle = 'rgba(64,50,34,0.4)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(48, 48, 11 + rng.float() * 2, 0, Math.PI * 2);
+    g.stroke();
+    // Spilled soil — a fan of grit out one side.
+    const sa = rng.float() * Math.PI * 2;
+    for (let i = 0; i < 12; i++) {
+      const d = 12 + rng.float() * 12;
+      const spread = rng.range(-0.35, 0.35);
+      g.fillStyle = `rgba(56,44,30,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(48 + Math.cos(sa + spread) * d, 48 + Math.sin(sa + spread) * d, 0.9 + rng.float() * 0.7, 0.8 + rng.float() * 0.6);
+    }
+    // Water-ring ghost — the saucer that overflowed once.
+    g.strokeStyle = `rgba(120,100,72,${0.18 + rng.float() * 0.14})`;
+    g.lineWidth = 0.9;
+    g.beginPath();
+    g.arc(48, 48, 16 + rng.float() * 3, rng.float() * 3, rng.float() * 3 + 3.5);
+    g.stroke();
+  });
+}
+
+/** The jars kept their dust — a shoulder ring where the dust sits
+ *  on the curve and a wipe streak where a hand reached once. */
+export function jarDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The shoulder band — dust that settles where the glass curves.
+    const band = g.createLinearGradient(0, 12, 0, 26);
+    band.addColorStop(0, 'rgba(120,108,88,0)');
+    band.addColorStop(0.5, `rgba(120,108,88,${0.35 + rng.float() * 0.15})`);
+    band.addColorStop(1, 'rgba(120,108,88,0)');
+    g.fillStyle = band;
+    g.fillRect(16, 12, 64, 14);
+    // Dust caps the lid — a soft pale pad.
+    const cap = g.createRadialGradient(48, 12, 1, 48, 12, 12);
+    cap.addColorStop(0, 'rgba(150,140,116,0.45)');
+    cap.addColorStop(1, 'rgba(150,140,116,0)');
+    g.fillStyle = cap;
+    g.beginPath();
+    g.ellipse(48, 12, 16, 6, 0, 0, Math.PI * 2);
+    g.fill();
+    // The wipe — one clean swipe through the film.
+    g.strokeStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.2})`;
+    g.lineWidth = 3.5;
+    g.beginPath();
+    const wy = 30 + rng.range(-4, 4);
+    g.moveTo(20, wy);
+    g.quadraticCurveTo(48, wy + rng.range(-4, 4), 76, wy + rng.range(-3, 3));
+    g.stroke();
+    // Fingertip commas at the wipe's start.
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = `rgba(56,50,40,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.arc(22 + i * 3, wy - 2 + rng.range(-1, 1), 1.6, 0, Math.PI * 1.2);
+      g.stroke();
+    }
+    // Settled specks — flyspecks and flour motes across the film.
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(70,62,50,${0.14 + rng.float() * 0.2})`;
+      g.fillRect(18 + rng.float() * 60, 14 + rng.float() * 38, 0.7, 0.7);
+    }
+    // The label's edge — a pale strip where glue held paper once.
+    if (rng.bool(0.5)) {
+      g.strokeStyle = 'rgba(170,160,136,0.3)';
+      g.lineWidth = 1;
+      g.strokeRect(36 + rng.range(-6, 6), 36 + rng.range(-4, 4), 18 + rng.float() * 6, 10 + rng.float() * 4);
+    }
+  });
+}
+
+/** The stools scraped arcs — quarter-moon gouges where the legs
+ *  drag around a pivot, scuffs where they're kicked straight. */
+export function stoolDrag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 44 + rng.range(-8, 8);
+    const cy = 46 + rng.range(-8, 8);
+    // Pivot arcs — the front legs swung and the back legs held.
+    for (let i = 0; i < 4; i++) {
+      const r = 12 + i * 5 + rng.float() * 3;
+      const a0 = rng.float() * Math.PI * 2;
+      const sweep = 0.7 + rng.float() * 0.9;
+      g.strokeStyle = `rgba(${140 + Math.floor(rng.float() * 30)},${124 + Math.floor(rng.float() * 24)},${98 + Math.floor(rng.float() * 20)},${0.3 + rng.float() * 0.2})`;
+      g.lineWidth = 0.9 + rng.float() * 0.6;
+      g.beginPath();
+      g.arc(cx, cy, r, a0, a0 + sweep);
+      g.stroke();
+    }
+    // The gouge — one deep arc where a leg dug in.
+    g.strokeStyle = 'rgba(90,74,54,0.55)';
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(cx, cy, 16 + rng.float() * 6, rng.float() * 4, rng.float() * 4 + 1.1);
+    g.stroke();
+    // Kick scuffs — straight drags where the stool was shoved.
+    for (let i = 0; i < 3; i++) {
+      const sx = cx + rng.range(-22, 22);
+      const sy = cy + rng.range(-22, 22);
+      g.save();
+      g.translate(sx, sy);
+      g.rotate(rng.float() * Math.PI);
+      g.fillStyle = `rgba(120,104,80,${0.2 + rng.float() * 0.2})`;
+      g.fillRect(-4, -0.8, 8 + rng.float() * 5, 1.6);
+      g.restore();
+    }
+    // Leg dimples — small pits where the stool stands now.
+    for (const [dx, dy] of [[-5, -5], [5, -5], [-5, 5], [5, 5]] as const) {
+      if (!rng.bool(0.75)) continue;
+      g.fillStyle = 'rgba(66,54,40,0.4)';
+      g.beginPath();
+      g.arc(cx + dx + rng.range(-1, 1), cy + dy + rng.range(-1, 1), 0.8 + rng.float() * 0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Dust pushed to the rest position — a faint settle ring.
+    g.strokeStyle = `rgba(120,106,84,${0.2 + rng.float() * 0.14})`;
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.ellipse(cx, cy, 9 + rng.float() * 2, 8 + rng.float() * 2, 0, 0, Math.PI * 2);
+    g.stroke();
+  });
+}

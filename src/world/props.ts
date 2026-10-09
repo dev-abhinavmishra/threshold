@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2162,6 +2162,80 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     hw.position.set(0, (dc?.[1] ?? 1.3) * 0.55, (dc?.[2] ?? 0.45) / 2 + 0.006);
     prop.group.add(hw);
     if (!prop.group.name) prop.group.name = 'hinge-wear';
+  }
+  // The head kept its oil — a dark bloom on the headboard where the
+  // same head rested a thousand nights.
+  const HEAD_KINDS = new Set(['headboard', 'bed', 'bedOld', 'daybed']);
+  if (HEAD_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const hg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.45),
+      new THREE.MeshStandardMaterial({ map: headGrease(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    hg.name = 'head-grease';
+    hg.userData.decalMat = true;
+    hg.position.set(0, (dc?.[1] ?? 1.1) * 0.75, -(dc?.[2] ?? 1.8) / 2 + 0.12);
+    prop.group.add(hg);
+    if (!prop.group.name) prop.group.name = 'head-grease';
+  }
+  // The cushions learned the body — a settle-dip, pulled buttons and
+  // the crumb line on seats that get sat in.
+  const SAG_KINDS = new Set(['sofa', 'settee', 'armchair', 'daybed']);
+  if (SAG_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const sg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.7),
+      new THREE.MeshStandardMaterial({ map: seatSag(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sg.name = 'seat-sag';
+    sg.userData.decalMat = true;
+    sg.rotation.x = -Math.PI / 2;
+    sg.position.set(0, (dc?.[1] ?? 0.85) * 0.55 + 0.006, 0);
+    prop.group.add(sg);
+    if (!prop.group.name) prop.group.name = 'seat-sag';
+  }
+  // The ribbon kept the words — an ink halo and ghosted lines on
+  // the typewriter platen.
+  if (spec.kind === 'typewriter' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const pi = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: platenInk(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pi.name = 'platen-ink';
+    pi.userData.decalMat = true;
+    pi.position.set(0, (dc?.[1] ?? 0.25) * 0.7, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    prop.group.add(pi);
+    if (!prop.group.name) prop.group.name = 'platen-ink';
+  }
+  // The breaker kept the burn — a carbon bloom on the panel face
+  // where a fuse let go, smuts where fingers reset the rest.
+  if (spec.kind === 'breakerPanel' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ss = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: sparkScorch(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ss.name = 'spark-scorch';
+    ss.userData.decalMat = true;
+    ss.position.set(0, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(ss);
+    if (!prop.group.name) prop.group.name = 'spark-scorch';
+  }
+  // The jars kept their dust — shoulder film and a lid cap on the
+  // bottles and jugs nobody lifts.
+  const JAR_KINDS = new Set(['gallonJug', 'brassPot', 'enamelPot', 'bleachBottle', 'cleanerBottle', 'foodCans', 'vase']);
+  if (JAR_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const jd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.35, 0.24),
+      new THREE.MeshStandardMaterial({ map: jarDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    jd.name = 'jar-dust';
+    jd.userData.decalMat = true;
+    jd.position.set(0, (dc?.[1] ?? 0.35) * 0.6, (dc?.[2] ?? 0.25) / 2 + 0.005);
+    prop.group.add(jd);
+    if (!prop.group.name) prop.group.name = 'jar-dust';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
