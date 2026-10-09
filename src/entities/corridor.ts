@@ -737,6 +737,10 @@ export class Warden extends Entity {
             c.cue('floor-creak', this.pos,
               '[it stops mid-tying — your footfall reaches it; the work lies half-fast]',
               { severity: 'warn' });
+          } else if (kind === 'wrapSpill') {
+            c.cue('floor-creak', this.pos,
+              '[it stops mid-gather — your footfall reaches it; the felt lies where it fell]',
+              { severity: 'warn' });
           }
           // a close face in his hands answers like any sighting —
           // he turns on you; hidden means the abort is the whole cost
@@ -748,6 +752,21 @@ export class Warden extends Entity {
           // ends on a dead hazard's sign brings it back — wire re-tied,
           // bled lines re-pressurized, wheels re-engaged, felt stripped
           // off its eyes (the wrap is pocketed, not returned).
+          if (this.investigateKind === 'wrapSpill') {
+            // sprint 482 — the floor folds its felt back in: the pile
+            // the stagger scattered goes back in his pocket — carried
+            // again, spillable again the next time he goes down.
+            const got = this.ctx.scavengeSpill?.(this.investigate.x, this.investigate.z, { wrap: true });
+            if (got?.kind === 'wrap') {
+              this.pocketed += got.n;
+              this.ctx.cue('floor-creak', this.investigate,
+                '[it gathers the spilled felt — the pocket closes over it]', { severity: 'warn' });
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.4, z: this.investigate.z,
+                intensity: 0.3, category: 'item', caption: '[felt gathers]',
+                source: this.id });
+            }
+          }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
             || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
             const kind = this.investigateKind;
@@ -807,6 +826,19 @@ export class Warden extends Entity {
           : '[it reads the sign — someone has been here]', { severity: 'warn' });
         this.rig?.play('move', 0.1);
         break;
+      }
+      // sprint 482 — felt on the floor is unfinished work: a pile its
+      // own stagger scattered (or anyone's) reads as a point to fold
+      // back in — the floor pockets what fell, the spill is a race.
+      if (!this.investigate && room0?.spec) {
+        const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['wrap']) ?? null;
+        if (spill && pointInRoom(room0, spill.x, spill.z)) {
+          this.investigate = v3(spill.x, 0, spill.z);
+          this.investigateScan = 0;
+          this.investigateKind = 'wrapSpill';
+          c.cue('floor-creak', this.pos, '[it bends for the felt that fell]', { severity: 'warn' });
+          this.rig?.play('move', 0.1);
+        }
       }
       if (this.learned && !this.learnedCued) {
         this.learnedCued = true;

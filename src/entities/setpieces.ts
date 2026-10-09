@@ -512,6 +512,23 @@ export class Grafter extends Entity {
       this.target = v3(p.pos.x, 0, p.pos.z);
       speed *= 1.2;
     }
+    // sprint 481 — the under reclaims its spill: a quiet room is a
+    // larder. While nothing living shows and no leaf holds its camp,
+    // the rubble drags back for dropped coin and wire and takes its
+    // own back. The spill window is a race, not a timer — put it down
+    // and beat it to the pile, or it keeps the money.
+    else if (c.now > this.crackCampUntil) {
+      const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['pouch', 'coil']) ?? null;
+      if (spill && this.roomOf(v3(spill.x, 0, spill.z)) === this.spawnRoom) {
+        this.target = v3(spill.x, 0, spill.z);
+        this.roamT = 0;
+        if (!this.spillCued) {
+          this.spillCued = true;
+          c.cue('grafter-grind', this.pos,
+            '[the hands remember their spill — stone drags back for it]', { severity: 'warn' });
+        }
+      } else this.spillCued = false;
+    }
 
     const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
     const dd = Math.hypot(dx, dz);
@@ -523,6 +540,20 @@ export class Grafter extends Entity {
     } else {
       this.rig?.play('idle');
       if (this.roamT > 1.4 && c.now > this.crackCampUntil) this.pickRoam();
+    }
+    // sprint 481 — arrival takes the pile back: coin re-pockets (the
+    // payer-smell restarts with it), a coil rides as carrying and may
+    // come right back down onto your path. Full hands leave the wire.
+    const claimed = c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null;
+    if (claimed?.kind === 'pouch') {
+      this.pouch += claimed.n; this.pouchHot += claimed.hot;
+      this.spillCued = false;
+      c.cue('grafter-grind', this.pos, '[the hands take their spill back]', { severity: 'warn' });
+      c.sound.emit({ x: this.pos.x, y: 0.4, z: this.pos.z, intensity: 0.3,
+        category: 'item', caption: '[coin counts back into the pile]', source: this.id });
+    } else if (claimed?.kind === 'coil') {
+      this.carrying = 1; this.carryCued = false; this.spillCued = false;
+      c.cue('grafter-grind', this.pos, '[stone gathers its wire back]', { severity: 'info' });
     }
     // It grinds the floor wherever it is — a dead snare crossed under
     // its stride is scrap too, not only the one under a standing rubble.
@@ -628,6 +659,7 @@ export class Grafter extends Entity {
   pouch = 0;
   pouchHot = 0;
   private payerCued = false;
+  private spillCued = false;
   override takeCoin(hot: number, leaf: Vec3): void {
     this.pouch++; this.pouchHot += hot;
     this.target = v3(leaf.x, 0, leaf.z);
