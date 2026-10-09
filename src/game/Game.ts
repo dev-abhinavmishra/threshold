@@ -1536,6 +1536,25 @@ export class Game {
         // pos-keyed: the array shifts on gather, the pos doesn't
         data: { x: Number(w.x.toFixed(2)), z: Number(w.z.toFixed(2)) },
       });
+      this.mintDragVerb('coil', `coil-drop-drag-${this.space}-${i}`, w);
+    });
+  }
+
+  /** sprint 497 — 'Drag the pile': the deliberate twin of the kick.
+   *  Crouched within reach, a pile offers an anchor a third of a metre
+   *  TOWARD you — aim past the pile to pull it a step per hold, instead
+   *  of pocketing it. Quiet work: a faint scrape, no sign left. */
+  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil',
+    id: string, w: { x: number; z: number }): void {
+    if (!this.player.crouching) return;
+    const dx = this.player.pos.x - w.x, dz = this.player.pos.z - w.z;
+    const d = Math.hypot(dx, dz);
+    if (d < 0.5 || d > 1.6) return;
+    this.dynamicInteractables.push({
+      kind: 'dragPile', id,
+      pos: { x: w.x + (dx / d) * 0.34, y: 0.18, z: w.z + (dz / d) * 0.34 },
+      prompt: 'Drag the pile closer', holdTime: 0.5, enabled: true, priority: 1,
+      data: { list, x: Number(w.x.toFixed(2)), z: Number(w.z.toFixed(2)) },
     });
   }
 
@@ -1548,6 +1567,7 @@ export class Game {
         prompt: 'Gather the loose chock',
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
+      this.mintDragVerb('wedge', `wedge-drop-drag-${this.space}-${i}`, w);
     });
   }
 
@@ -1583,6 +1603,7 @@ export class Game {
         prompt: w.bait ? 'Gather the baited coin' : 'Gather the spilled coin',
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
+      this.mintDragVerb('pouch', `pouch-drop-drag-${this.space}-${i}`, w);
     });
   }
   private mintWrapDrops(): void {
@@ -1594,6 +1615,7 @@ export class Game {
         prompt: w.n === 1 ? 'Gather the scattered felt' : `Gather the scattered felt (${w.n})`,
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
+      this.mintDragVerb('wrap', `wrap-drop-drag-${this.space}-${i}`, w);
     });
   }
 
@@ -3383,6 +3405,30 @@ export class Game {
         this.giveItem('feltWrap', n);
         this.cue('pickup', it.pos, `[felt wrap${n > 1 ? ` ×${n}` : ''} — back off the floor]`);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
+      case 'dragPile': {
+        // sprint 497 — pull the pile a step toward you instead of
+        // pocketing it. Quiet work: the pile slides, scrapes faintly,
+        // and stays a pile — bait you can reposition without reclaiming.
+        const dd = it.data as { list: string; x: number; z: number };
+        const arr = dd.list === 'pouch' ? this.droppedPouches
+          : dd.list === 'wrap' ? this.droppedWraps
+          : dd.list === 'wedge' ? this.kickedWedges
+          : this.droppedCoils;
+        const w = arr.find((p) => Math.abs(p.x - dd.x) < 0.06 && Math.abs(p.z - dd.z) < 0.06);
+        if (!w) { it.enabled = false; return; }
+        const dx = this.player.pos.x - w.x, dz = this.player.pos.z - w.z;
+        const d = Math.hypot(dx, dz);
+        const step = Math.min(0.38, d - 0.45);
+        if (step > 0.02) {
+          const to = this.scatterSpot(w.x, w.z, Math.atan2(dz, dx), step);
+          if (to) { w.x = to.x; w.z = to.z; }
+        }
+        this.mintPouchDrops(); this.mintWrapDrops();
+        this.mintWedgeDrops(); this.mintCoilDrops();
+        this.sound.emit({ x: w.x, y: 0.2, z: w.z, intensity: 0.14 * this.wantedPull,
+          category: 'item', caption: '[the pile scrapes across the boards]' });
         return;
       }
       case 'pouchDrop': {
@@ -8817,7 +8863,7 @@ export class Game {
               mk(ang + Math.PI, 0.6, Math.floor(clean0 / 2), Math.floor(hot0 / 2));
             }
             this.mintPouchDrops();
-            this.sound.emit({ x: w.x, y: 0.3, z: w.z, intensity: 0.4,
+            this.sound.emit({ x: w.x, y: 0.3, z: w.z, intensity: 0.4 * this.wantedPull,
               category: 'item', caption: '[your coin scatters across the boards]' });
             this.cue('pickup', v3(w.x, 0.3, w.z), '[you kick through your own spill]', 'warn');
             break;
@@ -8845,7 +8891,7 @@ export class Game {
           this.mintWrapDrops(); this.mintWedgeDrops();
           this.hazard.evidence.push({ pos: v3(px, 0, pz), room: this.currentRoom,
             kind: 'work', t: this.clock.time, readBy: ['player'] });
-          this.sound.emit({ x: kicked.x, y: 0.3, z: kicked.z, intensity: 0.38,
+          this.sound.emit({ x: kicked.x, y: 0.3, z: kicked.z, intensity: 0.38 * this.wantedPull,
             category: 'item', caption: '[the loose goods scatter under your stride]' });
           this.cue('pickup', v3(kicked.x, 0.3, kicked.z), '[you boot the pile as you pass]', 'warn');
         }
