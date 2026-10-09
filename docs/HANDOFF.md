@@ -7302,3 +7302,40 @@ units, robbed coils take theirs out of the lid's memory.
   `${space}:${spot.id}` — entity ctx hooks resolve through the live
   `this.space`, which is always the entity's own floor (entities
   exit when the player leaves their space).
+
+## Sprints 525–528 — the lid takes a mouthful
+
+Sibling: the stash verbs are a lattice now — selective stashing, a
+free readout, and the lid's own cost surface complete.
+
+- **s525 the choosy lid** — 'Stash the marked take' mints on the
+  mouth's right cheek beside 'Stash the take': parks ONLY the hot
+  stacks (hotItems ∩ count>0), marks union as before. Also fixes a
+  latent dead verb: recover/stash shared one anchor + priority, so
+  'Add the take' could NEVER focus once a stash existed — recover now
+  sits the left cheek, all three siblings geometrically distinct.
+- **s526 'Peep the lid'** — the lip below the mouth reads the stash
+  free (p1, 0.3s, no sign/price/hold): `[the lid keeps N goods — M
+  of it marked]`. A look, not a touch.
+- **s527 the register counts the lids** — 'Ask what the register
+  says' appends `· it counts N goods in the lids` — main-floor lids
+  only (the under's lids aren't its book). It counts, never names
+  which lid — the index files positions, the register files debts.
+- **s528 the lid signs the work** — stashTake/markedStash/recoverStash
+  push 'work' sign at the verb pos (readBy:['player'], your own
+  hands stay silent) — rifling's convention reaches the box.
+
+**Contract:** the lid lattice is four-deep now — LOOK (peep, lip,
+free) / PARK ALL (stash, mouth center) / PARK MARKED (mstash, right
+cheek) / TAKE BACK (recover, left cheek). Sibling verbs that share a
+spot MUST sit geometrically distinct anchors — same anchor + same
+priority ties to first-minted, silently killing the second verb.
+
+**Traps:**
+- When two verbs mint at the same `pos` and same `priority`, focus
+  scores identically and the FIRST minted wins forever. Audit verb
+  pairs sharing a spot (recover shadowed 'Add the take' for three
+  arcs before anyone noticed).
+- `it.data.room` now rides stash verbs for the sign push — verbs
+  minted in the room loop know `room.index`; use it for any
+  room-scoped evidence rather than re-resolving via pos.
