@@ -6911,3 +6911,39 @@ focus, not the one you found first. A crouched gatherer keeps the
 seam lattice minted: stand (KeyC release) before floor work. A
 staggered grafter still shoves whoever stands on its spill — set
 `state='done'` to silence it in specs.
+
+## Sprints 481-484 — the floor keeps what falls
+
+- **s481 the under reclaims its spill** — the grafter now drags back
+  for dropped coin and dead wire: a quiet grafter (`crackCampUntil`
+  lapsed, not chasing, not player-smelled) in its spawn room seeks
+  `nearestSpill(['pouch','coil'], 30)`; arrival calls
+  `scavengeSpill({coil: carrying === 0})` — a pouch re-fills `pouch`/
+  `pouchHot` (the s478 payer-smell restarts honestly), a coil re-arms
+  `carrying`. Full hands leave the wire. One-time cue per spill seek
+  ('[the hands remember their spill]'), re-armed when the seek
+  lapses. The spill window is a race, not a timer.
+- **s482 the floor folds its felt back in** — the warden's symmetric
+  reclaim: the scentT poll seeks `nearestSpill(['wrap'])` in-room →
+  `investigate` + `investigateKind = 'wrapSpill'`; the scan-complete
+  calls `scavengeSpill({wrap: true})` → `pocketed += n` — the felt is
+  carried again, so a later stagger spills it again (the loop
+  closes). Mid-gather interrupt has its own cue ('[it stops
+  mid-gather — your footfall reaches it]').
+- **s483 the spill advertises** — coin is the loud material: a
+  dropped pouch ticks on stone every ~2.6s (unsourced 0.22 emit —
+  house-hearable, rouse-capable). Your spill can rouse what sleeps;
+  the scavenger race runs against a clock you can hear. Wire, felt,
+  wood stay silent; multiple piles tick round-robin.
+- **s484 the lamp counts the floor too** — a checker sweep now reads
+  the room's floor: loose pouches fold into `seizedCoin` (the paper
+  lists coin as coin — no laundering track on the tag), dropped coils
+  join the tag as claimable `wireCoil`. One `seizeFloor(room)` read
+  per stop, on the inbound→sweep transition; a stripped lamp reads
+  nothing ('no lamp, no floor count'). Unguarded means yours to lose.
+
+**Contract:** `nearestSpill(x,z,maxD,kinds?)` + `scavengeSpill(x,z,
+take)` are on `EntityCtx` now — take `{coil?: bool; wrap?: bool}`;
+pouch always takeable. Reclaims are entity-initiated verbs, not
+player interactions — no mint churn. Spill persistence already rode
+the checkpoint (droppedPouches/droppedCoils/droppedWraps).

@@ -33,6 +33,10 @@ export interface CheckerHooks {
    *  receipts into its locker. Fires once per dispatch, on the find;
    *  false when you carry nothing marked (the seize is skipped). */
   seizeMarked?: () => boolean;
+  /** The lamp counts the floor too — loose spill in the swept room is
+   *  receipted into the locker under the same tag. Fires once per stop,
+   *  when the sweep lands. Returns what the floor yielded. */
+  seizeFloor?: (room: number) => { pouch: number; coils: number } | null;
 }
 
 export interface CheckerPlayer {
@@ -175,6 +179,14 @@ export class CrewChecker {
       if (this.travel >= this.sweepAt || f.doneT) {
         this.state = 'sweep';
         this.rig?.play('idle');
+        // the lamp counts the floor with the till — loose spill under
+        // a read room is unguarded goods: it joins the tag
+        const floor = this.lampLit ? hooks.seizeFloor?.(this.sweepRoom) : null;
+        if (floor && (floor.pouch > 0 || floor.coils > 0)) {
+          hooks.cue('chalk-mark', this.pos,
+            '[the lamp counts the floor too — your spill is receipted]',
+            { severity: 'warn' });
+        }
       }
     } else if (this.state === 'sweep') {
       this.sweepT += dt;

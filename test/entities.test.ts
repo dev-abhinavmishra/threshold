@@ -693,6 +693,33 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('the floor folds its felt back in — spilled wraps re-pocket (s482)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const pile = { x: mid.x + 1.0, z: mid.z };
+    let taken = false;
+    (ctx as { nearestSpill?: EntityCtx['nearestSpill'] }).nearestSpill =
+      () => taken ? null : { ...pile, kind: 'wrap' as const };
+    (ctx as { scavengeSpill?: EntityCtx['scavengeSpill'] }).scavengeSpill =
+      vi.fn((x: number, z: number) => {
+        if (Math.hypot(x - pile.x, z - pile.z) < 0.55) { taken = true; return { kind: 'wrap' as const, n: 2 }; }
+        return null;
+      });
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 30, 0, room.entryPos.z - 30);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { pocketed: number };
+    let t = 0;
+    for (let i = 0; i < 400 && !taken; i++) t = step(warden, ctx, 0.05, t);
+    expect(taken, 'the pile was claimed').toBe(true);
+    expect(w.pocketed, 'the felt is carried again').toBe(2);
+    warden.dispose();
+  });
+
   it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
@@ -1923,6 +1950,42 @@ describe('Grafter seam coin (sprints 476-480)', () => {
     gi.pouch = 1;
     for (let i = 0; i < 8; i++) { ctx.now += 0.05; g.update(0.05); }
     expect(Math.hypot(gi.target.x - 3.8, gi.target.z - 3.8), 'the pouch names the payer').toBeLessThan(0.01);
+    g.dispose();
+  });
+
+  it('the under reclaims its spill — quiet hands drag back for the pouch (s481)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -30; ctx.player.pos.z = -30; // nowhere near — quiet room
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { pos: { x: number; z: number }; target: { x: number; z: number }; pouch: number };
+    gi.pos.x = -1.5; gi.pos.z = -1.5;
+    const pile = { x: 2.5, z: 2.5 };
+    ctx.nearestSpill = () => ({ ...pile, kind: 'pouch' as const });
+    ctx.scavengeSpill = vi.fn((x: number, z: number) =>
+      Math.hypot(x - pile.x, z - pile.z) < 0.55 ? { kind: 'pouch' as const, n: 2, hot: 1 } : null);
+    for (let i = 0; i < 400 && gi.pouch === 0; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(Math.hypot(gi.target.x - pile.x, gi.target.z - pile.z), 'the spill pulled its target').toBeLessThan(0.01);
+    expect(ctx.scavengeSpill, 'the pile was claimed on arrival').toHaveBeenCalled();
+    expect(gi.pouch, 'the pouch came back onto the hand').toBe(2);
+    g.dispose();
+  });
+
+  it('full hands leave the wire — a carrier passes a spilled coil (s481)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -30; ctx.player.pos.z = -30;
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { pos: { x: number; z: number }; carrying: number };
+    gi.pos.x = 1; gi.pos.z = 1;
+    gi.carrying = 1; // already hauling — a coil underfoot stays
+    const pile = { x: 1.2, z: 1.2 };
+    ctx.nearestSpill = () => ({ ...pile, kind: 'coil' as const });
+    ctx.scavengeSpill = vi.fn(() => null); // coil:false path never fires
+    for (let i = 0; i < 10; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(ctx.scavengeSpill, 'arrival asks with coil=false').toHaveBeenCalledWith(expect.any(Number), expect.any(Number), { coil: false });
     g.dispose();
   });
 });

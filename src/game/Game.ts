@@ -252,6 +252,11 @@ export class Game {
       // and the marks on your back — the count receipts them into its
       // locker on the same find
       seizeMarked: () => this.entityCtx().seizeMarked?.() ?? false,
+      // sprint 484 — the lamp counts the floor too: loose spill in a
+      // swept room is unguarded goods. Coin folds into the tag's coin
+      // line; wire joins the tag as claimable coil. Unguarded means
+      // yours to lose — the count's paper doesn't ask whose it was.
+      seizeFloor: (room) => this.seizeFloorDrops(room),
     };
   }
   private reposterHooks(): ReposterHooks {
@@ -1131,6 +1136,51 @@ export class Game {
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
       // grafter drops it where it goes down, gatherable like any spill.
       spillPouch: (pos, n, hot) => this.spillPouch(pos, n, hot),
+      // sprint 481 — the under reclaims its spill: quiet hands drag back
+      // for dropped coin and wire. The spill window is a race, not a
+      // timer — the pile is safe only while no scavenger is in reach.
+      nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' } | null = null;
+        let bd = maxD;
+        if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'pouch' }; }
+        }
+        if (kinds.includes('coil')) for (const w of this.droppedCoils) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'coil' }; }
+        }
+        if (kinds.includes('wrap')) for (const w of this.droppedWraps) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'wrap' }; }
+        }
+        return best;
+      },
+      scavengeSpill: (x, z, take) => {
+        const pi = this.droppedPouches.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+        if (pi >= 0) {
+          const pile = this.droppedPouches.splice(pi, 1)[0];
+          this.mintPouchDrops();
+          return { kind: 'pouch', n: pile.n, hot: pile.hot };
+        }
+        if (take.coil) {
+          const ci = this.droppedCoils.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (ci >= 0) {
+            this.droppedCoils.splice(ci, 1);
+            this.mintCoilDrops();
+            return { kind: 'coil' };
+          }
+        }
+        if (take.wrap) {
+          const wi = this.droppedWraps.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (wi >= 0) {
+            const pile = this.droppedWraps.splice(wi, 1)[0];
+            this.mintWrapDrops();
+            return { kind: 'wrap', n: pile.n };
+          }
+        }
+        return null;
+      },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1375,6 +1425,41 @@ export class Game {
     });
   }
 
+  /** sprint 484 — the checker's lamp counts the floor with the till:
+   *  loose spill in the swept room is receipted into the locker. Coin
+   *  folds into the tag's coin line (marked or not — the paper lists
+   *  coin as coin); a dropped coil joins the tag as claimable wireCoil.
+   *  Returns what the floor yielded, null when nothing lay there. */
+  private seizeFloorDrops(room: number): { pouch: number; coils: number } | null {
+    const rooms = this.route?.underRooms ?? [];
+    const inRoom = (x: number, z: number) => underRoomOf(rooms, { x, z }) === room;
+    let pouch = 0, coils = 0;
+    const keepP = this.droppedPouches.filter((p) => {
+      if (!inRoom(p.x, p.z)) return true;
+      pouch += p.n + p.hot;
+      return false;
+    });
+    if (keepP.length !== this.droppedPouches.length) {
+      this.droppedPouches = keepP;
+      this.mintPouchDrops();
+    }
+    const keepC = this.droppedCoils.filter((w) => {
+      if (!inRoom(w.x, w.z)) return true;
+      coils++;
+      return false;
+    });
+    if (keepC.length !== this.droppedCoils.length) {
+      this.droppedCoils = keepC;
+      this.mintCoilDrops();
+    }
+    if (pouch === 0 && coils === 0) return null;
+    this.stashSeized(
+      coils > 0 ? [{ id: 'wireCoil' as ItemId, count: coils }] : [],
+      pouch,
+    );
+    return { pouch, coils };
+  }
+
   /** The kicked wedge lands on the player's side of the seam — the boot
    *  sends it skidding under the leaf toward the room it was guarding. */
   private dropKickedWedge(doorPos: Vec3, fromPos: Vec3): void {
@@ -1429,6 +1514,8 @@ export class Game {
    *  went down. Marked coin comes back still marked — the under doesn't
    *  launder what it pockets. Same re-mint/space-agnostic rules. */
   private droppedPouches: { x: number; z: number; n: number; hot: number }[] = [];
+  private spillTickT = 0;
+  private spillTickI = 0;
   private spillPouch(pos: Vec3, n: number, hot: number): void {
     this.droppedPouches.push({ x: pos.x, z: pos.z, n, hot });
     this.mintPouchDrops();
@@ -8500,6 +8587,23 @@ export class Game {
     this.player.update(dt, moveIn, blockers, this.settings, this.sound, this.activeRooms()[this.currentRoom] ?? null, this.clock.time);
     this.player.refreshProtection(this.activeRooms()[this.currentRoom]?.safeZones ?? []);
     this.pruneHotMarks();
+
+    // sprint 483 — the spill advertises: coin is the loud material. A
+    // dropped pouch ticks on stone on a slow cadence — an unsourced,
+    // house-hearable sound: your spill can rouse what sleeps, and the
+    // scavenger race is run against a clock you can hear. Wire, felt
+    // and wood stay silent; piles take turns ticking.
+    this.spillTickT -= dt;
+    if (this.spillTickT <= 0) {
+      this.spillTickT = 2.6;
+      const piles = this.droppedPouches;
+      if (piles.length) {
+        this.spillTickI = (this.spillTickI + 1) % piles.length;
+        const pile = piles[this.spillTickI];
+        this.sound.emit({ x: pile.x, y: 0.3, z: pile.z, intensity: 0.22,
+          category: 'item', caption: '[your coin ticks somewhere]' });
+      }
+    }
 
     // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
     // The Bellman (and anything else that trails you) reads these.

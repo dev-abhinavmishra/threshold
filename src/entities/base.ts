@@ -134,6 +134,18 @@ export interface EntityCtx {
   /** sprint 477 — a paid hand keeps your coin: a staggered grafter drops
    *  its pouch where it falls, gatherable like any spill. */
   spillPouch?: (pos: Vec3, n: number, hot: number) => void;
+  /** sprint 481-482 — the house and the under both reclaim their spill:
+   *  a quiet walker reads the nearest dropped pile to drag toward, then
+   *  takes it back on arrival. `nearestSpill` finds the closest pile of
+   *  the given kinds within maxD of (x,z); `scavengeSpill` splices the
+   *  pile underfoot — `take` names what the caller has a pocket for.
+   *  The spill window is a race, not a timer: beat it back to your own
+   *  coin or it keeps the money. */
+  nearestSpill?: (x: number, z: number, maxD: number,
+    kinds?: ('pouch' | 'coil' | 'wrap')[])
+    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' } | null;
+  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean })
+    => { kind: 'pouch'; n: number; hot: number } | { kind: 'coil' } | { kind: 'wrap'; n: number } | null;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

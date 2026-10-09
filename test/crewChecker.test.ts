@@ -129,6 +129,38 @@ describe('CrewChecker (the count answered)', () => {
     expect(roomOf(rooms, rooms[30].origin)).toBe(30);
     expect(roomOf(rooms, { x: 9e9, z: 9e9 })).toBe(-1);
   });
+
+  it('the lamp counts the floor too — loose spill in the swept room joins the tag (s484)', () => {
+    const rooms = underRooms();
+    const { h, cues } = hooks();
+    const seizeFloor = vi.fn(() => ({ pouch: 3, coils: 1 }));
+    h.seizeFloor = seizeFloor;
+    const c = new CrewChecker();
+    const ri = 30;
+    const socket = { x: rooms[ri].origin.x, z: rooms[ri].origin.z };
+    c.dispatch(rooms, [socket], h);
+    for (let t = 0; t < 120 && c.stage === 'inbound'; t += 0.1)
+      c.update(0.1, rooms, { pos: v3(9e9, 0, 9e9), room: -1, exposed: false }, h);
+    expect(c.stage).toBe('sweep');
+    // the floor read fires once, when the sweep lands at the till room
+    expect(seizeFloor).toHaveBeenCalledTimes(1);
+    expect(seizeFloor).toHaveBeenCalledWith(ri);
+    expect(cues.some((t) => /counts the floor too/.test(t))).toBe(true);
+  });
+
+  it('a stripped lamp cannot read the floor — a blind sweep leaves the spill (s484)', () => {
+    const rooms = underRooms();
+    const { h } = hooks();
+    const seizeFloor = vi.fn(() => ({ pouch: 3, coils: 0 }));
+    h.seizeFloor = seizeFloor;
+    const c = new CrewChecker();
+    const socket = { x: rooms[30].origin.x, z: rooms[30].origin.z };
+    c.dispatch(rooms, [socket], h);
+    c.stripLamp(h);
+    step(c, rooms, h, 300);
+    expect(c.stage).toBe('idle');
+    expect(seizeFloor, 'no lamp, no floor count').not.toHaveBeenCalled();
+  });
 });
 
 describe('CrewChecker — strip the lamp', () => {
