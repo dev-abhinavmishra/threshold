@@ -93,6 +93,13 @@ export interface EntityCtx {
   /** sprint 514 — total units of take on the player's back (inventory
    *  counts + marked coin). A heavy take betrays a hide: it rings. */
   takeLoad?: () => number;
+  /** sprint 518 — units of take parked in a hiding spot's stash. A
+   *  parked take still betrays the lid: the keys smell it too. */
+  stashLoad?: (spotId: string) => number;
+  /** sprint 518 — the count's hands take a found stash: moves every
+   *  good in that lid to the count's locker under a fresh tag.
+   *  Returns units seized (0 = nothing found). Optional for headless. */
+  seizeStash?: (spotId: string) => number;
   /** Repossess the marked take — strips every hotItems stack and the
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */

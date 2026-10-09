@@ -148,6 +148,8 @@ export interface BooksClosed {
   spilled?: number;
   /** goods still on your back at the end — the take that walked out */
   carried?: number;
+  /** goods parked in lids at the end — the stash you never reclaimed */
+  stashed?: number;
 }
 
 export interface CheckpointSave {
@@ -210,6 +212,10 @@ export interface CheckpointSave {
   // the kicked wedge rode under the leaf — chocks the bellman booted
   // loose lie as gatherable loot; a reload keeps them on the floor
   kickedWedges?: { x: number; z: number }[];
+  /** sprint 517 — the take parked in a lid: stashed goods per hiding
+   *  spot id, with which stashed ids were marked stock (marks ride
+   *  with the goods — a stash parks the take, it doesn't launder it). */
+  lidStashes?: { spot: string; items: { id: ItemId; count: number }[]; marked?: ItemId[] }[];
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
