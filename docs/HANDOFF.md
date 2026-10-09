@@ -7196,3 +7196,38 @@ hands (seize, locker, tag).
 - Pile kinds are per-good with per-kind gather yields — an inventory
   item without a pile kind can't spill; only stackables (wrap/chock/
   coil) have round-trip fidelity.
+
+## Sprints 513–516 — the take betrays
+
+Sibling: the carried-take arc's second half — the load on your back
+now testifies to the house itself, not just to physics.
+
+- **s513 the take reads at the door** — `BooksClosed.carried`
+  (inventory units at the end) joins both epitaphs:
+  `N goods walked out on your back — the take kept its weight`.
+- **s514 it smells the take** — `EntityCtx.takeLoad?()` (inventory
+  units + marked coin) joins the ctx hooks; the Inspector's
+  `nextSpot` skips straight to YOUR lid at ≥16 load (unchecked,
+  untrapped, same room). The load betrays the SPOT, not the body —
+  the cover is still honest cover for a light take. Once per
+  dispatch: `[the keys stop — it smells the take]`.
+- **s515 the counter clocks the bulge** — ≥24 units within 3m of a
+  staffed main-floor counter sight-files the bulge: `+1 held`, once
+  per counter via `bulkFiled` (checkpointed like `stockFiled`,
+  cold counters skip — they already watched you). Cue:
+  `[the clerk clocks the load on your back — the register writes]`.
+- **s516 the register says so** — `askReg` appends `· it has seen
+  your load` at a counter whose bulge is filed — the readout knows
+  the clerk's own handwriting.
+
+**Contract:** the take's costs escalate by tier — audible ≥8,
+physical ≥16 (weight + lid-betrayal), reportable ≥24. Spilling
+(s511) is the only out; marked stock doesn't spill.
+
+**Traps:**
+- `clerkFigs` is only populated for main-floor staffed rooms —
+  floor-check `this.space === 'main'` before reading it (under
+  shares x/z; a bulk sighting mustn't file at a mirrored position).
+- `hiddenSpot` in `EntityCtx` is the live spot object — compare
+  `s.id === hid.id`, not object identity, when checking a room's
+  spot list.
