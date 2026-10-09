@@ -37,7 +37,8 @@ export class PlayerController {
   hiddenSpot: HidingSpot | null = null;
   panic = 0;                        // 0..1 inside cabinet
   panicLockoutUntil = 0;
-  speedMul = 1;                     // tonic/weights
+  speedMul = 1;                     // tonic
+  weightMul = 1;                    // sprint 510 — the take weighs on you
   noiseMul = 1;                     // feltWrap
   maskMul = 1;                      // steam-vent hiss masks your steps
   dead = false;
@@ -90,7 +91,7 @@ export class PlayerController {
     else this.stamina = Math.min(PLAYER.staminaMax, this.stamina + PLAYER.staminaRegen * dt);
 
     let speed = this.crouching ? PLAYER.crouchSpeed : sprinting ? PLAYER.sprintSpeed : PLAYER.walkSpeed;
-    speed *= this.speedMul;
+    speed *= this.speedMul * this.weightMul;
     if (now < this.rootedUntil) speed = 0;
 
     // Camera-relative move direction
