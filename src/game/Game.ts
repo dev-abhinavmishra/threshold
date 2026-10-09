@@ -2584,6 +2584,40 @@ export class Game {
         data: {},
       });
     }
+    // sprint 511 — 'Spill the take': unburden the stackables — wraps,
+    // chocks, coils hit the floor as honest piles the house can read
+    // like any spill. The marked stock, the marks, the coin stay sewn
+    // to your back: the take proper testifies; it doesn't get put down.
+    {
+      const stackN = (id: ItemId) =>
+        this.inventory.find((i) => i.id === id)?.count ?? 0;
+      const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil');
+      if (this.player.crouching && n > 0) {
+        const lk = v3(); this.player.lookDir(lk);
+        this.interaction.add({
+          kind: 'spillTake', id: `spilltake-${this.space}:${this.currentRoom}`,
+          pos: { x: this.player.pos.x + lk.x * 0.55, y: 0.3, z: this.player.pos.z + lk.z * 0.55 },
+          prompt: 'Spill the take',
+          holdTime: 0.9, enabled: true, priority: 1,
+          data: {},
+        });
+      }
+    }
+    // sprint 512 — 'Weigh the take': the free readout for the load —
+    // how heavy, what it costs you. The house's mirror to its own
+    // book-asks; minted once the load starts to matter.
+    {
+      const load = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+      if (load >= 6) {
+        this.interaction.add({
+          kind: 'weighTake', id: `weigh-${this.space}:${this.currentRoom}`,
+          pos: { x: this.player.pos.x, y: 0.9, z: this.player.pos.z },
+          prompt: 'Weigh the take',
+          holdTime: 0.4, enabled: true, priority: 1,
+          data: {},
+        });
+      }
+    }
     // Crouched on bare floor with a wrap: 'Forge the sign' — rub a scuff
     // that smells like fresh work to anything that reads the boards.
     if (this.player.crouching
@@ -3435,6 +3469,46 @@ export class Game {
         this.mintWedgeDrops(); this.mintCoilDrops();
         this.sound.emit({ x: w.x, y: 0.2, z: w.z, intensity: 0.14 * this.wantedPull,
           category: 'item', caption: '[the pile scrapes across the boards]' });
+        return;
+      }
+      case 'weighTake': {
+        // sprint 512 — the load read out loud: units on your back, the
+        // marked coin that testifies, and what the stride costs you.
+        const load = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+        const bits = [`${load} on your back`];
+        if (this.hotImprints > 0) bits.push(`${this.hotImprints} marked coin testifies`);
+        if (load >= 28) bits.push('the stride drags hard');
+        else if (load >= 16) bits.push('the stride drags');
+        else if (load >= 8) bits.push('it rattles when you walk');
+        else bits.push('light enough to carry quiet');
+        this.cue('info', it.pos, `[${bits.join(' · ')}]`);
+        return;
+      }
+      case 'spillTake': {
+        // sprint 511 — every stackable good hits the floor as its own
+        // honest pile: wraps stack, chocks and coils scatter singly.
+        // What stays — rifled stock, marks, coin — is the take proper.
+        const grab = (id: ItemId) => {
+          const it2 = this.inventory.find((i) => i.id === id);
+          const n = it2?.count ?? 0;
+          if (it2) it2.count = 0;
+          return n;
+        };
+        const wraps = grab('feltWrap'), chocks = grab('doorChock'), coils = grab('wireCoil');
+        if (!wraps && !chocks && !coils) { it.enabled = false; return; }
+        const lk = v3(); this.player.lookDir(lk);
+        const sx = this.player.pos.x + lk.x * 0.55, sz = this.player.pos.z + lk.z * 0.55;
+        const spot = this.scatterSpot(sx, sz, Math.atan2(lk.z, lk.x), 0.1) ?? { x: sx, z: sz };
+        if (wraps) this.droppedWraps.push({ x: spot.x, z: spot.z, n: wraps });
+        for (let k = 0; k < chocks; k++) this.kickedWedges.push({ x: spot.x + k * 0.07, z: spot.z + k * 0.04 });
+        for (let k = 0; k < coils; k++) this.droppedCoils.push({ x: spot.x - k * 0.08, z: spot.z - k * 0.03 });
+        this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops();
+        const marked = this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0);
+        this.cue('pickup', it.pos, marked
+          ? '[you spill the take — the marked stock stays sewn to your back]'
+          : '[you spill the take]');
+        this.sound.emit({ x: spot.x, y: 0.3, z: spot.z, intensity: 0.16 * this.wantedPull,
+          category: 'item', caption: '[goods hit the floor]' });
         return;
       }
       case 'pouchDrop': {
@@ -7810,6 +7884,10 @@ export class Game {
   private creakyRooms = new Set<string>();
   private nextCreak = 0;
   private creakParity = 0;
+  /* — sprint 509: the heavy take rattles — */
+  private nextRattle = 0;
+  private rattleWarned = false;
+  private weightWarned = false;
   private maybeCreakyRoom(): void {
     const room = this.activeRooms()[this.currentRoom];
     if (!room || SAFE_ROOM_TEMPLATES.has(room.templateId) || room.spec?.special) return;
@@ -9619,6 +9697,41 @@ export class Game {
         const at = { x: this.player.pos.x, y: 0.1, z: this.player.pos.z };
         this.audio.play('floor-creak', at, '');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.22, category: 'footstep', caption: '' });
+      }
+    }
+
+    // sprint 509+510 — the take is loud and heavy: eight-plus units
+    // (carried wares plus the marked coin that testifies) rattle on an
+    // upright stride — a real positional sound the house hears, taxed
+    // by the boards like every player-caused emit; past sixteen the
+    // take drags the stride itself (past twenty-eight, worse). Crouch
+    // muffles the rattle; the weight has no such mercy — you carry
+    // what you carry.
+    {
+      const load = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+      this.player.weightMul = load >= 28 ? 0.85 : load >= 16 ? 0.92 : 1;
+      if (load >= 16 && !this.weightWarned) {
+        this.weightWarned = true;
+        this.cue('drawer', null, '[the take weighs on you — the stride drags]', 'warn');
+      }
+      if (load >= 8 && !this.player.crouching && tA >= this.nextRattle) {
+        const v = this.player.vel;
+        if (v.x * v.x + v.z * v.z > 0.16) {
+          this.nextRattle = tA + 2.6;
+          const at = this.player.pos;
+          const base = 0.14 + Math.min(0.16, load * 0.006);
+          this.audio.play('pebble', { x: at.x, y: 0.5, z: at.z }, '');
+          // the felt damps the take too (same kit); the valve's hiss
+          // masks it the way it masks a stride.
+          this.sound.emit({ x: at.x, y: 0.5, z: at.z,
+            intensity: base * this.player.noiseMul * this.player.maskMul
+              * (this.wantedActive ? 1.5 : 1),
+            category: 'item', caption: '' });
+          if (!this.rattleWarned) {
+            this.rattleWarned = true;
+            this.cue('drawer', null, '[your pockets are loud — the take rattles as you walk]', 'warn');
+          }
+        }
       }
     }
 
