@@ -1590,6 +1590,7 @@ export class Game {
   private spillKickCd = 0;   // sprint 493 — one kick per beat
   private spillTideT = 0;    // sprint 498 — the water pulls slow
   private spillTideCueT = 0;
+  private drainedSpots = new Map<number, { x: number; z: number }>(); // sprint 499 — where the water left
   private spillPouch(pos: Vec3, n: number, hot: number): void {
     this.droppedPouches.push({ x: pos.x, z: pos.z, n, hot });
     this.mintPouchDrops();
@@ -5402,6 +5403,9 @@ export class Game {
         const rIdx = Number(parts[1]);
         this.drainedRooms.add(`${this.space}:${rIdx}`);
         this.draining.set(rIdx, 0);
+        // sprint 499 — the surge pulls the spill to the crank: remember
+        // where the water left so the tide has somewhere to take it
+        this.drainedSpots.set(rIdx, { x: it.pos.x, z: it.pos.z });
         this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z), room: rIdx, kind: 'water', t: this.clock.time, readBy: [] });
         this.sound.emit({ x: it.pos.x, y: 0.9, z: it.pos.z, intensity: 0.55, category: 'machine', caption: '[the crank screams once]' });
         this.cue('puddle-splash', it.pos, '[the water finds the drain]', 'info');
@@ -9724,7 +9728,42 @@ export class Game {
         const t2 = el + dt;
         const sheet = this.streamer.get(idx)?.group.getObjectByName(`flood-${idx}`);
         if (sheet) sheet.position.y = Math.max(-0.06, 0.05 - t2 * 0.02);
-        if (t2 > 6) this.draining.delete(idx); else this.draining.set(idx, t2);
+        if (t2 > 6) { this.draining.delete(idx); this.drainedSpots.delete(idx); }
+        else this.draining.set(idx, t2);
+      }
+      // sprint 499 — the surge: while the water leaves, it takes what
+      // it was keeping afloat. Spilled coin drags toward the crank and
+      // settles there — the drain is where the tide ends.
+      if (this.droppedPouches.length) {
+        for (const [idx] of this.draining) {
+          const spot = this.drainedSpots.get(idx);
+          if (!spot) continue;
+          const rm = this.route?.underRooms.find((r) => r.index === idx);
+          if (!rm) continue;
+          let surged = false;
+          for (const w of this.droppedPouches) {
+            if (Math.abs(w.x - rm.origin.x) > rm.width / 2
+              || Math.abs(w.z - rm.origin.z) > rm.depth / 2) continue;
+            const dx = spot.x - w.x, dz = spot.z - w.z;
+            const d = Math.hypot(dx, dz);
+            if (d < 0.5) continue;
+            const nx = w.x + (dx / d) * Math.min(0.6 * dt, d - 0.5);
+            const nz = w.z + (dz / d) * Math.min(0.6 * dt, d - 0.5);
+            let blocked = false;
+            for (const cb of rm.colliders)
+              if (cb.minY < 0.45 && aabbContainsPoint(cb, nx, 0.2, nz)) { blocked = true; break; }
+            if (blocked) continue;
+            w.x = nx; w.z = nz; surged = true;
+          }
+          if (surged) {
+            this.mintPouchDrops();
+            if (v3dist(v3(spot.x, 0, spot.z), this.player.pos) < 6 && this.spillTideCueT <= 0) {
+              this.spillTideCueT = 2.2;
+              this.sound.emit({ x: spot.x, y: 0.15, z: spot.z, intensity: 0.2,
+                category: 'item', caption: '[the surge drags the spill toward the drain]' });
+            }
+          }
+        }
       }
     }
 
