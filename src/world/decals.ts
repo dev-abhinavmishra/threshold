@@ -9918,3 +9918,109 @@ export function buoyFade(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Gaze crack — the marks a haunted portrait keeps: craquelure
+ * webs, a shine across the eyes, dust in the frame's lip. */
+export function gazeCrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // craquelure — the varnish's cracked web
+    for (let i = 0; i < 10; i++) {
+      ctx.strokeStyle = `rgba(120,110,90,${0.24 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      let x = rng.float() * 64, y = rng.float() * 96;
+      ctx.moveTo(x, y);
+      for (let j = 0; j < 4; j++) {
+        x += (rng.float() - 0.5) * 14; y += (rng.float() - 0.5) * 14;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // eye shine — a dry gleam that won't leave the gaze
+    for (const ex of [-1, 1]) {
+      ctx.fillStyle = `rgba(200,196,186,${0.3 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + ex * 7, 30, 2.4, 1.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // frame-lip dust — the ledge the cloth never reached
+    const g = ctx.createLinearGradient(0, 0, 0, 10);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(2, 0, 60, 12);
+    // nicotine film — the smoke's brown wash on the varnish
+    ctx.fillStyle = `rgba(120,90,50,${0.14 + rng.float() * 0.1})`;
+    ctx.fillRect(4, 12, 56, 80);
+  });
+}
+
+/** Trophy dust — the marks a mounted head keeps: dust on the
+ * brow ledges, cobweb spans between the tines, a dull nose. */
+export function trophyDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32;
+    // brow ledges — the film across the skull planes
+    ctx.fillStyle = `rgba(150,144,132,${0.36 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 20, 12, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // web spans — silk strung between the tines
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 18 + rng.float() * 4, 10 + rng.float() * 8);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 10, 24 + rng.float() * 6, cx + 16 - rng.float() * 4, 10 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // dull nose — the only thing that still gets touched
+    ctx.fillStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 46, 4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // shed dust — specks on the shield plaque
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 16 + rng.float() * 32, 52 + rng.float() * 10, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Rigging dust — the marks a ship model keeps: dust sag on the
+ * ratlines, grey sails, a cleaned deck stripe amidships. */
+export function riggingDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // ratline sags — dust-weighted curves between the shrouds
+    for (let i = 0; i < 4; i++) {
+      const y = 12 + i * 8;
+      ctx.strokeStyle = `rgba(150,144,132,${0.32 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(20, y);
+      ctx.quadraticCurveTo(48, y + 5 + rng.float() * 3, 76, y);
+      ctx.stroke();
+    }
+    // grey sails — the film on the canvas
+    for (const sx of [30, 60]) {
+      ctx.fillStyle = `rgba(160,154,140,${0.24 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.moveTo(sx - 8, 16);
+      ctx.quadraticCurveTo(sx, 30, sx - 6, 44);
+      ctx.lineTo(sx + 8, 44);
+      ctx.quadraticCurveTo(sx + 2, 30, sx + 10, 16);
+      ctx.fill();
+    }
+    // deck stripe — one wipe amidships
+    ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(24, 50, 48, 2.4);
+    // yard dust — the spars' top film
+    for (const y of [10, 20]) {
+      ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.14})`;
+      ctx.fillRect(16, y, 64, 1.6);
+    }
+  });
+}
