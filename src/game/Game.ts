@@ -270,6 +270,10 @@ export class Game {
       wanted: () => this.wantedActive,
       // the cry down the spine is a real sound — the under rouses to it
       emit: (e) => this.sound.emit(e),
+      // sprint 495 — the clerk reads paper, not floor: a pile in his
+      // stride is booted aside like any walker's (same scatter the
+      // knocker puts on a chock).
+      scatterSpill: (x, z) => this.entityCtx().scatterSpill?.(x, z) ?? false,
     };
   }
   private canvas: HTMLCanvasElement;
@@ -1194,6 +1198,34 @@ export class Game {
         return null;
       },
       // sprint 489 — a pocketed chock spills back as kicked-wedge drop
+      // sprint 494 — the knocker doesn't read the floor, it boots it:
+      // a chock or felt in a walker's stride scatters further along —
+      // the warden's tidy-read chases a moving pile (floor pinball).
+      scatterSpill: (x, z) => {
+        let hit = false;
+        const boot = (w: { x: number; z: number }, r: number) => {
+          const ang = ((w.x * 12.9898 + w.z * 78.233) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+          const to = this.scatterSpot(w.x, w.z, ang, r);
+          if (!to) return;
+          w.x = to.x; w.z = to.z;
+          hit = true;
+        };
+        for (const w of this.kickedWedges)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.55);
+        for (const w of this.droppedWraps)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.45);
+        for (const w of this.droppedPouches)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
+        for (const w of this.droppedCoils)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
+        if (hit) {
+          this.mintWedgeDrops(); this.mintWrapDrops();
+          this.mintPouchDrops(); this.mintCoilDrops();
+          this.sound.emit({ x, y: 0.3, z, intensity: 0.34,
+            category: 'item', caption: '[a boot finds the loose goods]' });
+        }
+        return hit;
+      },
       spillChocks: (pos, n) => {
         for (let i = 0; i < n; i++) this.kickedWedges.push({ x: pos.x + i * 0.18, z: pos.z });
         this.mintWedgeDrops();
@@ -1535,6 +1567,7 @@ export class Game {
   private droppedPouches: { x: number; z: number; n: number; hot: number; bait?: boolean }[] = [];
   private spillTickT = 0;
   private spillTickI = 0;
+  private spillKickCd = 0;   // sprint 493 — one kick per beat
   private spillPouch(pos: Vec3, n: number, hot: number): void {
     this.droppedPouches.push({ x: pos.x, z: pos.z, n, hot });
     this.mintPouchDrops();
@@ -6497,6 +6530,24 @@ export class Game {
     return out;
   }
 
+  /** sprint 493-494 — a scatter target that lands inside a collider is
+   *  an unreachable pile an entity could seek forever. Try the spray
+   *  angle, then the three rotations; null means it stays put. */
+  private scatterSpot(x: number, z: number, ang: number, r: number): { x: number; z: number } | null {
+    for (const a of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
+      const nx = x + Math.cos(ang + a) * r, nz = z + Math.sin(ang + a) * r;
+      let blocked = false;
+      for (const rm of this.activeRooms()) {
+        for (const cb of rm.colliders) {
+          if (cb.minY < 0.45 && aabbContainsPoint(cb, nx, 0.2, nz)) { blocked = true; break; }
+        }
+        if (blocked) break;
+      }
+      if (!blocked) return { x: nx, z: nz };
+    }
+    return null;
+  }
+
   private collectBlockers(): Aabb[] {
     const rooms = this.activeRooms();
     const out: Aabb[] = [];
@@ -8729,6 +8780,75 @@ export class Game {
         this.sound.emit({ x: pile.x, y: 0.3, z: pile.z, intensity: pile.bait ? 0.3 : 0.22,
           category: 'item', caption: pile.bait
             ? '[the bait rings a touch louder than the spill]' : '[your coin ticks somewhere]' });
+      }
+    }
+
+    // sprint 493 — a pile is physical: sprint through your own spill and
+    // the coin kicks apart. It splits into two scatter-piles and rings —
+    // a REAL sound the house can hear. Careless speed spends your floor.
+    // sprint 496 — the boot works upstairs too: loose felt and chocks
+    // scatter under the same stride, and the scuff leaves 'work' sign
+    // the floorkeeper reads (a kicked pile still wants tidying).
+    this.spillKickCd -= dt;
+    if (this.spillKickCd <= 0
+      && this.player.lastMoveSpeed > PLAYER.walkSpeed + 0.5
+      && !this.player.crouching) {
+      const px = this.player.pos.x, pz = this.player.pos.z;
+      const kickAng = (w: { x: number; z: number }) =>
+        ((w.x * 12.9898 + w.z * 78.233) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+      if (this.space === 'under') {
+        for (let i = 0; i < this.droppedPouches.length; i++) {
+          const w = this.droppedPouches[i];
+          if (Math.hypot(w.x - px, w.z - pz) < 0.4) {
+            this.droppedPouches.splice(i, 1);
+            this.spillKickCd = 0.7;
+            // deterministic scatter — the pile's own coords pick the spray
+            const ang = kickAng(w);
+            const hot0 = w.hot, clean0 = w.n;
+            const mk = (a: number, r: number, n: number, hot: number) => {
+              if (n <= 0 && hot <= 0) return;
+              const to = this.scatterSpot(w.x, w.z, a, r);
+              if (!to) { this.droppedPouches.push({ ...w, n, hot }); return; }
+              this.droppedPouches.push({ x: to.x, z: to.z, n, hot, bait: w.bait });
+            };
+            if (clean0 + hot0 <= 1) mk(ang, 0.55, clean0, hot0); // a lone coin slides
+            else {
+              mk(ang, 0.45, Math.ceil(clean0 / 2), Math.ceil(hot0 / 2));
+              mk(ang + Math.PI, 0.6, Math.floor(clean0 / 2), Math.floor(hot0 / 2));
+            }
+            this.mintPouchDrops();
+            this.sound.emit({ x: w.x, y: 0.3, z: w.z, intensity: 0.4,
+              category: 'item', caption: '[your coin scatters across the boards]' });
+            this.cue('pickup', v3(w.x, 0.3, w.z), '[you kick through your own spill]', 'warn');
+            break;
+          }
+        }
+      } else if (this.space === 'main'
+        && (this.droppedWraps.length || this.kickedWedges.length)) {
+        let kicked: { x: number; z: number } | null = null;
+        for (const w of this.droppedWraps) {
+          if (Math.hypot(w.x - px, w.z - pz) < 0.4) {
+            kicked ??= { x: w.x, z: w.z };
+            const to = this.scatterSpot(w.x, w.z, kickAng(w), 0.5);
+            if (to) { w.x = to.x; w.z = to.z; }
+          }
+        }
+        for (const w of this.kickedWedges) {
+          if (Math.hypot(w.x - px, w.z - pz) < 0.4) {
+            kicked ??= { x: w.x, z: w.z };
+            const to = this.scatterSpot(w.x, w.z, kickAng(w), 0.6);
+            if (to) { w.x = to.x; w.z = to.z; }
+          }
+        }
+        if (kicked) {
+          this.spillKickCd = 0.7;
+          this.mintWrapDrops(); this.mintWedgeDrops();
+          this.hazard.evidence.push({ pos: v3(px, 0, pz), room: this.currentRoom,
+            kind: 'work', t: this.clock.time, readBy: ['player'] });
+          this.sound.emit({ x: kicked.x, y: 0.3, z: kicked.z, intensity: 0.38,
+            category: 'item', caption: '[the loose goods scatter under your stride]' });
+          this.cue('pickup', v3(kicked.x, 0.3, kicked.z), '[you boot the pile as you pass]', 'warn');
+        }
       }
     }
 

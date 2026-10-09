@@ -519,7 +519,11 @@ export class Grafter extends Entity {
     // own back. The spill window is a race, not a timer — put it down
     // and beat it to the pile, or it keeps the money.
     else {
-      const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['pouch', 'coil']) ?? null;
+      // sprint 491 — full hands leave the wire whole: a carrier reads
+      // only the kinds it has a pocket for. An untakeable pile must not
+      // pull it (the stoop would re-arm forever over goods it can't hold).
+      const kinds: ('pouch' | 'coil')[] = this.carrying === 0 ? ['pouch', 'coil'] : ['pouch'];
+      const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, kinds) ?? null;
       // sprint 486 — bait rings louder than the leaf: a PLACED pile
       // pulls it off the camp; ordinary spill only wins a quiet room.
       const wants = spill !== null
@@ -553,7 +557,7 @@ export class Grafter extends Entity {
     // ~1.2s bend before the take lands. The race has a heartbeat —
     // sprint in while it stoops and the pile is still yours.
     const pileNear = this.spillSeek
-      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, ['pouch', 'coil']) ?? null
+      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil'] : ['pouch']) ?? null
       : null;
     if (pileNear && this.spillClaimT <= 0) {
       this.spillClaimT = 1.2;

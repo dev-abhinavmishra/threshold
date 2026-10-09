@@ -34,6 +34,9 @@ export interface ReposterHooks {
   wanted?: () => boolean;
   /** The clerk's cry is a REAL sound — listeners rouse to it. */
   emit?: (e: SoundEvent) => void;
+  /** sprint 495 — the clerk reads paper, not floor: a pile in his
+   *  stride gets booted aside like any walker's. */
+  scatterSpill?: (x: number, z: number) => boolean;
 }
 
 export interface ReposterHost {
@@ -151,6 +154,7 @@ export class Reposter {
       const f = followPath(this.path, this.travel);
       v3copy(this.pos, f.pos);
       this.face(this.travel + 0.5);
+      hooks.scatterSpill?.(this.pos.x, this.pos.z);
       if (this.travel >= this.pinAt || f.doneT) {
         this.state = 'pin';
         this.pinT = 0;
@@ -178,6 +182,7 @@ export class Reposter {
       const f = followPath(this.path, this.travel);
       v3copy(this.pos, f.pos);
       this.face(this.travel + 0.5);
+      hooks.scatterSpill?.(this.pos.x, this.pos.z);
       if (f.doneT) this.despawn(hooks);
     }
     if (this.mesh) this.mesh.position.copy(this.pos);

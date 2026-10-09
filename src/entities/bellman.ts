@@ -419,6 +419,11 @@ export class Bellman extends Entity {
           this.pos.x += to.x * step;
           this.pos.z += to.z * step;
           moved = true;
+          // sprint 494 — the knocker doesn't read the floor, it boots it:
+          // loose goods in its stride scatter further along — never
+          // read, never pocketed. A chock left on its trail is a lure's
+          // tax: it pays the walker's attention in noise.
+          c.scatterSpill?.(this.pos.x, this.pos.z);
         }
       }
       this.starveT = 0;

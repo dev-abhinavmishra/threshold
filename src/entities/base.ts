@@ -149,6 +149,10 @@ export interface EntityCtx {
   /** sprint 489 — a confiscated chock is carried too: a staggered
    *  floorkeeper spills pocketed chocks back as kicked-wedge drops. */
   spillChocks?: (pos: Vec3, n: number) => void;
+  /** sprint 494 — a striding walker boots loose goods it doesn't read:
+   *  any pile within reach is scattered further along, not pocketed.
+   *  Returns true if it kicked anything. */
+  scatterSpill?: (x: number, z: number) => boolean;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

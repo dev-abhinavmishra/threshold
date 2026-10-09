@@ -273,6 +273,26 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('the knocker boots loose goods — its stride scatters what the floorkeeper pockets (s494)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const px = room.origin.x, pz = room.origin.z;
+    const trail = Array.from({ length: 9 }, (_, i) =>
+      v3(entry.x + ((px - entry.x) * i) / 8, 0, entry.z + ((pz - entry.z) * i) / 8));
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(px - 30, 0, pz - 30); player.yaw = 0;
+    const scatter = vi.fn(() => true);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number }; let steps = 0;
+    while (b.state !== 'done' && steps++ < 3000) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(scatter, 'its stride asked the floor about loose goods').toHaveBeenCalled();
+    b.dispose();
+  });
+
   it('yields to sustained direct gaze without ever reaching you', () => {
     const rooms = routeRooms();
     const room = rooms[20];
@@ -2013,13 +2033,18 @@ describe('Grafter seam coin (sprints 476-480)', () => {
     const g = new Grafter();
     g.spawn(ctx);
     const gi = g as unknown as { pos: { x: number; z: number }; carrying: number };
-    gi.pos.x = 1; gi.pos.z = 1;
+    // outside every room: it can't plant (the coil unwinds only where
+    // the living walk — pr -1 ≠ the player's room), so it keeps hauling
+    gi.pos.x = -100; gi.pos.z = -100;
     gi.carrying = 1; // already hauling — a coil underfoot stays
     const pile = { x: 1.2, z: 1.2 };
-    ctx.nearestSpill = () => ({ ...pile, kind: 'coil' as const });
+    ctx.nearestSpill = (_x: number, _z: number, _d: number, kinds?: string[]) =>
+      kinds?.includes('coil') ? { ...pile, kind: 'coil' as const } : null;
     ctx.scavengeSpill = vi.fn(() => null); // coil:false path never fires
-    for (let i = 0; i < 40; i++) { ctx.now += 0.05; g.update(0.05); } // past the s491 stoop
-    expect(ctx.scavengeSpill, 'arrival asks with coil=false').toHaveBeenCalledWith(expect.any(Number), expect.any(Number), { coil: false });
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; g.update(0.05); }
+    // a carrier doesn't read the kinds it can't hold — the wire never
+    // pulls it, never gets asked about (the stoop would re-arm forever)
+    expect(ctx.scavengeSpill, 'full hands never stoop over wire').not.toHaveBeenCalled();
     g.dispose();
   });
 

@@ -7008,3 +7008,38 @@ and a spill is who left it and why. Placed goods are retrievable
 (gather verbs unchanged) and confiscatable (entity reads unchanged);
 bait anchors sit 0.6m ahead on the look ray so crouched-floor verbs
 never tie at player.pos.
+
+## Sprints 493-495 — the pile is physical
+
+- **s493 the kick scatters** — sprint through your own spill and the
+  coin kicks apart: a touched `droppedPouches` entry splits into two
+  scatter-piles (deterministic spray from its own coords) and rings —
+  a REAL 0.4-intensity emit the house can hear. Crouched or walking
+  leaves it be; `spillKickCd` paces it to one kick per 0.7s. Careless
+  speed spends your floor. Scattered bait keeps `bait: true` — kicking
+  a pile apart is the loud way to split a lure.
+- **s494 the knocker boots it** — `scatterSpill?(x,z)` joins the ctx:
+  any pile within 0.35m of a striding walker relocates further along
+  (hash-angle spray, all four kinds). The Bellman calls it mid-stride —
+  it doesn't read the floor, it boots it. The warden's tidy-read now
+  chases a moving pile (floor pinball), and a chock left on the
+  trail is a lure's tax paid in noise.
+- **s495 every walker boots it** — the reposter's walk legs call the
+  same hook (the clerk reads paper, not floor). `scatterSpot(x,z,ang,r)`
+  keeps kicked goods out of colliders — four rotation tries before it
+  stays put, so no pile can land unreachable inside furniture and pin
+  a seeker forever. Fix folded in: the grafter's seek is now
+  carry-aware — full hands read only `['pouch']`, so an untakeable
+  coil can't re-arm the s491 stoop over goods it can't hold (spec:
+  currentRoomIndex moved post-spawn to keep it hauling).
+
+- **s496 the boot works upstairs too** — the kick block is space-aware:
+  sprint through loose felt or chocks on the main floor and they scatter
+  under your stride (same deterministic spray, same collider guard),
+  ringing and leaving 'work' sign the floorkeeper reads — a kicked pile
+  still wants tidying, and the tidy-read now chases a pile YOU moved.
+
+**Contract:** loose goods have physics — they scatter under any fast
+feet (player sprint, walker stride), never pocket themselves under a
+non-reader, and never land inside a collider. Scatter = noise +
+relocation; claim = read + stoop + take.
