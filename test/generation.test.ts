@@ -885,8 +885,8 @@ describe('door listen seams (sprint 229)', () => {
         const latOff = (st.pos.x - d.pos.x) * latX + (st.pos.z - d.pos.z) * latZ;
         expect(Math.abs(latOff)).toBeLessThan(0.06);
         expect(Math.hypot(st.pos.x - d.pos.x, st.pos.z - d.pos.z)).toBeLessThan(0.5);
-        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.2);
-        expect(st.pos.y).toBeLessThan(d.pos.y + 0.6);
+        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.8);
+        expect(st.pos.y).toBeLessThan(d.pos.y + 1.2);
         expect(st.holdTime).toBeGreaterThanOrEqual(0.8);
       }
     }
