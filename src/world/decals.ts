@@ -9806,3 +9806,115 @@ export function carVeil(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Steam bleach — the bleach-fan a steam vent keeps: a pale cone
+ * of leached paint, mineral tears, a scalded rim. */
+export function steamBleach(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // bleach cone — steam's pale bloom down the wall
+    const g = ctx.createLinearGradient(0, 6, 0, 90);
+    g.addColorStop(0, `rgba(200,196,186,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(0.5, 'rgba(200,196,186,0.2)');
+    g.addColorStop(1, 'rgba(200,196,186,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, 6);
+    ctx.lineTo(cx + 8, 6);
+    ctx.lineTo(cx + 18 + rng.float() * 6, 90);
+    ctx.lineTo(cx - 18 - rng.float() * 6, 90);
+    ctx.fill();
+    // mineral tears — white-green runs inside the cone
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(170,190,170,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.2;
+      const x = cx - 8 + rng.float() * 16;
+      ctx.beginPath();
+      ctx.moveTo(x, 12);
+      ctx.lineTo(x + (rng.float() - 0.5) * 8, 60 + rng.float() * 24);
+      ctx.stroke();
+    }
+    // scalded rim — the ring where the vent meets the wall
+    ctx.strokeStyle = `rgba(140,134,122,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, 8, 12, 4.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // rust kiss — iron tears at the bottom edge
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(140,80,40,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 14 + rng.float() * 28, 86 + rng.float() * 6, 1.8 + rng.float(), 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Duct seam — the streaks a duct run keeps: grime lines at each
+ * seam, finger wipes on the hangers, rust at the damper. */
+export function ductSeam(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // seam streaks — grime bleeding from the joints
+    for (let i = 0; i < 3; i++) {
+      const x = 18 + i * 28 + (rng.float() - 0.5) * 4;
+      ctx.strokeStyle = `rgba(80,72,60,${0.36 + rng.float() * 0.18})`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x, 6);
+      ctx.lineTo(x + (rng.float() - 0.5) * 3, 40);
+      ctx.stroke();
+      // the weep under each seam
+      ctx.fillStyle = `rgba(90,80,66,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(x, 42, 3 + rng.float() * 2, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // hanger wipes — clean streaks where the strap rubs
+    for (let i = 0; i < 2; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.14})`;
+      ctx.fillRect(30 + i * 36, 4, 3, 10);
+    }
+    // damper rust — oxide dust at the adjuster
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(140,80,40,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(70 + rng.float() * 20, 20 + rng.float() * 16, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Buoy fade — the marks a lifebuoy keeps: sun-bleach fade on the
+ * ring, a salt crust, the rope's dark where it was grabbed once. */
+export function buoyFade(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // the fade — a bleached arc on the sun side
+    ctx.strokeStyle = `rgba(200,190,170,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, Math.PI * 0.9, Math.PI * 1.9);
+    ctx.stroke();
+    // grab dark — the grip's shadow at the low arc
+    ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, Math.PI * 0.15, Math.PI * 0.6);
+    ctx.stroke();
+    // salt crust — white specks on the ring
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.fillStyle = `rgba(220,216,206,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * 20, cy + Math.sin(a) * 20, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rope shadow — the hanging line's ghost below
+    ctx.strokeStyle = `rgba(90,80,66,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, cy + 20);
+    ctx.quadraticCurveTo(cx + 8, cy + 30, cx + 5, cy + 30 + rng.float() * 6);
+    ctx.stroke();
+  });
+}

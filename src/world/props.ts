@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2772,6 +2772,50 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cv.position.set(0, 0.007, 0);
     prop.group.add(cv);
     if (!prop.group.name) prop.group.name = 'car-veil';
+  }
+  // The vent bleached — pale cones of leached paint under the
+  // steam vents.
+  const VENTS: ReadonlySet<PropSpec['kind']> = new Set(['steamVent', 'wallVent', 'ductCirc']);
+  if (VENTS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const sb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.6),
+      new THREE.MeshStandardMaterial({ map: steamBleach(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sb.name = 'steam-bleach';
+    sb.userData.decalMat = true;
+    sb.position.set(0, -(dc?.[1] ?? 0.4) * 0.3, (dc?.[2] ?? 0.15) / 2 + 0.004);
+    prop.group.add(sb);
+    if (!prop.group.name) prop.group.name = 'steam-bleach';
+  }
+  // The duct kept its seams — grime streaks at the joints of the
+  // runs.
+  const DUCTS: ReadonlySet<PropSpec['kind']> = new Set(['ductRun', 'ductRect', 'cableTray']);
+  if (DUCTS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ds = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.4),
+      new THREE.MeshStandardMaterial({ map: ductSeam(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ds.name = 'duct-seam';
+    ds.userData.decalMat = true;
+    ds.position.set(0, -(dc?.[1] ?? 0.3) / 2 - 0.004, 0);
+    ds.rotation.x = Math.PI / 2;
+    prop.group.add(ds);
+    if (!prop.group.name) prop.group.name = 'duct-seam';
+  }
+  // The buoy faded — sun-bleach and grab marks on the rings.
+  if (spec.kind === 'lifebuoy' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const bf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: buoyFade(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bf.name = 'buoy-fade';
+    bf.userData.decalMat = true;
+    bf.position.set(0, 0, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    prop.group.add(bf);
+    if (!prop.group.name) prop.group.name = 'buoy-fade';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

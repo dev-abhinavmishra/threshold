@@ -5175,3 +5175,48 @@ describe('the car kept its veil (sprint 548)', () => {
     expect(n, 'no car veils').toBeGreaterThan(0);
   });
 });
+
+describe('the vent bleached (sprint 549)', () => {
+  it('pale cones of leached paint sit under the steam vents', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'steam-bleach') n++; });
+      }
+    }
+    expect(n, 'no steam bleaches').toBeGreaterThan(0);
+  });
+});
+
+describe('the duct kept its seams (sprint 549)', () => {
+  it('grime streaks mark the joints of the runs', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'duct-seam') n++; });
+      }
+    }
+    expect(n, 'no duct seams').toBeGreaterThan(0);
+  });
+});
+
+describe('the buoy faded (sprint 549)', () => {
+  it('sun-bleach and grab marks mark the rings', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'buoy-fade') n++; });
+      }
+    }
+    expect(n, 'no buoy fades').toBeGreaterThan(0);
+  });
+});
