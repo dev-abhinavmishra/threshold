@@ -7033,6 +7033,12 @@ never tie at player.pos.
   coil can't re-arm the s491 stoop over goods it can't hold (spec:
   currentRoomIndex moved post-spawn to keep it hauling).
 
+- **s496 the boot works upstairs too** — the kick block is space-aware:
+  sprint through loose felt or chocks on the main floor and they scatter
+  under your stride (same deterministic spray, same collider guard),
+  ringing and leaving 'work' sign the floorkeeper reads — a kicked pile
+  still wants tidying, and the tidy-read now chases a pile YOU moved.
+
 **Contract:** loose goods have physics — they scatter under any fast
 feet (player sprint, walker stride), never pocket themselves under a
 non-reader, and never land inside a collider. Scatter = noise +
