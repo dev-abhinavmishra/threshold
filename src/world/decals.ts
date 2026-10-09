@@ -9284,3 +9284,116 @@ export function shutterChain(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Tea ring — the tannin tide a forgotten cup keeps: a dark ring
+ * inside the rim, a drip tail, dust on the saucer. */
+export function teaRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 24;
+    // the ring — tannin line where the level sat for years
+    ctx.strokeStyle = `rgba(90,60,30,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6 + rng.float() * 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 13 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // second fainter ring — an earlier fill
+    ctx.strokeStyle = `rgba(110,76,40,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // the dregs — a dark pool ghost at the bottom
+    ctx.fillStyle = `rgba(70,46,22,${0.36 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 3, cy + 3, 6 + rng.float() * 2, 3.5 + rng.float(), rng.float() * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // a drip tail over the rim
+    ctx.strokeStyle = `rgba(90,60,30,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 10, cy - 8);
+    ctx.quadraticCurveTo(cx + 13, cy - 2, cx + 12, cy + 6 + rng.float() * 4);
+    ctx.stroke();
+    // saucer dust
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.22 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 36, cy - 18 + rng.float() * 36, 0.6 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Lens veil — the dust and web film a watched lens grows: a
+ * fog patch over the glass, web strands at the hood lip. */
+export function lensVeil(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 24;
+    // fog patch — the film over the glass
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 18);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // web strands — spider silk at the hood lip
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16 + rng.float() * 6, cy - 14 + rng.float() * 4);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 20, cy + (rng.float() - 0.5) * 10, cx + 12 + rng.float() * 6, cy - 10 + rng.float() * 6);
+      ctx.stroke();
+    }
+    // dust specks on the housing
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(4 + rng.float() * 40, 4 + rng.float() * 40, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a dead pixel-clean spot where someone wiped once
+    ctx.fillStyle = 'rgba(60,54,44,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy - 2, 3, 2, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Sheet drag — the lines a mangle press keeps: parallel drag
+ * streaks in the feed direction, starch ghosts, finger polish. */
+export function sheetDrag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // parallel drag streaks — the linen's way through
+    for (let i = 0; i < 7; i++) {
+      const y = 10 + i * 4.5 + (rng.float() - 0.5) * 2;
+      ctx.strokeStyle = `rgba(120,114,102,${0.26 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.2 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(4, y);
+      ctx.lineTo(92, y + (rng.float() - 0.5) * 3);
+      ctx.stroke();
+    }
+    // starch ghosts — pale stiff patches where spray dried
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(170,168,158,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(12 + rng.float() * 70, 8 + rng.float() * 32, 6 + rng.float() * 4, 2.5 + rng.float(), rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // finger polish — the shine on the feed lip
+    ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.16})`;
+    ctx.fillRect(8, 40, 80, 2.4);
+    // edge drips — bluing water that ran off
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(80,100,130,${0.26 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.1;
+      const x = 16 + rng.float() * 64;
+      ctx.beginPath();
+      ctx.moveTo(x, 42);
+      ctx.lineTo(x + (rng.float() - 0.5) * 3, 47);
+      ctx.stroke();
+    }
+  });
+}

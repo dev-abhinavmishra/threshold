@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2556,6 +2556,50 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sc.position.set((dc?.[0] ?? 0.8) / 2 - 0.08, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.005);
     prop.group.add(sc);
     if (!prop.group.name) prop.group.name = 'shutter-chain';
+  }
+  // The tea kept its ring — tannin tides in the forgotten cups.
+  if (spec.kind === 'teaSet' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const tr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.2),
+      new THREE.MeshStandardMaterial({ map: teaRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tr.name = 'tea-ring';
+    tr.userData.decalMat = true;
+    tr.rotation.x = -Math.PI / 2;
+    tr.position.set(0, (dc?.[1] ?? 0.1) + 0.004, 0);
+    prop.group.add(tr);
+    if (!prop.group.name) prop.group.name = 'tea-ring';
+  }
+  // The lens kept its veil — fog and web film on the watched
+  // glass.
+  const CAMS: ReadonlySet<PropSpec['kind']> = new Set(['securityCam', 'vidCamera', 'camera']);
+  if (CAMS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const lv = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.18, 0.18),
+      new THREE.MeshStandardMaterial({ map: lensVeil(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    lv.name = 'lens-veil';
+    lv.userData.decalMat = true;
+    lv.position.set(0, 0, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    prop.group.add(lv);
+    if (!prop.group.name) prop.group.name = 'lens-veil';
+  }
+  // The mangle kept the sheet — drag streaks and starch ghosts in
+  // the feed.
+  if (spec.kind === 'manglePress' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const sd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.3),
+      new THREE.MeshStandardMaterial({ map: sheetDrag(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sd.name = 'sheet-drag';
+    sd.userData.decalMat = true;
+    sd.rotation.x = -Math.PI / 2;
+    sd.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
+    prop.group.add(sd);
+    if (!prop.group.name) prop.group.name = 'sheet-drag';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
