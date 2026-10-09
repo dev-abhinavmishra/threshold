@@ -10503,3 +10503,87 @@ export function dartHalo(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+// ---------- sprint 556: the jug sweated, the shelf kept the folds ----------
+
+export function jugSweat(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    // sweat runnels — cold drops crawling down the glass
+    for (let i = 0; i < 12; i++) {
+      const x = 6 + rng.float() * 36;
+      ctx.fillStyle = `rgba(190,196,200,${0.22 + rng.float() * 0.2})`;
+      ctx.fillRect(x, 8 + rng.float() * 20, 1, 6 + rng.float() * 16);
+      ctx.beginPath();
+      ctx.arc(x + 0.5, 30 + rng.float() * 24, 1.1 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // sediment line — the level it stood at for years
+    ctx.fillStyle = `rgba(120,104,76,${0.3 + rng.float() * 0.2})`;
+    const sy = 34 + rng.float() * 12;
+    ctx.fillRect(4, sy, 40, 1.6);
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(108,92,66,${0.24 + rng.float() * 0.18})`;
+      ctx.fillRect(6 + rng.float() * 36, sy + 2, 1.4, 2 + rng.float() * 3);
+    }
+    // finger smears where it was grabbed
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(170,168,158,${0.18 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(16 + rng.float() * 18, 12 + rng.float() * 8, 1.4, 3, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+export function foldPulls(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // stack shadows — crease lines across the folded linen
+    for (let i = 0; i < 6; i++) {
+      const y = 8 + i * 7 + rng.float() * 2;
+      ctx.fillStyle = `rgba(96,92,84,${0.24 + rng.float() * 0.16})`;
+      ctx.fillRect(6, y, 52, 1.8);
+      ctx.fillStyle = `rgba(196,190,176,${0.2 + rng.float() * 0.14})`;
+      ctx.fillRect(6, y + 1.8, 52, 1);
+    }
+    // pulled edge — a sheet's corner dragged out of the stack
+    ctx.fillStyle = `rgba(210,204,190,${0.34 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    const px = 44 + rng.float() * 8;
+    ctx.moveTo(px, 20);
+    ctx.lineTo(px + 10, 26 + rng.float() * 4);
+    ctx.lineTo(px + 2, 30);
+    ctx.closePath(); ctx.fill();
+    // dust on the top fold — it has not been lifted in months
+    for (let i = 0; i < 22; i++) {
+      ctx.fillStyle = `rgba(150,146,138,${0.16 + rng.float() * 0.12})`;
+      ctx.fillRect(8 + rng.float() * 48, 6 + rng.float() * 5, 1.6, 1);
+    }
+  });
+}
+
+export function shelfDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // empty ghosts — pale rectangles where the pieces sat
+    for (let i = 0; i < 3; i++) {
+      const w = 10 + rng.float() * 10;
+      ctx.strokeStyle = `rgba(186,180,164,${0.3 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.4;
+      const x = 8 + i * 18 + rng.float() * 4, y = 26 + rng.float() * 6;
+      ctx.strokeRect(x, y - 8, w, 8);
+    }
+    // dust film — a grey skin on the glass shelf
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = `rgba(158,152,140,${0.1 + rng.float() * 0.12})`;
+      ctx.fillRect(rng.float() * 64, rng.float() * 48, 1.5, 1.5);
+    }
+    // wipe arc — one half-hearted clean pass
+    ctx.strokeStyle = `rgba(210,204,190,${0.22 + rng.float() * 0.16})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(50, 40, 14, Math.PI * 1.1, Math.PI * 1.8);
+    ctx.stroke();
+    // dead fly — there is always one
+    ctx.fillStyle = 'rgba(50,46,40,0.5)';
+    ctx.fillRect(10 + rng.float() * 30, 38 + rng.float() * 6, 1.6, 1);
+  });
+}
