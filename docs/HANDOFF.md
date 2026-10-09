@@ -1,5 +1,15 @@
 # THRESH
 
+## Sprint 536–538 — the busts kept their caps, the gates kept their tracks & the tea kept its ring
+
+More room-history decals — wear on display pieces and service hardware.
+- **536**: crown-dust caps + shoulder ledges on busts/statues/hall figures, clean cells in board-game dust where pieces stood, thumb-polish waist bands on the globe.
+- **537**: rub tracks + wheel grease under sliding gates (scissor/iron/portcullis), heel arcs + finger smears + grease seam on lift/dumbwaiter leaves, polished haul-chain runs on roller shutters.
+- **538**: tannin rings + dregs in the tea set, fog + web veils on security/vid camera lenses, sheet-drag streaks + starch ghosts on the mangle feed.
+
+*Branch devin/…-sprint-536+ — 546 total decal wiring points.*
+
+
 ## Sprint 533–535 — the beams shed, the tags stayed on & the fans kept their blades
 
 Another room-history decal batch — wear where equipment lived.

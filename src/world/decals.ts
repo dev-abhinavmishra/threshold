@@ -9083,3 +9083,317 @@ export function bottleBloom(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Bust cap — the grey cap a bust's crown and shoulders collect:
+ * a crown film, shoulder ledges, clean nose where hands steadied it. */
+export function bustCap(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // crown cap — the film across the top planes
+    const g = ctx.createLinearGradient(0, 4, 0, 40);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 14, 4, 28, 40);
+    // shoulder ledges — dust that settled on the shelf of the chest
+    for (const sx of [-1, 1]) {
+      ctx.fillStyle = `rgba(150,144,132,${0.32 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + sx * 14, 62 + rng.float() * 4, 9, 3 + rng.float() * 1.5, sx * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // clean nose — the wipe where a hand steadied the face
+    ctx.fillStyle = 'rgba(60,54,44,0.26)';
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 4, 30, 2.4, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // settled specks down the plinth
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.22 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 36, 70 + rng.float() * 22, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Piece squares — on a dusty board, the squares the pieces stood
+ * on stay clean: a checker of pale/kept squares in the film. */
+export function pieceSquares(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // overall dust film
+    ctx.fillStyle = `rgba(150,144,132,${0.34 + rng.float() * 0.14})`;
+    ctx.fillRect(0, 0, 96, 96);
+    const cell = 12;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        // a scatter of squares kept clean where a piece stood
+        if (rng.float() < 0.3) {
+          ctx.clearRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+          ctx.fillStyle = 'rgba(150,144,132,0.06)';
+          ctx.fillRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    }
+    // piece rings — faint circular edges where bases sat
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(12 + rng.float() * 72, 12 + rng.float() * 72, 3 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // edge film heavier where hands never reached
+    const g = ctx.createLinearGradient(0, 0, 0, 96);
+    g.addColorStop(0, 'rgba(140,134,122,0.14)');
+    g.addColorStop(1, 'rgba(140,134,122,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 24);
+  });
+}
+
+/** Globe spins — horizontal thumb-polish bands where hands turned
+ * the sphere: clean arcs at the waist, dust on the cap and foot. */
+export function globeSpin(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // cap dust — the top no one touches
+    ctx.fillStyle = `rgba(150,144,132,${0.36 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 16, 16, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // waist bands — the polish arcs of a thousand spins
+    for (let i = 0; i < 3; i++) {
+      const y = 42 + i * 10 + rng.float() * 3;
+      ctx.strokeStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2.4 + rng.float();
+      ctx.beginPath();
+      ctx.ellipse(cx, y, 15 + rng.float() * 2, 3.5, 0, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+    // dust film that survived between the bands
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(cx - 14 + rng.float() * 28, 30 + rng.float() * 50, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // foot ledge — dust on the stand collar
+    ctx.fillStyle = `rgba(140,134,122,${0.3 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 84, 10, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Gate track — the rub tracks a sliding gate drags: twin scuff
+ * lines along the floor rail, grease beads at the wheels. */
+export function gateTrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // twin rails — the polished tracks the wheels ground
+    for (const y of [18, 30]) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.18})`;
+      ctx.lineWidth = 2.2 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(4, y + (rng.float() - 0.5) * 2);
+      ctx.lineTo(92, y + (rng.float() - 0.5) * 2);
+      ctx.stroke();
+    }
+    // wheel grease beads — dark drops where the rollers paused
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(8 + rng.float() * 80, (rng.bool(0.5) ? 18 : 30) + (rng.float() - 0.5) * 4, 2 + rng.float() * 1.6, 1.2 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rust dust the tracks shed
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(140,90,50,${0.24 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 10 + rng.float() * 28, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Lift heels — the mark a freight lift keeps: heel arcs at the
+ * sill, finger smears on the leaf, a grease seam at the gap. */
+export function liftHeels(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // sill heel arcs — boots dragging across the plate
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.34 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.8 + rng.float();
+      const x = 14 + rng.float() * 60;
+      ctx.beginPath();
+      ctx.arc(x, 88, 6 + rng.float() * 4, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+    }
+    // finger smears — pushes on the leaf at hand height
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2;
+      const x = 20 + rng.float() * 56, y = 30 + rng.float() * 30;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rng.float() - 0.5) * 10, y + 10 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // grease seam — the weep along the closing gap
+    const gx = 46 + rng.float() * 4;
+    ctx.fillStyle = `rgba(40,36,30,${0.36 + rng.float() * 0.18})`;
+    ctx.fillRect(gx, 8, 2 + rng.float() * 1.4, 80);
+    // grit the wheels ground off
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(90,84,74,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 80 + rng.float() * 14, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Shutter chain — the wear a shutter's haul chain leaves: a
+ * polished run down the jamb, grease spots, a slack-loop ghost. */
+export function shutterChain(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // the run — a polished vertical where the chain slides
+    const g = ctx.createLinearGradient(0, 6, 0, 78);
+    g.addColorStop(0, `rgba(60,54,44,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(60,54,44,0.08)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 2.5, 6, 5, 74);
+    // link shadows — the chain's dotted ghost
+    for (let y = 8; y < 76; y += 4) {
+      ctx.fillStyle = `rgba(40,36,30,${0.34 + rng.float() * 0.14})`;
+      ctx.fillRect(cx - 1.2, y, 2.4, 1.8);
+    }
+    // grease spots — thumb-grease where hands worked the haul
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(40,36,30,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + (rng.float() - 0.5) * 10, 20 + rng.float() * 50, 1.6 + rng.float(), 2.4 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // slack loop — the chain's spare curve at the base
+    ctx.strokeStyle = `rgba(50,44,38,${0.38 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx + 4, 84, 7 + rng.float() * 2, Math.PI * 0.2, Math.PI * 1.4);
+    ctx.stroke();
+  });
+}
+
+/** Tea ring — the tannin tide a forgotten cup keeps: a dark ring
+ * inside the rim, a drip tail, dust on the saucer. */
+export function teaRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 24;
+    // the ring — tannin line where the level sat for years
+    ctx.strokeStyle = `rgba(90,60,30,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6 + rng.float() * 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 13 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // second fainter ring — an earlier fill
+    ctx.strokeStyle = `rgba(110,76,40,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    // the dregs — a dark pool ghost at the bottom
+    ctx.fillStyle = `rgba(70,46,22,${0.36 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 3, cy + 3, 6 + rng.float() * 2, 3.5 + rng.float(), rng.float() * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // a drip tail over the rim
+    ctx.strokeStyle = `rgba(90,60,30,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 10, cy - 8);
+    ctx.quadraticCurveTo(cx + 13, cy - 2, cx + 12, cy + 6 + rng.float() * 4);
+    ctx.stroke();
+    // saucer dust
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.22 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 36, cy - 18 + rng.float() * 36, 0.6 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Lens veil — the dust and web film a watched lens grows: a
+ * fog patch over the glass, web strands at the hood lip. */
+export function lensVeil(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 24;
+    // fog patch — the film over the glass
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 18);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // web strands — spider silk at the hood lip
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16 + rng.float() * 6, cy - 14 + rng.float() * 4);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 20, cy + (rng.float() - 0.5) * 10, cx + 12 + rng.float() * 6, cy - 10 + rng.float() * 6);
+      ctx.stroke();
+    }
+    // dust specks on the housing
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(4 + rng.float() * 40, 4 + rng.float() * 40, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a dead pixel-clean spot where someone wiped once
+    ctx.fillStyle = 'rgba(60,54,44,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy - 2, 3, 2, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Sheet drag — the lines a mangle press keeps: parallel drag
+ * streaks in the feed direction, starch ghosts, finger polish. */
+export function sheetDrag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // parallel drag streaks — the linen's way through
+    for (let i = 0; i < 7; i++) {
+      const y = 10 + i * 4.5 + (rng.float() - 0.5) * 2;
+      ctx.strokeStyle = `rgba(120,114,102,${0.26 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.2 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(4, y);
+      ctx.lineTo(92, y + (rng.float() - 0.5) * 3);
+      ctx.stroke();
+    }
+    // starch ghosts — pale stiff patches where spray dried
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(170,168,158,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(12 + rng.float() * 70, 8 + rng.float() * 32, 6 + rng.float() * 4, 2.5 + rng.float(), rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // finger polish — the shine on the feed lip
+    ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.16})`;
+    ctx.fillRect(8, 40, 80, 2.4);
+    // edge drips — bluing water that ran off
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(80,100,130,${0.26 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.1;
+      const x = 16 + rng.float() * 64;
+      ctx.beginPath();
+      ctx.moveTo(x, 42);
+      ctx.lineTo(x + (rng.float() - 0.5) * 3, 47);
+      ctx.stroke();
+    }
+  });
+}
