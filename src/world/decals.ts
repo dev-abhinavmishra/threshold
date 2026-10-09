@@ -8967,3 +8967,119 @@ export function bucketRing(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Fan film — the grey film a ceiling fan's blades collect: blade
+ * streaks, a clean leading edge, dust shed onto the hub. */
+export function fanFilm(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48, cy = 48;
+    // blade streaks — dusty arcs along the sweep
+    const blades = 3 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < blades; i++) {
+      const a = (i / blades) * Math.PI * 2 + rng.float() * 0.2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(a);
+      // blade film — the trailing edge's dust
+      const g = ctx.createLinearGradient(10, 0, 34, 0);
+      g.addColorStop(0, 'rgba(150,144,132,0.28)');
+      g.addColorStop(1, 'rgba(150,144,132,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(8, -3, 28, 8);
+      // leading edge clean — polished strip where it cuts the air
+      ctx.fillStyle = 'rgba(70,60,50,0.3)';
+      ctx.fillRect(8, -3, 28, 1.4);
+      ctx.restore();
+    }
+    // hub dust — settled film on the motor cap
+    ctx.fillStyle = `rgba(140,134,122,${0.3 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 7 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.fill();
+    // shed grit — dust the sweep threw off
+    for (let i = 0; i < 18; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 30 + rng.float() * 14;
+      ctx.fillStyle = `rgba(150,144,132,${0.2 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Hose scuff — the drag arcs a wall hose rubs on its way out:
+ * curved wear bands at the reel, chafe stripes where it ran. */
+export function hoseScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 20 + rng.float() * 10, cy = 20;
+    // reel halo — a dark worn circle where the coil sits
+    ctx.strokeStyle = `rgba(60,52,42,${0.35 + rng.float() * 0.2})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(50,44,36,${0.2 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 14, 0, Math.PI * 2);
+    ctx.fill();
+    // drag arcs — the hose's sweep lines heading down
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(70,60,50,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(cx + 6 + i * 3, cy + 10);
+      ctx.quadraticCurveTo(cx + 26 + i * 6, cy + 30 + i * 6, cx + 40 + i * 8, cy + 60 + i * 8);
+      ctx.stroke();
+    }
+    // chafe spots — where the hose rubbed mid-wall
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(80,70,58,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(40 + rng.float() * 40, 40 + rng.float() * 40, 3 + rng.float() * 2, 1.4 + rng.float(), rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust the coil shed
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(160,152,134,${0.18 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 30, 8 + rng.float() * 30, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Bottle bloom — the grey bloom on stored bottles: a dust film,
+ * drip ghosts down the necks, a clean rim where hands held them. */
+export function bottleBloom(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // the film — settled dust on shoulders and glass
+    const g = ctx.createLinearGradient(0, 10, 0, 90);
+    g.addColorStop(0, `rgba(150,144,132,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(0.5, 'rgba(150,144,132,0.16)');
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(8, 10, 48, 82);
+    // neck clean band — where hands lifted it
+    ctx.fillStyle = 'rgba(60,54,44,0.22)';
+    ctx.fillRect(cx - 4, 14, 8, 10);
+    // drip ghosts — old runs down the glass
+    for (let i = 0; i < 4; i++) {
+      const dx = cx - 12 + rng.float() * 24;
+      ctx.strokeStyle = `rgba(140,134,120,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(dx, 30);
+      ctx.quadraticCurveTo(dx + (rng.float() - 0.5) * 4, 50 + rng.float() * 10, dx + (rng.float() - 0.5) * 6, 70 + rng.float() * 14);
+      ctx.stroke();
+    }
+    // dust clumps on the shoulder
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.28 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 14 + rng.float() * 28, 26 + rng.float() * 12, 0.6 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2437,6 +2437,35 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pl.position.set((rng.float() - 0.5) * 0.2, (modelCollider(spec.kind)?.[1] ?? 1.3) * 0.55, (modelCollider(spec.kind)?.[2] ?? 0.1) / 2 + 0.006);
     prop.group.add(pl);
     if (!prop.group.name) prop.group.name = 'pin-lines';
+  }
+  // The fans kept their blades — dust films on the sweeps no one
+  // wiped.
+  if ((spec.kind === 'fan' || spec.kind === 'ceilingFan') && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ff = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: fanFilm(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ff.name = 'fan-film';
+    ff.userData.decalMat = true;
+    ff.position.set(0, (dc?.[1] ?? 1.6) * 0.6, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(ff);
+    if (!prop.group.name) prop.group.name = 'fan-film';
+  }
+  // The bottles bloomed — dust films and drip ghosts on stored
+  // bottles.
+  const BOTTLES: ReadonlySet<PropSpec['kind']> = new Set(['wineBottles', 'bleachBottle', 'cleanerBottle', 'thermos', 'vase']);
+  if (BOTTLES.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const bb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.3),
+      new THREE.MeshStandardMaterial({ map: bottleBloom(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bb.name = 'bottle-bloom';
+    bb.userData.decalMat = true;
+    bb.position.set((rng.float() - 0.5) * 0.15, (dc?.[1] ?? 0.3) * 0.55, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    prop.group.add(bb);
+    if (!prop.group.name) prop.group.name = 'bottle-bloom';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
