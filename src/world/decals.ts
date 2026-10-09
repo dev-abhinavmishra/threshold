@@ -8564,3 +8564,148 @@ export function tonerDrift(rng: Rng): THREE.Texture | null {
     g.strokeRect(36 + rng.range(-4, 4), 30 + rng.range(-4, 4), 24 + rng.float() * 6, 16 + rng.float() * 4);
   });
 }
+
+/** The boots kept the mud — heel-and-toe stamps and a kicked mud
+ *  line under the rack where the wet boots always stand. */
+export function bootPrints(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // Standing prints — paired sole ghosts where the boots live.
+    for (let i = 0; i < 4; i++) {
+      const px = 24 + rng.float() * 48;
+      const py = 30 + rng.float() * 24;
+      const rot = rng.range(-0.4, 0.4);
+      for (const side of [-2.5, 2.5]) {
+        g.save();
+        g.translate(px + side + rng.range(-0.8, 0.8), py);
+        g.rotate(rot);
+        // Sole pad.
+        g.fillStyle = `rgba(${70 + Math.floor(rng.float() * 24)},${54 + Math.floor(rng.float() * 18)},${36 + Math.floor(rng.float() * 12)},${0.3 + rng.float() * 0.25})`;
+        g.beginPath();
+        g.ellipse(0, -1.5, 2.2, 3.2, 0, 0, Math.PI * 2);
+        g.fill();
+        // Heel pad.
+        g.beginPath();
+        g.ellipse(0, 3.4, 1.6, 1.8, 0, 0, Math.PI * 2);
+        g.fill();
+        g.restore();
+      }
+    }
+    // The trudge — a short sequence of fading stamps out one side.
+    const ta = rng.range(-0.6, 0.6);
+    for (let i = 0; i < 5; i++) {
+      const tx = 14 + i * 12;
+      const ty = 66 + i * 3 * Math.sin(ta);
+      g.save();
+      g.translate(tx, ty);
+      g.rotate(ta);
+      g.fillStyle = `rgba(80,62,42,${0.32 - i * 0.05})`;
+      g.beginPath();
+      g.ellipse(0, 0, 2, 3, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    // Dried clods — mud crumbs shaken off the treads.
+    for (let i = 0; i < 14; i++) {
+      g.fillStyle = `rgba(60,46,30,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(18 + rng.float() * 60, 26 + rng.float() * 40, 0.8 + rng.float() * 1.1, 0.7 + rng.float() * 0.8);
+    }
+    // The kick line — a smear where boots get toed off the wall.
+    g.strokeStyle = `rgba(76,58,38,${0.3 + rng.float() * 0.2})`;
+    g.lineWidth = 2.2;
+    g.beginPath();
+    g.moveTo(20, 20 + rng.range(-2, 2));
+    g.quadraticCurveTo(48, 18 + rng.range(-2, 2), 76, 20 + rng.range(-2, 2));
+    g.stroke();
+  });
+}
+
+/** The hooks rusted rings — an oxide halo round each meat hook
+ *  and ceiling hook, plus the blood-dark drip under the point. */
+export function hookRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    const hx = 48 + rng.range(-6, 6);
+    // The mount ring — rust halo where the hook meets its boss.
+    g.strokeStyle = `rgba(128,70,30,${0.5 + rng.float() * 0.2})`;
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(hx, 18 + rng.range(-2, 2), 5 + rng.float() * 1.5, 0, Math.PI * 2);
+    g.stroke();
+    // Rust bleed — oxide wicking outward in threads.
+    for (let i = 0; i < 8; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const len = 5 + rng.float() * 9;
+      g.strokeStyle = `rgba(140,80,36,${0.2 + rng.float() * 0.24})`;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      g.moveTo(hx + Math.cos(a) * 5, 18 + Math.sin(a) * 5);
+      g.lineTo(hx + Math.cos(a) * len + rng.range(-1, 1), 18 + Math.sin(a) * len + rng.range(-1, 1));
+      g.stroke();
+    }
+    // The drip — a blood-dark thread dropping off the point.
+    const dx = hx + rng.range(-2, 2);
+    const drip = g.createLinearGradient(0, 26, 0, 52);
+    drip.addColorStop(0, 'rgba(88,34,20,0.5)');
+    drip.addColorStop(1, 'rgba(88,34,20,0)');
+    g.fillStyle = drip;
+    g.fillRect(dx, 26, 1.4 + rng.float() * 0.8, 26 + rng.float() * 8);
+    // The swing scar — an arc where the hook's swing kept the mark.
+    g.strokeStyle = `rgba(150,132,106,${0.24 + rng.float() * 0.2})`;
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.arc(hx, 20, 12 + rng.float() * 4, Math.PI * 0.4, Math.PI * 0.9);
+    g.stroke();
+    // Flecks — scale chips that fell.
+    for (let i = 0; i < 7; i++) {
+      g.fillStyle = `rgba(150,88,40,${0.28 + rng.float() * 0.3})`;
+      g.fillRect(hx + rng.range(-12, 12), 30 + rng.float() * 24, 0.8 + rng.float() * 0.6, 0.7 + rng.float() * 0.5);
+    }
+  });
+}
+
+/** The racks remembered weight — sag shadows and load dents where
+ *  cases and keys have hung too long. */
+export function rackWeight(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The sag — a bowed shadow where the rail bends under its load.
+    g.strokeStyle = 'rgba(52,42,32,0.45)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(10, 14 + rng.range(-1, 1));
+    g.quadraticCurveTo(48, 20 + rng.range(-1, 2), 86, 14 + rng.range(-1, 1));
+    g.stroke();
+    // Load dents — divots where each case's weight digs in.
+    for (let i = 0; i < 5; i++) {
+      const lx = 16 + rng.float() * 64;
+      const dent = g.createRadialGradient(lx, 22, 1, lx, 22, 6);
+      dent.addColorStop(0, 'rgba(60,48,36,0.45)');
+      dent.addColorStop(1, 'rgba(60,48,36,0)');
+      g.fillStyle = dent;
+      g.beginPath();
+      g.arc(lx, 22, 6, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Chafe lines — where straps and handles rub the rail.
+    for (let i = 0; i < 6; i++) {
+      g.strokeStyle = `rgba(160,142,116,${0.16 + rng.float() * 0.18})`;
+      g.lineWidth = 0.6;
+      const rx = 14 + rng.float() * 68;
+      g.beginPath();
+      g.moveTo(rx, 12 + rng.range(-1, 1));
+      g.lineTo(rx + rng.range(-3, 3), 20 + rng.range(-1, 2));
+      g.stroke();
+    }
+    // Dust on the shadow side — a soft fill under the sag.
+    const dust = g.createLinearGradient(0, 24, 0, 36);
+    dust.addColorStop(0, 'rgba(130,116,92,0)');
+    dust.addColorStop(0.5, `rgba(130,116,92,${0.16 + rng.float() * 0.12})`);
+    dust.addColorStop(1, 'rgba(130,116,92,0)');
+    g.fillStyle = dust;
+    g.fillRect(14, 24, 68, 12);
+    // A strap ghost — the pale rectangle one bag protected.
+    if (rng.bool(0.5)) {
+      g.strokeStyle = 'rgba(190,176,148,0.28)';
+      g.lineWidth = 1;
+      g.strokeRect(28 + rng.range(-6, 6), 26 + rng.range(-3, 3), 14 + rng.float() * 6, 8 + rng.float() * 4);
+    }
+  });
+}

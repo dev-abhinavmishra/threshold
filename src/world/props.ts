@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2352,6 +2352,36 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ds.position.set(0, (dc?.[1] ?? 1.6) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'dart-splash';
+  }
+  // The hooks rusted rings — oxide halos and drip threads on the
+  // hanging hooks.
+  const HOOK_KINDS = new Set(['meatHook', 'ceilingHook']);
+  if (HOOK_KINDS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const hk = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.28),
+      new THREE.MeshStandardMaterial({ map: hookRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    hk.name = 'hook-ring';
+    hk.userData.decalMat = true;
+    hk.position.set(0, (dc?.[1] ?? 0.6) * 0.6, (dc?.[2] ?? 0.2) / 2 + 0.005);
+    prop.group.add(hk);
+    if (!prop.group.name) prop.group.name = 'hook-ring';
+  }
+  // The racks remembered weight — sag shadow and load dents on the
+  // racks holding cases and keys.
+  const RACK_KINDS = new Set(['luggageRack', 'keyRack']);
+  if (RACK_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const rw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.4),
+      new THREE.MeshStandardMaterial({ map: rackWeight(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    rw.name = 'rack-weight';
+    rw.userData.decalMat = true;
+    rw.position.set(0, (dc?.[1] ?? 1.5) * 0.55, (dc?.[2] ?? 0.3) / 2 + 0.006);
+    prop.group.add(rw);
+    if (!prop.group.name) prop.group.name = 'rack-weight';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
