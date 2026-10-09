@@ -7231,3 +7231,39 @@ physical ≥16 (weight + lid-betrayal), reportable ≥24. Spilling
 - `hiddenSpot` in `EntityCtx` is the live spot object — compare
   `s.id === hid.id`, not object identity, when checking a room's
   spot list.
+
+## Sprints 517–520 — the take can be stashed
+
+Sibling: the carried-take arc's capstone — the take can come off your
+back into a lid, and the fiction of every earlier mechanic follows
+it there.
+
+- **s517 'Stash the take' / 'Recover the stash'** — crouched at an
+  untrapped lid's mouth, every good leaves your back into the spot's
+  volume (`lidStashes`, checkpointed). The ONLY way to unburden
+  marked stock — it never spills (s511) — but `stash.marked`
+  records which stashed ids were rifled: reclaiming re-marks. Coin
+  and pages never stash. Anchor sits inside the mouth — aim INTO
+  the box for the stash, at the floor for the hide.
+- **s518 the keys read the lid** — the Inspector's smell now weighs
+  carried take vs parked take (heaviest ≥16 pulls priority); any
+  stash a lid-try reaches — even one good — goes to the count's
+  locker via `stashSeized` (the count's hands: the only lawful way
+  marked stock moves). New ctx hooks `stashLoad`/`seizeStash`.
+- **s519 the stash reads at the end** — `BooksClosed.stashed` joins
+  both epitaphs.
+- **s520 a full lid hides nothing** — a stash fills the volume:
+  'Hide in … — the take fills it' prompt + deny on use. Cover
+  spent as storage; reclaim to get it back.
+
+**Contract:** stash = park, not launder. The lid holds the take for
+you; the count's locker holds it against you. Costs: a lid-try can
+find it (any size), a big stash smells like a carried load, and the
+volume is spent while it holds goods.
+
+**Traps:**
+- `hiddenSpot` on the controller is `HidingSpot|null`, not a bool —
+  there is no `player.hidden` field.
+- Stash verbs need their own anchor INSIDE the mouth (exitPos −0.4
+  toward volume center): same-anchor verbs at equal priority lose
+  the focus tie to 'hide' every time.
