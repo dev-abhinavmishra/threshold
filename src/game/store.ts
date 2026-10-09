@@ -150,6 +150,8 @@ export interface BooksClosed {
   carried?: number;
   /** goods parked in lids at the end — the stash you never reclaimed */
   stashed?: number;
+  /** sprint 531 — how much of the parked take was still marked */
+  stashedMarked?: number;
 }
 
 export interface CheckpointSave {
@@ -215,7 +217,7 @@ export interface CheckpointSave {
   /** sprint 517 — the take parked in a lid: stashed goods per hiding
    *  spot id, with which stashed ids were marked stock (marks ride
    *  with the goods — a stash parks the take, it doesn't launder it). */
-  lidStashes?: { spot: string; items: { id: ItemId; count: number }[]; marked?: ItemId[] }[];
+  lidStashes?: { spot: string; items: { id: ItemId; count: number }[]; marked?: ItemId[]; robbedWire?: boolean }[];
   /** sprint 522 — lids whose stash a staffed counter already filed
    *  (space-prefixed spot keys, same as lidStashes) */
   lidFiled?: string[];

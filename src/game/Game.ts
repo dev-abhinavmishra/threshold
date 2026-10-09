@@ -732,6 +732,7 @@ export class Game {
       this.lidStashes.set(s.spot, {
         items: s.items.map((i) => ({ ...i })),
         marked: [...(s.marked ?? [])],
+        robbedWire: s.robbedWire === true ? true : undefined,
       });
     }
     this.lidFiled = new Set(cp?.lidFiled ?? []);
@@ -1144,6 +1145,7 @@ export class Game {
           const mi = stash.marked.indexOf('wireCoil');
           if (mi >= 0) stash.marked.splice(mi, 1);
         }
+        stash.robbedWire = true; // sprint 532 — the lid remembers the robbery
         if (stash.items.length === 0) this.lidStashes.delete(key);
         return true;
       },
@@ -1434,7 +1436,12 @@ export class Game {
    *  hiding-spot id; `marked` records which stashed ids were rifled
    *  stock so the marks ride with the goods (a stash parks the take —
    *  it doesn't launder it). */
-  private lidStashes = new Map<string, { items: { id: ItemId; count: number }[]; marked: ItemId[] }>();
+  private lidStashes = new Map<string, {
+    items: { id: ItemId; count: number }[]; marked: ItemId[];
+    /** sprint 532 — the lid remembers the robbery: a grafter worked
+     *  its wire loose — surfaces in 'Peep the lid'. */
+    robbedWire?: boolean;
+  }>();
   /** sprint 522 — lids whose stash a staffed counter already sight-
    *  filed — the bulge in the box is the same claim as on your back,
    *  once per lid. Keys share the lidStashes space-prefix. */
@@ -3757,9 +3764,13 @@ export class Game {
         const n = stash.items.reduce((a, i) => a + i.count, 0);
         const m = stash.items.filter((i) => stash.marked.includes(i.id))
           .reduce((a, i) => a + i.count, 0);
+        // sprint 532 — and the lid remembers the robbery: a lid the
+        // grafter worked tells you its wire walked.
+        const robbed = stash.robbedWire && !stash.items.some((i) => i.id === 'wireCoil')
+          ? ' · its wire walked' : '';
         this.cue('info', it.pos, m > 0
-          ? `[the lid keeps ${n} goods — ${m} of it marked]`
-          : `[the lid keeps ${n} goods]`);
+          ? `[the lid keeps ${n} goods — ${m} of it marked${robbed}]`
+          : `[the lid keeps ${n} goods${robbed}]`);
         return;
       }
       case 'recoverStash': {
@@ -3768,6 +3779,17 @@ export class Game {
         const spotId = (it.data as { spotId: string }).spotId;
         const stash = this.lidStashes.get(`${this.space}:${spotId}`);
         if (!stash) { it.enabled = false; return; }
+        // sprint 530 — a grappled lid holds what it holds: the trap
+        // owns the box — reaching through its fingers for your take
+        // is the reach it waits for. A full lid already can't hide
+        // you; a held lid can't pay you either.
+        const trappedSpot = this.activeRooms()
+          .flatMap((r) => r.hidingSpots).find((s) => s.id === spotId);
+        if (trappedSpot?.trappedBy) {
+          this.cue('door-locked', it.pos,
+            '[it holds the lid shut — the take waits behind its hands]', 'warn');
+          return;
+        }
         let n = 0;
         for (const s of stash.items) { this.giveItem(s.id, s.count); n += s.count; }
         for (const id of stash.marked) {
@@ -6620,6 +6642,15 @@ export class Game {
     this.echoQueue.length = 0;
     this.phoneRing = null;
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
+    // sprint 529 — the stair knows your weight: crossing floors past
+    // the rattle tier lands the descent as real sound at the threshold.
+    const loadIn = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+    if (loadIn >= 8) {
+      this.sound.emit({ x: first.entryPos.x, y: 0.5, z: first.entryPos.z,
+        intensity: 0.3 * this.player.noiseMul * this.player.maskMul * this.wantedPull,
+        category: 'impact', caption: '[the take knocks the stair]' });
+      this.cue('hide-in', null, '[the stair knows your weight]', 'warn');
+    }
     this.checkpoint = this.makeCheckpoint(0);
     saveCheckpoint(this.checkpoint);
   }
@@ -6648,6 +6679,14 @@ export class Game {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
       this.cue('victory', null, '[the Palimpsest is yours]', 'info');
+    }
+    // sprint 529 — and the climb back answers the same weigh-in
+    const loadOut = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+    if (loadOut >= 8) {
+      this.sound.emit({ x: back.entryPos.x, y: 0.5, z: back.entryPos.z,
+        intensity: 0.3 * this.player.noiseMul * this.player.maskMul * this.wantedPull,
+        category: 'impact', caption: '[the take knocks the stair]' });
+      this.cue('hide-in', null, '[the stair lets your weight go]', 'warn');
     }
     this.checkpoint = this.makeCheckpoint(this.currentRoom);
     saveCheckpoint(this.checkpoint);
@@ -6704,6 +6743,7 @@ export class Game {
         ? [...this.lidStashes].map(([spot, s]) => ({
           spot, items: s.items.map((i) => ({ ...i })),
           marked: s.marked.length > 0 ? [...s.marked] : undefined,
+          robbedWire: s.robbedWire === true ? true : undefined,
         }))
         : undefined,
       lidFiled: [...this.lidFiled],
@@ -6819,9 +6859,13 @@ export class Game {
             // carrying reads beside what the floor and the count kept
             carried: this.inventory.reduce((n, i) => n + i.count, 0),
             // sprint 519 — and what stayed parked: goods in lids you
-            // never came back for read at the end too
+            // never came back for read at the end too (s531: marks itemized)
             stashed: [...this.lidStashes.values()]
               .reduce((n, s) => n + s.items.reduce((a, i) => a + i.count, 0), 0),
+            stashedMarked: [...this.lidStashes.values()]
+              .reduce((n, s) => n + s.items
+                .filter((i) => s.marked.includes(i.id))
+                .reduce((a, i) => a + i.count, 0), 0),
           },
         },
         documents: this.loadDocs(),
@@ -6868,6 +6912,11 @@ export class Game {
         // sprint 519 — and what stayed parked in the lids
         stashed: [...this.lidStashes.values()]
           .reduce((n, s) => n + s.items.reduce((a, i) => a + i.count, 0), 0),
+        // sprint 531 — the epitaph itemizes the marks too
+        stashedMarked: [...this.lidStashes.values()]
+          .reduce((n, s) => n + s.items
+            .filter((i) => s.marked.includes(i.id))
+            .reduce((a, i) => a + i.count, 0), 0),
       },
     }, paused: true });
     document.exitPointerLock?.();

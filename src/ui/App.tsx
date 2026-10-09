@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -178,7 +178,10 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
     // sprint 513 — and what walked out: the take still on your back
     if (carried > 0) lines.push(`${carried} ${carried === 1 ? 'good' : 'goods'} walked out on your back — the take kept its weight`);
     // sprint 519 — and what stayed parked: the stash you left in a lid
-    if (stashed > 0) lines.push(`${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — the stash you never reclaimed`);
+    const stashedMarked = books.stashedMarked ?? 0;
+    if (stashed > 0) lines.push(stashedMarked > 0
+      ? `${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — ${stashedMarked} of it still marked`
+      : `${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — the stash you never reclaimed`);
   }
   return lines;
 }
