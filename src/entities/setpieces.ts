@@ -529,7 +529,9 @@ export class Grafter extends Entity {
       // sprint 491 — full hands leave the wire whole: a carrier reads
       // only the kinds it has a pocket for. An untakeable pile must not
       // pull it (the stoop would re-arm forever over goods it can't hold).
-      const kinds: ('pouch' | 'coil')[] = this.carrying === 0 ? ['pouch', 'coil'] : ['pouch'];
+      // sprint 538 — a burning lamp is loose goods to the under too:
+      // the hands gut it for the charge — pocketable like wire.
+      const kinds: ('pouch' | 'coil' | 'lamp')[] = this.carrying === 0 ? ['pouch', 'coil', 'lamp'] : ['pouch'];
       const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, kinds) ?? null;
       // sprint 486 — bait rings louder than the leaf: a PLACED pile
       // pulls it off the camp; ordinary spill only wins a quiet room.
@@ -596,7 +598,7 @@ export class Grafter extends Entity {
       && v3dist(this.pos, this.wireLid.exitPos) < 0.55
       ? this.wireLid : null;
     const pileNear = this.spillSeek && !this.wireLid
-      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil'] : ['pouch']) ?? null
+      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil', 'lamp'] : ['pouch']) ?? null
       : null;
     if ((pileNear || lidNear) && this.spillClaimT <= 0) {
       this.spillClaimT = 1.2;
@@ -616,7 +618,7 @@ export class Grafter extends Entity {
       }
     }
     const claimed = pileNear
-      ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null
+      ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0, lamp: this.carrying === 0 }) ?? null
       : null;
     // sprint 524 — a stashed lid yields its wire one coil a stoop:
     // it works the lid like a pile, takes what it has a pocket for.
@@ -642,6 +644,16 @@ export class Grafter extends Entity {
     } else if (claimed?.kind === 'coil') {
       this.carrying = 1; this.carryCued = false; this.spillCued = false;
       c.cue('grafter-grind', this.pos, '[stone gathers its wire back]', { severity: 'info' });
+    } else if (claimed?.kind === 'lamp') {
+      // sprint 538 — the under doesn't carry light, it guts it: the
+      // dynamo's charge folds into the pouch as coin, the lamp dies
+      // in its hands. The fuller the charge, the more meat in it.
+      this.pouch += Math.max(2, Math.ceil(claimed.batt / 30));
+      this.spillCued = false;
+      c.cue('grafter-grind', this.pos,
+        '[stone fingers crack the dynamo — the light folds into the pouch]', { severity: 'warn' });
+      c.sound.emit({ x: this.pos.x, y: 0.4, z: this.pos.z, intensity: 0.3,
+        category: 'item', caption: '[a lamp dies under the rubble]', source: this.id });
     }
     // It grinds the floor wherever it is — a dead snare crossed under
     // its stride is scrap too, not only the one under a standing rubble.
