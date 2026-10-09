@@ -447,6 +447,7 @@ export class Warden extends Entity {
   private investigateScan = 0;
   private investigateKind: string | null = null; // which sign it's checking (noise checks carry none)
   private pocketed = 0; // felt wraps confiscated off blinded eyes — carried, not deleted
+  private pocketedChocks = 0; // sprint 489 — kicked chocks confiscated off the floor, same rule
 
   /** The house keeps what it takes — until it staggers. A floorkeeper
    *  that goes down (your wire, the glass, a wet floor) spills the
@@ -460,6 +461,13 @@ export class Warden extends Entity {
       this.ctx.dropWraps?.(this.pos, n);
       this.ctx.cue('floor-creak', this.pos,
         '[it goes down — the felt it pocketed scatters]', { severity: 'warn' });
+    }
+    if (this.pocketedChocks > 0) {
+      const n = this.pocketedChocks;
+      this.pocketedChocks = 0;
+      this.ctx.spillChocks?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it goes down — the chocks it pocketed scatter too]', { severity: 'warn' });
     }
   }
   private scentT = 0;                          // evidence polling
@@ -756,7 +764,10 @@ export class Warden extends Entity {
             // sprint 482 — the floor folds its felt back in: the pile
             // the stagger scattered goes back in his pocket — carried
             // again, spillable again the next time he goes down.
-            const got = this.ctx.scavengeSpill?.(this.investigate.x, this.investigate.z, { wrap: true });
+            // sprint 489 — a kicked chock is loose goods on the same
+            // floor: it gets pocketed, not left for you.
+            const got = this.ctx.scavengeSpill?.(this.investigate.x, this.investigate.z,
+              { wrap: true, wedge: true });
             if (got?.kind === 'wrap') {
               this.pocketed += got.n;
               this.ctx.cue('floor-creak', this.investigate,
@@ -764,6 +775,14 @@ export class Warden extends Entity {
               this.ctx.sound.emit({
                 x: this.investigate.x, y: 0.4, z: this.investigate.z,
                 intensity: 0.3, category: 'item', caption: '[felt gathers]',
+                source: this.id });
+            } else if (got?.kind === 'wedge') {
+              this.pocketedChocks++;
+              this.ctx.cue('floor-creak', this.investigate,
+                '[it pockets the loose chock — the floor is tidy again]', { severity: 'warn' });
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.4, z: this.investigate.z,
+                intensity: 0.3, category: 'item', caption: '[a chock disappears]',
                 source: this.id });
             }
           }
@@ -831,12 +850,14 @@ export class Warden extends Entity {
       // own stagger scattered (or anyone's) reads as a point to fold
       // back in — the floor pockets what fell, the spill is a race.
       if (!this.investigate && room0?.spec) {
-        const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['wrap']) ?? null;
+        const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['wrap', 'wedge']) ?? null;
         if (spill && pointInRoom(room0, spill.x, spill.z)) {
           this.investigate = v3(spill.x, 0, spill.z);
           this.investigateScan = 0;
           this.investigateKind = 'wrapSpill';
-          c.cue('floor-creak', this.pos, '[it bends for the felt that fell]', { severity: 'warn' });
+          c.cue('floor-creak', this.pos, spill.kind === 'wedge'
+            ? '[it bends for the loose chock]'
+            : '[it bends for the felt that fell]', { severity: 'warn' });
           this.rig?.play('move', 0.1);
         }
       }

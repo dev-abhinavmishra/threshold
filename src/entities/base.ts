@@ -142,10 +142,13 @@ export interface EntityCtx {
    *  The spill window is a race, not a timer: beat it back to your own
    *  coin or it keeps the money. */
   nearestSpill?: (x: number, z: number, maxD: number,
-    kinds?: ('pouch' | 'coil' | 'wrap')[])
-    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap'; bait?: boolean } | null;
-  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean })
-    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | null;
+    kinds?: ('pouch' | 'coil' | 'wrap' | 'wedge')[])
+    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge'; bait?: boolean } | null;
+  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean; wedge?: boolean })
+    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | { kind: 'wedge' } | null;
+  /** sprint 489 — a confiscated chock is carried too: a staggered
+   *  floorkeeper spills pocketed chocks back as kicked-wedge drops. */
+  spillChocks?: (pos: Vec3, n: number) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

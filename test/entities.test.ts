@@ -720,6 +720,40 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('a kicked chock is loose goods — the warden pockets it, and spills it again (s489)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const chock = { x: mid.x + 1.0, z: mid.z };
+    let taken = false;
+    (ctx as { nearestSpill?: EntityCtx['nearestSpill'] }).nearestSpill =
+      () => taken ? null : { ...chock, kind: 'wedge' as const };
+    (ctx as { scavengeSpill?: EntityCtx['scavengeSpill'] }).scavengeSpill =
+      vi.fn((x: number, z: number) => {
+        if (Math.hypot(x - chock.x, z - chock.z) < 0.55) { taken = true; return { kind: 'wedge' as const }; }
+        return null;
+      });
+    const spilled: number[] = [];
+    (ctx as { spillChocks?: EntityCtx['spillChocks'] }).spillChocks =
+      (_p, n) => { spilled.push(n); };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 30, 0, room.entryPos.z - 30);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { pocketedChocks: number };
+    let t = 0;
+    for (let i = 0; i < 400 && !taken; i++) t = step(warden, ctx, 0.05, t);
+    expect(taken, 'the chock was confiscated').toBe(true);
+    expect(w.pocketedChocks, 'the chock is carried').toBe(1);
+    // carried means spillable — put it down and the chock falls back out
+    warden.stagger(3);
+    expect(w.pocketedChocks).toBe(0);
+    expect(spilled).toEqual([1]);
+    warden.dispose();
+  });
+
   it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
@@ -1984,7 +2018,7 @@ describe('Grafter seam coin (sprints 476-480)', () => {
     const pile = { x: 1.2, z: 1.2 };
     ctx.nearestSpill = () => ({ ...pile, kind: 'coil' as const });
     ctx.scavengeSpill = vi.fn(() => null); // coil:false path never fires
-    for (let i = 0; i < 10; i++) { ctx.now += 0.05; g.update(0.05); }
+    for (let i = 0; i < 40; i++) { ctx.now += 0.05; g.update(0.05); } // past the s491 stoop
     expect(ctx.scavengeSpill, 'arrival asks with coil=false').toHaveBeenCalledWith(expect.any(Number), expect.any(Number), { coil: false });
     g.dispose();
   });

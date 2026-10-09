@@ -503,6 +503,7 @@ export class Grafter extends Entity {
       c.cue('chalk-mark', this.pos, '[the boards named your face — it reads you past its reach]', { severity: 'warn' });
     }
     let speed = this.tuning.speed * (this.eager ? 1.15 : 1);
+    this.spillSeek = false; // re-derived per frame — only the seek branch owns the stoop
     if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= this.eager ? 1.75 : 1.4; }
     // sprint 478 — a fed hand smells its coin on you: past every sight
     // rule, the pouch tells it where the payer walks — within its own
@@ -524,6 +525,7 @@ export class Grafter extends Entity {
       const wants = spill !== null
         && this.roomOf(v3(spill.x, 0, spill.z)) === this.spawnRoom
         && (c.now > this.crackCampUntil || spill.bait === true);
+      this.spillSeek = wants === true;
       if (wants && spill) {
         this.target = v3(spill.x, 0, spill.z);
         this.roamT = 0;
@@ -547,10 +549,28 @@ export class Grafter extends Entity {
       this.rig?.play('idle');
       if (this.roamT > 1.4 && c.now > this.crackCampUntil) this.pickRoam();
     }
-    // sprint 481 — arrival takes the pile back: coin re-pockets (the
-    // payer-smell restarts with it), a coil rides as carrying and may
-    // come right back down onto your path. Full hands leave the wire.
-    const claimed = c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null;
+    // sprint 491 — the claim takes a stoop: reaching a pile starts a
+    // ~1.2s bend before the take lands. The race has a heartbeat —
+    // sprint in while it stoops and the pile is still yours.
+    const pileNear = this.spillSeek
+      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, ['pouch', 'coil']) ?? null
+      : null;
+    if (pileNear && this.spillClaimT <= 0) {
+      this.spillClaimT = 1.2;
+      this.target = v3(pileNear.x, 0, pileNear.z);
+      c.cue('grafter-grind', this.pos, '[it stoops over the spill — the fingers spread]', { severity: 'warn' });
+    }
+    if (this.spillClaimT > 0) {
+      if (!pileNear) this.spillClaimT = 0; // the pile went mid-stoop — the race was won
+      else {
+        this.spillClaimT -= dt;
+        this.rig?.play('idle');
+        if (this.spillClaimT > 0) return;
+      }
+    }
+    const claimed = pileNear
+      ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null
+      : null;
     if (claimed?.kind === 'pouch') {
       this.pouch += claimed.n; this.pouchHot += claimed.hot;
       // sprint 487 — bait holds the pull a beat: it stands over where
@@ -671,6 +691,8 @@ export class Grafter extends Entity {
   pouchHot = 0;
   private payerCued = false;
   private spillCued = false;
+  private spillClaimT = 0;   // sprint 491 — the bend before the take
+  private spillSeek = false; // the seek branch owns it this frame
   override takeCoin(hot: number, leaf: Vec3): void {
     this.pouch++; this.pouchHot += hot;
     this.target = v3(leaf.x, 0, leaf.z);
