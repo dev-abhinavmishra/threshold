@@ -9185,3 +9185,102 @@ export function globeSpin(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Gate track — the rub tracks a sliding gate drags: twin scuff
+ * lines along the floor rail, grease beads at the wheels. */
+export function gateTrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // twin rails — the polished tracks the wheels ground
+    for (const y of [18, 30]) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.18})`;
+      ctx.lineWidth = 2.2 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(4, y + (rng.float() - 0.5) * 2);
+      ctx.lineTo(92, y + (rng.float() - 0.5) * 2);
+      ctx.stroke();
+    }
+    // wheel grease beads — dark drops where the rollers paused
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(8 + rng.float() * 80, (rng.bool(0.5) ? 18 : 30) + (rng.float() - 0.5) * 4, 2 + rng.float() * 1.6, 1.2 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rust dust the tracks shed
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(140,90,50,${0.24 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 10 + rng.float() * 28, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Lift heels — the mark a freight lift keeps: heel arcs at the
+ * sill, finger smears on the leaf, a grease seam at the gap. */
+export function liftHeels(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // sill heel arcs — boots dragging across the plate
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.34 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.8 + rng.float();
+      const x = 14 + rng.float() * 60;
+      ctx.beginPath();
+      ctx.arc(x, 88, 6 + rng.float() * 4, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+    }
+    // finger smears — pushes on the leaf at hand height
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2;
+      const x = 20 + rng.float() * 56, y = 30 + rng.float() * 30;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rng.float() - 0.5) * 10, y + 10 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // grease seam — the weep along the closing gap
+    const gx = 46 + rng.float() * 4;
+    ctx.fillStyle = `rgba(40,36,30,${0.36 + rng.float() * 0.18})`;
+    ctx.fillRect(gx, 8, 2 + rng.float() * 1.4, 80);
+    // grit the wheels ground off
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(90,84,74,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 80 + rng.float() * 14, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Shutter chain — the wear a shutter's haul chain leaves: a
+ * polished run down the jamb, grease spots, a slack-loop ghost. */
+export function shutterChain(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // the run — a polished vertical where the chain slides
+    const g = ctx.createLinearGradient(0, 6, 0, 78);
+    g.addColorStop(0, `rgba(60,54,44,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(60,54,44,0.08)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 2.5, 6, 5, 74);
+    // link shadows — the chain's dotted ghost
+    for (let y = 8; y < 76; y += 4) {
+      ctx.fillStyle = `rgba(40,36,30,${0.34 + rng.float() * 0.14})`;
+      ctx.fillRect(cx - 1.2, y, 2.4, 1.8);
+    }
+    // grease spots — thumb-grease where hands worked the haul
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(40,36,30,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + (rng.float() - 0.5) * 10, 20 + rng.float() * 50, 1.6 + rng.float(), 2.4 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // slack loop — the chain's spare curve at the base
+    ctx.strokeStyle = `rgba(50,44,38,${0.38 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx + 4, 84, 7 + rng.float() * 2, Math.PI * 0.2, Math.PI * 1.4);
+    ctx.stroke();
+  });
+}
