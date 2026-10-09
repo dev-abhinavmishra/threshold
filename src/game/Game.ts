@@ -1800,7 +1800,10 @@ export class Game {
     }
   }
   private mintLampDrops(): void {
-    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('lamp-drop-'));
+    // every lamp verb carries a 'lamp-' prefix — filtering only
+    // 'lamp-drop-' re-adds crank/douse/bleed/roll each mint and the
+    // list explodes into a CPU-melting quadratic (the s545 stall)
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('lamp-'));
     this.litLamps.filter((l) => l.space === this.space).forEach((l, i) => {
       this.dynamicInteractables.push({
         kind: 'lampDrop', id: `lamp-drop-${this.space}-${i}`,
