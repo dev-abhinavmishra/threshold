@@ -878,9 +878,10 @@ describe('door listen seams (sprint 229)', () => {
         stoops++;
         // centred on the leaf's LATERAL line (the seam verbs live at its
         // edge), floating a step toward the player's side along the normal,
-        // at crack height — the focus score is dist-dominated, so the
-        // crack anchors where the eye actually looks or the seam verbs
-        // always outrank it
+        // above the crouched eye — sprint 469 lifted the lattice out of the
+        // eye plane (floor-level anchors sat at eye height 0.9, where the
+        // nearer flank always beat the centre on dist); aim must separate
+        // LOOK at the seam from REACH through its edges
         const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
         const latOff = (st.pos.x - d.pos.x) * latX + (st.pos.z - d.pos.z) * latZ;
         expect(Math.abs(latOff)).toBeLessThan(0.06);

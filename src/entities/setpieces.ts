@@ -457,6 +457,12 @@ export class Grafter extends Entity {
     this.ctx.cue('grafter-grind', this.pos, '[the rubble felt the crack — it drags to the leaf]', { severity: 'warn' });
   }
 
+  /** sprint 472 — pressed against that leaf while the camp lasts:
+   *  its weight goes on the swing. */
+  override seamCamped(leaf: Vec3): boolean {
+    return this.ctx.now < this.crackCampUntil && v3dist(this.pos, leaf) < 1.3;
+  }
+
   private pickRoam(): void {
     const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 97));
     this.target = v3(

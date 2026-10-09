@@ -230,6 +230,12 @@ export abstract class Entity {
    *  position for watchers that can't leave their room. */
   eyeTell?(at: Vec3, leaf?: Vec3): void;
 
+  /** sprint 472 — is this watcher currently pressed against that leaf?
+   *  Implemented by watchers whose posture at a crack is a lean — the
+   *  camp the eye's tell starts. Game reads it to put their weight on
+   *  the leaf's swing: a camped leaf is a held leaf. */
+  seamCamped?(leaf: Vec3): boolean;
+
   /** Corridor telegraph: the index span a pass will cover plus the wave
    *  direction (±1 in index space) and warn progress 0→1. Null when not
    *  telegraphing. Game folds this into lamp intensities each frame. */

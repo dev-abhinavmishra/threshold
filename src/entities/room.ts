@@ -1009,6 +1009,36 @@ export class HazardField {
   evidence: { pos: import('../engine/math').Vec3; room: number;
     kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work'; t: number; readBy: string[];
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
+
+  /** sprint 475 — a snare pos is free when no floor-band prop box
+   *  overlaps it (boxes whose bottom starts above a wader's reach —
+   *  lintels, shelves, the watcher mounts — don't hide a wire). */
+  private snareFree(x: number, z: number, room: RoomInstance): boolean {
+    for (const c of room.colliders ?? []) {
+      if (c.minY > 1.4 || c.maxY < 0.2) continue;
+      if (x > c.minX - 0.3 && x < c.maxX + 0.3 && z > c.minZ - 0.3 && z < c.maxZ + 0.3) return false;
+    }
+    return true;
+  }
+
+  /** sprint 475 — entombed wire is dead content: scan a deterministic
+   *  ring (8 headings × widening radii) for the nearest spot a wader's
+   *  foot can reach; falls back to the seeded pos when the whole
+   *  socket's pocket is boxed in. */
+  private freeSnareSpot(pos: import('../engine/math').Vec3, room: RoomInstance): import('../engine/math').Vec3 {
+    if (this.snareFree(pos.x, pos.z, room)) return pos;
+    const rm = room;
+    for (const rad of [0.45, 0.7, 0.95, 1.2, 1.5, 1.9, 2.4]) {
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const x = pos.x + Math.cos(a) * rad, z = pos.z + Math.sin(a) * rad;
+        if (rm.width && Math.abs(x - rm.origin.x) > rm.width / 2) continue;
+        if (rm.depth && Math.abs(z - rm.origin.z) > rm.depth / 2) continue;
+        if (this.snareFree(x, z, room)) return { x, y: pos.y, z };
+      }
+    }
+    return pos;
+  }
   fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles
@@ -1029,6 +1059,14 @@ export class HazardField {
     for (const s of room.sockets) {
       if (s.meta.hazard === 'snare') {
         const spent = s.meta.spent === true;
+        // sprint 475 — a wire hidden inside furniture threatens nothing:
+        // dressing can entomb a seeded socket inside a prop collider.
+        // Nudge entombed snares to the nearest free point on a
+        // deterministic ring — same seed, same spot. The socket's own
+        // pos moves with it so every reader (props, prompts, the
+        // checkpoint's spent-match) sees one wire in one place.
+        const pos = this.freeSnareSpot(s.pos, room);
+        s.pos.x = pos.x; s.pos.z = pos.z;
         this.snares.push({ pos: s.pos, room: room.index, armed: !spent });
         if (spent) this.evidence.push({ pos: s.pos, room: room.index, kind: 'wire', t: -1, readBy: [], old: true });
       }
