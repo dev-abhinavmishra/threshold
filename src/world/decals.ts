@@ -9695,3 +9695,332 @@ export function tapeCurl(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Manifold rust — the weep a pipe manifold keeps: drip trails
+ * under each valve body, rust halos at the flanges, scale flakes. */
+export function manifoldRust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // flange halos — oxide rings where the joints bolt together
+    for (let i = 0; i < 4; i++) {
+      const x = 16 + i * 20 + (rng.float() - 0.5) * 4;
+      ctx.strokeStyle = `rgba(140,80,40,${0.4 + rng.float() * 0.18})`;
+      ctx.lineWidth = 2.4 + rng.float();
+      ctx.beginPath();
+      ctx.arc(x, 22, 8 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.stroke();
+      // the weep — a rust tear under each flange
+      ctx.fillStyle = `rgba(130,74,36,${0.34 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.moveTo(x - 2, 28);
+      ctx.quadraticCurveTo(x + (rng.float() - 0.5) * 3, 40, x + (rng.float() - 0.5) * 4, 54);
+      ctx.lineTo(x + 3, 54);
+      ctx.quadraticCurveTo(x + 1, 40, x + 3, 28);
+      ctx.fill();
+    }
+    // scale flakes — shed paint and rust chips
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(120,70,36,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(6 + rng.float() * 84, 50 + rng.float() * 12, 1.4 + rng.float(), 0.7 + rng.float() * 0.5, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // mineral crust — white-green scale at the valve seats
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(160,180,150,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, 30 + rng.float() * 8, 1 + rng.float() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Crane hook — the wear an overhead crane keeps: the trolley's
+ * polished lane on the beam, grease drops, the block's cable rub. */
+export function craneHook(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // trolley lane — a bright polished line where wheels ran
+    ctx.strokeStyle = `rgba(60,54,44,${0.44 + rng.float() * 0.18})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(4, 14);
+    ctx.lineTo(92, 14 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // wheel rest marks — darker spots where the trolley parked
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(14 + i * 22 + rng.float() * 6, 16, 4 + rng.float() * 2, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // grease drops — oil weeps below the running gear
+    for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = `rgba(50,44,36,${0.36 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(8 + rng.float() * 80, 26 + rng.float() * 16, 1.6 + rng.float(), 2.4 + rng.float(), 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // chain shadow — the block's hang marks at mid-span
+    ctx.strokeStyle = `rgba(60,54,44,${0.34 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(46, 18);
+    ctx.quadraticCurveTo(48 + (rng.float() - 0.5) * 4, 30, 46 + (rng.float() - 0.5) * 6, 42);
+    ctx.stroke();
+  });
+}
+
+/** Car veil — the marks under a dust-sheeted car: the sheet's
+ * hem shadow, grime lines at the wheels, a fingertip smear on glass. */
+export function carVeil(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // hem shadow — the sheet's dark line where it meets the floor
+    ctx.strokeStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(4, 50 + (rng.float() - 0.5) * 2);
+    ctx.bezierCurveTo(30, 52 + rng.float() * 2, 60, 48 + rng.float() * 2, 92, 50 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // wheel grime — the arcs where tyres met concrete
+    for (const wx of [24, 68]) {
+      ctx.fillStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.ellipse(wx + (rng.float() - 0.5) * 4, 54, 9 + rng.float() * 2, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // drip line — condensation that ran off the cover once
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(90,84,74,${0.24 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1;
+      const x = 14 + i * 16 + rng.float() * 6;
+      ctx.beginPath();
+      ctx.moveTo(x, 52);
+      ctx.lineTo(x + (rng.float() - 0.5) * 2, 58 + rng.float() * 4);
+      ctx.stroke();
+    }
+    // dust pelt — the sheet's shed film under it all
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 8 + rng.float() * 40, 0.7 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Steam bleach — the bleach-fan a steam vent keeps: a pale cone
+ * of leached paint, mineral tears, a scalded rim. */
+export function steamBleach(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // bleach cone — steam's pale bloom down the wall
+    const g = ctx.createLinearGradient(0, 6, 0, 90);
+    g.addColorStop(0, `rgba(200,196,186,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(0.5, 'rgba(200,196,186,0.2)');
+    g.addColorStop(1, 'rgba(200,196,186,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, 6);
+    ctx.lineTo(cx + 8, 6);
+    ctx.lineTo(cx + 18 + rng.float() * 6, 90);
+    ctx.lineTo(cx - 18 - rng.float() * 6, 90);
+    ctx.fill();
+    // mineral tears — white-green runs inside the cone
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(170,190,170,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.2;
+      const x = cx - 8 + rng.float() * 16;
+      ctx.beginPath();
+      ctx.moveTo(x, 12);
+      ctx.lineTo(x + (rng.float() - 0.5) * 8, 60 + rng.float() * 24);
+      ctx.stroke();
+    }
+    // scalded rim — the ring where the vent meets the wall
+    ctx.strokeStyle = `rgba(140,134,122,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, 8, 12, 4.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // rust kiss — iron tears at the bottom edge
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(140,80,40,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 14 + rng.float() * 28, 86 + rng.float() * 6, 1.8 + rng.float(), 0.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Duct seam — the streaks a duct run keeps: grime lines at each
+ * seam, finger wipes on the hangers, rust at the damper. */
+export function ductSeam(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // seam streaks — grime bleeding from the joints
+    for (let i = 0; i < 3; i++) {
+      const x = 18 + i * 28 + (rng.float() - 0.5) * 4;
+      ctx.strokeStyle = `rgba(80,72,60,${0.36 + rng.float() * 0.18})`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(x, 6);
+      ctx.lineTo(x + (rng.float() - 0.5) * 3, 40);
+      ctx.stroke();
+      // the weep under each seam
+      ctx.fillStyle = `rgba(90,80,66,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(x, 42, 3 + rng.float() * 2, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // hanger wipes — clean streaks where the strap rubs
+    for (let i = 0; i < 2; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.14})`;
+      ctx.fillRect(30 + i * 36, 4, 3, 10);
+    }
+    // damper rust — oxide dust at the adjuster
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(140,80,40,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(70 + rng.float() * 20, 20 + rng.float() * 16, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Buoy fade — the marks a lifebuoy keeps: sun-bleach fade on the
+ * ring, a salt crust, the rope's dark where it was grabbed once. */
+export function buoyFade(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // the fade — a bleached arc on the sun side
+    ctx.strokeStyle = `rgba(200,190,170,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, Math.PI * 0.9, Math.PI * 1.9);
+    ctx.stroke();
+    // grab dark — the grip's shadow at the low arc
+    ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, Math.PI * 0.15, Math.PI * 0.6);
+    ctx.stroke();
+    // salt crust — white specks on the ring
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.fillStyle = `rgba(220,216,206,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * 20, cy + Math.sin(a) * 20, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rope shadow — the hanging line's ghost below
+    ctx.strokeStyle = `rgba(90,80,66,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, cy + 20);
+    ctx.quadraticCurveTo(cx + 8, cy + 30, cx + 5, cy + 30 + rng.float() * 6);
+    ctx.stroke();
+  });
+}
+
+/** Gaze crack — the marks a haunted portrait keeps: craquelure
+ * webs, a shine across the eyes, dust in the frame's lip. */
+export function gazeCrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // craquelure — the varnish's cracked web
+    for (let i = 0; i < 10; i++) {
+      ctx.strokeStyle = `rgba(120,110,90,${0.24 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      let x = rng.float() * 64, y = rng.float() * 96;
+      ctx.moveTo(x, y);
+      for (let j = 0; j < 4; j++) {
+        x += (rng.float() - 0.5) * 14; y += (rng.float() - 0.5) * 14;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // eye shine — a dry gleam that won't leave the gaze
+    for (const ex of [-1, 1]) {
+      ctx.fillStyle = `rgba(200,196,186,${0.3 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + ex * 7, 30, 2.4, 1.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // frame-lip dust — the ledge the cloth never reached
+    const g = ctx.createLinearGradient(0, 0, 0, 10);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(2, 0, 60, 12);
+    // nicotine film — the smoke's brown wash on the varnish
+    ctx.fillStyle = `rgba(120,90,50,${0.14 + rng.float() * 0.1})`;
+    ctx.fillRect(4, 12, 56, 80);
+  });
+}
+
+/** Trophy dust — the marks a mounted head keeps: dust on the
+ * brow ledges, cobweb spans between the tines, a dull nose. */
+export function trophyDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32;
+    // brow ledges — the film across the skull planes
+    ctx.fillStyle = `rgba(150,144,132,${0.36 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 20, 12, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // web spans — silk strung between the tines
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 18 + rng.float() * 4, 10 + rng.float() * 8);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 10, 24 + rng.float() * 6, cx + 16 - rng.float() * 4, 10 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // dull nose — the only thing that still gets touched
+    ctx.fillStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 46, 4, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // shed dust — specks on the shield plaque
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 16 + rng.float() * 32, 52 + rng.float() * 10, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Rigging dust — the marks a ship model keeps: dust sag on the
+ * ratlines, grey sails, a cleaned deck stripe amidships. */
+export function riggingDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // ratline sags — dust-weighted curves between the shrouds
+    for (let i = 0; i < 4; i++) {
+      const y = 12 + i * 8;
+      ctx.strokeStyle = `rgba(150,144,132,${0.32 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(20, y);
+      ctx.quadraticCurveTo(48, y + 5 + rng.float() * 3, 76, y);
+      ctx.stroke();
+    }
+    // grey sails — the film on the canvas
+    for (const sx of [30, 60]) {
+      ctx.fillStyle = `rgba(160,154,140,${0.24 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.moveTo(sx - 8, 16);
+      ctx.quadraticCurveTo(sx, 30, sx - 6, 44);
+      ctx.lineTo(sx + 8, 44);
+      ctx.quadraticCurveTo(sx + 2, 30, sx + 10, 16);
+      ctx.fill();
+    }
+    // deck stripe — one wipe amidships
+    ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(24, 50, 48, 2.4);
+    // yard dust — the spars' top film
+    for (const y of [10, 20]) {
+      ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.14})`;
+      ctx.fillRect(16, y, 64, 1.6);
+    }
+  });
+}

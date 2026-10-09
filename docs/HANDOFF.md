@@ -1,5 +1,15 @@
 # THRESH
 
+## Sprint 548–550 — the manifold wept, the vent bleached & the portrait kept the gaze
+
+Industrial + gallery wear, all prop overlays.
+- **548**: flange halos + rust tears on pipe manifolds, trolley polish + grease drops on overhead cranes, hem shadow + wheel grime under dust-sheeted cars.
+- **549**: steam-bleach cones under steam/wall vents, grime streaks at duct-run seams, sun-bleach + salt crust + grab marks on lifebuoys.
+- **550**: craquelure webs + eye shine on portraits/frames, brow dust + web spans on trophy heads, ratline sags + grey sails on ship models.
+
+*Branch devin/…-sprint-548+ — 564 decal wiring points.*
+
+
 ## Sprint 545–547 — the tube kept the voice, the panel kept the needle & the vend kept the kicks
 
 Service + display hardware wear, all prop overlays.
