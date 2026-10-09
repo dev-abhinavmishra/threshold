@@ -3805,3 +3805,39 @@ describe('the light testifies (sprints 565-568)', () => {
     expect(w.everDazzled, 'the blink forgets the episode, not the drink').toBe(true);
   });
 });
+
+describe('the wire crosses the seam (sprints 569-572)', () => {
+  const underRoom = () => ({
+    index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance);
+
+  it('the fingers take the coil — a slid wire feeds the rubble\'s stock (s571)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([underRoom()], { currentRoomIndex: 0 });
+    const g = new Grafter();
+    g.spawn(ctx);
+    const leaf = v3(1.5, 0, 2);
+    g.takeCoil!(leaf);
+    expect((g as unknown as { carrying: number }).carrying, 'the coil is carried')
+      .toBeGreaterThanOrEqual(1);
+    expect((g as unknown as { crackCampUntil: number }).crackCampUntil, 'it camps the leaf it was fed at')
+      .toBeGreaterThan(ctx.now + 20);
+    const cue = ctx.cue as ReturnType<typeof vi.fn>;
+    expect(cue.mock.calls.some((c) => /fingers take your coil/.test(String(c[2])))).toBe(true);
+    g.dispose();
+  });
+
+  it('the taken coil targets the leaf it was slid under (s571)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([underRoom()], { currentRoomIndex: 0 });
+    const g = new Grafter();
+    g.spawn(ctx);
+    const leaf = v3(-2, 0, 3);
+    g.takeCoil!(leaf);
+    const t = (g as unknown as { target: { x: number; z: number } }).target;
+    expect(Math.hypot(t.x - leaf.x, t.z - leaf.z)).toBeLessThan(0.01);
+    g.dispose();
+  });
+});

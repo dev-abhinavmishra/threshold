@@ -323,6 +323,9 @@ export abstract class Entity {
    *  slid cold as bait, or picked off your hip mid-grab. The hand
    *  pockets it into the pouch and remembers the smell. */
   takeCoin?(hot: number, leaf: Vec3): void;
+  /** sprint 571 — a coil slid under a leaf the hand is working: it
+   *  pockets the wire as graft stock instead of letting it plant. */
+  takeCoil?(leaf: Vec3): void;
 
   /** Corridor telegraph: the index span a pass will cover plus the wave
    *  direction (±1 in index space) and warn progress 0→1. Null when not
