@@ -9397,3 +9397,98 @@ export function sheetDrag(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Tube lip — the whistle-lip polish a speaking tube keeps: a
+ * bright worn rim, breath tarnish below, dust in the grille. */
+export function tubeLip(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    const cx = 24;
+    // mouth polish — lips on brass for a century
+    ctx.fillStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 14, 9 + rng.float() * 2, 4.5 + rng.float(), 0, 0, Math.PI * 2);
+    ctx.fill();
+    // breath tarnish — the green-brown bloom below the mouth
+    const g = ctx.createLinearGradient(0, 18, 0, 44);
+    g.addColorStop(0, `rgba(80,90,70,${0.3 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(80,90,70,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 10, 18, 20, 26);
+    // grille dust — the holes no word cleaned
+    for (let i = 0; i < 9; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 8 + rng.float() * 16, 46 + rng.float() * 12, 0.9 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // whistle drip — condensation that ran once
+    ctx.strokeStyle = `rgba(90,84,74,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, 18);
+    ctx.quadraticCurveTo(cx + 7, 30, cx + 5 + (rng.float() - 0.5) * 3, 40);
+    ctx.stroke();
+  });
+}
+
+/** Alarm pull — the mark a fire alarm's lever keeps: finger grease
+ * on the handle, knuckle smudges, dust in the break-glass. */
+export function alarmPull(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    const cx = 24;
+    // finger grease — the pull the drills taught
+    ctx.fillStyle = `rgba(60,54,44,${0.42 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 40, 10 + rng.float() * 2, 5 + rng.float(), 0, 0, Math.PI * 2);
+    ctx.fill();
+    // knuckle arcs — fingers curled round the T-handle
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(80,72,60,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(cx - 6 + i * 6, 34, 3.2, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+    }
+    // glass dust — the pane no alarm wiped
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.24 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 10 + rng.float() * 20, 8 + rng.float() * 16, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // grime halo at the mount
+    ctx.strokeStyle = `rgba(70,62,50,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(6, 4, 36, 56);
+  });
+}
+
+/** Valve grip — the hand-polish a valve wheel keeps: bright arcs
+ * on the rim, grease in the hub, dust on the upper spokes. */
+export function valveGrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32, r = 22;
+    // rim polish — the arcs where palms turned it
+    for (let i = 0; i < 5; i++) {
+      const a0 = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 2.4 + rng.float();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, a0, a0 + 0.6 + rng.float() * 0.5);
+      ctx.stroke();
+    }
+    // hub grease
+    ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4 + rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    // spoke dust — settled on the upper arcs only
+    for (let i = 0; i < 10; i++) {
+      const a = Math.PI + rng.float() * Math.PI;
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4) * 0.4 - 4, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2600,6 +2600,48 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sd.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
     prop.group.add(sd);
     if (!prop.group.name) prop.group.name = 'sheet-drag';
+  }
+  // The tube kept the voice — lip polish and breath tarnish on the
+  // speaking tubes.
+  if (spec.kind === 'speakingTube' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const tl = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.22),
+      new THREE.MeshStandardMaterial({ map: tubeLip(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tl.name = 'tube-lip';
+    tl.userData.decalMat = true;
+    tl.position.set(0, (dc?.[1] ?? 1.2) * 0.7, (dc?.[2] ?? 0.15) / 2 + 0.004);
+    prop.group.add(tl);
+    if (!prop.group.name) prop.group.name = 'tube-lip';
+  }
+  // The alarm kept the pull — finger grease and glass dust on the
+  // fire alarms.
+  if (spec.kind === 'fireAlarm' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const ap = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.26),
+      new THREE.MeshStandardMaterial({ map: alarmPull(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ap.name = 'alarm-pull';
+    ap.userData.decalMat = true;
+    ap.position.set(0, 0, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    prop.group.add(ap);
+    if (!prop.group.name) prop.group.name = 'alarm-pull';
+  }
+  // The valve kept the grip — rim polish and hub grease on the
+  // wheel.
+  if (spec.kind === 'valveWheel' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const vg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: valveGrip(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    vg.name = 'valve-grip';
+    vg.userData.decalMat = true;
+    vg.position.set(0, 0, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    prop.group.add(vg);
+    if (!prop.group.name) prop.group.name = 'valve-grip';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
