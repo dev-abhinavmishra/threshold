@@ -4725,3 +4725,138 @@ describe('the racks remembered weight (sprint 507)', () => {
     expect(n, 'no rack weight').toBeGreaterThan(0);
   });
 });
+
+describe('the beams kept the dust (sprint 533)', () => {
+  it('films ride the joists no hand reaches', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'beam-dust') n++; });
+      }
+    }
+    expect(n, 'no beam dust').toBeGreaterThan(0);
+  });
+});
+
+describe('the cans ringed rust (sprint 533)', () => {
+  it('orange circles sit under the stored tins', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'can-ring') n++; });
+      }
+    }
+    expect(n, 'no can rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the pegs shone (sprint 533)', () => {
+  it('rubbed tips mark the coat rails', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'peg-wear') n++; });
+      }
+    }
+    expect(n, 'no peg wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the extinguishers kept their tag (sprint 534)', () => {
+  it('red pull slivers hang on the brackets', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'exting-tag') n++; });
+      }
+    }
+    expect(n, 'no exting tags').toBeGreaterThan(0);
+  });
+});
+
+describe('the routing board kept its pins (sprint 534)', () => {
+  it('tally strings sag between the holes', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'pin-lines') n++; });
+      }
+    }
+    expect(n, 'no pin lines').toBeGreaterThan(0);
+  });
+});
+
+describe('the buckets dripped (sprint 534)', () => {
+  it('damp rings mark where they stood', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'bucket-ring') n++; });
+      }
+    }
+    expect(n, 'no bucket rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the fans kept their blades (sprint 535)', () => {
+  it('dust films ride the sweeps', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fan-film') n++; });
+      }
+    }
+    expect(n, 'no fan films').toBeGreaterThan(0);
+  });
+});
+
+describe('the hoses scuffed (sprint 535)', () => {
+  it('drag arcs run beside the reels', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'hose-scuff') n++; });
+      }
+    }
+    expect(n, 'no hose scuffs').toBeGreaterThan(0);
+  });
+});
+
+describe('the bottles bloomed (sprint 535)', () => {
+  it('dust films sit on the stored glass', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'bottle-bloom') n++; });
+      }
+    }
+    expect(n, 'no bottle blooms').toBeGreaterThan(0);
+  });
+});
