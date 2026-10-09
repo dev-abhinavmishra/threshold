@@ -131,6 +131,9 @@ export interface EntityCtx {
   /** sprint 419 — a carried coil is lost work: a staggered carrier
    *  drops it unlaid — a dead graft at its feet, reclaimable wire. */
   spillSnare?: (pos: Vec3, room: number) => void;
+  /** sprint 477 — a paid hand keeps your coin: a staggered grafter drops
+   *  its pouch where it falls, gatherable like any spill. */
+  spillPouch?: (pos: Vec3, n: number, hot: number) => void;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';
@@ -235,6 +238,14 @@ export abstract class Entity {
    *  camp the eye's tell starts. Game reads it to put their weight on
    *  the leaf's swing: a camped leaf is a held leaf. */
   seamCamped?(leaf: Vec3): boolean;
+  /** sprint 479 — a coin under the crack is bait too: true when this
+   *  leaf sits in the room the answerer can actually reach (the
+   *  grafter is room-locked — a coin under a foreign leaf is a lie). */
+  seamBaitable?(leaf: Vec3): boolean;
+  /** sprint 477/479/480 — a coin under the leaf: fed to buy quiet,
+   *  slid cold as bait, or picked off your hip mid-grab. The hand
+   *  pockets it into the pouch and remembers the smell. */
+  takeCoin?(hot: number, leaf: Vec3): void;
 
   /** Corridor telegraph: the index span a pass will cover plus the wave
    *  direction (±1 in index space) and warn progress 0→1. Null when not

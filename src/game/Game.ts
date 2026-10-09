@@ -777,6 +777,10 @@ export class Game {
     this.mintWrapDrops();
     this.droppedCoils = cp?.droppedCoils?.map((w) => ({ ...w })) ?? [];
     this.mintCoilDrops();
+    // sprint 477 — a spilled pouch keeps its spill: floor coin doesn't
+    // respawn in your pocket either
+    this.droppedPouches = cp?.droppedPouches?.map((w) => ({ ...w })) ?? [];
+    this.mintPouchDrops();
     // the grafter's grafts stay grafted — planted wire survives a
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
@@ -1124,6 +1128,9 @@ export class Game {
       },
       plantSnare: (pos, room, planterKey) => this.plantSnare(pos, room, planterKey),
       spillSnare: (pos, room) => this.spillSnare(pos, room),
+      // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
+      // grafter drops it where it goes down, gatherable like any spill.
+      spillPouch: (pos, n, hot) => this.spillPouch(pos, n, hot),
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1415,6 +1422,29 @@ export class Game {
   private dropWraps(pos: Vec3, n: number): void {
     this.droppedWraps.push({ x: pos.x, z: pos.z, n });
     this.mintWrapDrops();
+  }
+
+  /** sprint 477 — a paid hand keeps the coin: a grafter fed under the
+   *  leaf carries the pouch until it staggers, then spills it where it
+   *  went down. Marked coin comes back still marked — the under doesn't
+   *  launder what it pockets. Same re-mint/space-agnostic rules. */
+  private droppedPouches: { x: number; z: number; n: number; hot: number }[] = [];
+  private spillPouch(pos: Vec3, n: number, hot: number): void {
+    this.droppedPouches.push({ x: pos.x, z: pos.z, n, hot });
+    this.mintPouchDrops();
+    this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.3,
+      category: 'item', caption: '[a pouch of coin drops]' });
+  }
+  private mintPouchDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('pouch-drop-'));
+    this.droppedPouches.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'pouchDrop', id: `pouch-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the spilled coin',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+    });
   }
   private mintWrapDrops(): void {
     this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('wrap-drop-'));
@@ -1898,7 +1928,7 @@ export class Game {
       // read or a whisper: they close at holdTime - 0.1 (min 0.9), so
       // a slip finishes first and a stoop or call lands AS they take
       // you — your verb goes under, then the hand does
-      this.seamReach = { key: held!.id, doorId: heldDoor.id, door: heldDoor, t: now + Math.max(0.9, (held!.holdTime ?? 1) - 0.1), lingerUntil: now + 1.6 };
+      this.seamReach = { key: held!.id, doorId: heldDoor.id, door: heldDoor, t: now + Math.max(0.9, (held!.holdTime ?? 1) - 0.1), lingerUntil: now + 1.6, reacher };
       this.cue('door-locked', heldDoor.pos, '[fingers work under the leaf — grey, and wider than a hand]', 'warn');
       this.sound.emit({ x: heldDoor.pos.x, y: 0.1, z: heldDoor.pos.z, intensity: 0.3 * this.wantedPull, category: 'impact', caption: '' });
       return;
@@ -1917,7 +1947,21 @@ export class Game {
     const nX = Math.sin(heldDoor.yaw), nZ = Math.cos(heldDoor.yaw);
     const side = Math.sign((this.player.pos.x - heldDoor.pos.x) * nX + (this.player.pos.z - heldDoor.pos.z) * nZ) || 1;
     this.player.teleport(this.player.pos.x + nX * side * 0.45, 0, this.player.pos.z + nZ * side * 0.45);
-    this.cue('door-locked', heldDoor.pos, '[the hand takes your sleeve — you wrench free]', 'danger');
+    // sprint 480 — the grab takes, not just yanks: fingers that close
+    // on your sleeve pick the loosest coin off your hip into the same
+    // pouch the feed fills. Theft, not a spend — no register line —
+    // but the marked coins go first, and staggering the hand spills
+    // every coin it ever took. A hand you fed grabs like a hand you
+    // didn't; it keeps no debt.
+    if (this.imprints > 0) {
+      const hot = this.hotImprints > 0 ? 1 : 0;
+      this.imprints -= 1;
+      this.hotImprints -= hot;
+      reacher.takeCoin?.(hot, heldDoor.pos);
+      this.cue('door-locked', heldDoor.pos, '[the hand takes your sleeve — and a coin off your hip]', 'danger');
+    } else {
+      this.cue('door-locked', heldDoor.pos, '[the hand takes your sleeve — you wrench free]', 'danger');
+    }
     // the struggle is real noise AT the leaf — the house hears you fight
     this.sound.emit({ x: heldDoor.pos.x, y: 0.3, z: heldDoor.pos.z, intensity: 0.75 * this.wantedPull, category: 'impact', caption: '' });
     // a grab is contact, not a glimpse — the watcher that took your
@@ -2515,6 +2559,43 @@ export class Game {
         prompt: `Stamp the fingers under Door ${sd.label}`,
         holdTime: 0.5, enabled: true, priority: 6, data: sd,
       });
+      // sprint 476 — the seam sells too: pay the hand off. A coin under
+      // the crack is the warm option beside the free loud stamp — low
+      // at the crack itself, offset toward the slip flank so the stamp
+      // (p6, centre, knee height) and the feed (p5, low-left) split on
+      // aim instead of the stamp always shadowing it. No coin, no mint.
+      if (this.imprints > 0) {
+        const latX = Math.cos(sd.yaw), latZ = -Math.sin(sd.yaw);
+        this.interaction.add({
+          kind: 'feedSeam', id: `feedSeam-${sd.id}`,
+          pos: { x: sd.pos.x + nX * side * 0.25 - latX * 0.14, y: sd.pos.y + 0.7, z: sd.pos.z + nZ * side * 0.25 - latZ * 0.14 },
+          prompt: `Feed the hand under Door ${sd.label} — 1 imprint`,
+          holdTime: 0.35, enabled: true, priority: 5, data: sd,
+        });
+      }
+    }
+    // sprint 479 — the seam sells cold too: no fingers needed, the coin
+    // itself is the lure. Slip one under any shut leaf in the grafter's
+    // room and its smell drags the camp to that leaf — a paid pin, the
+    // pebble slip's priced twin. While a reach lives on a leaf, that
+    // leaf's feed verb mints up in the reach block instead (one slot,
+    // one coin, whichever hand is there).
+    if (this.player.crouching && this.imprints > 0) {
+      for (const it of this.interaction.interactables) {
+        const d = it.data as Door | undefined;
+        if (it.kind !== 'door' || !d || d.falseDoor || d.openT > 0.4) continue;
+        if (this.seamReach?.doorId === d.id && this.clock.time <= this.seamReach.lingerUntil) continue;
+        if (!this.entities.some((e) => e.seamBaitable?.(it.pos))) continue;
+        const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+        const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+        const side = Math.sign((this.player.pos.x - it.pos.x) * nX + (this.player.pos.z - it.pos.z) * nZ) || 1;
+        this.interaction.add({
+          kind: 'feedSeam', id: `feedSeam-${d.id}`,
+          pos: { x: it.pos.x + nX * side * 0.25 - latX * 0.14, y: it.pos.y + 0.7, z: it.pos.z + nZ * side * 0.25 - latZ * 0.14 },
+          prompt: `Slip a coin under Door ${d.label} — 1 imprint`,
+          holdTime: 0.35, enabled: true, priority: 5, data: d,
+        });
+      }
     }
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
@@ -3110,6 +3191,23 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
+      case 'pouchDrop': {
+        // sprint 477 — the pouch comes back off the floor: what you fed
+        // the hand is yours again — the price was putting it down.
+        // Marked coin returns still marked.
+        const pi = (it.data as { i?: number }).i ?? -1;
+        const pouch = pi >= 0 ? this.droppedPouches[pi] : undefined;
+        if (pi >= 0) this.droppedPouches.splice(pi, 1);
+        it.enabled = false;
+        this.mintPouchDrops();
+        if (pouch) {
+          this.imprints += pouch.n;
+          this.hotImprints += pouch.hot;
+          this.cue('pickup', it.pos, `[your coin back — ${pouch.n} imprint${pouch.n > 1 ? 's' : ''}${pouch.hot > 0 ? ' still marked' : ''}]`);
+        }
+        this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
+        return;
+      }
       case 'alarmDrop': {
         // sprint 424 — un-plant the clock: a live alarm comes back to
         // the pocket whole. It was never heard, never spent — the lure
@@ -3526,6 +3624,37 @@ export class Game {
         if (this.seamReach?.doorId === door.id) this.seamReach = null;
         this.cue('door-locked', door.pos, '[you stamp the fingers — they twist, and let go for now]', 'warn');
         this.sound.emit({ x: door.pos.x, y: 0.3, z: door.pos.z, intensity: 0.7 * this.wantedPull, category: 'impact', caption: '' });
+        return;
+      }
+      case 'feedSeam': {
+        // sprint 476 — feed the hand: pay the fingers off under the
+        // crack. The coin rolls under, the leaf stays quiet ~12s —
+        // longer than the stamp (the hand is PAID, not chased), and
+        // all it costs the room is a rolling coin's whisper. A marked
+        // coin testifies the same as at any till — the ledger reads
+        // the mark wherever it lands.
+        const door = it.data as Door;
+        const armed = this.seamReach?.doorId === door.id && this.clock.time <= this.seamReach.lingerUntil;
+        const hotBefore = this.hotImprints;
+        this.chargedImprints(1, door.pos.x, door.pos.z);
+        if (armed) {
+          // sprint 477 — the hand keeps what you paid it: the pouch rides
+          // the reacher, and a staggered grafter spills it back as loot.
+          this.seamReach?.reacher?.takeCoin?.(hotBefore - this.hotImprints, door.pos);
+          this.seamReachCd.set(door.id, this.clock.time + 12);
+          if (this.seamReach?.doorId === door.id) this.seamReach = null;
+          this.cue('door-locked', door.pos, '[the fingers close over the coin — the leaf goes quiet]', 'info');
+        } else {
+          // sprint 479 — the cold slide: bait, not ransom. The coin goes
+          // to whichever hand can reach this leaf; it pockets the pouch
+          // the same way, camps the leaf for more — and its smell now
+          // follows the payer. No quiet window bought: the reach can
+          // still come when YOU hold this seam. You paid for its place.
+          this.entities.find((e) => e.seamBaitable?.(it.pos))
+            ?.takeCoin?.(hotBefore - this.hotImprints, door.pos);
+          this.cue('door-locked', door.pos, '[the coin slips under — stone drags to the leaf]', 'info');
+        }
+        this.sound.emit({ x: door.pos.x, y: 0.3, z: door.pos.z, intensity: 0.25, category: 'item', caption: '[a coin rolls under the crack]' });
         return;
       }
       case 'brace': {
@@ -5911,6 +6040,8 @@ export class Game {
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
       droppedCoils: this.droppedCoils.length > 0
         ? this.droppedCoils.map((w) => ({ ...w })) : undefined,
+      droppedPouches: this.droppedPouches.length > 0
+        ? this.droppedPouches.map((w) => ({ ...w })) : undefined,
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
           .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted,
@@ -6961,7 +7092,7 @@ export class Game {
    *  under. Key = the held verb id; t = when the warn becomes a yank.
    *  s474 — the hand lingers a breath after the warn so the seam can
    *  offer the stamp. */
-  private seamReach: { key: string; doorId: string; door: Door; t: number; lingerUntil: number } | null = null;
+  private seamReach: { key: string; doorId: string; door: Door; t: number; lingerUntil: number; reacher: Entity } | null = null;
   /** sprint 474 — doors whose fingers you stamped off, until they
    *  reach under again (a stamp buys ~8s of leaf, not the room). */
   private seamReachCd = new Map<string, number>();

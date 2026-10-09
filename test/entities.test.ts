@@ -1853,6 +1853,80 @@ describe('Grafter (sprint 256)', () => {
   });
 });
 
+describe('Grafter seam coin (sprints 476-480)', () => {
+  const seamRoom = (): RoomInstance => ({
+    index: 0, templateId: 'u-lobby', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+    doors: [], sockets: [], hidingSpots: [], scheduled: [],
+  } as unknown as RoomInstance);
+
+  it('the pouch rides the hand — fed coin spills as floor loot on stagger', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    ctx.player.protection = 'hidden';
+    ctx.spillPouch = vi.fn();
+    const g = new Grafter();
+    g.spawn(ctx);
+    const leaf = v3(3.6, 0, 0);
+    g.takeCoin(1, leaf);   // a marked coin
+    g.takeCoin(0, leaf);   // a clean one
+    expect((g as unknown as { pouch: number }).pouch, 'two coins ride the pouch').toBe(2);
+    g.stagger(4);
+    expect(ctx.spillPouch, 'the spill hands the pouch to the floor').toHaveBeenCalledWith(expect.anything(), 2, 1);
+    expect((g as unknown as { pouch: number }).pouch, 'the pouch is empty after').toBe(0);
+    g.dispose();
+  });
+
+  it('a fed hand remembers — the paid leaf keeps its camp past a sighting', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    ctx.player.protection = 'hidden';
+    const g = new Grafter();
+    g.spawn(ctx);
+    const leaf = v3(3.6, 0, 0);
+    const t0 = ctx.now;
+    g.takeCoin(0, leaf);
+    const camp = (g as unknown as { crackCampUntil: number }).crackCampUntil;
+    expect(camp - t0, 'a paid hand camps past the eye\'s 14s').toBeGreaterThanOrEqual(22);
+    g.dispose();
+  });
+
+  it('the smell is room-locked — bait under a foreign leaf is a lie', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const far = {
+      index: 1, templateId: 'u-lobby', origin: { x: 30, y: 0, z: 0 }, yaw: 0,
+      width: 9, depth: 9, spec: { width: 9, depth: 9, props: [] },
+      doors: [], sockets: [], hidingSpots: [], scheduled: [],
+    } as unknown as RoomInstance;
+    const ctx = makeCtx([seamRoom(), far], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    ctx.player.protection = 'hidden'; // a seen player at the origin is lunch before it settles
+    const g = new Grafter();
+    g.spawn(ctx);
+    for (let i = 0; i < 30; i++) { ctx.now += 0.05; g.update(0.05); } // settle into engage
+    expect(g.seamBaitable!(v3(3.6, 0, 0)), 'its own room\'s leaf takes the coin').toBe(true);
+    expect(g.seamBaitable!(v3(33.6, 0, 0)), 'a foreign leaf cannot — the hand is room-locked').toBe(false);
+    g.dispose();
+  });
+
+  it('the coin\'s smell shadows the payer — the pouch reads you past the eyes', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    // the player stands far past seeRange but inside the hand's room
+    ctx.player.pos.x = 3.8; ctx.player.pos.z = 3.8;
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as { pos: { x: number; z: number }; target: { x: number; z: number }; pouch: number };
+    gi.pos.x = -3.5; gi.pos.z = -3.5; // ~10m away — no eye reaches this
+    gi.pouch = 1;
+    for (let i = 0; i < 8; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(Math.hypot(gi.target.x - 3.8, gi.target.z - 3.8), 'the pouch names the payer').toBeLessThan(0.01);
+    g.dispose();
+  });
+});
+
 
 describe('HazardField snares (sprint 257)', () => {
   const snareRoom = (flooded: boolean): RoomInstance => ({

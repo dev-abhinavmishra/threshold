@@ -6832,3 +6832,46 @@ stream-time (builder.ts ~628); hydration-time placement checks only
 see wall/spec colliders. A floor-level verb near a door loses focus
 to the seam lattice even un-aimed (nearEnough bypasses align) — e2e
 stands must hunt a spot off the door's flank.
+
+## Sprints 476-480 — the seam sells
+
+- **s476 feed the hand** — while the reach lingers, 'Feed the hand
+  under Door N — 1 imprint' (p5, low-left flank, hold 0.35) pays the
+  fingers off: `chargedImprints(1)` (a marked coin still testifies —
+  the ledger reads the mark wherever it lands) → `seamReachCd` 12s,
+  '[the fingers close over the coin — the leaf goes quiet]', 0.25
+  item emit. The warm option beside the free loud stamp.
+- **s477 the pouch** — a paid hand keeps the coin: `takeCoin(hot,
+  leaf)` on the reacher fills `pouch`/`pouchHot`; a staggered grafter
+  spills it via `ctx.spillPouch` → `droppedPouches` floor loot
+  ('Gather the spilled coin' → imprints + n, hot back hot). Marked
+  coin returns still marked — the under doesn't launder what it
+  pockets. `droppedPouches` rides the checkpoint like kickedWedges.
+- **s478 a fed hand remembers** — `takeCoin` also camps: target=leaf,
+  crackCampUntil +22s (past the eye's 14), one-time cue '[the hand
+  keeps your coin's smell — it stays at the leaf]'. And while the
+  pouch is non-empty the grafter smells the payer — in-room, past
+  every sight rule, at 1.2×: the price of the quiet feed is a hand
+  that shadows you while your coin's in it.
+- **s479 the cold slide** — no fingers needed: 'Slip a coin under
+  Door N — 1 imprint' mints on any crouched shut leaf inside a
+  baitable answerer's reach (`seamBaitable`: engaged grafter + leaf
+  within its room bounds + 1.2m doorway margin). The coin pockets
+  the same pouch and pins the camp — a paid positional lure, the
+  pebble slip's priced twin. The armed leaf's slot stays 'Feed the
+  hand' (one verb, whichever hand is there; the case branches on
+  reach-armed).
+- **s480 the grab takes** — a yank that lands picks a coin off your
+  hip into the same pouch (marked first, no ledger line — theft is
+  not a spend): '[the hand takes your sleeve — and a coin off your
+  hip]'. Feed, bait, steal all fill the one pouch; a stagger spills
+  all three back.
+
+**Traps:** `Entity` seam hooks now read `seamCamped`/`seamBaitable`/
+`takeCoin` — promote entity hooks onto the base interface instead of
+casting, the seam family keeps them together. `roomOf` misreads
+boundary leaves (both AABBs claim the doorway) — gate bait on the
+walker's own room bounds + margin, not the seam's room index. The
+feed's 12s cooldown is also what makes the cold mint reachable: a
+live reach owns the leaf's slot; release the verb first — the mint
+needs `holdTarget` clear (same hijack rule as the stamp).
