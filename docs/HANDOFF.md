@@ -7594,3 +7594,89 @@ answers the crank.
   the mint can't foresee (no held lamp / held full), cue the reason
   and return — don't `enabled=false`, which strands the verb until
   the next lamp event re-mints.
+
+## Sprints 549–552 — the lamp is goods
+
+- **s549 'Break the lamp down'** — a dead shell (`batt <= 0`) mints
+  'Break the lamp down' at the douse azimuth (dead lamps never mint
+  douse, so the slot is free): splice the entry, `giveItem('wireCoil',1)`.
+  Dead litter becomes splice stock — the grafter's own arithmetic
+  turned against it.
+- **s550 'Roll the lamp under the door'** — a burning lamp within
+  1.15m of a shut leaf (`shutLeafNear`: `openT < 0.3`, main rooms then
+  branchRooms) mints 'Roll the lamp under the door' at
+  `keyYaw + 3π/2`. The lamp lands burning ~1.1m past the far lip
+  (far-side seam math shared with slip-pebble/call-whisper), its room
+  re-resolved through `activeRooms()` then `route?.branchRooms`, its
+  keyYaw re-seeded, its hum emit landing at the far pos at
+  `0.35 * wantedPull` — a lure that crosses your cover and keeps
+  burning. First cross-seam lure; the light you send ahead of you.
+- **s551 lamp-work leaves 'work' sign** — crank, douse, bleed and
+  break each push `kind:'work'` evidence at the lamp's spot, tagged
+  `readBy:['player']` so your own dust-reads stay silent. The warden's
+  re-lay can read your dynamo work like any other hands-sign.
+- **s552 the stoop reads your lamp** — crouch-listens now answer your
+  dropped lamps: a burning lamp inside 2m of the far crack reads
+  '[lamplight pools at the crack — one of yours burns just past it]';
+  any burning lamp in the far room reads '[your lamp burns in the
+  black — the only light in there]' for dark rooms and '[your lamp
+  burns on in there — nothing crosses the seam]' as the non-dark
+  fallback. Your light testifies from beyond the seam.
+
+Also fixed: `spillLamps` resolved lamp rooms through `route?.rooms`
+(main-floor only) — under-floor spills mislabeled `lamp.room`. Now
+space-aware: `activeRooms()` then `route?.branchRooms`, currentRoom
+fallback.
+
+**Contract:** the lamp's whole value chain is on the floor — burn it
+as bait, bleed it for charge, break it for wire, roll it under a door
+you'd rather not cross, and let the crack tell you it's still there.
+
+**Traps:**
+- `mintLampDrops` refresh must filter the SHARED prefix `lamp-`, not
+  `lamp-drop-` — crank/douse/bleed/roll ids accumulate unbounded
+  otherwise (the quadratic-verb trap; fixed on the s545 branch).
+- `shutLeafNear` walks `streamer.builtIndices` → `activeRooms()` find
+  then `route?.branchRooms` find — a door lookup must search both
+  room lists or branch-room doors are invisible.
+- Break shares the douse azimuth safely only because dead lamps never
+  mint douse — if douse ever un-gates, move break to its own bearing.
+
+## Sprints 553–556 — the dead shell feeds the under
+
+- **s553 the under eats what the house ignores** — `'shell'` joins the
+  spill kinds as 'lamp''s inverse (`batt <= 0` only, same space): the
+  warden still never stoops for litter, but the grafter's seek/stoop/
+  take lists all read it. A claimed shell strips into `carrying = 1`
+  coil stock — your dead lamp literally becomes fresh wire planted on
+  YOUR path. Break it yourself (s549, coil to you) or leave it and the
+  under collects (coil to it). The race is the s491 claiming stoop —
+  beat it back to the shell or it keeps the scrap.
+- **s554 the strip signs itself** — `signWork(pos, signerKey)` ctx hook
+  (the splice's own signing convention extracted): the shell-strip
+  pushes a 'work' mark pre-read under `grafter:${spawnRoom}` so it
+  doesn't chase its own sign, fresh for every other reader — the
+  under's dynamo work smells like hands too.
+- **s555 the crack reads the shell** — stoop-under-leaf gains a dead-
+  lamp read: '[a dead lamp lies just past the crack — your litter,
+  waiting on the under]' at <2.5m of the far lip, lit-room path only
+  (a shell gives no light, so black-glass rooms stay black).
+- **s556 the epitaph counts the litter** — `shellsLeft` joins both
+  BooksClosed epitaphs: 'N dead lamps lie where they burned out — the
+  under will make wire of them' beside the burning-lamps line.
+
+**Contract:** litter is jurisdiction — upstairs the warden ignores a
+dead lamp (goods must carry charge), downstairs the grafter strips it
+like any dead snare. Your lamp's corpse is the under's raw material.
+
+**Traps:**
+- `nearestSpill`/`scavengeSpill` kind unions live in THREE places —
+  base.ts signature, the `best` literal type in Game.ts, and each
+  caller's `kinds`/`take` list. A new kind needs all of them or tsc
+  fails at the assignment, not the call.
+- 'shell' vs 'lamp' are disjoint filters (`batt <= 0` / `batt > 0`) —
+  a caller that wants ANY lamp must pass both kinds.
+- `signWork` resolves rooms space-aware (activeRooms then branchRooms
+  then currentRoom) — same triple-resolution as spillLamps; entity
+  positions can be off-map, so the fallback must stay `currentRoom`
+  not `0` or evidence lands in the wrong room's scent radius.

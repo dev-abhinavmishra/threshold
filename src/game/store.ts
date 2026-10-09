@@ -154,6 +154,8 @@ export interface BooksClosed {
   stashedMarked?: number;
   /** sprint 544 — lamps still burning on the floor at the end */
   lampsLeft?: number;
+  /** sprint 556 — burned-out lamp shells left as litter at the end */
+  shellsLeft?: number;
 }
 
 export interface CheckpointSave {
