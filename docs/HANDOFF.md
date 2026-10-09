@@ -7748,3 +7748,7 @@ signs the work.
   — tracking would make lit+sliding safe only while lit; pinned makes
   the whole episode readable (lit = stares where you were, not where
   you are — except you can slide dark-edge while still lit).
+- s564 trap logged: the blink-reset's else-branch MUST be gated on
+  `dazzleCued` — an eye that never drank has `dazzleT=-10`, so an
+  ungated `now - dazzleT > 2.5` is true every frame and `settle = 0`
+  stomped every plain watch (caught by the s285 settle specs).

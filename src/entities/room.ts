@@ -1257,12 +1257,13 @@ export class HazardField {
             ctx.signWork?.(w.pos, `eye:${w.room}`);
             ctx.cue('steam-hiss', w.pos, '[the eye\'s stare was worked — the floor keeps the sign]', { severity: 'info' });
           }
-        } else if (ctx.now - w.dazzleT > 2.5) {
+        } else if (w.dazzleCued && ctx.now - w.dazzleT > 2.5) {
           // sprint 562 — the blink tells: the sweep coming back online
-          // is audible to whoever held it — your window is closing
-          if (Number.isFinite(w.dazzleBearing) && w.dazzleCued) {
-            ctx.cue('steam-hiss', w.pos, '[the eye blinks — its pan runs again]', { severity: 'info' });
-          }
+          // is audible to whoever held it — your window is closing.
+          // (dazzleCued gates it — an eye that never drank has
+          // dazzleT=-10 and must NOT touch this branch every frame:
+          // s285 settle specs caught settle=0 stomping plain watches)
+          ctx.cue('steam-hiss', w.pos, '[the eye blinks — its pan runs again]', { severity: 'info' });
           // sprint 564 — the blink is a full reset: whatever half-
           // settled read it took while drinking is lost with the light
           w.settle = 0;
