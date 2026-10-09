@@ -100,6 +100,13 @@ export interface EntityCtx {
    *  good in that lid to the count's locker under a fresh tag.
    *  Returns units seized (0 = nothing found). Optional for headless. */
   seizeStash?: (spotId: string) => number;
+  /** sprint 524 — wireCoil units parked in a hiding spot's stash.
+   *  Wire is the one good the under's scavenger has a pocket for. */
+  stashWire?: (spotId: string) => number;
+  /** sprint 524 — the under's robbery: pull ONE coil out of a stashed
+   *  lid (the claiming stoop's yield). Returns false when the lid has
+   *  no wire left. Optional for headless ctxs. */
+  robStashWire?: (spotId: string) => boolean;
   /** Repossess the marked take — strips every hotItems stack and the
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */

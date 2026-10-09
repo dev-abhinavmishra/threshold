@@ -734,6 +734,7 @@ export class Game {
         marked: [...(s.marked ?? [])],
       });
     }
+    this.lidFiled = new Set(cp?.lidFiled ?? []);
     // the rifled till stays rifled — cold counters + the stock-reads
     // already testified ride the checkpoint with the debt that priced them
     this.closedCounters.clear();
@@ -1114,9 +1115,9 @@ export class Game {
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       takeLoad: () => this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints,
       stashLoad: (spotId) =>
-        this.lidStashes.get(spotId)?.items.reduce((a, i) => a + i.count, 0) ?? 0,
+        this.lidStashes.get(`${this.space}:${spotId}`)?.items.reduce((a, i) => a + i.count, 0) ?? 0,
       seizeStash: (spotId) => {
-        const stash = this.lidStashes.get(spotId);
+        const stash = this.lidStashes.get(`${this.space}:${spotId}`);
         if (!stash) return 0;
         const n = stash.items.reduce((a, i) => a + i.count, 0);
         if (n <= 0) return 0;
@@ -1124,8 +1125,27 @@ export class Game {
         // found stash hangs at the cage under a fresh tag like a take
         // stripped off your back
         this.stashSeized(stash.items.map((i) => ({ ...i })), 0);
-        this.lidStashes.delete(spotId);
+        this.lidStashes.delete(`${this.space}:${spotId}`);
         return n;
+      },
+      stashWire: (spotId) =>
+        this.lidStashes.get(`${this.space}:${spotId}`)?.items
+          .find((i) => i.id === 'wireCoil')?.count ?? 0,
+      robStashWire: (spotId) => {
+        const key = `${this.space}:${spotId}`;
+        const stash = this.lidStashes.get(key);
+        const w = stash?.items.find((i) => i.id === 'wireCoil');
+        if (!stash || !w || w.count <= 0) return false;
+        w.count -= 1;
+        // the mark rides the unit out — if the stash's wire was rifled
+        // stock, the lid keeps the mark only while wire remains in it
+        stash.items = stash.items.filter((i) => i.count > 0);
+        if (!stash.items.some((i) => i.id === 'wireCoil')) {
+          const mi = stash.marked.indexOf('wireCoil');
+          if (mi >= 0) stash.marked.splice(mi, 1);
+        }
+        if (stash.items.length === 0) this.lidStashes.delete(key);
+        return true;
       },
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
@@ -1415,6 +1435,10 @@ export class Game {
    *  stock so the marks ride with the goods (a stash parks the take —
    *  it doesn't launder it). */
   private lidStashes = new Map<string, { items: { id: ItemId; count: number }[]; marked: ItemId[] }>();
+  /** sprint 522 — lids whose stash a staffed counter already sight-
+   *  filed — the bulge in the box is the same claim as on your back,
+   *  once per lid. Keys share the lidStashes space-prefix. */
+  private lidFiled = new Set<string>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -1908,6 +1932,16 @@ export class Game {
         text: strained ? '[hands work your wire beyond — the bind strains]'
           : '[your wire still holds — nothing else moves]' };
     }
+    // sprint 523 — the seam carries the stash's hum too: the ear tells
+    // you the lid still holds your take before you open the door —
+    // lowest tier, below every tread, lure, and bind.
+    if (target.hidingSpots.some((s) => {
+      const st = this.lidStashes.get(`${this.space}:${s.id}`);
+      return st && st.items.some((i) => i.count > 0);
+    })) {
+      return { sfx: 'printer-whir', sev: 'info' as const,
+        text: '[your take hums behind a lid in there]' };
+    }
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { sfx: 'fire-crackle', text: '[still air — a resting place]' };
     if (target.darkRoom) return { sfx: 'hollow-wake', text: '[stale air — dark beyond]', sev: 'warn' };
     return { sfx: 'floor-creak', text: '[nothing moves]' };
@@ -2289,7 +2323,7 @@ export class Game {
       for (const it of this.interaction.interactables) {
         if (it.kind !== 'hide') continue;
         const spot = it.data as RoomInstance['hidingSpots'][number];
-        if (this.lidStashes.has(spot.id)) it.prompt = `${it.prompt} — the take fills it`;
+        if (this.lidStashes.has(`${this.space}:${spot.id}`)) it.prompt = `${it.prompt} — the take fills it`;
       }
     }
     if (this.player.hiddenSpot) {
@@ -2669,7 +2703,7 @@ export class Game {
             const ex = spot.exitPos.x - this.player.pos.x;
             const ez = spot.exitPos.z - this.player.pos.z;
             if (ex * ex + ez * ez > 1.44) continue;
-            const stash = this.lidStashes.get(spot.id);
+            const stash = this.lidStashes.get(`${this.space}:${spot.id}`);
             if (!stash && !carrying) continue;
             const cx = (spot.volume.minX + spot.volume.maxX) / 2;
             const cz = (spot.volume.minZ + spot.volume.maxZ) / 2;
@@ -3599,7 +3633,8 @@ export class Game {
         // (the marks ride with the goods — reclaiming brings them back).
         // Coin and pages never stash: currency lives on the hands.
         const spotId = (it.data as { spotId: string }).spotId;
-        const stash = this.lidStashes.get(spotId) ?? { items: [], marked: [] };
+        const key = `${this.space}:${spotId}`;
+        const stash = this.lidStashes.get(key) ?? { items: [], marked: [] };
         const taken = this.inventory.filter((i) => i.count > 0);
         let n = 0;
         for (const i of taken) {
@@ -3612,7 +3647,22 @@ export class Game {
         this.inventory = this.inventory.filter((i) => i.count > 0);
         this.pruneHotMarks();
         if (n <= 0) { it.enabled = false; return; }
-        this.lidStashes.set(spotId, stash);
+        this.lidStashes.set(key, stash);
+        // sprint 522 — the clerk clocks the lid's bulge too: stuffing
+        // the box within sight of a staffed counter is the same claim
+        // as carrying the bulge past — once per lid.
+        if (this.space === 'main' && !this.lidFiled.has(key)) {
+          for (const [rIdx, fig] of this.clerkFigs) {
+            if (this.closedCounters.has(rIdx)) continue;
+            const fd = Math.hypot(fig.position.x - it.pos.x, fig.position.z - it.pos.z);
+            if (fd > 3) continue;
+            this.lidFiled.add(key);
+            this.unpaidHeld += 1;
+            this.cue('register-write', it.pos,
+              '[the clerk watches the lid take the goods — the register writes]', 'warn');
+            break;
+          }
+        }
         const marked = stash.marked.length > 0;
         this.cue('pickup', it.pos, marked
           ? `[the lid takes the take — ${n} goods off your back · the marks ride with the goods]`
@@ -3625,14 +3675,14 @@ export class Game {
         // sprint 517 — the lid gives back what it kept: every good
         // returns to the back it came off, its marks intact.
         const spotId = (it.data as { spotId: string }).spotId;
-        const stash = this.lidStashes.get(spotId);
+        const stash = this.lidStashes.get(`${this.space}:${spotId}`);
         if (!stash) { it.enabled = false; return; }
         let n = 0;
         for (const s of stash.items) { this.giveItem(s.id, s.count); n += s.count; }
         for (const id of stash.marked) {
           if (this.inventory.some((i) => i.id === id && i.count > 0)) this.hotItems.add(id);
         }
-        this.lidStashes.delete(spotId);
+        this.lidStashes.delete(`${this.space}:${spotId}`);
         this.cue('pickup', it.pos, stash.marked.length > 0
           ? `[the lid gives back what it kept — ${n} goods, still marked]`
           : `[the lid gives back what it kept — ${n} goods]`);
@@ -3939,13 +3989,23 @@ export class Game {
         const spot = it.data as RoomInstance['hidingSpots'][number];
         // sprint 520 — a full lid hides nothing: the stash owns the
         // volume until you reclaim it — cover spent as storage.
-        if (this.lidStashes.has(spot.id)) {
+        if (this.lidStashes.has(`${this.space}:${spot.id}`)) {
           this.cue('hide-creak', it.pos, '[the lid is full of the take]', 'warn');
           return;
         }
         if (this.player.enterHiding(spot, this.clock.time)) {
           this.cue('hide-in', null, '');
           this.teach('hide', '[the spot holds you — a thing passing close still smells you]');
+          // sprint 521 — the take squeezes loud into cover: past the
+          // rattle tier the goods knock the lid frame on your way in —
+          // a real positional emit the house can borrow.
+          const load = this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints;
+          if (load >= 8) {
+            this.sound.emit({ x: spot.exitPos.x, y: 0.8, z: spot.exitPos.z,
+              intensity: 0.3 * this.player.noiseMul * this.player.maskMul * this.wantedPull,
+              category: 'impact', caption: '[goods knock the lid frame]' });
+            this.cue('hide-creak', spot.exitPos, '[the take knocks the frame on your way in]', 'warn');
+          }
           if (spot.trappedBy === 'hollow') {
             this.spawnEntity(new Hollow());
           }
@@ -6551,6 +6611,7 @@ export class Game {
           marked: s.marked.length > 0 ? [...s.marked] : undefined,
         }))
         : undefined,
+      lidFiled: [...this.lidFiled],
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0

@@ -216,6 +216,9 @@ export interface CheckpointSave {
    *  spot id, with which stashed ids were marked stock (marks ride
    *  with the goods — a stash parks the take, it doesn't launder it). */
   lidStashes?: { spot: string; items: { id: ItemId; count: number }[]; marked?: ItemId[] }[];
+  /** sprint 522 — lids whose stash a staffed counter already filed
+   *  (space-prefixed spot keys, same as lidStashes) */
+  lidFiled?: string[];
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
