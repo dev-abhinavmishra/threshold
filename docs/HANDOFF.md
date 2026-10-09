@@ -6836,7 +6836,8 @@ stands must hunt a spot off the door's flank.
 ## Sprints 476-480 — the seam sells
 
 - **s476 feed the hand** — while the reach lingers, 'Feed the hand
-  under Door N — 1 imprint' (p5, low-left flank, hold 0.35) pays the
+  under Door N — 1 imprint' (p5, a knee-step out on the payer's
+  side — n*0.55, lat-0.2, y+0.5 — hold 0.35) pays the
   fingers off: `chargedImprints(1)` (a marked coin still testifies —
   the ledger reads the mark wherever it lands) → `seamReachCd` 12s,
   '[the fingers close over the coin — the leaf goes quiet]', 0.25
@@ -6875,3 +6876,17 @@ walker's own room bounds + margin, not the seam's room index. The
 feed's 12s cooldown is also what makes the cold mint reachable: a
 live reach owns the leaf's slot; release the verb first — the mint
 needs `holdTarget` clear (same hijack rule as the stamp).
+**e2e traps (phase-7 fight):** the paid feed minted at lat-0.14/-0.35
+was unfocusable at common seam stands — inside nearEnough a p6 stamp
+or p4 brace flank wins every frame regardless of aim; the anchors
+were moved off every existing verb column (a real UX fix, not a test
+shim). A door's own 'Open' verb (p3) shadows EVERY p1 floor drop
+inside ~1.1m of the leaf: the pile's v3dist pays the eye-to-floor
+drop (~1.36m), so it loses even aimed — drag the drop data entries
+(`droppedPouches`/`droppedCoils` are pos-keyed `{x,z}`) clear of the
+leaf and call `mintPouchDrops`/`mintCoilDrops` before gathering.
+Two drops at one fall-spot tie on p1 — hold whichever Drop wins
+focus, not the one you found first. A crouched gatherer keeps the
+seam lattice minted: stand (KeyC release) before floor work. A
+staggered grafter still shoves whoever stands on its spill — set
+`state='done'` to silence it in specs.

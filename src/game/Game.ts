@@ -2561,14 +2561,14 @@ export class Game {
       });
       // sprint 476 — the seam sells too: pay the hand off. A coin under
       // the crack is the warm option beside the free loud stamp — low
-      // at the crack itself, offset toward the slip flank so the stamp
+      // at the crack itself, out on the slip flank so the stamp
       // (p6, centre, knee height) and the feed (p5, low-left) split on
       // aim instead of the stamp always shadowing it. No coin, no mint.
       if (this.imprints > 0) {
         const latX = Math.cos(sd.yaw), latZ = -Math.sin(sd.yaw);
         this.interaction.add({
           kind: 'feedSeam', id: `feedSeam-${sd.id}`,
-          pos: { x: sd.pos.x + nX * side * 0.25 - latX * 0.14, y: sd.pos.y + 0.7, z: sd.pos.z + nZ * side * 0.25 - latZ * 0.14 },
+          pos: { x: sd.pos.x + nX * side * 0.55 - latX * 0.2, y: sd.pos.y + 0.5, z: sd.pos.z + nZ * side * 0.55 - latZ * 0.2 },
           prompt: `Feed the hand under Door ${sd.label} — 1 imprint`,
           holdTime: 0.35, enabled: true, priority: 5, data: sd,
         });
@@ -2591,7 +2591,7 @@ export class Game {
         const side = Math.sign((this.player.pos.x - it.pos.x) * nX + (this.player.pos.z - it.pos.z) * nZ) || 1;
         this.interaction.add({
           kind: 'feedSeam', id: `feedSeam-${d.id}`,
-          pos: { x: it.pos.x + nX * side * 0.25 - latX * 0.14, y: it.pos.y + 0.7, z: it.pos.z + nZ * side * 0.25 - latZ * 0.14 },
+          pos: { x: it.pos.x + nX * side * 0.55 - latX * 0.2, y: it.pos.y + 0.5, z: it.pos.z + nZ * side * 0.55 - latZ * 0.2 },
           prompt: `Slip a coin under Door ${d.label} — 1 imprint`,
           holdTime: 0.35, enabled: true, priority: 5, data: d,
         });

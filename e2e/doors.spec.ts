@@ -1122,32 +1122,79 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
       let feedWarned = false, feedFired = false, baitFired = false,
         spillDropped = 0, coinBack = 0;
       const gAny = g as unknown as { imprints: number; hotImprints: number; droppedPouches: { x: number; z: number; n: number; hot: number }[] };
-      gAny.imprints = 4; gAny.hotImprints = 0;
+      // NO coin yet — a funded purse mints 'Slip a coin' on this lattice
+      // (p5, same lip) and at this stand nearEnough lets it shadow the
+      // stoop's focus all 45 frames: no hold, no reach. Coin comes back
+      // once the hand is warned.
+      gAny.imprints = 0; gAny.hotImprints = 0;
       g.keys.add('KeyC'); // phase 6 stood you up — back on the knee
       for (let f = 0; f < 6; f++) g.frame();
-      // the camper is still pressed (re-pin: phases spent its 60s camp)
+      // the camper is still pressed (re-pin: phases spent its 60s camp
+      // and the leaf-drag walk put it anywhere — put it back on the far
+      // lip of THIS leaf or the reach never arms)
+      const grPos = gr as unknown as { pos: { x: number; y: number; z: number } };
+      const nX7 = Math.sin(door.yaw), nZ7 = Math.cos(door.yaw);
+      const side7 = Math.sign((g.player.pos.x - door.pos.x) * nX7 + (g.player.pos.z - door.pos.z) * nZ7) || 1;
+      grPos.pos.x = door.pos.x - nX7 * side7 * 0.9;
+      grPos.pos.z = door.pos.z - nZ7 * side7 * 0.9;
       gc.target.x = door.pos.x; gc.target.z = door.pos.z;
       gc.roamT = 0; gc.crackCampUntil = g.clock.time + 60;
+      // the stamp's 8s cooldown can still be ticking when the phases
+      // between run short — a stamped leaf can't re-warn inside it
+      (g as unknown as { seamReachCd: Map<string, number> }).seamReachCd.delete(door.id);
       // warn the hand again, release, and pay it off inside the linger
+      const feedDiag: string[] = [];
       for (let f = 0; f < 45 && !feedWarned && stoopV; f++) {
         const ax = stoopV.pos.x - g.player.pos.x, az = stoopV.pos.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
         g.player.pitch = Math.atan2(stoopV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
-        if (g.interaction.focused?.id === stoopV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+        // the fingers don't care WHICH seam verb you hold — warn off
+        // whichever flank wins focus this frame
+        const foc7 = g.interaction.focused;
+        if (foc7 && (foc7.kind === 'stoop' || foc7.kind === 'slip' || foc7.kind === 'call')) g.keys.add('KeyE'); else g.keys.delete('KeyE');
         g.frame();
+        if (f % 9 === 0) {
+          const sr = (g as unknown as { seamReach?: { doorId: string; t: number } | null }).seamReach;
+          const gd = Math.hypot(grPos.pos.x - door.pos.x, grPos.pos.z - door.pos.z);
+          feedDiag.push(`f${f} foc=${g.interaction.focused?.id ?? 'none'} held=${(g.interaction as unknown as { holdTarget?: string }).holdTarget ?? 'none'} cr=${g.player.crouching} sr=${sr ? sr.doorId : 'null'} gd=${gd.toFixed(2)} state=${gr.state}`);
+        }
         if (caps.some((c) => /fingers work under/.test(c))) feedWarned = true;
       }
       g.keys.delete('KeyE');
       for (let f = 0; f < 4; f++) g.frame();
+      gAny.imprints = 4; // now the hand is under, pay it
       const imprintsBeforeFeed = gAny.imprints;
+      let fedStand = false;
       for (let f = 0; f < 60 && !feedFired; f++) {
         const feedV = g.interaction.interactables.find((i2) => i2.kind === 'feedSeam' && i2.id === `feedSeam-${door.id}` && /feed the hand/i.test(i2.prompt));
-        if (!feedV) { g.frame(); continue; }
+        if (!feedV) {
+          g.frame();
+          if (f % 10 === 0) {
+            const sr = (g as unknown as { seamReach?: { doorId: string; lingerUntil: number } | null }).seamReach;
+            const feeds = g.interaction.interactables.filter((i2) => i2.kind === 'feedSeam').map((i2) => i2.prompt).join(';');
+            feedDiag.push(`F${f} sr=${sr ? `${sr.doorId}@${sr.lingerUntil.toFixed(1)}` : 'null'} t=${g.clock.time.toFixed(1)} feeds=[${feeds}] foc=${g.interaction.focused?.id ?? 'none'} cr=${g.player.crouching}`);
+          }
+          continue;
+        }
+        // the feed now mints a knee-step out on the payer's side —
+        // but the seam stand sits on the slip's flank where the brace
+        // (lat -0.55) is always the nearest verb; teleport to the
+        // feed's own column (a bare teleport — the linger only lasts
+        // ~90 frames, a 40-frame standAt burns half of it)
+        if (!fedStand) {
+          g.player.teleport(feedV.pos.x + nX7 * side7 * 0.3, 0, feedV.pos.z + nZ7 * side7 * 0.3);
+          g.currentRoom = host.index;
+          fedStand = true;
+        }
         const ax = feedV.pos.x - g.player.pos.x, az = feedV.pos.z - g.player.pos.z;
         g.player.yaw = Math.atan2(ax, az);
-        g.player.pitch = Math.atan2(feedV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+        g.player.pitch = Math.atan2(feedV.pos.y - 0.4 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
         if (g.interaction.focused?.id === feedV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
         g.frame();
+        if (f % 10 === 0) {
+          const i2 = g.interaction as unknown as { holdTarget?: string; holdProgress?: number };
+          feedDiag.push(`H${f} foc=${g.interaction.focused?.id ?? 'none'} held=${i2.holdTarget ?? 'none'} hp=${(i2.holdProgress ?? 0).toFixed(2)}`);
+        }
         if (caps.some((c) => /fingers close over the coin/.test(c))) feedFired = true;
       }
       g.keys.delete('KeyE');
@@ -1168,23 +1215,62 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
       }
       g.keys.delete('KeyE');
       const pouchAfterBait = (gr as unknown as { pouch?: number }).pouch ?? 0;
-      // put it down — the pouch spills where it falls and gathers back
+      // put it down — the pouch spills where it falls and gathers back.
+      // Stagger spills the pouch, then the body is done: it keeps
+      // shoving whoever stands on the pile and breaks every gather
       (gr as unknown as { stagger?: (s: number) => void }).stagger?.(2);
       for (let f = 0; f < 20; f++) g.frame();
+      (gr as unknown as { state: string }).state = 'done';
+      for (let f = 0; f < 4; f++) g.frame();
       spillDropped = gAny.droppedPouches.length;
-      const dropV = g.interaction.interactables.find((i2) => i2.kind === 'pouchDrop');
-      if (dropV) {
-        standAt(dropV.pos.x, dropV.pos.z, 0.3);
-        for (let f = 0; f < 60 && !coinBack; f++) {
-          const ax = dropV.pos.x - g.player.pos.x, az = dropV.pos.z - g.player.pos.z;
+      // stand up FIRST — while crouched the seam lattice keeps minting
+      // and 'call' at p5 out-scores a p1 pile 0.3m off
+      g.keys.delete('KeyC');
+      for (let f = 0; f < 12; f++) g.frame();
+      // the spill lands ~0.9m off the leaf — inside the 'Open' verb's
+      // range, and p3 beats p1 there forever (the pile's v3dist pays
+      // the eye-to-floor drop). Drag the piles clear of the leaf and
+      // re-mint: the drop entries are pos-keyed data, gather fires by
+      // whichever pile wins focus.
+      {
+        const clear7 = { x: door.pos.x - nX7 * side7 * 3.2, z: door.pos.z - nZ7 * side7 * 3.2 };
+        for (const p of gAny.droppedPouches) { p.x = clear7.x; p.z = clear7.z; }
+        for (const c of (gAny as { droppedCoils?: { x: number; z: number }[] }).droppedCoils ?? []) { c.x = clear7.x; c.z = clear7.z; }
+        (gAny as { mintPouchDrops?: () => void }).mintPouchDrops?.();
+        (gAny as { mintCoilDrops?: () => void }).mintCoilDrops?.();
+        g.player.teleport(clear7.x, 0, clear7.z);
+        g.currentRoom = next.index;
+        for (let f = 0; f < 6; f++) g.frame();
+      }
+      const gatherDiag: string[] = [];
+      let pilesLeft = 5;
+      while (gAny.droppedPouches.length > 0 && pilesLeft-- > 0) {
+        const pile = g.interaction.interactables.find((i2) => /^(pouch|coil|wedge|wrap|alarm)Drop$/.test(i2.kind));
+        if (!pile) { for (let f = 0; f < 4; f++) g.frame(); continue; }
+        if (Math.hypot(pile.pos.x - g.player.pos.x, pile.pos.z - g.player.pos.z) > 0.35) {
+          g.player.teleport(pile.pos.x, 0, pile.pos.z);
+          g.currentRoom = next.index;
+        }
+        const piles0 = g.interaction.interactables.filter((i2) => /^(pouch|coil|wedge|wrap|alarm)Drop$/.test(i2.kind)).length;
+        let held = false;
+        for (let f = 0; f < 60 && !held; f++) {
+          const ax = pile.pos.x - g.player.pos.x, az = pile.pos.z - g.player.pos.z;
           g.player.yaw = Math.atan2(ax, az);
           g.player.pitch = -0.9;
-          if (g.interaction.focused?.id === dropV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+          // two piles at one fall-spot shadow each other — whichever
+          // takes focus is the one you can hold
+          const focG = g.interaction.focused;
+          if (focG && /^(pouch|coil|wedge|wrap|alarm)Drop$/.test(focG.kind)) g.keys.add('KeyE'); else g.keys.delete('KeyE');
           g.frame();
-          if (caps.some((c) => /your coin back/.test(c))) coinBack = gAny.imprints;
+          held = g.interaction.interactables.filter((i2) => /^(pouch|coil|wedge|wrap|alarm)Drop$/.test(i2.kind)).length < piles0;
+          if (f % 15 === 0) {
+            const iAny = g.interaction as unknown as { holdTarget?: { kind: string } | null; holdProgress?: number };
+            gatherDiag.push(`g${f} foc=${focG?.kind ?? '-'} held=${iAny.holdTarget?.kind ?? '-'} hp=${(iAny.holdProgress ?? 0).toFixed(2)} dp=${gAny.droppedPouches.length}`);
+          }
         }
         g.keys.delete('KeyE');
       }
+      coinBack = gAny.imprints;
 
       return {
         stage: 'done', room: next.index, dist0, minLeaf, pulled, mouthed,
@@ -1194,7 +1280,7 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
         reachWarned2, stampFired, stampedQuiet,
         slipFired, stoneBack, pressSlowed, reachDiag,
         feedWarned, feedFired, imprintsBeforeFeed, pouchAfterFeed,
-        baitFired, pouchAfterBait, spillDropped, coinBack,
+        baitFired, pouchAfterBait, spillDropped, coinBack, feedDiag, gatherDiag,
         caps: caps.slice(-16), attempts,
       } as const;
     }
@@ -1213,7 +1299,7 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
     reachDiag: string[];
     feedWarned: boolean; feedFired: boolean; imprintsBeforeFeed: number;
     pouchAfterFeed: number; baitFired: boolean; pouchAfterBait: number;
-    spillDropped: number; coinBack: number;
+    spillDropped: number; coinBack: number; feedDiag: string[]; gatherDiag: string[];
   };
   const tail = r.caps.join(' | ') + ` calls: ${r.callPrompts} / ${r.call2Prompts}`;
   expect(r.callPrompts, 'the call verb never focused at the leaf').toMatch(/call through the crack/i);
@@ -1241,12 +1327,12 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
   expect(r.pressSlowed, `the leaf never dragged under the rubble's weight — ${tail}`).toBe(true);
   // the seam sells: feed the armed hand quiet, bait it cold, and the
   // pouch it fills spills back as loot when the hand goes down
-  expect(r.feedWarned, `the fingers never re-warned for the feed — ${tail}`).toBe(true);
-  expect(r.feedFired, `the feed never landed — ${tail}`).toBe(true);
+  expect(r.feedWarned, `the fingers never re-warned for the feed — ${r.feedDiag.join(' ')} — ${tail}`).toBe(true);
+  expect(r.feedFired, `the feed never landed — ${r.feedDiag.join(' ')} — ${tail}`).toBe(true);
   expect(r.pouchAfterFeed, `the fed hand never pocketed the coin — ${tail}`).toBe(1);
   expect(r.baitFired, `the cold slide never baited the camp — ${tail}`).toBe(true);
   expect(r.pouchAfterBait, `the bait never pocketed — ${tail}`).toBe(2);
   expect(r.spillDropped, `the stagger never spilled the pouch — ${tail}`).toBeGreaterThanOrEqual(1);
-  expect(r.coinBack, `the spilled coin never gathered back — ${tail}`).toBe(r.imprintsBeforeFeed);
+  expect(r.coinBack, `the spilled coin never gathered back — ${tail} || GD ${r.gatherDiag.join(' ')}`).toBe(r.imprintsBeforeFeed);
   expect(errors).toEqual([]);
 });
