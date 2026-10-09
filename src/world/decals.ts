@@ -8120,3 +8120,145 @@ export function callGrub(rng: Rng): THREE.Texture | null {
     g.fillRect(4, 20, 56, 60);
   });
 }
+
+/** The wheel shed its wool — lanolin dust and fiber drifts caught
+ *  in the treadle path and under the flyer. */
+export function spinDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // Wool dust — a soft felted film over the wheel's working face.
+    const film = g.createRadialGradient(48, 30, 3, 48, 30, 30);
+    film.addColorStop(0, 'rgba(168,150,118,0.3)');
+    film.addColorStop(0.7, 'rgba(168,150,118,0.14)');
+    film.addColorStop(1, 'rgba(168,150,118,0)');
+    g.fillStyle = film;
+    g.fillRect(16, 6, 64, 50);
+    // Fiber wisps — threads that drifted and stuck.
+    for (let i = 0; i < 12; i++) {
+      g.strokeStyle = `rgba(190,174,144,${0.2 + rng.float() * 0.25})`;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      const wx = 20 + rng.float() * 56;
+      const wy = 12 + rng.float() * 40;
+      g.moveTo(wx, wy);
+      g.quadraticCurveTo(wx + rng.range(-4, 4), wy + rng.range(-3, 3), wx + rng.range(-7, 7), wy + rng.range(-5, 5));
+      g.stroke();
+    }
+    // The treadle dip — a worn hollow where the foot pumps.
+    const dip = g.createRadialGradient(48 + rng.range(-6, 6), 50, 1, 48 + rng.range(-6, 6), 50, 8);
+    dip.addColorStop(0, 'rgba(60,48,34,0.5)');
+    dip.addColorStop(1, 'rgba(60,48,34,0)');
+    g.fillStyle = dip;
+    g.beginPath();
+    g.ellipse(48, 50, 10, 5, 0, 0, Math.PI * 2);
+    g.fill();
+    // Lanolin sheen — oily wipe marks on the spokes' reach.
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(150,132,102,${0.16 + rng.float() * 0.14})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(48, 26, 10 + i * 4 + rng.float() * 2, rng.float() * 3, rng.float() * 3 + 1);
+      g.stroke();
+    }
+    // Fuzz knots — little balls where fibers gathered.
+    for (let i = 0; i < 7; i++) {
+      g.fillStyle = `rgba(160,144,114,${0.3 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.arc(22 + rng.float() * 52, 14 + rng.float() * 40, 0.7 + rng.float() * 0.9, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
+}
+
+/** The counter kept the coins — a scratch fan where change gets
+ *  swept across and the elbow's polish at the lean spot. */
+export function counterBelt(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // Coin scratches — bright score arcs where payment gets slid.
+    for (let i = 0; i < 14; i++) {
+      const sx = 28 + rng.float() * 40;
+      const sy = 20 + rng.float() * 24;
+      g.strokeStyle = `rgba(196,184,162,${0.16 + rng.float() * 0.24})`;
+      g.lineWidth = 0.4 + rng.float() * 0.4;
+      g.beginPath();
+      g.moveTo(sx, sy);
+      g.quadraticCurveTo(sx + rng.range(-6, 6), sy + rng.range(-3, 3), sx + rng.range(-12, 12), sy + rng.range(-5, 5));
+      g.stroke();
+    }
+    // The coin well — a round-worn spot where change pools.
+    const well = g.createRadialGradient(48 + rng.range(-10, 10), 30, 1, 48 + rng.range(-10, 10), 30, 9);
+    well.addColorStop(0, 'rgba(180,166,142,0.4)');
+    well.addColorStop(1, 'rgba(180,166,142,0)');
+    g.fillStyle = well;
+    g.beginPath();
+    g.arc(48, 30, 9, 0, Math.PI * 2);
+    g.fill();
+    // The elbow rest — a long dull polish at the front edge.
+    const elbow = g.createLinearGradient(0, 52, 0, 60);
+    elbow.addColorStop(0, 'rgba(170,152,128,0)');
+    elbow.addColorStop(0.6, `rgba(176,158,132,${0.26 + rng.float() * 0.14})`);
+    elbow.addColorStop(1, 'rgba(176,158,132,0)');
+    g.fillStyle = elbow;
+    g.fillRect(24 + rng.range(-8, 8), 52, 44, 8);
+    // One deep gouge — a coin dug a scar once.
+    g.strokeStyle = 'rgba(150,134,108,0.45)';
+    g.lineWidth = 0.9;
+    g.beginPath();
+    g.moveTo(24 + rng.float() * 20, 24 + rng.float() * 12);
+    g.lineTo(60 + rng.float() * 16, 26 + rng.float() * 12);
+    g.stroke();
+    // Coffee rings — payment taken over cups.
+    if (rng.bool(0.6)) {
+      g.strokeStyle = 'rgba(90,64,38,0.35)';
+      g.lineWidth = 1.1;
+      g.beginPath();
+      g.arc(30 + rng.float() * 40, 34 + rng.range(-8, 8), 5 + rng.float() * 2, 0, Math.PI * 2);
+      g.stroke();
+    }
+  });
+}
+
+/** The bell dulled — a palm-polished cap and the smut ring where
+ *  hands bang the counter bell for attention nobody gives. */
+export function bellTap(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (g) => {
+    // The tap crown — the dome's apex polished bright by palms.
+    const crown = g.createRadialGradient(32, 26, 1, 32, 26, 12);
+    crown.addColorStop(0, 'rgba(210,198,172,0.6)');
+    crown.addColorStop(0.55, 'rgba(210,198,172,0.2)');
+    crown.addColorStop(1, 'rgba(210,198,172,0)');
+    g.fillStyle = crown;
+    g.beginPath();
+    g.arc(32, 26, 12, 0, Math.PI * 2);
+    g.fill();
+    // The dome's own circle — the bell's rim in the grime field.
+    g.strokeStyle = 'rgba(50,42,32,0.45)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(32, 30, 14 + rng.float() * 2, 0, Math.PI * 2);
+    g.stroke();
+    // Grime around — the counter dust the bell's skirt never reaches.
+    const grime = g.createRadialGradient(32, 34, 10, 32, 34, 26);
+    grime.addColorStop(0, 'rgba(80,68,52,0.1)');
+    grime.addColorStop(1, 'rgba(80,68,52,0.3)');
+    g.fillStyle = grime;
+    g.beginPath();
+    g.arc(32, 34, 26, 0, Math.PI * 2);
+    g.fill();
+    // Palm smuts — hand-oil crescents off the cap's sides.
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(110,94,72,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.arc(32 + rng.range(-4, 4), 28 + rng.range(-3, 3), 8 + rng.float() * 3, rng.float() * 3, rng.float() * 3 + 1);
+      g.stroke();
+    }
+    // Fingerprint commas where impatient fingers tapped.
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = `rgba(140,126,102,${0.16 + rng.float() * 0.2})`;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      g.arc(32 + rng.range(-14, 14), 30 + rng.range(-10, 10), 1.2, 0, Math.PI * 1.3);
+      g.stroke();
+    }
+  });
+}
