@@ -5265,3 +5265,48 @@ describe('the ship kept its rigging (sprint 550)', () => {
     expect(n, 'no rigging dust').toBeGreaterThan(0);
   });
 });
+
+describe('the crates kept the stencil (sprint 551)', () => {
+  it('ghost letters mark the military boxes', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'stencil-ghost') n++; });
+      }
+    }
+    expect(n, 'no stencil ghosts').toBeGreaterThan(0);
+  });
+});
+
+describe('the welder spat (sprint 551)', () => {
+  it('bead tracks and spatter pits lie by the gear', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'weld-spatter') n++; });
+      }
+    }
+    expect(n, 'no weld spatter').toBeGreaterThan(0);
+  });
+});
+
+describe('the grease kept the box (sprint 551)', () => {
+  it('cosmoline film marks the munitions', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'cosmo-grease') n++; });
+      }
+    }
+    expect(n, 'no cosmo grease').toBeGreaterThan(0);
+  });
+});

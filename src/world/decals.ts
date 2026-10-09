@@ -10024,3 +10024,104 @@ export function riggingDust(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Stencil ghost — the marks a crate stencil leaves: pale letters
+ * where paint peeled off, stencil bleed, corner wear. */
+export function stencilGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // stencil bleed — ghost letterforms, their paint gone
+    const letters = '12345678';
+    ctx.font = 'bold 20px monospace';
+    ctx.textBaseline = 'middle';
+    let x = 10;
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(170,164,150,${0.2 + rng.float() * 0.16})`;
+      ctx.fillText(letters[Math.floor(rng.float() * 8)], x, 22);
+      x += 14 + rng.float() * 6;
+    }
+    // stencil overspray — a faint rectangle around the print
+    ctx.strokeStyle = `rgba(170,164,150,${0.2 + rng.float() * 0.12})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(6, 8, 84, 30);
+    // corner wear — the dragged scuffs at the crate's edges
+    for (const [cx, cy] of [[8, 42], [86, 40], [10, 8]]) {
+      ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + (rng.float() - 0.5) * 3, cy, 4 + rng.float() * 2, 1.8, rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // stencil smear — one pass that slipped
+    ctx.strokeStyle = `rgba(150,144,132,${0.24 + rng.float() * 0.14})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(60, 18);
+    ctx.lineTo(80 + rng.float() * 8, 24);
+    ctx.stroke();
+  });
+}
+
+/** Weld spatter — the marks welding leaves: bead tracks, spatter
+ * pits, scorch halos, a ground-clamp bite. */
+export function weldSpatter(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // bead track — the weld's rippled seam
+    ctx.strokeStyle = `rgba(70,60,46,${0.5 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(8, 24);
+    for (let x = 8; x < 88; x += 6) {
+      ctx.lineTo(x + 3, 24 + (rng.float() - 0.5) * 3);
+    }
+    ctx.stroke();
+    // spatter pits — the scatter of flung droplets
+    for (let i = 0; i < 22; i++) {
+      ctx.fillStyle = `rgba(50,44,36,${0.36 + rng.float() * 0.24})`;
+      const d = rng.float() * 16;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, 24 + (rng.float() - 0.5) * 2 * (6 + d), 0.6 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // scorch halo — the heat tint around the bead
+    ctx.fillStyle = `rgba(90,60,36,${0.2 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 24, 44, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // clamp bite — the ground's burn mark off to one side
+    ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(14 + rng.float() * 10, 40, 3.4, 2.2, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Cosmo grease — the marks packing grease leaves: a waxy film,
+ * thumb swirls, a wrapped-item ghost, weep at the lid seam. */
+export function cosmoGrease(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // waxy film — cosmoline's amber glaze
+    ctx.fillStyle = `rgba(160,120,60,${0.26 + rng.float() * 0.14})`;
+    ctx.fillRect(4, 4, 56, 40);
+    // thumb swirls — fingerprints set in the wax
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(120,88,40,${0.3 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(12 + rng.float() * 40, 10 + rng.float() * 28, 2 + rng.float() * 2, 0, Math.PI * (0.4 + rng.float() * 0.8));
+      ctx.stroke();
+    }
+    // wrapped ghost — the shape the grease-paper kept
+    ctx.strokeStyle = `rgba(140,104,50,${0.34 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(18, 14, 24, 16);
+    // lid weep — wax that crept out at the seam
+    ctx.fillStyle = `rgba(150,110,52,${0.36 + rng.float() * 0.18})`;
+    ctx.fillRect(6, 20, 52, 3);
+    // dust film — grease caught the dirt
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(140,134,122,${0.22 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 52, 6 + rng.float() * 36, 0.7 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
