@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2323,6 +2323,35 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     hr.position.set(0, (dc?.[1] ?? 1.0) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
     prop.group.add(hr);
     if (!prop.group.name) prop.group.name = 'hatch-ring';
+  }
+  // The canvas crackled — age craquelure and slack shadow on the
+  // paintings and portraits.
+  const CANVAS_KINDS = new Set(['painting', 'hauntedPortrait', 'standingFrame', 'frameStand']);
+  if (CANVAS_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const cc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: canvasCrackle(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cc.name = 'canvas-crackle';
+    cc.userData.decalMat = true;
+    cc.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.005);
+    prop.group.add(cc);
+    if (!prop.group.name) prop.group.name = 'canvas-crackle';
+  }
+  // The darts missed the board — a pocked halo on the wall face
+  // around the target.
+  if (spec.kind === 'dartboard' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ds = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.7),
+      new THREE.MeshStandardMaterial({ map: dartSplash(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ds.name = 'dart-splash';
+    ds.userData.decalMat = true;
+    ds.position.set(0, (dc?.[1] ?? 1.6) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.006);
+    prop.group.add(ds);
+    if (!prop.group.name) prop.group.name = 'dart-splash';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

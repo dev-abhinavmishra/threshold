@@ -8419,3 +8419,148 @@ export function hatchRing(rng: Rng): THREE.Texture | null {
     g.fill();
   });
 }
+
+/** The canvas crackled — age craquelure webbing the paint and a
+ *  slack-canvas shadow where the fabric pulled loose. */
+export function canvasCrackle(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The web — fine crazed cracks threading the whole face.
+    for (let i = 0; i < 26; i++) {
+      let x = 8 + rng.float() * 80;
+      let y = 8 + rng.float() * 80;
+      g.strokeStyle = `rgba(${60 + Math.floor(rng.float() * 40)},${52 + Math.floor(rng.float() * 36)},${40 + Math.floor(rng.float() * 28)},${0.2 + rng.float() * 0.28})`;
+      g.lineWidth = 0.35;
+      g.beginPath();
+      g.moveTo(x, y);
+      for (let s = 0; s < 4; s++) {
+        x += rng.range(-8, 8);
+        y += rng.range(-6, 6);
+        g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    // Slack shadow — the canvas's belly where it left the stretcher.
+    const belly = g.createRadialGradient(48 + rng.range(-10, 10), 50 + rng.range(-8, 8), 4, 48, 50, 26);
+    belly.addColorStop(0, 'rgba(40,32,24,0.25)');
+    belly.addColorStop(1, 'rgba(40,32,24,0)');
+    g.fillStyle = belly;
+    g.fillRect(20, 24, 56, 52);
+    // Paint loss — flake chips down to the gesso.
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = `rgba(190,180,158,${0.3 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.ellipse(14 + rng.float() * 68, 14 + rng.float() * 68, 0.9 + rng.float() * 1.6, 0.6 + rng.float() * 1, rng.float(), 0, Math.PI * 2);
+      g.fill();
+    }
+    // Varnish amber — the old coat's nicotine film.
+    const amber = g.createLinearGradient(0, 0, 96, 96);
+    amber.addColorStop(0, 'rgba(140,104,44,0)');
+    amber.addColorStop(0.5, `rgba(140,104,44,${0.12 + rng.float() * 0.08})`);
+    amber.addColorStop(1, 'rgba(140,104,44,0)');
+    g.fillStyle = amber;
+    g.fillRect(6, 6, 84, 84);
+    // Stretcher ghost — faint bar lines where the frame presses behind.
+    for (const pos of [10, 86]) {
+      g.fillStyle = 'rgba(50,40,30,0.18)';
+      g.fillRect(pos - 0.8, 8, 1.6, 80);
+      g.fillRect(8, pos - 0.8, 80, 1.6);
+    }
+  });
+}
+
+/** The darts missed the board — a pocked halo round the target and
+ *  the floor scars where the throwers stood. */
+export function dartSplash(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The pock field — holes sprayed around the board's rim.
+    for (let i = 0; i < 30; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 22 + rng.float() * 18;
+      const px = 48 + Math.cos(a) * r;
+      const py = 46 + Math.sin(a) * r;
+      g.fillStyle = `rgba(36,28,20,${0.4 + rng.float() * 0.35})`;
+      g.beginPath();
+      g.arc(px, py, 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      g.fill();
+      // The crater lip — plaster pushed up round the hole.
+      if (rng.bool(0.4)) {
+        g.strokeStyle = 'rgba(160,146,122,0.25)';
+        g.lineWidth = 0.4;
+        g.beginPath();
+        g.arc(px, py, 1.4 + rng.float(), 0, Math.PI * 2);
+        g.stroke();
+      }
+    }
+    // The board's own ring — where its rim shields the wall.
+    g.strokeStyle = 'rgba(30,24,18,0.4)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.arc(48, 46, 20 + rng.float(), 0, Math.PI * 2);
+    g.stroke();
+    // The stand-off groove — a dragged line down from the board to
+    // the throwing line the toes always mark.
+    const lane = g.createLinearGradient(0, 66, 0, 88);
+    lane.addColorStop(0, 'rgba(150,134,108,0)');
+    lane.addColorStop(0.6, `rgba(150,134,108,${0.18 + rng.float() * 0.14})`);
+    lane.addColorStop(1, 'rgba(150,134,108,0)');
+    g.fillStyle = lane;
+    g.fillRect(20, 66, 56, 22);
+    // Toe-line gouge — the oche's scuffed edge.
+    g.strokeStyle = `rgba(120,102,78,${0.3 + rng.float() * 0.2})`;
+    g.lineWidth = 1.4;
+    g.beginPath();
+    g.moveTo(18, 84 + rng.range(-1, 1));
+    g.lineTo(78, 84 + rng.range(-1, 1));
+    g.stroke();
+    // Chalk dust under the scoring spot.
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = `rgba(190,184,170,${0.2 + rng.float() * 0.24})`;
+      g.fillRect(66 + rng.float() * 20, 60 + rng.float() * 8, 0.9, 0.9);
+    }
+  });
+}
+
+/** The printers coughed toner — grey scatter and paper-jam streaks
+ *  under the machines that always jam. */
+export function tonerDrift(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    // The drift — toner grey pooled under the output slot.
+    const pool = g.createRadialGradient(50, 44, 3, 50, 44, 24);
+    pool.addColorStop(0, 'rgba(52,48,44,0.45)');
+    pool.addColorStop(0.7, 'rgba(52,48,44,0.18)');
+    pool.addColorStop(1, 'rgba(52,48,44,0)');
+    g.fillStyle = pool;
+    g.beginPath();
+    g.ellipse(50, 44, 26, 18, 0, 0, Math.PI * 2);
+    g.fill();
+    // The scatter — fine black dust sprayed past the tray.
+    for (let i = 0; i < 34; i++) {
+      const a = rng.range(-0.6, 0.6) + Math.PI / 2;
+      const r = 10 + rng.float() * 34;
+      g.fillStyle = `rgba(40,36,34,${0.2 + rng.float() * 0.3})`;
+      g.fillRect(48 + Math.cos(a) * r, 40 + Math.sin(a) * r * 0.7, 0.8 + rng.float() * 0.7, 0.7 + rng.float() * 0.5);
+    }
+    // Paper streaks — the jams dragged out leaving drag bars.
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle = `rgba(150,142,126,${0.16 + rng.float() * 0.16})`;
+      g.save();
+      g.translate(48 + rng.range(-16, 16), 46 + rng.range(-8, 10));
+      g.rotate(rng.range(-0.5, 0.5));
+      g.fillRect(-8, -0.9, 16 + rng.float() * 6, 1.8);
+      g.restore();
+    }
+    // Paper chips — torn-off corners that never got picked up.
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(200,194,178,${0.3 + rng.float() * 0.3})`;
+      g.save();
+      g.translate(20 + rng.float() * 56, 56 + rng.float() * 26);
+      g.rotate(rng.float() * Math.PI);
+      g.fillRect(-1.4, -1, 2.8 + rng.float() * 2, 2 + rng.float() * 1.6);
+      g.restore();
+    }
+    // The service-open ghost — a darker patch where the cover drops.
+    g.strokeStyle = 'rgba(44,38,32,0.3)';
+    g.lineWidth = 0.8;
+    g.strokeRect(36 + rng.range(-4, 4), 30 + rng.range(-4, 4), 24 + rng.float() * 6, 16 + rng.float() * 4);
+  });
+}

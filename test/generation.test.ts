@@ -4634,3 +4634,48 @@ describe('the hatch kept its ring (sprint 505)', () => {
     expect(n, 'no hatch ring').toBeGreaterThan(0);
   });
 });
+
+describe('the canvas crackled (sprint 506)', () => {
+  it('craquelure webs the paintings', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'canvas-crackle') n++; });
+      }
+    }
+    expect(n, 'no canvas crackle').toBeGreaterThan(0);
+  });
+});
+
+describe('the darts missed the board (sprint 506)', () => {
+  it('a pocked halo rings the dartboards', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'dart-splash') n++; });
+      }
+    }
+    expect(n, 'no dart splash').toBeGreaterThan(0);
+  });
+});
+
+describe('the printers coughed toner (sprint 506)', () => {
+  it('grey scatter pools under the machines', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'toner-drift') n++; });
+      }
+    }
+    expect(n, 'no toner drift').toBeGreaterThan(0);
+  });
+});
