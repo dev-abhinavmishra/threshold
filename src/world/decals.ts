@@ -10422,3 +10422,84 @@ export function lockerGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+// ---------- sprint 555: the kettle whistled, the board kept the cuts ----------
+
+export function kettleScale(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    // limescale bloom — chalky crust climbing from the waterline
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2, r = 6 + rng.float() * 14;
+      ctx.fillStyle = `rgba(214,208,192,${0.26 + rng.float() * 0.24})`;
+      ctx.beginPath();
+      ctx.arc(24 + Math.cos(a) * r, 30 + Math.sin(a) * r * 0.5, 1.5 + rng.float() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // drip trails down the belly
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(198,192,176,${0.3 + rng.float() * 0.2})`;
+      const dx = 8 + rng.float() * 32;
+      ctx.fillRect(dx, 10 + rng.float() * 8, 1 + rng.float() * 0.6, 8 + rng.float() * 10);
+    }
+    // heat ring — where the flame licked the base
+    ctx.strokeStyle = `rgba(60,50,40,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(24, 40, 14, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+  });
+}
+
+export function boardScores(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // knife scoring — a hundred cuts crossing the middle
+    for (let i = 0; i < 46; i++) {
+      const x = 10 + rng.float() * 44, y = 8 + rng.float() * 32;
+      const a = (rng.float() - 0.5) * 0.9;
+      const len = 4 + rng.float() * 12;
+      ctx.strokeStyle = `rgba(72,58,40,${0.2 + rng.float() * 0.3})`;
+      ctx.lineWidth = 0.6 + rng.float() * 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+      ctx.stroke();
+    }
+    // worked-in stain — the hollow where years of meals were cut
+    ctx.fillStyle = `rgba(88,68,44,${0.16 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(32, 24, 18 + rng.float() * 6, 10 + rng.float() * 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // edge scrub — paler rim where it was washed least hard
+    ctx.strokeStyle = `rgba(200,186,160,${0.2 + rng.float() * 0.12})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(4, 4, 56, 40);
+  });
+}
+
+export function dartHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // missed holes — a spray of pits around the board's rim
+    for (let i = 0; i < 40; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 20 + rng.float() * 10;
+      ctx.fillStyle = `rgba(46,38,30,${0.3 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 0.5 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // chalk arcs — someone's throw line drawn too often
+    ctx.strokeStyle = `rgba(186,178,160,${0.3 + rng.float() * 0.18})`;
+    ctx.lineWidth = 1.1;
+    for (let i = 0; i < 2; i++) {
+      ctx.beginPath();
+      ctx.arc(32, 32, 24 + rng.float() * 5, rng.float() * Math.PI, rng.float() * Math.PI + 0.9);
+      ctx.stroke();
+    }
+    // pull ghosts — faint rings where the board was re-hung
+    ctx.strokeStyle = `rgba(140,130,112,${0.22 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(32, 32, 28, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
