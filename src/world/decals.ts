@@ -10587,3 +10587,81 @@ export function shelfDust(rng: Rng): THREE.Texture | null {
     ctx.fillRect(10 + rng.float() * 30, 38 + rng.float() * 6, 1.6, 1);
   });
 }
+
+// ---------- sprint 557: the till kept the scratch, the screen kept the ghost ----------
+
+export function tillScratch(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // coin rings — circles polished into the counter over a till's life
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(150,142,124,${0.26 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 44, 8 + rng.float() * 14, 2.4 + rng.float() * 1.6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // drawer rub — the bright line where the tray slid a thousand times
+    ctx.fillStyle = `rgba(170,162,146,${0.3 + rng.float() * 0.18})`;
+    ctx.fillRect(6, 30 + rng.float() * 6, 52, 1.6);
+    for (let i = 0; i < 9; i++) {
+      ctx.fillStyle = `rgba(120,112,96,${0.18 + rng.float() * 0.14})`;
+      ctx.fillRect(8 + rng.float() * 46, 32 + rng.float() * 5, 1.4, 2.4);
+    }
+    // button ghosts — worn crowns over the heavy keys
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(190,182,164,${0.22 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(14 + i * 12, 12, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+export function screenGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // burn ghost — a pale phantom frame left in the phosphor
+    ctx.strokeStyle = `rgba(190,200,204,${0.2 + rng.float() * 0.14})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(12, 10, 40, 26);
+    // static snow — a dead channel's residue
+    for (let i = 0; i < 50; i++) {
+      ctx.fillStyle = `rgba(200,204,206,${0.08 + rng.float() * 0.14})`;
+      ctx.fillRect(12 + rng.float() * 40, 10 + rng.float() * 26, 1.4, 1);
+    }
+    // dust skin on the glass
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = `rgba(158,152,140,${0.12 + rng.float() * 0.1})`;
+      ctx.fillRect(rng.float() * 64, rng.float() * 48, 1.8, 1.4);
+    }
+    // wipe swatch — one clean arc where someone checked if it still worked
+    ctx.strokeStyle = `rgba(216,210,196,${0.26 + rng.float() * 0.16})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(16, 40, 16, Math.PI * 1.2, Math.PI * 1.75);
+    ctx.stroke();
+  });
+}
+
+export function splatFilm(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    // spatter — a bowl boiled over in there once
+    for (let i = 0; i < 26; i++) {
+      const a = rng.float() * Math.PI * 2, r = rng.float() * 16;
+      ctx.fillStyle = `rgba(150,110,70,${0.24 + rng.float() * 0.26})`;
+      ctx.beginPath();
+      ctx.arc(24 + Math.cos(a) * r, 20 + Math.sin(a) * r * 0.8, 0.6 + rng.float() * 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // cooked-on ring — the plate's tide line
+    ctx.strokeStyle = `rgba(140,100,62,${0.3 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(24, 24, 13, 0, Math.PI * 2);
+    ctx.stroke();
+    // keypad wear — the two buttons anyone ever pressed
+    for (const [bx, by] of [[38, 10], [38, 18]]) {
+      ctx.fillStyle = `rgba(196,190,176,${0.3 + rng.float() * 0.18})`;
+      ctx.fillRect(bx + rng.float() * 2, by + rng.float() * 2, 5, 3.4);
+    }
+  });
+}
