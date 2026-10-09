@@ -6435,6 +6435,11 @@ export class Game {
             seized: [...this.seizedTake, ...this.fencedTake].reduce((n, s) => n + s.count, 0),
             // dead — the live tag rots, so its listed coin is kept too
             coinKept: this.coinKept + this.seizedCoin,
+            // sprint 500 — the floor keeps the loose take too: every
+            // pile left lying reads at the end
+            spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
+              + this.droppedWraps.reduce((n, w) => n + w.n, 0)
+              + this.kickedWedges.length + this.droppedCoils.length,
           },
         },
         documents: this.loadDocs(),
@@ -6471,6 +6476,10 @@ export class Game {
         hotCoin: this.hotImprints,
         hotGoods: this.hotItems.size,
         hotPages: this.hotMarginalia,
+        // sprint 500 — and what the floor kept: every pile left lying
+        spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
+          + this.droppedWraps.reduce((n, w) => n + w.n, 0)
+          + this.kickedWedges.length + this.droppedCoils.length,
       },
     }, paused: true });
     document.exitPointerLock?.();
