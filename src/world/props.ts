@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2466,6 +2466,51 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bb.position.set((rng.float() - 0.5) * 0.15, (dc?.[1] ?? 0.3) * 0.55, (dc?.[2] ?? 0.12) / 2 + 0.004);
     prop.group.add(bb);
     if (!prop.group.name) prop.group.name = 'bottle-bloom';
+  }
+  // The busts kept their caps — crown film, shoulder ledges and a
+  // clean nose where hands steadied them.
+  const BUSTS: ReadonlySet<PropSpec['kind']> = new Set(['bust', 'marbleBust', 'galleryStatue', 'hallFigure']);
+  if (BUSTS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const bc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.45),
+      new THREE.MeshStandardMaterial({ map: bustCap(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bc.name = 'bust-cap';
+    bc.userData.decalMat = true;
+    bc.position.set(0, (dc?.[1] ?? 1.4) * 0.72, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    prop.group.add(bc);
+    if (!prop.group.name) prop.group.name = 'bust-cap';
+  }
+  // The board kept its squares — clean cells in the dust where the
+  // pieces stood.
+  const BOARDS: ReadonlySet<PropSpec['kind']> = new Set(['chessSet', 'boardGame']);
+  if (BOARDS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const ps = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: pieceSquares(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ps.name = 'piece-squares';
+    ps.userData.decalMat = true;
+    ps.rotation.x = -Math.PI / 2;
+    ps.position.set(0, (dc?.[1] ?? 0.08) + 0.004, 0);
+    prop.group.add(ps);
+    if (!prop.group.name) prop.group.name = 'piece-squares';
+  }
+  // The globe kept the spins — thumb-polish bands at the waist,
+  // dust on the cap and foot.
+  if (spec.kind === 'globeStand' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const gs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.5),
+      new THREE.MeshStandardMaterial({ map: globeSpin(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    gs.name = 'globe-spin';
+    gs.userData.decalMat = true;
+    gs.position.set(0, (dc?.[1] ?? 0.9) * 0.6, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    prop.group.add(gs);
+    if (!prop.group.name) prop.group.name = 'globe-spin';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

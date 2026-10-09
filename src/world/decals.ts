@@ -9083,3 +9083,105 @@ export function bottleBloom(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Bust cap — the grey cap a bust's crown and shoulders collect:
+ * a crown film, shoulder ledges, clean nose where hands steadied it. */
+export function bustCap(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // crown cap — the film across the top planes
+    const g = ctx.createLinearGradient(0, 4, 0, 40);
+    g.addColorStop(0, `rgba(150,144,132,${0.4 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 14, 4, 28, 40);
+    // shoulder ledges — dust that settled on the shelf of the chest
+    for (const sx of [-1, 1]) {
+      ctx.fillStyle = `rgba(150,144,132,${0.32 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(cx + sx * 14, 62 + rng.float() * 4, 9, 3 + rng.float() * 1.5, sx * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // clean nose — the wipe where a hand steadied the face
+    ctx.fillStyle = 'rgba(60,54,44,0.26)';
+    ctx.beginPath();
+    ctx.ellipse(cx + (rng.float() - 0.5) * 4, 30, 2.4, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // settled specks down the plinth
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.22 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 36, 70 + rng.float() * 22, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Piece squares — on a dusty board, the squares the pieces stood
+ * on stay clean: a checker of pale/kept squares in the film. */
+export function pieceSquares(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // overall dust film
+    ctx.fillStyle = `rgba(150,144,132,${0.34 + rng.float() * 0.14})`;
+    ctx.fillRect(0, 0, 96, 96);
+    const cell = 12;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        // a scatter of squares kept clean where a piece stood
+        if (rng.float() < 0.3) {
+          ctx.clearRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+          ctx.fillStyle = 'rgba(150,144,132,0.06)';
+          ctx.fillRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    }
+    // piece rings — faint circular edges where bases sat
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(12 + rng.float() * 72, 12 + rng.float() * 72, 3 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // edge film heavier where hands never reached
+    const g = ctx.createLinearGradient(0, 0, 0, 96);
+    g.addColorStop(0, 'rgba(140,134,122,0.14)');
+    g.addColorStop(1, 'rgba(140,134,122,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 24);
+  });
+}
+
+/** Globe spins — horizontal thumb-polish bands where hands turned
+ * the sphere: clean arcs at the waist, dust on the cap and foot. */
+export function globeSpin(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // cap dust — the top no one touches
+    ctx.fillStyle = `rgba(150,144,132,${0.36 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 16, 16, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // waist bands — the polish arcs of a thousand spins
+    for (let i = 0; i < 3; i++) {
+      const y = 42 + i * 10 + rng.float() * 3;
+      ctx.strokeStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2.4 + rng.float();
+      ctx.beginPath();
+      ctx.ellipse(cx, y, 15 + rng.float() * 2, 3.5, 0, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+    // dust film that survived between the bands
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(cx - 14 + rng.float() * 28, 30 + rng.float() * 50, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // foot ledge — dust on the stand collar
+    ctx.fillStyle = `rgba(140,134,122,${0.3 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 84, 10, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
