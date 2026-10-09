@@ -7106,3 +7106,50 @@ vanish while holding goods, that is a bug, not a design.
 **Harness note (walkers):** `bootSpill` checks pos-moved-per-update, so
 pinning an entity's pos in a spec disables its boot — drive walkers by
 letting them actually walk (spawn + update loop), not by teleporting.
+
+## Sprints 505–508 — the pile pushes back
+
+Sibling: my mechanics lane continues. This arc finishes the
+"the pile is physical" family — the floor's loose goods now push
+BACK on the house's mechanisms, not just move under them.
+
+- **s505 the fall boots what it lands on** — `Entity.stagger()` calls
+  `ctx.scatterSpill` at `threatPos()` — a body going down scatters the
+  pile under it like any stride. The staggered warden can kick its own
+  spill further: floor pinball is honest. First-fall only (`wasDown`
+  early-return); entities without spatial presence (`threatPos()` null)
+  can't scatter, same gate as the s415 impact emit.
+- **s506 the leaf sweeps the pile** — a swinging door leaf is a broom:
+  once per swing (crossing `openT 0.35` upward), spills in the arc band
+  (|lateral|≤0.85, |through|≤0.65) slide laterally clear via
+  `scatterSpot` — never into a collider. Space-keyed (`this.space`
+  picks the pile lists — under and main share x/z). Re-arms when the
+  leaf fully closes. `[the leaf sweeps the spill aside]` on a real
+  positional emit.
+- **s507 the pile jams the leaf** — the other half of the pair: a spill
+  the broom couldn't move (wedged against colliders, or re-piled
+  mid-swing) drags the swing to `stick 0.5` while it sits in the arc —
+  a doorway full of goods is a soft jam, not a lock. Gather the pile
+  mid-swing and the leaf speeds back the next frame. One warn cue per
+  door (`stuckAnnounced` `${id}-jam`): `[the leaf grinds on the spill —
+  the goods hold it]`.
+- **s508 the spill chokes the crank** — the s499 surge drags piles to
+  the drain spot; goods sitting within 0.55m of it slow the sink-out
+  to 55% until gathered. Emergent loop: surge delivers → choke engages
+  → drain slows → more tide time. `[the spill chokes the crank — the
+  water drains slow]` once per room (`drainChoked`).
+
+**Contract:** loose goods are now a bidirectional mechanic — the house
+moves them (sweep, tide, surge, boots) and they resist the house (jam,
+choke). Placement remains the only guarantee: `scatterSpot`'s collider
+guard means nothing gets pushed where a hand can't reach.
+
+**Traps:**
+- `updateDoors` iterates `streamer.builtIndices` over BOTH
+  `activeRooms()` and `branchRooms` — door-side mechanics must handle
+  branch leaves too.
+- `threatPos()` is null for entities without spatial presence — put
+  scatter/fall code behind `if (tp)` or it fires at (0,0,0).
+- Pile lists are space-keyed by KIND (`droppedPouches`/`droppedCoils`
+  = under; `droppedWraps`/`kickedWedges` = main) — always pick via
+  `this.space`, never scan both.

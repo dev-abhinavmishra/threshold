@@ -1973,6 +1973,9 @@ export class Game {
   private rousedSpawned = new Set<string>();
   /** Under doors that already announced their named-face stick. */
   private readonly stuckAnnounced = new Set<string>();
+  /** sprint 506 — doors that already broomed their threshold this swing;
+   *  cleared when the leaf comes fully shut again. */
+  private readonly leafSwept = new Set<string>();
   /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
    *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
   private playerTrail: Vec3[] = [];
@@ -6609,6 +6612,56 @@ export class Game {
     return null;
   }
 
+  /** sprint 506 — a swinging leaf is a broom: loose goods inside its arc
+   *  slide out along the leaf's own axis, away from the side they were
+   *  already on. One shove per swing (the caller gates on `leafSwept`),
+   *  collider-guarded like every other spill move. Space-keyed: under
+   *  doors sweep coin and coils, main doors sweep felt and chocks. */
+  private sweepSpillAtLeaf(d: Door): void {
+    const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);   // wall normal
+    const tx = nz, tz = -nx;                            // the leaf's axis
+    const lists: { x: number; z: number }[][] = this.space === 'under'
+      ? [this.droppedPouches, this.droppedCoils]
+      : [this.droppedWraps, this.kickedWedges];
+    let moved = false;
+    for (const list of lists) {
+      for (const w of list) {
+        const px = w.x - d.pos.x, pz = w.z - d.pos.z;
+        const lat = px * tx + pz * tz;
+        const thru = px * nx + pz * nz;
+        if (Math.abs(lat) > 0.85 || Math.abs(thru) > 0.65) continue;
+        const side = lat >= 0 ? 1 : -1;
+        const ang = Math.atan2(tz * side, tx * side);
+        const to = this.scatterSpot(w.x, w.z, ang, Math.max(0.2, 0.95 - Math.abs(lat)));
+        if (!to) continue;
+        w.x = to.x; w.z = to.z; moved = true;
+      }
+    }
+    if (moved) {
+      this.mintPouchDrops(); this.mintCoilDrops();
+      this.mintWrapDrops(); this.mintWedgeDrops();
+      this.sound.emit({ x: d.pos.x, y: 0.25, z: d.pos.z, intensity: 0.16,
+        category: 'item', caption: '[the leaf sweeps the spill aside]' });
+    }
+  }
+
+  /** sprint 507 — is any loose good still inside the leaf's sweep band?
+   *  Space-keyed like `sweepSpillAtLeaf`. */
+  private spillInLeafArc(d: Door): boolean {
+    const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);
+    const tx = nz, tz = -nx;
+    const lists: { x: number; z: number }[][] = this.space === 'under'
+      ? [this.droppedPouches, this.droppedCoils]
+      : [this.droppedWraps, this.kickedWedges];
+    for (const list of lists) {
+      for (const w of list) {
+        const px = w.x - d.pos.x, pz = w.z - d.pos.z;
+        if (Math.abs(px * tx + pz * tz) <= 0.85 && Math.abs(px * nx + pz * nz) <= 0.65) return true;
+      }
+    }
+    return false;
+  }
+
   private collectBlockers(): Aabb[] {
     const rooms = this.activeRooms();
     const out: Aabb[] = [];
@@ -6767,8 +6820,26 @@ export class Game {
             this.rousedSpawned.add(d.id);
             this.spawnRousedThrough(d);
           }
+          // sprint 506 — the leaf sweeps the pile: a swinging leaf is a
+          // broom — loose goods in its arc slide laterally clear, one
+          // shove per swing, never into a collider.
+          if (d.openT >= 0.35 && !this.leafSwept.has(d.id)) {
+            this.leafSwept.add(d.id);
+            this.sweepSpillAtLeaf(d);
+          }
+          // sprint 507 — the pile pushes back: a spill the broom couldn't
+          // move (wedged against colliders) drags on the leaf's swing —
+          // a doorway full of goods is a soft jam, not a lock.
+          if (d.openT > 0.35 && this.spillInLeafArc(d)) {
+            stick = Math.min(stick, 0.5);
+            if (!this.stuckAnnounced.has(`${d.id}-jam`)) {
+              this.stuckAnnounced.add(`${d.id}-jam`);
+              this.cue('door-locked', d.pos, '[the leaf grinds on the spill — the goods hold it]', 'warn');
+            }
+          }
         } else if (!d.opening && d.openT > 0) {
           d.openT = Math.max(0, d.openT - dt * 2.2);
+          if (d.openT <= 0) this.leafSwept.delete(d.id); // re-arm for the next swing
         }
         // animate leaf(es)
         const built = this.streamer.get(r.index);
@@ -7699,6 +7770,8 @@ export class Game {
   private drainedRooms = new Set<string>();
   private drainNoted = new Set<string>();
   private draining = new Map<number, number>();
+  /* — sprint 508: drained rooms whose crank a spill is choking — */
+  private drainChoked = new Set<number>();
   private wadeAcc = 0;
   private wadeMul = false;
   /* — the glass falls: armed chandeliers creak when you stand under
@@ -9736,7 +9809,21 @@ export class Game {
       }
       // Opened drains sink their sheets over a few seconds.
       for (const [idx, el] of this.draining) {
-        const t2 = el + dt;
+        // sprint 508 — the spill chokes the crank: loose goods dragged to
+        // the drain sit in it and slow the sink-out until they're gathered.
+        const spot0 = this.drainedSpots.get(idx);
+        let rate = 1;
+        if (spot0) {
+          for (const w of [...this.droppedPouches, ...this.droppedCoils]) {
+            if (Math.hypot(w.x - spot0.x, w.z - spot0.z) < 0.55) { rate = 0.55; break; }
+          }
+          if (rate < 1 && !this.drainChoked.has(idx)) {
+            this.drainChoked.add(idx);
+            this.cue('drawer', v3(spot0.x, 0.3, spot0.z),
+              '[the spill chokes the crank — the water drains slow]', 'warn');
+          }
+        }
+        const t2 = el + dt * rate;
         const sheet = this.streamer.get(idx)?.group.getObjectByName(`flood-${idx}`);
         if (sheet) sheet.position.y = Math.max(-0.06, 0.05 - t2 * 0.02);
         if (t2 > 6) { this.draining.delete(idx); this.drainedSpots.delete(idx); }

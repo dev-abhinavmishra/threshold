@@ -217,6 +217,10 @@ export abstract class Entity {
         x: tp.x, y: 0.3, z: tp.z, intensity: 0.5,
         category: 'impact', caption: '[something heavy goes down]',
       });
+      // sprint 505 — the fall boots what it lands on: a body going down
+      // scatters the pile under it, same as any stride. The staggered
+      // warden can kick its own spill further — floor pinball is honest.
+      this.ctx.scatterSpill?.(tp.x, tp.z);
     }
   }
 

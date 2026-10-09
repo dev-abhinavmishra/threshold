@@ -325,6 +325,30 @@ describe('Bellman (sprint 232)', () => {
     warden.dispose();
   });
 
+  it('the fall boots what it lands on — a staggered walker scatters the pile (s505)', () => {
+    const rooms = routeRooms();
+    const room = rooms[20];
+    const entry = room.doors[0].pos;
+    const px = room.origin.x, pz = room.origin.z;
+    const trail = Array.from({ length: 9 }, (_, i) =>
+      v3(entry.x + ((px - entry.x) * i) / 8, 0, entry.z + ((pz - entry.z) * i) / 8));
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20, playerTrail: trail });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; yaw: number };
+    player.pos = v3(px - 30, 0, pz - 30); player.yaw = 0;
+    const scatter = vi.fn(() => true);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const b = new Bellman();
+    b.spawn(ctx);
+    let t = 0; const ctxMut = ctx as { now: number };
+    // let it reach engage so threatPos() is live, then drop it
+    for (let i = 0; i < 800 && b.state !== 'engage'; i++) { ctxMut.now = t; b.update(0.05); t += 0.05; }
+    expect(b.state, 'it found the trail and engaged').toBe('engage');
+    scatter.mockClear();
+    b.stagger(3);
+    expect(scatter, 'the falling body asked the floor about loose goods').toHaveBeenCalled();
+    b.dispose();
+  });
+
   it('yields to sustained direct gaze without ever reaching you', () => {
     const rooms = routeRooms();
     const room = rooms[20];
