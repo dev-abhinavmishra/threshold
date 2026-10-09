@@ -7153,3 +7153,46 @@ guard means nothing gets pushed where a hand can't reach.
 - Pile lists are space-keyed by KIND (`droppedPouches`/`droppedCoils`
   = under; `droppedWraps`/`kickedWedges` = main) — always pick via
   `this.space`, never scan both.
+
+## Sprints 509–512 — the take is loud and heavy
+
+Sibling: the carried-goods arc — the take on your back now has a
+physical cost, a physical out, and a readout.
+
+- **s509 your pockets are loud** — ≥8 units of take (inventory units +
+  `hotImprints`) rattle on an upright stride: a real positional `item`
+  emit every ~2.6s while moving, intensity scaled by load (0.14→0.30),
+  taxed by the boards (`wantedActive` ×1.5), muffled by feltWrap's
+  `noiseMul` and the valve's `maskMul` like any step. Crouching silences
+  it. One-time teach cue `[your pockets are loud]`.
+- **s510 the take weighs on you** — `PlayerController.weightMul` joins
+  `speedMul` at the speed site (the field comment already said
+  "tonic/weights"): ≥16 units → 0.92, ≥28 → 0.85. Stacks honestly with
+  tonic's 1.12. One-time teach `[the take weighs on you — the stride
+  drags]`.
+- **s511 'Spill the take'** — crouched, drops every stackable good as
+  honest floor piles ahead of you: feltWrap→`droppedWraps` (stacked n),
+  doorChock→`kickedWedges` (singly), wireCoil→`droppedCoils` (singly).
+  Real unload — rattle and weight ease the frame it lands. Rifled
+  stock, marks, and coin stay: the take proper testifies — it doesn't
+  get put down (`[the marked stock stays sewn to your back]` when you
+  spill while marked). Floor readers can steal a spilled take like
+  any pile — that is the price of the unload.
+- **s512 'Weigh the take'** — free repeatable readout minted at ≥6
+  load, standing or crouched: `[N on your back · M marked coin
+  testifies · the stride drags]` — mirrors the house's book-asks.
+
+**Contract:** what you carry is physical — it rings, it weighs, it
+spills; what is MARKED never leaves except through the count's own
+hands (seize, locker, tag).
+
+**Traps:**
+- `noiseMul`/`maskMul` live on the controller and apply at the stride
+  emit (controller.ts:126) — any NEW player-worn emit must multiply
+  them in too, or felt/hiss stop covering that noise.
+- `speedMul` is stomped by timers (tonic, rug, wade) — a persistent
+  modifier belongs on a separate field (`weightMul`) multiplied at the
+  speed site, not inside `speedMul` or it gets reset away.
+- Pile kinds are per-good with per-kind gather yields — an inventory
+  item without a pile kind can't spill; only stackables (wrap/chock/
+  coil) have round-trip fidelity.
