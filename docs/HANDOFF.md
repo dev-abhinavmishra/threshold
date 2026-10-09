@@ -1,5 +1,16 @@
 # THRESH
 
+## Sprint 557–559 — the till kept the scratch, the saw kept its dust & the case kept the journey
+
+Nine more prop decals: `tillScratch` coin rings + drawer rub on registers and
+tills, `screenGhost` burnt frame + static residue on televisions, `splatFilm`
+boil-over spatter + keypad wear on microwaves, `sawdustFan` dust drift + kerf
+under handsaws, `oilyGrip` palm sheen + finger ghosts on hand tools
+(wrench/hammer/pliers/screwdrivers), `haftShine` hand-burnish on long handles
+(pickaxe/sledge/spade/axe/broom/machete), `strapScuff` strap shadows + sticker
+ghosts on suitcases, `toeRubs` plate arcs + wheel trails under hand trucks,
+`mailDust` paper film + torn twine on mail carts.
+
 ## Sprint 554–556 — the barrel kept the hoop, the jug sweated & the case kept its dust
 
 Nine more prop decals: `hoopRust` rust bands on barrels, `ashRing` crumb spill

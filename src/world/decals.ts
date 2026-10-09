@@ -10745,3 +10745,92 @@ export function haftShine(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+// ---------- sprint 559: the case kept the journey, the truck kept its toes ----------
+
+export function strapScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // strap shadows — twin dark bands where the belts bit
+    for (const x of [20, 44]) {
+      ctx.fillStyle = `rgba(52,42,32,${0.28 + rng.float() * 0.18})`;
+      ctx.fillRect(x - 2, 4, 4, 40);
+      // buckle scratch arcs beside each band
+      ctx.strokeStyle = `rgba(150,140,120,${0.3 + rng.float() * 0.18})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(x + 6, 12 + rng.float() * 20, 3, 0, Math.PI);
+      ctx.stroke();
+    }
+    // corner knocks — pale rubs at the four heels
+    for (const [cx, cy] of [[8, 8], [56, 8], [8, 40], [56, 40]]) {
+      ctx.fillStyle = `rgba(180,168,146,${0.24 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + rng.float() * 3, cy + rng.float() * 3, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // sticker ghosts — pale rectangles where travel labels peeled away
+    for (let i = 0; i < 2; i++) {
+      ctx.fillStyle = `rgba(190,182,162,${0.2 + rng.float() * 0.14})`;
+      ctx.fillRect(26 + rng.float() * 14, 14 + i * 14, 10, 6);
+    }
+  });
+}
+
+export function toeRubs(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // plate rubs — twin arcs the toe plate ground into floors
+    for (const x of [18, 42]) {
+      ctx.strokeStyle = `rgba(140,132,118,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, 30, 10 + rng.float() * 3, Math.PI * 0.1, Math.PI * 0.9);
+      ctx.stroke();
+    }
+    // wheel trails — twin tracks run off the back edge
+    ctx.strokeStyle = `rgba(64,56,46,${0.24 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    for (const x of [20, 44]) {
+      ctx.beginPath();
+      ctx.moveTo(x, 6);
+      ctx.lineTo(x + rng.float() * 4 - 2, 30);
+      ctx.stroke();
+    }
+    // shoe scuffs — the sole stamps where loads were righted
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(80,72,60,${0.22 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(12 + rng.float() * 40, 34 + rng.float() * 8, 3.4, 1.6, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+export function mailDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // paper dust — grey film sifted from a thousand envelopes
+    for (let i = 0; i < 46; i++) {
+      ctx.fillStyle = `rgba(172,166,152,${0.12 + rng.float() * 0.14})`;
+      ctx.fillRect(6 + rng.float() * 52, 6 + rng.float() * 36, 1.8, 1.2);
+    }
+    // corner curls — labels worked loose at the edges
+    for (let i = 0; i < 3; i++) {
+      const x = 10 + rng.float() * 36, y = 10 + rng.float() * 22;
+      ctx.fillStyle = `rgba(200,192,172,${0.3 + rng.float() * 0.18})`;
+      ctx.fillRect(x, y, 8, 5);
+      ctx.fillStyle = 'rgba(90,84,72,0.4)';
+      ctx.fillRect(x + 6, y + 3, 2, 2);
+    }
+    // ink smudge — a franking stamp that never dried
+    ctx.fillStyle = `rgba(52,56,72,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(30 + rng.float() * 10, 30 + rng.float() * 8, 5, 2.6, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // string tail — twine off a torn parcel
+    ctx.strokeStyle = `rgba(120,110,90,${0.34 + rng.float() * 0.2})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(46, 8);
+    ctx.bezierCurveTo(50, 16, 44, 22, 52, 30);
+    ctx.stroke();
+  });
+}
