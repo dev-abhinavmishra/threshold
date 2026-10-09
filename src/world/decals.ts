@@ -8709,3 +8709,132 @@ export function rackWeight(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Can ring — the rust ring a stored can leaves on its shelf: an
+ * orange circle, oxide dust, a few stacked rings from re-sets. */
+export function canRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // stacked rings — re-set cans leave concentric rust circles
+    const rings = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < rings; i++) {
+      const cx = 32 + (rng.float() - 0.5) * 12;
+      const cy = 32 + (rng.float() - 0.5) * 12;
+      const r = 8 + rng.float() * 10;
+      ctx.strokeStyle = `rgba(120,70,38,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 2 + rng.float() * 1.2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      // wet ghost inside the ring
+      ctx.fillStyle = `rgba(110,66,36,${0.14 + rng.float() * 0.1})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // oxide dust — rust powder scattered around
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 14 + rng.float() * 16;
+      ctx.fillStyle = `rgba(140,82,44,${0.3 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 0.6 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // drip — one orange run off the shelf edge
+    if (rng.bool(0.5)) {
+      ctx.strokeStyle = 'rgba(120,70,38,0.4)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(36 + rng.float() * 8, 50);
+      ctx.lineTo(36 + rng.float() * 6, 62);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Beam dust — the ridge a beam keeps where no hand ever reaches:
+ * a thick grey film with a clean keel line on top, cobweb bites. */
+export function beamDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 48, (ctx) => {
+    const by = 20 + rng.float() * 6;
+    // the film — thick settled dust along the beam top
+    ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(4, by, 120, 5);
+    // clumps — heavier drifts at the joist pockets
+    for (let i = 0; i < 10; i++) {
+      const bx = 10 + rng.float() * 108;
+      ctx.fillStyle = `rgba(140,134,122,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(bx, by + 2, 4 + rng.float() * 5, 2.4 + rng.float() * 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the keel — a slightly brighter line down the middle
+    ctx.strokeStyle = `rgba(180,174,162,${0.24 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(8, by + 1.5);
+    ctx.lineTo(120, by + 1.5);
+    ctx.stroke();
+    // cobweb bites — pale thread fans at the beam ends
+    for (const ex of [8, 118]) {
+      if (!rng.bool(0.6)) continue;
+      for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = `rgba(200,196,186,${0.3 + rng.float() * 0.2})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(ex, by + 4);
+        ctx.lineTo(ex + (ex < 20 ? 10 + rng.float() * 8 : -10 - rng.float() * 8), by + 10 + rng.float() * 12);
+        ctx.stroke();
+      }
+    }
+    // fallen dust flecks beneath
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.18 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 112, by + 8 + rng.float() * 18, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Peg wear — the shine a peg keeps where coats always hung: dark
+ * rubbed tips, sag shadows below, polish arcs where sleeves slid. */
+export function pegWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32;
+    // peg halo — a rubbed ring around the peg's mount
+    ctx.strokeStyle = `rgba(50,42,34,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, 26, 6 + rng.float(), 0, Math.PI * 2);
+    ctx.stroke();
+    // the tip shine — bright wear on the peg's end
+    ctx.fillStyle = `rgba(190,180,160,${0.3 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 26, 2.6, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // sag shadow — the shade a heavy coat left pulling down
+    const g = ctx.createLinearGradient(0, 30, 0, 74);
+    g.addColorStop(0, `rgba(46,38,32,${0.24 + rng.float() * 0.14})`);
+    g.addColorStop(1, 'rgba(46,38,32,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, 44, 10 + rng.float() * 4, 22 + rng.float() * 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // polish arcs — where sleeves slid past the peg going up and off
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(170,160,140,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, 26, 8 + i * 4 + rng.float() * 2, Math.PI * (0.6 + rng.float() * 0.3), Math.PI * (1.3 + rng.float() * 0.2));
+      ctx.stroke();
+    }
+    // lint at the base
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(150,142,128,${0.2 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 8 + rng.float() * 16, 66 + rng.float() * 22, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2382,6 +2382,35 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     rw.position.set(0, (dc?.[1] ?? 1.5) * 0.55, (dc?.[2] ?? 0.3) / 2 + 0.006);
     prop.group.add(rw);
     if (!prop.group.name) prop.group.name = 'rack-weight';
+  }
+  // The cans ringed rust — orange circles under the tins that sat
+  // too long on their shelves.
+  const CANS: ReadonlySet<PropSpec['kind']> = new Set(['foodCans', 'oilCan', 'oilTin', 'rustCan', 'sprayCans', 'wateringCan', 'jerrycan', 'jerrycanP']);
+  if (CANS.has(spec.kind) && rng.bool(0.45)) {
+    const cr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.22, 0.22),
+      new THREE.MeshStandardMaterial({ map: canRing(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cr.name = 'can-ring';
+    cr.userData.decalMat = true;
+    cr.rotation.x = -Math.PI / 2;
+    cr.position.set((rng.float() - 0.5) * 0.15, 0.003, (rng.float() - 0.5) * 0.15);
+    prop.group.add(cr);
+    if (!prop.group.name) prop.group.name = 'can-ring';
+  }
+  // The pegs shone — rubbed tips and sag shadows on rails that
+  // carried coats every day.
+  if ((spec.kind === 'pegRail' || spec.kind === 'towelRail' || spec.kind === 'ceilingHook') && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const pw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.28),
+      new THREE.MeshStandardMaterial({ map: pegWear(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    pw.name = 'peg-wear';
+    pw.userData.decalMat = true;
+    pw.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    prop.group.add(pw);
+    if (!prop.group.name) prop.group.name = 'peg-wear';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
