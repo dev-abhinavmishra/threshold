@@ -1588,6 +1588,8 @@ export class Game {
   private spillTickT = 0;
   private spillTickI = 0;
   private spillKickCd = 0;   // sprint 493 — one kick per beat
+  private spillTideT = 0;    // sprint 498 — the water pulls slow
+  private spillTideCueT = 0;
   private spillPouch(pos: Vec3, n: number, hot: number): void {
     this.droppedPouches.push({ x: pos.x, z: pos.z, n, hot });
     this.mintPouchDrops();
@@ -8897,6 +8899,43 @@ export class Game {
         }
       }
     }
+
+    // sprint 498 — the tide takes the spill: a pile left in a flooded
+    // room drifts with the water. Slow, deterministic per-room pull,
+    // collider-guarded, and it stops at the dry edge. Drain the room
+    // and the spill settles where the water left it — the under reclaims
+    // slowly, never re-lays.
+    this.spillTideT -= dt;
+    if (this.spillTideT <= 0 && this.droppedPouches.length) {
+      this.spillTideT = 0.5;
+      let drifted: { x: number; z: number } | null = null;
+      for (const w of this.droppedPouches) {
+        const rm = this.route?.underRooms.find((r) =>
+          Math.abs(w.x - r.origin.x) <= r.width / 2 && Math.abs(w.z - r.origin.z) <= r.depth / 2);
+        if (!rm?.flooded || this.drainedRooms.has(`under:${rm.index}`)) continue;
+        // the room's own coords pick the pull — deterministic like the kick
+        const ang = ((rm.origin.x * 12.9898 + rm.origin.z * 78.233) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+        const nx = w.x + Math.cos(ang) * 0.028, nz = w.z + Math.sin(ang) * 0.028;
+        // it stops at the dry edge and never drifts into furniture
+        if (Math.abs(nx - rm.origin.x) > rm.width / 2 || Math.abs(nz - rm.origin.z) > rm.depth / 2) continue;
+        let blocked = false;
+        for (const cb of rm.colliders)
+          if (cb.minY < 0.45 && aabbContainsPoint(cb, nx, 0.2, nz)) { blocked = true; break; }
+        if (blocked) continue;
+        w.x = nx; w.z = nz;
+        drifted ??= { x: nx, z: nz };
+      }
+      if (drifted) {
+        this.mintPouchDrops(); // the verbs ride the moving pile
+        // the water tells on it — faint, near-ear only
+        if (v3dist(v3(drifted.x, 0, drifted.z), this.player.pos) < 4 && this.spillTideCueT <= 0) {
+          this.spillTideCueT = 2.6;
+          this.sound.emit({ x: drifted.x, y: 0.15, z: drifted.z, intensity: 0.12,
+            category: 'item', caption: '[coin slides in the water]' });
+        }
+      }
+    }
+    this.spillTideCueT -= dt;
 
     // Breadcrumb trail — where the player has actually walked, ~1.15m apart.
     // The Bellman (and anything else that trails you) reads these.
