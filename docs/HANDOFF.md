@@ -5514,6 +5514,26 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 502–504 — the ladder's feet, the landing wore a turn & the bell dulled
+
+Sprint 502: `ladderFeet` — pad pits + drag scars under ladders
+(~45%); `viceGrit` — filings + oil crescents under bench vices and
+drill presses (~45%); `barrelRings` — hoop rust + stave weeps
+under barrels and fuel cans (~40%).
+
+Sprint 503: `landingWear` — pivoting heel arcs at stair landings
+and newels (~50%); `cageRattle` — rust flake falls under records
+cages and cage lockers (~50%); `callGrub` — finger halo beside
+lifts and dumb-waiters (~45%).
+
+Sprint 504: `spinDust` — lanolin film + fiber wisps on spinning
+wheels (~45%); `counterBelt` — coin-slide scratches + elbow polish
+on counters (~45%); `bellTap` — palm-polished cap on counter bells
+(~50%).
+
+Gates: tsc, lint, generation tests (9 new, 512 total). Full
+suite + sim + build before push. Dressing only — no e2e leg.
+
 ## Sprint 499–501 — the head kept its oil, the ribbon kept the words & the plants died standing
 
 Sprint 499: `headGrease` — hair-oil bloom on headboards (~40%);
