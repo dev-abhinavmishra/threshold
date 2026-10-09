@@ -7716,3 +7716,35 @@ way, it interrogates the floor. Sign is dust; light is the question.
   the whole pile (doused, dead). Two hooks, don't broaden the first.
 - Beam-read marks are `readBy:['player']`-consumed exactly like ankle
   reads — the beam doesn't get a second narrate walking in later.
+
+## Sprints 561–564 — the eye drinks your beam
+
+- **s561 the light pins the pan** — a held lamp aimed at a live
+  watcher (`beamCovers(w.pos, w.range+2, 0.7)`) pins `facing` to the
+  FIRST bearing the light came from (`dazzleBearing`). Your beam
+  outranks a dropped lamp's pull — you're actively working the eye.
+  The play: light it, then slip off the bearing — the sweep can't
+  find you on its dark edge. Standing ON the pinned bearing and
+  moving still settles you — the light testifies while it drinks.
+- **s562 the blink tells** — drop the beam and the dazzle holds ~2.5s
+  of stale bearing, then '[the eye blinks — its pan runs again]' — the
+  window is audible, not guesswork.
+- **s563 the dazzle signs** — hold light 4s+ cumulative on an eye and
+  `signWork(w.pos, 'eye:N')` pushes 'work' sign — the floor keeps the
+  dazzle for hunters to smell, same convention as lamp-work and grafts.
+- **s564 the blink is a full reset** — a dazzle you escape costs the
+  eye its half-won read: `settle = 0` when it blinks back. Clean
+  escape if you're off the bearing before the pan resumes.
+
+Contract: the beam's third job — interrogator (s557-560) AND
+countermeasure. The eye drinks any light pointed at it, yours
+included; but light is testimony — drink long enough and the floor
+signs the work.
+
+**Traps:**
+- New watcher fields MUST be initialized in `addFromRoom`'s push
+  literal — `undefined += dt` poisons to NaN silently (dazzleAcc).
+- The pin is FIRST-contact, not tracking: `if (!isFinite(dazzleBearing))`
+  — tracking would make lit+sliding safe only while lit; pinned makes
+  the whole episode readable (lit = stares where you were, not where
+  you are — except you can slide dark-edge while still lit).

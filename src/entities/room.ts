@@ -1047,7 +1047,12 @@ export class HazardField {
   watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
     arc: number; half: number; range: number; cycle: number; phase0: number;
     dead: boolean; settle: number; lastReport: number; warnT: number;
-    filed: boolean; lampCued: boolean }[] = [];
+    filed: boolean; lampCued: boolean;
+    /** sprint 561 — the dazzle: bearing the beam lit the eye from, the
+     *  last frame it drank, seconds drunk this episode, whether the
+     *  work was signed, and whether the drink was announced. */
+    dazzleBearing: number; dazzleT: number; dazzleAcc: number;
+    dazzleSigned: boolean; dazzleCued: boolean }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
   /** sprint 560 — the beam's charge readout, per lamp position, on a
@@ -1111,6 +1116,8 @@ export class HazardField {
         range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
         phase0: hsh * 20,
         dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false, lampCued: false,
+        dazzleBearing: NaN, dazzleT: -10, dazzleAcc: 0,
+        dazzleSigned: false, dazzleCued: false,
       });
     }
   }
@@ -1226,6 +1233,47 @@ export class HazardField {
           ctx.cue('steam-hiss', w.pos, '[the eye drinks the light — its pan fixes on the lamp]', { severity: 'info' });
         }
       } else w.lampCued = false;
+      // sprint 561-563 — the eye drinks YOUR beam too: a held lamp
+      // aimed at a live eye pins its pan to the bearing the light came
+      // from. It stares at where the light WAS — slip off that bearing
+      // and the sweep is blind to you until it blinks back (~2.5s).
+      // Your beam outranks a dropped lamp's pull — you're actively
+      // working the eye. Hold the light 4s+ and the floor keeps the
+      // work: 'work' sign hunters can smell (s563).
+      if (live) {
+        if (ctx.beamCovers?.(w.pos, w.range + 2, 0.7)) {
+          // it pins to the FIRST bearing the light came from and holds
+          // there while it drinks — the play is light it, then slip
+          // off the bearing; the sweep can't find you on its dark edge
+          if (!Number.isFinite(w.dazzleBearing)) w.dazzleBearing = Math.atan2(dx, dz);
+          w.dazzleT = ctx.now;
+          w.dazzleAcc += dt;
+          if (!w.dazzleCued) {
+            w.dazzleCued = true;
+            ctx.cue('steam-hiss', w.pos, '[the eye drinks your light — it stares where you stood]', { severity: 'warn' });
+          }
+          if (!w.dazzleSigned && w.dazzleAcc > 4) {
+            w.dazzleSigned = true;
+            ctx.signWork?.(w.pos, `eye:${w.room}`);
+            ctx.cue('steam-hiss', w.pos, '[the eye\'s stare was worked — the floor keeps the sign]', { severity: 'info' });
+          }
+        } else if (ctx.now - w.dazzleT > 2.5) {
+          // sprint 562 — the blink tells: the sweep coming back online
+          // is audible to whoever held it — your window is closing
+          if (Number.isFinite(w.dazzleBearing) && w.dazzleCued) {
+            ctx.cue('steam-hiss', w.pos, '[the eye blinks — its pan runs again]', { severity: 'info' });
+          }
+          // sprint 564 — the blink is a full reset: whatever half-
+          // settled read it took while drinking is lost with the light
+          w.settle = 0;
+          w.dazzleBearing = NaN; w.dazzleAcc = 0;
+          w.dazzleSigned = false; w.dazzleCued = false;
+        }
+        if (Number.isFinite(w.dazzleBearing)) {
+          facing = w.dazzleBearing
+            + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
+        }
+      }
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
