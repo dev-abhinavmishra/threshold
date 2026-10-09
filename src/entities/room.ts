@@ -1824,6 +1824,7 @@ export class Inspector extends Entity {
       c.damagePlayer(8, 'inspector', 'It will not be slowed — stay out of its way or stay out of sight.');
       c.cue('luggage-thud', this.pos, '[it shoulders past]', { severity: 'warn' });
     }
+  this.bootSpill(this.pos);
   }
 
   override threatPos(): Vec3 | null {
@@ -2132,6 +2133,7 @@ export class Commissionaire extends Entity {
       // The lantern arm swings gently while it sweeps, sharp when it runs.
       if (this.lampSwing) this.lampSwing.rotation.x = Math.sin(c.now * (this.chasing ? 9 : 1.8)) * (this.chasing ? 0.3 : 0.12);
     }
+  this.bootSpill(this.pos);
   }
 
   override threatPos(): Vec3 | null {

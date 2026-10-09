@@ -187,6 +187,7 @@ export class Collector extends Entity {
       default: break;
     }
     if (this.mesh) this.mesh.position.set(this.pos.x, 0, this.pos.z);
+  this.bootSpill(this.pos);
   }
 
   private step(target: Vec3, speed: number, dt: number): void {

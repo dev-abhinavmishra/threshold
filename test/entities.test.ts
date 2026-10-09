@@ -293,6 +293,38 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('every walker boots it — the sweep scatters the pile it never reads (s503)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(rooms[20].origin.x - 40, 0, rooms[20].origin.z - 40);
+    const scatter = vi.fn(() => false);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    let t = 0; let steps = 0;
+    const ctxMut = ctx as { now: number };
+    while (sw.state !== 'done' && steps++ < 3000) { ctxMut.now = t; sw.update(0.05); t += 0.05; }
+    expect(scatter, 'the pass asked the floor about loose goods').toHaveBeenCalled();
+    sw.dispose();
+  });
+
+  it('the floorkeeper never boots — its stride reads before it scatters (s503)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(rooms[28].entryPos.x - 30, 0, rooms[28].entryPos.z - 30);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const scatter = vi.fn(() => false);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const warden = new Warden();
+    warden.spawn(ctx);
+    let t = 0;
+    for (let i = 0; i < 400; i++) t = step(warden, ctx, 0.05, t);
+    expect(scatter, 'the reader pockets — it never boots blindly').not.toHaveBeenCalled();
+    warden.dispose();
+  });
+
   it('yields to sustained direct gaze without ever reaching you', () => {
     const rooms = routeRooms();
     const room = rooms[20];
@@ -772,6 +804,26 @@ describe('Warden (sprint 234)', () => {
     expect(w.pocketedChocks).toBe(0);
     expect(spilled).toEqual([1]);
     warden.dispose();
+  });
+
+  it('the floorkeeper settles — pocketed goods spill where it went under (s502)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const dropped: number[] = [];
+    const chocks: number[] = [];
+    (ctx as { dropWraps?: EntityCtx['dropWraps'] }).dropWraps = (_p, n) => { dropped.push(n); };
+    (ctx as { spillChocks?: EntityCtx['spillChocks'] }).spillChocks = (_p, n) => { chocks.push(n); };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const w = warden as unknown as { pocketed: number; pocketedChocks: number };
+    w.pocketed = 2; w.pocketedChocks = 1;
+    // a quiet settle must not eat confiscated goods — confiscated, not
+    // destroyed (dispose() runs onDone)
+    warden.dispose();
+    expect(dropped, 'the felt spills loose on settle').toEqual([2]);
+    expect(chocks, 'the chocks spill loose on settle').toEqual([1]);
+    expect(w.pocketed).toBe(0);
+    expect(w.pocketedChocks).toBe(0);
   });
 
   it('doubts the mark — sign on a wiped floor is not investigated (sprint 291)', () => {
@@ -1957,6 +2009,25 @@ describe('Grafter seam coin (sprints 476-480)', () => {
     expect(ctx.spillPouch, 'the spill hands the pouch to the floor').toHaveBeenCalledWith(expect.anything(), 2, 1);
     expect((g as unknown as { pouch: number }).pouch, 'the pouch is empty after').toBe(0);
     g.dispose();
+  });
+
+  it('the settle spills too — a pouch on its back sinks as floor loot (s501)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -3.2; ctx.player.pos.z = -3.2;
+    ctx.player.protection = 'hidden';
+    ctx.spillPouch = vi.fn();
+    const g = new Grafter();
+    g.spawn(ctx);
+    const leaf = v3(3.6, 0, 0);
+    g.takeCoin(1, leaf);
+    g.takeCoin(0, leaf);
+    // it settles peacefully — no stagger — and the coin must not vanish:
+    // the under relocates, never destroys (dispose() runs onDone)
+    g.dispose();
+    expect(ctx.spillPouch, 'a settled grafter leaves its coin on the floor')
+      .toHaveBeenCalledWith(expect.anything(), 2, 1);
+    expect((g as unknown as { pouch: number }).pouch, 'the pouch is empty after').toBe(0);
   });
 
   it('a fed hand remembers — the paid leaf keeps its camp past a sighting', async () => {

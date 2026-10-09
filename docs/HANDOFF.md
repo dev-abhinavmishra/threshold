@@ -7069,3 +7069,40 @@ relocation; claim = read + stoop + take.
 signs), DRAG it (slow, quiet), the WATER pulls it (tide + drain surge),
 and WALKERS boot it (scatterSpill). It never teleports, never lands in
 a collider, and the books count it at the end.
+
+## Sprints 501–504 — the under relocates, never destroys
+
+- **s501 the settle spills too** — a grafter going under with coin on its
+  back used to eat the pouch: `onDone` planted the coil but dropped the
+  pouch silently. Now `spillPouch` empties it where the hands settled —
+  marked coin included, `[the coin sinks with the hands — it lies where
+  they settled]`.
+- **s502 the floorkeeper's pockets empty** — same bug, bigger fish: the
+  warden's `onDone` removed the mesh but kept `pocketed`/`pocketedChocks`
+  in memory, so a quiet despawn (player left the room, or it expired)
+  destroyed every confiscation it was carrying. Pocketed goods now spill
+  at the settle spot — a confiscated wrap/chock is only ever *moved*,
+  so leaving the room gives the take back.
+- **s503 every walker boots it for real** — s495 claimed "every walker"
+  but only the bellman and reposter scattered. `Entity.bootSpill(at)`
+  joins the base: fired at the end of `onUpdate`, it calls `scatterSpill`
+  only when the entity's position actually moved — a stride boots, a
+  stand doesn't. Wired into the sweep (`CorridorRunner`), `Pursuer`,
+  `Swamper`, `Hauler`, `Laundress`, `Auditor`, `Detective`, `Filer`,
+  `Inspector`, `Commissionaire`, `Collector`, `Singer`, `Curator`.
+  The floor-READERS stay deliberately off it — warden, grafter, and the
+  checker's lamp take piles, they don't kick them (spec pins the warden
+  never calling `scatterSpill` mid-stride).
+- **s504 the coil rides the water** — the s498 tide and s499 surge only
+  pulled `droppedPouches`; `droppedCoils` sat static in flood water
+  (a wire coil was somehow glued to a flooded floor). Both movers now
+  sweep both under-floor kinds.
+
+**Contract:** nothing the floor holds is destroyed — it moves. Carried
+goods spill at the settle point; loose goods scatter under any stride
+but a reader's; the water takes every loose kind. If an entity would
+vanish while holding goods, that is a bug, not a design.
+
+**Harness note (walkers):** `bootSpill` checks pos-moved-per-update, so
+pinning an entity's pos in a spec disables its boot — drive walkers by
+letting them actually walk (spawn + update loop), not by teleporting.
