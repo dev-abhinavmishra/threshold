@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2281,6 +2281,48 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bt.position.set(0, (dc?.[1] ?? 0.1) + 0.004, 0);
     prop.group.add(bt);
     if (!prop.group.name) prop.group.name = 'bell-tap';
+  }
+  // The pews wore the knees — sit-shine, shin kicks and a hymnal
+  // groove on the bench fronts.
+  if ((spec.kind === 'chapelPew' || spec.kind === 'pewRow') && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const pw = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.4),
+      new THREE.MeshStandardMaterial({ map: pewWear(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    pw.name = 'pew-wear';
+    pw.userData.decalMat = true;
+    pw.position.set(0, (dc?.[1] ?? 0.6) * 0.5, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    prop.group.add(pw);
+    if (!prop.group.name) prop.group.name = 'pew-wear';
+  }
+  // The kneeler kept the weight — elbow cups on the rail, knee dents
+  // in the pad.
+  if (spec.kind === 'prayerKneeler' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const kr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.42),
+      new THREE.MeshStandardMaterial({ map: kneelRubs(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    kr.name = 'kneel-rubs';
+    kr.userData.decalMat = true;
+    kr.position.set(0, (dc?.[1] ?? 0.7) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    prop.group.add(kr);
+    if (!prop.group.name) prop.group.name = 'kneel-rubs';
+  }
+  // The hatch kept its ring — pull-ring rust and the seam's dust
+  // frame on hatches nobody opens.
+  if (spec.kind === 'hatch' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const hr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: hatchRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    hr.name = 'hatch-ring';
+    hr.userData.decalMat = true;
+    hr.position.set(0, (dc?.[1] ?? 1.0) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
+    prop.group.add(hr);
+    if (!prop.group.name) prop.group.name = 'hatch-ring';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

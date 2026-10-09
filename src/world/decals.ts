@@ -8262,3 +8262,160 @@ export function bellTap(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The pews wore the knees — shin-kick scuffs along the pew foot
+ *  and the sit-line's shine where congregations sat a century. */
+export function pewWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // The sit-shine — a long dull polish along the seat's leading edge.
+    const shine = g.createLinearGradient(0, 8, 0, 16);
+    shine.addColorStop(0, 'rgba(180,160,132,0)');
+    shine.addColorStop(0.5, `rgba(186,166,138,${0.3 + rng.float() * 0.15})`);
+    shine.addColorStop(1, 'rgba(186,166,138,0)');
+    g.fillStyle = shine;
+    g.fillRect(8, 8, 80, 8);
+    // Shin kicks — the drag marks of a hundred shifts and kneels.
+    for (let i = 0; i < 9; i++) {
+      g.save();
+      g.translate(14 + rng.float() * 68, 30 + rng.range(-5, 6));
+      g.rotate(rng.range(-0.3, 0.3));
+      g.fillStyle = `rgba(140,120,94,${0.16 + rng.float() * 0.22})`;
+      g.fillRect(-4, -0.9, 8 + rng.float() * 5, 1.8);
+      g.restore();
+    }
+    // Hymnal groove — the ledge line where the books always rest.
+    g.strokeStyle = `rgba(90,74,54,${0.3 + rng.float() * 0.2})`;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(10, 20 + rng.range(-1, 1));
+    g.lineTo(86, 20 + rng.range(-1, 1));
+    g.stroke();
+    // Knee dents — paired dimples where the kneelers' shins press.
+    for (const kx of [30, 62]) {
+      if (!rng.bool(0.75)) continue;
+      for (const off of [-3, 3]) {
+        g.fillStyle = 'rgba(58,46,34,0.4)';
+        g.beginPath();
+        g.ellipse(kx + off + rng.range(-1, 1), 36 + rng.range(-1.5, 1.5), 1.4, 0.9, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    // The floor side's dust ridge — swept grit under the seat lip.
+    g.fillStyle = `rgba(110,96,74,${0.2 + rng.float() * 0.14})`;
+    g.fillRect(10, 42 + rng.range(-1, 1), 76, 1.6);
+    // Graffiti ghosts — knife initials scrubbed but still readable.
+    if (rng.bool(0.4)) {
+      g.strokeStyle = 'rgba(120,102,78,0.3)';
+      g.lineWidth = 0.5;
+      const gx = 20 + rng.float() * 50;
+      g.strokeRect(gx, 12 + rng.range(-2, 2), 3, 3.5);
+      g.beginPath();
+      g.moveTo(gx + 5, 12); g.lineTo(gx + 5, 15.5);
+      g.moveTo(gx + 4, 13.5); g.lineTo(gx + 6, 13.5);
+      g.stroke();
+    }
+  });
+}
+
+/** The kneeler kept the weight — elbow shine on the rail and the
+ *  deep soft dents in the pad where the knees go. */
+export function kneelRubs(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The rail's sheen — forearms polished a band along the rest.
+    const sheen = g.createLinearGradient(0, 8, 0, 18);
+    sheen.addColorStop(0, 'rgba(190,172,142,0)');
+    sheen.addColorStop(0.5, `rgba(196,178,148,${0.35 + rng.float() * 0.15})`);
+    sheen.addColorStop(1, 'rgba(196,178,148,0)');
+    g.fillStyle = sheen;
+    g.fillRect(12, 8, 72, 10);
+    // Elbow cups — twin darker rests where the elbows dig in.
+    for (const ex of [30, 64]) {
+      const cup = g.createRadialGradient(ex, 13, 1, ex, 13, 7);
+      cup.addColorStop(0, 'rgba(120,102,76,0.45)');
+      cup.addColorStop(1, 'rgba(120,102,76,0)');
+      g.fillStyle = cup;
+      g.beginPath();
+      g.ellipse(ex + rng.range(-2, 2), 13, 7, 4, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    // The pad's memory — knee dents sunk where the praying happens.
+    for (const kx of [34, 60]) {
+      const dent = g.createRadialGradient(kx, 46, 1, kx, 46, 10);
+      dent.addColorStop(0, 'rgba(56,44,32,0.5)');
+      dent.addColorStop(0.65, 'rgba(56,44,32,0.22)');
+      dent.addColorStop(1, 'rgba(56,44,32,0)');
+      g.fillStyle = dent;
+      g.beginPath();
+      g.ellipse(kx + rng.range(-2, 2), 46 + rng.range(-1, 1), 10, 7, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Seam crease — the pad's own fold line across the middle.
+    g.strokeStyle = 'rgba(46,36,26,0.4)';
+    g.lineWidth = 0.9;
+    g.beginPath();
+    g.moveTo(14, 46 + rng.range(-0.8, 0.8));
+    g.quadraticCurveTo(48, 47 + rng.range(-1, 1), 82, 46 + rng.range(-0.8, 0.8));
+    g.stroke();
+    // Finger rubs on the rail edge — the grip before standing.
+    for (let i = 0; i < 5; i++) {
+      g.strokeStyle = `rgba(160,144,118,${0.16 + rng.float() * 0.18})`;
+      g.lineWidth = 0.5;
+      g.beginPath();
+      g.arc(24 + rng.float() * 48, 16 + rng.range(-1, 1), 2.5 + rng.float() * 1.5, Math.PI * 0.9, Math.PI * 1.9);
+      g.stroke();
+    }
+  });
+}
+
+/** The hatch kept its ring — pull-ring rust and the dust seam that
+ *  frames the door nobody opens. */
+export function hatchRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const hx = 50 + rng.range(-8, 8);
+    const hy = 34 + rng.range(-8, 8);
+    // The pull-ring's orbit — rust circle where the ring swings.
+    g.strokeStyle = `rgba(124,68,30,${0.45 + rng.float() * 0.2})`;
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.arc(hx, hy, 6 + rng.float() * 1.5, 0, Math.PI * 2);
+    g.stroke();
+    // Rust sprinkle inside the orbit — what the ring sheds.
+    for (let i = 0; i < 10; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 4 + rng.float() * 6;
+      g.fillStyle = `rgba(150,86,38,${0.3 + rng.float() * 0.3})`;
+      g.fillRect(hx + Math.cos(a) * r, hy + Math.sin(a) * r, 0.9, 0.9);
+    }
+    // The seam — a dark rectangle where the hatch meets its frame.
+    g.strokeStyle = 'rgba(30,24,18,0.55)';
+    g.lineWidth = 1.8;
+    const sx = 22 + rng.range(-2, 2), sy = 18 + rng.range(-2, 2);
+    const sw = 52 + rng.range(-3, 3), sh = 60 + rng.range(-3, 3);
+    g.strokeRect(sx, sy, sw, sh);
+    // Dust drifted against the seam's lip — a pale line along two edges.
+    g.fillStyle = `rgba(160,146,120,${0.24 + rng.float() * 0.16})`;
+    g.fillRect(sx, sy - 1.4, sw, 1.4);
+    g.fillRect(sx - 1.4, sy, 1.4, sh);
+    // The hinge ticks — dark bites on the seam's hinge side.
+    for (const hyt of [sy + 8, sy + sh - 10]) {
+      g.fillStyle = 'rgba(38,30,22,0.6)';
+      g.fillRect(sx + (rng.bool(0.5) ? 0 : sw - 2), hyt, 2.4, 3.6);
+    }
+    // Drag marks — the ring's swing arcs scraping the plate.
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = `rgba(150,130,104,${0.2 + rng.float() * 0.16})`;
+      g.lineWidth = 0.6;
+      g.beginPath();
+      g.arc(hx + rng.range(-1, 1), hy + rng.range(-1, 1), 8 + rng.float() * 3, rng.float() * 3, rng.float() * 3 + 1.2);
+      g.stroke();
+    }
+    // Finger grub below the ring — the pull zone's grime.
+    const grub = g.createRadialGradient(hx, hy + 10, 1, hx, hy + 10, 7);
+    grub.addColorStop(0, 'rgba(64,52,38,0.4)');
+    grub.addColorStop(1, 'rgba(64,52,38,0)');
+    g.fillStyle = grub;
+    g.beginPath();
+    g.arc(hx, hy + 10, 7, 0, Math.PI * 2);
+    g.fill();
+  });
+}

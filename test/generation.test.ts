@@ -4589,3 +4589,48 @@ describe('the bell dulled (sprint 504)', () => {
     expect(n, 'no bell tap').toBeGreaterThan(0);
   });
 });
+
+describe('the pews wore the knees (sprint 505)', () => {
+  it('sit-shine and shin kicks mark the pews', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'pew-wear') n++; });
+      }
+    }
+    expect(n, 'no pew wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the kneeler kept the weight (sprint 505)', () => {
+  it('elbow cups and knee dents mark the kneelers', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'kneel-rubs') n++; });
+      }
+    }
+    expect(n, 'no kneel rubs').toBeGreaterThan(0);
+  });
+});
+
+describe('the hatch kept its ring (sprint 505)', () => {
+  it('pull-ring rust frames the hatches', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'hatch-ring') n++; });
+      }
+    }
+    expect(n, 'no hatch ring').toBeGreaterThan(0);
+  });
+});
