@@ -7267,3 +7267,38 @@ volume is spent while it holds goods.
 - Stash verbs need their own anchor INSIDE the mouth (exitPos −0.4
   toward volume center): same-anchor verbs at equal priority lose
   the focus tie to 'hide' every time.
+
+## Sprints 521–524 — the lid answers for the take
+
+Sibling: the stash arc's second half — parking the take now has its
+own costs and reads, upstairs and under, in each floor's idiom.
+
+- **s521 the squeeze** — entering cover past the rattle tier (≥8)
+  knocks the take against the lid frame: a real positional emit the
+  house can borrow (noiseMul/maskMul/wantedPull applied like every
+  player-worn emit) + '[the take knocks the frame on your way in]'.
+- **s522 the clerk clocks the lid's bulge** — stashing within 3m of a
+  staffed main counter sight-files the ACT: +1 held once per lid
+  (`lidFiled`, checkpointed, cold counters skip). The bulge in the
+  box is the same claim as the bulge on your back.
+- **s523 the seam carries the stash's hum** — a door-listen answers
+  a room holding your stash: '[your take hums behind a lid in
+  there]', lowest tier below every tread, lure, and bind.
+- **s524 the under robs wire out of lids** — the grafter's claiming
+  stoop now reads stash lids: a parked wireCoil is dead wire to the
+  scavenger, claimed one coil a stoop like any pile (`stashWire`/
+  `robStashWire` ctx hooks). Coils ONLY — it has no pocket for the
+  rest of your take. The under's stash answer is narrower than the
+  keys', by design: nobody audits lids below.
+
+**Contract:** the stash's peril has two idioms — upstairs the count's
+hands take the whole lid to the locker (s518); below, only the wire
+walks. A stash is still parking, never laundering: marks ride the
+units, robbed coils take theirs out of the lid's memory.
+
+**Traps:**
+- Main and under rooms BOTH index from 0 → `hide-N-i` spot ids
+  collide across floors. `lidStashes`/`lidFiled` keys are
+  `${space}:${spot.id}` — entity ctx hooks resolve through the live
+  `this.space`, which is always the entity's own floor (entities
+  exit when the player leaves their space).
