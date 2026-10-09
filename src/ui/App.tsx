@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -183,6 +183,9 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
       ? `${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — ${stashedMarked} of it still marked`
       : `${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — the stash you never reclaimed`);
   }
+  const lamps = books.lampsLeft ?? 0;
+  if (lamps > 0) lines.push(
+    `${lamps === 1 ? 'a lamp still burns' : `${lamps} lamps still burn`} where you left ${lamps === 1 ? 'it' : 'them'} — the floor holds your light`);
   return lines;
 }
 

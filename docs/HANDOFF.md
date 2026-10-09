@@ -7466,3 +7466,36 @@ lifecycle: hand → floor → pocket/gut → (stagger) floor again.
 - `litLamps` is space-filtered inside `nearestSpill`/`scavengeSpill`
   (`l.space === this.space`) — entities only run on the player's floor
   (disposed on flip), so `this.space` is their floor.
+
+## Sprints 541–544 — the lamp is worked
+
+- **s541 a dropped lamp can be cranked** — 'Crank the lamp' mints at
+  each litLamps entry's key-side (`keyYaw` = lamp→player bearing at
+  drop, +0.28m off-axis, y0.3). holdTime 1.0 → `batt = min(100,
+  batt+30)` + a 0.7-strength emit the house hears. The held lamp's
+  useItem crank now has a floor twin.
+- **s542 hot lamps ring louder** — overcharge past 70: drain ×1.5
+  (1.65/s), PointLight 3.4 not 2.2, hum chance 0.42 not 0.25, and the
+  crank cue reads hot ('[the dynamo drinks — it hums hot]'). A lamp
+  pushed hard is a louder lure that dies faster.
+- **s543 walkers boot the light** — scatterSpill boots litLamps like
+  every other spill kind (0.35m, 0.5 impulse); lamps kicked askew keep
+  burning, keyYaw travels with the lamp. Verbs re-mint after every
+  boot.
+- **s544 the book counts your light** — `lampsLeft` joins both
+  epitaphs: 'N lamps still burn where you left them — the floor holds
+  your light' beside the parked-take line.
+
+**Contract:** a lamp is never inert — it's battery, bait, bait the
+house can carry, and work the house can boot. You can feed it charge
+or let it burn out; either way the light was yours and the floor
+remembers it.
+
+**Traps:**
+- Same-anchor verb ties die to first-minted (the s525 rule) — the
+  crank verb needed its OWN azimuth, not the pickup's. `keyYaw` is
+  lamp→player bearing at drop time; pre-keyYaw checkpoints relight
+  with a random facing (`?? Math.random()*2π` at restore).
+- `lampLights[i]` is index-aligned to `litLamps[i]` — drain/removal
+  loops MUST splice both (or better: filter+`syncLampLights()` rebuild
+  like s539's spill path does).

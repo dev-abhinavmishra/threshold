@@ -152,6 +152,8 @@ export interface BooksClosed {
   stashed?: number;
   /** sprint 531 — how much of the parked take was still marked */
   stashedMarked?: number;
+  /** sprint 544 — lamps still burning on the floor at the end */
+  lampsLeft?: number;
 }
 
 export interface CheckpointSave {
@@ -223,7 +225,7 @@ export interface CheckpointSave {
   lidFiled?: string[];
   /** sprint 536 — pulse lamps left burning on a floor keep their
    *  battery and their pull through the save. */
-  litLamps?: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number }[];
+  litLamps?: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number; keyYaw?: number }[];
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
