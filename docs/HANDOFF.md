@@ -5514,6 +5514,27 @@ dressing/ambient only.
 
 Gates: tsc, lint, generation tests (4 new sprint-453/454 cases). Full suite + sim before push.
 
+## Sprint 505–507 — the pews wore the knees, the canvas crackled & the boots kept the mud
+
+Sprint 505: `pewWear` — sit-shine + shin kicks + hymnal groove on
+pews (~50%); `kneelRubs` — elbow cups + knee dents on prayer
+kneelers (~50%); `hatchRing` — pull-ring rust + dust seam on
+hatches (~50%).
+
+Sprint 506: `canvasCrackle` — craquelure + slack shadow on
+paintings/portraits (~45%); `dartSplash` — pocked halo + oche
+gouge around dartboards (~50%); `tonerDrift` — toner scatter +
+jam streaks under printers (~50%).
+
+Sprint 507: `bootPrints` — sole stamps + mud clods under boot
+gear (~45%); `hookRing` — rust halo + drip thread on meat/ceiling
+hooks (~50%); `rackWeight` — sag shadow + load dents on
+luggage/key racks (~45%).
+
+Gates: tsc, lint, generation tests (9 new, 515 total + stoop
+bound fix). Full suite + sim + build before push. Dressing only —
+no e2e leg.
+
 ## Sprint 502–504 — the ladder's feet, the landing wore a turn & the bell dulled
 
 Sprint 502: `ladderFeet` — pad pits + drag scars under ladders
