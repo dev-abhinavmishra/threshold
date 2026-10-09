@@ -7499,3 +7499,46 @@ remembers it.
 - `lampLights[i]` is index-aligned to `litLamps[i]` — drain/removal
   loops MUST splice both (or better: filter+`syncLampLights()` rebuild
   like s539's spill path does).
+
+## Sprints 545–548 — the lamp's three states
+
+- **s545 'Douse the lamp' / 'Light the lamp'** — `litLamps[].lit` is the
+  wick: a burning lamp can be pinched dark (charge kept, pull gone —
+  no light, no hum, no drain, nothing for the eyes to drink) and a
+  doused one re-lit free. Third azimuth `keyYaw + π`, opposite the
+  crank. The lure you can silence without reclaiming.
+- **s546 'Bleed the lamp into yours'** — fourth azimuth `keyYaw + π/2`:
+  pour a floor lamp's charge into a held `pulseLamp`
+  (`take = min(100 − held.count, floor batt)`). Bleed it dry and it
+  gutters to a dead shell on the spot. Honest refusals cue instead of
+  dead verbs (no lamp in hand / brim-full).
+- **s547 the dead shell stays** — `batt <= 0` no longer removes the
+  entry: the lamp gutters out in place (lit=false, faint orb) and only
+  'Pick the lamp up' or a crank moves it. A dead shell answers the
+  crank but the burned dynamo caps at 25 (`[the dynamo coughs — the
+  lamp gutters back]`) — one more pull, never full charge.
+- **s548 the house reads only burning light** — watchers' fixate,
+  warden/grafter spill reads, the register's count and the epitaph all
+  filter `l.lit && l.batt > 0`. A dead shell is litter: it lies there,
+  it boots, it rides the save, but nothing stoops for trash. A doused
+  lamp is still goods — the charge is still in the bottle.
+
+**Contract:** a lamp is charge first, light second — hand, floor,
+doused, dead, bled, spilled, pocketed, guttered back. What burns has
+pull; what has charge is goods; what's empty is litter that still
+answers the crank.
+
+**Traps:**
+- Four verbs on one lamp: pickup center (y0.15), crank keyYaw (y0.3),
+  douse keyYaw+π (y0.3), bleed keyYaw+π/2 (y0.25). Any new lamp verb
+  needs its OWN azimuth — the s525 dead-sibling rule.
+- `lampLights[i]` stays index-aligned: dead/doused entries get a
+  PointLight at intensity 0 rather than skipping, so splice-free
+  rebuilds keep the alignment.
+- pocketedLamps is `number[]` — a doused lamp carried and spilled
+  relights (`lit: b > 0` in spillLamps); the flag can't cross the
+  pocket. Fiction accepts it: the handling re-wakes it.
+- Refusal-cue pattern (bleedLamp): when a verb can't act for reasons
+  the mint can't foresee (no held lamp / held full), cue the reason
+  and return — don't `enabled=false`, which strands the verb until
+  the next lamp event re-mints.

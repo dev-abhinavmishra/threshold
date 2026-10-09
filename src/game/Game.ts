@@ -858,6 +858,8 @@ export class Game {
       ...l,
       // pre-keyYaw checkpoints relight facing anywhere — any side is the crank
       keyYaw: l.keyYaw ?? Math.random() * Math.PI * 2,
+      // pre-s545 saves never wrote the wick state — they were all burning
+      lit: l.lit ?? true,
     })) ?? [];
     this.syncLampLights();
     this.mintLampDrops();
@@ -1160,8 +1162,10 @@ export class Game {
         return true;
       },
       // sprint 534 — the eyes read the lamps you leave burning
+      // sprint 548 — a doused or dead lamp has nothing to drink: only
+      // burning light holds the pan.
       litLamps: (room) => this.litLamps
-        .filter((l) => l.room === room && l.space === this.space)
+        .filter((l) => l.room === room && l.space === this.space && l.lit && l.batt > 0)
         .map((l) => ({ x: l.x, z: l.z })),
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
@@ -1225,6 +1229,10 @@ export class Game {
         // the floorkeeper reads it like any spill and walks to put it out
         if (kinds.includes('lamp')) for (const w of this.litLamps) {
           if (w.space !== this.space) continue;
+          // sprint 548 — the floorkeeper wants the goods, not the litter:
+          // dead shells aren't worth a stoop. Doused stays worth it —
+          // the charge is still in the bottle.
+          if (w.batt <= 0) continue;
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'lamp' }; }
         }
@@ -1263,6 +1271,7 @@ export class Game {
         }
         if (take.lamp) {
           const li = this.litLamps.findIndex((l) => l.space === this.space
+            && l.batt > 0   // charged shells are goods; dead ones are litter
             && Math.hypot(l.x - x, l.z - z) < 0.55);
           if (li >= 0) {
             const lamp = this.litLamps.splice(li, 1)[0];
@@ -1288,6 +1297,7 @@ export class Game {
             z: pos.z + (Math.random() - 0.5) * 0.5,
             room, space: this.space, batt: b,
             keyYaw: Math.random() * Math.PI * 2, // it rolled — any side is the crank
+            lit: b > 0,   // spilled charge still burns; an empty shell spills dark
           });
         }
         this.syncLampLights();
@@ -1755,7 +1765,7 @@ export class Game {
    *  the side you set it down from is where its crank is. A dedicated
    *  azimuth so 'Crank the lamp' never shares 'Pick the lamp up''s
    *  anchor — the same dead-verb trap the lid lattice hit at s525. */
-  private litLamps: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number; keyYaw: number }[] = [];
+  private litLamps: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number; keyYaw: number; lit: boolean }[] = [];
   /** One PointLight + emissive orb per burning lamp — the marker is
    *  the mechanic: light you (and the eyes) can actually see. */
   private lampLights: THREE.PointLight[] = [];
@@ -1771,12 +1781,18 @@ export class Game {
       li.dispose();
     }
     this.lampLights = [];
+    // sprint 545 — three states: burning (light + warm orb), doused
+    // (dark orb, charge kept), dead shell (faint orb, no charge). The
+    // light array stays index-aligned even where intensity is 0.
     for (const l of this.litLamps) {
-      const li = new THREE.PointLight(0xffc880, 2.2, 4.5, 1.6);
+      const burning = l.lit && l.batt > 0;
+      const li = new THREE.PointLight(0xffc880, burning ? 2.2 : 0, 4.5, 1.6);
       li.position.set(l.x, 0.35, l.z);
       const orb = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 8, 6),
-        new THREE.MeshBasicMaterial({ color: 0xffd9a0 }));
+        new THREE.MeshBasicMaterial({
+          color: burning ? 0xffd9a0 : (l.batt > 0 ? 0x553f22 : 0x2a2018),
+        }));
       orb.position.set(l.x, 0.22, l.z);
       li.userData.orb = orb;
       this.entityGroup.add(li, orb);
@@ -1796,12 +1812,31 @@ export class Game {
       });
       // sprint 541 — 'Crank the lamp' mints on the lamp's key side —
       // the bearing you set it down from. Same ring, different azimuth:
-      // the two verbs are aim-separated, never dead siblings.
-      this.dynamicInteractables.push({
+      // the verbs are aim-separated, never dead siblings.
+      if (l.batt < 100) this.dynamicInteractables.push({
         kind: 'crankLamp', id: `lamp-crank-${this.space}-${i}`,
         pos: { x: l.x + Math.sin(l.keyYaw) * 0.28, y: 0.3, z: l.z + Math.cos(l.keyYaw) * 0.28 },
         prompt: 'Crank the lamp',
         holdTime: 1.0, enabled: true, priority: 1,
+        data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
+      });
+      // sprint 545 — the third azimuth: pinch the flame, or wake a
+      // doused wick. A doused lamp keeps its charge but gives up its
+      // pull — no light, no hum, nothing for the eyes to drink.
+      if (l.batt > 0) this.dynamicInteractables.push({
+        kind: 'douseLamp', id: `lamp-douse-${this.space}-${i}`,
+        pos: { x: l.x + Math.sin(l.keyYaw + Math.PI) * 0.28, y: 0.3, z: l.z + Math.cos(l.keyYaw + Math.PI) * 0.28 },
+        prompt: l.lit ? 'Douse the lamp' : 'Light the lamp',
+        holdTime: 0.6, enabled: true, priority: 1,
+        data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
+      });
+      // sprint 546 — the fourth azimuth: pour the floor lamp's charge
+      // into the one on your back. Charge is goods — it moves.
+      if (l.batt > 0) this.dynamicInteractables.push({
+        kind: 'bleedLamp', id: `lamp-bleed-${this.space}-${i}`,
+        pos: { x: l.x + Math.sin(l.keyYaw + Math.PI / 2) * 0.3, y: 0.25, z: l.z + Math.cos(l.keyYaw + Math.PI / 2) * 0.3 },
+        prompt: 'Bleed the lamp into yours',
+        holdTime: 0.8, enabled: true, priority: 1,
         data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
       });
     });
@@ -3654,7 +3689,8 @@ export class Game {
         const lids = lidN > 0 ? ` · it counts ${lidN} goods in the lids` : '';
         // sprint 540 — and the lamps you leave burning on its floor:
         // unattended light is goods out of hand — the book counts it too
-        const lampN = this.litLamps.filter((l) => l.space === 'main').length;
+        // s548 — only burning lights count; shells and doused don't burn unattended
+        const lampN = this.litLamps.filter((l) => l.space === 'main' && l.lit && l.batt > 0).length;
         const lamps = lampN > 0 ? ` · it counts ${lampN} light${lampN === 1 ? '' : 's'} burning unattended` : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
           ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}]`
@@ -5821,6 +5857,7 @@ export class Game {
           batt: item.count,
           // the crank's side is the side you set it down from
           keyYaw: Math.atan2(this.player.pos.x - it.pos.x, this.player.pos.z - it.pos.z),
+          lit: true,
         });
         this.inventory = this.inventory.filter((i) => i.id !== 'pulseLamp');
         this.pulseLampOn = false;
@@ -5862,12 +5899,82 @@ export class Game {
         const lamp = dd ? this.litLamps.find((l) => l.space === this.space
           && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.35) : undefined;
         if (!lamp) { it.enabled = false; return; }
+        // sprint 547 — a dead shell still answers the crank, but the
+        // burned dynamo only holds a guttering 25: one more pull of
+        // light, never the full charge.
+        if (lamp.batt <= 0) {
+          lamp.batt = 25;
+          lamp.lit = true;
+          this.syncLampLights();
+          this.mintLampDrops();
+          this.sound.emit({ x: lamp.x, y: 0.4, z: lamp.z, intensity: 0.7,
+            category: 'item', caption: '[a dead lamp is worked back]' });
+          this.cue('ui-click', null,
+            '[the dynamo coughs — the lamp gutters back]', 'warn');
+          return;
+        }
         lamp.batt = Math.min(100, lamp.batt + 30);
         this.sound.emit({ x: lamp.x, y: 0.4, z: lamp.z, intensity: 0.7,
           category: 'item', caption: '[a lamp is cranked]' });
         this.cue('ui-click', null, lamp.batt > 70
           ? '[the dynamo drinks — it hums hot]'
           : '[the dynamo drinks]', 'info');
+        return;
+      }
+      case 'douseLamp': {
+        // sprint 545 — the wick's third state: pinch a burning lamp
+        // dark (the pull dies, the charge keeps), or wake a doused
+        // wick. The lure you can silence without reclaiming.
+        const dd = it.data as { x: number; z: number } | undefined;
+        const lamp = dd ? this.litLamps.find((l) => l.space === this.space
+          && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.35) : undefined;
+        if (!lamp || lamp.batt <= 0) { it.enabled = false; return; }
+        lamp.lit = !lamp.lit;
+        this.syncLampLights();
+        this.mintLampDrops();
+        this.sound.emit({ x: lamp.x, y: 0.3, z: lamp.z, intensity: 0.15,
+          category: 'item',
+          caption: lamp.lit ? '[a wick catches]' : '[a lamp is pinched dark]' });
+        this.cue('ui-click', null, lamp.lit
+          ? '[the wick catches — the light is loose again]'
+          : '[you pinch the flame — the lure goes dark]', 'info');
+        return;
+      }
+      case 'bleedLamp': {
+        // sprint 546 — charge is goods: pour the floor lamp's battery
+        // into the one on your back. The verb mints on every charged
+        // lamp; the press is honest about why it can't pour.
+        const dd = it.data as { x: number; z: number } | undefined;
+        const lamp = dd ? this.litLamps.find((l) => l.space === this.space
+          && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.35) : undefined;
+        if (!lamp || lamp.batt <= 0) { it.enabled = false; return; }
+        const held = this.inventory.find((i) => i.id === 'pulseLamp' && i.count > 0);
+        if (!held) {
+          this.cue('ui-click', null,
+            '[no lamp in hand to pour it into]', 'info');
+          return;
+        }
+        if (held.count >= 100) {
+          this.cue('ui-click', null,
+            '[your lamp is brim-full — the charge stays]', 'info');
+          return;
+        }
+        const take = Math.min(100 - held.count, Math.floor(lamp.batt));
+        held.count += take;
+        lamp.batt -= take;
+        this.sound.emit({ x: lamp.x, y: 0.3, z: lamp.z, intensity: 0.2,
+          category: 'item', caption: '[a dynamo is bled]' });
+        if (lamp.batt <= 0) {
+          lamp.batt = 0;
+          lamp.lit = false;
+          this.cue('ui-click', null,
+            `[bled dry — +${take} charge, and the lamp gutters out]`, 'warn');
+        } else {
+          this.cue('ui-click', null,
+            `[the lamp gives up its charge — yours drinks +${take}]`, 'info');
+        }
+        this.syncLampLights();
+        this.mintLampDrops();
         return;
       }
       case 'baitWrap': {
@@ -7073,7 +7180,7 @@ export class Game {
                 .filter((i) => s.marked.includes(i.id))
                 .reduce((a, i) => a + i.count, 0), 0),
             // sprint 544 — and the lamps you left burning to it
-            lampsLeft: this.litLamps.length > 0 ? this.litLamps.length : undefined,
+            lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7126,7 +7233,7 @@ export class Game {
             .filter((i) => s.marked.includes(i.id))
             .reduce((a, i) => a + i.count, 0), 0),
         // sprint 544 — the lamps still burning where you left them
-        lampsLeft: this.litLamps.length > 0 ? this.litLamps.length : undefined,
+        lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -10823,6 +10930,9 @@ export class Game {
       let lampDied = false;
       for (let i = 0; i < this.litLamps.length; i++) {
         const l = this.litLamps[i];
+        // sprint 545 — a doused or spent shell keeps its spot but pays
+        // no fuse: only burning lamps drain and hum.
+        if (!l.lit || l.batt <= 0) continue;
         // sprint 542 — a lamp cranked hot (charge over 70) burns
         // brighter and louder and pays for it in faster drain — the
         // overcharge is a pull you pay for in fuse.
@@ -10834,13 +10944,19 @@ export class Game {
           this.sound.emit({ x: l.x, y: 0.3, z: l.z, intensity: hot ? 0.42 : 0.25,
             category: 'machine', caption: hot ? '[a lamp hums hot on the floor]' : '[a lamp hums on the floor]' });
         }
-        if (l.batt <= 0) lampDied = true;
+        // sprint 547 — the lamp gutters out but the shell stays: a dead
+        // lamp is litter, not light — gather it, crank it back, or let
+        // the floor keep it. The house won't pocket what doesn't burn.
+        if (l.batt <= 0) {
+          l.batt = 0;
+          l.lit = false;
+          lampDied = true;
+        }
       }
       if (lampDied) {
-        this.litLamps = this.litLamps.filter((l) => l.batt > 0);
         this.syncLampLights();
         this.mintLampDrops();
-        this.cue('ui-click', null, '[a lamp dies on the floor]', 'warn');
+        this.cue('ui-click', null, '[a lamp dies on the floor — the shell stays]', 'warn');
       }
     }
 
