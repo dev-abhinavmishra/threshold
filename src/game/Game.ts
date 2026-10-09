@@ -726,6 +726,7 @@ export class Game {
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
     this.stockFiled = new Set(cp?.stockFiled ?? []);
+    this.bulkFiled = new Set(cp?.bulkFiled ?? []);
     // the rifled till stays rifled — cold counters + the stock-reads
     // already testified ride the checkpoint with the debt that priced them
     this.closedCounters.clear();
@@ -1104,6 +1105,7 @@ export class Game {
         this.unpaidHeld += 1;
       },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
+      takeLoad: () => this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints,
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
@@ -1386,6 +1388,7 @@ export class Game {
   /** Detective rooms whose register already filed a marked-stock
    *  sighting — the once-per-detective flag survives a reload. */
   private stockFiled = new Set<number>();
+  private bulkFiled = new Set<number>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -3338,9 +3341,13 @@ export class Game {
         }
         this.chargedImprints(3, it.pos.x, it.pos.z);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
+        // sprint 516 — and the register remembers the bulge: a counter
+        // that sight-filed your load says so in the readout — the
+        // bulge's line is the clerk's own handwriting.
+        const bulk = this.bulkFiled.has(rIdx) ? ' · it has seen your load' : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}]`
-          : '[the register has no line on you — your face isn\'t in it]');
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}]`
+          : `[the register has no line on you — your face isn't in it${bulk}]`);
         return;
       }
       case 'till': {
@@ -6409,6 +6416,7 @@ export class Game {
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
+      bulkFiled: [...this.bulkFiled],
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
@@ -6517,6 +6525,9 @@ export class Game {
             spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
               + this.droppedWraps.reduce((n, w) => n + w.n, 0)
               + this.kickedWedges.length + this.droppedCoils.length,
+            // sprint 513 — and what your back kept: the take you died
+            // carrying reads beside what the floor and the count kept
+            carried: this.inventory.reduce((n, i) => n + i.count, 0),
           },
         },
         documents: this.loadDocs(),
@@ -6557,6 +6568,9 @@ export class Game {
         spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
           + this.droppedWraps.reduce((n, w) => n + w.n, 0)
           + this.kickedWedges.length + this.droppedCoils.length,
+        // sprint 513 — and what walked out on your back: the take kept
+        // its weight to the door
+        carried: this.inventory.reduce((n, i) => n + i.count, 0),
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -9730,6 +9744,23 @@ export class Game {
           if (!this.rattleWarned) {
             this.rattleWarned = true;
             this.cue('drawer', null, '[your pockets are loud — the take rattles as you walk]', 'warn');
+          }
+        }
+      }
+      // sprint 515 — the take is visible: past two dozen units the load
+      // on your back reads at a glance. A staffed counter that sees it
+      // sight-files the bulge — once per counter, like the Detective's
+      // marked-stock sighting, and it keeps to its own floor.
+      if (load >= 24 && this.space === 'main') {
+        for (const [rIdx, fig] of this.clerkFigs) {
+          if (this.bulkFiled.has(rIdx) || this.closedCounters.has(rIdx)) continue;
+          const dx = fig.position.x - this.player.pos.x;
+          const dz = fig.position.z - this.player.pos.z;
+          if (dx * dx + dz * dz < 9) {
+            this.bulkFiled.add(rIdx);
+            this.unpaidHeld += 1;
+            this.cue('register-write', { x: fig.position.x, y: 1.4, z: fig.position.z },
+              '[the clerk clocks the load on your back — the register writes]', 'warn');
           }
         }
       }

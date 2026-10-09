@@ -146,6 +146,8 @@ export interface BooksClosed {
   coinKept?: number;
   /** loose goods the floor still holds — spilled piles left lying */
   spilled?: number;
+  /** goods still on your back at the end — the take that walked out */
+  carried?: number;
 }
 
 export interface CheckpointSave {
@@ -203,6 +205,8 @@ export interface CheckpointSave {
   // registers that already filed a marked-stock sighting — a reload
   // can't bill the same manifest twice
   stockFiled?: number[];
+  /** counters that already sight-filed a 24+ take — the bulge is filed once */
+  bulkFiled?: number[];
   // the kicked wedge rode under the leaf — chocks the bellman booted
   // loose lie as gatherable loot; a reload keeps them on the floor
   kickedWedges?: { x: number; z: number }[];
