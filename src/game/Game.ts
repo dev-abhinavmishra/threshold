@@ -1973,6 +1973,9 @@ export class Game {
   private rousedSpawned = new Set<string>();
   /** Under doors that already announced their named-face stick. */
   private readonly stuckAnnounced = new Set<string>();
+  /** sprint 506 — doors that already broomed their threshold this swing;
+   *  cleared when the leaf comes fully shut again. */
+  private readonly leafSwept = new Set<string>();
   /** Rolling breadcrumbs of where the player has walked (~1.15m apart,
    *  capped at the last 160 — roughly the last 3-4 rooms of travel). */
   private playerTrail: Vec3[] = [];
@@ -6609,6 +6612,39 @@ export class Game {
     return null;
   }
 
+  /** sprint 506 — a swinging leaf is a broom: loose goods inside its arc
+   *  slide out along the leaf's own axis, away from the side they were
+   *  already on. One shove per swing (the caller gates on `leafSwept`),
+   *  collider-guarded like every other spill move. Space-keyed: under
+   *  doors sweep coin and coils, main doors sweep felt and chocks. */
+  private sweepSpillAtLeaf(d: Door): void {
+    const nx = Math.sin(d.yaw), nz = Math.cos(d.yaw);   // wall normal
+    const tx = nz, tz = -nx;                            // the leaf's axis
+    const lists: { x: number; z: number }[][] = this.space === 'under'
+      ? [this.droppedPouches, this.droppedCoils]
+      : [this.droppedWraps, this.kickedWedges];
+    let moved = false;
+    for (const list of lists) {
+      for (const w of list) {
+        const px = w.x - d.pos.x, pz = w.z - d.pos.z;
+        const lat = px * tx + pz * tz;
+        const thru = px * nx + pz * nz;
+        if (Math.abs(lat) > 0.85 || Math.abs(thru) > 0.65) continue;
+        const side = lat >= 0 ? 1 : -1;
+        const ang = Math.atan2(tz * side, tx * side);
+        const to = this.scatterSpot(w.x, w.z, ang, Math.max(0.2, 0.95 - Math.abs(lat)));
+        if (!to) continue;
+        w.x = to.x; w.z = to.z; moved = true;
+      }
+    }
+    if (moved) {
+      this.mintPouchDrops(); this.mintCoilDrops();
+      this.mintWrapDrops(); this.mintWedgeDrops();
+      this.sound.emit({ x: d.pos.x, y: 0.25, z: d.pos.z, intensity: 0.16,
+        category: 'item', caption: '[the leaf sweeps the spill aside]' });
+    }
+  }
+
   private collectBlockers(): Aabb[] {
     const rooms = this.activeRooms();
     const out: Aabb[] = [];
@@ -6767,8 +6803,16 @@ export class Game {
             this.rousedSpawned.add(d.id);
             this.spawnRousedThrough(d);
           }
+          // sprint 506 — the leaf sweeps the pile: a swinging leaf is a
+          // broom — loose goods in its arc slide laterally clear, one
+          // shove per swing, never into a collider.
+          if (d.openT >= 0.35 && !this.leafSwept.has(d.id)) {
+            this.leafSwept.add(d.id);
+            this.sweepSpillAtLeaf(d);
+          }
         } else if (!d.opening && d.openT > 0) {
           d.openT = Math.max(0, d.openT - dt * 2.2);
+          if (d.openT <= 0) this.leafSwept.delete(d.id); // re-arm for the next swing
         }
         // animate leaf(es)
         const built = this.streamer.get(r.index);
