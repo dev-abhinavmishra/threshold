@@ -1140,7 +1140,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1153,6 +1153,10 @@ export class Game {
         if (kinds.includes('wrap')) for (const w of this.droppedWraps) {
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'wrap' }; }
+        }
+        if (kinds.includes('wedge')) for (const w of this.kickedWedges) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'wedge' }; }
         }
         return best;
       },
@@ -1179,7 +1183,22 @@ export class Game {
             return { kind: 'wrap', n: pile.n };
           }
         }
+        if (take.wedge) {
+          const wi = this.kickedWedges.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (wi >= 0) {
+            this.kickedWedges.splice(wi, 1);
+            this.mintWedgeDrops();
+            return { kind: 'wedge' };
+          }
+        }
         return null;
+      },
+      // sprint 489 — a pocketed chock spills back as kicked-wedge drop
+      spillChocks: (pos, n) => {
+        for (let i = 0; i < n; i++) this.kickedWedges.push({ x: pos.x + i * 0.18, z: pos.z });
+        this.mintWedgeDrops();
+        this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
+          category: 'item', caption: '[chocks scatter on the boards]' });
       },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -1494,7 +1513,7 @@ export class Game {
       this.dynamicInteractables.push({
         kind: 'wedgeDrop', id: `wedge-drop-${this.space}-${i}`, 
         pos: { x: w.x, y: 0.15, z: w.z },
-        prompt: 'Gather the kicked wedge',
+        prompt: 'Gather the loose chock',
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
     });
@@ -2458,10 +2477,48 @@ export class Game {
     if (this.player.crouching && this.space === 'under' && this.imprints > 0
       && !this.droppedPouches.some((p) =>
         Math.hypot(p.x - this.player.pos.x, p.z - this.player.pos.z) < 1.2)) {
+      const blk = v3(); this.player.lookDir(blk);
+      const bbx = this.player.pos.x + blk.x * 0.6, bbz = this.player.pos.z + blk.z * 0.6;
       this.interaction.add({
         kind: 'baitFloor', id: `bait-${this.space}:${this.currentRoom}`,
-        pos: { x: this.player.pos.x, y: 0.3, z: this.player.pos.z },
+        pos: { x: bbx, y: 0.3, z: bbz },
         prompt: 'Bait the floor — 1 imprint',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
+    // Crouched upstairs with a felt wrap: 'Bait the floor — felt wrap' —
+    // the under's lure, house-side. A placed wrap reads exactly like
+    // spilled felt to the floorkeeper's fold-back (s482 can't tell a
+    // plant from a spill): you spend the wrap to pull it off your line.
+    if (this.player.crouching && this.space === 'main'
+      && this.inventory.some((i) => i.id === 'feltWrap' && i.count > 0)
+      && !this.droppedWraps.some((w) =>
+        Math.hypot(w.x - this.player.pos.x, w.z - this.player.pos.z) < 1.2)) {
+      // the lure lands where you reach, not under you — a scuff is
+      // rubbed underfoot, a bait is set out in front
+      const lk = v3(); this.player.lookDir(lk);
+      const bx = this.player.pos.x + lk.x * 0.6, bz = this.player.pos.z + lk.z * 0.6;
+      this.interaction.add({
+        kind: 'baitWrap', id: `baitwrap-${this.space}:${this.currentRoom}`,
+        pos: { x: bx, y: 0.3, z: bz },
+        prompt: 'Bait the floor — felt wrap',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
+    // sprint 492 — and a chock is loose goods too (s489): set one down
+    // and the floorkeeper walks to tidy it. The whole spill grammar is
+    // baitable now — coin under, felt and chock above.
+    if (this.player.crouching && this.space === 'main'
+      && this.inventory.some((i) => i.id === 'doorChock' && i.count > 0)
+      && !this.kickedWedges.some((w) =>
+        Math.hypot(w.x - this.player.pos.x, w.z - this.player.pos.z) < 1.2)) {
+      const lk = v3(); this.player.lookDir(lk);
+      this.interaction.add({
+        kind: 'baitWedge', id: `baitwedge-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.3, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Leave a chock out',
         holdTime: 0.8, enabled: true, priority: 1,
         data: {},
       });
@@ -3277,7 +3334,7 @@ export class Game {
         it.enabled = false;
         this.mintWedgeDrops();   // re-index the survivors
         this.giveItem('doorChock', 1);
-        this.cue('pickup', it.pos, '[door chock — it slid under the leaf to you]');
+        this.cue('pickup', it.pos, '[door chock — back off the floor]');
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.2, category: 'item', caption: '' });
         return;
       }
@@ -5139,6 +5196,40 @@ export class Game {
           category: 'item', caption: '[a coin rings soft on the stones]' });
         this.cue('pickup', it.pos,
           '[the bait is set — whatever reads the floor reads this first]');
+        return;
+      }
+      case 'baitWrap': {
+        // sprint 490 — the upstairs bait: leave a felt wrap where you
+        // kneel. The floorkeeper's fold-back can't tell a plant from
+        // its own stagger's spill — it walks to fold it back in. The
+        // pull is the service; the wrap is the price.
+        const w0 = this.inventory.find((i) => i.id === 'feltWrap' && i.count > 0);
+        if (!w0) { it.enabled = false; return; }
+        w0.count--;
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.droppedWraps.push({ x: it.pos.x, z: it.pos.z, n: 1 });
+        this.mintWrapDrops();
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.22,
+          category: 'item', caption: '[felt lands soft on the boards]' });
+        this.cue('pickup', it.pos,
+          '[the bait is set — the floor will come fold it in]');
+        return;
+      }
+      case 'baitWedge': {
+        // sprint 492 — the chock lure: a set-down wedge reads exactly
+        // like a kicked one to the floorkeeper's tidying (s489).
+        const wd0 = this.inventory.find((i) => i.id === 'doorChock' && i.count > 0);
+        if (!wd0) { it.enabled = false; return; }
+        wd0.count--;
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.kickedWedges.push({ x: it.pos.x, z: it.pos.z });
+        this.mintWedgeDrops();
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.24,
+          category: 'item', caption: '[a chock knocks the boards]' });
+        this.cue('pickup', it.pos,
+          '[the chock is out — the floor will come tidy it]');
         return;
       }
       case 'forge': {

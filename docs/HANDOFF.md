@@ -6976,3 +6976,35 @@ restore all spread it — nothing extra to persist). Bait is the only
 pile that beats `crackCampUntil`; everything else about it is just
 an ordinary `droppedPouches` entry — same gather, same seize, same
 tick cadence.
+
+## Sprints 489-492 — the lure works both floors
+
+- **s489 the chock is loose goods** — the warden's fold-back now covers
+  `kickedWedges`: 'wedge' joins the `nearestSpill` kinds union and
+  `scavengeSpill`'s take flags. A set-down or booted chock is read,
+  walked to, and pocketed (`pocketedChocks`) — 'it bends for the loose
+  chock'. A stagger spills pocketed chocks back out via `spillChocks`,
+  exactly like pocketed felt (s413): confiscation is carried.
+- **s490 felt is bait** — 'Bait the floor — felt wrap' mints crouched
+  upstairs with a wrap, anchored 0.6m ahead of you (not underfoot —
+  a scuff is rubbed below you, a lure is set out front; the two
+  crouched-wrap verbs never share an anchor). The planted wrap is an
+  ordinary `droppedWraps` entry: the floorkeeper folds it back in like
+  any spill — the pull is the service, the wrap is the price.
+- **s491 the claim takes a stoop** — the grafter's spill claim is no
+  longer silent mid-stride: on reaching a pile it bends ~1.2s first
+  ('it stoops over the spill — the fingers spread'), `spillClaimT`
+  gated on `spillSeek` (the seek branch, re-derived per frame — a
+  chasing or smelling grafter never stoops). Beat it there and the
+  stoop aborts empty: the race has a heartbeat now.
+- **s492 the chock is bait too** — 'Leave a chock out' (crouched,
+  upstairs, carrying a doorChock) plants into `kickedWedges`; the
+  warden confiscates it on the same read. The full spill grammar is
+  baitable: coin under, felt and chock above. Drop prompts go neutral
+  ('Gather the loose chock') since a pile can be kicked or placed.
+
+**Contract:** every pile is bait — the only difference between a plant
+and a spill is who left it and why. Placed goods are retrievable
+(gather verbs unchanged) and confiscatable (entity reads unchanged);
+bait anchors sit 0.6m ahead on the look ray so crouched-floor verbs
+never tie at player.pos.
