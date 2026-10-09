@@ -1711,6 +1711,21 @@ export class Inspector extends Entity {
   }
 
   private nextSpot(room: RoomInstance): void {
+    const c = this.ctx;
+    // sprint 514 — it smells the take: a heavy load rings through the
+    // lid. Once the take passes sixteen the keys skip straight to the
+    // cover you're inside — the load betrays the spot, not the body.
+    const load = c.takeLoad?.() ?? 0;
+    const hid = c.player.hiddenSpot;
+    if (load >= 16 && hid && !hid.trappedBy && !this.checked.has(hid.id)
+      && room.hidingSpots.some((s) => s.id === hid.id)) {
+      this.target = { exitPos: hid.exitPos, id: hid.id, spot: hid };
+      if (!this.smelledTake) {
+        this.smelledTake = true;
+        c.cue('collector-rattle', this.pos, '[the keys stop — it smells the take]', { severity: 'warn' });
+      }
+      return;
+    }
     let best: RoomInstance['hidingSpots'][number] | null = null;
     let bestD = Infinity;
     for (const s of room.hidingSpots) {
@@ -1720,6 +1735,8 @@ export class Inspector extends Entity {
     }
     this.target = best ? { exitPos: best.exitPos, id: best.id, spot: best } : null;
   }
+
+  private smelledTake = false;
 
   protected override onUpdate(dt: number): void {
     const c = this.ctx;

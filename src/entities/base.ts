@@ -90,6 +90,9 @@ export interface EntityCtx {
   /** True while the player carries marked wares (a hotItems stack with
    *  count > 0). Optional for headless ctxs. */
   carriesMarked?: () => boolean;
+  /** sprint 514 — total units of take on the player's back (inventory
+   *  counts + marked coin). A heavy take betrays a hide: it rings. */
+  takeLoad?: () => number;
   /** Repossess the marked take — strips every hotItems stack and the
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */
