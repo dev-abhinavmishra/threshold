@@ -979,10 +979,151 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
       for (let f = 0; f < 60; f++) g.frame();
       g.keys.delete('KeyC');
 
+      // --- phase 4: the seam reaches — a camped leaf has fingers ---
+      // The rubble is pressed within reach of the leaf (it got there on
+      // its own camp). A slow crack verb gets yanked before it finishes.
+      g.keys.add('KeyC');
+      for (let f = 0; f < 10; f++) g.frame();
+      const stoopV = g.interaction.interactables.find((i2) => i2.kind === 'stoop' && i2.id === `stoop-${door.id}`);
+      let reachWarn = false, yanked = false;
+      const pr = g.player as unknown as { rootedUntil?: number };
+      const rooted0 = pr.rootedUntil ?? 0;
+      const reachDiag: string[] = [];
+      let stoopStood = false;
+      if (stoopV) {
+        // deep radii too — inside the doorway lane every stand ejects to
+        // an edge where the nearer flank wins on dist; past the band a
+        // centre stand holds and the aimed seam read wins on aim
+        for (const rad of [0.3, 0.5, 0.7, 1.0, 1.4, 1.8, 2.2]) {
+          standAt(stoopV.pos.x, stoopV.pos.z, rad);
+          aimFrames(stoopV.pos, 0.6, 8);
+          reachDiag.push(`r${rad}:f=${g.interaction.focused?.id ?? 'null'}`);
+          if (g.interaction.focused?.id === stoopV.id) { stoopStood = true; break; }
+        }
+        if (!stoopStood) {
+          const eye2 = g.player.eyePos({ x: 0, y: 0, z: 0 });
+          const look2 = { x: Math.sin(g.player.yaw) * Math.cos(g.player.pitch), y: Math.sin(g.player.pitch), z: Math.cos(g.player.yaw) * Math.cos(g.player.pitch) };
+          for (const v of [stoopV, g.interaction.interactables.find((i2) => i2.id === `slip-${door.id}`)!]) {
+            const dx = v.pos.x - eye2.x, dy = v.pos.y + 0.6 - eye2.y, dz = v.pos.z - eye2.z;
+            const dist = Math.hypot(dx, dy, dz);
+            const al = (dx * look2.x + dy * look2.y + dz * look2.z) / (dist || 1);
+            const px = Math.hypot(v.pos.x - g.player.pos.x, v.pos.z - g.player.pos.z);
+            reachDiag.push(`${v.id}@d${dist.toFixed(2)} a${al.toFixed(2)} ph${px.toFixed(2)} y${v.pos.y.toFixed(2)}`);
+          }
+          reachDiag.push(`p=${g.player.pos.x.toFixed(2)},${g.player.pos.z.toFixed(2)} eye=${eye2.y.toFixed(2)} cr=${g.player.crouching} noStoop d=${leafDist().toFixed(2)} camp=${(gr as unknown as { crackCampUntil?: number }).crackCampUntil?.toFixed(1)} t=${g.clock.time.toFixed(1)}`);
+        }
+        if (stoopStood) {
+          caps.length = 0;
+          for (let f = 0; f < 120 && !yanked; f++) {
+            const ax = stoopV.pos.x - g.player.pos.x, az = stoopV.pos.z - g.player.pos.z;
+            g.player.yaw = Math.atan2(ax, az);
+            g.player.pitch = Math.atan2(stoopV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+            if (g.interaction.focused?.id === stoopV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+            g.frame();
+            if (caps.some((c) => /fingers work under/.test(c))) reachWarn = true;
+            if (caps.some((c) => /takes your sleeve/.test(c))) yanked = true;
+          }
+          g.keys.delete('KeyE');
+        }
+      }
+
+      // --- phase 4b: stamp the fingers — let go while the hand is still
+      // under, then answer the reach with your boot. The stamp buys ~8s:
+      // a re-held stoop neither warns nor yanks inside the window ---
+      let reachWarned2 = false, stampFired = false, stampedQuiet = false;
+      if (stoopV && stoopStood && yanked) {
+        caps.length = 0;
+        // re-hold the stoop — the camper is still pressed; the warn re-arms
+        for (let f = 0; f < 45 && !reachWarned2; f++) {
+          const ax = stoopV.pos.x - g.player.pos.x, az = stoopV.pos.z - g.player.pos.z;
+          g.player.yaw = Math.atan2(ax, az);
+          g.player.pitch = Math.atan2(stoopV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+          if (g.interaction.focused?.id === stoopV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+          g.frame();
+          if (caps.some((c) => /fingers work under/.test(c))) reachWarned2 = true;
+        }
+        g.keys.delete('KeyE');
+        // release → holdTarget clears next frame → the stamp mints while
+        // the hand lingers a breath on the seam
+        for (let f = 0; f < 4; f++) g.frame();
+        const stampV = g.interaction.interactables.find((i2) => i2.kind === 'stampSeam' && i2.id === `stampSeam-${door.id}`);
+        if (reachWarned2 && stampV) {
+          for (let f = 0; f < 45 && !stampFired; f++) {
+            const ax = stampV.pos.x - g.player.pos.x, az = stampV.pos.z - g.player.pos.z;
+            g.player.yaw = Math.atan2(ax, az);
+            g.player.pitch = Math.atan2(stampV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+            if (g.interaction.focused?.id === stampV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+            g.frame();
+            if (caps.some((c) => /you stamp the fingers/.test(c))) stampFired = true;
+          }
+          g.keys.delete('KeyE');
+          // a stamped hand stays gone ~8s: re-holding the stoop inside
+          // the window neither warns again nor yanks — the leaf is yours
+          if (stampFired) {
+            caps.length = 0;
+            let stillWarn = false, yanked2 = false;
+            for (let f = 0; f < 55; f++) {
+              const ax = stoopV.pos.x - g.player.pos.x, az = stoopV.pos.z - g.player.pos.z;
+              g.player.yaw = Math.atan2(ax, az);
+              g.player.pitch = Math.atan2(stoopV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+              if (g.interaction.focused?.id === stoopV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+              g.frame();
+              if (caps.some((c) => /fingers work under/.test(c))) stillWarn = true;
+              if (caps.some((c) => /takes your sleeve/.test(c))) yanked2 = true;
+            }
+            g.keys.delete('KeyE');
+            stampedQuiet = !stillWarn && !yanked2;
+          }
+        }
+      }
+
+      // --- phase 5: the stone comes back — the slip beats the fingers
+      // (0.8s hold < 0.9s yank) but the camper rolls it under again ---
+      for (let f = 0; f < 400 && g.clock.time < gg.nextToss; f++) g.frame();
+      caps.length = 0;
+      const slipV = g.interaction.interactables.find((i2) => i2.kind === 'slip' && i2.id === `slip-${door.id}`);
+      let slipFired = false, stoneBack = false;
+      if (slipV) {
+        let slipStood = false;
+        for (const rad of [0.15, 0.25, 0.45, 0.62, 0.8]) {
+          standAt(slipV.pos.x, slipV.pos.z, rad);
+          aimFrames(slipV.pos, 0.6, 8);
+          if (g.interaction.focused?.id === slipV.id) { slipStood = true; break; }
+        }
+        if (slipStood) {
+          for (let f = 0; f < 60 && !slipFired; f++) {
+            const ax = slipV.pos.x - g.player.pos.x, az = slipV.pos.z - g.player.pos.z;
+            g.player.yaw = Math.atan2(ax, az);
+            g.player.pitch = Math.atan2(slipV.pos.y + 0.6 - g.player.eyePos({ x: 0, y: 0, z: 0 }).y, Math.hypot(ax, az) || 1);
+            if (g.interaction.focused?.id === slipV.id) g.keys.add('KeyE'); else g.keys.delete('KeyE');
+            g.frame();
+            if (caps.some((c) => /pebble skips under/.test(c))) slipFired = true;
+          }
+          g.keys.delete('KeyE');
+          for (let f = 0; f < 90 && !stoneBack; f++) {
+            g.frame();
+            if (caps.some((c) => /stone rolls back/.test(c))) stoneBack = true;
+          }
+        }
+      }
+
+      // --- phase 6: a camped leaf is a held leaf — the swing drags at
+      // masonry's weight while the camp lasts ---
+      const dr = door as { openT?: number; opening?: boolean };
+      dr.openT = 0; dr.opening = true;
+      for (let f = 0; f < 15; f++) g.frame();
+      const pressSlowed = (dr.openT ?? 1) < 0.6;
+      dr.opening = false; dr.openT = 0;
+      for (let f = 0; f < 30; f++) g.frame();
+      g.keys.delete('KeyC');
+
       return {
         stage: 'done', room: next.index, dist0, minLeaf, pulled, mouthed,
         farEmit: !!farEmit, nearEmit: !!nearEmit, breathCap, toldCap, grafterCued,
         callPrompts, listenPrompts, call2Prompts, leafDistEnd: leafDist(),
+        reachWarn, yanked, rooted: (pr.rootedUntil ?? 0) > rooted0,
+        reachWarned2, stampFired, stampedQuiet,
+        slipFired, stoneBack, pressSlowed, reachDiag,
         caps: caps.slice(-16), attempts,
       } as const;
     }
@@ -996,6 +1137,9 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
     room: number; dist0: number; minLeaf: number; pulled: boolean; mouthed: boolean;
     farEmit: boolean; nearEmit: boolean; breathCap?: string; toldCap?: string; grafterCued: boolean;
     callPrompts: string; listenPrompts: string; call2Prompts: string; leafDistEnd: number; caps: string[];
+    reachWarn: boolean; yanked: boolean; rooted: boolean; slipFired: boolean; stoneBack: boolean; pressSlowed: boolean;
+    reachWarned2: boolean; stampFired: boolean; stampedQuiet: boolean;
+    reachDiag: string[];
   };
   const tail = r.caps.join(' | ') + ` calls: ${r.callPrompts} / ${r.call2Prompts}`;
   expect(r.callPrompts, 'the call verb never focused at the leaf').toMatch(/call through the crack/i);
@@ -1006,5 +1150,20 @@ test('the seam speaks: the call pulls, mouths back, and tells on a camped leaf',
   expect(r.breathCap ?? `the listen never read the camped leaf — ${tail}`).toMatch(/listening back|breath at the crack/i);
   expect(r.toldCap ?? `the second call never told — ${tail}`).toMatch(/takes the whisper/);
   expect(r.grafterCued, `the grafter never answered the tell in idiom — ${tail}`).toBe(true);
+  // the seam reaches: the fingers warn first, then the yank takes you
+  expect(r.reachWarn, `the fingers never worked under the leaf — ${r.reachDiag.join(' ')} — ${tail}`).toBe(true);
+  expect(r.yanked, `the hand never took your sleeve — ${tail}`).toBe(true);
+  expect(r.rooted, `the yank never rooted you — ${tail}`).toBe(true);
+  // the stamp: let go while the hand is under, answer it with your boot,
+  // and the leaf is yours for the window
+  expect(r.reachWarned2, `the fingers never came back under — ${tail}`).toBe(true);
+  expect(r.stampFired, `the stamp never landed — ${tail}`).toBe(true);
+  expect(r.stampedQuiet, `the leaf stayed hot after the stamp — ${tail}`).toBe(true);
+  // the stone comes back: the slip beats the fingers, then the camper
+  // rolls the pebble under the leaf again
+  expect(r.slipFired, `the pebble never skipped under — ${tail}`).toBe(true);
+  expect(r.stoneBack, `the stone never rolled back under the crack — ${tail}`).toBe(true);
+  // a camped leaf is a held leaf
+  expect(r.pressSlowed, `the leaf never dragged under the rubble's weight — ${tail}`).toBe(true);
   expect(errors).toEqual([]);
 });

@@ -1860,6 +1860,71 @@ export class Game {
     return null;
   }
 
+  /** sprint 470 — the seam reaches. The crack is a two-way aperture,
+   *  not a one-way keyhole: while you hold a crack verb (stoop, slip,
+   *  call — face or hand at the gap) on a leaf a grab-capable watcher
+   *  is pressed against, its fingers work under. A warn beat first —
+   *  release the hold and the hand withdraws. Keep holding and the
+   *  yank takes your sleeve: the hold breaks, you're dragged off the
+   *  kneel, and the scuffle is loud enough to rouse the house.
+   *  Grab-capable today: the rubble — loose masonry already lives at
+   *  cracks; shoulders and knocks belong to door-work watchers, not
+   *  fingers. */
+  private updateSeamReach(): void {
+    const ht = this.interaction.holdTarget;
+    const held = ht ? this.interaction.interactables.find((i) => i.id === ht) : null;
+    const heldDoor = held && (held.kind === 'stoop' || held.kind === 'slip' || held.kind === 'call')
+      ? (held.data as Door) : null;
+    let reacher: Entity | null = null;
+    if (heldDoor && this.player.crouching) {
+      for (const e of this.entities) {
+        if (e.state === 'done' || e.id !== 'grafter') continue;
+        const tp = e.threatPos();
+        if (!tp) continue;
+        // either lip — the fingers come under whichever side it presses
+        if (v3dist(tp, heldDoor.pos) < 1.15) { reacher = e; break; }
+      }
+    }
+    const now = this.clock.time;
+    if (!heldDoor || !reacher || now < (this.seamReachCd.get(heldDoor.id) ?? 0)) {
+      // no seam hand under this leaf (or you stamped it off) — but a
+      // warned hand lingers a breath after you let go: it is still
+      // there, feeling, long enough to answer with a stamp
+      if (this.seamReach && now <= this.seamReach.lingerUntil) return;
+      this.seamReach = null; return;
+    }
+    if (!this.seamReach || this.seamReach.key !== held!.id || this.seamReach.doorId !== heldDoor.id) {
+      // the fingers are slower than a thrown stone but faster than a
+      // read or a whisper: they close at holdTime - 0.1 (min 0.9), so
+      // a slip finishes first and a stoop or call lands AS they take
+      // you — your verb goes under, then the hand does
+      this.seamReach = { key: held!.id, doorId: heldDoor.id, door: heldDoor, t: now + Math.max(0.9, (held!.holdTime ?? 1) - 0.1), lingerUntil: now + 1.6 };
+      this.cue('door-locked', heldDoor.pos, '[fingers work under the leaf — grey, and wider than a hand]', 'warn');
+      this.sound.emit({ x: heldDoor.pos.x, y: 0.1, z: heldDoor.pos.z, intensity: 0.3 * this.wantedPull, category: 'impact', caption: '' });
+      return;
+    }
+    this.seamReach.lingerUntil = now + 1.6; // a held verb keeps the hand under
+    if (now < this.seamReach.t) return;
+    this.seamReach = null;
+    // the verb lands first — your whisper or your read goes under the
+    // leaf in the same breath the hand takes your sleeve
+    if (this.interaction.focused === held) this.tryInteract();
+    // the yank: break the hold and drag you off the kneel — you wrench
+    // free a step back along your own lip of the seam
+    this.interaction.holdTarget = null;
+    this.interaction.holdProgress = 0;
+    this.player.rootedUntil = now + 0.9;
+    const nX = Math.sin(heldDoor.yaw), nZ = Math.cos(heldDoor.yaw);
+    const side = Math.sign((this.player.pos.x - heldDoor.pos.x) * nX + (this.player.pos.z - heldDoor.pos.z) * nZ) || 1;
+    this.player.teleport(this.player.pos.x + nX * side * 0.45, 0, this.player.pos.z + nZ * side * 0.45);
+    this.cue('door-locked', heldDoor.pos, '[the hand takes your sleeve — you wrench free]', 'danger');
+    // the struggle is real noise AT the leaf — the house hears you fight
+    this.sound.emit({ x: heldDoor.pos.x, y: 0.3, z: heldDoor.pos.z, intensity: 0.75 * this.wantedPull, category: 'impact', caption: '' });
+    // a grab is contact, not a glimpse — the watcher that took your
+    // sleeve has where you knelt cold, and it stays on the seam
+    reacher.eyeTell?.(this.player.pos, heldDoor.pos);
+  }
+
   private flickerRoom(roomIndex: number, mode: 'sweep' | 'reprise' | 'dim' | 'break'): void {
     const built = this.streamer.get(roomIndex);
     if (!built) return;
@@ -2430,6 +2495,27 @@ export class Game {
       });
     }
     if (this.player.crouching) addCrouchedDoorInteracts(this.interaction, this.inventory.some((i) => i.id === 'doorChock' && i.count > 0), this.player.pos, this.inventory.some((i) => i.id === 'wireCoil' && i.count > 0));
+    // sprint 474 — while the fingers are under (warned, or lingering
+    // after you let go), the seam offers the stamp: answer the reach
+    // with your boot. p6 so it outranks the seam lattice it sits on —
+    // but never mid-hold: a stamp minted over a held verb would steal
+    // focus, break the hold, and hijack every reach into a stamp loop.
+    // Letting go is what frees your boot.
+    const seamHeldId = this.interaction.holdTarget;
+    const seamHeld = seamHeldId
+      ? this.interaction.interactables.find((i) => i.id === seamHeldId && (i.kind === 'stoop' || i.kind === 'slip' || i.kind === 'call'))
+      : null;
+    if (this.player.crouching && !seamHeld && this.seamReach && this.clock.time <= this.seamReach.lingerUntil) {
+      const sd = this.seamReach.door;
+      const nX = Math.sin(sd.yaw), nZ = Math.cos(sd.yaw);
+      const side = Math.sign((this.player.pos.x - sd.pos.x) * nX + (this.player.pos.z - sd.pos.z) * nZ) || 1;
+      this.interaction.add({
+        kind: 'stampSeam', id: `stampSeam-${sd.id}`,
+        pos: { x: sd.pos.x + nX * side * 0.25, y: sd.pos.y + 0.95, z: sd.pos.z + nZ * side * 0.25 },
+        prompt: `Stamp the fingers under Door ${sd.label}`,
+        holdTime: 0.5, enabled: true, priority: 6, data: sd,
+      });
+    }
     // The Wake's bier — a hold-to-open lid. The reveal is authored, not loot.
     if (!this.coffinOpened) {
       const wr = this.activeRooms()[this.currentRoom];
@@ -3350,6 +3436,19 @@ export class Game {
         this.audio.play('pebble', { x, y: 0.1, z }, '');
         this.cue('pebble', it.pos, '[the pebble skips under — a tap on the far side]');
         this.sound.emit({ x, y: 0.1, z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
+        // sprint 471 — the stone comes back: anything with hands standing
+        // where the pebble lands can nudge it under the leaf again. The
+        // returned tap is the tell you paid for — you learn something is
+        // AT this door, and the roll is a real sound on YOUR lip of it.
+        for (const e of this.entities) {
+          if (e.state === 'done') continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          if (v3dist(tp, { x, y: 0.1, z }) < 1.4) {
+            this.pebbleBack = { t: this.clock.time + 1.2 + Math.random() * 0.8, x: door.pos.x + nX * side * 0.3, z: door.pos.z + nZ * side * 0.3 };
+            break;
+          }
+        }
         return;
       }
       case 'call': {
@@ -3414,6 +3513,19 @@ export class Game {
             this.seamAnswer = { t: this.clock.time + 1.2 + Math.random() * 0.9, x: door.pos.x, z: door.pos.z };
           }
         }
+        return;
+      }
+      case 'stampSeam': {
+        // sprint 474 — stamp the fingers: the seam's counter to the
+        // reach. Your boot comes down on the hand under the leaf — it
+        // lets go and stays gone ~8s at this door (the rubble's mass
+        // still presses the leaf; it just stops reaching under). The
+        // stamp is a real stomp — loud enough for the house to hear.
+        const door = it.data as Door;
+        this.seamReachCd.set(door.id, this.clock.time + 8);
+        if (this.seamReach?.doorId === door.id) this.seamReach = null;
+        this.cue('door-locked', door.pos, '[you stamp the fingers — they twist, and let go for now]', 'warn');
+        this.sound.emit({ x: door.pos.x, y: 0.3, z: door.pos.z, intensity: 0.7 * this.wantedPull, category: 'impact', caption: '' });
         return;
       }
       case 'brace': {
@@ -6173,8 +6285,22 @@ export class Game {
         if (d.opening && d.openT < 1) {
           // The crew's doors read the boards — a named face's under
           // doors stick to three-fifths their swing. Once per door.
-          const stick = this.space === 'under' && this.wantedActive ? 0.6 : 1;
-          if (stick < 1 && !this.stuckAnnounced.has(d.id)) {
+          let stick = this.space === 'under' && this.wantedActive ? 0.6 : 1;
+          let pressed = false;
+          // sprint 472 — a camped leaf is a held leaf: a watcher whose
+          // posture at the crack is a lean puts its weight on the swing
+          // too. Slower than the boards' stick — masonry is heavier
+          // than paperwork.
+          if (stick === 1) {
+            for (const e of this.entities) {
+              if (e.state === 'done' || !e.seamCamped?.(d.pos)) continue;
+              stick = 0.45; pressed = true; break;
+            }
+          }
+          if (pressed && !this.stuckAnnounced.has(`${d.id}-press`)) {
+            this.stuckAnnounced.add(`${d.id}-press`);
+            this.cue('door-locked', d.pos, '[the leaf drags — something is pressed against the far side]', 'warn');
+          } else if (stick < 1 && !this.stuckAnnounced.has(d.id)) {
             this.stuckAnnounced.add(d.id);
             this.cue('door-locked', d.pos, '[the crew\'s door reads the boards — it sticks]', 'warn');
           }
@@ -6830,6 +6956,19 @@ export class Game {
   /** sprint 467 — a called leaf mouths back a breath later, once the
    *  whisper has had time to reach whatever heard it in the far room. */
   private seamAnswer: { t: number; x: number; z: number } | null = null;
+  /** sprint 470 — the seam reaches: while you hold a crack verb on a
+   *  leaf a grab-capable watcher is pressed against, fingers work
+   *  under. Key = the held verb id; t = when the warn becomes a yank.
+   *  s474 — the hand lingers a breath after the warn so the seam can
+   *  offer the stamp. */
+  private seamReach: { key: string; doorId: string; door: Door; t: number; lingerUntil: number } | null = null;
+  /** sprint 474 — doors whose fingers you stamped off, until they
+   *  reach under again (a stamp buys ~8s of leaf, not the room). */
+  private seamReachCd = new Map<string, number>();
+  /** sprint 471 — the stone comes back: a slipped pebble that lands
+   *  within reach of a live watcher gets rolled under the leaf again,
+   *  a breath later, at your lip of the seam. */
+  private pebbleBack: { t: number; x: number; z: number } | null = null;
   /** A shelf sheds a book while you're inside — it stays fallen. */
   private bookDrop: { x: number; z: number; y: number; vy: number; at: number; mesh: THREE.Mesh | null; landed: boolean } | null = null;
 
@@ -8455,6 +8594,16 @@ export class Game {
       this.sound.emit({ x: sa.x, y: 0.15, z: sa.z, intensity: 0.3, category: 'entity-cue', caption: '' });
     }
 
+    // sprint 471 — the stone comes back: the pebble returns a breath
+    // after the slip, tapped under YOUR lip of the seam — a real tap
+    // in your room: you learn the leaf is pressed, the room hears it too
+    if (this.pebbleBack && tA >= this.pebbleBack.t) {
+      const pb = this.pebbleBack;
+      this.pebbleBack = null;
+      this.cue('pebble', { x: pb.x, y: 0.1, z: pb.z }, '[a stone rolls back under the crack — the far side did not want the gift]', 'warn');
+      this.sound.emit({ x: pb.x, y: 0.1, z: pb.z, intensity: 0.45 * this.wantedPull, category: 'distraction', caption: '' });
+    }
+
     // Wind-up alarms — tick loud enough to pull sound-hunters, then ring once.
     // sprint 434 — the boards listen for YOUR noise too: while the
     // sheets name you, every sound you planted pulls half again as
@@ -9179,6 +9328,8 @@ export class Game {
       const ms = this.milestones.get(this.currentRoom);
       ms?.onHold(this.interaction.focused, dt);
     }
+
+    this.updateSeamReach();
 
     // entities + director
     this.spawnScheduled();

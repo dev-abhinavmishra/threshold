@@ -6739,3 +6739,57 @@ filtered even when it wins the score. On a ~1.3m doorway lane the
 collider eject only lands you at an edge (±0.67 lat) — three
 co-planar equal-priority verbs can't all have pockets when dist
 dominates; separate them vertically instead.
+
+## Sprints 470-475 — the seam reaches
+
+The crack bites back. Holding any seam verb while a grafter lurks
+within 1.15m of the leaf arms `seamReach` — fingers reach under on a
+timer (`Math.max(0.9, holdTime − 0.1)`), so the lattice's own rhythm
+decides the bet: slip (0.8) always beats the grab; stoop (1.0) and
+call (1.2) complete via `tryInteract()` at the yank — the verb lands
+AS the hand takes your sleeve (rooted 0.9s, pulled back off the
+seam, danger cue, 0.75×wantedPull emit, and the reacher gets its
+`eyeTell`). The hand lingers ~1.6s after release (`lingerUntil`), a
+window you can spend on the stamp.
+
+- **s470 the reach** — `updateSeamReach` scans grafters near the
+  held door each frame; arming warns once +0.3 emit. Cooldown is
+  per-door (`seamReachCd`) so the stamp can't be chain-farmed.
+- **s471 the stone comes back** — a slipped pebble landing within
+  1.4m of an entity schedules `pebbleBack` (+1.2–2.0s): the stone
+  rolls back to your side, '[a stone rolls back under the crack —
+  the far side did not want the gift]' + 0.45 emit. The far side
+  refuses the gift.
+- **s472 a camped leaf is a held leaf** — `seamCamped(leaf)` on
+  Entity (Grafter overrides: `crackCampUntil` + within 1.3m) — a
+  pressed-against leaf drags (stick 0.45) and sticks-announces
+  '[the leaf drags — something is pressed against the far side]'.
+- **s473 the e2e legs** — doors.spec phase 4 drives stoop→reach→
+  yank→release→linger live, re-hold to re-arm.
+- **s474 stamp the fingers** — the counterplay: while the hand
+  lingers and NO seam verb is held, crouching mints
+  'Stamp the fingers under Door N' (p6, hold 0.5) at the stoop
+  anchor — `seamReachCd` 8s/leaf, '[you stamp the fingers — they
+  twist, and let go for now]' + 0.7 emit. The triangle: release
+  (lose the verb), hold through (verb lands then yank), or stamp
+  (pay noise, keep kneeling, leaf quiet ~8s). The mint is gated on
+  `holdTarget` — LETTING GO is what frees your boot to stamp.
+- **s475 the wire finds open water** — a seeded submerged snare
+  inside a prop collider was unreachable (closest approach 0.86m
+  vs the 0.7m trip): placement now clears every floor-level prop's
+  own `buildProp` collider footprint (cached per kind+scale, fixed
+  rng — deterministic, still seed-stable), plus `freeSnareSpot`
+  nudges any socket landed inside wall colliders at addFromRoom.
+
+**Traps:** doorway colliders eject a lane-stand to lat ±0.67 — three
+co-planar seam verbs score within ~0.04 there and the nearer flank
+wins on dist; hunt DEEPER radii (1.4–2.2m) so the stand stays
+off-lane at lat≈0 where the aimed centre wins. A higher-priority
+verb minted mid-hold at the same anchor HIJACKS focus — the held
+verb can never complete: any "answer while fingers under" mint must
+gate on `holdTarget` not being a seam verb. `room.colliders` is
+EMPTY at `addFromRoom` (Game.ts ~585) — prop colliders are wired at
+stream-time (builder.ts ~628); hydration-time placement checks only
+see wall/spec colliders. A floor-level verb near a door loses focus
+to the seam lattice even un-aimed (nearEnough bypasses align) — e2e
+stands must hunt a spot off the door's flank.

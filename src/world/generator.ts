@@ -7,7 +7,7 @@
  * translated onto the previous room's exit port, so the path bends naturally
  * through turns. Overlaps against earlier rooms are rejected by AABB test.
  */
-import { SeedStreams } from '../engine/rng';
+import { SeedStreams, Rng } from '../engine/rng';
 import {
   aabb, aabbIntersects2D, aabbFromMinMax, v3, type Aabb, type Vec3,
 } from '../engine/math';
@@ -15,9 +15,10 @@ import type {
   Biome, Door, EntityId, EntityTuning, HidingSpot, ItemId, NavNode, RoomInstance, ScheduledEncounter, Socket,
 } from '../game/types';
 import { ENTITY_TUNING, INCOMPATIBLE, DIRECTOR, SAFE_ROOM_TEMPLATES } from '../game/config';
-import type { Port, RoomSpec, RoomTemplate, Wall } from './spec';
+import type { LocalCollider, Port, PropSpec, RoomSpec, RoomTemplate, Wall } from './spec';
 import { portLocalPos, portOutwardDir, clearDoorLanes, inDoorLane } from './spec';
 import { modelCollider } from './modelLibrary';
+import { buildProp } from './props';
 import { MAIN_TEMPLATES, MAIN_TEMPLATE_MAP } from './templates';
 import { UNDERSCRIPT_TEMPLATES } from './underscriptTemplates';
 import { milestoneSpec } from '../encounters/milestoneSpecs';
@@ -1632,11 +1633,42 @@ function generateUnderscript(streams: SeedStreams, opts: GenOptions): RoomInstan
     if (room.flooded && room.darkRoom) {
       const sr = streams.roomStream('dressing', 720 + i);
       const count = 1 + (sr.bool(0.55) ? 1 : 0);
-      for (let placed = 0, tries = 0; placed < count && tries < 8; tries++) {
+      // sprint 475 — a wire hidden inside furniture threatens nothing:
+      // candidate spots must clear every floor-level prop's own collider.
+      // Footprints come from buildProp itself (cached per kind+scale,
+      // fixed rng so the footprint table is deterministic), and the
+      // snare's own prop types can't hide a wire.
+      const footCache = new Map<string, LocalCollider[]>();
+      const footOf = (pk: PropSpec['kind'], scale: number): LocalCollider[] => {
+        const key = `${pk}@${scale}`;
+        let f = footCache.get(key);
+        if (!f) {
+          f = buildProp({ kind: pk, x: 0, z: 0, scale }, new Rng(0x9a7e5)).colliders;
+          footCache.set(key, f);
+        }
+        return f;
+      };
+      const wireClear = (lx: number, lz: number): boolean => {
+        for (const pp of room.spec?.props ?? []) {
+          if (pp.kind === 'snare') continue;
+          if ((pp.y ?? 0) > 0.5) continue; // mounted too high to hide a wire
+          const dx = lx - pp.x, dz = lz - pp.z;
+          const cy = Math.cos(pp.yaw ?? 0), sy = Math.sin(pp.yaw ?? 0);
+          const px = dx * cy + dz * sy, pz = -dx * sy + dz * cy;
+          for (const c of footOf(pp.kind, pp.scale ?? 1)) {
+            if (c.walkable || c.losOnly) continue;
+            if ((c.y ?? 0) > 1.3 || (c.y ?? 0) + c.h < 0.15) continue;
+            if (Math.abs(px - c.x) < c.w / 2 + 0.35 && Math.abs(pz - c.z) < c.d / 2 + 0.35) return false;
+          }
+        }
+        return true;
+      };
+      for (let placed = 0, tries = 0; placed < count && tries < 12; tries++) {
         const lx = sr.range(-room.width / 2 + 1.0, room.width / 2 - 1.0);
         const lz = sr.range(-room.depth / 2 + 1.0, room.depth / 2 - 1.0);
         const wp = localToWorld(room.origin, room.yaw, lx, 0, lz);
         if (room.doors.some((d) => Math.hypot(d.pos.x - wp.x, d.pos.z - wp.z) < 1.6)) continue;
+        if (!wireClear(lx, lz)) continue;
         room.spec?.props.push({ kind: 'snare', x: lx, z: lz, yaw: sr.float() * Math.PI * 2 });
         const spentWire = ((wp.x * 11 + wp.z * 3 + room.index * 17) % 97) < 6;
         room.sockets.push({ kind: 'hazard', pos: wp, yaw: room.yaw, filled: false,

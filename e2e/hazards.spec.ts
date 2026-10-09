@@ -215,17 +215,31 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
     // Needs a second armed wire: a single-snare room spends its only
     // wire on the trip above, and a sprung wire offers no snip by design.
     const last = snares[snares.length - 1].pos;
-    g.player.teleport(last.x + 0.6, 0, last.z + 0.6);
     g.keys.add('KeyC');
-    for (let f = 0; f < 30; f++) g.frame();
+    // sprint 475 — a stand near a door loses focus to the seam lattice;
+    // hunt the compass ring for a stand where the snip actually owns it.
+    const stands = [[0.6, 0.6], [-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.9, 0], [-0.9, 0], [0, 0.9], [0, -0.9]];
+    let it2: { kind: string; pos: { x: number; y: number; z: number } } | undefined;
+    for (const [ox, oz] of stands) {
+      g.player.teleport(last.x + ox, 0, last.z + oz);
+      for (let f = 0; f < 12; f++) g.frame();
+      const snip = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
+      if (!snip) continue;
+      const ax = snip.pos.x - g.player.pos.x, az = snip.pos.z - g.player.pos.z;
+      g.player.yaw = Math.atan2(ax, az);
+      g.player.pitch = -0.7;
+      for (let f = 0; f < 4; f++) g.frame();
+      if (g.interaction.focused?.kind === 'snip') { it2 = snip; break; }
+    }
     let cut = false;
-    for (let f = 0; f < 160 && !cut; f++) {
+    const snipDiag: string[] = [`stood=${g.player.pos.x.toFixed(2)},${g.player.pos.z.toFixed(2)} foc=${g.interaction.focused?.id ?? 'null'}`];
+    for (let f = 0; f < 160 && !cut && it2; f++) {
       const it = g.interaction.interactables.find((i) => i.kind === 'snip' && i.enabled);
-      if (!it) break;
+      if (!it) { snipDiag.push(`gone@${f}`); break; }
       const ax = it.pos.x - g.player.pos.x, az = it.pos.z - g.player.pos.z;
       g.player.yaw = Math.atan2(ax, az);
       g.player.pitch = -0.7;
-      if (/cut/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
+      if (/cut|feel/i.test(g.interaction.focused?.prompt ?? '')) g.keys.add('KeyE');
       g.frame();
       cut = caps.some((c) => /wire comes loose/.test(c));
     }
@@ -235,8 +249,9 @@ test('the dark water hides the wire — upright trips it, the slow wade feels it
       Math.hypot((c.minX + c.maxX) / 2 - snares[0].pos.x, (c.minZ + c.maxZ) / 2 - snares[0].pos.z) < 1.6)
       .map((c) => `${((c.minX + c.maxX) / 2).toFixed(2)},${((c.minZ + c.maxZ) / 2).toFixed(2)} ${(c.maxX - c.minX).toFixed(1)}x${(c.maxZ - c.minZ).toFixed(1)}`);
     return { stage: 'done', room: room.index, nSnares: snares.length, tripped, felt,
-      blindNoPrompt, cut, caps: caps.slice(-16), wadeDiag, nearCols,
+      blindNoPrompt, cut, caps: caps.slice(-16), wadeDiag, nearCols, snipDiag,
       snareAt: { x: snares[0].pos.x, z: snares[0].pos.z },
+      lastAt: { x: last.x, z: last.z },
       armed: hzf.hazard.snares.find((s) => s.room === room.index && Math.hypot(s.pos.x - snares[0].pos.x, s.pos.z - snares[0].pos.z) < 0.5)?.armed } as const;
   });
 
