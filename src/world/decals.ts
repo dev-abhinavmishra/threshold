@@ -9397,3 +9397,301 @@ export function sheetDrag(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Tube lip — the whistle-lip polish a speaking tube keeps: a
+ * bright worn rim, breath tarnish below, dust in the grille. */
+export function tubeLip(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    const cx = 24;
+    // mouth polish — lips on brass for a century
+    ctx.fillStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 14, 9 + rng.float() * 2, 4.5 + rng.float(), 0, 0, Math.PI * 2);
+    ctx.fill();
+    // breath tarnish — the green-brown bloom below the mouth
+    const g = ctx.createLinearGradient(0, 18, 0, 44);
+    g.addColorStop(0, `rgba(80,90,70,${0.3 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(80,90,70,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 10, 18, 20, 26);
+    // grille dust — the holes no word cleaned
+    for (let i = 0; i < 9; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 8 + rng.float() * 16, 46 + rng.float() * 12, 0.9 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // whistle drip — condensation that ran once
+    ctx.strokeStyle = `rgba(90,84,74,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, 18);
+    ctx.quadraticCurveTo(cx + 7, 30, cx + 5 + (rng.float() - 0.5) * 3, 40);
+    ctx.stroke();
+  });
+}
+
+/** Alarm pull — the mark a fire alarm's lever keeps: finger grease
+ * on the handle, knuckle smudges, dust in the break-glass. */
+export function alarmPull(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    const cx = 24;
+    // finger grease — the pull the drills taught
+    ctx.fillStyle = `rgba(60,54,44,${0.42 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 40, 10 + rng.float() * 2, 5 + rng.float(), 0, 0, Math.PI * 2);
+    ctx.fill();
+    // knuckle arcs — fingers curled round the T-handle
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(80,72,60,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(cx - 6 + i * 6, 34, 3.2, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+    }
+    // glass dust — the pane no alarm wiped
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.24 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 10 + rng.float() * 20, 8 + rng.float() * 16, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // grime halo at the mount
+    ctx.strokeStyle = `rgba(70,62,50,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(6, 4, 36, 56);
+  });
+}
+
+/** Valve grip — the hand-polish a valve wheel keeps: bright arcs
+ * on the rim, grease in the hub, dust on the upper spokes. */
+export function valveGrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32, r = 22;
+    // rim polish — the arcs where palms turned it
+    for (let i = 0; i < 5; i++) {
+      const a0 = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 2.4 + rng.float();
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, a0, a0 + 0.6 + rng.float() * 0.5);
+      ctx.stroke();
+    }
+    // hub grease
+    ctx.fillStyle = `rgba(40,36,30,${0.4 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4 + rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    // spoke dust — settled on the upper arcs only
+    for (let i = 0; i < 10; i++) {
+      const a = Math.PI + rng.float() * Math.PI;
+      ctx.fillStyle = `rgba(150,144,132,${0.26 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * (r - 4), cy + Math.sin(a) * (r - 4) * 0.4 - 4, 0.8 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Needle ghost — the marks a dead gauge keeps: a stuck pointer's
+ * arc, dust on the dial face, finger taps at the glass. */
+export function needleGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // dial dust — film over the face
+    ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+    ctx.fill();
+    // needle ghost — the dark arc where the pointer parked for
+    // years and bleached the face around it
+    const a = Math.PI * (0.7 + rng.float() * 0.6);
+    ctx.strokeStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * 19, cy + Math.sin(a) * 19);
+    ctx.stroke();
+    // pointer sweep ghost — the arc it swept before stopping
+    ctx.strokeStyle = `rgba(120,110,96,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 17, Math.PI * 0.75, a);
+    ctx.stroke();
+    // finger taps — the spots someone rapped the glass
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.24 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 10 + rng.float() * 20, cy - 10 + rng.float() * 20, 2, 1.4, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Cable sleeve — the dust sleeve a hanging cable keeps: a grey
+ * tube around the drop, web at the ceiling rosette, a wiped run. */
+export function cableSleeve(rng: Rng): THREE.Texture | null {
+  return canvasTex(32, 96, (ctx) => {
+    const cx = 16;
+    // rosette bloom — dust and web at the ceiling anchor
+    ctx.fillStyle = `rgba(150,144,132,${0.4 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 8, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the sleeve — a dust film hugging the drop
+    const g = ctx.createLinearGradient(0, 10, 0, 90);
+    g.addColorStop(0, `rgba(150,144,132,${0.34 + rng.float() * 0.14})`);
+    g.addColorStop(0.7, 'rgba(150,144,132,0.18)');
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 4, 10, 8, 82);
+    // web threads — silk from rosette to wall
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, 10 + rng.float() * 6);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 14, 20 + rng.float() * 10, cx + 8, 24 + rng.float() * 12);
+      ctx.stroke();
+    }
+    // a wiped run — where a hand slid it
+    ctx.fillStyle = 'rgba(60,54,44,0.2)';
+    ctx.fillRect(cx - 3, 40 + rng.float() * 10, 6, 8 + rng.float() * 6);
+  });
+}
+
+/** Key ghost — the marks a key rack keeps: pale tag shapes where
+ * keys hung, hook-bright spots, a dust drift on the rail. */
+export function keyGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // tag ghosts — pale paper silhouettes where keys hung
+    for (let i = 0; i < 6; i++) {
+      const x = 8 + i * 9 + (rng.float() - 0.5) * 2;
+      ctx.fillStyle = `rgba(170,164,150,${0.3 + rng.float() * 0.16})`;
+      ctx.fillRect(x, 14, 5, 12 + rng.float() * 4);
+      ctx.beginPath();
+      ctx.arc(x + 2.5, 14, 2.4, Math.PI, 0);
+      ctx.fill();
+    }
+    // hook shine — bright pins where tags rubbed
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(10.5 + i * 9, 12, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust drift — the rail no hand ran along
+    ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.fillRect(4, 6, 56, 3);
+    // a key that stayed — dark shape still hanging
+    ctx.fillStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.14})`;
+    ctx.fillRect(46, 16, 2.4, 14);
+    ctx.beginPath();
+    ctx.arc(47.2, 17, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Vend kick — the marks a vending unit keeps: shoe scuffs at the
+ * drop flap, coin-cup wear, finger glass trails by the buttons. */
+export function vendKick(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // shoe kicks — arcs low on the machine face
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.6 + rng.float();
+      const x = 10 + rng.float() * 44;
+      ctx.beginPath();
+      ctx.arc(x, 92, 5 + rng.float() * 4, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+    }
+    // coin-cup wear — the scratch ring where change got scooped
+    ctx.strokeStyle = `rgba(70,62,50,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(32, 72, 7 + rng.float(), Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+    // button rub — a greasy column beside the buttons
+    const g = ctx.createLinearGradient(0, 20, 0, 55);
+    g.addColorStop(0, `rgba(80,72,60,${0.3 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(80,72,60,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(44, 20, 10, 36);
+    // glass trails — fingers that pointed through the pane
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,114,102,${0.2 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(10 + rng.float() * 20, 12 + rng.float() * 14);
+      ctx.lineTo(10 + rng.float() * 20, 20 + rng.float() * 14);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Trap set — the marks a mousetrap keeps: bait ghosts, sprung
+ * dust blowback, drag lines where it slid once. */
+export function trapSet(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24, cy = 26;
+    // bait ghost — the dark square where the cheese sat
+    ctx.fillStyle = `rgba(80,60,30,${0.4 + rng.float() * 0.18})`;
+    ctx.fillRect(cx - 4, cy - 4, 8, 7);
+    // sprung blowback — dust ring blown outward around the trap
+    ctx.strokeStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 18, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // snap arc — the wire's swing shadow
+    ctx.strokeStyle = `rgba(50,44,36,${0.42 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, 11, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.stroke();
+    // drag lines — it slid once, spraying dust
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(140,134,122,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy + 10 + i * 3);
+      ctx.lineTo(cx + 16, cy + 12 + i * 2 + (rng.float() - 0.5) * 2);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Tape curl — the marks a dropped tape measure keeps: a curled
+ * end ghost, measure ticks, and the sweep line it drew in dust. */
+export function tapeCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 32, (ctx) => {
+    // the sweep — a measuring line drawn through the dust
+    ctx.strokeStyle = `rgba(150,144,132,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(6, 16 + (rng.float() - 0.5) * 3);
+    ctx.lineTo(80, 16 + (rng.float() - 0.5) * 3);
+    ctx.stroke();
+    // measure ticks — the blade's increments bitten off
+    for (let i = 0; i < 9; i++) {
+      const x = 10 + i * 8;
+      ctx.strokeStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.16})`;
+      ctx.lineWidth = i % 4 === 0 ? 1.8 : 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 13);
+      ctx.lineTo(x, 13 + (i % 4 === 0 ? 6 : 3.4));
+      ctx.stroke();
+    }
+    // curled end — the hook's dark curl
+    ctx.strokeStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(84, 16, 5, -Math.PI * 0.4, Math.PI * 0.6);
+    ctx.stroke();
+    // housing scuff where it was dropped
+    ctx.fillStyle = `rgba(80,72,60,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(10, 24, 7, 3, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

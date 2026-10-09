@@ -1,5 +1,17 @@
 # THRESH
 
+## Sprint 545–547 — the tube kept the voice, the panel kept the needle & the vend kept the kicks
+
+Service + display hardware wear, all prop overlays.
+- **545**: whistle-lip polish + breath tarnish on speaking tubes, finger grease + knuckle arcs on fire alarms, rim polish + hub grease on valve wheels.
+- **546**: stuck-pointer arcs + dial dust on instrument/breaker panels, dust sleeves + rosette web on hanging cables, tag ghosts + hook shine on key racks.
+- **547**: shoe kicks + coin-cup wear on vending units, bait ghosts + sprung blowback on mousetraps, sweep lines + hook curls under tape measures and loose tools.
+
+Sibling landed mechanics 533–536 ("the lamp works the floor") while decal batches held 533–538 — **jumped my numbering to 545+ to deconflict; check `git log` for the sibling's latest range before picking sprint numbers.**
+
+*Branch devin/…-sprint-539+ — 555 total decal wiring points.*
+
+
 ## Sprint 536–538 — the busts kept their caps, the gates kept their tracks & the tea kept its ring
 
 More room-history decals — wear on display pieces and service hardware.

@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2600,6 +2600,136 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sd.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
     prop.group.add(sd);
     if (!prop.group.name) prop.group.name = 'sheet-drag';
+  }
+  // The tube kept the voice — lip polish and breath tarnish on the
+  // speaking tubes.
+  if (spec.kind === 'speakingTube' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const tl = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.16, 0.22),
+      new THREE.MeshStandardMaterial({ map: tubeLip(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tl.name = 'tube-lip';
+    tl.userData.decalMat = true;
+    tl.position.set(0, (dc?.[1] ?? 1.2) * 0.7, (dc?.[2] ?? 0.15) / 2 + 0.004);
+    prop.group.add(tl);
+    if (!prop.group.name) prop.group.name = 'tube-lip';
+  }
+  // The alarm kept the pull — finger grease and glass dust on the
+  // fire alarms.
+  if (spec.kind === 'fireAlarm' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const ap = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.26),
+      new THREE.MeshStandardMaterial({ map: alarmPull(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ap.name = 'alarm-pull';
+    ap.userData.decalMat = true;
+    ap.position.set(0, 0, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    prop.group.add(ap);
+    if (!prop.group.name) prop.group.name = 'alarm-pull';
+  }
+  // The valve kept the grip — rim polish and hub grease on the
+  // wheel.
+  if (spec.kind === 'valveWheel' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const vg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: valveGrip(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    vg.name = 'valve-grip';
+    vg.userData.decalMat = true;
+    vg.position.set(0, 0, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    prop.group.add(vg);
+    if (!prop.group.name) prop.group.name = 'valve-grip';
+  }
+  // The panel kept the needle — stuck pointers and dial dust on
+  // the instrument faces.
+  const PANELS: ReadonlySet<PropSpec['kind']> = new Set(['instrPanel', 'breakerPanel', 'powerBox', 'utilityBox']);
+  if (PANELS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ng = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, 0.24),
+      new THREE.MeshStandardMaterial({ map: needleGhost(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ng.name = 'needle-ghost';
+    ng.userData.decalMat = true;
+    ng.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 1.2) * 0.6, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    prop.group.add(ng);
+    if (!prop.group.name) prop.group.name = 'needle-ghost';
+  }
+  // The cable kept its sleeve — dust film and web on the hanging
+  // drops.
+  const CABLES: ReadonlySet<PropSpec['kind']> = new Set(['hangingCable', 'chainBulb', 'cageLight']);
+  if (CABLES.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const cs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.14, 0.4),
+      new THREE.MeshStandardMaterial({ map: cableSleeve(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cs.name = 'cable-sleeve';
+    cs.userData.decalMat = true;
+    cs.position.set(0, (dc?.[1] ?? 1) * 0.5, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    prop.group.add(cs);
+    if (!prop.group.name) prop.group.name = 'cable-sleeve';
+  }
+  // The key kept its hook — tag ghosts and hook shine on the
+  // racks.
+  const KEYS: ReadonlySet<PropSpec['kind']> = new Set(['keyRack', 'keyCabinet']);
+  if (KEYS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const kg = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.22),
+      new THREE.MeshStandardMaterial({ map: keyGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    kg.name = 'key-ghost';
+    kg.userData.decalMat = true;
+    kg.position.set(0, (dc?.[1] ?? 1.2) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.004);
+    prop.group.add(kg);
+    if (!prop.group.name) prop.group.name = 'key-ghost';
+  }
+  // The vend kept the kicks — shoe scuffs and coin-cup wear on
+  // the machines.
+  if (spec.kind === 'vendingUnit' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const vk = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.6),
+      new THREE.MeshStandardMaterial({ map: vendKick(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    vk.name = 'vend-kick';
+    vk.userData.decalMat = true;
+    vk.position.set(0, (dc?.[1] ?? 1.8) * 0.4, (dc?.[2] ?? 0.6) / 2 + 0.004);
+    prop.group.add(vk);
+    if (!prop.group.name) prop.group.name = 'vend-kick';
+  }
+  // The trap kept the spring — bait ghosts and sprung blowback.
+  if (spec.kind === 'mousetrap' && rng.bool(0.7)) {
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, 0.24),
+      new THREE.MeshStandardMaterial({ map: trapSet(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ts.name = 'trap-set';
+    ts.userData.decalMat = true;
+    ts.rotation.x = -Math.PI / 2;
+    ts.position.set(0, 0.006, 0);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'trap-set';
+  }
+  // The tape kept its curl — sweep lines and hook curls under the
+  // measures.
+  const TAPES: ReadonlySet<PropSpec['kind']> = new Set(['tapeMeasure', 'trowel', 'stapler', 'crowbar', 'plunger', 'boltCutters']);
+  if (TAPES.has(spec.kind) && rng.bool(0.5)) {
+    const tc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.18),
+      new THREE.MeshStandardMaterial({ map: tapeCurl(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tc.name = 'tape-curl';
+    tc.userData.decalMat = true;
+    tc.rotation.x = -Math.PI / 2;
+    tc.rotation.z = rng.float() * Math.PI * 2;
+    tc.position.set(0, 0.006, 0.15);
+    prop.group.add(tc);
+    if (!prop.group.name) prop.group.name = 'tape-curl';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
