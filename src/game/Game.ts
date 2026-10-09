@@ -1290,7 +1290,11 @@ export class Game {
       // floorkeeper's stagger re-lights the floor where it went down.
       spillLamps: (pos, batts) => {
         for (const b of batts) {
-          const room = this.route?.rooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
+          // space-aware room resolution — under spills must resolve
+          // against underRooms, not the main route (route.rooms was a
+          // latent mislabel for under-floor lamps)
+          const room = this.activeRooms().find((r) => pointInRoom(r, pos.x, pos.z))?.index
+            ?? this.route?.branchRooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
             ?? this.currentRoom;
           this.litLamps.push({
             x: pos.x + (Math.random() - 0.5) * 0.5,
@@ -1842,6 +1846,26 @@ export class Game {
         holdTime: 0.8, enabled: true, priority: 1,
         data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
       });
+      // sprint 549 — the shell is goods too: crack a dead lamp open
+      // for its wound wire. Mints at the douse azimuth — a dead lamp
+      // never carries that verb, so the two never tie.
+      if (l.batt <= 0) this.dynamicInteractables.push({
+        kind: 'breakLamp', id: `lamp-break-${this.space}-${i}`,
+        pos: { x: l.x + Math.sin(l.keyYaw + Math.PI) * 0.28, y: 0.3, z: l.z + Math.cos(l.keyYaw + Math.PI) * 0.28 },
+        prompt: 'Break the lamp down',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
+      });
+      // sprint 550 — roll it under: a lamp near a shut leaf can be
+      // pushed through the crack to the far room, still burning. The
+      // lure crosses the cover you can't.
+      if (l.batt > 0 && this.shutLeafNear(l.x, l.z, 1.15)) this.dynamicInteractables.push({
+        kind: 'rollLamp', id: `lamp-roll-${this.space}-${i}`,
+        pos: { x: l.x + Math.sin(l.keyYaw + Math.PI * 1.5) * 0.3, y: 0.25, z: l.z + Math.cos(l.keyYaw + Math.PI * 1.5) * 0.3 },
+        prompt: 'Roll the lamp under the door',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
+      });
     });
   }
   private mintWrapDrops(): void {
@@ -2178,10 +2202,24 @@ export class Game {
         return { text: '[a low eye meets yours at the crack — it was watching]', sev: 'danger' as const };
       }
     }
-    // sprint 454 — a room too dark gives the crack nothing: no shadow
-    // reads reach black glass. The count's lamp is the one exception —
-    // it IS the light, so it still reads through the crack
+    // sprint 552 — the crack reads your light: a lamp burning right
+    // past the leaf pools at the seam, and in a black room your lamp
+    // is the ONLY light — it reads through like the count's own.
+    const poolLamp = this.litLamps.find((l) => l.space === this.space
+      && l.lit && l.batt > 0 && l.room === target.index
+      && v3dist({ x: l.x, y: 0, z: l.z }, door.pos) < 2.0);
+    if (poolLamp) return {
+      text: '[lamplight pools at the crack — one of yours burns just past it]',
+      sev: 'info' as const };
+    const roomLamp = this.litLamps.find((l) => l.space === this.space
+      && l.lit && l.batt > 0 && l.room === target.index);
     if (target.darkRoom) {
+      if (roomLamp) return {
+        text: '[your lamp burns in the black — the only light in there]',
+        sev: 'warn' as const };
+      // sprint 454 — a room too dark gives the crack nothing: no shadow
+      // reads reach black glass. The count's lamp is the one exception —
+      // it IS the light, so it still reads through the crack
       if (this.space === 'under' && this.checker.active && this.checker.lampLit) {
         const ci = underRoomOf(roam, this.checker.position);
         if (ci >= 0 && roam[ci] === target) {
@@ -2210,6 +2248,8 @@ export class Game {
     if (best <= 1.7) return { text: '[a shadow holds at the threshold — it is right there]', sev: 'danger' as const };
     if (best <= 4.2) return { text: '[a shadow crosses the floor-light — something is working that room]', sev: 'warn' as const };
     if (best < Infinity) return { text: '[a lit seam — something stirs deep in that room]' };
+    if (roomLamp) return {
+      text: '[your lamp burns on in there — nothing crosses the seam]' };
     if (SAFE_ROOM_TEMPLATES.has(target.templateId)) return { text: '[still floor — a resting place]' };
     return { text: '[a lit seam — nothing crosses it]' };
   }
@@ -5908,6 +5948,8 @@ export class Game {
         if (lamp.batt <= 0) {
           lamp.batt = 25;
           lamp.lit = true;
+          this.hazard.evidence.push({ pos: v3(lamp.x, 0, lamp.z), room: lamp.room,
+            kind: 'work', t: this.clock.time, readBy: ['player'] });
           this.syncLampLights();
           this.mintLampDrops();
           this.sound.emit({ x: lamp.x, y: 0.4, z: lamp.z, intensity: 0.7,
@@ -5917,6 +5959,10 @@ export class Game {
           return;
         }
         lamp.batt = Math.min(100, lamp.batt + 30);
+        // sprint 551 — the wind-up is hand-work: the house smells a
+        // handled dynamo like it smells a rifled till
+        this.hazard.evidence.push({ pos: v3(lamp.x, 0, lamp.z), room: lamp.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         this.sound.emit({ x: lamp.x, y: 0.4, z: lamp.z, intensity: 0.7,
           category: 'item', caption: '[a lamp is cranked]' });
         this.cue('ui-click', null, lamp.batt > 70
@@ -5933,6 +5979,8 @@ export class Game {
           && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.35) : undefined;
         if (!lamp || lamp.batt <= 0) { it.enabled = false; return; }
         lamp.lit = !lamp.lit;
+        this.hazard.evidence.push({ pos: v3(lamp.x, 0, lamp.z), room: lamp.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         this.syncLampLights();
         this.mintLampDrops();
         this.sound.emit({ x: lamp.x, y: 0.3, z: lamp.z, intensity: 0.15,
@@ -5965,6 +6013,8 @@ export class Game {
         const take = Math.min(100 - held.count, Math.floor(lamp.batt));
         held.count += take;
         lamp.batt -= take;
+        this.hazard.evidence.push({ pos: v3(lamp.x, 0, lamp.z), room: lamp.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
         this.sound.emit({ x: lamp.x, y: 0.3, z: lamp.z, intensity: 0.2,
           category: 'item', caption: '[a dynamo is bled]' });
         if (lamp.batt <= 0) {
@@ -5978,6 +6028,54 @@ export class Game {
         }
         this.syncLampLights();
         this.mintLampDrops();
+        return;
+      }
+      case 'breakLamp': {
+        // sprint 549 — a dead shell is still goods: crack it open and
+        // the dynamo gives up its wound wire. The under's material
+        // economy reaches the lamp — nothing here is ever just trash.
+        const dd = it.data as { x: number; z: number } | undefined;
+        const li = dd ? this.litLamps.findIndex((l) => l.space === this.space
+          && l.batt <= 0 && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.35) : -1;
+        if (li < 0) { it.enabled = false; return; }
+        const lamp = this.litLamps.splice(li, 1)[0];
+        this.giveItem('wireCoil', 1);
+        // sprint 551 — lamp-work signs like every other work you do
+        this.hazard.evidence.push({ pos: v3(lamp.x, 0, lamp.z), room: lamp.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'] });
+        this.syncLampLights();
+        this.mintLampDrops();
+        this.sound.emit({ x: lamp.x, y: 0.3, z: lamp.z, intensity: 0.3,
+          category: 'item', caption: '[a lamp is cracked open]' });
+        this.cue('pickup', it.pos, '[the shell gives up its wound wire — a coil for the kit]');
+        return;
+      }
+      case 'rollLamp': {
+        // sprint 550 — push it under: the lamp rolls through the crack
+        // and comes up burning on the far side of your cover. It lands
+        // ~1.1m in, any side its crank now, and the roll is a real
+        // sound the far room hears.
+        const dd = it.data as { x: number; z: number } | undefined;
+        const lamp = dd ? this.litLamps.find((l) => l.space === this.space
+          && l.batt > 0 && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.4) : undefined;
+        if (!lamp) { it.enabled = false; return; }
+        const door = this.shutLeafNear(lamp.x, lamp.z, 1.3);
+        if (!door) { it.enabled = false; return; }
+        const nX = Math.sin(door.yaw), nZ = Math.cos(door.yaw);
+        const side = Math.sign((lamp.x - door.pos.x) * nX + (lamp.z - door.pos.z) * nZ) || 1;
+        const fx = door.pos.x - nX * side * 1.1;
+        const fz = door.pos.z - nZ * side * 1.1;
+        lamp.x = fx; lamp.z = fz;
+        lamp.room = this.activeRooms().find((r) => pointInRoom(r, fx, fz))?.index
+          ?? this.route?.branchRooms.find((r) => pointInRoom(r, fx, fz))?.index
+          ?? lamp.room;
+        lamp.keyYaw = Math.random() * Math.PI * 2; // it rolled — any side is the crank
+        this.syncLampLights();
+        this.mintLampDrops();
+        this.sound.emit({ x: fx, y: 0.2, z: fz, intensity: 0.35 * this.wantedPull,
+          category: 'item', caption: '[a lamp rolls under the door]' });
+        this.cue('ui-click', door.pos,
+          '[the lamp rolls under — the light crosses without you]', 'warn');
         return;
       }
       case 'baitWrap': {
@@ -7330,6 +7428,25 @@ export class Game {
       }
     }
     return this.currentRoom;
+  }
+
+  /** The nearest leaf shut enough to keep a crack (openT < 0.3)
+   *  within maxD of (x,z) — same built-rooms scan as doorsAt but with
+   *  an explicit bound and the shut-gate the roll needs. */
+  private shutLeafNear(x: number, z: number, maxD: number): Door | undefined {
+    let best: Door | undefined;
+    let bd = maxD;
+    const rooms = this.activeRooms();
+    for (const i of this.streamer.builtIndices) {
+      const r = rooms.find((rr) => rr.index === i) ?? this.route?.branchRooms.find((rr) => rr.index === i);
+      if (!r) continue;
+      for (const d of r.doors) {
+        if (d.openT >= 0.3) continue;
+        const dist = Math.hypot(d.pos.x - x, d.pos.z - z);
+        if (dist < bd) { bd = dist; best = d; }
+      }
+    }
+    return best;
   }
 
   /** Every door object within one doorway's width of pos, across built rooms. */
