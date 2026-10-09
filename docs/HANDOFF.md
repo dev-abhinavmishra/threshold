@@ -7372,3 +7372,45 @@ who worked it.
 - `enterUnderscript`/`exitUnderscript` both run `this.space` flips
   BEFORE their emits — emit at the ARRIVAL pos in the NEW space, or
   the sound lands on the wrong floor's listeners.
+
+## Sprints 533–536 — the lamp works the floor
+
+- **s533 'Set the lamp down'** — crouched with a pulse lamp: the whole
+  item goes down burning at the look-point (`batt` = charge at the
+  drop). It keeps the held lamp's own terms on the floor: `batt` drains
+  at the same `dt * 1.1`, it emits the same `[a lamp hums on the floor]`
+  machine sound the house can hear, and a real PointLight + emissive
+  orb marks it. A lure that pays with its own battery and dies on the
+  stones — gather it before burnout or lose the lamp.
+- **s534 the eye drinks the light** — `litLamps` ctx hook: a wall eye
+  whose sweep reaches a burning lamp (|bearing−yaw| < arc+0.5, within
+  range+2) fixates on it — pan centre becomes the lamp's bearing with a
+  slower, narrower breath (`cycle×2, arc×0.35`). Once-cued per eye,
+  resets when the lamp leaves the sweep. Honest: stand inside `half`
+  of your own lure's bearing and it still reads you.
+- **s535 'Pick the lamp up'** — `lampDrop` at each lamp: returns
+  `pulseLamp` with the remaining `batt` (rounded, ≥1). The burn-out
+  path removes marker + verb and warns `[a lamp dies on the floor]`.
+- **s536 the lamp rides the book** — `litLamps` on CheckpointSave
+  (x/z/room/space/batt), restored after the space flip, relit + remint.
+
+**Contract:** the lure economy's fourth tier — free aimless (pebble),
+free planted (off-hook), paid aimed (dial), and now *consumable* (the
+lamp's own battery is the price). It pulls ears (the hum emits are
+real positional sound, taxed by nothing extra) AND eyes (the only lure
+that answers the watchers). A lamp on the floor is not cover — it
+marks where you knelt.
+
+**Traps:**
+- `litLamps` is space-scoped (`l.space === this.space` at mint and at
+  the ctx hook): floors overlap xz, so an unfiltered verb would focus
+  across the floor break. `enterUnderscript`/`exitUnderscript` must
+  re-mint `mintLampDrops` — the older drop lists don't need it because
+  they mint unfiltered.
+- Restore order: `litLamps` rehydrates AFTER `this.space` is set
+  (~line 855) — before it, the space filter mints for the dead run's
+  floor.
+- The watcher bias only computes when the player is inside the eye's
+  own `range` — the fixate is a settle-path feature, so a lamp can't
+  be "seen attracting" from out of range (by design; the cue is for
+  the player in the room).

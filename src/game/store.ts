@@ -221,6 +221,9 @@ export interface CheckpointSave {
   /** sprint 522 — lids whose stash a staffed counter already filed
    *  (space-prefixed spot keys, same as lidStashes) */
   lidFiled?: string[];
+  /** sprint 536 — pulse lamps left burning on a floor keep their
+   *  battery and their pull through the save. */
+  litLamps?: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number }[];
   // felt the floorkeeper pocketed off blinded eyes, spilled where he
   // went down — scattered wraps wait as floor loot, same convention
   droppedWraps?: { x: number; z: number; n: number }[];
