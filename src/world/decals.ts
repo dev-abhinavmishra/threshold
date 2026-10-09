@@ -7806,3 +7806,171 @@ export function stoolDrag(rng: Rng): THREE.Texture | null {
     g.stroke();
   });
 }
+
+/** The ladder's feet — twin pad pits and the kick scuffs where the
+ *  rails dig in every time it gets climbed. */
+export function ladderFeet(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    const gap = 20 + rng.float() * 8;
+    const lx = 48 - gap / 2, rx = 48 + gap / 2;
+    // The pads — deep divots worn where the feet land every time.
+    for (const fx of [lx, rx]) {
+      const pit = g.createRadialGradient(fx, 34, 1, fx, 34, 7);
+      pit.addColorStop(0, 'rgba(50,40,30,0.55)');
+      pit.addColorStop(0.6, 'rgba(50,40,30,0.24)');
+      pit.addColorStop(1, 'rgba(50,40,30,0)');
+      g.fillStyle = pit;
+      g.beginPath();
+      g.ellipse(fx, 34, 7, 5, 0, 0, Math.PI * 2);
+      g.fill();
+      // The pad's own bite — a small hard-edged sole print.
+      g.fillStyle = 'rgba(60,48,34,0.5)';
+      g.save();
+      g.translate(fx, 34);
+      g.rotate(rng.range(-0.15, 0.15));
+      g.fillRect(-2.4, -1.6, 4.8, 3.2);
+      g.restore();
+    }
+    // Drag scars — the arcs the feet carve when the ladder's walked in.
+    for (let i = 0; i < 4; i++) {
+      g.strokeStyle = `rgba(140,124,100,${0.2 + rng.float() * 0.2})`;
+      g.lineWidth = 0.8 + rng.float() * 0.5;
+      g.beginPath();
+      const sx = lx + rng.range(-6, 6);
+      g.moveTo(sx, 20 + rng.range(-4, 4));
+      g.quadraticCurveTo((sx + lx) / 2, 28 + rng.range(-2, 2), lx + rng.range(-2, 2), 32 + rng.range(-2, 2));
+      g.stroke();
+    }
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = `rgba(140,124,100,${0.18 + rng.float() * 0.18})`;
+      g.lineWidth = 0.8;
+      g.beginPath();
+      const sx = rx + rng.range(-6, 6);
+      g.moveTo(sx, 20 + rng.range(-4, 4));
+      g.quadraticCurveTo((sx + rx) / 2, 28, rx + rng.range(-2, 2), 32 + rng.range(-2, 2));
+      g.stroke();
+    }
+    // Splinters and grit shaken loose from the wood.
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(110,90,64,${0.24 + rng.float() * 0.3})`;
+      g.fillRect(48 + rng.range(-gap, gap), 30 + rng.range(-8, 18), 0.9 + rng.float() * 0.8, 0.6 + rng.float() * 0.5);
+    }
+    // Kicked dust ridge between the feet.
+    const ridge = g.createLinearGradient(0, 40, 0, 48);
+    ridge.addColorStop(0, 'rgba(130,114,90,0)');
+    ridge.addColorStop(0.5, `rgba(130,114,90,${0.18 + rng.float() * 0.12})`);
+    ridge.addColorStop(1, 'rgba(130,114,90,0)');
+    g.fillStyle = ridge;
+    g.fillRect(48 - gap / 2 - 4, 40, gap + 8, 8);
+  });
+}
+
+/** The vice's grit — filings and metal dust under the workbench
+ *  where the work got done, in a fan under the jaw side. */
+export function viceGrit(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const fa = rng.range(-0.5, 0.5) + Math.PI / 2;
+    // The fan — filings thrown in a cone off the jaw.
+    for (let i = 0; i < 46; i++) {
+      const a = fa + rng.range(-0.6, 0.6);
+      const r = 8 + rng.float() * 30;
+      const fx = 48 + Math.cos(a) * r;
+      const fy = 40 + Math.sin(a) * r * 0.8;
+      const bright = rng.bool(0.3);
+      g.fillStyle = bright
+        ? `rgba(196,188,168,${0.3 + rng.float() * 0.35})`
+        : `rgba(90,80,66,${0.2 + rng.float() * 0.3})`;
+      g.save();
+      g.translate(fx, fy);
+      g.rotate(a + Math.PI / 2 + rng.range(-0.3, 0.3));
+      g.fillRect(-1.4, -0.35, 2.8 + rng.float() * 2, 0.7);
+      g.restore();
+    }
+    // The dense zone — ground-in grey where the filings pile.
+    const pile = g.createRadialGradient(48, 52, 2, 48, 52, 18);
+    pile.addColorStop(0, 'rgba(78,68,56,0.42)');
+    pile.addColorStop(1, 'rgba(78,68,56,0)');
+    g.fillStyle = pile;
+    g.beginPath();
+    g.ellipse(48, 52, 20, 14, 0, 0, Math.PI * 2);
+    g.fill();
+    // Oil crescents — the drip-off streaks.
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = `rgba(46,38,28,${0.24 + rng.float() * 0.2})`;
+      g.lineWidth = 1 + rng.float() * 0.6;
+      g.beginPath();
+      g.arc(48 + rng.range(-14, 14), 58 + rng.range(-4, 10), 4 + rng.float() * 4, rng.float() * 3, rng.float() * 3 + 1.6);
+      g.stroke();
+    }
+    // Wire curls — sprung spirals that fell and stayed.
+    for (let i = 0; i < 3; i++) {
+      if (!rng.bool(0.7)) continue;
+      g.strokeStyle = 'rgba(180,170,148,0.4)';
+      g.lineWidth = 0.5;
+      g.beginPath();
+      g.arc(48 + rng.range(-20, 20), 48 + rng.range(-14, 20), 1.4 + rng.float() * 1.2, 0, Math.PI * 1.7);
+      g.stroke();
+    }
+    // The toe-line — boot scuffs along the standing edge.
+    for (let i = 0; i < 5; i++) {
+      g.fillStyle = `rgba(60,50,38,${0.16 + rng.float() * 0.2})`;
+      g.save();
+      g.translate(30 + rng.float() * 36, 76 + rng.range(-4, 4));
+      g.rotate(rng.range(-0.4, 0.4));
+      g.fillRect(-3, -1, 6 + rng.float() * 3, 2);
+      g.restore();
+    }
+  });
+}
+
+/** The barrel's rings — hoop-rust circles and stave weeps where
+ *  the keg always sits and sweats. */
+export function barrelRings(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48 + rng.range(-4, 4);
+    const cy = 48 + rng.range(-4, 4);
+    // The seat ring — the hoop's rust circle pressed into the floor.
+    g.strokeStyle = 'rgba(96,56,24,0.55)';
+    g.lineWidth = 2 + rng.float() * 0.8;
+    g.beginPath();
+    g.arc(cx, cy, 13 + rng.float() * 2, 0, Math.PI * 2);
+    g.stroke();
+    // The weep ring outside it — the contents that escaped down the staves.
+    g.strokeStyle = 'rgba(70,42,20,0.32)';
+    g.lineWidth = 1.1;
+    g.beginPath();
+    g.arc(cx, cy, 17 + rng.float() * 3, 0, Math.PI * 2);
+    g.stroke();
+    // Damp blotches pooled between the rings.
+    for (let i = 0; i < 8; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 14 + rng.float() * 4;
+      g.fillStyle = `rgba(60,38,18,${0.2 + rng.float() * 0.25})`;
+      g.beginPath();
+      g.ellipse(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4 + rng.float() * 1.6, 1 + rng.float(), a, 0, Math.PI * 2);
+      g.fill();
+    }
+    // A second ghost — where the barrel stood before this stand.
+    if (rng.bool(0.6)) {
+      g.strokeStyle = 'rgba(110,68,32,0.2)';
+      g.lineWidth = 1;
+      g.beginPath();
+      g.arc(cx + rng.range(-24, 24), cy + rng.range(-18, 18), 12 + rng.float() * 2, rng.float() * 3, rng.float() * 3 + 4);
+      g.stroke();
+    }
+    // Stave drag — the arc scraped when it was rolled into place.
+    g.strokeStyle = `rgba(120,96,64,${0.24 + rng.float() * 0.2})`;
+    g.lineWidth = 2.4;
+    g.beginPath();
+    g.arc(cx + rng.range(-10, 10), cy + rng.range(-10, 10), 24 + rng.float() * 8, rng.float() * 4, rng.float() * 4 + 1.2);
+    g.stroke();
+    // Drip tears off the lowest stave.
+    for (let i = 0; i < 4; i++) {
+      const a = Math.PI / 2 + rng.range(-0.4, 0.4);
+      const tx = cx + Math.cos(a) * 15;
+      const ty = cy + Math.sin(a) * 15;
+      g.fillStyle = `rgba(56,36,18,${0.3 + rng.float() * 0.25})`;
+      g.fillRect(tx, ty, 1, 4 + rng.float() * 6);
+    }
+  });
+}
