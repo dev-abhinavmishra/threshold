@@ -18,5 +18,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    // vitest's console interception wedges the forked worker mid-suite
+    // (native IPC spin, timers starve — the s230/231 stall): run without it.
+    disableConsoleIntercept: true,
   },
 });
