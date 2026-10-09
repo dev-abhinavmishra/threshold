@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2949,6 +2949,49 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ts.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.1) / 2 + 0.004);
     prop.group.add(ts);
     if (!prop.group.name) prop.group.name = 'torch-soot';
+  }
+  // The cards curled — corner ghosts and tape hinges on the
+  // postcard boards.
+  if (spec.kind === 'postcards' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const cc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.MeshStandardMaterial({ map: cardCurl(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cc.name = 'card-curl';
+    cc.userData.decalMat = true;
+    cc.position.set(0, (dc?.[1] ?? 1.2) * 0.3, (dc?.[2] ?? 0.05) / 2 + 0.004);
+    prop.group.add(cc);
+    if (!prop.group.name) prop.group.name = 'card-curl';
+  }
+  // The label faded — bleached text and lifted corners on the
+  // exhibit labels.
+  if (spec.kind === 'exhibitLabel' && rng.bool(0.7)) {
+    const dc = modelCollider(spec.kind);
+    const lf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.15),
+      new THREE.MeshStandardMaterial({ map: labelFade(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    lf.name = 'label-fade';
+    lf.userData.decalMat = true;
+    lf.position.set(0, 0, (dc?.[2] ?? 0.02) / 2 + 0.003);
+    prop.group.add(lf);
+    if (!prop.group.name) prop.group.name = 'label-fade';
+  }
+  // The speakers kept their dust — cone rings and grille film on
+  // the old electronics.
+  const SOUNDS: ReadonlySet<PropSpec['kind']> = new Set(['boombox', 'cassettePlayer']);
+  if (SOUNDS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const sd2 = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.24),
+      new THREE.MeshStandardMaterial({ map: speakerDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sd2.name = 'speaker-dust';
+    sd2.userData.decalMat = true;
+    sd2.position.set(0, (dc?.[1] ?? 0.2) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    prop.group.add(sd2);
+    if (!prop.group.name) prop.group.name = 'speaker-dust';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

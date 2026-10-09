@@ -10229,3 +10229,111 @@ export function torchSoot(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Card curl — the marks old postcards keep: curled corner
+ * ghosts, sun fade, a tape hinge at one corner. */
+export function cardCurl(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // corner ghosts — pale card silhouettes where they were tacked
+    for (let i = 0; i < 4; i++) {
+      const x = 6 + i * 15 + (rng.float() - 0.5) * 2;
+      ctx.fillStyle = `rgba(170,164,150,${0.22 + rng.float() * 0.14})`;
+      ctx.fillRect(x, 10 + (rng.float() - 0.5) * 4, 12, 16 + rng.float() * 4);
+      // the curled corner — a lifted triangle shadow
+      ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.moveTo(x + 9, 10);
+      ctx.lineTo(x + 12, 10);
+      ctx.lineTo(x + 12, 13);
+      ctx.fill();
+    }
+    // tape hinges — yellowed tape marks at corners
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(200,180,120,${0.3 + rng.float() * 0.16})`;
+      ctx.fillRect(4 + rng.float() * 56, 4 + rng.float() * 30, 4, 6);
+    }
+    // sun fade — a bright wash where the light sat
+    const g = ctx.createLinearGradient(0, 0, 0, 48);
+    g.addColorStop(0, `rgba(200,196,186,${0.14 + rng.float() * 0.1})`);
+    g.addColorStop(1, 'rgba(200,196,186,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 48);
+    // tack holes — the pins that held them
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 52, 6 + rng.float() * 32, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Label fade — the marks an exhibit label keeps: bleached text
+ * ghosts, sun stripes, a lifted corner, a finger smear. */
+export function labelFade(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 32, (ctx) => {
+    // bleached lines — text rows the sun ate
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.14})`;
+      ctx.fillRect(8, 8 + i * 6, 40 + rng.float() * 8, 2.4);
+    }
+    // sun stripe — one edge bleached harder
+    ctx.fillStyle = `rgba(200,196,186,${0.2 + rng.float() * 0.12})`;
+    ctx.fillRect(0, 0, 64, 6);
+    // lifted corner — the label peeling off its pins
+    ctx.fillStyle = `rgba(60,54,44,${0.32 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.moveTo(56, 24);
+    ctx.lineTo(64, 24);
+    ctx.lineTo(64, 32);
+    ctx.lineTo(54, 30);
+    ctx.fill();
+    // finger smear — visitors touched the lower right
+    ctx.fillStyle = `rgba(80,72,60,${0.28 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(50, 22, 6, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // pin holes
+    for (const x of [8, 56]) {
+      ctx.fillStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(x, 8, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Speaker dust — the marks old electronics keep: dust cones on
+ * the drivers, felt-grille film, dial wear at the knob. */
+export function speakerDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // cone dust — grey rings on the driver
+    for (const cx of [20, 44]) {
+      ctx.strokeStyle = `rgba(150,144,132,${0.36 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, 22, 9 + rng.float(), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(150,144,132,${0.24 + rng.float() * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(cx, 22, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // grille film — dust in the felt mesh
+    for (let i = 0; i < 30; i++) {
+      ctx.fillStyle = `rgba(150,144,132,${0.18 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 52, 6 + rng.float() * 36, 0.6 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dial wear — polish arc at the tuner
+    ctx.strokeStyle = `rgba(60,54,44,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(32, 42, 5, Math.PI * 0.8, Math.PI * 1.9);
+    ctx.stroke();
+    // cassette lip dust — the door's grime line
+    ctx.fillStyle = `rgba(140,134,122,${0.26 + rng.float() * 0.14})`;
+    ctx.fillRect(38, 36, 18, 2);
+  });
+}
