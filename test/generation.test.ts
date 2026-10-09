@@ -885,8 +885,8 @@ describe('door listen seams (sprint 229)', () => {
         const latOff = (st.pos.x - d.pos.x) * latX + (st.pos.z - d.pos.z) * latZ;
         expect(Math.abs(latOff)).toBeLessThan(0.06);
         expect(Math.hypot(st.pos.x - d.pos.x, st.pos.z - d.pos.z)).toBeLessThan(0.5);
-        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.2);
-        expect(st.pos.y).toBeLessThan(d.pos.y + 0.6);
+        expect(st.pos.y).toBeGreaterThan(d.pos.y + 0.8);
+        expect(st.pos.y).toBeLessThan(d.pos.y + 1.2);
         expect(st.holdTime).toBeGreaterThanOrEqual(0.8);
       }
     }
@@ -4452,5 +4452,140 @@ describe('the stools scraped arcs (sprint 501)', () => {
       }
     }
     expect(n, 'no stool drag').toBeGreaterThan(0);
+  });
+});
+
+describe("the ladder's feet (sprint 502)", () => {
+  it('pad pits and drag scars sit under ladders', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'ladder-feet') n++; });
+      }
+    }
+    expect(n, 'no ladder feet').toBeGreaterThan(0);
+  });
+});
+
+describe("the vice's grit (sprint 502)", () => {
+  it('filings fan out under the work stations', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'vice-grit') n++; });
+      }
+    }
+    expect(n, 'no vice grit').toBeGreaterThan(0);
+  });
+});
+
+describe("the barrel's rings (sprint 502)", () => {
+  it('hoop rust circles sit under barrels and cans', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'barrel-rings') n++; });
+      }
+    }
+    expect(n, 'no barrel rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the landing wore a turn (sprint 503)', () => {
+  it('heel arcs sweep the stair elbows', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'landing-wear') n++; });
+      }
+    }
+    expect(n, 'no landing wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the cage shook its rust (sprint 503)', () => {
+  it('flake falls sit under the rattled cages', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'cage-rattle') n++; });
+      }
+    }
+    expect(n, 'no cage rattle').toBeGreaterThan(0);
+  });
+});
+
+describe('the call button grubbed (sprint 503)', () => {
+  it('a finger halo marks the lift walls', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'call-grub') n++; });
+      }
+    }
+    expect(n, 'no call grub').toBeGreaterThan(0);
+  });
+});
+
+describe('the wheel shed its wool (sprint 504)', () => {
+  it('lanolin film marks the spinning wheels', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'spin-dust') n++; });
+      }
+    }
+    expect(n, 'no spin dust').toBeGreaterThan(0);
+  });
+});
+
+describe('the counter kept the coins (sprint 504)', () => {
+  it('slide scratches mark the counter tops', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'counter-belt') n++; });
+      }
+    }
+    expect(n, 'no counter belt').toBeGreaterThan(0);
+  });
+});
+
+describe('the bell dulled (sprint 504)', () => {
+  it('a palm cap marks the counter bells', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'bell-tap') n++; });
+      }
+    }
+    expect(n, 'no bell tap').toBeGreaterThan(0);
   });
 });

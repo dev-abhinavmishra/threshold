@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2236,6 +2236,51 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     jd.position.set(0, (dc?.[1] ?? 0.35) * 0.6, (dc?.[2] ?? 0.25) / 2 + 0.005);
     prop.group.add(jd);
     if (!prop.group.name) prop.group.name = 'jar-dust';
+  }
+  // The wheel shed its wool — lanolin film and fiber wisps on the
+  // spinning wheels nobody turns anymore.
+  if (spec.kind === 'spinningWheel' && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const sd = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.34),
+      new THREE.MeshStandardMaterial({ map: spinDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sd.name = 'spin-dust';
+    sd.userData.decalMat = true;
+    sd.position.set(0, (dc?.[1] ?? 0.9) * 0.6, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(sd);
+    if (!prop.group.name) prop.group.name = 'spin-dust';
+  }
+  // The counter kept the coins — slide scratches and elbow polish
+  // on counters that took payment for years.
+  const COUNTER_KINDS = new Set(['counter', 'merchantCounter']);
+  if (COUNTER_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const cb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.45),
+      new THREE.MeshStandardMaterial({ map: counterBelt(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    cb.name = 'counter-belt';
+    cb.userData.decalMat = true;
+    cb.rotation.x = -Math.PI / 2;
+    cb.position.set(0, (dc?.[1] ?? 0.9) + 0.006, 0);
+    prop.group.add(cb);
+    if (!prop.group.name) prop.group.name = 'counter-belt';
+  }
+  // The bell dulled — a palm cap on the counter bells that still
+  // get rung for nobody.
+  if (spec.kind === 'counterBell' && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const bt = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.22, 0.22),
+      new THREE.MeshStandardMaterial({ map: bellTap(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    bt.name = 'bell-tap';
+    bt.userData.decalMat = true;
+    bt.rotation.x = -Math.PI / 2;
+    bt.position.set(0, (dc?.[1] ?? 0.1) + 0.004, 0);
+    prop.group.add(bt);
+    if (!prop.group.name) prop.group.name = 'bell-tap';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
