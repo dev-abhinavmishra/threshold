@@ -1,5 +1,15 @@
 # THRESH
 
+## Sprint 551–553 — the crates kept the stencil, the flasks ringed & the cards curled
+
+Military/lab/curio wear, all prop overlays.
+- **551**: stencil ghost letters + corner wear on mil/tool crates, bead tracks + spatter pits near welding gear, cosmoline film on ammo boxes/grenades.
+- **552**: reagent rings + scorch on chemistry/apothecary surfaces, cleaver grooves + fat sheen on chopping blocks, soot feathers behind propane torches.
+- **553**: card corner ghosts + tape hinges on postcard boards, bleached text + lifted corners on exhibit labels, dust cone rings + grille film on boomboxes/cassette players.
+
+*Branch devin/…-sprint-551+ — 573 decal wiring points.*
+
+
 ## Sprint 548–550 — the manifold wept, the vent bleached & the portrait kept the gaze
 
 Industrial + gallery wear, all prop overlays.
