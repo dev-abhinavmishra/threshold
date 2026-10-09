@@ -1047,7 +1047,7 @@ export class HazardField {
   watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
     arc: number; half: number; range: number; cycle: number; phase0: number;
     dead: boolean; settle: number; lastReport: number; warnT: number;
-    filed: boolean }[] = [];
+    filed: boolean; lampCued: boolean }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
   private wPX = NaN; private wPZ = NaN;
@@ -1106,7 +1106,7 @@ export class HazardField {
         arc: cam ? 0.95 : 0.5, half: cam ? 0.42 : 0.34,
         range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
         phase0: hsh * 20,
-        dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false,
+        dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false, lampCued: false,
       });
     }
   }
@@ -1196,7 +1196,32 @@ export class HazardField {
         ctx.cue('steam-hiss', w.pos, '[the register talks back — the eyes have your description]', { severity: 'warn' });
       }
       if (!live || d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
-      const facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
+      let facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
+      // sprint 534 — the eye drinks the light: a pulse lamp left
+      // burning inside the sweep's reach holds the pan on it — the
+      // cone fixates and breathes slowly over the lamp's bearing
+      // instead of travelling the room. Stand beside your own lure
+      // and it still reads you: light is not cover.
+      let lampBearing = NaN;
+      for (const l of ctx.litLamps?.(w.room) ?? []) {
+        const ld = Math.hypot(l.x - w.pos.x, l.z - w.pos.z);
+        if (ld > w.range + 2) continue;
+        const lb = Math.atan2(l.x - w.pos.x, l.z - w.pos.z);
+        let d0 = lb - w.yaw;
+        while (d0 > Math.PI) d0 -= Math.PI * 2;
+        while (d0 < -Math.PI) d0 += Math.PI * 2;
+        if (Math.abs(d0) > w.arc + 0.5) continue;
+        lampBearing = lb;
+        break;
+      }
+      if (Number.isFinite(lampBearing)) {
+        facing = lampBearing
+          + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * w.arc * 0.35;
+        if (!w.lampCued) {
+          w.lampCued = true;
+          ctx.cue('steam-hiss', w.pos, '[the eye drinks the light — its pan fixes on the lamp]', { severity: 'info' });
+        }
+      } else w.lampCued = false;
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;

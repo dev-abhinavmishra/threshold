@@ -107,6 +107,11 @@ export interface EntityCtx {
    *  lid (the claiming stoop's yield). Returns false when the lid has
    *  no wire left. Optional for headless ctxs. */
   robStashWire?: (spotId: string) => boolean;
+  /** sprint 534 — pulse lamps left burning on a floor. A wall eye
+   *  whose sweep reaches one drinks the light: its pan fixates on the
+   *  lamp's bearing instead of travelling the room. Optional for
+   *  headless ctxs. */
+  litLamps?: (room: number) => { x: number; z: number }[];
   /** Repossess the marked take — strips every hotItems stack and the
    *  marked coin. Returns false when there was nothing to take (honest:
    *  callers cue only on a real seizure). Optional for headless ctxs. */

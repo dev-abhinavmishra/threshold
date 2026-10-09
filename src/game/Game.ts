@@ -851,6 +851,12 @@ export class Game {
     this.space = cp?.inUnderscript ? 'under' : 'main';
     this.streamer.setSpace(this.space);
     this.streamer.clear();
+    // sprint 536 — a lamp left burning keeps its battery and its pull;
+    // restored AFTER the space flip so the verbs mint for the arrival
+    // floor, not the dead run's (the restore-order trap from s393)
+    this.litLamps = cp?.litLamps?.map((l) => ({ ...l })) ?? [];
+    this.syncLampLights();
+    this.mintLampDrops();
     this.stats = cp?.stats ? { ...cp.stats, entityEncounters: { ...cp.stats.entityEncounters } } : {
       startedAt: Date.now(), endedAt: 0, deaths: 0, retries: 0, roomsVisited: 0,
       imprintsEarned: 0, marginaliaEarned: 0, entityEncounters: {},
@@ -1149,6 +1155,10 @@ export class Game {
         if (stash.items.length === 0) this.lidStashes.delete(key);
         return true;
       },
+      // sprint 534 — the eyes read the lamps you leave burning
+      litLamps: (room) => this.litLamps
+        .filter((l) => l.room === room && l.space === this.space)
+        .map((l) => ({ x: l.x, z: l.z })),
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
@@ -1686,6 +1696,52 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
       this.mintDragVerb('pouch', `pouch-drop-drag-${this.space}-${i}`, w);
+    });
+  }
+  /** sprint 533 — 'Set the lamp down' / sprint 535 — 'Pick the lamp
+   *  up'. A burning lamp is real floor state: `batt` is the charge it
+   *  carried out of your hand, draining at the held rate until it dies
+   *  on the stones. Space-scoped like the spills — a lamp's verb only
+   *  mints on the floor it's burning on. */
+  private litLamps: { x: number; z: number; room: number; space: 'main' | 'under'; batt: number }[] = [];
+  /** One PointLight + emissive orb per burning lamp — the marker is
+   *  the mechanic: light you (and the eyes) can actually see. */
+  private lampLights: THREE.PointLight[] = [];
+  private syncLampLights(): void {
+    for (const li of this.lampLights) {
+      const orb = li.userData.orb as THREE.Object3D | undefined;
+      if (orb) {
+        this.entityGroup.remove(orb);
+        (orb as THREE.Mesh).geometry.dispose();
+        ((orb as THREE.Mesh).material as THREE.Material).dispose();
+      }
+      this.entityGroup.remove(li);
+      li.dispose();
+    }
+    this.lampLights = [];
+    for (const l of this.litLamps) {
+      const li = new THREE.PointLight(0xffc880, 2.2, 4.5, 1.6);
+      li.position.set(l.x, 0.35, l.z);
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0xffd9a0 }));
+      orb.position.set(l.x, 0.22, l.z);
+      li.userData.orb = orb;
+      this.entityGroup.add(li, orb);
+      this.lampLights.push(li);
+    }
+  }
+  private mintLampDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('lamp-drop-'));
+    this.litLamps.filter((l) => l.space === this.space).forEach((l, i) => {
+      this.dynamicInteractables.push({
+        kind: 'lampDrop', id: `lamp-drop-${this.space}-${i}`,
+        pos: { x: l.x, y: 0.15, z: l.z },
+        prompt: 'Pick the lamp up',
+        holdTime: 0.6, enabled: true, priority: 1,
+        // pos-keyed: the array shifts on gather, the pos doesn't
+        data: { x: Number(l.x.toFixed(2)), z: Number(l.z.toFixed(2)) },
+      });
     });
   }
   private mintWrapDrops(): void {
@@ -2678,6 +2734,24 @@ export class Game {
         kind: 'baitWedge', id: `baitwedge-${this.space}:${this.currentRoom}`,
         pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.3, z: this.player.pos.z + lk.z * 0.6 },
         prompt: 'Leave a chock out',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
+    // sprint 533 — 'Set the lamp down': the pulse lamp keeps burning
+    // where you kneel. Light the wall eyes drink (s534), a hum the
+    // ears follow — a lure that pays with its own battery and dies on
+    // the floor. It pulls the watch off you and marks where you were:
+    // light is not cover.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'pulseLamp' && i.count > 0)
+      && !this.litLamps.some((l) => l.space === this.space
+        && Math.hypot(l.x - this.player.pos.x, l.z - this.player.pos.z) < 1.4)) {
+      const lk = v3(); this.player.lookDir(lk);
+      this.interaction.add({
+        kind: 'setLamp', id: `setlamp-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.3, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Set the lamp down',
         holdTime: 0.8, enabled: true, priority: 1,
         data: {},
       });
@@ -5669,6 +5743,47 @@ export class Game {
           '[the bait is set — whatever reads the floor reads this first]');
         return;
       }
+      case 'setLamp': {
+        // sprint 533 — the lamp leaves your hand burning: the whole
+        // item goes down with its battery, and the battery is the
+        // fuse. Honest terms: gather it before it dies or lose it.
+        const item = this.inventory.find((i) => i.id === 'pulseLamp' && i.count > 0);
+        if (!item) { it.enabled = false; return; }
+        this.litLamps.push({
+          x: it.pos.x, z: it.pos.z,
+          room: this.currentRoom, space: this.space,
+          batt: item.count,
+        });
+        this.inventory = this.inventory.filter((i) => i.id !== 'pulseLamp');
+        this.pulseLampOn = false;
+        this.syncLampLights();
+        this.mintLampDrops();
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.25,
+          category: 'item', caption: '[a lamp settles on the floor]' });
+        this.cue('pickup', it.pos,
+          '[the lamp burns on its own — light the eyes drink, a hum the ears follow]');
+        return;
+      }
+      case 'lampDrop': {
+        // sprint 535 — gather the burning lamp: what's left of its
+        // battery comes back as your pulse lamp.
+        const dd = it.data as { x: number; z: number } | undefined;
+        const li = this.litLamps.findIndex((l) => l.space === this.space
+          && dd !== undefined
+          && Math.hypot(l.x - dd.x, l.z - dd.z) < 0.3);
+        if (li < 0) { it.enabled = false; return; }
+        const lamp = this.litLamps[li];
+        this.litLamps.splice(li, 1);
+        this.giveItem('pulseLamp', Math.max(1, Math.round(lamp.batt)));
+        this.syncLampLights();
+        this.mintLampDrops();
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.2,
+          category: 'item', caption: '[the lamp leaves the floor]' });
+        this.cue('pickup', it.pos, '[the lamp is yours again — its battery spent what it spent]');
+        return;
+      }
       case 'baitWrap': {
         // sprint 490 — the upstairs bait: leave a felt wrap where you
         // kneel. The floorkeeper's fold-back can't tell a plant from
@@ -6641,6 +6756,8 @@ export class Game {
     this.echoRoom = -1;
     this.echoQueue.length = 0;
     this.phoneRing = null;
+    // s533 — the lamps' verbs follow the floor you're on
+    this.mintLampDrops();
     this.stats.underscriptDeepest = Math.max(this.stats.underscriptDeepest, 0);
     // sprint 529 — the stair knows your weight: crossing floors past
     // the rattle tier lands the descent as real sound at the threshold.
@@ -6675,6 +6792,7 @@ export class Game {
     this.echoRoom = -1;
     this.echoQueue.length = 0;
     this.phoneRing = null;
+    this.mintLampDrops();
     if (this.stats.underscriptDeepest >= this.route.underRooms.length - 1) {
       this.stats.underscriptCompleted = true;
       if (!this.inventory.some((i) => i.id === 'palimpsest')) this.giveItem('palimpsest');
@@ -6755,6 +6873,8 @@ export class Game {
         ? this.droppedCoils.map((w) => ({ ...w })) : undefined,
       droppedPouches: this.droppedPouches.length > 0
         ? this.droppedPouches.map((w) => ({ ...w })) : undefined,
+      litLamps: this.litLamps.length > 0
+        ? this.litLamps.map((l) => ({ ...l })) : undefined,
       graftedWires: this.hazard.snares.some((s) => s.grafted || s.planted)
         ? this.hazard.snares.filter((s) => s.grafted || s.planted)
           .map((s) => ({ x: s.pos.x, z: s.pos.z, room: s.room, armed: s.armed, planted: s.planted,
@@ -10606,6 +10726,25 @@ export class Game {
     // pulse lamp noise: humming attracts
     if (this.pulseLampOn && Math.random() < dt * 0.8) {
       this.sound.emit({ x: this.player.pos.x, y: 1, z: this.player.pos.z, intensity: 0.25, category: 'machine', caption: '[lamp hum]' });
+    }
+    // sprint 533 — a lamp set down keeps working the floor: same hum,
+    // same drain, no hand to shut it off. The battery is the fuse.
+    if (this.litLamps.length > 0) {
+      let lampDied = false;
+      for (const l of this.litLamps) {
+        l.batt -= dt * 1.1;
+        if (Math.random() < dt * 0.8) {
+          this.sound.emit({ x: l.x, y: 0.3, z: l.z, intensity: 0.25,
+            category: 'machine', caption: '[a lamp hums on the floor]' });
+        }
+        if (l.batt <= 0) lampDied = true;
+      }
+      if (lampDied) {
+        this.litLamps = this.litLamps.filter((l) => l.batt > 0);
+        this.syncLampLights();
+        this.mintLampDrops();
+        this.cue('ui-click', null, '[a lamp dies on the floor]', 'warn');
+      }
     }
 
     this.updatePanic(dt);
