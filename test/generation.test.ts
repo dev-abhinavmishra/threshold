@@ -5040,3 +5040,48 @@ describe('the valve kept the grip (sprint 545)', () => {
     expect(n, 'no valve grips').toBeGreaterThan(0);
   });
 });
+
+describe('the panel kept the needle (sprint 546)', () => {
+  it('stuck pointers mark the gauge faces', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'needle-ghost') n++; });
+      }
+    }
+    expect(n, 'no needle ghosts').toBeGreaterThan(0);
+  });
+});
+
+describe('the cable kept its sleeve (sprint 546)', () => {
+  it('dust film and web ride the hanging drops', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'cable-sleeve') n++; });
+      }
+    }
+    expect(n, 'no cable sleeves').toBeGreaterThan(0);
+  });
+});
+
+describe('the key kept its hook (sprint 546)', () => {
+  it('tag ghosts hang on the racks', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'key-ghost') n++; });
+      }
+    }
+    expect(n, 'no key ghosts').toBeGreaterThan(0);
+  });
+});

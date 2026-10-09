@@ -9492,3 +9492,102 @@ export function valveGrip(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Needle ghost — the marks a dead gauge keeps: a stuck pointer's
+ * arc, dust on the dial face, finger taps at the glass. */
+export function needleGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // dial dust — film over the face
+    ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+    ctx.fill();
+    // needle ghost — the dark arc where the pointer parked for
+    // years and bleached the face around it
+    const a = Math.PI * (0.7 + rng.float() * 0.6);
+    ctx.strokeStyle = `rgba(50,44,36,${0.44 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * 19, cy + Math.sin(a) * 19);
+    ctx.stroke();
+    // pointer sweep ghost — the arc it swept before stopping
+    ctx.strokeStyle = `rgba(120,110,96,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 17, Math.PI * 0.75, a);
+    ctx.stroke();
+    // finger taps — the spots someone rapped the glass
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.24 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 10 + rng.float() * 20, cy - 10 + rng.float() * 20, 2, 1.4, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Cable sleeve — the dust sleeve a hanging cable keeps: a grey
+ * tube around the drop, web at the ceiling rosette, a wiped run. */
+export function cableSleeve(rng: Rng): THREE.Texture | null {
+  return canvasTex(32, 96, (ctx) => {
+    const cx = 16;
+    // rosette bloom — dust and web at the ceiling anchor
+    ctx.fillStyle = `rgba(150,144,132,${0.4 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 8, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the sleeve — a dust film hugging the drop
+    const g = ctx.createLinearGradient(0, 10, 0, 90);
+    g.addColorStop(0, `rgba(150,144,132,${0.34 + rng.float() * 0.14})`);
+    g.addColorStop(0.7, 'rgba(150,144,132,0.18)');
+    g.addColorStop(1, 'rgba(150,144,132,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 4, 10, 8, 82);
+    // web threads — silk from rosette to wall
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(180,176,164,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, 10 + rng.float() * 6);
+      ctx.quadraticCurveTo(cx + (rng.float() - 0.5) * 14, 20 + rng.float() * 10, cx + 8, 24 + rng.float() * 12);
+      ctx.stroke();
+    }
+    // a wiped run — where a hand slid it
+    ctx.fillStyle = 'rgba(60,54,44,0.2)';
+    ctx.fillRect(cx - 3, 40 + rng.float() * 10, 6, 8 + rng.float() * 6);
+  });
+}
+
+/** Key ghost — the marks a key rack keeps: pale tag shapes where
+ * keys hung, hook-bright spots, a dust drift on the rail. */
+export function keyGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // tag ghosts — pale paper silhouettes where keys hung
+    for (let i = 0; i < 6; i++) {
+      const x = 8 + i * 9 + (rng.float() - 0.5) * 2;
+      ctx.fillStyle = `rgba(170,164,150,${0.3 + rng.float() * 0.16})`;
+      ctx.fillRect(x, 14, 5, 12 + rng.float() * 4);
+      ctx.beginPath();
+      ctx.arc(x + 2.5, 14, 2.4, Math.PI, 0);
+      ctx.fill();
+    }
+    // hook shine — bright pins where tags rubbed
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.36 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(10.5 + i * 9, 12, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust drift — the rail no hand ran along
+    ctx.fillStyle = `rgba(150,144,132,${0.3 + rng.float() * 0.16})`;
+    ctx.fillRect(4, 6, 56, 3);
+    // a key that stayed — dark shape still hanging
+    ctx.fillStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.14})`;
+    ctx.fillRect(46, 16, 2.4, 14);
+    ctx.beginPath();
+    ctx.arc(47.2, 17, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
