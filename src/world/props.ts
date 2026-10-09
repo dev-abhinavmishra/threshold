@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2992,6 +2992,47 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sd2.position.set(0, (dc?.[1] ?? 0.2) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.004);
     prop.group.add(sd2);
     if (!prop.group.name) prop.group.name = 'speaker-dust';
+  }
+  // The barrel kept the hoop — rust bleeding under each band.
+  if (spec.kind === 'barrel' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const hr = new THREE.Mesh(
+      new THREE.PlaneGeometry(dc?.[0] ?? 0.7, (dc?.[1] ?? 0.9) * 0.8),
+      new THREE.MeshStandardMaterial({ map: hoopRust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    hr.name = 'hoop-rust';
+    hr.userData.decalMat = true;
+    hr.position.set(0, (dc?.[1] ?? 0.9) * 0.4, (dc?.[2] ?? 0.35) / 2 + 0.005);
+    prop.group.add(hr);
+    if (!prop.group.name) prop.group.name = 'hoop-rust';
+  }
+  // The bin kept the ash — a spill of grey crumbs it could not hold.
+  if (spec.kind === 'bin' && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const ar = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: ashRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ar.name = 'ash-ring';
+    ar.userData.decalMat = true;
+    ar.rotation.x = -Math.PI / 2;
+    ar.position.set(0, 0.006, (dc?.[2] ?? 0.3) / 2 + 0.1);
+    prop.group.add(ar);
+    if (!prop.group.name) prop.group.name = 'ash-ring';
+  }
+  // The locker kept its ghosts — label shadows and key scratches.
+  const LOCKERS: ReadonlySet<PropSpec['kind']> = new Set(['locker', 'cageLocker']);
+  if (LOCKERS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const lg = new THREE.Mesh(
+      new THREE.PlaneGeometry((dc?.[0] ?? 0.5) * 0.6, (dc?.[1] ?? 1.8) * 0.7),
+      new THREE.MeshStandardMaterial({ map: lockerGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    lg.name = 'locker-ghost';
+    lg.userData.decalMat = true;
+    lg.position.set(0, (dc?.[1] ?? 1.8) * 0.45, (dc?.[2] ?? 0.45) / 2 + 0.004);
+    prop.group.add(lg);
+    if (!prop.group.name) prop.group.name = 'locker-ghost';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

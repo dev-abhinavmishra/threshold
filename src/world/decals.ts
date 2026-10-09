@@ -10337,3 +10337,88 @@ export function speakerDust(rng: Rng): THREE.Texture | null {
     ctx.fillRect(38, 36, 18, 2);
   });
 }
+
+// ---------- sprint 554: the barrel kept the hoop, the bin kept the ash ----------
+
+export function hoopRust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 48, (ctx) => {
+    // hoop shadows — rust bleeding under each band
+    for (const y of [12, 24, 36]) {
+      for (let x = 0; x < 64; x += 4) {
+        const a = 0.18 + rng.float() * 0.22;
+        ctx.fillStyle = `rgba(96,50,24,${a})`;
+        ctx.fillRect(x, y - 1, 4, 3 + rng.float() * 2);
+      }
+      // drips falling off the band
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = `rgba(88,46,22,${0.3 + rng.float() * 0.2})`;
+        const dx = rng.float() * 64;
+        ctx.fillRect(dx, y + 2, 1, 2 + rng.float() * 6);
+      }
+    }
+    // stave weep — dark joins between the planks
+    for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = `rgba(30,22,16,${0.14 + rng.float() * 0.12})`;
+      ctx.fillRect(4 + rng.float() * 56, 4, 0.8, 40);
+    }
+  });
+}
+
+export function ashRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // ash scatter — grey crumbs spilled around the bin's rim
+    for (let i = 0; i < 40; i++) {
+      const a = rng.float() * Math.PI * 2, r = 16 + rng.float() * 14;
+      ctx.fillStyle = `rgba(150,146,138,${0.2 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 0.6 + rng.float() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // kicked paper — a crumpled wad that missed
+    ctx.fillStyle = `rgba(196,190,178,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    const wx = 12 + rng.float() * 12, wy = 38 + rng.float() * 12;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const rr = 3 + rng.float() * 2;
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](wx + Math.cos(a) * rr, wy + Math.sin(a) * rr);
+    }
+    ctx.closePath(); ctx.fill();
+    // char flecks — darker grit in the spill
+    for (let i = 0; i < 18; i++) {
+      const a = rng.float() * Math.PI * 2, r = 14 + rng.float() * 16;
+      ctx.fillStyle = `rgba(50,46,40,${0.24 + rng.float() * 0.2})`;
+      ctx.fillRect(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 1.4, 1.4);
+    }
+  });
+}
+
+export function lockerGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    // label ghosts — pale rectangles where name cards sat for decades
+    for (let i = 0; i < 2; i++) {
+      const ly = 8 + i * 24 + rng.float() * 4;
+      ctx.fillStyle = `rgba(160,152,136,${0.24 + rng.float() * 0.16})`;
+      ctx.fillRect(10 + rng.float() * 4, ly, 24 + rng.float() * 8, 6 + rng.float() * 2);
+      // pin holes at the card's corners
+      ctx.fillStyle = 'rgba(40,36,30,0.5)';
+      ctx.fillRect(11 + rng.float() * 4, ly + 1, 1, 1);
+      ctx.fillRect(32 + rng.float() * 4, ly + 1, 1, 1);
+    }
+    // vent shadow — grime above the louvres
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(52,48,42,${0.2 + rng.float() * 0.14})`;
+      ctx.fillRect(12, 40 + i * 4, 24, 1.6);
+    }
+    // key scratch — someone fished for the lock in the dark
+    ctx.strokeStyle = `rgba(140,132,118,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 0.8;
+    const sx = 24 + rng.float() * 6;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(sx + rng.float() * 3 - 1.5, 30);
+      ctx.lineTo(sx + rng.float() * 4 - 2, 30 - 4 - rng.float() * 6);
+      ctx.stroke();
+    }
+  });
+}
