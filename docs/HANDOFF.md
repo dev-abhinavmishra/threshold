@@ -1,5 +1,14 @@
 # THRESH
 
+## Sprint 554–556 — the barrel kept the hoop, the jug sweated & the case kept its dust
+
+Nine more prop decals: `hoopRust` rust bands on barrels, `ashRing` crumb spill
+around bins, `lockerGhost` label shadows + key scratches on lockers,
+`kettleScale` limescale on pots, `boardScores` knife scoring on chopping
+boards, `dartHalo` pin halo around dartboards, `jugSweat` runnels + sediment
+on glass jugs, `foldPulls` crease lines on linen shelves, `shelfDust` empty
+ghosts + dust film in display cases.
+
 ## Sprint 551–553 — the crates kept the stencil, the flasks ringed & the cards curled
 
 Military/lab/curio wear, all prop overlays.

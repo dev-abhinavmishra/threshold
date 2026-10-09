@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2992,6 +2992,129 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sd2.position.set(0, (dc?.[1] ?? 0.2) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.004);
     prop.group.add(sd2);
     if (!prop.group.name) prop.group.name = 'speaker-dust';
+  }
+  // The barrel kept the hoop — rust bleeding under each band.
+  if (spec.kind === 'barrel' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const hr = new THREE.Mesh(
+      new THREE.PlaneGeometry(dc?.[0] ?? 0.7, (dc?.[1] ?? 0.9) * 0.8),
+      new THREE.MeshStandardMaterial({ map: hoopRust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    hr.name = 'hoop-rust';
+    hr.userData.decalMat = true;
+    hr.position.set(0, (dc?.[1] ?? 0.9) * 0.4, (dc?.[2] ?? 0.35) / 2 + 0.005);
+    prop.group.add(hr);
+    if (!prop.group.name) prop.group.name = 'hoop-rust';
+  }
+  // The bin kept the ash — a spill of grey crumbs it could not hold.
+  if (spec.kind === 'bin' && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const ar = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: ashRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ar.name = 'ash-ring';
+    ar.userData.decalMat = true;
+    ar.rotation.x = -Math.PI / 2;
+    ar.position.set(0, 0.006, (dc?.[2] ?? 0.3) / 2 + 0.1);
+    prop.group.add(ar);
+    if (!prop.group.name) prop.group.name = 'ash-ring';
+  }
+  // The locker kept its ghosts — label shadows and key scratches.
+  const LOCKERS: ReadonlySet<PropSpec['kind']> = new Set(['locker', 'cageLocker']);
+  if (LOCKERS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const lg = new THREE.Mesh(
+      new THREE.PlaneGeometry((dc?.[0] ?? 0.5) * 0.6, (dc?.[1] ?? 1.8) * 0.7),
+      new THREE.MeshStandardMaterial({ map: lockerGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    lg.name = 'locker-ghost';
+    lg.userData.decalMat = true;
+    lg.position.set(0, (dc?.[1] ?? 1.8) * 0.45, (dc?.[2] ?? 0.45) / 2 + 0.004);
+    prop.group.add(lg);
+    if (!prop.group.name) prop.group.name = 'locker-ghost';
+  }
+  // The kettle whistled — limescale and heat rings on the old pots.
+  const POTS: ReadonlySet<PropSpec['kind']> = new Set(['kettle', 'enamelPot', 'brassPot']);
+  if (POTS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const ks = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: kettleScale(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ks.name = 'kettle-scale';
+    ks.userData.decalMat = true;
+    ks.position.set(0, (dc?.[1] ?? 0.25) * 0.35, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    prop.group.add(ks);
+    if (!prop.group.name) prop.group.name = 'kettle-scale';
+  }
+  // The board kept the cuts — a hundred meals' knife scoring.
+  if (spec.kind === 'cuttingBoard' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const bs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.MeshStandardMaterial({ map: boardScores(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bs.name = 'board-scores';
+    bs.userData.decalMat = true;
+    bs.rotation.x = -Math.PI / 2;
+    bs.position.set(0, (dc?.[1] ?? 0.04) + 0.002, 0);
+    prop.group.add(bs);
+    if (!prop.group.name) prop.group.name = 'board-scores';
+  }
+  // The darts missed too — a halo of pits around the board.
+  if (spec.kind === 'dartboard' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const dh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.7),
+      new THREE.MeshStandardMaterial({ map: dartHalo(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    dh.name = 'dart-halo';
+    dh.userData.decalMat = true;
+    dh.position.set(0, 0, (dc?.[2] ?? 0.04) / 2 + 0.004);
+    prop.group.add(dh);
+    if (!prop.group.name) prop.group.name = 'dart-halo';
+  }
+  // The jug sweated — runnels and a sediment line on the old glass.
+  const JUGS: ReadonlySet<PropSpec['kind']> = new Set(['gallonJug', 'jug']);
+  if (JUGS.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const js = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.24, 0.32),
+      new THREE.MeshStandardMaterial({ map: jugSweat(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    js.name = 'jug-sweat';
+    js.userData.decalMat = true;
+    js.position.set(0, (dc?.[1] ?? 0.3) * 0.4, (dc?.[2] ?? 0.16) / 2 + 0.004);
+    prop.group.add(js);
+    if (!prop.group.name) prop.group.name = 'jug-sweat';
+  }
+  // The shelf kept the folds — crease lines and one dragged corner.
+  if (spec.kind === 'linenShelf' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const fp = new THREE.Mesh(
+      new THREE.PlaneGeometry((dc?.[0] ?? 0.9) * 0.7, 0.4),
+      new THREE.MeshStandardMaterial({ map: foldPulls(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    fp.name = 'fold-pulls';
+    fp.userData.decalMat = true;
+    fp.position.set(0, (dc?.[1] ?? 1.6) * 0.5, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(fp);
+    if (!prop.group.name) prop.group.name = 'fold-pulls';
+  }
+  // The case kept its dust — empty ghosts where the pieces were taken.
+  if (spec.kind === 'displayCase' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const sdx = new THREE.Mesh(
+      new THREE.PlaneGeometry((dc?.[0] ?? 1.0) * 0.8, 0.45),
+      new THREE.MeshStandardMaterial({ map: shelfDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sdx.name = 'shelf-dust';
+    sdx.userData.decalMat = true;
+    sdx.rotation.x = -Math.PI / 2;
+    sdx.position.set(0, (dc?.[1] ?? 0.9) * 0.55, 0);
+    prop.group.add(sdx);
+    if (!prop.group.name) prop.group.name = 'shelf-dust';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
