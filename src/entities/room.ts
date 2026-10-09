@@ -1715,11 +1715,25 @@ export class Inspector extends Entity {
     // sprint 514 — it smells the take: a heavy load rings through the
     // lid. Once the take passes sixteen the keys skip straight to the
     // cover you're inside — the load betrays the spot, not the body.
+    // sprint 518 — and it smells a parked take the same way: a stash
+    // in a lid is take off your back but not out of the house. The
+    // heaviest smell wins — your lid if you're carrying more, the
+    // stash lid if the parked take outweighs you.
     const load = c.takeLoad?.() ?? 0;
     const hid = c.player.hiddenSpot;
+    let smellSpot: RoomInstance['hidingSpots'][number] | null = null;
+    let smellLoad = 0;
     if (load >= 16 && hid && !hid.trappedBy && !this.checked.has(hid.id)
       && room.hidingSpots.some((s) => s.id === hid.id)) {
-      this.target = { exitPos: hid.exitPos, id: hid.id, spot: hid };
+      smellSpot = hid; smellLoad = load;
+    }
+    for (const s of room.hidingSpots) {
+      if (this.checked.has(s.id) || s.trappedBy) continue;
+      const st = c.stashLoad?.(s.id) ?? 0;
+      if (st > smellLoad) { smellLoad = st; smellSpot = s; }
+    }
+    if (smellSpot && smellLoad >= 16) {
+      this.target = { exitPos: smellSpot.exitPos, id: smellSpot.id, spot: smellSpot };
       if (!this.smelledTake) {
         this.smelledTake = true;
         c.cue('collector-rattle', this.pos, '[the keys stop — it smells the take]', { severity: 'warn' });
@@ -1776,6 +1790,15 @@ export class Inspector extends Entity {
             c.damagePlayer(this.tuning.damage, 'inspector', 'It tests every lid — bail out before it reaches your spot, or hold it shut through the rattle.');
             c.cue('door-rattle', spot.exitPos, '[it pulls you out]', { severity: 'danger' });
           }
+        }
+        // sprint 518 — the lid test reads what's inside it: goods
+        // parked in a lid the keys got to go to the count's locker —
+        // the stash's one real peril, the price of parking the take.
+        const seized = c.seizeStash?.(spot.id) ?? 0;
+        if (seized > 0) {
+          c.cue('collector-rattle', spot.exitPos,
+            `[the keys read the lid — the count's hands take what it holds · ${seized} goods]`,
+            { severity: 'warn' });
         }
         this.checked.add(spot.id);
         this.grappling = false;

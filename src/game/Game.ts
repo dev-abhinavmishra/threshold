@@ -727,6 +727,13 @@ export class Game {
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
     this.stockFiled = new Set(cp?.stockFiled ?? []);
     this.bulkFiled = new Set(cp?.bulkFiled ?? []);
+    this.lidStashes.clear();
+    for (const s of cp?.lidStashes ?? []) {
+      this.lidStashes.set(s.spot, {
+        items: s.items.map((i) => ({ ...i })),
+        marked: [...(s.marked ?? [])],
+      });
+    }
     // the rifled till stays rifled — cold counters + the stock-reads
     // already testified ride the checkpoint with the debt that priced them
     this.closedCounters.clear();
@@ -1106,6 +1113,20 @@ export class Game {
       },
       carriesMarked: () => this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0),
       takeLoad: () => this.inventory.reduce((a, i) => a + i.count, 0) + this.hotImprints,
+      stashLoad: (spotId) =>
+        this.lidStashes.get(spotId)?.items.reduce((a, i) => a + i.count, 0) ?? 0,
+      seizeStash: (spotId) => {
+        const stash = this.lidStashes.get(spotId);
+        if (!stash) return 0;
+        const n = stash.items.reduce((a, i) => a + i.count, 0);
+        if (n <= 0) return 0;
+        // the count's hands are the only way marked stock moves — a
+        // found stash hangs at the cage under a fresh tag like a take
+        // stripped off your back
+        this.stashSeized(stash.items.map((i) => ({ ...i })), 0);
+        this.lidStashes.delete(spotId);
+        return n;
+      },
       seizeMarked: () => {
         const take = this.inventory.filter((i) => this.hotItems.has(i.id) && i.count > 0);
         if (take.length === 0 && this.hotImprints <= 0 && this.hotMarginalia <= 0) return false;
@@ -1389,6 +1410,11 @@ export class Game {
    *  sighting — the once-per-detective flag survives a reload. */
   private stockFiled = new Set<number>();
   private bulkFiled = new Set<number>();
+  /** sprint 517 — the take parked in a lid: stashed goods keyed by
+   *  hiding-spot id; `marked` records which stashed ids were rifled
+   *  stock so the marks ride with the goods (a stash parks the take —
+   *  it doesn't launder it). */
+  private lidStashes = new Map<string, { items: { id: ItemId; count: number }[]; marked: ItemId[] }>();
 
   /** The Filer's consult ledger — each paid read of the under's own
    *  paper (work order, crew board, claim register) is a question the
@@ -2257,6 +2283,15 @@ export class Game {
       const r = rooms.find((x) => x.index === i) ?? this.route?.branchRooms.find((x) => x.index === i);
       if (r) this.interaction.addRoomInteractables(r);
     }
+    // sprint 520 — a full lid hides nothing: a stash fills the volume,
+    // so its prompt tells you the box is taken before you try it.
+    if (this.lidStashes.size > 0) {
+      for (const it of this.interaction.interactables) {
+        if (it.kind !== 'hide') continue;
+        const spot = it.data as RoomInstance['hidingSpots'][number];
+        if (this.lidStashes.has(spot.id)) it.prompt = `${it.prompt} — the take fills it`;
+      }
+    }
     if (this.player.hiddenSpot) {
       this.interaction.add({
         kind: 'exitHide', id: 'exit-hide', pos: this.player.hiddenSpot.exitPos,
@@ -2619,6 +2654,46 @@ export class Game {
           holdTime: 0.4, enabled: true, priority: 1,
           data: {},
         });
+      }
+    }
+    // sprint 517 — 'Stash the take' / 'Recover the stash': the lid holds
+    // your goods too. The only way to unburden marked stock — it never
+    // spills (s511) — but the lid is a place, and a place can be read.
+    // Anchor sits inside the mouth: aim INTO the box for the stash, at
+    // the floor before it for the hide. A trapped lid takes nothing.
+    if (!this.player.hiddenSpot) {
+      const carrying = this.player.crouching && this.inventory.some((i) => i.count > 0);
+      if (carrying || this.lidStashes.size > 0) {
+        for (const room of this.activeRooms()) {
+          for (const spot of room.hidingSpots) {
+            const ex = spot.exitPos.x - this.player.pos.x;
+            const ez = spot.exitPos.z - this.player.pos.z;
+            if (ex * ex + ez * ez > 1.44) continue;
+            const stash = this.lidStashes.get(spot.id);
+            if (!stash && !carrying) continue;
+            const cx = (spot.volume.minX + spot.volume.maxX) / 2;
+            const cz = (spot.volume.minZ + spot.volume.maxZ) / 2;
+            const dx = spot.exitPos.x - cx, dz = spot.exitPos.z - cz;
+            const dl = Math.hypot(dx, dz) || 1;
+            const anchor = { x: spot.exitPos.x - (dx / dl) * 0.4, y: 0.55, z: spot.exitPos.z - (dz / dl) * 0.4 };
+            if (stash) {
+              this.interaction.add({
+                kind: 'recoverStash', id: `recover-${spot.id}`, pos: anchor,
+                prompt: `Recover the stash — ${stash.items.reduce((a, i) => a + i.count, 0)} goods`,
+                holdTime: 0.7, enabled: true, priority: 2,
+                data: { spotId: spot.id },
+              });
+            }
+            if (carrying && !spot.trappedBy) {
+              this.interaction.add({
+                kind: 'stashTake', id: `stash-${spot.id}`, pos: anchor,
+                prompt: stash ? 'Add the take to the stash' : 'Stash the take',
+                holdTime: 1.0, enabled: true, priority: 2,
+                data: { spotId: spot.id },
+              });
+            }
+          }
+        }
       }
     }
     // Crouched on bare floor with a wrap: 'Forge the sign' — rub a scuff
@@ -3518,6 +3593,53 @@ export class Game {
           category: 'item', caption: '[goods hit the floor]' });
         return;
       }
+      case 'stashTake': {
+        // sprint 517 — the lid swallows the take: every good off your
+        // back into the spot's volume, marked ids recorded on the stash
+        // (the marks ride with the goods — reclaiming brings them back).
+        // Coin and pages never stash: currency lives on the hands.
+        const spotId = (it.data as { spotId: string }).spotId;
+        const stash = this.lidStashes.get(spotId) ?? { items: [], marked: [] };
+        const taken = this.inventory.filter((i) => i.count > 0);
+        let n = 0;
+        for (const i of taken) {
+          n += i.count;
+          const cur = stash.items.find((s) => s.id === i.id);
+          if (cur) cur.count += i.count; else stash.items.push({ id: i.id, count: i.count });
+          if (this.hotItems.has(i.id) && !stash.marked.includes(i.id)) stash.marked.push(i.id);
+          i.count = 0;
+        }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.pruneHotMarks();
+        if (n <= 0) { it.enabled = false; return; }
+        this.lidStashes.set(spotId, stash);
+        const marked = stash.marked.length > 0;
+        this.cue('pickup', it.pos, marked
+          ? `[the lid takes the take — ${n} goods off your back · the marks ride with the goods]`
+          : `[the lid takes the take — ${n} goods off your back]`);
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.14 * this.wantedPull,
+          category: 'item', caption: '[goods into the lid]' });
+        return;
+      }
+      case 'recoverStash': {
+        // sprint 517 — the lid gives back what it kept: every good
+        // returns to the back it came off, its marks intact.
+        const spotId = (it.data as { spotId: string }).spotId;
+        const stash = this.lidStashes.get(spotId);
+        if (!stash) { it.enabled = false; return; }
+        let n = 0;
+        for (const s of stash.items) { this.giveItem(s.id, s.count); n += s.count; }
+        for (const id of stash.marked) {
+          if (this.inventory.some((i) => i.id === id && i.count > 0)) this.hotItems.add(id);
+        }
+        this.lidStashes.delete(spotId);
+        this.cue('pickup', it.pos, stash.marked.length > 0
+          ? `[the lid gives back what it kept — ${n} goods, still marked]`
+          : `[the lid gives back what it kept — ${n} goods]`);
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.14 * this.wantedPull,
+          category: 'item', caption: '[goods out of the lid]' });
+        return;
+      }
       case 'pouchDrop': {
         // sprint 477 — the pouch comes back off the floor: what you fed
         // the hand is yours again — the price was putting it down.
@@ -3815,6 +3937,12 @@ export class Game {
       }
       case 'hide': {
         const spot = it.data as RoomInstance['hidingSpots'][number];
+        // sprint 520 — a full lid hides nothing: the stash owns the
+        // volume until you reclaim it — cover spent as storage.
+        if (this.lidStashes.has(spot.id)) {
+          this.cue('hide-creak', it.pos, '[the lid is full of the take]', 'warn');
+          return;
+        }
         if (this.player.enterHiding(spot, this.clock.time)) {
           this.cue('hide-in', null, '');
           this.teach('hide', '[the spot holds you — a thing passing close still smells you]');
@@ -6417,6 +6545,12 @@ export class Game {
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
       bulkFiled: [...this.bulkFiled],
+      lidStashes: this.lidStashes.size > 0
+        ? [...this.lidStashes].map(([spot, s]) => ({
+          spot, items: s.items.map((i) => ({ ...i })),
+          marked: s.marked.length > 0 ? [...s.marked] : undefined,
+        }))
+        : undefined,
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
@@ -6528,6 +6662,10 @@ export class Game {
             // sprint 513 — and what your back kept: the take you died
             // carrying reads beside what the floor and the count kept
             carried: this.inventory.reduce((n, i) => n + i.count, 0),
+            // sprint 519 — and what stayed parked: goods in lids you
+            // never came back for read at the end too
+            stashed: [...this.lidStashes.values()]
+              .reduce((n, s) => n + s.items.reduce((a, i) => a + i.count, 0), 0),
           },
         },
         documents: this.loadDocs(),
@@ -6571,6 +6709,9 @@ export class Game {
         // sprint 513 — and what walked out on your back: the take kept
         // its weight to the door
         carried: this.inventory.reduce((n, i) => n + i.count, 0),
+        // sprint 519 — and what stayed parked in the lids
+        stashed: [...this.lidStashes.values()]
+          .reduce((n, s) => n + s.items.reduce((a, i) => a + i.count, 0), 0),
       },
     }, paused: true });
     document.exitPointerLock?.();

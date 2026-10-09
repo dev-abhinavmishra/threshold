@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -159,7 +159,8 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
   const hotPages = books.hotPages ?? 0;
   const spilled = books.spilled ?? 0;
   const carried = books.carried ?? 0;
-  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + hotPages + seized + coinKept + spilled + carried;
+  const stashed = books.stashed ?? 0;
+  const total = books.thefts + books.held + books.asks + books.hotCoin + books.hotGoods + hotPages + seized + coinKept + spilled + carried + stashed;
   if (total === 0) {
     lines.push('every book closed before the door did');
   } else {
@@ -176,6 +177,8 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
     if (spilled > 0) lines.push(`${spilled} loose ${spilled === 1 ? 'good' : 'goods'} still lie on the floor — the house will tidy them`);
     // sprint 513 — and what walked out: the take still on your back
     if (carried > 0) lines.push(`${carried} ${carried === 1 ? 'good' : 'goods'} walked out on your back — the take kept its weight`);
+    // sprint 519 — and what stayed parked: the stash you left in a lid
+    if (stashed > 0) lines.push(`${stashed} ${stashed === 1 ? 'good stays parked in a lid' : 'goods stay parked in the lids'} — the stash you never reclaimed`);
   }
   return lines;
 }
