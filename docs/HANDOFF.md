@@ -7426,3 +7426,33 @@ marks where you knelt.
   own `range` — the fixate is a settle-path feature, so a lamp can't
   be "seen attracting" from out of range (by design; the cue is for
   the player in the room).
+
+## Sprints 537–540 — the light is loose goods
+
+- **s537 the floorkeeper pockets the light** — a burning lamp reads to
+  the warden's `nearestSpill` like any spill: he walks to it and the
+  light goes out under its coat (`pocketedLamps`). The confiscation is
+  a theft you can watch happen — '[it pinches the light out]'.
+- **s538 the under guts the light** — the grafter's claim-stoop takes
+  lamps too, but the under doesn't carry light: the dynamo's charge
+  folds into its pouch as coin (`max(2, ceil(batt/30))`), the lamp dies
+  in its hands. Upstairs keeps the lamp whole; the under eats it.
+- **s539 a spilled lamp relights** — pocketed charge drains under the
+  coat (lit or not, `dt * 1.1`); a stagger or settle spills each lamp
+  with charge left back onto the floor *still burning* via
+  `spillLamps`. Dead-in-pocket is gone for good.
+- **s540 the book counts the lights** — askReg appends `· it counts N
+  light(s) burning unattended` for main-floor `litLamps`, same idiom
+  as the lid count (s527).
+
+**Contract:** everything loose is now contestable INCLUDING light —
+the lure that pulls eyes can be pocketed by the floorkeeper it's meant
+to fool, or gutted by the hands it was meant to bait. The lamp's full
+lifecycle: hand → floor → pocket/gut → (stagger) floor again.
+
+**Traps:**
+- `spillLamps` resolves the room from the pos (`pointInRoom`), NOT
+  `currentRoom` — the warden's room isn't the player's.
+- `litLamps` is space-filtered inside `nearestSpill`/`scavengeSpill`
+  (`l.space === this.space`) — entities only run on the player's floor
+  (disposed on flip), so `this.space` is their floor.

@@ -1199,7 +1199,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1216,6 +1216,13 @@ export class Game {
         if (kinds.includes('wedge')) for (const w of this.kickedWedges) {
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'wedge' }; }
+        }
+        // sprint 537 — a burning lamp is loose goods on the same floor:
+        // the floorkeeper reads it like any spill and walks to put it out
+        if (kinds.includes('lamp')) for (const w of this.litLamps) {
+          if (w.space !== this.space) continue;
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'lamp' }; }
         }
         return best;
       },
@@ -1250,12 +1257,39 @@ export class Game {
             return { kind: 'wedge' };
           }
         }
+        if (take.lamp) {
+          const li = this.litLamps.findIndex((l) => l.space === this.space
+            && Math.hypot(l.x - x, l.z - z) < 0.55);
+          if (li >= 0) {
+            const lamp = this.litLamps.splice(li, 1)[0];
+            this.syncLampLights();
+            this.mintLampDrops();
+            return { kind: 'lamp', batt: lamp.batt };
+          }
+        }
         return null;
       },
       // sprint 489 — a pocketed chock spills back as kicked-wedge drop
       // sprint 494 — the knocker doesn't read the floor, it boots it:
       // a chock or felt in a walker's stride scatters further along —
       // the warden's tidy-read chases a moving pile (floor pinball).
+      // sprint 539 — a confiscated lamp comes back still burning: the
+      // floorkeeper's stagger re-lights the floor where it went down.
+      spillLamps: (pos, batts) => {
+        for (const b of batts) {
+          const room = this.route?.rooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
+            ?? this.currentRoom;
+          this.litLamps.push({
+            x: pos.x + (Math.random() - 0.5) * 0.5,
+            z: pos.z + (Math.random() - 0.5) * 0.5,
+            room, space: this.space, batt: b,
+          });
+        }
+        this.syncLampLights();
+        this.mintLampDrops();
+        this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.3,
+          category: 'item', caption: '[a lamp rolls out still burning]' });
+      },
       scatterSpill: (x, z) => {
         let hit = false;
         const boot = (w: { x: number; z: number }, r: number) => {
@@ -3590,9 +3624,13 @@ export class Game {
           .filter(([k]) => k.startsWith('main:'))
           .reduce((a, [, s]) => a + s.items.reduce((x, i) => x + i.count, 0), 0);
         const lids = lidN > 0 ? ` · it counts ${lidN} goods in the lids` : '';
+        // sprint 540 — and the lamps you leave burning on its floor:
+        // unattended light is goods out of hand — the book counts it too
+        const lampN = this.litLamps.filter((l) => l.space === 'main').length;
+        const lamps = lampN > 0 ? ` · it counts ${lampN} light${lampN === 1 ? '' : 's'} burning unattended` : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}]`
-          : `[the register has no line on you — your face isn't in it${bulk}${lids}]`);
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}]`
+          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}]`);
         return;
       }
       case 'till': {
