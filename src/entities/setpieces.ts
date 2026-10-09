@@ -14,6 +14,7 @@ import { noiseCanBeHeard, withinRouseRadius } from '../engine/noiseRouse';
 import { pointInRoom } from '../engine/doorGeo';
 import type { SoundEvent } from '../engine/events';
 import type { Vec3 } from '../engine/math';
+import type { RoomInstance } from '../game/types';
 
 /* ============================ PURSUER ============================ */
 /** Chase entity: follows the corridor path behind the player during an
@@ -380,6 +381,11 @@ export class Grafter extends Entity {
    *  fresh when it reaches the living's room. */
   private carrying = 0;
   private carryCued = false;
+  /** sprint 524 — the under robs wire out of lids: a stash's coil is
+   *  dead wire to the scavenger. It works a stashed lid like a pile —
+   *  wire is what it has a pocket for; the rest of your take it leaves. */
+  private wireLid: RoomInstance['hidingSpots'][number] | null = null;
+  private wireLidCued = false;
   private dragT = 0;
   private get eager() { return this.markReads >= 2; }
 
@@ -531,6 +537,7 @@ export class Grafter extends Entity {
         && this.roomOf(v3(spill.x, 0, spill.z)) === this.spawnRoom
         && (c.now > this.crackCampUntil || spill.bait === true);
       this.spillSeek = wants === true;
+      this.wireLid = null;
       if (wants && spill) {
         this.target = v3(spill.x, 0, spill.z);
         this.roamT = 0;
@@ -540,7 +547,32 @@ export class Grafter extends Entity {
             ? "[the coin's ring pulls the hands off the leaf]"
             : '[the hands remember their spill — stone drags back for it]', { severity: 'warn' });
         }
-      } else this.spillCued = false;
+      } else {
+        this.spillCued = false;
+        // sprint 524 — and a stashed lid feeds it the same way: wire
+        // parked in a lid is dead wire to the under, claimed by stoop
+        // like any pile. Coils only — it has no pocket for the rest.
+        if (this.carrying === 0 && c.now > this.crackCampUntil) {
+          let bd = Infinity;
+          let lid: RoomInstance['hidingSpots'][number] | null = null;
+          for (const s of c.rooms[this.spawnRoom]?.hidingSpots ?? []) {
+            if ((c.stashWire?.(s.id) ?? 0) <= 0) continue;
+            const d = v3dist(this.pos, s.exitPos);
+            if (d < bd) { bd = d; lid = s; }
+          }
+          if (lid && bd < 30) {
+            this.wireLid = lid;
+            this.spillSeek = true;
+            this.target = v3(lid.exitPos.x, 0, lid.exitPos.z);
+            this.roamT = 0;
+            if (!this.wireLidCued) {
+              this.wireLidCued = true;
+              c.cue('grafter-grind', this.pos,
+                '[the hands smell wire in the lid — stone drags toward it]', { severity: 'warn' });
+            }
+          } else this.wireLidCued = false;
+        }
+      }
     }
 
     const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
@@ -557,16 +589,26 @@ export class Grafter extends Entity {
     // sprint 491 — the claim takes a stoop: reaching a pile starts a
     // ~1.2s bend before the take lands. The race has a heartbeat —
     // sprint in while it stoops and the pile is still yours.
-    const pileNear = this.spillSeek
+    // sprint 524 — the claiming stoop reads lids too: wire parked in a
+    // lid claims like a pile — the race has the same heartbeat.
+    const lidNear = this.spillSeek && this.wireLid
+      && (c.stashWire?.(this.wireLid.id) ?? 0) > 0
+      && v3dist(this.pos, this.wireLid.exitPos) < 0.55
+      ? this.wireLid : null;
+    const pileNear = this.spillSeek && !this.wireLid
       ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil'] : ['pouch']) ?? null
       : null;
-    if (pileNear && this.spillClaimT <= 0) {
+    if ((pileNear || lidNear) && this.spillClaimT <= 0) {
       this.spillClaimT = 1.2;
-      this.target = v3(pileNear.x, 0, pileNear.z);
-      c.cue('grafter-grind', this.pos, '[it stoops over the spill — the fingers spread]', { severity: 'warn' });
+      this.target = lidNear
+        ? v3(lidNear.exitPos.x, 0, lidNear.exitPos.z)
+        : v3(pileNear!.x, 0, pileNear!.z);
+      c.cue('grafter-grind', this.pos, lidNear
+        ? '[it stoops over the lid — the fingers spread]'
+        : '[it stoops over the spill — the fingers spread]', { severity: 'warn' });
     }
     if (this.spillClaimT > 0) {
-      if (!pileNear) this.spillClaimT = 0; // the pile went mid-stoop — the race was won
+      if (!pileNear && !lidNear) this.spillClaimT = 0; // the pile went mid-stoop — the race was won
       else {
         this.spillClaimT -= dt;
         this.rig?.play('idle');
@@ -576,6 +618,16 @@ export class Grafter extends Entity {
     const claimed = pileNear
       ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null
       : null;
+    // sprint 524 — a stashed lid yields its wire one coil a stoop:
+    // it works the lid like a pile, takes what it has a pocket for.
+    if (!claimed && lidNear && this.carrying === 0) {
+      if (c.robStashWire?.(lidNear.id)) {
+        this.carrying = 1; this.carryCued = false; this.spillCued = false;
+        this.wireLidCued = false;
+        c.cue('grafter-grind', this.pos,
+          '[stone works the lid\'s wire loose — the coil goes with it]', { severity: 'info' });
+      }
+    }
     if (claimed?.kind === 'pouch') {
       this.pouch += claimed.n; this.pouchHot += claimed.hot;
       // sprint 487 — bait holds the pull a beat: it stands over where
