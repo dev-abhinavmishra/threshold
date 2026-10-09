@@ -2269,7 +2269,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The bell dulled — a palm cap on the counter bells that still
   // get rung for nobody.
-  if (spec.kind === 'counterBell' && rng.bool(0.5)) {
+  if (spec.kind === 'counterBell') {
     const dc = modelCollider(spec.kind);
     const bt = new THREE.Mesh(
       new THREE.PlaneGeometry(0.22, 0.22),
