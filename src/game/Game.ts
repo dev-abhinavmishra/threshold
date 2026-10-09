@@ -1140,11 +1140,11 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
-          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'pouch' }; }
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'pouch', bait: w.bait }; }
         }
         if (kinds.includes('coil')) for (const w of this.droppedCoils) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1161,7 +1161,7 @@ export class Game {
         if (pi >= 0) {
           const pile = this.droppedPouches.splice(pi, 1)[0];
           this.mintPouchDrops();
-          return { kind: 'pouch', n: pile.n, hot: pile.hot };
+          return { kind: 'pouch', n: pile.n, hot: pile.hot, bait: pile.bait };
         }
         if (take.coil) {
           const ci = this.droppedCoils.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
@@ -1513,7 +1513,7 @@ export class Game {
    *  leaf carries the pouch until it staggers, then spills it where it
    *  went down. Marked coin comes back still marked — the under doesn't
    *  launder what it pockets. Same re-mint/space-agnostic rules. */
-  private droppedPouches: { x: number; z: number; n: number; hot: number }[] = [];
+  private droppedPouches: { x: number; z: number; n: number; hot: number; bait?: boolean }[] = [];
   private spillTickT = 0;
   private spillTickI = 0;
   private spillPouch(pos: Vec3, n: number, hot: number): void {
@@ -1528,7 +1528,7 @@ export class Game {
       this.dynamicInteractables.push({
         kind: 'pouchDrop', id: `pouch-drop-${this.space}-${i}`,
         pos: { x: w.x, y: 0.15, z: w.z },
-        prompt: 'Gather the spilled coin',
+        prompt: w.bait ? 'Gather the baited coin' : 'Gather the spilled coin',
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
     });
@@ -2448,6 +2448,23 @@ export class Game {
         });
       }
       }
+    }
+    // Crouched in the under with coin: 'Bait the floor — 1 imprint' —
+    // plant a coin pile where you kneel. It ticks (s483), pulls the
+    // scavenger if its room is this one (s481), and the count's lamp
+    // receipts it should a sweep land here (s484) — bait or donation,
+    // whoever reads the floor first. Marked coin is placed marked —
+    // a drop, not a spend: the ledger only files coin fed to a till.
+    if (this.player.crouching && this.space === 'under' && this.imprints > 0
+      && !this.droppedPouches.some((p) =>
+        Math.hypot(p.x - this.player.pos.x, p.z - this.player.pos.z) < 1.2)) {
+      this.interaction.add({
+        kind: 'baitFloor', id: `bait-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x, y: 0.3, z: this.player.pos.z },
+        prompt: 'Bait the floor — 1 imprint',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
     }
     // Crouched on bare floor with a wrap: 'Forge the sign' — rub a scuff
     // that smells like fresh work to anything that reads the boards.
@@ -5104,6 +5121,24 @@ export class Game {
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.35, category: 'item', caption: '[pilfered]' });
         this.queueLoss(it.pos.x, it.pos.z,
           '[the count\'s lamp is marked gone — the count is short]');
+        return;
+      }
+      case 'baitFloor': {
+        // sprint 485 — plant a coin pile where you kneel: a paid placed
+        // lure the scavenger, the ticking clock, or the count's lamp
+        // reads first. A drop, not a spend — no ledger line; marked
+        // coin is placed marked and comes back marked.
+        if (this.imprints < 1) { it.enabled = false; return; }
+        const hot = Math.min(1, this.hotImprints);
+        this.imprints -= 1;
+        this.hotImprints -= hot;
+        this.droppedPouches.push({ x: it.pos.x, z: it.pos.z, n: 1 - hot, hot, bait: true });
+        this.mintPouchDrops();
+        it.enabled = false;
+        this.sound.emit({ x: it.pos.x, y: 0.3, z: it.pos.z, intensity: 0.28,
+          category: 'item', caption: '[a coin rings soft on the stones]' });
+        this.cue('pickup', it.pos,
+          '[the bait is set — whatever reads the floor reads this first]');
         return;
       }
       case 'forge': {
@@ -8600,8 +8635,9 @@ export class Game {
       if (piles.length) {
         this.spillTickI = (this.spillTickI + 1) % piles.length;
         const pile = piles[this.spillTickI];
-        this.sound.emit({ x: pile.x, y: 0.3, z: pile.z, intensity: 0.22,
-          category: 'item', caption: '[your coin ticks somewhere]' });
+        this.sound.emit({ x: pile.x, y: 0.3, z: pile.z, intensity: pile.bait ? 0.3 : 0.22,
+          category: 'item', caption: pile.bait
+            ? '[the bait rings a touch louder than the spill]' : '[your coin ticks somewhere]' });
       }
     }
 

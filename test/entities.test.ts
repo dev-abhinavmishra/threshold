@@ -1988,6 +1988,34 @@ describe('Grafter seam coin (sprints 476-480)', () => {
     expect(ctx.scavengeSpill, 'arrival asks with coil=false').toHaveBeenCalledWith(expect.any(Number), expect.any(Number), { coil: false });
     g.dispose();
   });
+
+  it('bait rings louder than the leaf — a placed pile pulls it off the camp (s486)', async () => {
+    const { Grafter } = await import('../src/entities/setpieces');
+    const ctx = makeCtx([seamRoom()], { currentRoomIndex: 0 });
+    ctx.player.pos.x = -30; ctx.player.pos.z = -30; // quiet room
+    const g = new Grafter();
+    g.spawn(ctx);
+    const gi = g as unknown as {
+      pos: { x: number; z: number }; target: { x: number; z: number };
+      crackCampUntil: number; pouch: number;
+    };
+    gi.pos.x = -1.5; gi.pos.z = -1.5;
+    ctx.now = 100;
+    gi.crackCampUntil = 140; // it is paid to hold a leaf — nothing ordinary moves it
+    const spill = { x: 2.5, z: 2.5 };
+    // ordinary spill: the camp wins — it does NOT drag for it
+    ctx.nearestSpill = () => ({ ...spill, kind: 'pouch' as const });
+    for (let i = 0; i < 20; i++) { ctx.now += 0.05; g.update(0.05); }
+    const held = Math.hypot(gi.target.x - spill.x, gi.target.z - spill.z);
+    expect(held, 'the camp ignores a plain pile').toBeGreaterThan(0.5);
+    // placed bait: the ring pulls it off the leaf
+    ctx.nearestSpill = () => ({ ...spill, kind: 'pouch' as const, bait: true });
+    ctx.scavengeSpill = vi.fn((x: number, z: number) =>
+      Math.hypot(x - spill.x, z - spill.z) < 0.55 ? { kind: 'pouch' as const, n: 1, hot: 0 } : null);
+    for (let i = 0; i < 40 && gi.pouch === 0; i++) { ctx.now += 0.05; g.update(0.05); }
+    expect(Math.hypot(gi.target.x - spill.x, gi.target.z - spill.z), 'bait broke the camp').toBeLessThan(0.01);
+    g.dispose();
+  });
 });
 
 
