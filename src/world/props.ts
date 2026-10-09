@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -2905,6 +2905,50 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cg.position.set(0, (dc?.[1] ?? 0.25) * 0.6, (dc?.[2] ?? 0.3) / 2 + 0.004);
     prop.group.add(cg);
     if (!prop.group.name) prop.group.name = 'cosmo-grease';
+  }
+  // The flasks ringed — reagent circles and scorch marks around
+  // the chemistry work.
+  const CHEM: ReadonlySet<PropSpec['kind']> = new Set(['chemistrySet', 'bunsenBurner', 'apothecaryCabinet']);
+  if (CHEM.has(spec.kind) && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const fr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: flaskRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    fr.name = 'flask-ring';
+    fr.userData.decalMat = true;
+    fr.rotation.x = -Math.PI / 2;
+    fr.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
+    prop.group.add(fr);
+    if (!prop.group.name) prop.group.name = 'flask-ring';
+  }
+  // The block kept the cuts — cleaver grooves and fat sheen on
+  // the chopping blocks.
+  if (spec.kind === 'choppingBlock' && rng.bool(0.65)) {
+    const dc = modelCollider(spec.kind);
+    const bc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.4),
+      new THREE.MeshStandardMaterial({ map: blockCuts(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bc.name = 'block-cuts';
+    bc.userData.decalMat = true;
+    bc.rotation.x = -Math.PI / 2;
+    bc.position.set(0, (dc?.[1] ?? 0.5) + 0.004, 0);
+    prop.group.add(bc);
+    if (!prop.group.name) prop.group.name = 'block-cuts';
+  }
+  // The torch left its soot — black feathers behind the burners.
+  if (spec.kind === 'propaneTorch' && rng.bool(0.6)) {
+    const dc = modelCollider(spec.kind);
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: torchSoot(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ts.name = 'torch-soot';
+    ts.userData.decalMat = true;
+    ts.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'torch-soot';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

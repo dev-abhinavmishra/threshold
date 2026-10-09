@@ -10125,3 +10125,107 @@ export function cosmoGrease(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Flask ring — the marks a chemistry set keeps: reagent rings on
+ * the bench, stain drips down flask sides, a scorch under the stand. */
+export function flaskRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // reagent rings — the residue circles flasks leave
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(${['120,80,140', '90,110,70', '140,90,40'][i]},${0.4 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.8 + rng.float();
+      ctx.beginPath();
+      ctx.arc(16 + i * 17 + (rng.float() - 0.5) * 4, 30 + (rng.float() - 0.5) * 16, 5 + rng.float() * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // stain drips — reagent runs down a side
+    ctx.strokeStyle = `rgba(100,70,120,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(46, 16);
+    ctx.quadraticCurveTo(48, 30, 45 + (rng.float() - 0.5) * 4, 44);
+    ctx.stroke();
+    // scorch — the burner stand's heat mark
+    ctx.fillStyle = `rgba(50,44,36,${0.4 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.ellipse(24, 52, 7, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // bench speckle — drops that dried mid-run
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(110,80,60,${0.26 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 52, 8 + rng.float() * 50, 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Block cuts — the marks a chopping block keeps: cleaver grooves,
+ * a darker hollow where the knife fell most, fat sheen. */
+export function blockCuts(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // cleaver grooves — scored lines, densest at the middle
+    for (let i = 0; i < 14; i++) {
+      const cx = 32 + (rng.float() - 0.5) * 20;
+      const cy = 32 + (rng.float() - 0.5) * 20;
+      const a = rng.float() * Math.PI;
+      ctx.strokeStyle = `rgba(70,54,34,${0.34 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.9 + rng.float() * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(cx - Math.cos(a) * (4 + rng.float() * 8), cy - Math.sin(a) * (4 + rng.float() * 8));
+      ctx.lineTo(cx + Math.cos(a) * (4 + rng.float() * 8), cy + Math.sin(a) * (4 + rng.float() * 8));
+      ctx.stroke();
+    }
+    // the hollow — where the knife fell most, worn darker
+    ctx.fillStyle = `rgba(56,42,26,${0.3 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.ellipse(32, 30, 9 + rng.float() * 3, 6 + rng.float() * 2, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // fat sheen — the grease film on the grain
+    ctx.fillStyle = `rgba(140,120,80,${0.14 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(30, 34, 22, 14, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // edge chips — cleaver bites at the rim
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(60,46,28,${0.36 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 52, 4 + rng.float() * 4, 1.4 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Torch soot — the marks a propane torch keeps: a soot feather
+ * on the wall behind work, heat tint on the nozzle, a fuel weep. */
+export function torchSoot(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32;
+    // soot feather — the black bloom the flame brushed up
+    const g = ctx.createRadialGradient(cx, 46, 2, cx, 30, 30);
+    g.addColorStop(0, `rgba(30,26,22,${0.5 + rng.float() * 0.18})`);
+    g.addColorStop(1, 'rgba(30,26,22,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(cx, 34, 16, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // heat tint — the metal's straw-blue where it ran hot
+    ctx.fillStyle = `rgba(140,110,70,${0.24 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 50, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // fuel weep — an oily crescent at the valve
+    ctx.strokeStyle = `rgba(90,84,60,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx + 8, 52, 5, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.stroke();
+    // ash flecks — the feather's shed
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(60,54,44,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(cx - 14 + rng.float() * 28, 10 + rng.float() * 30, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
