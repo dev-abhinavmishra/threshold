@@ -2427,7 +2427,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The routing board kept its pins — tally strings strung between
   // holes in rough rows.
-  if ((spec.kind === 'routingBoard' || spec.kind === 'noticeBoard' || spec.kind === 'chalkBoard') && rng.bool(0.5)) {
+  if ((spec.kind === 'routingBoard') && rng.bool(0.5)) {
     const pl = new THREE.Mesh(
       new THREE.PlaneGeometry(0.5, 0.5),
       new THREE.MeshStandardMaterial({ map: pinLines(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
