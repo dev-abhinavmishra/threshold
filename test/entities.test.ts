@@ -293,6 +293,38 @@ describe('Bellman (sprint 232)', () => {
     b.dispose();
   });
 
+  it('every walker boots it — the sweep scatters the pile it never reads (s503)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 20 });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number } };
+    player.pos = v3(rooms[20].origin.x - 40, 0, rooms[20].origin.z - 40);
+    const scatter = vi.fn(() => false);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const sw = new CorridorRunner('sweep');
+    sw.spawn(ctx);
+    let t = 0; let steps = 0;
+    const ctxMut = ctx as { now: number };
+    while (sw.state !== 'done' && steps++ < 3000) { ctxMut.now = t; sw.update(0.05); t += 0.05; }
+    expect(scatter, 'the pass asked the floor about loose goods').toHaveBeenCalled();
+    sw.dispose();
+  });
+
+  it('the floorkeeper never boots — its stride reads before it scatters (s503)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(rooms[28].entryPos.x - 30, 0, rooms[28].entryPos.z - 30);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const scatter = vi.fn(() => false);
+    (ctx as { scatterSpill?: typeof scatter }).scatterSpill = scatter;
+    const warden = new Warden();
+    warden.spawn(ctx);
+    let t = 0;
+    for (let i = 0; i < 400; i++) t = step(warden, ctx, 0.05, t);
+    expect(scatter, 'the reader pockets — it never boots blindly').not.toHaveBeenCalled();
+    warden.dispose();
+  });
+
   it('yields to sustained direct gaze without ever reaching you', () => {
     const rooms = routeRooms();
     const room = rooms[20];

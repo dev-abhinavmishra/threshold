@@ -306,6 +306,7 @@ export class Curator extends Entity {
       && playerExposed(c, this.pos) === 'kill') {
       c.killPlayer('curator', 'The Curator files runners under “loud”. Crouch, stay off metal, and never run twice the same way.');
     }
+  this.bootSpill(this.pos);
   }
 
   stun(seconds = 3): void {

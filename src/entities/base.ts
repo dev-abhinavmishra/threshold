@@ -226,6 +226,19 @@ export abstract class Entity {
     this.onUpdate(dt);
   }
 
+  /** sprint 503 — every walker boots it for real: a stride that moved
+   *  this update scatters loose goods underfoot. Floor-readers (warden,
+   *  grafter, the lamp) keep their deliberate take and never call this;
+   *  everyone else's feet are dumb. Call at the end of onUpdate with the
+   *  entity's stride position. */
+  private bootX = Number.NaN;
+  private bootZ = Number.NaN;
+  protected bootSpill(at: Vec3): void {
+    if (at.x === this.bootX && at.z === this.bootZ) return;
+    this.bootX = at.x; this.bootZ = at.z;
+    this.ctx.scatterSpill?.(at.x, at.z);
+  }
+
   protected done(): void {
     this.state = 'done';
     this.log.push(`${this.id} done t=${this.ctx.now.toFixed(1)}`);

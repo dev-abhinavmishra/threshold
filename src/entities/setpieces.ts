@@ -101,6 +101,7 @@ export class Pursuer extends Entity {
     if (d < 20 && Math.random() < dt * 4) {
       c.cue('pursuer-crash', this.pos, '', { severity: 'danger' });
     }
+  this.bootSpill(this.pos);
   }
 
   /** The eye at the crack: the route it chases is scripted, but a kneel
@@ -930,6 +931,7 @@ export class Swamper extends Entity {
       if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
     }
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   protected override onDone(): void {
@@ -1149,6 +1151,7 @@ export class Hauler extends Entity {
       this.lampLight.intensity = (this.relit ? 0.5 : 0.85) + Math.sin(this.lifeT * 7.3) * 0.1;
     }
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   /** 'Strip the lamp' reaches him — the drag goes dark, the light is yours.
@@ -1336,6 +1339,7 @@ export class Laundress extends Entity {
       if (dd > 0.3) this.mesh.rotation.y = Math.atan2(dx, dz);
     }
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   protected override onDone(): void {
@@ -1603,6 +1607,7 @@ export class Auditor extends Entity {
 
     if (this.mesh) this.mesh.position.copy(this.pos);
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   protected override onDone(): void {
@@ -1904,6 +1909,7 @@ export class Detective extends Entity {
 
     if (this.mesh) this.mesh.position.copy(this.pos);
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   protected override onDone(): void {
@@ -2194,6 +2200,7 @@ export class Filer extends Entity {
 
     if (this.mesh) this.mesh.position.copy(this.pos);
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   protected override onDone(): void {

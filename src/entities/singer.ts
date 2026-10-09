@@ -115,6 +115,7 @@ export class Singer extends Entity {
 
     if (this.mesh) this.mesh.position.set(this.pos.x, this.pos.y + (this.mesh.userData.hover ?? 0), this.pos.z);
     this.rig?.update(dt);
+  this.bootSpill(this.pos);
   }
 
   private step(target: Vec3, speed: number, dt: number): void {

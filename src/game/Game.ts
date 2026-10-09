@@ -8919,10 +8919,12 @@ export class Game {
     // and the spill settles where the water left it — the under reclaims
     // slowly, never re-lays.
     this.spillTideT -= dt;
-    if (this.spillTideT <= 0 && this.droppedPouches.length) {
+    if (this.spillTideT <= 0 && (this.droppedPouches.length || this.droppedCoils.length)) {
       this.spillTideT = 0.5;
       let drifted: { x: number; z: number } | null = null;
-      for (const w of this.droppedPouches) {
+      // sprint 504 — the tide takes the coil too: every loose kind on the
+      // under floor rides the water, not just the coin.
+      for (const w of [...this.droppedPouches, ...this.droppedCoils]) {
         const rm = this.route?.underRooms.find((r) =>
           Math.abs(w.x - r.origin.x) <= r.width / 2 && Math.abs(w.z - r.origin.z) <= r.depth / 2);
         if (!rm?.flooded || this.drainedRooms.has(`under:${rm.index}`)) continue;
@@ -8939,7 +8941,7 @@ export class Game {
         drifted ??= { x: nx, z: nz };
       }
       if (drifted) {
-        this.mintPouchDrops(); // the verbs ride the moving pile
+        this.mintPouchDrops(); this.mintCoilDrops(); // the verbs ride the moving pile
         // the water tells on it — faint, near-ear only
         if (v3dist(v3(drifted.x, 0, drifted.z), this.player.pos) < 4 && this.spillTideCueT <= 0) {
           this.spillTideCueT = 2.6;
@@ -9743,14 +9745,16 @@ export class Game {
       // sprint 499 — the surge: while the water leaves, it takes what
       // it was keeping afloat. Spilled coin drags toward the crank and
       // settles there — the drain is where the tide ends.
-      if (this.droppedPouches.length) {
+      if (this.droppedPouches.length || this.droppedCoils.length) {
         for (const [idx] of this.draining) {
           const spot = this.drainedSpots.get(idx);
           if (!spot) continue;
           const rm = this.route?.underRooms.find((r) => r.index === idx);
           if (!rm) continue;
           let surged = false;
-          for (const w of this.droppedPouches) {
+          // sprint 504 — the surge drags coils too: loose wire on the
+          // floor slides to the crank with the coin.
+          for (const w of [...this.droppedPouches, ...this.droppedCoils]) {
             if (Math.abs(w.x - rm.origin.x) > rm.width / 2
               || Math.abs(w.z - rm.origin.z) > rm.depth / 2) continue;
             const dx = spot.x - w.x, dz = spot.z - w.z;
@@ -9765,7 +9769,7 @@ export class Game {
             w.x = nx; w.z = nz; surged = true;
           }
           if (surged) {
-            this.mintPouchDrops();
+            this.mintPouchDrops(); this.mintCoilDrops();
             if (v3dist(v3(spot.x, 0, spot.z), this.player.pos) < 6 && this.spillTideCueT <= 0) {
               this.spillTideCueT = 2.2;
               this.sound.emit({ x: spot.x, y: 0.15, z: spot.z, intensity: 0.2,
