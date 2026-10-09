@@ -463,6 +463,16 @@ export class Grafter extends Entity {
     return this.ctx.now < this.crackCampUntil && v3dist(this.pos, leaf) < 1.3;
   }
 
+  /** sprint 479 — it can only smell coin through a leaf it can reach:
+   *  its own room's bounds plus the doorway margin — the same leaves
+   *  the eye's tell camps. roomOf on a boundary leaf misreads which
+   *  side owns it, so the check is its wander bounds, not the seam's. */
+  override seamBaitable(leaf: Vec3): boolean {
+    return this.state === 'engage'
+      && Math.abs(leaf.x - this.roomO.x) <= this.roomW / 2 + 1.2
+      && Math.abs(leaf.z - this.roomO.z) <= this.roomD / 2 + 1.2;
+  }
+
   private pickRoam(): void {
     const rng = new Rng(this.ctx.seed + Math.floor(this.lifeT * 97));
     this.target = v3(
@@ -494,6 +504,14 @@ export class Grafter extends Entity {
     }
     let speed = this.tuning.speed * (this.eager ? 1.15 : 1);
     if (notices) { this.target = v3(p.pos.x, 0, p.pos.z); speed *= this.eager ? 1.75 : 1.4; }
+    // sprint 478 — a fed hand smells its coin on you: past every sight
+    // rule, the pouch tells it where the payer walks — within its own
+    // room, slower than a sighting, always on. The price of the quiet
+    // feed is a hand that shadows you while the coin's in it.
+    else if (this.pouch > 0 && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom) {
+      this.target = v3(p.pos.x, 0, p.pos.z);
+      speed *= 1.2;
+    }
 
     const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z;
     const dd = Math.hypot(dx, dz);
@@ -601,6 +619,27 @@ export class Grafter extends Entity {
     if (Math.abs(c.currentRoomIndex - this.spawnRoom) >= 2 || this.lifeT > (this.eager ? 120 : 75)) this.done();
   }
 
+  /** sprint 477-478 — the hand keeps what you paid it: coins fed under
+   *  a leaf ride this grafter's pouch until it goes down, marked coins
+   *  still marked (the under doesn't launder what it pockets — the
+   *  mark just hasn't reached a book yet). And a fed hand remembers
+   *  the payer: it stays pressed at the paid leaf hoping for more, and
+   *  the coin's smell follows you while it carries the pouch. */
+  pouch = 0;
+  pouchHot = 0;
+  private payerCued = false;
+  override takeCoin(hot: number, leaf: Vec3): void {
+    this.pouch++; this.pouchHot += hot;
+    this.target = v3(leaf.x, 0, leaf.z);
+    this.roamT = 0;
+    this.crackCampUntil = Math.max(this.crackCampUntil, this.ctx.now + 22);
+    if (!this.payerCued) {
+      this.payerCued = true;
+      this.ctx.cue('grafter-grind', this.pos,
+        '[the hand keeps your coin\'s smell — it stays at the leaf]', { severity: 'warn' });
+    }
+  }
+
   /** A carried coil is lost work — it goes down, the splice spills
    *  unlaid at its feet. Dead wire again: strippable by the next
    *  scavenger — or by this one once it rises. */
@@ -612,6 +651,14 @@ export class Grafter extends Entity {
       if (pr >= 0) this.ctx.spillSnare?.(this.pos, pr);
       this.ctx.cue('grafter-grind', this.pos,
         '[the coil slips free — it falls slack where it drops]', { severity: 'warn' });
+    }
+    if (this.pouch > 0) {
+      const n = this.pouch, hot = this.pouchHot;
+      this.pouch = 0; this.pouchHot = 0;
+      this.payerCued = false;
+      this.ctx.spillPouch?.(this.pos, n, hot);
+      this.ctx.cue('grafter-grind', this.pos,
+        '[the pouch spills — the coin you fed it rolls out]', { severity: 'warn' });
     }
   }
 
