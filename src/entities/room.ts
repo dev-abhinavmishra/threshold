@@ -1047,9 +1047,18 @@ export class HazardField {
   watchers: { pos: import('../engine/math').Vec3; yaw: number; room: number;
     arc: number; half: number; range: number; cycle: number; phase0: number;
     dead: boolean; settle: number; lastReport: number; warnT: number;
-    filed: boolean; lampCued: boolean }[] = [];
+    filed: boolean; lampCued: boolean;
+    /** sprint 561 — the dazzle: bearing the beam lit the eye from, the
+     *  last frame it drank, seconds drunk this episode, whether the
+     *  work was signed, and whether the drink was announced. */
+    dazzleBearing: number; dazzleT: number; dazzleAcc: number;
+    dazzleSigned: boolean; dazzleCued: boolean }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
+  /** sprint 560 — the beam's charge readout, per lamp position, on a
+   *  decay (the fuse burns down — re-reading a burning lamp after a
+   *  while reports a lower batt and that's the point). */
+  private lampBeamRead = new Map<string, number>();
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -1107,6 +1116,8 @@ export class HazardField {
         range: cam ? 6.5 : 7.5, cycle: cam ? 7 + hsh * 4 : 10 + hsh * 4,
         phase0: hsh * 20,
         dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false, lampCued: false,
+        dazzleBearing: NaN, dazzleT: -10, dazzleAcc: 0,
+        dazzleSigned: false, dazzleCued: false,
       });
     }
   }
@@ -1222,6 +1233,48 @@ export class HazardField {
           ctx.cue('steam-hiss', w.pos, '[the eye drinks the light — its pan fixes on the lamp]', { severity: 'info' });
         }
       } else w.lampCued = false;
+      // sprint 561-563 — the eye drinks YOUR beam too: a held lamp
+      // aimed at a live eye pins its pan to the bearing the light came
+      // from. It stares at where the light WAS — slip off that bearing
+      // and the sweep is blind to you until it blinks back (~2.5s).
+      // Your beam outranks a dropped lamp's pull — you're actively
+      // working the eye. Hold the light 4s+ and the floor keeps the
+      // work: 'work' sign hunters can smell (s563).
+      if (live) {
+        if (ctx.beamCovers?.(w.pos, w.range + 2, 0.7)) {
+          // it pins to the FIRST bearing the light came from and holds
+          // there while it drinks — the play is light it, then slip
+          // off the bearing; the sweep can't find you on its dark edge
+          if (!Number.isFinite(w.dazzleBearing)) w.dazzleBearing = Math.atan2(dx, dz);
+          w.dazzleT = ctx.now;
+          w.dazzleAcc += dt;
+          if (!w.dazzleCued) {
+            w.dazzleCued = true;
+            ctx.cue('steam-hiss', w.pos, '[the eye drinks your light — it stares where you stood]', { severity: 'warn' });
+          }
+          if (!w.dazzleSigned && w.dazzleAcc > 4) {
+            w.dazzleSigned = true;
+            ctx.signWork?.(w.pos, `eye:${w.room}`);
+            ctx.cue('steam-hiss', w.pos, '[the eye\'s stare was worked — the floor keeps the sign]', { severity: 'info' });
+          }
+        } else if (w.dazzleCued && ctx.now - w.dazzleT > 2.5) {
+          // sprint 562 — the blink tells: the sweep coming back online
+          // is audible to whoever held it — your window is closing.
+          // (dazzleCued gates it — an eye that never drank has
+          // dazzleT=-10 and must NOT touch this branch every frame:
+          // s285 settle specs caught settle=0 stomping plain watches)
+          ctx.cue('steam-hiss', w.pos, '[the eye blinks — its pan runs again]', { severity: 'info' });
+          // sprint 564 — the blink is a full reset: whatever half-
+          // settled read it took while drinking is lost with the light
+          w.settle = 0;
+          w.dazzleBearing = NaN; w.dazzleAcc = 0;
+          w.dazzleSigned = false; w.dazzleCued = false;
+        }
+        if (Number.isFinite(w.dazzleBearing)) {
+          facing = w.dazzleBearing
+            + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
+        }
+      }
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
@@ -1242,29 +1295,74 @@ export class HazardField {
     }
     // Old sign the PLAYER can read: a sprung wire or a bled line from
     // before you arrived reads as history — someone else worked here.
+    // sprint 558 — and the beam reads it at range: aimed lamp light
+    // picks old scars out of the dust before you're standing in them.
     for (const ev of this.evidence) {
       if (!ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
-      if (v3dist(p.pos, ev.pos) > 3) continue;
+      const d = v3dist(p.pos, ev.pos);
+      const aimed = d <= 9 && (ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false);
+      if (d > 3 && !aimed) continue;
       ev.readBy.push('player');
-      ctx.cue('floor-creak', ev.pos, ev.kind === 'wire'
-        ? '[a sprung wire, long dry — someone else took this step]'
-        : ev.kind === 'line'
-          ? '[a bled line, long cold — somebody worked here]'
-          : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
+      ctx.cue('floor-creak', ev.pos, aimed
+        ? '[the beam picks an old scar — somebody worked here, long ago]'
+        : ev.kind === 'wire'
+          ? '[a sprung wire, long dry — someone else took this step]'
+          : ev.kind === 'line'
+            ? '[a bled line, long cold — somebody worked here]'
+            : '[a chocked wheel, long still — somebody stopped the blades]', { severity: 'info' });
     }
     // sprint 421 — fresh sign reads too: 'work' marks are hands at
     // hand-height — a grafted splice, the rubble's maintenance — and
     // the dust testifies while it's still warm. Your own work comes
     // pre-read so the floor doesn't narrate your hands back to you.
+    // sprint 557 — aimed light reaches it too: the beam finds the
+    // hand before your ankle does.
     for (const ev of this.evidence) {
       // wiped sign reads as scrubbed dust — the felt's shadow poisons
       // the player's fresh-read the same as every hunter's
       if (ev.old || ev.wiped || ev.room !== ctx.currentRoomIndex || ev.kind !== 'work'
         || ev.readBy.includes('player')) continue;
-      if (v3dist(p.pos, ev.pos) > 2.6) continue;
+      const d = v3dist(p.pos, ev.pos);
+      const aimed = d <= 9 && (ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false);
+      if (d > 2.6 && !aimed) continue;
       ev.readBy.push('player');
-      ctx.cue('floor-creak', ev.pos,
-        '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+      ctx.cue('floor-creak', ev.pos, aimed
+        ? '[the beam finds a hand in the dust — worked here, recently]'
+        : '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+    }
+    // sprint 559 — the beam reads what the ankle can't: hunter-sign
+    // (fresh wire/line/fan kills) and wiped floors are invisible to a
+    // player on foot, but aimed light catches the fresh break or the
+    // scrubbed patch — the wipe's shadow reads back under the beam.
+    for (const ev of this.evidence) {
+      if (ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
+      if (!(ev.wiped || ev.kind === 'wire' || ev.kind === 'line' || ev.kind === 'fan')) continue;
+      const d = v3dist(p.pos, ev.pos);
+      if (d > 9 || !(ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false)) continue;
+      ev.readBy.push('player');
+      ctx.cue('floor-creak', ev.pos, ev.wiped
+        ? '[the dust is scrubbed clean under the beam — someone wiped this]'
+        : ev.kind === 'wire'
+          ? '[the beam finds a fresh cut — wire died here, recently]'
+          : ev.kind === 'line'
+            ? '[the beam finds a bled line — somebody worked it, recently]'
+            : '[the beam finds a stilled wheel — somebody stopped the blades]', { severity: 'info' });
+    }
+    // sprint 560 — and the beam reads your own lamps' charge: aim at a
+    // dropped lamp and its fuse reads back across the room — burning,
+    // doused-but-charged, or dead shell. Re-reads decay with the lamp:
+    // a burning lamp is worth checking again as the batt runs down.
+    for (const l of ctx.floorLamps?.(ctx.currentRoomIndex) ?? []) {
+      const key = `${l.x.toFixed(2)},${l.z.toFixed(2)}`;
+      const d = v3dist(p.pos, { x: l.x, y: 0, z: l.z });
+      if (d > 9 || !(ctx.beamCovers?.({ x: l.x, y: 0, z: l.z }, 9, 0.75) ?? false)) continue;
+      if (ctx.now - (this.lampBeamRead.get(key) ?? -60) < 45) continue;
+      this.lampBeamRead.set(key, ctx.now);
+      ctx.cue('floor-creak', { x: l.x, y: 0.4, z: l.z }, l.batt <= 0
+        ? '[a dead lamp under the beam — the shell still holds its shape]'
+        : !l.lit
+          ? `[your lamp waits dark — ${Math.round(l.batt)} charge in the bottle]`
+          : `[the beam finds your lamp — burning, ${Math.round(l.batt)} left]`, { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {

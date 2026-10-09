@@ -3558,3 +3558,159 @@ describe('the eye tells — hunters and mass (sprints 461-464)', () => {
     sw.dispose();
   });
 });
+
+describe('the beam reads sign (sprints 557-560)', () => {
+  const plainRoom = (): RoomInstance => ({
+    index: 0, templateId: 'u-corridor', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 14, depth: 14, spec: { width: 14, depth: 14, props: [] },
+    doors: [], hidingSpots: [], scheduled: [], flooded: false,
+    sockets: [],
+  } as unknown as RoomInstance);
+
+  const cueTexts = (ctx: EntityCtx) =>
+    (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+
+  it('a fresh work mark reads under aimed light beyond ankle reach', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => true });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [] });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0; // 5m — past the 2.6 ankle read
+    h.update(ctx, 0.05);
+    expect(cueTexts(ctx).some((t) => t.includes('the beam finds a hand'))).toBe(true);
+    expect(h.evidence[0].readBy).toContain('player');
+  });
+
+  it('no beam, no far read — sign stays for the ankle', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => false });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [] });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    expect(cueTexts(ctx).some((t) => t.includes('dust keeps a hand') || t.includes('beam finds'))).toBe(false);
+    expect(h.evidence[0].readBy).not.toContain('player');
+  });
+
+  it('hunter-sign reads ONLY under the beam — wire, wiped, and the scrubbed patch', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, { currentRoomIndex: 0, beamCovers: () => true });
+    const h = new HazardField();
+    h.evidence.push({ pos: v3(5, 0, 0), room: 0, kind: 'wire', t: 0, readBy: [] });
+    h.evidence.push({ pos: v3(-5, 0, 0), room: 0, kind: 'work', t: 0, readBy: [], wiped: true });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    const texts = cueTexts(ctx);
+    expect(texts.some((t) => t.includes('wire died here'))).toBe(true);
+    expect(texts.some((t) => t.includes('scrubbed clean'))).toBe(true);
+  });
+
+  it('the beam reads a dropped lamp\'s charge — burning, dark, or shell', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const rooms = [plainRoom()];
+    const ctx = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      beamCovers: () => true,
+      floorLamps: () => [
+        { x: 4, z: 0, batt: 62, lit: true },
+        { x: -4, z: 0, batt: 30, lit: false },
+        { x: 0, z: 4, batt: 0, lit: false },
+      ],
+    });
+    const h = new HazardField();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    h.update(ctx, 0.05);
+    const texts = cueTexts(ctx);
+    expect(texts.some((t) => t.includes('burning, 62 left'))).toBe(true);
+    expect(texts.some((t) => t.includes('waits dark — 30 charge'))).toBe(true);
+    expect(texts.some((t) => t.includes('dead lamp under the beam'))).toBe(true);
+    // and without the lamp on, the lamps keep their silence
+    const ctx2 = makeCtx(rooms, {
+      currentRoomIndex: 0,
+      beamCovers: () => false,
+      floorLamps: () => [{ x: 4, z: 0, batt: 62, lit: true }],
+    });
+    const h2 = new HazardField();
+    ctx2.player.pos.x = 0; ctx2.player.pos.z = 0;
+    h2.update(ctx2, 0.05);
+    expect(cueTexts(ctx2).some((t) => t.includes('your lamp'))).toBe(false);
+  });
+});
+
+describe('the eye drinks your beam (sprints 561-563)', () => {
+  const camRoom = (dark: boolean) => ({
+    index: 0, templateId: 'corr-straight', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, darkRoom: dark,
+    spec: { width: 8, depth: 8, props: [{ kind: 'securityCam', x: 0, z: -2, yaw: 0 }] },
+    doors: [], hidingSpots: [], scheduled: [], sockets: [],
+  }) as unknown as RoomInstance;
+
+  const pinCamBeam = async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(false);
+    h.addFromRoom(room);
+    const w = h.watchers[0]; // mounted at (0, ~2.35, -2)
+    w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+    // the beam covers only near the eye itself — like the real cone
+    const ctx = makeCtx([room], {
+      currentRoomIndex: 0,
+      beamCovers: (pos) => Math.hypot(pos.x - w.pos.x, pos.z - w.pos.z) < 0.5,
+    });
+    return { h, w, ctx };
+  };
+  const texts = (ctx: EntityCtx) =>
+    (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+
+  it('the light pins the pan — slip off the bearing and the sweep is blind to you', async () => {
+    const { h, w, ctx } = await pinCamBeam();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;   // on the eye's bearing (0)
+    h.update(ctx, 0.05);                          // seeds the pin
+    expect(w.dazzleBearing).toBeCloseTo(0, 2);
+    expect(texts(ctx).some((t) => t.includes('drinks your light'))).toBe(true);
+    // slide sideways while the beam still holds it — the pan stays pinned
+    // to the first bearing, so your new position is on its dark edge
+    for (let i = 0; i < 40; i++) {
+      ctx.player.pos.x = 2.5 + Math.sin(i) * 0.02; ctx.player.pos.z = 2;
+      ctx.now += 0.05; h.update(ctx, 0.05);
+    }
+    expect(w.settle, 'a dazzled eye cannot settle your new bearing').toBeLessThan(0.9);
+    expect(texts(ctx).some((t) => t.includes('settles on you'))).toBe(false);
+    // but stand on the pinned bearing and move — it still settles you:
+    // the light testifies while it drinks
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 60; i++) {
+      ctx.player.pos.x = Math.sin(i) * 0.03;
+      ctx.now += 0.05; h.update(ctx, 0.05);
+    }
+    expect(texts(ctx).some((t) => t.includes('settles on you'))).toBe(true);
+  });
+
+  it('the beam lets go — the eye blinks, the pan comes back, and the half-read is lost', async () => {
+    const { h, w, ctx } = await pinCamBeam();
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 10; i++) {
+      ctx.player.pos.x = Math.sin(i) * 0.03;   // keep it half-settling on you
+      ctx.now += 0.05; h.update(ctx, 0.05);
+    }
+    w.settle = 0.6;                             // a half-won read
+    ctx.beamCovers = () => false;   // you drop the light
+    for (let i = 0; i < 55; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    expect(Number.isNaN(w.dazzleBearing)).toBe(true);
+    expect(texts(ctx).some((t) => t.includes('eye blinks'))).toBe(true);
+    expect(w.settle, 'the blink is a full reset').toBe(0);
+  });
+
+  it('hold the light too long and the floor keeps the work — the dazzle signs', async () => {
+    const { h, w, ctx } = await pinCamBeam();
+    const signWork = vi.fn();
+    ctx.signWork = signWork;
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 90; i++) { ctx.now += 0.05; h.update(ctx, 0.05); } // 4.5s drunk
+    expect(signWork).toHaveBeenCalledWith(
+      expect.objectContaining({ x: w.pos.x }), 'eye:0');
+  });
+});

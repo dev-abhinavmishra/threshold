@@ -7680,3 +7680,75 @@ like any dead snare. Your lamp's corpse is the under's raw material.
   then currentRoom) — same triple-resolution as spillLamps; entity
   positions can be off-map, so the fallback must stay `currentRoom`
   not `0` or evidence lands in the wrong room's scent radius.
+
+## Sprints 557–560 — the beam reads the scars
+
+- **s557 the beam finds the hand** — `beamCovers(pos, maxD, minDot)` is
+  the s444 cover rules extracted (lamp on, in cone, in reach, sight
+  clear of walls and shut leaves) as a shared ctx hook; aimed light
+  extends the fresh-'work' dust-read from 2.6m to 9m with its own
+  caption '[the beam finds a hand in the dust — worked here,
+  recently]'.
+- **s558 the beam picks old scars** — same reach for `ev.old` sign:
+  3m → 9m aimed, '[the beam picks an old scar — somebody worked here,
+  long ago]'.
+- **s559 the beam reads what the ankle can't** — hunter-sign (fresh
+  wire/line/fan kills) and wiped floors were player-invisible; aimed
+  light reads them: fresh cuts, bled lines, stilled wheels, and the
+  wipe's shadow itself — '[the dust is scrubbed clean under the beam
+  — someone wiped this]'.
+- **s560 the beam reads your lamps' charge** — `floorLamps(room)` ctx
+  hook (the unfiltered lamp pile — `litLamps` stays the burning-only
+  view the eyes drink): aim at a dropped lamp and its fuse reads back
+  across the room — 'burning, N left' / 'waits dark — N in the
+  bottle' / 'a dead lamp under the beam'. Re-reads on a 45s decay per
+  lamp position — the fuse burns down, that's the point.
+
+Contract: the held lamp's second job — it doesn't just light the
+way, it interrogates the floor. Sign is dust; light is the question.
+
+**Traps:**
+- `beamCovers` minDot: entity cover (repel/wake) keeps the s444 0.4
+  cone, but READS need a real aim — sign/lamp reads pass 0.75 (~41°)
+  or they cue at the screen edge. The default stays 0.4 for s444
+  compat.
+- `litLamps` vs `floorLamps`: the eyes drink burning-only; reads need
+  the whole pile (doused, dead). Two hooks, don't broaden the first.
+- Beam-read marks are `readBy:['player']`-consumed exactly like ankle
+  reads — the beam doesn't get a second narrate walking in later.
+
+## Sprints 561–564 — the eye drinks your beam
+
+- **s561 the light pins the pan** — a held lamp aimed at a live
+  watcher (`beamCovers(w.pos, w.range+2, 0.7)`) pins `facing` to the
+  FIRST bearing the light came from (`dazzleBearing`). Your beam
+  outranks a dropped lamp's pull — you're actively working the eye.
+  The play: light it, then slip off the bearing — the sweep can't
+  find you on its dark edge. Standing ON the pinned bearing and
+  moving still settles you — the light testifies while it drinks.
+- **s562 the blink tells** — drop the beam and the dazzle holds ~2.5s
+  of stale bearing, then '[the eye blinks — its pan runs again]' — the
+  window is audible, not guesswork.
+- **s563 the dazzle signs** — hold light 4s+ cumulative on an eye and
+  `signWork(w.pos, 'eye:N')` pushes 'work' sign — the floor keeps the
+  dazzle for hunters to smell, same convention as lamp-work and grafts.
+- **s564 the blink is a full reset** — a dazzle you escape costs the
+  eye its half-won read: `settle = 0` when it blinks back. Clean
+  escape if you're off the bearing before the pan resumes.
+
+Contract: the beam's third job — interrogator (s557-560) AND
+countermeasure. The eye drinks any light pointed at it, yours
+included; but light is testimony — drink long enough and the floor
+signs the work.
+
+**Traps:**
+- New watcher fields MUST be initialized in `addFromRoom`'s push
+  literal — `undefined += dt` poisons to NaN silently (dazzleAcc).
+- The pin is FIRST-contact, not tracking: `if (!isFinite(dazzleBearing))`
+  — tracking would make lit+sliding safe only while lit; pinned makes
+  the whole episode readable (lit = stares where you were, not where
+  you are — except you can slide dark-edge while still lit).
+- s564 trap logged: the blink-reset's else-branch MUST be gated on
+  `dazzleCued` — an eye that never drank has `dazzleT=-10`, so an
+  ungated `now - dazzleT > 2.5` is true every frame and `settle = 0`
+  stomped every plain watch (caught by the s285 settle specs).
