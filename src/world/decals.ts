@@ -8838,3 +8838,132 @@ export function pegWear(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Exting tag — the pull-tag ghost an extinguisher keeps: a red
+ * plastic sliver on the pin, inspection string, mount shadow. */
+export function extingTag(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // mount shadow — the dark ghost where the bracket grips
+    ctx.fillStyle = `rgba(30,26,22,${0.3 + rng.float() * 0.15})`;
+    ctx.fillRect(10, 30, 28, 30);
+    // the tag — a red plastic sliver still tied to the pin
+    ctx.fillStyle = `rgba(150,44,36,${0.6 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.moveTo(cx, 22);
+    ctx.lineTo(cx + 4, 32);
+    ctx.lineTo(cx - 2, 34);
+    ctx.lineTo(cx - 4, 24);
+    ctx.closePath();
+    ctx.fill();
+    // the string — a slack loop hanging off it
+    ctx.strokeStyle = `rgba(200,196,186,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + 1, 30);
+    ctx.quadraticCurveTo(cx + 8 + rng.float() * 4, 38 + rng.float() * 4, cx + 4, 46 + rng.float() * 6);
+    ctx.stroke();
+    // finger grease — smudges where hands tested the handle
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(50,44,36,${0.2 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(14 + rng.float() * 20, 34 + rng.float() * 20, 1.8 + rng.float(), 1 + rng.float(), rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust lip on the bracket's top
+    ctx.fillStyle = 'rgba(160,152,134,0.3)';
+    ctx.fillRect(10, 28, 28, 1.6);
+  });
+}
+
+/** Pin lines — the tally strings a routing board keeps: pin holes
+ * in rows, cotton strings strung between them, pencil labels. */
+export function pinLines(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // pin grid — small dark holes in rough rows
+    const pins: [number, number][] = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 6; c++) {
+        if (!rng.bool(0.7)) continue;
+        const px = 14 + c * 14 + (rng.float() - 0.5) * 5;
+        const py = 14 + r * 22 + (rng.float() - 0.5) * 6;
+        pins.push([px, py]);
+        ctx.fillStyle = 'rgba(30,24,18,0.7)';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // strings — a few cotton lines strung between pins
+    const runs = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < runs && pins.length > 2; i++) {
+      const a = pins[Math.floor(rng.float() * pins.length)];
+      const c = pins[Math.floor(rng.float() * pins.length)];
+      if (a === c) continue;
+      ctx.strokeStyle = `rgba(196,188,168,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(a[0], a[1]);
+      // slight sag
+      const mx = (a[0] + c[0]) / 2;
+      const my = (a[1] + c[1]) / 2 + 3 + rng.float() * 4;
+      ctx.quadraticCurveTo(mx, my, c[0], c[1]);
+      ctx.stroke();
+    }
+    // pencil labels — faint scribed rows beside some pins
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(80,70,56,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.7;
+      const ly = 18 + rng.float() * 60;
+      ctx.beginPath();
+      ctx.moveTo(66 + rng.float() * 8, ly);
+      ctx.lineTo(78 + rng.float() * 8, ly);
+      ctx.stroke();
+    }
+    // eraser dust — crumbs where labels were reworked
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(160,152,134,${0.2 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, 80 + rng.float() * 10, 0.6 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Bucket ring — the drip ring a bucket leaves: a wet circle with
+ * a puddle ghost in the middle, splash spatters outside. */
+export function bucketRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // the ring — a damp circle where the base sat
+    ctx.strokeStyle = `rgba(90,96,88,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 3 + rng.float();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 16 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // the ghost — a faint puddle remnant inside
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 15);
+    g.addColorStop(0, 'rgba(80,86,80,0.3)');
+    g.addColorStop(1, 'rgba(80,86,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+    ctx.fill();
+    // spatters — drips that missed the ring
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 18 + rng.float() * 10;
+      ctx.fillStyle = `rgba(90,96,88,${0.26 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.7 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rust kiss — iron ring oxidized where the handle sat
+    if (rng.bool(0.5)) {
+      ctx.fillStyle = 'rgba(110,64,36,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(cx + 10 + rng.float() * 6, cy - 4, 3, 2, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
