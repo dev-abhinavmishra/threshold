@@ -1450,6 +1450,25 @@ export class Game {
    *  carry your face to the index too. */
   private fileQuestion() { this.paperTrail += this.wantedActive ? 2 : 1; }
 
+  /** sprint 522 — the clerk clocks the lid's bulge: stuffing the box
+   *  within sight of a staffed counter is the same claim as carrying
+   *  the bulge past — once per lid, main floor only (its book is the
+   *  register's; the under's lids aren't its business). Cold counters
+   *  skip — that clerk already watched you take its till. */
+  private fileLidClerkBulge(key: string, pos: Vec3): void {
+    if (this.space !== 'main' || this.lidFiled.has(key)) return;
+    for (const [rIdx, fig] of this.clerkFigs) {
+      if (this.closedCounters.has(rIdx)) continue;
+      const fd = Math.hypot(fig.position.x - pos.x, fig.position.z - pos.z);
+      if (fd > 3) continue;
+      this.lidFiled.add(key);
+      this.unpaidHeld += 1;
+      this.cue('register-write', pos,
+        '[the clerk watches the lid take the goods — the register writes]', 'warn');
+      return;
+    }
+  }
+
   /** The count's locker — seized goods hang under a fresh claim tag at
    *  the nearest under claim cage instead of vanishing. A seed with no
    *  cage keeps the take (the count swallowed it whole). */
@@ -2697,6 +2716,8 @@ export class Game {
     // the floor before it for the hide. A trapped lid takes nothing.
     if (!this.player.hiddenSpot) {
       const carrying = this.player.crouching && this.inventory.some((i) => i.count > 0);
+      const carryingMarked = this.player.crouching
+        && this.inventory.some((i) => i.count > 0 && this.hotItems.has(i.id));
       if (carrying || this.lidStashes.size > 0) {
         for (const room of this.activeRooms()) {
           for (const spot of room.hidingSpots) {
@@ -2710,11 +2731,27 @@ export class Game {
             const dx = spot.exitPos.x - cx, dz = spot.exitPos.z - cz;
             const dl = Math.hypot(dx, dz) || 1;
             const anchor = { x: spot.exitPos.x - (dx / dl) * 0.4, y: 0.55, z: spot.exitPos.z - (dz / dl) * 0.4 };
+            // sprint 525 — the mouth has cheeks: sibling verbs share a
+            // spot, so each gets a geometrically distinct anchor —
+            // same-anchor ties die to the first-minted, which used to
+            // leave 'Add the take' unfocusable forever behind recover.
+            const perpX = -(dz / dl), perpZ = dx / dl;
+            const anchorL = { x: anchor.x + perpX * 0.22, y: 0.55, z: anchor.z + perpZ * 0.22 };
+            const anchorR = { x: anchor.x - perpX * 0.22, y: 0.55, z: anchor.z - perpZ * 0.22 };
             if (stash) {
               this.interaction.add({
-                kind: 'recoverStash', id: `recover-${spot.id}`, pos: anchor,
+                kind: 'recoverStash', id: `recover-${spot.id}`, pos: anchorL,
                 prompt: `Recover the stash — ${stash.items.reduce((a, i) => a + i.count, 0)} goods`,
                 holdTime: 0.7, enabled: true, priority: 2,
+                data: { spotId: spot.id, room: room.index },
+              });
+              // sprint 526 — and the lip below the mouth reads the lid
+              // free: a look, not a touch — no sign, no hold, no price.
+              this.interaction.add({
+                kind: 'peepLid', id: `peep-${spot.id}`,
+                pos: { x: spot.exitPos.x - (dx / dl) * 0.15, y: 0.3, z: spot.exitPos.z - (dz / dl) * 0.15 },
+                prompt: 'Peep the lid',
+                holdTime: 0.3, enabled: true, priority: 1,
                 data: { spotId: spot.id },
               });
             }
@@ -2723,8 +2760,18 @@ export class Game {
                 kind: 'stashTake', id: `stash-${spot.id}`, pos: anchor,
                 prompt: stash ? 'Add the take to the stash' : 'Stash the take',
                 holdTime: 1.0, enabled: true, priority: 2,
-                data: { spotId: spot.id },
+                data: { spotId: spot.id, room: room.index },
               });
+              // sprint 525 — the choosy lid: park ONLY the testimony —
+              // the marked stacks leave your back, the clean goods stay.
+              if (carryingMarked) {
+                this.interaction.add({
+                  kind: 'markedStash', id: `mstash-${spot.id}`, pos: anchorR,
+                  prompt: 'Stash the marked take',
+                  holdTime: 1.0, enabled: true, priority: 2,
+                  data: { spotId: spot.id, room: room.index },
+                });
+              }
             }
           }
         }
@@ -3454,9 +3501,17 @@ export class Game {
         // that sight-filed your load says so in the readout — the
         // bulge's line is the clerk's own handwriting.
         const bulk = this.bulkFiled.has(rIdx) ? ' · it has seen your load' : '';
+        // sprint 527 — and the register counts the lids it watches:
+        // its book is main-floor only — the under's lids aren't its
+        // business. Counting is the whole readout; it doesn't name
+        // which lid — the index is the one that files positions.
+        const lidN = [...this.lidStashes.entries()]
+          .filter(([k]) => k.startsWith('main:'))
+          .reduce((a, [, s]) => a + s.items.reduce((x, i) => x + i.count, 0), 0);
+        const lids = lidN > 0 ? ` · it counts ${lidN} goods in the lids` : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}]`
-          : `[the register has no line on you — your face isn't in it${bulk}]`);
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}]`
+          : `[the register has no line on you — your face isn't in it${bulk}${lids}]`);
         return;
       }
       case 'till': {
@@ -3648,27 +3703,63 @@ export class Game {
         this.pruneHotMarks();
         if (n <= 0) { it.enabled = false; return; }
         this.lidStashes.set(key, stash);
-        // sprint 522 — the clerk clocks the lid's bulge too: stuffing
-        // the box within sight of a staffed counter is the same claim
-        // as carrying the bulge past — once per lid.
-        if (this.space === 'main' && !this.lidFiled.has(key)) {
-          for (const [rIdx, fig] of this.clerkFigs) {
-            if (this.closedCounters.has(rIdx)) continue;
-            const fd = Math.hypot(fig.position.x - it.pos.x, fig.position.z - it.pos.z);
-            if (fd > 3) continue;
-            this.lidFiled.add(key);
-            this.unpaidHeld += 1;
-            this.cue('register-write', it.pos,
-              '[the clerk watches the lid take the goods — the register writes]', 'warn');
-            break;
-          }
-        }
+        this.fileLidClerkBulge(key, it.pos);
+        // sprint 528 — the lid signs the work: stuffing the box is work
+        // like rifling the till — the house reads it, your own hands
+        // stay silent to you.
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
+          room: (it.data as { room: number }).room, kind: 'work',
+          t: this.clock.time, readBy: ['player'] });
         const marked = stash.marked.length > 0;
         this.cue('pickup', it.pos, marked
           ? `[the lid takes the take — ${n} goods off your back · the marks ride with the goods]`
           : `[the lid takes the take — ${n} goods off your back]`);
         this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.14 * this.wantedPull,
           category: 'item', caption: '[goods into the lid]' });
+        return;
+      }
+      case 'markedStash': {
+        // sprint 525 — park only the testimony: the marked stacks leave
+        // your back, the clean goods stay on it. Marks ride with the
+        // goods — the lid keeps what testifies, never launders it.
+        const spotId = (it.data as { spotId: string }).spotId;
+        const key = `${this.space}:${spotId}`;
+        const stash = this.lidStashes.get(key) ?? { items: [], marked: [] };
+        const taken = this.inventory.filter((i) => i.count > 0 && this.hotItems.has(i.id));
+        let n = 0;
+        for (const i of taken) {
+          n += i.count;
+          const cur = stash.items.find((s) => s.id === i.id);
+          if (cur) cur.count += i.count; else stash.items.push({ id: i.id, count: i.count });
+          if (!stash.marked.includes(i.id)) stash.marked.push(i.id);
+          i.count = 0;
+        }
+        this.inventory = this.inventory.filter((i) => i.count > 0);
+        this.pruneHotMarks();
+        if (n <= 0) { it.enabled = false; return; }
+        this.lidStashes.set(key, stash);
+        this.fileLidClerkBulge(key, it.pos);
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
+          room: (it.data as { room: number }).room, kind: 'work',
+          t: this.clock.time, readBy: ['player'] });
+        this.cue('pickup', it.pos,
+          `[the lid swallows the testimony — ${n} marked goods off your back]`);
+        this.sound.emit({ x: it.pos.x, y: 0.5, z: it.pos.z, intensity: 0.14 * this.wantedPull,
+          category: 'item', caption: '[marked goods into the lid]' });
+        return;
+      }
+      case 'peepLid': {
+        // sprint 526 — read the lid free: a look, not a touch. No sign,
+        // no price, no hold — the lid's own memory read out loud.
+        const spotId = (it.data as { spotId: string }).spotId;
+        const stash = this.lidStashes.get(`${this.space}:${spotId}`);
+        if (!stash) { it.enabled = false; return; }
+        const n = stash.items.reduce((a, i) => a + i.count, 0);
+        const m = stash.items.filter((i) => stash.marked.includes(i.id))
+          .reduce((a, i) => a + i.count, 0);
+        this.cue('info', it.pos, m > 0
+          ? `[the lid keeps ${n} goods — ${m} of it marked]`
+          : `[the lid keeps ${n} goods]`);
         return;
       }
       case 'recoverStash': {
@@ -3683,6 +3774,10 @@ export class Game {
           if (this.inventory.some((i) => i.id === id && i.count > 0)) this.hotItems.add(id);
         }
         this.lidStashes.delete(`${this.space}:${spotId}`);
+        // sprint 528 — opening the box signs the work too
+        this.hazard.evidence.push({ pos: v3(it.pos.x, 0, it.pos.z),
+          room: (it.data as { room: number }).room, kind: 'work',
+          t: this.clock.time, readBy: ['player'] });
         this.cue('pickup', it.pos, stash.marked.length > 0
           ? `[the lid gives back what it kept — ${n} goods, still marked]`
           : `[the lid gives back what it kept — ${n} goods]`);
