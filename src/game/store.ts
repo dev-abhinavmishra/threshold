@@ -156,6 +156,8 @@ export interface BooksClosed {
   lampsLeft?: number;
   /** sprint 556 — burned-out lamp shells left as litter at the end */
   shellsLeft?: number;
+  /** sprint 568 — watchers the held beam ever dazzled */
+  eyesDazzled?: number;
 }
 
 export interface CheckpointSave {

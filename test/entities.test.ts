@@ -3714,3 +3714,94 @@ describe('the eye drinks your beam (sprints 561-563)', () => {
       expect.objectContaining({ x: w.pos.x }), 'eye:0');
   });
 });
+
+describe('the light testifies (sprints 565-568)', () => {
+  const camRoom = (dark: boolean) => ({
+    index: 0, templateId: 'corr-straight', origin: { x: 0, y: 0, z: 0 }, yaw: 0,
+    width: 8, depth: 8, darkRoom: dark,
+    spec: { width: 8, depth: 8, props: [{ kind: 'securityCam', x: 0, z: -2, yaw: 0 }] },
+    doors: [], hidingSpots: [], scheduled: [], sockets: [],
+  }) as unknown as RoomInstance;
+  const texts = (ctx: EntityCtx) =>
+    (ctx.cue as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[2]));
+
+  it('the sign names the hand — a read says who worked (s565)', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(false);
+    h.evidence.push(
+      { pos: v3(1, 0, 2), room: 0, kind: 'work', t: 0, readBy: [], by: 'grafter:2' },
+      { pos: v3(-1, 0, 2), room: 0, kind: 'work', t: 0, readBy: [], by: 'eye:0' },
+    );
+    const ctx = makeCtx([room], { currentRoomIndex: 0, beamCovers: () => true });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 0;
+    for (let i = 0; i < 3; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    expect(texts(ctx).some((t) => t.includes('stone fingers'))).toBe(true);
+    expect(texts(ctx).some((t) => t.includes('a stare was worked'))).toBe(true);
+  });
+
+  it('a filed face lit by its own beam settles ~40% faster (s566)', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const mk = async (held: number) => {
+      const h = new HazardField();
+      const room = camRoom(false);
+      h.addFromRoom(room);
+      const w = h.watchers[0];
+      w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+      const ctx = makeCtx([room], {
+        currentRoomIndex: 0,
+        heldOwed: () => held,
+        beamCovers: (pos) => Math.hypot(pos.x - w.pos.x, pos.z - w.pos.z) < 0.5,
+      });
+      ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+      h.update(ctx, 0.05); // pins the dazzle on the player's bearing
+      for (let i = 0; i < 20; i++) {   // move ON the pinned bearing
+        ctx.player.pos.x = Math.sin(i) * 0.03;
+        ctx.now += 0.05; h.update(ctx, 0.05);
+      }
+      return w.settle;
+    };
+    const lit = await mk(2);      // filed + drinking your beam
+    const filedOnly = 1.6 * 20 * 0.05; // what plain filed motion would give
+    expect(lit, 'your light confirms the description')
+      .toBeGreaterThan(filedOnly + 0.2);
+  });
+
+  it('a worked eye rings its report — the dazzle\'s sign is heard (s567)', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(false);
+    h.addFromRoom(room);
+    const w = h.watchers[0];
+    w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+    const ctx = makeCtx([room], {
+      currentRoomIndex: 0,
+      beamCovers: (pos) => Math.hypot(pos.x - w.pos.x, pos.z - w.pos.z) < 0.5,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    for (let i = 0; i < 90; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    const emit = ctx.sound.emit as ReturnType<typeof vi.fn>;
+    expect(emit.mock.calls.some((c) =>
+      c[0].category === 'machine' && Math.hypot(c[0].x - w.pos.x, c[0].z - w.pos.z) < 0.1),
+      'the eye\'s report rings at its mount').toBe(true);
+  });
+
+  it('the epitaph counts every eye that ever drank (s568)', async () => {
+    const { HazardField } = await import('../src/entities/room');
+    const h = new HazardField();
+    const room = camRoom(false);
+    h.addFromRoom(room);
+    const w = h.watchers[0];
+    w.arc = 0; w.yaw = 0; w.half = 0.42; w.range = 6.5; w.lastReport = -10;
+    const ctx = makeCtx([room], {
+      currentRoomIndex: 0,
+      beamCovers: (pos) => Math.hypot(pos.x - w.pos.x, pos.z - w.pos.z) < 0.5,
+    });
+    ctx.player.pos.x = 0; ctx.player.pos.z = 2;
+    h.update(ctx, 0.05);
+    expect(w.everDazzled).toBe(true);
+    ctx.beamCovers = () => false;
+    for (let i = 0; i < 55; i++) { ctx.now += 0.05; h.update(ctx, 0.05); }
+    expect(w.everDazzled, 'the blink forgets the episode, not the drink').toBe(true);
+  });
+});

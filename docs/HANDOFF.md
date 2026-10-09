@@ -7752,3 +7752,26 @@ signs the work.
   `dazzleCued` — an eye that never drank has `dazzleT=-10`, so an
   ungated `now - dazzleT > 2.5` is true every frame and `settle = 0`
   stomped every plain watch (caught by the s285 settle specs).
+
+## Sprints 565–568 — the light testifies
+
+- **s565 the sign names the hand** — `evidence.by` stores the
+  signer's key; fresh-'work' reads now say WHO worked: 'grafter:N' →
+  '[stone fingers worked this dust]', 'eye:N' → '[a stare was worked
+  out of this spot — light held it]'. Both ankle and beam reads name
+  the hand.
+- **s566 your light confirms the description** — a FILED face
+  (`heldOwed>0`) moving on a dazzled eye's pinned bearing settles at
+  2.2× instead of 1.6× — walking into your own dazzle with a marked
+  face is the beam's real cost.
+- **s567 the dazzle's sign rings** — the s563 `signWork` now also
+  emits a positional 'machine' emit at the eye's mount: the stare's
+  report is a sound the house hears, not just dust to smell later.
+- **s568 the epitaph counts the drinks** — `watchers.everDazzled`
+  (persistent past the blink's episode reset) →
+  `BooksClosed.eyesDazzled` on both epitaphs: 'N eyes drank your
+  light before the end — the house remembers a beam that stares'.
+
+Contract: every use of the beam writes somewhere — reads write
+nothing (silent), but holding an eye signs the floor, rings its
+mount, and tallies the epitaph. Light is testimony.

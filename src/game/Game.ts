@@ -1208,7 +1208,7 @@ export class Game {
           ?? this.route?.branchRooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
           ?? this.currentRoom;
         this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-          t: this.clock.time, readBy: [signerKey] });
+          t: this.clock.time, readBy: [signerKey], by: signerKey });
       },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
@@ -1992,7 +1992,7 @@ export class Game {
     // re-mint the wire silently (the mark was written when it was laid).
     if (planterKey) {
       this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-        t: this.clock.time, readBy: [planterKey] });
+        t: this.clock.time, readBy: [planterKey], by: planterKey });
     }
     snare.mesh = this.buildSnareProp(pos, room);
   }
@@ -7348,6 +7348,8 @@ export class Game {
             lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
             // sprint 556 — and the litter the under will make wire of
             shellsLeft: this.litLamps.filter((l) => l.batt <= 0).length || undefined,
+            // sprint 568 — and the eyes your beam held
+            eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7401,6 +7403,8 @@ export class Game {
             .reduce((a, i) => a + i.count, 0), 0),
         // sprint 544 — the lamps still burning where you left them
         lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
+        // sprint 568 — the eyes your beam held along the way
+        eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();
