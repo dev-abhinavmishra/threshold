@@ -7974,3 +7974,149 @@ export function barrelRings(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** The landing wore a turn — a pivoting fan of heel arcs where
+ *  every climber wheels round the stair's elbow. */
+export function landingWear(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (g) => {
+    const cx = 48 + rng.range(-8, 8);
+    const cy = 44 + rng.range(-8, 8);
+    // The turn — concentric heel arcs swept around the pivot point.
+    for (let i = 0; i < 7; i++) {
+      const r = 8 + i * 5 + rng.float() * 2;
+      const a0 = rng.float() * Math.PI * 2;
+      const sweep = 1.2 + rng.float() * 1.6;
+      g.strokeStyle = `rgba(170,152,122,${0.14 + rng.float() * 0.18})`;
+      g.lineWidth = 1.4 + rng.float() * 0.8;
+      g.beginPath();
+      g.arc(cx, cy, r, a0, a0 + sweep);
+      g.stroke();
+    }
+    // The pivot — a polished knot where the leading foot plants.
+    const pivot = g.createRadialGradient(cx, cy, 1, cx, cy, 9);
+    pivot.addColorStop(0, 'rgba(196,180,150,0.5)');
+    pivot.addColorStop(1, 'rgba(196,180,150,0)');
+    g.fillStyle = pivot;
+    g.beginPath();
+    g.arc(cx, cy, 9, 0, Math.PI * 2);
+    g.fill();
+    // Toe drags — short straight scuffs where a boot pivoted on its heel.
+    for (let i = 0; i < 6; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 10 + rng.float() * 16;
+      const tx = cx + Math.cos(a) * r;
+      const ty = cy + Math.sin(a) * r;
+      g.save();
+      g.translate(tx, ty);
+      g.rotate(a + Math.PI / 2);
+      g.fillStyle = `rgba(70,58,44,${0.18 + rng.float() * 0.2})`;
+      g.fillRect(-2.5, -0.7, 5 + rng.float() * 3, 1.4);
+      g.restore();
+    }
+    // Dust that the feet pushed out of the arc lanes.
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 26 + rng.float() * 12;
+      g.fillStyle = `rgba(96,84,66,${0.14 + rng.float() * 0.2})`;
+      g.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.8, 0.9, 0.9);
+    }
+  });
+}
+
+/** The cage shook its rust — flake falls and wire drags on the
+ *  floor beneath doors that get rattled to check the lock. */
+export function cageRattle(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (g) => {
+    // The shake line — a rust dust strip under the door's bottom rail.
+    const band = g.createLinearGradient(0, 30, 0, 44);
+    band.addColorStop(0, 'rgba(110,60,26,0)');
+    band.addColorStop(0.45, `rgba(110,60,26,${0.35 + rng.float() * 0.15})`);
+    band.addColorStop(1, 'rgba(110,60,26,0)');
+    g.fillStyle = band;
+    g.fillRect(10, 30, 76, 14);
+    // Flake falls — bright oxide chips in the shake line.
+    for (let i = 0; i < 16; i++) {
+      g.fillStyle = `rgba(${140 + Math.floor(rng.float() * 50)},${64 + Math.floor(rng.float() * 24)},${22 + Math.floor(rng.float() * 12)},${0.3 + rng.float() * 0.35})`;
+      g.save();
+      g.translate(12 + rng.float() * 72, 32 + rng.float() * 12);
+      g.rotate(rng.float() * Math.PI);
+      g.fillRect(-1, -0.5, 2 + rng.float() * 2, 1 + rng.float());
+      g.restore();
+    }
+    // The rattle grip — a finger-polished spot mid-door.
+    const gx = 36 + rng.float() * 24;
+    const grip = g.createRadialGradient(gx, 18, 1, gx, 18, 9);
+    grip.addColorStop(0, 'rgba(170,150,122,0.4)');
+    grip.addColorStop(1, 'rgba(170,150,122,0)');
+    g.fillStyle = grip;
+    g.beginPath();
+    g.arc(gx, 18, 9, 0, Math.PI * 2);
+    g.fill();
+    // Wire shadows — the mesh's own stave lines in the grime.
+    for (let i = 0; i < 6; i++) {
+      g.fillStyle = `rgba(50,42,32,${0.2 + rng.float() * 0.16})`;
+      g.fillRect(14 + i * 12 + rng.range(-1, 1), 30, 0.7, 14);
+    }
+    // The kick dent — a toe-deep scuff at the frame's foot.
+    g.fillStyle = 'rgba(44,36,26,0.5)';
+    g.save();
+    g.translate(48 + rng.range(-16, 16), 44);
+    g.rotate(rng.range(-0.2, 0.2));
+    g.fillRect(-3.5, -1.2, 7, 2.4);
+    g.restore();
+  });
+}
+
+/** The call button grubbed — a finger-worn halo and wipe streaks
+ *  round the plate everyone jabs at the lift. */
+export function callGrub(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (g) => {
+    const bx = 32 + rng.range(-4, 4);
+    const by = 30 + rng.range(-4, 4);
+    // The halo — decades of fingers missing and finding the button.
+    const halo = g.createRadialGradient(bx, by, 2, bx, by, 16);
+    halo.addColorStop(0, 'rgba(60,50,38,0.55)');
+    halo.addColorStop(0.5, 'rgba(60,50,38,0.28)');
+    halo.addColorStop(1, 'rgba(60,50,38,0)');
+    g.fillStyle = halo;
+    g.beginPath();
+    g.arc(bx, by, 16, 0, Math.PI * 2);
+    g.fill();
+    // The button's own crown — polished bright by the jabs.
+    g.fillStyle = 'rgba(190,176,150,0.55)';
+    g.beginPath();
+    g.arc(bx, by, 3 + rng.float(), 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = 'rgba(46,38,28,0.4)';
+    g.lineWidth = 0.6;
+    g.beginPath();
+    g.arc(bx, by, 4.5 + rng.float(), 0, Math.PI * 2);
+    g.stroke();
+    // Missed jabs — nail scratches ringing the button.
+    for (let i = 0; i < 6; i++) {
+      const a = rng.float() * Math.PI * 2;
+      g.strokeStyle = `rgba(170,156,132,${0.18 + rng.float() * 0.2})`;
+      g.lineWidth = 0.4;
+      g.beginPath();
+      g.arc(bx + rng.range(-1.5, 1.5), by + rng.range(-1.5, 1.5), 6 + rng.float() * 4, a, a + 0.5 + rng.float() * 0.6);
+      g.stroke();
+    }
+    // The drag — fingers slide down off the button to the plate edge.
+    g.fillStyle = `rgba(80,68,50,${0.22 + rng.float() * 0.18})`;
+    g.fillRect(bx - 1 + rng.range(-2, 2), by + 5, 2 + rng.float(), 16 + rng.float() * 8);
+    // The plate screws — rust ticks at the corners.
+    for (const [sx, sy] of [[6, 6], [58, 6], [6, 90], [58, 90]] as const) {
+      if (!rng.bool(0.7)) continue;
+      g.fillStyle = `rgba(120,66,28,${0.3 + rng.float() * 0.3})`;
+      g.beginPath();
+      g.arc(sx + rng.range(-1, 1), sy + rng.range(-1, 1), 1 + rng.float() * 0.7, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Smear field — the wall's own grime around the plate.
+    const grime = g.createRadialGradient(32, 48, 6, 32, 48, 30);
+    grime.addColorStop(0, 'rgba(74,62,48,0.14)');
+    grime.addColorStop(1, 'rgba(74,62,48,0)');
+    g.fillStyle = grime;
+    g.fillRect(4, 20, 56, 60);
+  });
+}
