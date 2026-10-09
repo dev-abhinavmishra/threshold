@@ -899,6 +899,22 @@ export class Warden extends Entity {
   override threatPos(): Vec3 | null { return this.state === 'engage' ? this.pos : null; }
 
   protected override onDone(): void {
+    // sprint 502 — the settle spills too: pocketed felt and chocks lie
+    // where the floorkeeper went under — confiscated, not destroyed.
+    if (this.pocketed > 0) {
+      const n = this.pocketed;
+      this.pocketed = 0;
+      this.ctx.dropWraps?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it settles — the felt it pocketed spills loose]', { severity: 'warn' });
+    }
+    if (this.pocketedChocks > 0) {
+      const n = this.pocketedChocks;
+      this.pocketedChocks = 0;
+      this.ctx.spillChocks?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it settles — the chocks it pocketed spill loose]', { severity: 'warn' });
+    }
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;

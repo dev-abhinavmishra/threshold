@@ -750,6 +750,17 @@ export class Grafter extends Entity {
       const pr = this.roomOf(this.pos);
       if (pr >= 0) this.ctx.plantSnare?.(this.pos, pr, `grafter:${this.spawnRoom}`);
     }
+    // sprint 501 — the settle spills too: a pouch on its back never
+    // vanishes, it sinks where the rubble did — the under relocates,
+    // never destroys. Fed coin comes back as floor loot, still marked.
+    if (this.pouch > 0) {
+      const n = this.pouch, hot = this.pouchHot;
+      this.pouch = 0; this.pouchHot = 0;
+      this.payerCued = false;
+      this.ctx.spillPouch?.(this.pos, n, hot);
+      this.ctx.cue('grafter-grind', this.pos,
+        '[the coin sinks with the hands — it lies where they settled]', { severity: 'warn' });
+    }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }
     this.rig = null;
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
