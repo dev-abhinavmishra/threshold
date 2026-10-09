@@ -6947,3 +6947,32 @@ take)` are on `EntityCtx` now — take `{coil?: bool; wrap?: bool}`;
 pouch always takeable. Reclaims are entity-initiated verbs, not
 player interactions — no mint churn. Spill persistence already rode
 the checkpoint (droppedPouches/droppedCoils/droppedWraps).
+
+## Sprints 485-488 — the bait is a lure
+
+- **s485 bait the floor** — crouched in the under with coin mints
+  'Bait the floor — 1 imprint' at your feet (the forge-verb grammar):
+  a drop, not a spend — no ledger line, marked coin is placed marked.
+  The planted pile ticks (s483), reads 'Gather the baited coin', and
+  rides every floor reader the arc built: the scavenger seeks it, the
+  checker's lamp receipts it. Bait or donation — whoever reads the
+  floor first.
+- **s486 bait breaks the camp** — a PLACED pile (`bait: true` on
+  `droppedPouches`, surfaced by `nearestSpill`) pulls a camped
+  grafter off the leaf: the seek's `crackCampUntil` gate is waived
+  for bait only ('[the coin's ring pulls the hands off the leaf]').
+  Ordinary spill still waits for a quiet room.
+- **s487 the bait holds the pull** — a claimed bait pile sets
+  `crackCampUntil = now + 6` at the spot: it stands over where the
+  coin rang. The lure buys seconds even spent. `scavengeSpill`'s
+  pouch return carries `bait` for this.
+- **s488 bait rings louder** — the s483 tick differentiates: baited
+  piles emit 0.3 ('[the bait rings a touch louder than the spill]'),
+  spill stays 0.22. A placed lure is the louder beacon — the
+  emergent hearing-pull is stronger on the pile you meant to ring.
+
+**Contract:** `bait?: boolean` on pouch drops (spill, checkpoint and
+restore all spread it — nothing extra to persist). Bait is the only
+pile that beats `crackCampUntil`; everything else about it is just
+an ordinary `droppedPouches` entry — same gather, same seize, same
+tick cadence.

@@ -517,15 +517,21 @@ export class Grafter extends Entity {
     // the rubble drags back for dropped coin and wire and takes its
     // own back. The spill window is a race, not a timer — put it down
     // and beat it to the pile, or it keeps the money.
-    else if (c.now > this.crackCampUntil) {
+    else {
       const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['pouch', 'coil']) ?? null;
-      if (spill && this.roomOf(v3(spill.x, 0, spill.z)) === this.spawnRoom) {
+      // sprint 486 — bait rings louder than the leaf: a PLACED pile
+      // pulls it off the camp; ordinary spill only wins a quiet room.
+      const wants = spill !== null
+        && this.roomOf(v3(spill.x, 0, spill.z)) === this.spawnRoom
+        && (c.now > this.crackCampUntil || spill.bait === true);
+      if (wants && spill) {
         this.target = v3(spill.x, 0, spill.z);
         this.roamT = 0;
         if (!this.spillCued) {
           this.spillCued = true;
-          c.cue('grafter-grind', this.pos,
-            '[the hands remember their spill — stone drags back for it]', { severity: 'warn' });
+          c.cue('grafter-grind', this.pos, spill.bait
+            ? "[the coin's ring pulls the hands off the leaf]"
+            : '[the hands remember their spill — stone drags back for it]', { severity: 'warn' });
         }
       } else this.spillCued = false;
     }
@@ -547,8 +553,13 @@ export class Grafter extends Entity {
     const claimed = c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0 }) ?? null;
     if (claimed?.kind === 'pouch') {
       this.pouch += claimed.n; this.pouchHot += claimed.hot;
+      // sprint 487 — bait holds the pull a beat: it stands over where
+      // the coin rang — the lure buys a few seconds even spent.
+      if (claimed.bait === true) { this.crackCampUntil = c.now + 6; this.roamT = 0; }
       this.spillCued = false;
-      c.cue('grafter-grind', this.pos, '[the hands take their spill back]', { severity: 'warn' });
+      c.cue('grafter-grind', this.pos, claimed.bait
+        ? '[the hands take the bait — the ring still rings]'
+        : '[the hands take their spill back]', { severity: 'warn' });
       c.sound.emit({ x: this.pos.x, y: 0.4, z: this.pos.z, intensity: 0.3,
         category: 'item', caption: '[coin counts back into the pile]', source: this.id });
     } else if (claimed?.kind === 'coil') {

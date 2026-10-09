@@ -143,9 +143,9 @@ export interface EntityCtx {
    *  coin or it keeps the money. */
   nearestSpill?: (x: number, z: number, maxD: number,
     kinds?: ('pouch' | 'coil' | 'wrap')[])
-    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' } | null;
+    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap'; bait?: boolean } | null;
   scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean })
-    => { kind: 'pouch'; n: number; hot: number } | { kind: 'coil' } | { kind: 'wrap'; n: number } | null;
+    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | null;
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';
