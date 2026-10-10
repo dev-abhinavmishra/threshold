@@ -1792,6 +1792,23 @@ export class Game {
                 this.mintSpringDrops();
                 return 'platePull';
               }
+              // sprint 681 — or YOUR jaw gets the pull: a plate you
+              // set signs 'work' under your name, and the house's
+              // answer is the same wrench — your live plate comes
+              // off the floor, mechanism on the boards. Its sign
+              // stays written (the sign is what he read).
+              const st = this.setTraps.find((t) => !this.snappedTraps.has(t.key)
+                && Math.hypot(t.x - x, t.z - z) < 1.4);
+              if (st) {
+                const si = this.setTraps.indexOf(st);
+                this.setTraps.splice(si, 1);
+                const li = this.liveTraps.findIndex((t) => t.key === st.key);
+                if (li >= 0) this.liveTraps.splice(li, 1);
+                this.trapPos.delete(st.key);
+                this.droppedSprings.push({ x: st.x, z: st.z });
+                this.mintSpringDrops();
+                return 'platePull';
+              }
               // sprint 653 — or your lid gets the sweep: the stash
               // signs 'work' when you fill it (s528), and the last
               // surface without a house answer pays it now — the
