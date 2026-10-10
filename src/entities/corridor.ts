@@ -882,7 +882,7 @@ export class Warden extends Entity {
                           : restored === 'crimp' ? '[it crimps your line shut — the pressure dies in your own throat]'
                             : restored === 'pull' ? '[it pulls the belt off your wheel — the muscle slaps the boards]'
                               : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
-                                : restored === 'sweep' ? '[it tips your lid — the take scatters the floor]'
+                                : restored === 'lidSweep' ? '[it tips your lid — the take scatters the floor]'
                                   : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't

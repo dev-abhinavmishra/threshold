@@ -598,7 +598,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
     // the house answers your wheel: 'work' near a live fitted fan is
     // the pull — beltless housing, belt on the boards
-    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'sweep' | null");
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'lidSweep' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     // sprint 648 — 'work' near a claimed wheel pulls it whoever's
     // hands claim it: yours or the under's
@@ -751,7 +751,7 @@ describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
     // the fourth 'work' dispatch — after eye tear, before null
-    expect(baseSrc).toContain("'lensTear' | 'sweep'");
+    expect(baseSrc).toContain("'lensTear' | 'lidSweep'");
     expect(gameSrc).toContain('floorkeeper tips');
     expect(gameSrc).toContain('near(s.exitPos)');
     // scattered, not confiscated — six pile kinds mirror the take
@@ -764,7 +764,7 @@ describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
     expect(gameSrc).toContain('this.sweptLids');
     // the warden reads the sweep out loud
     const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
-    expect(corridorSrc).toContain("restored === 'sweep'");
+    expect(corridorSrc).toContain("restored === 'lidSweep'");
     expect(corridorSrc).toContain('tips your lid');
     // the epitaph counts the tipped lids
     const storeSrc = readFileSync('src/game/store.ts', 'utf8');

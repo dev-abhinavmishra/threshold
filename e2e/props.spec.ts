@@ -1420,6 +1420,7 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
     g.renderFrame = () => {};
     g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
     const ga = g as unknown as {
+      space: string;
       lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
       droppedBelts: { x: number; z: number }[];
       droppedCoils: { x: number; z: number }[];
@@ -1437,7 +1438,7 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
         .hidingSpots ?? []).map((s) => ({ s })))[0];
     if (!spot) return { stage: 'no-spot' } as const;
     const { s } = spot;
-    ga.lidStashes.set(`${g.space}:${s.id}`, {
+    ga.lidStashes.set(`${ga.space}:${s.id}`, {
       items: [{ id: 'fanBelt', count: 2 }, { id: 'wireCoil', count: 1 }, { id: 'documents', count: 1 }],
       marked: ['fanBelt'],
     });
@@ -1445,7 +1446,7 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
     // a 'work' mark at the lid's mouth — the signature the stash
     // itself leaves — gets the fourth dispatch
     const swept = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
-    const stash = ga.lidStashes.get(`${g.space}:${s.id}`);
+    const stash = ga.lidStashes.get(`${ga.space}:${s.id}`);
     return {
       stage: 'swept' as const,
       swept,
@@ -1459,7 +1460,7 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
 
   if (result.stage === 'no-spot') test.skip();
   else {
-    expect(result.swept, 'work near a stuffed lid is the sweep').toBe('sweep');
+    expect(result.swept, 'work near a stuffed lid is the sweep').toBe('lidSweep');
     expect(result.beltGain, 'the swept belts land as floor goods').toBe(2);
     expect(result.coilGain, 'the swept coil lands as floor goods').toBe(1);
     expect(result.kept, 'oddities keep the lid — documents do not pile').toEqual(['documents:1']);

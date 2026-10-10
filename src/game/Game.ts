@@ -1680,7 +1680,7 @@ export class Game {
               this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops();
               this.mintSpringDrops(); this.mintBeltDrops(); this.mintLensDrops();
               this.sweptLids = (this.sweptLids ?? 0) + 1;
-              return 'sweep';
+              return 'lidSweep';
             }
             w.dead = true;
             w.lensed = false;
