@@ -773,6 +773,23 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           frameHardware.push(ros);
         }
       }
+      // The caller pressed here once — a brass bell-push on the
+      // hinge-side casing opposite the switch plate.
+      if (rng.float() < 0.35) {
+        for (const zOff of [0.26, -0.26]) {
+          const plate = new THREE.Mesh(texBox(0.07, 0.12, 0.015), MAT.brass());
+          plate.name = 'bell-plate';
+          plate.position.set(-fw / 2 - 0.14, 1.22, zOff);
+          frame.add(plate);
+          frameHardware.push(plate);
+          const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 10), MAT.paper());
+          btn.name = 'bell-push';
+          btn.rotation.x = Math.PI / 2;
+          btn.position.set(-fw / 2 - 0.14, 1.22, zOff + (zOff > 0 ? 0.017 : -0.017));
+          frame.add(btn);
+          frameHardware.push(btn);
+        }
+      }
     }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
     const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
@@ -854,6 +871,23 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
             lg.name = 'leaf-ledge';
             lg.position.set(0, by, fz);
             leaf.add(lg);
+          }
+        }
+        // Long strap hinges across the boards — the old T-iron a ledged
+        // door actually hangs on.
+        if (rng.bool(0.65)) {
+          for (const fz of [0.062, -0.062]) {
+            for (const hy of [0.72, -0.65]) {
+              const strap = new THREE.Mesh(texBox(pw * 0.55, 0.045, 0.014), MAT.steelDark());
+              strap.name = 'strap-hinge';
+              strap.position.set(-pw / 2 + pw * 0.32, hy, fz);
+              leaf.add(strap);
+              const end = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 8), MAT.steelDark());
+              end.name = 'strap-end';
+              end.rotation.x = Math.PI / 2;
+              end.position.set(-pw / 2 + 0.04, hy, fz);
+              leaf.add(end);
+            }
           }
         }
       } else if (leafStyle === 'louver') {
@@ -968,6 +1002,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         dn.name = 'door-number';
         dn.position.set(0, 0.58, 0.056);
         leaf.add(dn);
+      }
+      // The leaf kept its teeth — a kick plate low, a chain on the
+      // inside face where somebody slept worse at night.
+      if (rng.bool(0.4)) {
+        for (const fz of [0.062, -0.062]) {
+          const kp2 = new THREE.Mesh(texBox(pw - 0.12, 0.24, 0.01), MAT.steelDark());
+          kp2.name = 'kick-plate';
+          kp2.position.set(0, -0.95, fz);
+          leaf.add(kp2);
+        }
+      }
+      if (rng.bool(0.3)) {
+        const keep = new THREE.Mesh(texBox(0.04, 0.1, 0.012), MAT.steelDark());
+        keep.name = 'chain-keeper';
+        keep.position.set(pw / 2 - 0.08, 0.5, -0.062);
+        leaf.add(keep);
+        for (let li = 0; li < 4; li++) {
+          const link = new THREE.Mesh(texBox(0.035, 0.02, 0.008), MAT.steel());
+          link.name = 'chain-link';
+          link.position.set(pw / 2 - 0.02 + li * 0.045, 0.5 - li * 0.008, -0.062);
+          link.rotation.z = -0.15;
+          leaf.add(link);
+        }
+        const mount = new THREE.Mesh(texBox(0.05, 0.1, 0.015), MAT.steelDark());
+        mount.name = 'chain-mount';
+        mount.position.set(pw / 2 + 0.19, 0.5, -0.06);
+        leaf.add(mount);
       }
     } else {
       // kick plate + rivets on service doors

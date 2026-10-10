@@ -6125,3 +6125,20 @@ describe('the rails kept their smalls (sprint 637-639)', () => {
     });
   }
 });
+
+describe('the doors kept their teeth (sprint 640-642)', () => {
+  for (const name of ['strap-hinge', 'strap-end', 'kick-plate', 'chain-keeper', 'chain-link', 'chain-mount', 'bell-plate', 'bell-push'] as const) {
+    it(`doors carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
