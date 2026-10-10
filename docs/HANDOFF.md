@@ -92,6 +92,24 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
 - `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
 
+## Sprint 673 — the kettle rang the wall, the shelf bowed & the flue exhaled
+
+- `kettleHalo` (96×96): steam bloom + dried tide-ring + limescale drips + beads + soot kiss; 45% of stove/kettle/masonryHeater props.
+- `shelfSag` (96×48): bowed shelf shadow + dust banks + bracket ghosts + fallen-item sliver; 40% of bookshelf/shelf/cabinet/dresser.
+- `chimneySmut` (96×96): feathered soot bloom + smoke ghosts + streak tongues + tar beads; ceiling quad (rotation.x=π/2) at h−0.02 above fireplace/masonryHeater/stove, 45%. Presence tests ×3 green.
+
+## Sprint 674 — the pull cast its shadow, they hung a sheet & the outlet spat once
+
+- `handleShadow` (48×48): hand-shadow crescent + grip lip + finger comets + polish rim; 40% of dresser/cabinet/drawerUnit/filing/nightstand.
+- `drapeDrop` (96×64): cloth-ghost rectangle + hem shadow + fold streaks + clean hook circles + hem rub; 30% lived-in walls at ~1.6m.
+- `socketScorch` (48×64): smoke plume + char tear + prong chars + drip beads + cord shadow; 45% service-bones walls at socket height. Presence tests ×3 green.
+
+## Sprint 675 — the clock etched its swing, the board dropped its crumbs & the rad spat once
+
+- `pendTick` (64×96): swing arc + bob polish halo + tick dents + rod shadow + dust spars; 50% of clock/wallClock/grandfatherClock.
+- `crumbDrift` (96×64): board ghost + grease halo + knife scores + crumb scatter + edge trail; 45% of cuttingBoard/counter, floor quad.
+- `valveSpur` (48×48): rust jet + spray flecks + bleed-screw socket + rust seep + mineral bloom; 45% of radiatorTall/radiatorFin/masonryHeater. Presence tests ×3 green (kind names verified against spec.ts union: grandfatherClock not grandfather, counter not kitchenTable/workbench).
+
 ## Sprint log
 
 
@@ -8348,3 +8366,23 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
+\n\n## Sprint 677–678 — the latches kept the thumbs, the nails kept the straightening & the springs shed their dust (decals lane)
+
+- `windowLatch` — grease smear, turn crescents and fingertip ghosts on window latches; buildProp front-face overlay on `window`/`transomWindow`/`traceryWindow`/`windowArch`.
+- `pianoKeys` — ivory band, polished tops and nick marks on the piano's fall; overlay on `pianoUpright` front face.
+- `pictureNail` — rust pit, leveling arcs and plaster crumbs where single frames were adjusted; room-level wall decal behind frame-ish props (`painting`/`frameStand`/`standingFrame`/`mirror`, `livedIn`).
+- `vaseRing` — moisture ring and shelf dust under `vase`/`plant`/`planter`.
+- `springDust` — rail shadow, coil ghosts and lint on `bed`/`bedOld`/`daybed` fronts.
+- `drainAge` — sediment rings, limescale and iron blush on `grateDrain`/`ironGrate` floor decals.
+
+**Gotchas:** `placedProps` and `nearestWall` don't exist in the dressing block — prop list is `spec.props`, nearest-wall is the `dE/dW/dN/dS → md` pattern. `floorDecal` doesn't exist either — floor decals are `decalQuad` + `rotation.x = -π/2` + `position.set(x, ~0.009, z)`.
+
+Gates: tsc, lint, scoped vitest (sprints 677–678) green.\n\n## Sprint 676 — the lintels kept their dust, the bells kept the thumbs & the slots kept the scratches (decals lane)
+
+- `lintelDust` — grey dust shelf-lines, end drip tails and cobweb wisps above doors nobody dusted; room-level decal over each `doorPositions` port (35% roll, ~2.35m up).
+- `bellThumb` — polished brass halo + thumb arcs + push pits; buildProp top-face overlay on counterBell/writingDesk/catalogueDesk/dresser/nightstand.
+- `slotScratch` — key-chase arcs, flap ghost and push smudges where the post came through; room-level at door positions (30%) plus buildProp overlay on `dumbWaiterDoor`.
+
+**Gotcha this sprint:** door kinds (`door`, `castleDoor`, `liftDoors`) are NOT prop-spawned — they never reach `buildProp`, so prop overlays on them produce zero meshes. If a decal needs to live on a door, wire it as a room-level decal at `doorPositions` (like `doorDent`/`doorGlow`), or overlay `dumbWaiterDoor` only.
+
+Gates: tsc, lint, scoped vitest (sprint 676) green.
