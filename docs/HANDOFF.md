@@ -2,6 +2,14 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 673–675 — the under re-teeth the jaw (third graft substrate)
+
+- **673** the last graft substrate: a dead plate still bolted to the floor (armed seed, snapped or pried, in nobody's hands) is graft stock for a carried spring. `carriedKind` gains `'spring'` — the under now keeps its teeth the way it keeps muscle and glass. `nearestGraft`/`graft` extend to `'plate'`: the bite comes back in the under's name (`trapOwner` key → 'under'), signing 'work' under the grafter's key.
+- **674** jurisdiction in the bite: the entity snap-loop exempts `UNDER_CAST` (the underscript ids) on `owner==='under'` plates — the jaw was set for the house's feet, not its own hands. Yours still break it. `trapOwner` rides the checkpoint like every other graft claim.
+- **675** the house answers — a fifth 'work' dispatch before the lidSweep: `platePull` wrenches the under's teeth (jurisdiction cleared, jaw snapped dead, `springPart` on the boards). Corridor cue + epitaph `graftedWork` counts jaws. Contract pins 55/55; runflow leg green live.
+
+Next: the under's graft family is complete (wheel/eye/plate). Below that: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, and the 'work'-streak escalation surface (repeated marks tighten patrols).
+
 ## Sprint 663–665 — the wire walks under the knee (mechanics lane)
 
 - **663** the under's wire-rob was already indifferent to a planted knee — the grafter's wireLid scan never gates on `trappedBy` — but nothing said so.
