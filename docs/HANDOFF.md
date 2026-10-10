@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
+\n\n## Sprint 691–693 — the stairs kept their rods, the mirrors foxed & the spools kept their shadows (decals lane)
+
+- `stairRod` — bracket ghosts across stairs/ladders (stairs/grandStair/stairLanding/stairGate/ladder/woodLadder/libraryLadder/rollingLadder/fireEscape).
+- `pelmetDust` — dust shelves above windows/curtain kinds.
+- `scuttleGhost` — coal dust rings beside hearths/stoves.
+- `inkwellRing` — bottle rings on desk kinds.
+- `washTide` — soap tide lines under wash/laundry props.
+- `pewCushion` — pressed outlines on chapelPew/pewRow.
+- `bellPull` — cord wear strips beside lived-in doors.
+- `mirrorFox` — foxing spots overlay on mirror props.
+- `spoolShadow` — thread/needle marks on table kinds.
+
+Gates: tsc, lint, scoped vitest (691–693) green.\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
 
 - `catHalo` — curled heat halos on radiator/masonryHeater/bench/bedBench tops (props overlay).
 - `birdCage` — feather drift + seed scatter under cageLocker/cageLight/cagedSconce/recordsCage.
