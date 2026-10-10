@@ -32,6 +32,12 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - `saltLine` (96×32): uneven mineral crust + piled ends + dark seam + crystals; 30% lived-in door feet.
 - `flySpot` (64×64): amber halo + rim-sparse speck cluster + dragged smear; 30% lived-in walls high near lamps. Presence tests ×3 green.
 
+## Sprint 669 — the chair left its tracks, the shelf kept its outline & the kettle steamed the wall
+
+- `chairScrape` (96×64): twin leg drag-lines + dust walls at ends + foot divots + turn smear; 35% lived-in floors.
+- `bookDust` (96×64): pale tipped book ghost + spine ridge + fore-edge dust lip + thumb smudge; 50% of `bookshelf` props.
+- `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 657–662 — the sweep plants a knee (a second house reader)

@@ -12108,3 +12108,111 @@ export function flySpot(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Chair scrape — the chair left its tracks: two thin parallel drag
+ * lines where the legs pushed back, dust walls at their ends. */
+export function chairScrape(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const gap = 12 + rng.float() * 8;
+    const x0 = 48 - gap;
+    const x1 = 48 + gap;
+    for (const lx of [x0, x1]) {
+      // the drag — a thin bright track where the leg slid
+      ctx.strokeStyle = `rgba(180,160,130,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(lx + (rng.float() - 0.5) * 4, 10);
+      ctx.quadraticCurveTo(lx, 32, lx + (rng.float() - 0.5) * 3, 46 + rng.float() * 8);
+      ctx.stroke();
+      // dust wall — piled grit at the drag's end
+      ctx.fillStyle = `rgba(160,148,124,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(lx, 48 + rng.float() * 6, 3.5, 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // foot divot — the leg's resting pit
+      ctx.fillStyle = `rgba(40,30,24,${0.35 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(lx, 12, 1.6, 2.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the smear — faint sideways brush where it turned
+    ctx.strokeStyle = `rgba(170,150,124,${0.2 + rng.float() * 0.15})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x0 - 6, 30);
+    ctx.quadraticCurveTo(48, 34, x1 + 6, 28);
+    ctx.stroke();
+  });
+}
+
+/** Book dust — the shelf kept its outline: pale shadow of a book's
+ * lean on the shelf face, dust lip at its fore edge, thumb smudge. */
+export function bookDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // the lean — a pale book-shaped ghost tipped a few degrees
+    ctx.save();
+    ctx.translate(44 + rng.float() * 8, 30);
+    ctx.rotate(0.12 + rng.float() * 0.15);
+    ctx.fillStyle = `rgba(200,192,170,${0.28 + rng.float() * 0.18})`;
+    ctx.fillRect(-9, -14, 18, 28);
+    // spine ridge — darker where the dust settled against it
+    ctx.fillStyle = `rgba(90,78,60,${0.25 + rng.float() * 0.15})`;
+    ctx.fillRect(-9, -14, 2, 28);
+    ctx.restore();
+    // the lip — dust built at the fore edge
+    ctx.fillStyle = `rgba(150,138,114,${0.35 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(44, 47, 16, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // thumb smudge — where a hand slid it back, cleaner
+    ctx.fillStyle = `rgba(210,204,186,${0.25 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.ellipse(58, 34, 4, 2.6, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // stray dust
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(160,150,128,${0.2 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 56, 40 + rng.float() * 12, 0.5 + rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Vapor ghost — the kettle steamed the wall: a fading bloom of
+ * condensation above where the pot sits, drip trails down. */
+export function vaporGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the bloom — soft condensation mark, heavy low, gone high
+    const g = ctx.createRadialGradient(48, 78, 8, 48, 70, 44);
+    g.addColorStop(0, `rgba(190,196,196,${0.24 + rng.float() * 0.14})`);
+    g.addColorStop(1, 'rgba(190,196,196,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // drip trails — thin runs falling off the bloom's floor
+    const drips = 3 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < drips; i++) {
+      const dx = 26 + rng.float() * 44;
+      const len = 10 + rng.float() * 18;
+      ctx.strokeStyle = `rgba(150,160,158,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(dx, 74);
+      ctx.lineTo(dx + (rng.float() - 0.5) * 2, 74 + len);
+      ctx.stroke();
+    }
+    // the ring — mineral halo where the steam sat longest
+    ctx.strokeStyle = `rgba(170,178,176,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(48, 74, 18 + rng.float() * 6, 8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // specks
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(160,168,166,${0.2 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(24 + rng.float() * 48, 60 + rng.float() * 24, 0.5 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
