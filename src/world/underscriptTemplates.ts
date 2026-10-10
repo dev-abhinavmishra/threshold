@@ -564,7 +564,7 @@ const u_lockerRow: RoomTemplate = {
       { kind: 'bin', x: 3.4, z: -2.8 },
       { kind: 'linenHamper', x: -3.5, z: -2.5 },
       { kind: 'towelRail', x: 3.55, z: 1.5, y: 1.6, yaw: -Math.PI / 2 },
-      { kind: 'exitSign', x: 0, z: 2.9, y: 2.3 },
+      { kind: 'exitSign', x: 2.6, z: 2.9, y: 2.3 },
       { kind: 'fluoroTube', x: -1.5, z: -0.5, y: 2.6 }, { kind: 'fluoroTube', x: 1.5, z: -0.5, y: 2.6 },
     ],
     colliders: [
@@ -579,6 +579,7 @@ const u_lockerRow: RoomTemplate = {
       { kind: 'cabinet', x: 3.5, z: 0.4, yaw: -Math.PI / 2, propKind: 'locker' },
       { kind: 'cabinet', x: -3.5, z: 2.2, yaw: Math.PI / 2, propKind: 'locker' },
     ],
+    exits: [P(2.6, 'n')],
     weight: 7, perfCost: 3,
   }),
 };
@@ -622,7 +623,7 @@ const u_dumbwaiterBay: RoomTemplate = {
       // The freight hatches — one dead shaft north, one service door east.
       { kind: 'dumbwaiter', x: 0, z: 2.4, y: 0.95, yaw: Math.PI },
       { kind: 'dumbWaiterDoor', x: 1.9, z: 0.5, y: 0.9, yaw: -Math.PI / 2 },
-      { kind: 'trolley', x: -1.2, z: -0.8 },
+      { kind: 'trolley', x: -1.35, z: -0.4 },
       { kind: 'handTruck', x: 1.3, z: -1.4, yaw: -0.5 },
       { kind: 'mailCart', x: -1.4, z: 1.0 },
       { kind: 'crate', x: -1.6, z: -2.0 }, { kind: 'crate', x: 1.5, z: -2.1 },
@@ -630,7 +631,7 @@ const u_dumbwaiterBay: RoomTemplate = {
       { kind: 'cageLight', x: 0, z: 0, y: 2.45 },
       { kind: 'conduitRun', x: -1.95, z: -0.5, y: 1.9, yaw: Math.PI / 2 },
     ],
-    colliders: [{ x: -1.2, z: -0.8, w: 1.3, d: 0.9, h: 1.1 }],
+    colliders: [{ x: -1.35, z: -0.4, w: 1.3, d: 0.9, h: 1.1 }],
     sockets: [
       { kind: 'loot', x: -1.6, z: -2.0, meta: {} },
       { kind: 'loot', x: 1.6, z: 0.2, meta: {} },
@@ -718,7 +719,7 @@ const u_burnRoom: RoomTemplate = {
   build: (_rng) => us('u-burn-room', 6, 6, 2.7, {
     props: [
       // The drum that ate the paperwork, and the coal that fed it.
-      { kind: 'boilerDrum', x: 0, z: 1.6 },
+      { kind: 'boilerDrum', x: 0, z: -0.3 },
       { kind: 'coalScuttle', x: -1.8, z: 1.8 },
       { kind: 'barrel', x: -2.5, z: -0.5 },
       { kind: 'crate', x: -2.4, z: -2.4 }, { kind: 'compostBags', x: -2.9, z: -1.7 },
@@ -730,7 +731,7 @@ const u_burnRoom: RoomTemplate = {
       { kind: 'conduitRun', x: 2.95, z: 1.0, y: 1.9, yaw: -Math.PI / 2 },
     ],
     colliders: [
-      { x: 0, z: 1.6, w: 1.7, d: 1.7, h: 2.5 },
+      { x: 0, z: -0.3, w: 1.7, d: 1.7, h: 2.5 },
       { x: 2.4, z: -0.8, w: 1.3, d: 0.9, h: 1.1 },
     ],
     sockets: [
