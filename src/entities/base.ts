@@ -165,6 +165,14 @@ export interface EntityCtx {
    *  the signer doesn't chase its own sign — the splice's own signing
    *  convention, shared for non-snare work (shell-stripping etc.). */
   signWork?: (pos: Vec3, signerKey: string) => void;
+  /** sprint 675 — the under's answer to a 'work' mark: a grafter that
+   *  reaches fresh sign strips the armed work it names — your planted
+   *  wire comes up as a carried coil, your cocked plate folds into
+   *  stock. The under relocates live work; it doesn't dead it.
+   *  Returns what it took, or null when the mark lied (the work left
+   *  first, or what it found isn't yours). */
+  stripWork?: (x: number, z: number)
+    => 'coil' | 'plate' | 'belt' | 'lens' | 'throat' | null;
   /** sprint 419 — a carried coil is lost work: a staggered carrier
    *  drops it unlaid — a dead graft at its feet, reclaimable wire. */
   spillSnare?: (pos: Vec3, room: number) => void;

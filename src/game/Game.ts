@@ -1261,6 +1261,35 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
           t: this.clock.time, readBy: [signerKey], by: signerKey });
       },
+      // sprint 675 — the under's answer to your 'work': the grafter
+      // strips the armed work the mark names into its own carry. Where
+      // the house deads your work (crimp, pull, tear) the under LIFTS
+      // it — live wire, a cocked plate — and walks it to a substrate
+      // or a fresh snare on your path. Jurisdiction is honest: it has
+      // no pocket for the house's work, and a claimed wire the warden
+      // re-tied is the house's again, outside its hands.
+      stripWork: (x, z) => {
+        const near = (p: { x: number; z: number }) => Math.hypot(p.x - x, p.z - z) < 1.4;
+        // your live wire comes up as its coil — planted and still
+        // armed, never house-claimed. A claimed wire is the house's
+        // work and stays outside the under's pocket.
+        const s = this.hazard.snares.find((hz) => hz.armed && hz.planted
+          && !hz.claimed && near(hz.pos));
+        if (s) { this.removeSnare(s); return 'coil'; }
+        // or your cocked plate folds into stock — a live setTrap the
+        // mark named lifts whole. Sprung or pried plates are dead
+        // work; the 'spring' sign already owns their answer.
+        const t = this.setTraps.find((tt) => !this.snappedTraps.has(tt.key)
+          && !this.priedTraps.has(tt.key) && near(tt));
+        if (t) {
+          this.setTraps.splice(this.setTraps.indexOf(t), 1);
+          const li = this.liveTraps.findIndex((tt) => tt.key === t.key);
+          if (li >= 0) this.liveTraps.splice(li, 1);
+          this.trapPos.delete(t.key);
+          return 'plate';
+        }
+        return null;
+      },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
       // grafter drops it where it goes down, gatherable like any spill.

@@ -394,6 +394,11 @@ export class Grafter extends Entity {
   private wireLid: RoomInstance['hidingSpots'][number] | null = null;
   private wireLidCued = false;
   private dragT = 0;
+  /** sprint 675 — a fresh 'work' mark it dragged to is an armed
+   *  surface it has pockets for: the read stays live until the strip
+   *  lands or full hands make it moot. */
+  private workMark: Vec3 | null = null;
+  private stripT = 0;
   private get eager() { return this.markReads >= 2; }
 
   constructor() { super('grafter', ENTITY_TUNING.grafter); }
@@ -526,6 +531,15 @@ export class Grafter extends Entity {
     else if (this.pouch > 0 && p.protection !== 'hidden' && this.roomOf(p.pos) === this.spawnRoom) {
       this.target = v3(p.pos.x, 0, p.pos.z);
       speed *= 1.2;
+    }
+    // sprint 675 — the read is unfinished until the strip lands: fresh
+    // 'work' sign keeps pulling past dead spill — the meat there is
+    // still armed, worth more than litter. Empty hands only: a full
+    // pocket leaves your work whole (the s491 rule).
+    else if (this.workMark && this.carrying === 0) {
+      this.target = v3(this.workMark.x, 0, this.workMark.z);
+      this.roamT = 0;
+      this.spillCued = false;
     }
     // sprint 481 — the under reclaims its spill: a quiet room is a
     // larder. While nothing living shows and no leaf holds its camp,
@@ -709,6 +723,40 @@ export class Grafter extends Entity {
         category: 'item', caption: '[a dead lamp cracks under the rubble]', source: this.id });
       c.signWork?.(this.pos, `grafter:${this.spawnRoom}`);
     }
+    // sprint 675 — and your work is meat too: a 'work' mark it dragged
+    // to is an armed surface it has pockets for. The stoop is the
+    // spill's heartbeat — reach it first and the work stays yours.
+    const workNear = this.workMark && this.carrying === 0
+      && v3dist(this.pos, this.workMark) < 0.6 ? this.workMark : null;
+    if (workNear && this.stripT <= 0) {
+      this.stripT = 1.2;
+      this.target = v3(workNear.x, 0, workNear.z);
+      c.cue('grafter-grind', this.pos,
+        '[it stoops over the sign — the fingers spread]', { severity: 'warn' });
+    }
+    if (this.stripT > 0) {
+      if (!workNear) {
+        this.stripT = 0; // it wandered off mid-stoop — the intent stands
+      } else {
+        this.stripT -= dt;
+        this.rig?.play('idle');
+        if (this.stripT > 0) return;
+        this.stripT = 0;
+        this.workMark = null;
+        const got = c.stripWork?.(workNear.x, workNear.z) ?? null;
+        if (got === 'coil') {
+          this.carrying = 1;
+          this.carryCued = false;
+          c.cue('grafter-grind', this.pos,
+            '[stone worries your wire up — the coil goes under the rubble]', { severity: 'warn' });
+        } else if (got === 'plate') {
+          this.carrying = 1;
+          this.carryCued = false;
+          c.cue('grafter-grind', this.pos,
+            '[stone folds your cocked plate into its hands]', { severity: 'warn' });
+        }
+      }
+    }
     // It grinds the floor wherever it is — a dead snare crossed under
     // its stride is scrap too, not only the one under a standing rubble.
     if (this.carrying === 0 && c.stripSnare?.(this.pos.x, this.pos.z)) {
@@ -795,6 +843,10 @@ export class Grafter extends Entity {
         this.markReads += owed ? 2 : 1;
         this.target = v3(ev.pos.x, 0, ev.pos.z);
         this.roamT = 0;
+        // sprint 675 — a 'work' mark is a read it can answer: the spot
+        // stays marked until the strip lands or full hands make it moot.
+        if (ev.kind === 'work' && this.carrying === 0 && !this.carriedKind)
+          this.workMark = v3(ev.pos.x, 0, ev.pos.z);
         c.cue('grafter-grind', this.pos, ev.old ? '[stone drags to an old mark — it does not know]'
           : owed ? '[the tally\'s mark is on this sign — stone knows these hands]'
           : ev.weak ? '[stone snuffles the ash — it smells hands]'

@@ -746,6 +746,36 @@ describe('the under grafts back (sprints 646-650)', () => {
 });
 
 
+describe('the under strips your hands (sprints 675-680)', () => {
+  it('stone reads your work — a fresh mark is an armed surface it has pockets for', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the ctx hook exists and the grafter stoops for it
+    expect(baseSrc).toContain('stripWork');
+    expect(spSrc).toContain('stripWork');
+    expect(spSrc).toContain('workMark');
+    // it answers 'work' marks only, and only with empty hands — a full
+    // pocket leaves your work whole, the same rule as dead wire
+    expect(spSrc).toMatch(/ev\.kind === 'work' && this\.carrying === 0/);
+    expect(spSrc).toContain('this.carrying === 0\n      && v3dist(this.pos, this.workMark) < 0.6');
+    // your live wire comes up as its coil — planted and armed, never
+    // house-claimed: a wire the warden re-tied is outside its pocket
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    expect(strip).toContain('hz.armed && hz.planted\n          && !hz.claimed');
+    expect(strip).toContain("return 'coil'");
+    // your cocked plate folds whole — sprung or pried plates are dead
+    // work; the 'spring' sign already owns their answer
+    expect(strip).toContain('this.snappedTraps.has(tt.key)');
+    expect(strip).toContain('this.priedTraps.has(tt.key)');
+    expect(strip).toContain("return 'plate'");
+    // the plate leaves the snap loops and the mint on the way out
+    expect(strip).toContain('this.liveTraps.splice');
+    expect(strip).toContain('this.trapPos.delete(t.key)');
+  });
+});
+
+
 describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
   it("'work' near a stuffed lid tips it — the take comes out as piles", () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
