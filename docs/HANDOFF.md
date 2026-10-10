@@ -4,6 +4,15 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
+
+- `corridor-sconce` brass arms alternate e/w walls every ~2.6–3.2m in
+  long corridor rooms; `sconce-shade` cones; `sconce-bulb-lit`/
+  `sconce-bulb` emissive bulbs (30% dead); `sconcePool` wall decal
+  + `sconce-pool` thrown light under lit arms.
+- Emissive only — no point lights (a corridor chain would blow the
+  light budget); hardware kept via `frameHardware`.
+
 ## Sprint 622–624 — the ceiling carried its mains (overhead conduit batch)
 
 - `ceiling-main` 1–3 parallel conduit runs along one axis at h-0.12
