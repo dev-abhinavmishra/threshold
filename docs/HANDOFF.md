@@ -4,6 +4,42 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 604–606 — the under kept its workings (nine new under templates)
+
+The Underscript ran ~120 rooms on 14 templates — its largest variety gap.
+Nine new room templates across three batches:
+
+- **s604 the workings**: `u-mail-sort` (8×7 sort floor — stackShelf cubby
+  wall, two dead mail carts, key cabinet, parcel crates), `u-switchboard`
+  (6×6 electrical vault — breaker/utility bank on two walls, machine box,
+  cage light + conduit runs), `u-tool-cage` (7×6 tool crib — mesh-front
+  cageLocker row, racks, tool chest/cart, bench vice on a crate, gas
+  bottles).
+- **s605 the people**: `u-locker-row` (8×6 locker room — four lockers on
+  the north wall, cage lockers west, benches + floor drains, water cooler),
+  `u-bunk-nook` (5×5 squatter bedroom — one partition screen walls the
+  north-west corner off, bed flush against the wall, camp crate with
+  lantern/rations/cigs/thermos, under-bed hide), `u-dumbwaiter-bay`
+  (4×5 freight alcove — dead dumbwaiter hatch + service door, trolley,
+  hand truck, mail cart).
+- **s606 the machines**: `u-pump-vault` (7×7 sump vault — two sump pumps,
+  pipe manifold wall, valve wheels, overhead pipe runs, floor drains),
+  `u-freight-bay` (8×6 loading nook — roller shutter east, overhead crane
+  hoist, crate rows, tyre pile, chain fence), `u-burn-room` (6×6 waste
+  furnace — boiler drum, coal scuttle, meat hook, trolley).
+
+**Bug fixed along the way**: `us()` ignored `weight`, `perfCost`,
+`darkChance`, `minRoom` in opts — every under template spawned at weight
+10 regardless of its declared value. Now wired through, so the existing
+templates' declared weights are live for the first time (corridors/lobbies
+up, set-pieces down — check under room mix if distribution drifts).
+
+New tests: each of the nine builds a valid spec (props > 3, hiding spot,
+entry+exit nav), ≥4 of the nine appear across 5 seeds, hiding spots stay
+inside room bounds, and a propsClash sweep over the nine (under templates
+were never swept) — caught and fixed two real embeds (partition/bed,
+crane/shutter).
+
 ## Review-fix sweep — the decals land where they claim
 
 All Devin Review findings on the merged decal PRs (#182–#218, 54 findings)

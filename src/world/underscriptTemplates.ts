@@ -22,10 +22,10 @@ function us(id: string, w: number, d: number, h: number, opts: Partial<RoomSpec>
     lights: opts.lights ?? [{ x: 0, y: h - 0.15, z: 0, color: 0xf2eeda, intensity: 0.7, range: Math.max(w, d), group: 'main', breakable: true }],
     floorMaterial: 'concrete',
     tags: opts.tags ?? [],
-    darkChance: 0.5,
-    weight: 10,
-    perfCost: 2,
-    minRoom: 0,
+    darkChance: opts.darkChance ?? 0.5,
+    weight: opts.weight ?? 10,
+    perfCost: opts.perfCost ?? 2,
+    minRoom: opts.minRoom ?? 0,
     special: opts.special,
   };
 }
@@ -431,10 +431,326 @@ const u_narrowStacks: RoomTemplate = {
   }),
 };
 
+const u_mailSort: RoomTemplate = {
+  id: 'u-mail-sort',
+  build: (_rng) => us('u-mail-sort', 8, 7, 2.7, {
+    props: [
+      // Sort shelving hugging the west wall — the cubby rows.
+      { kind: 'stackShelf', x: -3.6, z: -2.0, yaw: Math.PI / 2 },
+      { kind: 'stackShelf', x: -3.6, z: -0.4, yaw: Math.PI / 2 },
+      { kind: 'stackShelf', x: -3.6, z: 1.2, yaw: Math.PI / 2 },
+      // The carts that never finished their rounds.
+      { kind: 'mailCart', x: -1.4, z: -1.6, yaw: 0.35 },
+      { kind: 'mailCart', x: 1.2, z: 1.0, yaw: -0.5 },
+      { kind: 'keyCabinet', x: 3.85, z: -2.2, y: 1.55, yaw: -Math.PI / 2 },
+      { kind: 'crate', x: -2.9, z: -2.9 }, { kind: 'paperStack', x: -2.9, z: -2.9, y: 0.55 },
+      { kind: 'crate', x: 2.9, z: -2.9 }, { kind: 'paperStack', x: 2.9, z: -2.9, y: 0.55 },
+      { kind: 'bin', x: 3.5, z: -3.2 },
+      { kind: 'suitcase', x: 3.2, z: 2.6, yaw: -0.6 },
+      { kind: 'plasticCrate3', x: -0.4, z: 2.6 },
+      { kind: 'fluoroTube', x: -1.3, z: 0, y: 2.6 }, { kind: 'fluoroTube', x: 1.3, z: 0, y: 2.6 },
+      { kind: 'ductRun', x: 0, z: 2.2, y: 2.5 },
+      { kind: 'conduitRun', x: 3.9, z: 0.8, y: 1.9, yaw: -Math.PI / 2 },
+    ],
+    colliders: [
+      { x: -3.6, z: -2.0, w: 0.6, d: 1.7, h: 2.3 },
+      { x: -3.6, z: -0.4, w: 0.6, d: 1.7, h: 2.3 },
+      { x: -3.6, z: 1.2, w: 0.6, d: 1.7, h: 2.3 },
+      { x: -1.4, z: -1.6, w: 0.9, d: 0.9, h: 0.85 },
+      { x: 1.2, z: 1.0, w: 0.9, d: 0.9, h: 0.85 },
+    ],
+    sockets: [
+      { kind: 'loot', x: -3.55, z: -0.4, y: 1.1, meta: {} },
+      { kind: 'loot', x: 1.2, z: 1.0, meta: {} },
+      { kind: 'drawer', x: -3.55, z: -2.0, meta: {} },
+    ],
+    hiding: [
+      { kind: 'cabinet', x: 3.4, z: 2.6, yaw: -Math.PI / 2, propKind: 'locker' },
+      { kind: 'underFurniture', x: 0.5, z: 2.7, yaw: Math.PI, propKind: 'desk' },
+    ],
+    weight: 6, perfCost: 3,
+  }),
+};
+
+const u_switchboard: RoomTemplate = {
+  id: 'u-switchboard',
+  build: (_rng) => us('u-switchboard', 6, 6, 2.6, {
+    props: [
+      // Panels on two walls — the floor's whole nerve kept in one vault.
+      { kind: 'breakerPanel', x: 2.8, z: -1.6, y: 0.9, yaw: -Math.PI / 2 },
+      { kind: 'breakerPanel', x: 2.8, z: -0.4, y: 0.9, yaw: -Math.PI / 2 },
+      { kind: 'breakerPanel', x: -1.8, z: 2.8, y: 0.9, yaw: Math.PI },
+      { kind: 'breakerPanel', x: -0.6, z: 2.8, y: 0.9, yaw: Math.PI },
+      { kind: 'powerBox', x: 1.2, z: 2.9, y: 0.95, yaw: Math.PI },
+      { kind: 'utilityBox', x: -2.9, z: -1.0, y: 0.95, yaw: Math.PI / 2 },
+      { kind: 'utilityBox', x: -2.9, z: 0.4, y: 0.95, yaw: Math.PI / 2 },
+      { kind: 'machineBox', x: 1.8, z: 1.4 },
+      { kind: 'cableTray', x: 0, z: -1.2, y: 2.45 },
+      { kind: 'conduitRun', x: -2.95, z: 1.6, y: 1.9, yaw: Math.PI / 2 },
+      { kind: 'hangingCable', x: -1.0, z: 1.6, y: 2.3 },
+      { kind: 'hangingCable', x: 1.6, z: -1.8, y: 2.3 },
+      { kind: 'keyCabinet', x: -2.9, z: -2.4, y: 1.55, yaw: Math.PI / 2 },
+      { kind: 'fluoroTube', x: 0, z: 0, y: 2.5 },
+      { kind: 'cageLight', x: 2.2, z: -2.2, y: 2.45 },
+      { kind: 'exitSign', x: 0, z: 2.85, y: 2.3 },
+      { kind: 'fireAlarm', x: -0.8, z: -2.9, y: 1.8 },
+    ],
+    colliders: [{ x: 1.8, z: 1.4, w: 0.9, d: 0.85, h: 1.9 }],
+    sockets: [
+      { kind: 'loot', x: 1.4, z: 0.9, meta: {} },
+      { kind: 'drawer', x: -2.6, z: -0.3, meta: {} },
+    ],
+    hiding: [{ kind: 'cabinet', x: 2.6, z: -2.5, yaw: -Math.PI / 2, propKind: 'locker' }],
+    darkChance: 0.35,
+    weight: 5, perfCost: 2,
+  }),
+};
+
+const u_toolCage: RoomTemplate = {
+  id: 'u-tool-cage',
+  build: (_rng) => us('u-tool-cage', 7, 6, 2.7, {
+    props: [
+      // Mesh-front lockers along the north wall — the crib itself.
+      { kind: 'cageLocker', x: -1.6, z: 2.6, yaw: Math.PI },
+      { kind: 'cageLocker', x: -0.5, z: 2.6, yaw: Math.PI },
+      { kind: 'cageLocker', x: 0.6, z: 2.6, yaw: Math.PI },
+      { kind: 'rack', x: -3.3, z: 1.2, yaw: Math.PI / 2 },
+      { kind: 'rack', x: -3.3, z: -1.0, yaw: Math.PI / 2 },
+      { kind: 'toolChest', x: -2.7, z: -2.4 },
+      { kind: 'toolCart', x: -1.2, z: -2.0, yaw: 0.3 },
+      { kind: 'crate', x: 1.4, z: -2.6 }, { kind: 'benchVice', x: 1.4, z: -2.6, y: 0.56 },
+      { kind: 'weldingCart', x: 2.8, z: -0.8 },
+      { kind: 'propaneTank', x: 3.1, z: -1.9 }, { kind: 'lpgTank', x: 2.4, z: -1.9 },
+      { kind: 'trolley', x: 1.6, z: -0.2 },
+      { kind: 'barrel', x: 3.0, z: 1.6 }, { kind: 'crate', x: 3.1, z: 2.4 },
+      { kind: 'fireAlarm', x: 3.45, z: 0.6, y: 1.8, yaw: -Math.PI / 2 },
+      { kind: 'hangingCable', x: -1.4, z: 0.8, y: 2.35 },
+      { kind: 'cableTray', x: 0.8, z: 1.6, y: 2.55 },
+      { kind: 'fluoroTube', x: 0, z: -0.6, y: 2.6 },
+    ],
+    colliders: [
+      { x: -0.5, z: 2.6, w: 3.0, d: 0.7, h: 1.9 },
+      { x: -3.3, z: 1.2, w: 0.5, d: 1.1, h: 2.0 },
+      { x: -3.3, z: -1.0, w: 0.5, d: 1.1, h: 2.0 },
+      { x: 1.6, z: -0.2, w: 1.3, d: 0.9, h: 1.1 },
+    ],
+    sockets: [
+      { kind: 'loot', x: -2.7, z: -2.4, meta: {} },
+      { kind: 'drawer', x: 1.4, z: -2.6, meta: {} },
+      { kind: 'loot', x: 3.0, z: 1.6, meta: {} },
+    ],
+    hiding: [{ kind: 'losAlcove', x: -3.0, z: 2.4, yaw: Math.PI / 2, propKind: 'partition' }],
+    safeZones: [{ x: -3.0, z: 2.4, w: 1.2, d: 1.2 }],
+    darkChance: 0.45,
+    weight: 5, perfCost: 3,
+  }),
+};
+
+const u_lockerRow: RoomTemplate = {
+  id: 'u-locker-row',
+  build: (_rng) => us('u-locker-row', 8, 6, 2.7, {
+    props: [
+      // A full row of lockers against the north wall + cage lockers west.
+      { kind: 'locker', x: -2.6, z: 2.65, yaw: Math.PI },
+      { kind: 'locker', x: -1.4, z: 2.65, yaw: Math.PI },
+      { kind: 'locker', x: -0.2, z: 2.65, yaw: Math.PI },
+      { kind: 'locker', x: 1.0, z: 2.65, yaw: Math.PI },
+      { kind: 'cageLocker', x: -3.5, z: -0.9, yaw: Math.PI / 2 },
+      { kind: 'cageLocker', x: -3.5, z: 0.4, yaw: Math.PI / 2 },
+      // Changing benches mid-room + the floor drains that still weep.
+      { kind: 'bedBench', x: -1.2, z: -0.6 }, { kind: 'bedBench', x: 1.2, z: -0.6 },
+      { kind: 'grateDrain', x: 0, z: -1.8, y: 0.01 }, { kind: 'grateDrain', x: 0, z: 0.6, y: 0.01 },
+      { kind: 'waterCooler', x: 3.5, z: -2.2 },
+      { kind: 'bin', x: 3.4, z: -2.8 },
+      { kind: 'linenHamper', x: -3.5, z: -2.5 },
+      { kind: 'towelRail', x: 3.55, z: 1.5, y: 1.6, yaw: -Math.PI / 2 },
+      { kind: 'exitSign', x: 2.6, z: 2.9, y: 2.3 },
+      { kind: 'fluoroTube', x: -1.5, z: -0.5, y: 2.6 }, { kind: 'fluoroTube', x: 1.5, z: -0.5, y: 2.6 },
+    ],
+    colliders: [
+      { x: 0, z: 2.65, w: 4.6, d: 0.6, h: 2.2 },
+      { x: -3.5, z: -0.25, w: 0.65, d: 2.6, h: 1.9 },
+    ],
+    sockets: [
+      { kind: 'loot', x: 0, z: -0.6, y: 0.55, meta: {} },
+      { kind: 'drawer', x: 2.0, z: 2.5, meta: {} },
+    ],
+    hiding: [
+      { kind: 'cabinet', x: 3.5, z: 0.4, yaw: -Math.PI / 2, propKind: 'locker' },
+      { kind: 'cabinet', x: -3.5, z: 2.2, yaw: Math.PI / 2, propKind: 'locker' },
+    ],
+    exits: [P(2.6, 'n')],
+    weight: 7, perfCost: 3,
+  }),
+};
+
+const u_bunkNook: RoomTemplate = {
+  id: 'u-bunk-nook',
+  build: (_rng) => us('u-bunk-nook', 5, 5, 2.6, {
+    props: [
+      // A partition screen walls the north-west corner into a bedroom.
+      { kind: 'partition', x: 0.6, z: 0.65, yaw: Math.PI / 2, scale: 1.4 },
+      { kind: 'bed', x: -1.5, z: 1.4 },
+      { kind: 'suitcase', x: -0.35, z: 0.2, yaw: 0.8 },
+      // The camp table: one crate piled with what somebody left.
+      { kind: 'crate', x: -1.3, z: -1.4 },
+      { kind: 'lantern', x: -1.3, z: -1.4, y: 0.56 },
+      { kind: 'rations', x: -1.45, z: -1.45, y: 0.55 },
+      { kind: 'cigs', x: -1.15, z: -1.3, y: 0.55 },
+      { kind: 'thermos', x: -1.35, z: -1.2, y: 0.55 },
+      { kind: 'paperStack', x: 1.3, z: 2.1 },
+      { kind: 'plasticChair', x: 1.1, z: 1.4, yaw: 2.9 },
+      { kind: 'fluoroTube', x: 0, z: -0.8, y: 2.5 },
+    ],
+    colliders: [
+      { x: -1.5, z: 1.4, w: 1.8, d: 2.3, h: 1.1 },
+      { x: 0.6, z: 0.65, w: 0.4, d: 2.3, h: 1.7 },
+    ],
+    sockets: [
+      { kind: 'loot', x: -1.6, z: 2.1, meta: {} },
+      { kind: 'loot', x: -0.5, z: -1.8, meta: {} },
+    ],
+    hiding: [{ kind: 'underFurniture', x: -1.5, z: 1.4, yaw: 0, propKind: 'bed' }],
+    darkChance: 0.65,
+    weight: 4, perfCost: 2,
+  }),
+};
+
+const u_dumbwaiterBay: RoomTemplate = {
+  id: 'u-dumbwaiter-bay',
+  build: (_rng) => us('u-dumbwaiter-bay', 4, 5, 2.6, {
+    props: [
+      // The freight hatches — one dead shaft north, one service door east.
+      { kind: 'dumbwaiter', x: 0, z: 2.4, y: 0.95, yaw: Math.PI },
+      { kind: 'dumbWaiterDoor', x: 1.9, z: 0.5, y: 0.9, yaw: -Math.PI / 2 },
+      { kind: 'trolley', x: -1.35, z: -0.4 },
+      { kind: 'handTruck', x: 1.3, z: -1.4, yaw: -0.5 },
+      { kind: 'mailCart', x: -1.4, z: 1.0 },
+      { kind: 'crate', x: -1.6, z: -2.0 }, { kind: 'crate', x: 1.5, z: -2.1 },
+      { kind: 'plasticCrate', x: 1.6, z: 0.2 },
+      { kind: 'cageLight', x: 0, z: 0, y: 2.45 },
+      { kind: 'conduitRun', x: -1.95, z: -0.5, y: 1.9, yaw: Math.PI / 2 },
+    ],
+    colliders: [{ x: -1.35, z: -0.4, w: 1.3, d: 0.9, h: 1.1 }],
+    sockets: [
+      { kind: 'loot', x: -1.6, z: -2.0, meta: {} },
+      { kind: 'loot', x: 1.6, z: 0.2, meta: {} },
+    ],
+    hiding: [{ kind: 'cabinet', x: -1.7, z: 2.0, yaw: Math.PI / 2, propKind: 'locker' }],
+    weight: 5, perfCost: 2,
+  }),
+};
+
+const u_pumpVault: RoomTemplate = {
+  id: 'u-pump-vault',
+  build: (_rng) => us('u-pump-vault', 7, 7, 2.8, {
+    props: [
+      // The sump pair + the manifold wall that still runs the floor's water.
+      { kind: 'sumpPump', x: -2.6, z: -2.6 },
+      { kind: 'sumpPump', x: 2.6, z: 1.4 },
+      { kind: 'pipeManifold', x: 0, z: 3.3, yaw: 0, meta: { laneBlock: true } },
+      { kind: 'valveWheel', x: -3.4, z: 0.8, y: 1.2, yaw: Math.PI / 2 },
+      { kind: 'valveWheel', x: 3.4, z: -1.4, y: 1.2, yaw: -Math.PI / 2 },
+      { kind: 'grateDrain', x: 0, z: -0.6, y: 0.01 },
+      { kind: 'grateDrain', x: 1.8, z: -2.0, y: 0.01 },
+      { kind: 'pipe', x: -3.2, z: 0, y: 2.3, scale: 7 },
+      { kind: 'pipe', x: 3.2, z: 0, y: 2.3, scale: 7 },
+      { kind: 'machineBox', x: -3.0, z: -0.8 },
+      { kind: 'hydrant', x: 3.0, z: -2.6 },
+      { kind: 'cageLight', x: -1.5, z: 0, y: 2.6 }, { kind: 'cageLight', x: 1.5, z: 0, y: 2.6 },
+      { kind: 'wallVent', x: 3.45, z: 1.8, y: 1.8, yaw: -Math.PI / 2 },
+      { kind: 'hangingCable', x: -1.5, z: 1.5, y: 2.4 },
+    ],
+    colliders: [{ x: -3.0, z: -0.8, w: 0.9, d: 0.85, h: 1.9 }],
+    sockets: [
+      { kind: 'loot', x: 2.6, z: 0.6, meta: {} },
+      { kind: 'drawer', x: -3.0, z: -0.8, meta: {} },
+    ],
+    hiding: [{ kind: 'losAlcove', x: 2.9, z: 2.7, yaw: -Math.PI / 2, propKind: 'partition' }],
+    safeZones: [{ x: 2.9, z: 2.7, w: 1.2, d: 1.2 }],
+    nav: [
+      { id: 'entry', x: 0, z: -2.6, links: ['mid'], tags: ['door', 'entry'] },
+      { id: 'mid', x: 0.8, z: -0.2, links: ['entry', 'exit'], tags: [] },
+      { id: 'exit', x: 0, z: 2.6, links: ['mid'], tags: ['door', 'exit'] },
+    ],
+    darkChance: 0.6,
+    weight: 5, perfCost: 3,
+  }),
+};
+
+const u_freightBay: RoomTemplate = {
+  id: 'u-freight-bay',
+  build: (_rng) => us('u-freight-bay', 8, 6, 2.9, {
+    props: [
+      // The loading nook — a dead roller shutter and the hoist above it.
+      { kind: 'shutterDoor', x: 3.9, z: 0, yaw: -Math.PI / 2, meta: { laneBlock: true } },
+      { kind: 'overheadCrane', x: 1.6, z: -0.2 },
+      { kind: 'handTruck', x: -2.6, z: -1.2, yaw: 0.3 },
+      { kind: 'crate', x: -3.2, z: -2.2 }, { kind: 'crate', x: -3.2, z: -1.4 },
+      { kind: 'crate', x: -1.8, z: -2.2 },
+      { kind: 'milCrate', x: -1.2, z: -2.4 }, { kind: 'plasticCrate3', x: 0.6, z: -2.3 },
+      { kind: 'wheelRim', x: 3.3, z: -2.4 }, { kind: 'tyre', x: 2.4, z: -2.5 },
+      { kind: 'trolley', x: 0.2, z: -0.8 },
+      { kind: 'chainFence', x: -3.4, z: 0.6, yaw: Math.PI / 2 },
+      { kind: 'fluoroTube', x: -1.5, z: 0, y: 2.7 }, { kind: 'fluoroTube', x: 1.5, z: 0, y: 2.7 },
+      { kind: 'cableTray', x: -1.0, z: 1.0, y: 2.6 },
+      { kind: 'exitSign', x: 0, z: 2.9, y: 2.4 },
+    ],
+    colliders: [
+      { x: 1.6, z: -0.2, w: 3.2, d: 1.0, h: 2.6 },
+      { x: -2.5, z: -2.0, w: 2.9, d: 1.6, h: 1.0 },
+      { x: 0.2, z: -0.8, w: 1.3, d: 0.9, h: 1.1 },
+    ],
+    sockets: [
+      { kind: 'loot', x: -3.2, z: -1.8, meta: {} },
+      { kind: 'loot', x: 0.6, z: -2.3, meta: {} },
+    ],
+    hiding: [
+      { kind: 'losAlcove', x: -3.5, z: 2.4, yaw: Math.PI / 2, propKind: 'partition' },
+      { kind: 'cabinet', x: 3.5, z: 2.4, yaw: -Math.PI / 2, propKind: 'locker' },
+    ],
+    safeZones: [{ x: -3.5, z: 2.4, w: 1.2, d: 1.2 }],
+    weight: 5, perfCost: 4,
+  }),
+};
+
+const u_burnRoom: RoomTemplate = {
+  id: 'u-burn-room',
+  build: (_rng) => us('u-burn-room', 6, 6, 2.7, {
+    props: [
+      // The drum that ate the paperwork, and the coal that fed it.
+      { kind: 'boilerDrum', x: 0, z: -0.3 },
+      { kind: 'coalScuttle', x: -1.8, z: 1.8 },
+      { kind: 'barrel', x: -2.5, z: -0.5 },
+      { kind: 'crate', x: -2.4, z: -2.4 }, { kind: 'compostBags', x: -2.9, z: -1.7 },
+      { kind: 'trolley', x: 2.4, z: -0.8 },
+      { kind: 'meatHook', x: 1.8, z: 1.4, y: 2.15 },
+      { kind: 'wallVent', x: 1.5, z: 2.9, y: 1.9, yaw: Math.PI },
+      { kind: 'fireAlarm', x: -2.9, z: 0.6, y: 1.8, yaw: Math.PI / 2 },
+      { kind: 'cageLight', x: 0, z: -0.5, y: 2.55 },
+      { kind: 'conduitRun', x: 2.95, z: 1.0, y: 1.9, yaw: -Math.PI / 2 },
+    ],
+    colliders: [
+      { x: 0, z: -0.3, w: 1.7, d: 1.7, h: 2.5 },
+      { x: 2.4, z: -0.8, w: 1.3, d: 0.9, h: 1.1 },
+    ],
+    sockets: [
+      { kind: 'loot', x: -2.4, z: -2.4, meta: {} },
+      { kind: 'loot', x: 2.4, z: -1.6, meta: {} },
+    ],
+    hiding: [{ kind: 'cabinet', x: 2.6, z: 2.4, yaw: -Math.PI / 2, propKind: 'locker' }],
+    darkChance: 0.7,
+    weight: 4, perfCost: 3,
+  }),
+};
+
 export const UNDERSCRIPT_TEMPLATES: RoomTemplate[] = [
   u_corridor, u_officeRow, u_breakRoom, u_recordsCageRoom, u_longHall,
   u_stairLanding, u_openOffice, u_serverRoom, u_maze, u_printShop,
   u_lobby, u_deadEnd, u_doubleCubicle, u_narrowStacks,
+  u_mailSort, u_switchboard, u_toolCage,
+  u_lockerRow, u_bunkNook, u_dumbwaiterBay,
+  u_pumpVault, u_freightBay, u_burnRoom,
 ];
 
 export const UNDERSCRIPT_TEMPLATE_MAP = new Map(UNDERSCRIPT_TEMPLATES.map((t) => [t.id, t]));
