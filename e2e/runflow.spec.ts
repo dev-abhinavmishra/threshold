@@ -711,6 +711,8 @@ test('the under re-teeth the jaw — a grafted plate answers its own hands, not 
       armedTraps: Map<string, boolean>;
       snappedTraps: Set<string>;
       trapOwner: Map<string, string>;
+      setTraps: { key: string; x: number; z: number; room: number }[];
+      liveTraps: { key: string; x: number; z: number }[];
       droppedSprings: { x: number; z: number }[];
       hazard: { evidence: { pos: { x: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
       entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
@@ -758,9 +760,21 @@ test('the under re-teeth the jaw — a grafted plate answers its own hands, not 
       room: 0, kind: 'work', t: g.clock.time, readBy: ['player'] });
     const springsBefore = ga.droppedSprings.length;
     const restored = ga.entityCtx().rearmHazard?.('work', tp.x, tp.z);
+    const springGain = ga.droppedSprings.length - springsBefore;
+    // sprint 676 — and a plate YOU set answers the same wrench: a live
+    // set-trap + 'work' → off the floor, spring on the boards.
+    const stKey = `set:99:${Math.round(tp.x * 4)},${Math.round(tp.z * 4)}`;
+    ga.setTraps.push({ key: stKey, x: tp.x + 3, z: tp.z + 3, room: 0 });
+    ga.liveTraps.push({ key: stKey, x: tp.x + 3, z: tp.z + 3 });
+    ga.trapPos.set(stKey, { x: tp.x + 3, z: tp.z + 3 });
+    ga.hazard.evidence.push({ pos: { x: tp.x + 3, z: tp.z + 3 },
+      room: 0, kind: 'work', t: g.clock.time, readBy: ['player'] });
+    const restored2 = ga.entityCtx().rearmHazard?.('work', tp.x + 3, tp.z + 3);
     return { stage: 'pulled' as const, restored,
       cleared: !ga.trapOwner.has(key), snapped: ga.snappedTraps.has(key),
-      springGain: ga.droppedSprings.length - springsBefore, frames };
+      springGain,
+      restored2, setCleared: !ga.setTraps.some((t) => t.key === stKey),
+      springGain2: ga.droppedSprings.length - springsBefore - springGain, frames };
   });
 
   if (result.stage === 'no-trap' || result.stage === 'no-grafter') test.skip();
@@ -771,6 +785,9 @@ test('the under re-teeth the jaw — a grafted plate answers its own hands, not 
     expect(result.cleared, 'the pull ends the under\'s jurisdiction').toBe(true);
     expect(result.snapped, 'the pulled jaw lies toothless again').toBe(true);
     expect(result.springGain, 'the mechanism lands on the boards').toBe(1);
+    expect(result.restored2, 'your own jaw answers the same wrench').toBe('platePull');
+    expect(result.setCleared, 'the pull lifts your plate off the floor').toBe(true);
+    expect(result.springGain2, 'your mechanism lands on the boards too').toBe(1);
   }
   expect(errors).toEqual([]);
 });

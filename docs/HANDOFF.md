@@ -2,6 +2,14 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 676–678 — your jaw answers too (mechanics lane)
+
+- **676** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.
+- **677** the cue widens: 'a jaw that was never the house's' covers both foreign sets (the under's graft and your own plant) under the one wrench. The 'work'-answers map is now complete across every goods surface: wheel (pull), eye (lensTear/reclaim), under jaws and your jaws (platePull), the lid (lidSweep).
+- **678** pins + live: contract 55/55 holds the pair (grafted jaw, set jaw → same wrench); the runflow leg's second stage seeds a live setTrap + 'work' → `platePull`, plate gone, spring on the boards.
+
+Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, the 'work'-streak escalation surface (wanted already tightens — a distinct streak mechanic would need its own design), and a gather-side read: the house's pull leaves YOUR sign standing while it takes the metal — a second 'work' near the same spot could name a repeat offender (pair with the streak idea or drop).
+
 ## Sprint 673–675 — the under re-teeth the jaw (third graft substrate)
 
 - **673** the last graft substrate: a dead plate still bolted to the floor (armed seed, snapped or pried, in nobody's hands) is graft stock for a carried spring. `carriedKind` gains `'spring'` — the under now keeps its teeth the way it keeps muscle and glass. `nearestGraft`/`graft` extend to `'plate'`: the bite comes back in the under's name (`trapOwner` key → 'under'), signing 'work' under the grafter's key.

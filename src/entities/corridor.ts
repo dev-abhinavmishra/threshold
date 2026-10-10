@@ -914,7 +914,7 @@ export class Warden extends Entity {
                           : restored === 'crimp' ? '[it crimps your line shut — the pressure dies in your own throat]'
                             : restored === 'pull' ? '[it pulls the belt off your wheel — the muscle slaps the boards]'
                               : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
-                                : restored === 'platePull' ? '[it wrenches the teeth out of the under\'s jaw — the spring slaps the boards]'
+                                : restored === 'platePull' ? '[it wrenches the teeth out of a jaw that was never the house\'s — the spring slaps the boards]'
                                   : restored === 'lidSweep' ? '[it tips your lid — the take scatters the floor]'
                                   : restored === 'reclaim' ? '[it turns your eye back to the house — the pan is its own again]'
                                     : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });

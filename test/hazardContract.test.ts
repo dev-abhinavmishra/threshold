@@ -918,6 +918,12 @@ describe('the under re-teeth the jaw (sprints 673-675)', () => {
     expect(gameSrc).toContain('this.snappedTraps.add(pk)');
     expect(baseSrc).toContain("'platePull'");
     expect(corridorSrc).toContain("restored === 'platePull'");
+    // sprint 676 — and YOUR set jaw answers the same wrench: the pull
+    // strips the plate off setTraps/liveTraps/trapPos, spring → pile
+    expect(gameSrc).toContain('this.setTraps.find((t)');
+    expect(gameSrc).toContain('this.setTraps.splice(si, 1)');
+    expect(gameSrc).toContain('this.trapPos.delete(st.key)');
+    expect(gameSrc).toContain('this.droppedSprings.push({ x: st.x, z: st.z })');
   });
 });
 
