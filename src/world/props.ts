@@ -3152,7 +3152,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ts2.name = 'till-scratch';
     ts2.userData.decalMat = true;
-    ts2.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.47) / 2 + 0.004);
+    ts2.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.47) / 2 + 0.03);
     prop.group.add(ts2);
     if (!prop.group.name) prop.group.name = 'till-scratch';
   }
