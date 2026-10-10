@@ -536,7 +536,7 @@ describe('the house crimps your line (sprints 585-588)', () => {
     // the crimp is a real answer, not a re-lay — 'work' joins the
     // investigate kinds and the return names the squeeze
     expect(baseSrc).toContain("'blind' | 'spring' | 'work'");
-    expect(baseSrc).toContain("| 'crimp' | null");
+    expect(baseSrc).toContain("'crimp'");
     expect(corridorSrc).toContain("|| this.investigateKind === 'work'");
     expect(corridorSrc).toContain("restored === 'crimp'");
     // the ctx impl finds a live player-threaded vent and deads it,
@@ -550,5 +550,59 @@ describe('the house crimps your line (sprints 585-588)', () => {
     expect(refit).toContain("st.owner === 'player' && st.valved !== false");
     // the seam reads your live line
     expect(gameSrc).toContain("your line breathes past the leaf");
+  });
+});
+
+describe('the eye watches for you (sprints 589-593)', () => {
+  it('an aimed eye locks its pan, reports what crosses, and the house can turn it back', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    // 'Aim the eye' is real — kind registered, minted crouched only
+    // (standing = tape; no twin-verb churn), case locks owner+bearing
+    expect(interactionSrc).toContain("| 'focusEye'");
+    expect(gameSrc).toContain("kind: 'focusEye'");
+    expect(gameSrc).toContain("this.player.crouching) this.interaction.add({\n              kind: 'focusEye'");
+    expect(gameSrc).toContain("case 'focusEye'");
+    expect(gameSrc).toContain('w.aimBearing = Math.atan2');
+    expect(gameSrc).toContain("w.owner = 'player'");
+    // the pan lock lives in the eye's own facing computation
+    expect(roomSrc).toContain('aimBearing?: number');
+    expect(roomSrc).toContain('Number.isFinite(w.aimBearing)');
+    // the report: your eye marks entities inside its locked cone
+    expect(gameSrc).toContain('your eye marks');
+    // the house's answer: a 'work' mark by your eye → reclaim, not
+    // unthread — the camera was always the house's
+    expect(baseSrc).toContain("| 'reclaim' | null");
+    const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(work).toContain("return 'reclaim'");
+    // aim+owner ride the checkpoint on eye records
+    expect(gameSrc).toContain('aimBearing: w.aimBearing');
+    expect(gameSrc).toContain('eyesAimed: this.hazard.watchers.filter');
+  });
+});
+
+describe('your eye still sees you (sprint 595)', () => {
+  it('the honest price: the aimed eye\'s player-settle has no owner exemption', () => {
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    // ownership only steers the pan — the settle accumulation still
+    // runs identically for the player: no owner check gates it
+    const settleRegion = roomSrc.slice(roomSrc.indexOf('w.settle = wMoving'), roomSrc.indexOf('w.settle = wMoving') + 400);
+    expect(settleRegion).not.toContain('owner');
+    // and ownership never mutes the eye's own warn/settle cues
+    expect(roomSrc).not.toContain("w.owner === 'player' &&");
+  });
+});
+
+describe('the pan is real (sprints 596-598)', () => {
+  it('the beam reads your aim back, and your lock survives the blink', () => {
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    // beam readout: owned eyes answer aimed light with the aim report
+    expect(roomSrc).toContain('eyeBeamRead');
+    expect(roomSrc).toContain('its stare still holds your bearing');
+    // the blink reasserts the lock — dazzle clears to NaN, aimBearing
+    // keeps hold (the lock only yields to live light, never resets)
+    expect(roomSrc).toContain('!Number.isFinite(w.dazzleBearing)\n        && !Number.isFinite(lampBearing)');
   });
 });

@@ -727,7 +727,12 @@ export class Game {
         if (f) f.dead = true;
       } else {
         const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
-        if (w) { if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true; }
+        if (w) {
+          if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true;
+          // sprint 592 — an aimed eye keeps its bearing and your name
+          if (h.owner === 'player') w.owner = 'player';
+          if (Number.isFinite(h.aimBearing)) w.aimBearing = h.aimBearing;
+        }
       }
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
@@ -1482,9 +1487,16 @@ export class Game {
           // stays yours ('Re-pressurize your line' opens it again).
           const s = this.hazard.steams.find((st) => !st.dead
             && st.owner === 'player' && near(st.pos));
-          if (!s) return null;
-          s.dead = true;
-          return 'crimp';
+          if (s) { s.dead = true; return 'crimp'; }
+          // sprint 591 — and a 'work' mark by an eye you aimed gets
+          // the reclaim: he turns it back to the house (the camera
+          // itself is the house's — your bearing was the only loan).
+          const w = this.hazard.watchers.find((x) => !x.dead
+            && x.owner === 'player' && near(x.pos));
+          if (!w) return null;
+          delete w.owner;
+          w.aimBearing = undefined;
+          return 'reclaim';
         }
         if (kind === 'spring') {
           // sprint 574 — the house cocks its plates back: a 'spring'
@@ -2315,6 +2327,17 @@ export class Game {
       if (line) {
         return { sfx: 'steam-hiss', sev: 'info' as const,
           text: '[your line breathes past the leaf — the valve you set]' };
+      }
+    }
+    // sprint 594 — the seam answers your own eye too: a locked pan
+    // breathes at its mount past the leaf — your watch holds.
+    {
+      const eye = this.hazard.watchers.find((w) =>
+        w.owner === 'player' && !w.dead && w.room === target.index
+          && Math.hypot(w.pos.x - door.pos.x, w.pos.z - door.pos.z) < 3);
+      if (eye) {
+        return { sfx: 'steam-hiss', sev: 'info' as const,
+          text: '[your eye keeps watch past the leaf — its pan holds]' };
       }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
@@ -3675,9 +3698,19 @@ export class Game {
             const wy = p.y ?? (p.kind === 'securityCam' ? 2.35 : 1.4);
             const wHere = this.hazard.watchers.find((w) =>
               w.room === pr.index && Math.hypot(w.pos.x - wx, w.pos.z - wz) < 0.6);
-            if (wHere && !wHere.dead && !pr.darkRoom) this.interaction.add({
+            if (wHere && !wHere.dead && !pr.darkRoom && !this.player.crouching) this.interaction.add({
               kind: 'tape', id: `tape-${key}`, pos: { x: wx, y: wy, z: wz },
               prompt: p.kind === 'securityCam' ? 'Tape the eye — felt wrap' : 'Smother the beam — felt wrap',
+              holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
+            });
+            // sprint 589 — 'Aim the eye', CROUCHED under the mount:
+            // the pan locks to the bearing you point and its report is
+            // yours — the planted CCTV (re-mints on owned eyes to re-
+            // point). Standing/tape vs crouched/aim — no twin-verb churn.
+            if (wHere && !wHere.dead && !pr.darkRoom && this.player.crouching) this.interaction.add({
+              kind: 'focusEye', id: `focus-${key}`, pos: { x: wx, y: wy, z: wz },
+              prompt: wHere.owner === 'player' ? 'Re-aim your eye'
+                : 'Aim the eye — it stares where you point',
               holdTime: 1.6, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
             else if (wHere?.dead) this.interaction.add({
@@ -6011,6 +6044,27 @@ export class Game {
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
         return;
       }
+      case 'focusEye': {
+        // sprint 589 — the planted CCTV: the eye's pan locks to the
+        // bearing you point ~3m out from its mount, signs 'work', and
+        // it still sees YOU (honest two-ways) — but its report of what
+        // crosses the sweep is yours.
+        it.enabled = false;
+        const d = it.data as { watchPos: { x: number; z: number } };
+        const w = this.hazard.watchers.find((x) =>
+          Math.hypot(x.pos.x - d.watchPos.x, x.pos.z - d.watchPos.z) < 0.6);
+        if (!w || w.dead) return;
+        const lk = v3(); this.player.lookDir(lk);
+        w.aimBearing = Math.atan2(
+          (this.player.pos.x + lk.x * 3) - w.pos.x,
+          (this.player.pos.z + lk.z * 3) - w.pos.z);
+        w.owner = 'player';
+        this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.cue('steam-hiss', w.pos, '[the eye\'s pan locks on your bearing — it watches for you now]', 'info');
+        this.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.3, category: 'machine', caption: '[an eye re-aims]' });
+        return;
+      }
       case 'workValve': {
         // sprint 581 — the throat threads off whole: the bled line
         // yields `steamValve` and signs 'work' — the strip is the
@@ -7663,9 +7717,10 @@ export class Game {
           .map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z,
             dead: s.dead, valved: s.valved, owner: s.owner })),
         ...this.hazard.fans.filter((f) => f.dead).map((f) => ({ room: f.room, kind: 'fan' as const, x: f.pos.x, z: f.pos.z })),
-        ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
+        ...this.hazard.watchers.filter((w) => w.dead || w.filed || w.owner === 'player').map((w) => ({
           room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
-          dead: w.dead || undefined, filed: w.filed || undefined })),
+          dead: w.dead || undefined, filed: w.filed || undefined,
+          owner: w.owner, aimBearing: w.aimBearing })),
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
@@ -7813,6 +7868,8 @@ export class Game {
             trapsSet: this.setTraps.length || undefined,
             // sprint 583 — and the lines still threaded your way
             ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
+            // sprint 593 — and the eyes still staring your way
+            eyesAimed: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7873,6 +7930,8 @@ export class Game {
         trapsSet: this.setTraps.length || undefined,
         // sprint 583 — the lines you left threaded your way
         ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
+        // sprint 593 — the eyes you left aimed your way
+        eyesAimed: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -10908,6 +10967,33 @@ export class Game {
       this.audio.play('trap-snap', { x: hz.pos.x, y: 0.2, z: hz.pos.z },
         '[paper screams — a foot that was not yours]', 'warn');
       this.sound.emit({ x: hz.pos.x, y: 0.4, z: hz.pos.z, intensity: 0.8, category: 'impact', caption: '[paper snare]' });
+    }
+
+    // sprint 590 — your eye reports: an owned watcher's locked sweep
+    // marks whatever crosses it — a real cue + tick per sighting,
+    // throttled per eye. It still can't blind itself to you: the
+    // report is the yield, your own exposure the price.
+    for (const w of this.hazard.watchers) {
+      if (w.owner !== 'player' || w.dead || !Number.isFinite(w.aimBearing)) continue;
+      if (this.clock.time - (w.reportT ?? -10) < 8) continue;
+      const facing = (w.aimBearing as number)
+        + Math.sin((this.clock.time + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
+      for (const ent of this.entities) {
+        if (ent.state === 'done') continue;
+        const epos = ent.threatPos();
+        if (!epos) continue;
+        const edx = epos.x - w.pos.x, edz = epos.z - w.pos.z;
+        const ed = Math.hypot(edx, edz);
+        if (ed > w.range || ed < 0.45) continue;
+        let ediff = Math.atan2(edx, edz) - facing;
+        while (ediff > Math.PI) ediff -= Math.PI * 2;
+        while (ediff < -Math.PI) ediff += Math.PI * 2;
+        if (Math.abs(ediff) > w.half) continue;
+        w.reportT = this.clock.time;
+        this.cue('steam-hiss', w.pos, `[your eye marks ${ent.id} crossing its sweep]`, 'info');
+        this.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.25, category: 'machine', caption: '[an eye ticks]' });
+        break;
+      }
     }
 
     // sprint 406 — the floor slides under his stride too: a walker

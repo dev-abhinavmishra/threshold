@@ -840,6 +840,7 @@ export class Warden extends Entity {
                     : restored === 'fan' ? '[it re-engages the wheel — the blades turn again]'
                       : restored === 'trap' ? '[it cocks the plate back — the floor relearns your step]'
                         : restored === 'crimp' ? '[it crimps your line shut — the pressure dies in your own throat]'
+                          : restored === 'reclaim' ? '[it turns your eye back to the house — the pan is its own again]'
                           : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't

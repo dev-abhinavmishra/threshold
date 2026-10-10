@@ -1062,6 +1062,11 @@ export class HazardField {
      *  work was signed, and whether the drink was announced. */
     dazzleBearing: number; dazzleT: number; dazzleAcc: number;
     dazzleSigned: boolean; dazzleCued: boolean;
+    /** sprint 589 — 'Aim the eye': an owned eye's pan locks to the
+     *  bearing you pointed from its mount. It still sees YOU — you
+     *  can't blind your own camera — but its report is yours.
+     *  `reportT` throttles the entity-sighting cues. */
+    aimBearing?: number; owner?: 'player'; reportT?: number;
     /** sprint 568 — it drank at least once: the episode flags reset
      *  on every blink, but the epitaph counts every eye the light
      *  ever held. */
@@ -1072,6 +1077,8 @@ export class HazardField {
    *  decay (the fuse burns down — re-reading a burning lamp after a
    *  while reports a lower batt and that's the point). */
   private lampBeamRead = new Map<string, number>();
+  /** sprint 596 — aimed eyes read back under the beam, same decay */
+  private eyeBeamRead = new Map<string, number>();
   private wPX = NaN; private wPZ = NaN;
   lastTick = 0;
 
@@ -1293,6 +1300,14 @@ export class HazardField {
             + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
         }
       }
+      // sprint 589 — an owned eye's pan is yours: it holds the bearing
+      // you pointed, breathing at the mount. Your beam still outranks
+      // the lock — light is the stronger command.
+      if (Number.isFinite(w.aimBearing) && !Number.isFinite(w.dazzleBearing)
+        && !Number.isFinite(lampBearing)) {
+        facing = (w.aimBearing as number)
+          + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
+      }
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
@@ -1394,6 +1409,20 @@ export class HazardField {
         : !l.lit
           ? `[your lamp waits dark — ${Math.round(l.batt)} charge in the bottle]`
           : `[the beam finds your lamp — burning, ${Math.round(l.batt)} left]`, { severity: 'info' });
+    }
+    // sprint 596 — and the beam reads your own aim back: light on an
+    // eye you pointed tells you the lock still holds — your bearing,
+    // breathing at the mount.
+    for (const w of this.watchers) {
+      if (w.owner !== 'player' || w.dead || w.room !== ctx.currentRoomIndex
+        || !Number.isFinite(w.aimBearing)) continue;
+      const key = `${w.pos.x.toFixed(2)},${w.pos.z.toFixed(2)}`;
+      const d = v3dist(p.pos, w.pos);
+      if (d > 9 || !(ctx.beamCovers?.(w.pos, 9, 0.75) ?? false)) continue;
+      if (ctx.now - (this.eyeBeamRead.get(key) ?? -60) < 45) continue;
+      this.eyeBeamRead.set(key, ctx.now);
+      ctx.cue('floor-creak', w.pos,
+        '[the beam finds your eye — its stare still holds your bearing]', { severity: 'info' });
     }
     this.lastTick += dt;
     if (this.lastTick > 0.5) {

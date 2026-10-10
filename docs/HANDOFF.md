@@ -7930,3 +7930,26 @@ silently writes to droppedCoils.
 Contract: every defuse signs AND yields — the bleed was the last gap; the valve completes the surface (bleed → strip → carry → refit → bleed → crimp → re-pressurize). Who-threaded-it is a first-class property of a line: `owner` rides the checkpoint and the house touches your throat only to close it.
 
 Traps: a live player-refit vent must serialize into deadHazards too (owner flag) — steam records now carry explicit `dead` or a live owned vent would restore bled. 'workValve'/'refitValve' mint only on DEAD vents, 'bleed' only on live — no focus overlap. `refitValve` branch order matters: own-throat (free) before bare-thread (paid).
+
+## Sprints 589–593 — the eye watches for you
+
+- **'Aim the eye — it stares where you point'** (s589): crouched under a live watcher — the pan locks to the bearing you point ~3m out from its mount (`aimBearing`, `owner:'player'` on the watcher) + 'work' sign by:'player'. Standing/tape vs crouched/aim — no twin-verb churn; re-mints on owned eyes to re-point.
+- **The report** (s590): an owned eye's locked sweep marks entities crossing its cone — `[your eye marks warden crossing its sweep]` + tick emit, throttled 8s per eye. The planted CCTV.
+- **The honest price** (s595): your eye still settles on YOU — the settle path has no owner exemption; you can't blind your own camera. Report is the yield, exposure the price.
+- **The reclaim** (s591): the house answers — a 'work' mark by your eye gets `rearmHazard → 'reclaim'`: he turns your eye back ("[it turns your eye back to the house — the pan is its own again]"). The camera was always the house's; your bearing was the only loan.
+- **The seam reads your watch** (s594): a door-listen answers a live owned eye <3m past the leaf, same tier as your line/plate/wire.
+- **Rides the book** (s592-593): owner+aimBearing on eye `deadHazards` records; `eyesAimed` joins both epitaphs.
+
+Contract: ownership is one axis across every hazard kind now — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`. The pan lock is the dazzle pin made permanent; your beam still outranks your own lock (light is the stronger command).
+
+Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim share one anchor otherwise (twin-verb churn). An owned eye mints focusEye again for re-aiming — the case must NOT return early on `owner==='player'`.
+
+## Sprints 594–598 — the pan is real
+
+- **The seam reads your watch** (s594): listen answers a live owned eye <3m past the leaf — '[your eye keeps watch past the leaf — its pan holds]'.
+- **The honest price, spec'd** (s595): your eye still settles on you — `w.settle` has no owner exemption; you can't blind your own camera.
+- **The beam reads your aim** (s596): aimed light on an owned eye answers '[the beam finds your eye — its stare still holds your bearing]' on the same 45s decay as lamp-charge reads (`eyeBeamRead`).
+- **The lock survives the blink** (s597): dazzle clears to NaN on the blink; `aimBearing` persists and reasserts — your beam outranks the lock only while it drinks.
+- **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
+
+Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.

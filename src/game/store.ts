@@ -162,6 +162,8 @@ export interface BooksClosed {
   trapsSet?: number;
   /** sprint 583 — steam lines still threaded with YOUR valve */
   ventsOwned?: number;
+  /** sprint 593 — eyes still aimed your way at the end */
+  eyesAimed?: number;
 }
 
 export interface CheckpointSave {
@@ -219,8 +221,9 @@ export interface CheckpointSave {
     x: number; z: number; dead?: boolean; filed?: boolean;
     /** sprint 581 — steam vents carry their throat + ownership: a
      *  stripped valve (valved:false) stays stripped, a player-refit
-     *  line stays yours. */
-    valved?: boolean; owner?: 'player' }[];
+     *  line stays yours. sprint 592 — eye records carry owner +
+     *  aimBearing for 'Aim the eye'. */
+    valved?: boolean; owner?: 'player'; aimBearing?: number }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload
