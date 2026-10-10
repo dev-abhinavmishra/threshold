@@ -35,6 +35,8 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
 
 ## Fixes — singleton prop decals + review debt
+- `pinLines` gate removed (`rng.bool(0.5)` → unconditional): routingBoard is one-per-run at milestoneSpecs.ts:336 — same index-seeded trap as speakingTube. Its s534 presence test went cold; now green.
+
 
 - **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
 - PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
