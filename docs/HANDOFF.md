@@ -79,6 +79,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `drapeDrop` (96×64): cloth-ghost rectangle + hem shadow + fold streaks + clean hook circles + hem rub; 30% lived-in walls at ~1.6m.
 - `socketScorch` (48×64): smoke plume + char tear + prong chars + drip beads + cord shadow; 45% service-bones walls at socket height. Presence tests ×3 green.
 
+## Sprint 675 — the clock etched its swing, the board dropped its crumbs & the rad spat once
+
+- `pendTick` (64×96): swing arc + bob polish halo + tick dents + rod shadow + dust spars; 50% of clock/wallClock/grandfatherClock.
+- `crumbDrift` (96×64): board ghost + grease halo + knife scores + crumb scatter + edge trail; 45% of cuttingBoard/counter, floor quad.
+- `valveSpur` (48×48): rust jet + spray flecks + bleed-screw socket + rust seep + mineral bloom; 45% of radiatorTall/radiatorFin/masonryHeater. Presence tests ×3 green (kind names verified against spec.ts union: grandfatherClock not grandfather, counter not kitchenTable/workbench).
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)

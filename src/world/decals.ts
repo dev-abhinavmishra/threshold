@@ -12814,3 +12814,124 @@ export function socketScorch(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Pendulum tick — the clock's swing etched an arc on the wall:
+ * a faint pendulum trace with bob halo and tick dents. */
+export function pendTick(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    // swing arc — the bob's trace scored into the plaster
+    ctx.strokeStyle = `rgba(70,60,50,${0.4 + rng.float() * 0.18})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(32, 20, 55, Math.PI * 0.32, Math.PI * 0.68);
+    ctx.stroke();
+    // bob halo — round polish ring at the swing's bottom
+    ctx.strokeStyle = `rgba(140,128,110,${0.45 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(32, 74, 7 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = `rgba(150,140,120,${0.3 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.arc(32, 74, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    // tick dents — where the bob's edge kissed the wall each pass
+    for (const tx of [16, 48]) {
+      ctx.fillStyle = `rgba(60,50,42,${0.45 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(tx + (rng.float() - 0.5) * 3, 62 + rng.float() * 6, 1.6, 2.6, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rod shadow — the pendulum rod's line up the wall
+    ctx.strokeStyle = `rgba(100,90,76,${0.3 + rng.float() * 0.12})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(32, 18);
+    ctx.lineTo(32, 70);
+    ctx.stroke();
+    // dust spars — where the case stopped dust reaching
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(160,150,130,${0.22 + rng.float() * 0.12})`;
+      ctx.fillRect(24 + rng.float() * 16, 10 + i * 20, 8, 1.4);
+    }
+  });
+}
+
+/** Bread crumbs — the board dropped its crumbs for years: a soft
+ * drift of crumbs and grease where the breadboard sat. */
+export function crumbDrift(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // the board ghost — a pale rectangle where the board's weight kept it clean
+    ctx.fillStyle = `rgba(180,170,148,${0.3 + rng.float() * 0.15})`;
+    ctx.fillRect(24, 10, 48, 34);
+    // grease halo — the counter's skin darkened around the board
+    ctx.strokeStyle = `rgba(80,68,54,${0.35 + rng.float() * 0.18})`;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(22, 8, 52, 38);
+    // knife scores — cuts that missed the board's edge
+    for (let i = 0; i < 6; i++) {
+      const kx = 16 + rng.float() * 16;
+      ctx.strokeStyle = `rgba(100,88,70,${0.3 + rng.float() * 0.15})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(kx, 12 + rng.float() * 30);
+      ctx.lineTo(kx + 6 + rng.float() * 8, 14 + rng.float() * 30);
+      ctx.stroke();
+    }
+    // the crumbs — a scatter of crumbs spilling off the edge
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(160,132,96,${0.4 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 66, 44 + rng.float() * 16, 0.7 + rng.float() * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // crumb trail — a thin fan leading to the counter's edge
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(150,124,90,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(76 + i * 3, 50 + rng.float() * 10, 0.6 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Radiator cough — the rad's valve spat once and kept the stain:
+ * a rust spur, spray flecks and the bleed-screw scar. */
+export function valveSpur(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    // the spur — a jet of rust arcing from the bleed screw
+    ctx.strokeStyle = `rgba(130,70,40,${0.55 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(10, 38);
+    ctx.quadraticCurveTo(16, 24, 28 + rng.float() * 8, 12 + rng.float() * 6);
+    ctx.stroke();
+    // spray flecks — where the jet broke up
+    for (let i = 0; i < 8; i++) {
+      const t = rng.float();
+      const fx = 10 + t * 22 + (rng.float() - 0.5) * 7;
+      const fy = 38 - t * 26 + (rng.float() - 0.5) * 7;
+      ctx.fillStyle = `rgba(120,64,36,${0.4 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 0.6 + rng.float() * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the bleed screw — a dark socket where the key turns
+    ctx.fillStyle = `rgba(50,34,26,${0.6 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(9, 40, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+    // rust seep — brown creep below the screw
+    ctx.fillStyle = `rgba(110,60,34,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(10, 44, 4, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // white bloom — dried mineral ghost around the spur
+    ctx.strokeStyle = `rgba(200,195,180,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(12, 37);
+    ctx.quadraticCurveTo(18, 24, 30, 13);
+    ctx.stroke();
+  });
+}
