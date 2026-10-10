@@ -432,7 +432,7 @@ function HUD() {
   const settings = useGameStore((s) => s.settings);
   return (
     <div className={`hud ${settings.highContrast ? 'hc' : ''}`}>
-      <div className="vignette" style={{ opacity: hud.vignette }} />
+      <div className="vignette" aria-hidden="true" style={{ opacity: hud.vignette }} />
       {hud.freezeFrame && <div className="freeze-flash" />}
       <div className="top-left">
         <div className="room-label">{hud.inUnderscript ? `U-${String(hud.roomIndex).padStart(3, '0')}` : hud.roomLabel}</div>
@@ -474,7 +474,7 @@ function HUD() {
       {hud.hidden && <div className="hidden-tag">hidden — panic rises if they pass close</div>}
       {hud.protection === 'losSafe' && <div className="safe-tag">sheltered</div>}
       {hud.stabilizeActive && <StabilizeHud needle={hud.stabilizedNeedle} />}
-      <div className="crosshair">·</div>
+      <div className="crosshair" aria-hidden="true">·</div>
     </div>
   );
 }
@@ -487,7 +487,16 @@ function Bar({ label, value, max, cls }: { label: string; value: number; max: nu
   return (
     <div className={`bar ${cls}`}>
       <span className="bar-label">{label}</span>
-      <div className="bar-track"><div className="bar-fill" style={{ width: `${(value / max) * 100}%` }} /></div>
+      <div
+        className="bar-track"
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={Math.round(value)}
+        aria-valuemin={0}
+        aria-valuemax={max}
+      >
+        <div className="bar-fill" style={{ width: `${(value / max) * 100}%` }} />
+      </div>
     </div>
   );
 }

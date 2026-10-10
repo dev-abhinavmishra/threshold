@@ -110,3 +110,18 @@ describe('the rail speaks once — App wiring pins', () => {
   });
 
 });
+
+describe('the room names its instruments — ARIA pins', () => {
+  const app = readFileSync(join(__dirname, '../src/ui/App.tsx'), 'utf8');
+
+  it('HUD bars announce as progressbars with live values', () => {
+    expect(app).toMatch(/role="progressbar"/);
+    expect(app).toMatch(/aria-valuenow/);
+    expect(app).toMatch(/aria-valuemax/);
+  });
+
+  it('decorative chrome hides from the reader', () => {
+    expect(app).toMatch(/className="crosshair"[^>]*aria-hidden/);
+    expect(app).toMatch(/className="vignette"[^>]*aria-hidden/);
+  });
+});
