@@ -40,6 +40,17 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 
 
+
+## Sprint 631–633 — the sills kept their keepers (window-ledge batch)
+
+- `sill-pot` + `sill-stem` dead plants, `sill-candle` stubs,
+  `sill-jar`s, `sill-cloth` folds — 2–3 items per window sill (y 0.95,
+  inset 0.05 off the wall) in livedIn rooms (~70% of windows).
+- Item kinds CYCLE per sill (`(kindStart + i) % 4`), never rolled —
+  windows are rare (~10/seed), so a uniform roll starves edge kinds;
+  keep this pattern whenever a rare host gates a multi-kind batch.
+- All `frameHardware`-kept like the rest of the static dressing.
+
 ## Sprint 628–630 — the wet walls wore their aprons (splash-tile batch)
 
 - `tile-apron` subway-tile slabs (~1.5–1.9m × ~1.35–1.6m, proud of
@@ -64,76 +75,6 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
   in under/maintenance rooms; `main-hanger` straps to the slab every
   ~1.4m; `main-junction` feed box + `main-stub` crossing run (~50%).
 - All `frameHardware`-kept like the skirting pipes.
-
-## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
-
-- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
-  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
-  stove*/boiler*/fireplace) or maintenance/under — steelDark in
-  service space, brass inside.
-- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
-  the floor at a run end; `pipe-valve` torus wheel mid-run.
-- Port-aware: the wall span is cut into segments clear of door
-  offsets (±1.0 margin) so pipes never cross an opening.
-- All pieces pushed into `frameHardware` so names survive static
-  consolidation.
-- 4 tests added (664 total).
-
-## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
-
-- **Sprint 616**: procedural leaves split into four styles —
-  `panel` (62%, the estate six-panel), `plank` (ledged boards),
-  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
-  solid lower half). Style rolls inside `!industrial && !doorModel`;
-  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
-- **Sprint 617**: `threshold-strip` transition bars under each port —
-  brass inside, steelDark under — pushed into `frameHardware` keep list.
-- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
-  flanking the leaf — pairs with the existing emissive under-door seam.
-- 5 tests added (660 total).
-
-## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
-
-- `corridor-sconce` brass arms alternate e/w walls every ~2.6–3.2m in
-  long corridor rooms; `sconce-shade` cones; `sconce-bulb-lit`/
-  `sconce-bulb` emissive bulbs (30% dead); `sconcePool` wall decal
-  + `sconce-pool` thrown light under lit arms.
-- Emissive only — no point lights (a corridor chain would blow the
-  light budget); hardware kept via `frameHardware`.
-
-## Sprint 622–624 — the ceiling carried its mains (overhead conduit batch)
-
-- `ceiling-main` 1–3 parallel conduit runs along one axis at h-0.12
-  in under/maintenance rooms; `main-hanger` straps to the slab every
-  ~1.4m; `main-junction` feed box + `main-stub` crossing run (~50%).
-- All `frameHardware`-kept like the skirting pipes.
-
-## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
-
-- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
-  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
-  stove*/boiler*/fireplace) or maintenance/under — steelDark in
-  service space, brass inside.
-- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
-  the floor at a run end; `pipe-valve` torus wheel mid-run.
-- Port-aware: the wall span is cut into segments clear of door
-  offsets (±1.0 margin) so pipes never cross an opening.
-- All pieces pushed into `frameHardware` so names survive static
-  consolidation.
-- 4 tests added (664 total).
-
-## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
-
-- **Sprint 616**: procedural leaves split into four styles —
-  `panel` (62%, the estate six-panel), `plank` (ledged boards),
-  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
-  solid lower half). Style rolls inside `!industrial && !doorModel`;
-  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
-- **Sprint 617**: `threshold-strip` transition bars under each port —
-  brass inside, steelDark under — pushed into `frameHardware` keep list.
-- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
-  flanking the leaf — pairs with the existing emissive under-door seam.
-- 5 tests added (660 total).
 
 ## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
 
