@@ -6142,3 +6142,48 @@ describe('the doors kept their teeth (sprint 640-642)', () => {
     });
   }
 });
+
+describe('the rats chewed through (sprint 661)', () => {
+  it('gnawed arches sit low on lived-in walls', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'rat-hole') n++; });
+      }
+    }
+    expect(n, 'no rat holes').toBeGreaterThan(0);
+  });
+});
+
+describe('the nails kept the hooks (sprint 661)', () => {
+  it('bent clusters mark the old hang spots', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'nail-cluster') n++; });
+      }
+    }
+    expect(n, 'no nail clusters').toBeGreaterThan(0);
+  });
+});
+
+describe('the wallpaper kept the standing (sprint 661)', () => {
+  it('figure-shaped fades haunt the paper', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'figure-shadow') n++; });
+      }
+    }
+    expect(n, 'no figure shadows').toBeGreaterThan(0);
+  });
+});
