@@ -310,6 +310,7 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   wireCoil: { name: 'Wire Coil', desc: 'A snare\'s worth of wire, coiled. Lay it where the living walk — it trips whoever steps on it.', maxCharges: 4, slotItem: true },
   springPart: { name: 'Spring Plate', desc: 'A trap\'s works, pried whole. Crouch and set it — it bites whichever foot finds it first.', maxCharges: 2, slotItem: true },
   steamValve: { name: 'Brass Valve', desc: 'A vent\'s throat, threaded whole. Refit it on a stripped line — the blast answers whoever passes.', maxCharges: 2, slotItem: true },
+  fanBelt: { name: 'Drive Belt', desc: 'A wheel\'s muscle, walked off the rim whole. Fit it on a stripped wheel — the blades answer whoever stands under them.', maxCharges: 2, slotItem: true },
 };
 
 // Fiction name shown on the death screen for each kill source.

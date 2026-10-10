@@ -162,6 +162,8 @@ export interface BooksClosed {
   trapsSet?: number;
   /** sprint 583 — steam lines still threaded with YOUR valve */
   ventsOwned?: number;
+  /** sprint 595 — wheels still turning on YOUR belt */
+  wheelsOwned?: number;
 }
 
 export interface CheckpointSave {
@@ -220,7 +222,11 @@ export interface CheckpointSave {
     /** sprint 581 — steam vents carry their throat + ownership: a
      *  stripped valve (valved:false) stays stripped, a player-refit
      *  line stays yours. */
-    valved?: boolean; owner?: 'player' }[];
+    valved?: boolean; owner?: 'player';
+    /** sprint 593 — fans carry their muscle + the wedge: a stripped
+     *  wheel (belted:false) stays stripped, a chocked wheel keeps its
+     *  jam, a refit wheel stays yours. */
+    belted?: boolean; chocked?: boolean }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload
@@ -253,6 +259,9 @@ export interface CheckpointSave {
   // sprint 577 — sprung plates set out, spilled, or dropped loose:
   // litter waits as gatherable goods like the kicked chock
   droppedSprings?: { x: number; z: number }[];
+  // sprint 593 — belts pulled off your wheels or set out lie as
+  // gatherable goods like the sprung plate
+  droppedBelts?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];

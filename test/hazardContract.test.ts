@@ -536,7 +536,7 @@ describe('the house crimps your line (sprints 585-588)', () => {
     // the crimp is a real answer, not a re-lay — 'work' joins the
     // investigate kinds and the return names the squeeze
     expect(baseSrc).toContain("'blind' | 'spring' | 'work'");
-    expect(baseSrc).toContain("| 'crimp' | null");
+    expect(baseSrc).toContain("| 'crimp'");
     expect(corridorSrc).toContain("|| this.investigateKind === 'work'");
     expect(corridorSrc).toContain("restored === 'crimp'");
     // the ctx impl finds a live player-threaded vent and deads it,
@@ -550,5 +550,66 @@ describe('the house crimps your line (sprints 585-588)', () => {
     expect(refit).toContain("st.owner === 'player' && st.valved !== false");
     // the seam reads your live line
     expect(gameSrc).toContain("your line breathes past the leaf");
+  });
+});
+
+describe('the wheel is goods (sprints 589-596)', () => {
+  it('a still wheel yields its belt; refit wheels are player work the house leaves alone', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // the muscle is a part: strip yields fanBelt, refit spends it —
+    // gather + leave-out mint like the plate's pile
+    for (const k of ['workBelt', 'refitBelt', 'baitBelt', 'beltDrop']) {
+      expect(interactionSrc).toContain(`| '${k}'`);
+      expect(gameSrc).toContain(`case '${k}'`);
+    }
+    expect(gameSrc).toContain("giveItem('fanBelt'");
+    // the strip is the permanent kill — no belt, no re-engage; and
+    // player-fitted wheels are outside the house's re-lay jurisdiction
+    expect(roomSrc).toContain('belted?: boolean');
+    expect(roomSrc).toContain("owner?: 'player'");
+    expect(roomSrc).toContain('chocked?: boolean');
+    const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'fan'"),
+      gameSrc.indexOf("kind === 'blind'"));
+    expect(rearm).toContain('ff.belted !== false');
+    expect(rearm).toContain("ff.owner !== 'player'");
+    // the strip signs 'work' by:'player' — the price of the permanent
+    // kill is the name it leaves for the floorkeeper to read
+    const strip = gameSrc.slice(gameSrc.indexOf("case 'workBelt'"),
+      gameSrc.indexOf("case 'refitBelt'"));
+    expect(strip).toContain('f.belted = false');
+    expect(strip).toContain("by: 'player'");
+    // chocking your own wheel signs 'work', never 'fan' — the house
+    // doesn't get jurisdiction over a wedge in your own belt
+    const chock = gameSrc.slice(gameSrc.indexOf("case 'chock'"),
+      gameSrc.indexOf("case 'unchock'"));
+    expect(chock).toContain("f.owner === 'player'");
+    expect(chock).toContain("by: 'player'");
+    // muscle + wedge + ownership ride deadHazards through the checkpoint;
+    // the loose belt rides its own pile field
+    expect(storeSrc).toContain('belted?: boolean; chocked?: boolean');
+    expect(storeSrc).toContain('droppedBelts?:');
+    expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
+    // the house answers your wheel: 'work' near a live fitted fan is
+    // the pull — beltless housing, belt on the boards
+    expect(baseSrc).toContain("| 'pull' | null");
+    const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(pull).toContain("ff.owner === 'player'");
+    expect(pull).toContain("return 'pull'");
+    expect(pull).toContain('this.droppedBelts.push');
+    // a chocked house wheel re-engaging frees the wedge into his
+    // pocket — confiscated like the felt, spillable like the plate
+    expect(baseSrc).toContain("| 'fanChock'");
+    expect(corridorSrc).toContain("restored === 'fanChock'");
+    expect(corridorSrc).toContain('this.pocketedChocks++');
+    // a loose belt is tidy goods: the floorkeeper pockets it, the under
+    // folds it, the seam reads your wheel
+    expect(corridorSrc).toContain('pocketedBelts');
+    expect(baseSrc).toContain("'spring' | 'belt'");
+    expect(gameSrc).toContain('your wheel hums past the leaf');
   });
 });

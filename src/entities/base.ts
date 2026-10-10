@@ -147,7 +147,7 @@ export interface EntityCtx {
    *  off its eyes (the wrap is confiscated — the house pockets it).
    *  Returns what it restored, or null. Optional for headless ctxs. */
   rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind' | 'spring' | 'work', x: number, z: number)
-    => 'snare' | 'steam' | 'fan' | 'eye' | 'trap' | 'crimp' | null;
+    => 'snare' | 'steam' | 'fan' | 'fanChock' | 'eye' | 'trap' | 'crimp' | 'pull' | null;
   /** sprint 433 — a walker reaching a coil-bound leaf works the wire:
    *  'strained' on first contact, 'freed' once the bind parts (the
    *  coil drops where it was worked loose), null when nothing wired. */
@@ -179,10 +179,10 @@ export interface EntityCtx {
    *  The spill window is a race, not a timer: beat it back to your own
    *  coin or it keeps the money. */
   nearestSpill?: (x: number, z: number, maxD: number,
-    kinds?: ('pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring')[])
-    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring'; bait?: boolean } | null;
-  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean; wedge?: boolean; lamp?: boolean; shell?: boolean; spring?: boolean })
-    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | { kind: 'wedge' } | { kind: 'lamp'; batt: number } | { kind: 'shell' } | { kind: 'spring' } | null;
+    kinds?: ('pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring' | 'belt')[])
+    => { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring' | 'belt'; bait?: boolean } | null;
+  scavengeSpill?: (x: number, z: number, take: { coil?: boolean; wrap?: boolean; wedge?: boolean; lamp?: boolean; shell?: boolean; spring?: boolean; belt?: boolean })
+    => { kind: 'pouch'; n: number; hot: number; bait?: boolean } | { kind: 'coil' } | { kind: 'wrap'; n: number } | { kind: 'wedge' } | { kind: 'lamp'; batt: number } | { kind: 'shell' } | { kind: 'spring' } | { kind: 'belt' } | null;
   /** sprint 489 — a confiscated chock is carried too: a staggered
    *  floorkeeper spills pocketed chocks back as kicked-wedge drops. */
   spillChocks?: (pos: Vec3, n: number) => void;
@@ -193,6 +193,9 @@ export interface EntityCtx {
   /** sprint 578 — pocketed plates spill back as dead goods: a
    *  staggered floorkeeper drops confiscated springs like chocks. */
   spillSprings?: (pos: Vec3, n: number) => void;
+  /** sprint 593 — pocketed belts spill back the same way: a staggered
+   *  floorkeeper drops the muscle it pulled off your wheels. */
+  spillBelts?: (pos: Vec3, n: number) => void;
   /** sprint 494 — a striding walker boots loose goods it doesn't read:
    *  any pile within reach is scattered further along, not pocketed.
    *  Returns true if it kicked anything. */

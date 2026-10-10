@@ -601,7 +601,7 @@ export class Grafter extends Entity {
       && v3dist(this.pos, this.wireLid.exitPos) < 0.55
       ? this.wireLid : null;
     const pileNear = this.spillSeek && !this.wireLid
-      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil', 'lamp', 'shell', 'spring'] : ['pouch']) ?? null
+      ? c.nearestSpill?.(this.pos.x, this.pos.z, 0.55, this.carrying === 0 ? ['pouch', 'coil', 'lamp', 'shell', 'spring', 'belt'] : ['pouch']) ?? null
       : null;
     if ((pileNear || lidNear) && this.spillClaimT <= 0) {
       this.spillClaimT = 1.2;
@@ -621,7 +621,7 @@ export class Grafter extends Entity {
       }
     }
     const claimed = pileNear
-      ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0, lamp: this.carrying === 0, shell: this.carrying === 0, spring: this.carrying === 0 }) ?? null
+      ? c.scavengeSpill?.(this.pos.x, this.pos.z, { coil: this.carrying === 0, lamp: this.carrying === 0, shell: this.carrying === 0, spring: this.carrying === 0, belt: this.carrying === 0 }) ?? null
       : null;
     // sprint 524 — a stashed lid yields its wire one coil a stoop:
     // it works the lid like a pile, takes what it has a pocket for.
@@ -655,6 +655,14 @@ export class Grafter extends Entity {
       this.carryCued = false; this.spillCued = false;
       c.cue('grafter-grind', this.pos,
         '[stone folds the plate into wire — the under takes your teeth]', { severity: 'info' });
+    } else if (claimed?.kind === 'belt') {
+      // sprint 593 — a pulled belt is feedstock too: stone folds the
+      // leather and lugwork into stock like it folds the plate. The
+      // under takes your wheels' muscle the same as their teeth.
+      this.carrying = Math.max(this.carrying, 1);
+      this.carryCued = false; this.spillCued = false;
+      c.cue('grafter-grind', this.pos,
+        '[stone folds the belt into wire — the under takes your wheels]', { severity: 'info' });
     } else if (claimed?.kind === 'lamp') {
       // sprint 538 — the under doesn't carry light, it guts it: the
       // dynamo's charge folds into the pouch as coin, the lamp dies

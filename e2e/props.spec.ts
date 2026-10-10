@@ -720,6 +720,112 @@ test('the wheel chews — fan warns, bites a stander, and dies on the chock', as
   expect(errors).toEqual([]);
 });
 
+test('the belt is goods — the strip signs, the refit answers, the house pulls', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // live fans at 39/48/60/...
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { fans: { pos: { x: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; owner?: 'player'; chocked?: boolean }[];
+        evidence: { kind: string; room: number; by?: string }[] };
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+      entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
+      droppedBelts: { x: number; z: number }[];
+    };
+    const fan = ga.hazard.fans.find((f) => !f.dead);
+    if (!fan) return { stage: 'no-fan' } as const;
+    const froom = g.route.rooms[fan.room];
+    const inX = froom.origin.x - fan.pos.x, inZ = froom.origin.z - fan.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    // stand near the blades, feed the chock — the wheel jams
+    g.player.teleport(fan.pos.x + (inX / inL) * 1.8, 0, fan.pos.z + (inZ / inL) * 1.8);
+    ga.currentRoom = fan.room;
+    ga.inventory.push({ id: 'doorChock', count: 1 });
+    for (let f = 0; f < 12; f++) g.frame();
+    const chockIt = g.interaction.interactables.find((i) => i.kind === 'chock');
+    const sys = g.interaction as unknown as {
+      focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+      focused: typeof g.interaction.focused;
+      interactables: typeof g.interaction.interactables;
+    };
+    const origFocus = sys.focus.bind(sys);
+    const pinTo = (id: string) => {
+      sys.focus = (eye, look, pos) => {
+        const here = sys.interactables.find((i) => i.id === id);
+        const r = here ?? origFocus(eye, look, pos);
+        sys.focused = r ?? null;
+        return r;
+      };
+    };
+    if (chockIt) {
+      pinTo(chockIt.id);
+      for (let f = 0; f < 80 && !fan.dead; f++) { if (g.interaction.focused?.id === chockIt.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const jammed = fan.dead && fan.chocked === true;
+    for (let f = 0; f < 12; f++) g.frame();
+    // the still wheel offers the strip
+    const strip = g.interaction.interactables.find((i) => i.kind === 'workBelt');
+    const stripPrompt = strip?.prompt ?? '';
+    const belts0 = (ga.inventory.find((i) => i.id === 'fanBelt')?.count) ?? 0;
+    if (strip) {
+      pinTo(strip.id);
+      for (let f = 0; f < 120 && fan.belted !== false; f++) { if (g.interaction.focused?.id === strip.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const stripped = fan.belted === false && fan.dead;
+    const beltGot = (ga.inventory.find((i) => i.id === 'fanBelt')?.count ?? 0) > belts0;
+    const chockBack = fan.chocked === false
+      && (ga.inventory.find((i) => i.id === 'doorChock')?.count ?? 0) > 0;
+    const signed = ga.hazard.evidence.some((e) => e.kind === 'work'
+      && e.by === 'player' && e.room === fan.room);
+    // a beltless housing is outside the house's re-engage
+    const rearmDead = ga.entityCtx().rearmHazard?.('fan', fan.pos.x, fan.pos.z);
+    for (let f = 0; f < 12; f++) g.frame();
+    // the stripped housing offers the refit — your belt, your wheel
+    const refit = g.interaction.interactables.find((i) => i.kind === 'refitBelt');
+    const refitPrompt = refit?.prompt ?? '';
+    if (refit) {
+      pinTo(refit.id);
+      for (let f = 0; f < 120 && fan.dead; f++) { if (g.interaction.focused?.id === refit.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    sys.focus = origFocus;
+    const owned = fan.owner === 'player' && !fan.dead && fan.belted !== false;
+    // jurisdiction: the house can't re-engage your live wheel — and a
+    // 'work' mark near it gets the pull instead
+    const rearmMine = ga.entityCtx().rearmHazard?.('fan', fan.pos.x, fan.pos.z);
+    const pull = ga.entityCtx().rearmHazard?.('work', fan.pos.x, fan.pos.z);
+    const pulled = fan.belted === false && fan.dead && fan.owner === undefined;
+    const beltOnBoards = ga.droppedBelts.length > 0;
+    return { stage: 'done', jammed, stripPrompt, stripped, beltGot, chockBack, signed,
+      rearmDead, refitPrompt, owned, rearmMine, pull, pulled, beltOnBoards } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.jammed, JSON.stringify(result)).toBe(true);
+  expect(result.stripPrompt, JSON.stringify(result)).toMatch(/Work the belt off/);
+  expect(result.stripped, JSON.stringify(result)).toBe(true);
+  expect(result.beltGot, JSON.stringify(result)).toBe(true);
+  expect(result.chockBack, JSON.stringify(result)).toBe(true);
+  expect(result.signed, JSON.stringify(result)).toBe(true);
+  expect(result.rearmDead, JSON.stringify(result)).toBeNull();
+  expect(result.refitPrompt, JSON.stringify(result)).toMatch(/Fit the belt back/);
+  expect(result.owned, JSON.stringify(result)).toBe(true);
+  expect(result.rearmMine, JSON.stringify(result)).toBeNull();
+  expect(result.pull, JSON.stringify(result)).toBe('pull');
+  expect(result.pulled, JSON.stringify(result)).toBe(true);
+  expect(result.beltOnBoards, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('the scarred latch — a drawer somebody else already coaxed', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
