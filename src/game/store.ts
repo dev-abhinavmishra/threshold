@@ -164,6 +164,8 @@ export interface BooksClosed {
   ventsOwned?: number;
   /** sprint 595 — wheels still turning on YOUR belt */
   wheelsOwned?: number;
+  /** sprint 602 — eyes still panning on YOUR lens */
+  eyesOwned?: number;
 }
 
 export interface CheckpointSave {
@@ -226,7 +228,11 @@ export interface CheckpointSave {
     /** sprint 593 — fans carry their muscle + the wedge: a stripped
      *  wheel (belted:false) stays stripped, a chocked wheel keeps its
      *  jam, a refit wheel stays yours. */
-    belted?: boolean; chocked?: boolean }[];
+    belted?: boolean; chocked?: boolean;
+    /** sprint 597 — eyes carry their glass: a pried socket
+     *  (lensed:false) stays pried, a seated eye stays yours (owner is
+     *  shared with steam/fan records). */
+    lensed?: boolean }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload
@@ -262,6 +268,9 @@ export interface CheckpointSave {
   // sprint 593 — belts pulled off your wheels or set out lie as
   // gatherable goods like the sprung plate
   droppedBelts?: { x: number; z: number }[];
+  // sprint 601 — lenses torn off your eyes or set out lie as
+  // gatherable goods like the pulled belt
+  droppedLenses?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];

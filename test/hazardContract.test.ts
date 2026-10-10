@@ -596,7 +596,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
     // the house answers your wheel: 'work' near a live fitted fan is
     // the pull — beltless housing, belt on the boards
-    expect(baseSrc).toContain("| 'pull' | null");
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     expect(pull).toContain("ff.owner === 'player'");
     expect(pull).toContain("return 'pull'");
@@ -611,5 +611,76 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(corridorSrc).toContain('pocketedBelts');
     expect(baseSrc).toContain("'spring' | 'belt'");
     expect(gameSrc).toContain('your wheel hums past the leaf');
+  });
+});
+
+describe('your glass watches back (sprints 597-603)', () => {
+  it('a taped eye yields its lens; a seated eye is player work the house can only tear', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the glass is a part: pry yields eyeLens, seat spends it —
+    // gather + leave-out mint like the wheel's pile
+    for (const k of ['pryLens', 'seatLens', 'baitLens', 'lensDrop']) {
+      expect(interactionSrc).toContain(`| '${k}'`);
+      expect(gameSrc).toContain(`case '${k}'`);
+    }
+    expect(gameSrc).toContain("giveItem('eyeLens'");
+    // the pry is the permanent kill — lensed:false blinds like dead
+    // mains, and the socket never opens again
+    expect(roomSrc).toContain('lensed?: boolean');
+    expect(roomSrc).toContain('w.lensed !== false');
+    // the seated eye is owned: it never warns on you, it murmurs
+    // walkers instead, and the lens hold pins a dazzled stare
+    expect(roomSrc).toContain("w.owner === 'player'");
+    expect(roomSrc).toContain('ctx.walkers?.(w.room)');
+    expect(roomSrc).toContain('lensHoldUntil');
+    // the pry signs 'work' by:'player'; the seat signs too — the name
+    // your hands leave is the price of the permanent kill
+    const pry = gameSrc.slice(gameSrc.indexOf("case 'pryLens'"),
+      gameSrc.indexOf("case 'seatLens'"));
+    expect(pry).toContain('w.lensed = false');
+    expect(pry).toContain("by: 'player'");
+    const seat = gameSrc.slice(gameSrc.indexOf("case 'seatLens'"),
+      gameSrc.indexOf("case 'drain'"));
+    expect(seat).toContain("w.owner = 'player'");
+    expect(seat).toContain("by: 'player'");
+    // felt over YOUR OWN eye reroutes to 'work' — the house doesn't
+    // get jurisdiction over a wrap on your own glass
+    const tape = gameSrc.slice(gameSrc.indexOf("case 'tape'"),
+      gameSrc.indexOf("case 'untape'"));
+    expect(tape).toContain("w.owner === 'player'");
+    expect(tape).toContain("by: 'player'");
+    // the consumable dazzle: hold the glass to a live eye and the
+    // blink holds nine seconds — no sign, it just drinks its own
+    const use = gameSrc.slice(gameSrc.indexOf("case 'eyeLens'"),
+      gameSrc.indexOf("case 'chalkSpool'"));
+    expect(use).toContain('w.dazzleCued = true');
+    expect(use).toContain('lensHoldUntil = this.clock.time + 9');
+    // glass + ownership ride deadHazards through the checkpoint; the
+    // loose lens rides its own pile field
+    expect(storeSrc).toContain('lensed?: boolean');
+    expect(storeSrc).toContain('droppedLenses?:');
+    expect(gameSrc).toContain('eyesOwned: this.hazard.watchers.filter');
+    // the house answers your eye: 'work' near a live seated socket is
+    // the tear — dead glass, lens on the boards
+    expect(baseSrc).toContain("'lensTear'");
+    const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(work).toContain("ww.owner === 'player'");
+    expect(work).toContain("return 'lensTear'");
+    expect(work).toContain('this.droppedLenses.push');
+    // torn glass is tidy goods: the floorkeeper pockets it and spills
+    // it going down, the under folds it into stock
+    expect(corridorSrc).toContain('pocketedLenses');
+    expect(corridorSrc).toContain("restored === 'lensTear'");
+    expect(corridorSrc).toContain('spillLenses');
+    expect(baseSrc).toContain("'belt' | 'lens'");
+    expect(setpiecesSrc).toContain("kind === 'lens'");
+    // the seam reads your eye too
+    expect(gameSrc).toContain('your eye pans past the leaf');
   });
 });

@@ -826,6 +826,113 @@ test('the belt is goods — the strip signs, the refit answers, the house pulls'
   expect(errors).toEqual([]);
 });
 
+test('the glass is goods — the pry signs, the seat answers, the house tears', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { watchers: { pos: { x: number; z: number }; room: number; dead: boolean;
+          lensed?: boolean; owner?: 'player'; lensHoldUntil?: number }[];
+        evidence: { kind: string; room: number; by?: string }[] };
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+      entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
+      droppedLenses: { x: number; z: number }[];
+    };
+    const eye = ga.hazard.watchers.find((w) => !w.dead
+      && g.route.rooms[w.room] && !g.route.rooms[w.room].darkRoom);
+    if (!eye) return { stage: 'no-eye' } as const;
+    const wroom = g.route.rooms[eye.room];
+    const inX = wroom.origin.x - eye.pos.x, inZ = wroom.origin.z - eye.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    // stand under the eye, feed the felt — it goes blind
+    g.player.teleport(eye.pos.x + (inX / inL) * 1.6, 0, eye.pos.z + (inZ / inL) * 1.6);
+    ga.currentRoom = eye.room;
+    ga.inventory.push({ id: 'feltWrap', count: 1 });
+    const sys = g.interaction as unknown as {
+      focus: (eyeP: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+      focused: typeof g.interaction.focused;
+      interactables: typeof g.interaction.interactables;
+    };
+    const origFocus = sys.focus.bind(sys);
+    const pinTo = (id: string) => {
+      sys.focus = (eyeP, look, pos) => {
+        const here = sys.interactables.find((i) => i.id === id);
+        const r = here ?? origFocus(eyeP, look, pos);
+        sys.focused = r ?? null;
+        return r;
+      };
+    };
+    for (let f = 0; f < 12; f++) g.frame();
+    const tapeIt = g.interaction.interactables.find((i) => i.kind === 'tape');
+    if (tapeIt) {
+      pinTo(tapeIt.id);
+      for (let f = 0; f < 100 && !eye.dead; f++) { if (g.interaction.focused?.id === tapeIt.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const blinded = eye.dead;
+    for (let f = 0; f < 12; f++) g.frame();
+    // the blind eye offers the pry
+    const pry = g.interaction.interactables.find((i) => i.kind === 'pryLens');
+    const pryPrompt = pry?.prompt ?? '';
+    const lenses0 = (ga.inventory.find((i) => i.id === 'eyeLens')?.count) ?? 0;
+    if (pry) {
+      pinTo(pry.id);
+      for (let f = 0; f < 140 && eye.lensed !== false; f++) { if (g.interaction.focused?.id === pry.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const pried = eye.lensed === false && eye.dead;
+    const lensGot = (ga.inventory.find((i) => i.id === 'eyeLens')?.count ?? 0) > lenses0;
+    const wrapBack = (ga.inventory.find((i) => i.id === 'feltWrap')?.count ?? 0) > 0;
+    const signed = ga.hazard.evidence.some((e) => e.kind === 'work'
+      && e.by === 'player' && e.room === eye.room);
+    // the empty socket is outside the house's wake — felt-stay-dead,
+    // and the pry already handed your felt back so there's nothing to strip
+    const rearmDead = ga.entityCtx().rearmHazard?.('blind', eye.pos.x, eye.pos.z);
+    for (let f = 0; f < 12; f++) g.frame();
+    // the pried socket offers the seat — your glass, your eye
+    const seat = g.interaction.interactables.find((i) => i.kind === 'seatLens');
+    const seatPrompt = seat?.prompt ?? '';
+    if (seat) {
+      pinTo(seat.id);
+      for (let f = 0; f < 120 && eye.dead; f++) { if (g.interaction.focused?.id === seat.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    sys.focus = origFocus;
+    const owned = eye.owner === 'player' && !eye.dead && eye.lensed !== false;
+    // jurisdiction: the house can't wake your eye — a 'work' mark near
+    // it gets the tear instead
+    const rearmMine = ga.entityCtx().rearmHazard?.('blind', eye.pos.x, eye.pos.z);
+    const tear = ga.entityCtx().rearmHazard?.('work', eye.pos.x, eye.pos.z);
+    const torn = eye.lensed === false && eye.dead && eye.owner === undefined;
+    const lensOnBoards = ga.droppedLenses.length > 0;
+    return { stage: 'done', blinded, pryPrompt, pried, lensGot, wrapBack, signed,
+      rearmDead, seatPrompt, owned, rearmMine, tear, torn, lensOnBoards } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.blinded, JSON.stringify(result)).toBe(true);
+  expect(result.pryPrompt, JSON.stringify(result)).toMatch(/Pry the lens out/);
+  expect(result.pried, JSON.stringify(result)).toBe(true);
+  expect(result.lensGot, JSON.stringify(result)).toBe(true);
+  expect(result.wrapBack, JSON.stringify(result)).toBe(true);
+  expect(result.signed, JSON.stringify(result)).toBe(true);
+  expect(result.rearmDead, JSON.stringify(result)).toBeNull();
+  expect(result.seatPrompt, JSON.stringify(result)).toMatch(/Seat the lens/);
+  expect(result.owned, JSON.stringify(result)).toBe(true);
+  expect(result.rearmMine, JSON.stringify(result)).toBeNull();
+  expect(result.tear, JSON.stringify(result)).toBe('lensTear');
+  expect(result.torn, JSON.stringify(result)).toBe(true);
+  expect(result.lensOnBoards, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('the scarred latch — a drawer somebody else already coaxed', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
