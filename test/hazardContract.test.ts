@@ -598,7 +598,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
     // the house answers your wheel: 'work' near a live fitted fan is
     // the pull — beltless housing, belt on the boards
-    expect(baseSrc).toContain("| 'pull' | 'lensTear' | null");
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'lidSweep' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     // sprint 648 — 'work' near a claimed wheel pulls it whoever's
     // hands claim it: yours or the under's
@@ -742,5 +742,46 @@ describe('the under grafts back (sprints 646-650)', () => {
     expect(gameSrc).toContain("f.owner === 'under' ? UNDER_FACTION : null");
     expect(gameSrc).toContain("'grafter'");
     expect(gameSrc).toContain('exempt?.has(ent.id)');
+  });
+});
+
+
+describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
+  it("'work' near a stuffed lid tips it — the take comes out as piles", () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // the fourth 'work' dispatch — after eye tear, before null
+    expect(baseSrc).toContain("'lensTear' | 'lidSweep'");
+    expect(gameSrc).toContain('floorkeeper tips');
+    expect(gameSrc).toContain('near(s.exitPos)');
+    // scattered, not confiscated — six pile kinds mirror the take
+    for (const pile of ['droppedWraps', 'kickedWedges', 'droppedCoils',
+      'droppedSprings', 'droppedBelts', 'droppedLenses'])
+      expect(gameSrc).toContain(`this.${pile}.push`);
+    // oddities keep the lid; emptied stashes drop out of the ledger
+    expect(gameSrc).toContain('oddities keep the lid');
+    expect(gameSrc).toContain('this.lidStashes.delete');
+    expect(gameSrc).toContain('this.sweptLids');
+    // the warden reads the sweep out loud
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    expect(corridorSrc).toContain("restored === 'lidSweep'");
+    expect(corridorSrc).toContain('tips your lid');
+    // the epitaph counts the tipped lids
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('lidsSwept');
+  });
+
+  it('the stash signs the work the sweep answers', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // s528 — stuffing the box already signs 'work' by the player;
+    // the sweep is the reader, not a new signature
+    const stash = gameSrc.slice(gameSrc.indexOf("case 'stashTake'"));
+    expect(gameSrc).toContain('the lid signs the work');
+    expect(gameSrc).toContain("kind: 'work'");
+    expect(gameSrc).toContain("readBy: ['player']");
+    // a lid with no stackable goods is not sweepable — the mark
+    // stays for other readers
+    expect(gameSrc).toContain('if (!spot) return null');
+    void stash;
   });
 });

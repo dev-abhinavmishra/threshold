@@ -168,6 +168,7 @@ export interface BooksClosed {
   eyesOwned?: number;
   /** sprint 650 — wheels and eyes the under grafted back awake */
   graftedWork?: number;
+  lidsSwept?: number;
 }
 
 export interface CheckpointSave {
