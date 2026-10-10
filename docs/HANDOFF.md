@@ -8339,7 +8339,18 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 676 — the lintels kept their dust, the bells kept the thumbs & the slots kept the scratches (decals lane)
+\n\n## Sprint 677–678 — the latches kept the thumbs, the nails kept the straightening & the springs shed their dust (decals lane)
+
+- `windowLatch` — grease smear, turn crescents and fingertip ghosts on window latches; buildProp front-face overlay on `window`/`transomWindow`/`traceryWindow`/`windowArch`.
+- `pianoKeys` — ivory band, polished tops and nick marks on the piano's fall; overlay on `pianoUpright` front face.
+- `pictureNail` — rust pit, leveling arcs and plaster crumbs where single frames were adjusted; room-level wall decal behind frame-ish props (`painting`/`frameStand`/`standingFrame`/`mirror`, `livedIn`).
+- `vaseRing` — moisture ring and shelf dust under `vase`/`plant`/`planter`.
+- `springDust` — rail shadow, coil ghosts and lint on `bed`/`bedOld`/`daybed` fronts.
+- `drainAge` — sediment rings, limescale and iron blush on `grateDrain`/`ironGrate` floor decals.
+
+**Gotchas:** `placedProps` and `nearestWall` don't exist in the dressing block — prop list is `spec.props`, nearest-wall is the `dE/dW/dN/dS → md` pattern. `floorDecal` doesn't exist either — floor decals are `decalQuad` + `rotation.x = -π/2` + `position.set(x, ~0.009, z)`.
+
+Gates: tsc, lint, scoped vitest (sprints 677–678) green.\n\n## Sprint 676 — the lintels kept their dust, the bells kept the thumbs & the slots kept the scratches (decals lane)
 
 - `lintelDust` — grey dust shelf-lines, end drip tails and cobweb wisps above doors nobody dusted; room-level decal over each `doorPositions` port (35% roll, ~2.35m up).
 - `bellThumb` — polished brass halo + thumb arcs + push pits; buildProp top-face overlay on counterBell/writingDesk/catalogueDesk/dresser/nightstand.

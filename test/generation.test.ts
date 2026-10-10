@@ -6727,3 +6727,93 @@ describe('the slots kept the scratches (sprint 676)', () => {
     expect(n, 'no slot scratches').toBeGreaterThan(0);
   });
 });
+
+describe('the latches kept the thumbs (sprint 677)', () => {
+  it('grease and turn arcs mark the window latches', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'window-latch') n++; });
+      }
+    }
+    expect(n, 'no window latch wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the keys kept the shine (sprint 677)', () => {
+  it('ivory edge wear sits on the pianos', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'piano-keys') n++; });
+      }
+    }
+    expect(n, 'no piano key wear').toBeGreaterThan(0);
+  });
+});
+
+describe('the nails kept the straightening (sprint 677)', () => {
+  it('nail pits and leveling arcs mark the frames', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'picture-nail') n++; });
+      }
+    }
+    expect(n, 'no picture nails').toBeGreaterThan(0);
+  });
+});
+
+describe('the vases kept their rings (sprint 678)', () => {
+  it('moisture circles sit under the vases', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'vase-ring') n++; });
+      }
+    }
+    expect(n, 'no vase rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the springs shed their dust (sprint 678)', () => {
+  it('rail shadows mark the sagging bed frames', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'spring-dust') n++; });
+      }
+    }
+    expect(n, 'no spring dust').toBeGreaterThan(0);
+  });
+});
+
+describe('the drains kept their age (sprint 678)', () => {
+  it('sediment rings stain the floor drains', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'drain-age') n++; });
+      }
+    }
+    expect(n, 'no drain age').toBeGreaterThan(0);
+  });
+});
