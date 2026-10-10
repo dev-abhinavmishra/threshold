@@ -8221,3 +8221,26 @@ Contract: every defuse signs AND yields, every yield is goods — the eye comple
 Traps: watchers spawn from PROPS not sockets — the pry/seat mint in the same isWatch block, anchored on the wrap's wall key and split on Y (`wy−0.35`), not on watcher.pos. `live` must test `w.lensed !== false` separately from `w.dead` — a pried socket stays 'dead' but the flag is what makes it permanent (dead mains can kill an eye without touching its glass). The owned-eye branch in room.ts `continue`s before the player-distance gate or your own eye would still settle on you. `rearmHazard 'work'` dispatches steam→fan→eye inside the same !f fallthrough — a pull without a fan near mustn't return null before the eye is checked. pocketedBelts staggered-settle: verified both spill sites zero the count before the callback — no double-spill possible; closed.
 
 NEXT SPRINT IDEAS (mechanics): the crimp's mirror — the under should be able to re-thread your pulled belt for a price (grafted wheels — a wheel that answers the under, staggers the house). The same mirror now exists for the eye: a grafted socket that answers the under and murmurs AGAINST you (an eye that isn't yours anymore but still pans). Or the last goods surface without a house answer: the stash/lid — a 'work' mark near your lid could get it swept (your take scattered, not confiscated).
+
+## Sprints 664–666 (eye arc — renumbered; main claimed 589-596) — the eye watches for you
+
+- **'Aim the eye — it stares where you point'** (s589): crouched under a live watcher — the pan locks to the bearing you point ~3m out from its mount (`aimBearing`, `owner:'player'` on the watcher) + 'work' sign by:'player'. Standing/tape vs crouched/aim — no twin-verb churn; re-mints on owned eyes to re-point.
+- **The report** (s590): an owned eye's locked sweep marks entities crossing its cone — `[your eye marks warden crossing its sweep]` + tick emit, throttled 8s per eye. The planted CCTV.
+- **The honest price** (s595): your eye still settles on YOU — the settle path has no owner exemption; you can't blind your own camera. Report is the yield, exposure the price.
+- **The reclaim** (s591): the house answers — a 'work' mark by your eye gets `rearmHazard → 'reclaim'`: he turns your eye back ("[it turns your eye back to the house — the pan is its own again]"). The camera was always the house's; your bearing was the only loan.
+- **The seam reads your watch** (s594): a door-listen answers a live owned eye <3m past the leaf, same tier as your line/plate/wire.
+- **Rides the book** (s592-593): owner+aimBearing on eye `deadHazards` records; `eyesAimed` joins both epitaphs.
+
+Contract: ownership is one axis across every hazard kind now — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`. The pan lock is the dazzle pin made permanent; your beam still outranks your own lock (light is the stronger command).
+
+Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim share one anchor otherwise (twin-verb churn). An owned eye mints focusEye again for re-aiming — the case must NOT return early on `owner==='player'`.
+
+## Sprints 594–598 — the pan is real
+
+- **The seam reads your watch** (s594): listen answers a live owned eye <3m past the leaf — '[your eye keeps watch past the leaf — its pan holds]'.
+- **The honest price, spec'd** (s595): your eye still settles on you — `w.settle` has no owner exemption; you can't blind your own camera.
+- **The beam reads your aim** (s596): aimed light on an owned eye answers '[the beam finds your eye — its stare still holds your bearing]' on the same 45s decay as lamp-charge reads (`eyeBeamRead`).
+- **The lock survives the blink** (s597): dazzle clears to NaN on the blink; `aimBearing` persists and reasserts — your beam outranks the lock only while it drinks.
+- **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
+
+Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.

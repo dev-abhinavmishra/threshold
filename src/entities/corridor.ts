@@ -915,7 +915,8 @@ export class Warden extends Entity {
                             : restored === 'pull' ? '[it pulls the belt off your wheel — the muscle slaps the boards]'
                               : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
                                 : restored === 'lidSweep' ? '[it tips your lid — the take scatters the floor]'
-                                  : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+                                  : restored === 'reclaim' ? '[it turns your eye back to the house — the pan is its own again]'
+                                    : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't
               // pull to his own hands
