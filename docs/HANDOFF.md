@@ -26,6 +26,12 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - `boardFlex` (96×48): dark gap along a board edge + lifted lip + popped nail heads w/ rust + gathered dust; 35% lived-in floors.
 - `frostFern` (96×96): branching crystal fronds + barbs + ice-speck dust + thawed tear channel; 40% of windows via prop loop. Presence tests ×3 green.
 
+## Sprint 668 — the latch missed its catch, the salt lined the seam & the flies kept the shade
+
+- `latchScore` (48×48): swung arc scratches + deep gouge + tongue sheen + strike ghost; 45% lived-in doors at catch height.
+- `saltLine` (96×32): uneven mineral crust + piled ends + dark seam + crystals; 30% lived-in door feet.
+- `flySpot` (64×64): amber halo + rim-sparse speck cluster + dragged smear; 30% lived-in walls high near lamps. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 657–662 — the sweep plants a knee (a second house reader)

@@ -12012,3 +12012,99 @@ export function frostFern(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Latch score — the catch missed for years: arc scratches fanning
+ * around the strike plate, a sheen where the tongue rides, one gouge. */
+export function latchScore(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    const cx = 24; const cy = 24;
+    // the arc fan — swung scratches where the tongue missed the catch
+    for (let i = 0; i < 7; i++) {
+      const a0 = -0.4 - i * 0.22 + rng.float() * 0.06;
+      const r = 14 + rng.float() * 5;
+      ctx.strokeStyle = `rgba(160,148,126,${0.3 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.8 + rng.float() * 0.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 6, r, a0, a0 + 0.3 + rng.float() * 0.2);
+      ctx.stroke();
+    }
+    // the gouge — one deep miss that dug the wood
+    const ga = -0.5 - rng.float() * 0.8;
+    ctx.strokeStyle = `rgba(50,38,28,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 6, 12 + rng.float() * 4, ga, ga + 0.28);
+    ctx.stroke();
+    // the sheen — bright wear where the tongue rides true
+    ctx.fillStyle = `rgba(190,180,160,${0.3 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 7, 4.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // strike ghost — the plate's faint outline
+    ctx.strokeStyle = `rgba(80,68,54,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(cx - 6, cy - 8, 12, 18);
+  });
+}
+
+/** Salt line — the seam sweats minerals: a pale crust along the very
+ * bottom of the door, heavier at the sweep ends. */
+export function saltLine(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 32, (ctx) => {
+    // the crust band — uneven pale mineral line at the foot
+    for (let x = 4; x < 92; x += 3) {
+      const h = 3 + Math.sin(x * 0.22 + rng.float() * 2) * 1.6 + rng.float() * 2.2;
+      ctx.fillStyle = `rgba(215,208,190,${0.3 + rng.float() * 0.22})`;
+      ctx.fillRect(x, 32 - h - 4, 3, h);
+    }
+    // heavier ends — crust piles where the sweep stops
+    for (const ex of [10 + rng.float() * 6, 80 - rng.float() * 6]) {
+      ctx.fillStyle = `rgba(225,218,200,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(ex, 27, 5 + rng.float() * 3, 4 + rng.float() * 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the dark seam — the gap itself beneath the crust
+    ctx.fillStyle = `rgba(28,22,18,${0.45 + rng.float() * 0.2})`;
+    ctx.fillRect(4, 29, 88, 3);
+    // crystals — sparkle specks along the line
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(235,230,215,${0.4 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(6 + rng.float() * 84, 24 + rng.float() * 4, 0.4 + rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Fly spot — the flies kept the shade: a cluster of dark specks
+ * over a dim amber halo where the bulb breathes through. */
+export function flySpot(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // the halo — dim amber where the bulb's warmth held them
+    const g = ctx.createRadialGradient(32, 32, 4, 32, 32, 26);
+    g.addColorStop(0, `rgba(180,140,80,${0.2 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(180,140,80,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // the specks — clustered tight near center, sparse at rim
+    const specks = 16 + Math.floor(rng.float() * 10);
+    for (let i = 0; i < specks; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = Math.pow(rng.float(), 1.6) * 22;
+      ctx.fillStyle = `rgba(30,24,18,${0.45 + rng.float() * 0.35})`;
+      ctx.beginPath();
+      ctx.arc(32 + Math.cos(a) * r, 32 + Math.sin(a) * r, 0.5 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // smear — one dragged speck where a swipe caught it
+    if (rng.bool(0.6)) {
+      ctx.strokeStyle = `rgba(40,32,24,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(24 + rng.float() * 16, 30);
+      ctx.lineTo(30 + rng.float() * 16, 32 + rng.float() * 6);
+      ctx.stroke();
+    }
+  });
+}

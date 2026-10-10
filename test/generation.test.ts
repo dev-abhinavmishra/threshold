@@ -6322,3 +6322,48 @@ describe('the frost crept (sprint 667)', () => {
     expect(n, 'no frost ferns').toBeGreaterThan(0);
   });
 });
+
+describe('the latch missed its catch (sprint 668)', () => {
+  it('arc scratches fan around strikes', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'latch-score') n++; });
+      }
+    }
+    expect(n, 'no latch scores').toBeGreaterThan(0);
+  });
+});
+
+describe('the salt lined the seam (sprint 668)', () => {
+  it('mineral crust rides door feet', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'salt-line') n++; });
+      }
+    }
+    expect(n, 'no salt lines').toBeGreaterThan(0);
+  });
+});
+
+describe('the flies kept the shade (sprint 668)', () => {
+  it('specks cluster by the lamps', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fly-spot') n++; });
+      }
+    }
+    expect(n, 'no fly spots').toBeGreaterThan(0);
+  });
+});
