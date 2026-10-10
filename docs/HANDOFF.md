@@ -4,18 +4,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
-## Sprint 628–632 — the under grafts back (third jurisdiction: owner:'under')
+## Sprint 640–644 — the under grafts back (third jurisdiction: owner:'under')
 
-- **Sprint 628**: the grafter stops folding every good into wire — a
+- **Sprint 640**: the grafter stops folding every good into wire — a
   claimed `belt` or `lens` keeps its kind (`carriedKind`) and seeks a
   substrate via new ctx hooks `nearestGraft(x,z,maxD,kind)` /
   `graft(x,z,kind,byKey)`: muscle-less housings (`belted===false`) take
   belts, pried sockets (`lensed===false`) take lenses. Out-of-room or
   missing substrate falls back to the old wire fold — nothing strands.
-- **Sprint 629**: `UNDER_FACTION` — a grafted wheel's wake exempts the
+- **Sprint 641**: `UNDER_FACTION` — a grafted wheel's wake exempts the
   hands that threaded it (`exempt?.has(ent.id)` in the fan stagger loop).
   House walkers and you still get bitten; player wheels bite all.
-- **Sprint 630**: jurisdiction is now three-way. `owner:'under'` rides
+- **Sprint 642**: jurisdiction is now three-way. `owner:'under'` rides
   deadHazards + checkpoint (serialize filter widened to
   `owner !== undefined`, restore `if (h.owner)`). 'work' pull/tear
   fires on ANY claimed hazard (`ff.owner !== undefined`,
@@ -23,10 +23,10 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
   `owner === undefined` — the house re-engages only ownerless work.
   Pry deletes owner (re-strip a grafted socket); `workBelt` already
   did — grafted goods are re-strippable through normal verbs.
-- **Sprint 631**: graft signs `work` under `grafter:<spawnRoom>` — the
+- **Sprint 643**: graft signs `work` under `grafter:<spawnRoom>` — the
   house smells whose hands went there, so the warden's pull reaches
   under-owned work the same as player-owned.
-- **Sprint 632**: seam reads grafted work at warn tier ('muscle you
+- **Sprint 644**: seam reads grafted work at warn tier ('muscle you
   stripped'/'glass you pried'); epitaph + victory books count
   `graftedWork`. Carried-kind spills spill as themselves
   (`spillCarriedKind` → `spillBelts`/`spillLenses`), never as wire.
@@ -38,6 +38,59 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - Note for decals lane: no shared files touched this arc.
 
 
+
+
+## Sprint 628–630 — the wet walls wore their aprons (splash-tile batch)
+
+- `tile-apron` subway-tile slabs (~1.5–1.9m × ~1.35–1.6m, proud of
+  wall by 0.016) behind basinSink/washStand/grateDrain/washer props
+  on their nearest wall — skipped when a door sits in the span.
+- `apron-grout` groutLines decal ghosted over the band; `tile-chip`
+  dark oak boxes where a tile fell off.
+- `frameHardware`-kept like all recent static dressing.
+
+## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
+
+- `corridor-sconce` brass arms alternate e/w walls every ~2.6–3.2m in
+  long corridor rooms; `sconce-shade` cones; `sconce-bulb-lit`/
+  `sconce-bulb` emissive bulbs (30% dead); `sconcePool` wall decal
+  + `sconce-pool` thrown light under lit arms.
+- Emissive only — no point lights (a corridor chain would blow the
+  light budget); hardware kept via `frameHardware`.
+
+## Sprint 622–624 — the ceiling carried its mains (overhead conduit batch)
+
+- `ceiling-main` 1–3 parallel conduit runs along one axis at h-0.12
+  in under/maintenance rooms; `main-hanger` straps to the slab every
+  ~1.4m; `main-junction` feed box + `main-stub` crossing run (~50%).
+- All `frameHardware`-kept like the skirting pipes.
+
+## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
+
+- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
+  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
+  stove*/boiler*/fireplace) or maintenance/under — steelDark in
+  service space, brass inside.
+- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
+  the floor at a run end; `pipe-valve` torus wheel mid-run.
+- Port-aware: the wall span is cut into segments clear of door
+  offsets (±1.0 margin) so pipes never cross an opening.
+- All pieces pushed into `frameHardware` so names survive static
+  consolidation.
+- 4 tests added (664 total).
+
+## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
+
+- **Sprint 616**: procedural leaves split into four styles —
+  `panel` (62%, the estate six-panel), `plank` (ledged boards),
+  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
+  solid lower half). Style rolls inside `!industrial && !doorModel`;
+  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
+- **Sprint 617**: `threshold-strip` transition bars under each port —
+  brass inside, steelDark under — pushed into `frameHardware` keep list.
+- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
+  flanking the leaf — pairs with the existing emissive under-door seam.
+- 5 tests added (660 total).
 
 ## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
 

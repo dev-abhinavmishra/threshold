@@ -204,13 +204,13 @@ export interface EntityCtx {
    *  you (it never settles on your own walk). Optional for headless
    *  ctxs. */
   walkers?: (room: number) => { x: number; z: number }[];
-  /** sprint 628 — the under re-threads what it carries: a graftable
+  /** sprint 640 — the under re-threads what it carries: a graftable
    *  substrate is a muscle-less fan housing (`belted===false`) for a
    *  carried belt, or a pried socket (`lensed===false`) for a carried
    *  lens. Returns the nearest site within maxD, or null. */
   nearestGraft?: (x: number, z: number, maxD: number, kind?: 'wheel' | 'socket')
     => { x: number; z: number; kind: 'wheel' | 'socket' } | null;
-  /** sprint 628 — and the graft itself: claims the substrate for the
+  /** sprint 640 — and the graft itself: claims the substrate for the
    *  under (owner='under'), wakes it, and signs 'work' under the
    *  grafter's key so the house can smell whose hands went there.
    *  Returns true when the kind matched a live site. */
