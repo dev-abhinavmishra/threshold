@@ -12457,3 +12457,129 @@ export function shoeScuff(rng: Rng): THREE.Texture | null {
     ctx.fillRect(6, 8, 84, 2);
   });
 }
+
+/** Mirror tape — they taped the mirror and it stayed taped: adhesive
+ * strips crossing a corner, peel ghosts, and dust-framed edges. */
+export function mirrorTape(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // dust frame — grime line around the tape boundary
+    ctx.strokeStyle = `rgba(80,70,58,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(10, 10, 76, 76);
+    // the strips — two crossing bands of aged adhesive
+    for (let i = 0; i < 2; i++) {
+      ctx.save();
+      ctx.translate(48, 48);
+      ctx.rotate(i === 0 ? 0.6 + rng.float() * 0.2 : -0.7 - rng.float() * 0.2);
+      ctx.fillStyle = `rgba(190,178,150,${0.45 + rng.float() * 0.15})`;
+      ctx.fillRect(-40, -5, 80, 10);
+      // backing wrinkles
+      for (let wx = -34; wx < 36; wx += 8) {
+        ctx.strokeStyle = `rgba(160,148,124,${0.3 + rng.float() * 0.15})`;
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(wx, -5);
+        ctx.lineTo(wx + 2, 5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    // peel ghost — one corner where a strip lifted and dried
+    ctx.fillStyle = `rgba(150,140,116,${0.35 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.moveTo(70, 18);
+    ctx.lineTo(82, 16);
+    ctx.lineTo(78, 26);
+    ctx.closePath();
+    ctx.fill();
+    // the exposed glass — cleaner triangle the tape hid
+    ctx.fillStyle = `rgba(200,205,210,${0.15 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.moveTo(30, 60);
+    ctx.lineTo(50, 70);
+    ctx.lineTo(36, 78);
+    ctx.closePath();
+    ctx.fill();
+    // specks
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(120,108,90,${0.25 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(14 + rng.float() * 68, 14 + rng.float() * 68, 0.5 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Glove print — the hand pressed dust into the paint: five finger
+ * pads, the palm, and the drag-off smear on door leaves. */
+export function glovePrint(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // finger pads — five ovals fanned above the palm
+    const pads: [number, number, number][] = [[20, 20, -0.3], [27, 15, -0.15], [34, 13, 0], [41, 16, 0.15], [47, 23, 0.4]];
+    for (const [px, py, tilt] of pads) {
+      ctx.fillStyle = `rgba(60,50,40,${0.45 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(px, py, 2.4, 4.4, tilt, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the palm — broad press, lighter heel
+    const g = ctx.createRadialGradient(33, 42, 2, 33, 42, 13);
+    g.addColorStop(0, `rgba(55,46,38,${0.5 + rng.float() * 0.2})`);
+    g.addColorStop(1, 'rgba(55,46,38,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(33, 42, 11, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // drag-off smear — pulled down as the hand left
+    ctx.strokeStyle = `rgba(58,48,40,${0.35 + rng.float() * 0.15})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(32, 50);
+    ctx.quadraticCurveTo(33, 56, 31 + (rng.float() - 0.5) * 4, 61);
+    ctx.stroke();
+    // dust rim — fresh dust haloing the print
+    ctx.strokeStyle = `rgba(150,140,120,${0.25 + rng.float() * 0.12})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(33, 38, 18, 22, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
+/** Cord bite — the pull cord chewed the plaster: a vertical groove
+ * worn where it swings, with the disc halo at its crown. */
+export function cordBite(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    // the groove — a dark vertical wear channel the cord cut
+    const gx = 22 + rng.float() * 4;
+    ctx.fillStyle = `rgba(50,42,34,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(gx, 40, 2.4, 30, 0.03, 0, Math.PI * 2);
+    ctx.fill();
+    // swing arcs — scuffs where the cord swept either side
+    for (const side of [-1, 1]) {
+      ctx.strokeStyle = `rgba(90,78,64,${0.3 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(gx, 20);
+      ctx.quadraticCurveTo(gx + side * 10, 40, gx + side * (6 + rng.float() * 5), 58);
+      ctx.stroke();
+    }
+    // the disc halo — plaster ring where the bell-pull cap rubbed
+    ctx.strokeStyle = `rgba(120,108,90,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(gx, 14, 8 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // cap dent — deeper center where the cap seat wore
+    ctx.fillStyle = `rgba(60,50,40,${0.35 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(gx, 14, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // plaster dust — a pale drift settling below the groove
+    ctx.fillStyle = `rgba(160,150,128,${0.25 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.ellipse(gx, 76, 7, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

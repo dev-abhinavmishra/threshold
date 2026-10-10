@@ -51,6 +51,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `inkSoak` (96×48): dense soak pool + splatter ring + pen-drag tail + board-seam wicking; 40% of rooms holding desk/writingDesk props.
 - `shoeScuff` (96×48): heel drags + toe arcs + rubber streaks + dust lip; 35% lived-in walls at skirting height. Presence tests ×3 green.
 
+## Sprint 672 — they taped the mirror, the hand pressed the door & the cord chewed the plaster
+
+- `mirrorTape` (96×96): crossing adhesive strips + backing wrinkles + peel ghost + dust frame + clean-glass patch; 35% of `mirror` props.
+- `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
+- `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
