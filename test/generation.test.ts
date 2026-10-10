@@ -5894,3 +5894,30 @@ describe('the under kept its marks (sprint 609)', () => {
     expect(n, 'no chain drags').toBeGreaterThan(0);
   });
 });
+
+describe('the ceiling kept its weather (sprint 610-612)', () => {
+  for (const [name, label] of [
+    ['ceiling-ring', 'mineral rings where water pooled overhead'],
+    ['plaster-vein', 'settlement veins with tributaries'],
+    ['pendant-ghost', 'pale rings where shades once hung'],
+    ['fixture-soot', 'smoke halos over burning fixtures'],
+    ['tile-sag', 'grid ghosts and sagging panels'],
+    ['cornice-line', 'dust ledges at the wall-ceiling seam'],
+    ['attic-stain', 'broad damp blooms past the ring'],
+    ['paint-flake', 'peeled tongues and their scars'],
+    ['heater-ghost', 'heat halos over the radiators'],
+  ] as const) {
+    it(`marks the surface: ${label}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
