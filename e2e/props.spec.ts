@@ -1323,7 +1323,7 @@ test('dial the far line — the aimed pull', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-// sprint 622 — the under's grafts: a carried belt/lens re-threads dead
+// sprint 628 — the under's grafts: a carried belt/lens re-threads dead
 // work against you. Driven through the same ctx hooks the grafter calls.
 test('the under grafts back — the wheel and the socket answer a third jurisdiction', async ({ page }) => {
   const errors: string[] = [];

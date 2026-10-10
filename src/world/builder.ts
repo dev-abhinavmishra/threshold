@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -3319,6 +3319,51 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (hg && !hg.name) hg.name = 'heater-ghost';
     }
 
+    // The halls kept their lamps — sconce arms marching the corridor,
+    // alternating walls the way the porters wired them. Emissive
+    // bulbs only; the pool of thrown light is faked with a wall decal.
+    if (spec.biome === 'corridor' && d > w * 1.15 && !isUnder) {
+      const step = 2.6 + rng.float() * 0.6;
+      const count = Math.max(1, Math.floor((d - 1.2) / step));
+      let side = rng.bool(0.5) ? 1 : -1;
+      for (let i = 0; i < count; i++) {
+        const sz = -d / 2 + (i + 0.5) * ((d - 1.2) / count) + 0.6;
+        const sx = side * (w / 2 - 0.05);
+        const py = 1.9 + rng.float() * 0.15;
+        // arm out from the wall
+        const arm = new THREE.Mesh(texBox(0.05, 0.05, 0.14), MAT.brass());
+        arm.name = 'corridor-sconce';
+        arm.position.set(sx - side * 0.06, py, sz);
+        group.add(arm);
+        frameHardware.push(arm);
+        // shade cone, mouth down
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.11, 8, 1, true), MAT.brass());
+        shade.name = 'sconce-shade';
+        shade.position.set(sx - side * 0.13, py + 0.06, sz);
+        group.add(shade);
+        frameHardware.push(shade);
+        // bulb — warm emissive, sometimes dead
+        const lit = rng.float() < 0.7;
+        const bMat = new THREE.MeshStandardMaterial({
+          color: 0x1a1208, emissive: lit ? 0xd8a050 : 0x202028,
+          emissiveIntensity: lit ? 0.9 : 0.2, roughness: 0.6, metalness: 0,
+        });
+        bMat.userData.decalMat = true;
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), bMat);
+        bulb.name = lit ? 'sconce-bulb-lit' : 'sconce-bulb';
+        bulb.position.set(sx - side * 0.13, py + 0.02, sz);
+        group.add(bulb);
+        frameHardware.push(bulb);
+        // the thrown pool on the plaster beneath
+        if (lit && rng.float() < 0.8) {
+          wallDecal(side === 1 ? 'e' : 'w', sconcePool(rng), 0.7, 0.9, sz, py - 0.45);
+          const wl2 = group.children[group.children.length - 1];
+          if (wl2 && !wl2.name) wl2.name = 'sconce-pool';
+        }
+        side = -side;
+      }
+    }
+
     // The veins ran the skirting — supply pipes hugging the wall in
     // rooms that carry heat or service kit: a horizontal run with
     // clamps, a riser at one end, sometimes a valve wheel. Segments
@@ -3394,6 +3439,53 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
             frameHardware.push(wheel);
           }
         }
+      }
+    }
+
+    // The ceiling carried its mains — parallel conduit runs overhead
+    // in the service bones, hung on straps, broken by junction boxes.
+    if ((isUnder || spec.biome === 'maintenance') && rng.float() < 0.6) {
+      const pipeMat = MAT.steelDark();
+      const axis = rng.bool(0.5) ? 'x' : 'z';
+      const runLen = (axis === 'x' ? w : d) - 0.6;
+      const lanes = 1 + Math.floor(rng.float() * 2.4); // 1-3 parallel runs
+      for (let lane = 0; lane < lanes; lane++) {
+        const off = (lane - (lanes - 1) / 2) * 0.22 + (rng.float() - 0.5) * 0.3;
+        const py = h - 0.12 - lane * 0.02;
+        const run = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, runLen, 8), pipeMat);
+        run.name = 'ceiling-main';
+        if (axis === 'x') { run.rotation.z = Math.PI / 2; run.position.set(0, py, off); }
+        else { run.rotation.x = Math.PI / 2; run.position.set(off, py, 0); }
+        group.add(run);
+        frameHardware.push(run);
+        // hanger straps every ~1.4m reaching the slab
+        const nH = Math.max(1, Math.floor(runLen / 1.4));
+        for (let c = 0; c < nH; c++) {
+          const t = -runLen / 2 + (c + 0.5) * (runLen / nH);
+          const hg2 = new THREE.Mesh(texBox(0.035, 0.09, 0.035), pipeMat);
+          hg2.name = 'main-hanger';
+          if (axis === 'x') hg2.position.set(t, py + 0.045, off);
+          else hg2.position.set(off, py + 0.045, t);
+          group.add(hg2);
+          frameHardware.push(hg2);
+        }
+      }
+      // junction box where a feed splits — conduit stubs branch off it
+      if (rng.float() < 0.5) {
+        const jb = new THREE.Mesh(texBox(0.22, 0.12, 0.22), pipeMat);
+        jb.name = 'main-junction';
+        const jx = axis === 'x' ? (rng.float() - 0.5) * runLen * 0.4 : 0;
+        const jz = axis === 'x' ? 0 : (rng.float() - 0.5) * runLen * 0.4;
+        jb.position.set(jx, h - 0.1, jz);
+        group.add(jb);
+        frameHardware.push(jb);
+        // a stub crossing the room the other way
+        const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, (axis === 'x' ? d : w) * 0.4, 8), pipeMat);
+        stub.name = 'main-stub';
+        if (axis === 'x') { stub.rotation.x = Math.PI / 2; stub.position.set(jx, h - 0.13, jz + (rng.bool() ? 0.1 : -0.1)); }
+        else { stub.rotation.z = Math.PI / 2; stub.position.set(jx + (rng.bool() ? 0.1 : -0.1), h - 0.13, jz); }
+        group.add(stub);
+        frameHardware.push(stub);
       }
     }
 
