@@ -158,6 +158,8 @@ export interface BooksClosed {
   shellsLeft?: number;
   /** sprint 568 — watchers the held beam ever dazzled */
   eyesDazzled?: number;
+  /** sprint 580 — plates the floor still holds cocked at the end */
+  trapsSet?: number;
 }
 
 export interface CheckpointSave {
@@ -191,8 +193,11 @@ export interface CheckpointSave {
   // the sign stays written — fresh work/kill/wipe marks the hunters read
   // (authored 'old' sign re-derives from sockets, so it isn't carried)
   evidence?: { room: number;
-    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work';
-    t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean }[];
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work' | 'spring';
+    t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean;
+    /** sprint 565 — the signer's key ('player', 'grafter:N', 'eye:N');
+     *  rides the checkpoint so a restored sign still names the hand. */
+    by?: string }[];
   // an armed ward seal is paid protection — a reload can't strip it
   wardArmed?: boolean;
   // the count's locker — goods a named catch stripped hang claimable
@@ -239,6 +244,9 @@ export interface CheckpointSave {
   // a paid hand kept the coin — a staggered grafter spills its pouch:
   // floor coin waits as loot, marked coin still marked
   droppedPouches?: { x: number; z: number; n: number; hot: number }[];
+  // sprint 577 — sprung plates set out, spilled, or dropped loose:
+  // litter waits as gatherable goods like the kicked chock
+  droppedSprings?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];
@@ -267,6 +275,9 @@ export interface CheckpointSave {
   // (a reload can't re-arm a spent spring)
   snappedTraps?: string[];
   priedTraps?: string[];
+  /** sprint 576 — traps you set ride the checkpoint: cocked plates
+   *  re-lay into liveTraps on the next mint. */
+  setTraps?: { key: string; x: number; z: number; room: number }[];
   // sprint 406 — a slid rug or splashed puddle is spent too; the floor
   // doesn't re-slip on a reload (same class as the springs)
   slippedRugs?: string[];

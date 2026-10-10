@@ -449,6 +449,7 @@ export class Warden extends Entity {
   private investigateKind: string | null = null; // which sign it's checking (noise checks carry none)
   private pocketed = 0; // felt wraps confiscated off blinded eyes — carried, not deleted
   private pocketedChocks = 0; // sprint 489 — kicked chocks confiscated off the floor, same rule
+  private pocketedSprings = 0; // sprint 578 — loose sprung plates pocket the same way
   // sprint 537 — a burning lamp is loose goods too: he pinches it out
   // and pockets it, charge still draining under the coat. A stagger
   // spills it back still burning (s539).
@@ -473,6 +474,13 @@ export class Warden extends Entity {
       this.ctx.spillChocks?.(this.pos, n);
       this.ctx.cue('floor-creak', this.pos,
         '[it goes down — the chocks it pocketed scatter too]', { severity: 'warn' });
+    }
+    if (this.pocketedSprings > 0) {
+      const n = this.pocketedSprings;
+      this.pocketedSprings = 0;
+      this.ctx.spillSprings?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it goes down — the plates it pocketed scatter too]', { severity: 'warn' });
     }
     if (this.pocketedLamps.length > 0) {
       const bs = this.pocketedLamps;
@@ -779,7 +787,7 @@ export class Warden extends Entity {
             // sprint 489 — a kicked chock is loose goods on the same
             // floor: it gets pocketed, not left for you.
             const got = this.ctx.scavengeSpill?.(this.investigate.x, this.investigate.z,
-              { wrap: true, wedge: true, lamp: true });
+              { wrap: true, wedge: true, lamp: true, spring: true });
             if (got?.kind === 'wrap') {
               this.pocketed += got.n;
               this.ctx.cue('floor-creak', this.investigate,
@@ -807,10 +815,21 @@ export class Warden extends Entity {
                 x: this.investigate.x, y: 0.4, z: this.investigate.z,
                 intensity: 0.3, category: 'item', caption: '[the light goes out in its fist]',
                 source: this.id });
+            } else if (got?.kind === 'spring') {
+              // sprint 578 — a loose plate is tidy goods too: it pockets
+              // the sprung metal like a chock. A stagger drops it again.
+              this.pocketedSprings++;
+              this.ctx.cue('floor-creak', this.investigate,
+                '[it pockets the sprung plate — the floor is tidy again]', { severity: 'warn' });
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.4, z: this.investigate.z,
+                intensity: 0.3, category: 'item', caption: '[a plate disappears]',
+                source: this.id });
             }
           }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
-            || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
+            || this.investigateKind === 'fan' || this.investigateKind === 'blind'
+            || this.investigateKind === 'spring') {
             const kind = this.investigateKind;
             const restored = this.ctx.rearmHazard?.(kind, this.investigate.x, this.investigate.z);
             if (restored === 'eye') this.pocketed++; // the wrap goes in his pocket — carried, until he staggers
@@ -819,7 +838,8 @@ export class Warden extends Entity {
                 restored === 'snare' ? '[it bends and re-lays the wire — the floor relearns your walk]'
                   : restored === 'steam' ? '[it works the valve back open — the line breathes again]'
                     : restored === 'fan' ? '[it re-engages the wheel — the blades turn again]'
-                      : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+                      : restored === 'trap' ? '[it cocks the plate back — the floor relearns your step]'
+                        : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't
               // pull to his own hands
@@ -873,7 +893,7 @@ export class Warden extends Entity {
       // own stagger scattered (or anyone's) reads as a point to fold
       // back in — the floor pockets what fell, the spill is a race.
       if (!this.investigate && room0?.spec) {
-        const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['wrap', 'wedge', 'lamp']) ?? null;
+        const spill = c.nearestSpill?.(this.pos.x, this.pos.z, 30, ['wrap', 'wedge', 'lamp', 'spring']) ?? null;
         if (spill && pointInRoom(room0, spill.x, spill.z)) {
           this.investigate = v3(spill.x, 0, spill.z);
           this.investigateScan = 0;
@@ -953,6 +973,13 @@ export class Warden extends Entity {
       this.ctx.spillLamps?.(this.pos, bs);
       this.ctx.cue('floor-creak', this.pos,
         '[it settles — the lamp spills out still burning]', { severity: 'warn' });
+    }
+    if (this.pocketedSprings > 0) {
+      const n = this.pocketedSprings;
+      this.pocketedSprings = 0;
+      this.ctx.spillSprings?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it settles — the plates it pocketed spill loose]', { severity: 'warn' });
     }
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }

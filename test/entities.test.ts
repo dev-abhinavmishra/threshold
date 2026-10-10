@@ -830,6 +830,40 @@ describe('Warden (sprint 234)', () => {
     warden.dispose();
   });
 
+  it('a sprung plate is loose goods — the warden pockets it, and spills it again (s578)', () => {
+    const rooms = routeRooms();
+    const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
+    const room = rooms[28];
+    const mid = v3((room.entryPos.x + room.exitPos.x) / 2, 0, (room.entryPos.z + room.exitPos.z) / 2);
+    const plate = { x: mid.x + 1.0, z: mid.z };
+    let taken = false;
+    (ctx as { nearestSpill?: EntityCtx['nearestSpill'] }).nearestSpill =
+      () => taken ? null : { ...plate, kind: 'spring' as const };
+    (ctx as { scavengeSpill?: EntityCtx['scavengeSpill'] }).scavengeSpill =
+      vi.fn((x: number, z: number) => {
+        if (Math.hypot(x - plate.x, z - plate.z) < 0.55) { taken = true; return { kind: 'spring' as const }; }
+        return null;
+      });
+    const spilled: number[] = [];
+    (ctx as { spillSprings?: EntityCtx['spillSprings'] }).spillSprings =
+      (_p, n) => { spilled.push(n); };
+    const warden = new Warden();
+    warden.spawn(ctx);
+    const player = ctx.player as unknown as { pos: { x: number; y: number; z: number }; hiddenSpot: null | object };
+    player.pos = v3(room.entryPos.x - 30, 0, room.entryPos.z - 30);
+    player.hiddenSpot = { id: 'cab' } as object;
+    const w = warden as unknown as { pocketedSprings: number };
+    let t = 0;
+    for (let i = 0; i < 400 && !taken; i++) t = step(warden, ctx, 0.05, t);
+    expect(taken, 'the plate was confiscated').toBe(true);
+    expect(w.pocketedSprings, 'the plate is carried').toBe(1);
+    // carried means spillable — put it down and the plate falls back out
+    warden.stagger(3);
+    expect(w.pocketedSprings).toBe(0);
+    expect(spilled).toEqual([1]);
+    warden.dispose();
+  });
+
   it('the floorkeeper settles — pocketed goods spill where it went under (s502)', () => {
     const rooms = routeRooms();
     const ctx = makeCtx(rooms, { currentRoomIndex: 28 });
