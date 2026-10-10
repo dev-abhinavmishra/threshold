@@ -833,8 +833,8 @@ describe('the under strips your hands (sprints 675-680)', () => {
     // 'work' near YOUR threaded line — valved is the meat; a crimped
     // line still wears the valve so dead is no shelter
     expect(strip).toContain("s.owner === 'player'\n          && s.valved !== false");
-    expect(strip).toContain('s.valved = false');
-    expect(strip).toContain('s.dead = true');
+    expect(strip).toContain('st.valved = false');
+    expect(strip).toContain('st.dead = true');
     expect(strip).toContain("return 'throat'");
     // the kill is permanent: the house's line re-lay already refuses a
     // stripped vent — no throat, no pressure, ever
