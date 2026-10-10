@@ -92,3 +92,21 @@ describe('the rail keeps its hour (sprints 690-692)', () => {
   });
 });
 
+describe('the rail speaks once — App wiring pins', () => {
+  const app = readFileSync(join(__dirname, '../src/ui/App.tsx'), 'utf8');
+
+  it('the rail renders through visibleCaptions, not a raw slice', () => {
+    expect(app).toMatch(/visibleCaptions\(hud\.subtitles,\s*performance\.now\(\)\)/);
+    expect(app).not.toMatch(/hud\.subtitles\.slice/);
+  });
+
+  it('the rail is a polite live log', () => {
+    expect(app).toMatch(/className="captions"[^>]*role="log"/);
+    expect(app).toMatch(/aria-live="polite"/);
+  });
+
+  it('folded repeats render their count', () => {
+    expect(app).toMatch(/c\.count > 1/);
+  });
+
+});

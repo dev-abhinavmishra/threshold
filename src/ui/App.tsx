@@ -9,6 +9,7 @@ import { Game } from '../game/Game';
 import { ITEM_DEFS, DEFAULT_KEYBINDS, DEATH_NAMES } from '../game/config';
 import type { SettingsData, Difficulty } from '../game/types';
 import { DOCUMENTS } from '../game/documents';
+import { visibleCaptions } from './captions';
 
 let gameInstance: Game | null = null;
 
@@ -462,9 +463,11 @@ function HUD() {
         </div>
       )}
       {settings.captions && (
-        <div className="captions" style={{ fontSize: `${settings.captionSize}em` }}>
-          {hud.subtitles.slice(-3).map((c) => (
-            <div key={c.key} className={`caption ${c.severity}`}>{c.text}</div>
+        <div className="captions" role="log" aria-live="polite" aria-label="game captions" style={{ fontSize: `${settings.captionSize}em` }}>
+          {visibleCaptions(hud.subtitles, performance.now()).map((c) => (
+            <div key={c.key} className={`caption ${c.severity}`}>
+              {c.text}{c.count > 1 ? ` ×${c.count}` : ''}
+            </div>
           ))}
         </div>
       )}
