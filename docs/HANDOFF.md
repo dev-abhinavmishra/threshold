@@ -3,11 +3,12 @@
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 
-## Sprint 690–692 — the rail keeps its hour (captions rail ages, folds & announces)
+## Sprint 690–693 — the rail keeps its hour (captions rail ages, folds & announces)
 
 - s690 `the rail keeps its hour` — `src/ui/captions.ts`: `visibleCaptions(subs, now)` ages reads out by severity (info 4.2s / warn 5.2s / danger 7s — the last thing before a death stays up longest), folds consecutive identical reads into a ×N run riding the newest stamp, caps the rail at 3 live lines.
 - s691 `the rail speaks once` — App.tsx renders the rail through the helper instead of `subtitles.slice(-3)`; stale tells ("stone drags to the fresh sign") no longer read as if they just happened. The rail is a `role="log" aria-live="polite"` region; folded repeats show ` ×N`.
 - s692 `the room names its instruments` — HUD bars announce `role="progressbar"` with aria-valuenow/min/max/label; vignette + crosshair go `aria-hidden` so the reader hears the house, not its chrome.
+- s693 `the rail forgets in the glass` — `e2e/rail.spec.ts`: the rail verified in the running DOM — a repeated tell folds to one ×4 line, a burst of distinct reads keeps only the newest three (oldest scrolls off), and after the info dwell the rail empties of its own age. `emitCaption` is monkey-wrapped in-page to drop ambient tells (only `rail-` texts land in the store); `applySettings({captions:true})` flips the rail on through the real path.
 - Tests: `test/captions.test.ts` (13) — dwell boundaries per severity, exact-dwell edge, fold rules (severity/text break the run, non-consecutive doesn't fold back, fold refreshes dwell), cap + expired-not-counting, App wiring pins.
 
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
