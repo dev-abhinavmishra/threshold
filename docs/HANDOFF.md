@@ -7912,3 +7912,21 @@ shared with coin still pays the coin. `mintDragVerb`'s list
 union is where dragPile resolves its backing array — new pile
 kinds must extend BOTH the union and the arr switch or the drag
 silently writes to droppedCoils.
+
+## Sprints 581–584 — the valve is scrap too
+
+- **Work the valve loose** (s581): a bled steam vent — `dead`, crouched — mints the strip verb. The throat threads off whole into `steamValve` (Brass Valve, stack 2), signs `kind:'work'` by:'player', and marks the vent `valved=false`: a throatless line can never re-lay — the PERMANENT kill a bleed never was, priced by the sign.
+- **Refit the valve — 1 steamValve** (s582): on a stripped vent the same throat threads back — `dead=false, valved=true, owner='player'` + 'work' sign by:'player'. The blast is honest two-ways (the entity steam-stagger loop covers any walker, you included). `rearmHazard 'line'` skips `valved===false` AND `owner==='player'` — the house leaves your pipe alone, same jurisdiction as set-plates.
+- **Bleed your own line** (s584): bleeding an owned live vent re-routes the sign — `kind:'work'` by:'player', never the house's 'line' kill. Your hands stay silent on your pipe.
+- **The line rides the book** (s583): `ventsOwned` joins both epitaphs; throat+ownership+live-state ride `deadHazards` (steam records carry `dead`/`valved`/`owner` — legacy records without `dead` restore as dead, `h.dead !== false`).
+
+## Sprints 585–588 — the house crimps your line
+
+- **The crimp** (s585): the house answers your work too. `rearmHazard` kind union + corridor investigate list gain `'work'`; a 'work' mark near a live `owner==='player'` vent deads it and returns `'crimp'` — "[it crimps your line shut — the pressure dies in your own throat]". It can't re-lay your throat, so it pinches it shut — ownership kept.
+- **Re-pressurize your line** (s586): a crimped player vent keeps its throat — the refit case opens your own valve free (re-open `st.owner==='player' && st.valved!==false`), while a bare thread still spends 1 steamValve. The crimp→re-open cycle is the un-plant window, house-side.
+- **The seam reads your line** (s587): a door-listen answers a live owned vent <3m past the leaf — '[your line breathes past the leaf — the valve you set]' — same tier as your wire and your plate.
+- **Contract spec** (s588): `hazardContract` pins the crimp dispatch, free re-open, stripped-vent re-lay exclusion, and the 'Bleed your own' sign-reroute.
+
+Contract: every defuse signs AND yields — the bleed was the last gap; the valve completes the surface (bleed → strip → carry → refit → bleed → crimp → re-pressurize). Who-threaded-it is a first-class property of a line: `owner` rides the checkpoint and the house touches your throat only to close it.
+
+Traps: a live player-refit vent must serialize into deadHazards too (owner flag) — steam records now carry explicit `dead` or a live owned vent would restore bled. 'workValve'/'refitValve' mint only on DEAD vents, 'bleed' only on live — no focus overlap. `refitValve` branch order matters: own-throat (free) before bare-thread (paid).

@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number; eyesDazzled?: number; trapsSet?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number; eyesDazzled?: number; trapsSet?: number; ventsOwned?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -199,6 +199,10 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
   const traps = books.trapsSet ?? 0;
   if (traps > 0) lines.push(
     `${traps === 1 ? 'a plate still lies cocked' : `${traps} plates still lie cocked`} on the floor — your work outlasts you`);
+  // sprint 583 — and the pressure that answers your hand
+  const vents = books.ventsOwned ?? 0;
+  if (vents > 0) lines.push(
+    `${vents === 1 ? 'a line still runs' : `${vents} lines still run`} on your valve — the house keeps your work`);
   return lines;
 }
 

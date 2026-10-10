@@ -715,7 +715,13 @@ export class Game {
         if (s) s.armed = false;
       } else if (h.kind === 'steam') {
         const s = this.hazard.steams.find((x) => x.room === h.room && near(x.pos));
-        if (s) s.dead = true;
+        if (s) {
+          // sprint 581 — a live refit vent serializes too (owner flag):
+          // `dead` is carried explicitly or it would restore bled
+          s.dead = h.dead !== false;
+          if (h.valved === false) s.valved = false;
+          if (h.owner === 'player') s.owner = 'player';
+        }
       } else if (h.kind === 'fan') {
         const f = this.hazard.fans.find((x) => x.room === h.room && near(x.pos));
         if (f) f.dead = true;
@@ -1460,10 +1466,25 @@ export class Game {
           return 'snare';
         }
         if (kind === 'line') {
-          const s = this.hazard.steams.find((st) => st.dead && near(st.pos));
+          // sprint 581 — a stripped vent can't re-lay: no throat, no
+          // pressure. And the house only re-lays HOUSE work — a valve
+          // you threaded is yours even bled.
+          const s = this.hazard.steams.find((st) => st.dead
+            && st.valved !== false && st.owner !== 'player' && near(st.pos));
           if (!s) return null;
           s.dead = false;
           return 'steam';
+        }
+        if (kind === 'work') {
+          // sprint 585 — the house answers YOUR work too: a 'work'
+          // mark by a live player-threaded line gets the crimp — he
+          // can't re-lay your throat so he pinches it shut. The valve
+          // stays yours ('Re-pressurize your line' opens it again).
+          const s = this.hazard.steams.find((st) => !st.dead
+            && st.owner === 'player' && near(st.pos));
+          if (!s) return null;
+          s.dead = true;
+          return 'crimp';
         }
         if (kind === 'spring') {
           // sprint 574 — the house cocks its plates back: a 'spring'
@@ -2285,6 +2306,17 @@ export class Game {
           text: '[a plate waits cocked past the leaf — the spring you set]' };
       }
     }
+    // sprint 587 — the seam answers your own line too: a live vent
+    // you threaded breathes past the leaf, its hiss still yours.
+    {
+      const line = this.hazard.steams.find((st) =>
+        st.owner === 'player' && !st.dead && st.room === target.index
+          && Math.hypot(st.pos.x - door.pos.x, st.pos.z - door.pos.z) < 3);
+      if (line) {
+        return { sfx: 'steam-hiss', sev: 'info' as const,
+          text: '[your line breathes past the leaf — the valve you set]' };
+      }
+    }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
     // you the lid still holds your take before you open the door —
     // lowest tier, below every tread, lure, and bind.
@@ -2943,16 +2975,53 @@ export class Game {
     // Bleed the line — a live steam fitting can be bled quiet at the
     // valve; the blast stops, the corridor calms.
     for (const st of this.hazard.steams) {
-      if (st.dead) continue;
       const dx = st.pos.x - this.player.pos.x, dz = st.pos.z - this.player.pos.z;
       if (dx * dx + dz * dz > 4.4 * 4.4) continue;
-      this.interaction.add({
-        kind: 'bleed', id: `bleed-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
-        pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
-        prompt: 'Bleed the line',
-        holdTime: 1.6, enabled: true, priority: 2,
-        data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
-      });
+      if (!st.dead) {
+        this.interaction.add({
+          kind: 'bleed', id: `bleed-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+          pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+          prompt: st.owner === 'player' ? 'Bleed your own line' : 'Bleed the line',
+          holdTime: 1.6, enabled: true, priority: 2,
+          data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+        });
+        continue;
+      }
+      // sprint 581 — a bled vent's throat is scrap: crouched, 'Work the
+      // valve loose' threads it off whole into your pack — the strip
+      // signs 'work' and kills the line for good (a throatless vent
+      // can never re-lay). sprint 582 — the same valve threads BACK:
+      // 'Refit the valve' re-pressurizes the line as YOUR work, and
+      // the house leaves your pipe alone.
+      if (this.player.crouching) {
+        if (st.valved !== false && st.owner !== 'player') {
+          this.interaction.add({
+            kind: 'workValve', id: `workvalve-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+            pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+            prompt: 'Work the valve loose',
+            holdTime: 1.8, enabled: true, priority: 2,
+            data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+          });
+        } else if (st.owner === 'player') {
+          // sprint 586 — a crimped player line keeps ITS throat:
+          // re-pressurize is free — the house only pinched it shut
+          this.interaction.add({
+            kind: 'refitValve', id: `refitvalve-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+            pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+            prompt: 'Re-pressurize your line',
+            holdTime: 1.4, enabled: true, priority: 2,
+            data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+          });
+        } else if (this.inventory.some((i) => i.id === 'steamValve' && i.count > 0)) {
+          this.interaction.add({
+            kind: 'refitValve', id: `refitvalve-${this.space}:${st.room}:${Math.round(st.pos.x * 7)}x${Math.round(st.pos.z * 7)}`,
+            pos: { x: st.pos.x, y: 0.4, z: st.pos.z },
+            prompt: 'Refit the valve — 1 steamValve',
+            holdTime: 1.8, enabled: true, priority: 2,
+            data: { room: st.room, sx: st.pos.x, sz: st.pos.z },
+          });
+        }
+      }
     }
     // Crouched at a wired drawer: 'Coax the latch' — kneel to work the
     // bitten latch slow and free (the standing prompt shows the tell).
@@ -5929,10 +5998,64 @@ export class Game {
           && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
         if (st) {
           st.dead = true;
-          this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room, kind: 'line', t: this.clock.time, readBy: [] });
+          // sprint 584 — bleeding YOUR OWN refit doesn't file the kill
+          // at the house's book: your hands stay silent on your pipe.
+          if (st.owner === 'player') {
+            this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
+              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          } else {
+            this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room, kind: 'line', t: this.clock.time, readBy: [] });
+          }
         }
         this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz }, '[the pressure falls — the line goes quiet]');
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[a valve eases]' });
+        return;
+      }
+      case 'workValve': {
+        // sprint 581 — the throat threads off whole: the bled line
+        // yields `steamValve` and signs 'work' — the strip is the
+        // PERMANENT kill a bleed never was (no throat, no re-lay).
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const st = this.hazard.steams.find((v) => v.room === d.room
+          && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
+        if (!st || st.valved === false) return;
+        st.valved = false;
+        delete st.owner;
+        this.giveItem('steamValve', 1);
+        this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('trap-click', { x: d.sx, y: 0.4, z: d.sz },
+          '[the throat threads off whole — the line will never pressurize again]');
+        this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[brass on the thread]' });
+        return;
+      }
+      case 'refitValve': {
+        // sprint 582 — the valve cycles: thread YOUR throat onto a
+        // stripped line and the pressure answers whoever passes —
+        // player work, live blast, house hands off the re-lay.
+        it.enabled = false;
+        const d = it.data as { room: number; sx: number; sz: number };
+        const st = this.hazard.steams.find((v) => v.room === d.room
+          && Math.hypot(v.pos.x - d.sx, v.pos.z - d.sz) < 0.5);
+        if (!st) return;
+        // sprint 586 — your own throat re-opens free; a bare thread
+        // spends one steamValve
+        if (st.owner === 'player' && st.valved !== false) {
+          st.dead = false;
+        } else if (st.valved === false) {
+          const vi = this.inventory.findIndex((i) => i.id === 'steamValve' && i.count > 0);
+          if (vi < 0) return;
+          this.inventory[vi].count--;
+          st.valved = true;
+          st.dead = false;
+          st.owner = 'player';
+        } else return;
+        this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz },
+          '[the thread seats — pressure rises on a line that is yours]');
+        this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.4, category: 'item', caption: '[a valve seats under pressure]' });
         return;
       }
       case 'scrub': {
@@ -7536,7 +7659,9 @@ export class Game {
           [k, { x: v.pos.x, y: v.pos.y, z: v.pos.z, yaw: v.yaw, label: v.label }]),
       deadHazards: [
         ...this.hazard.snares.filter((s) => !s.armed).map((s) => ({ room: s.room, kind: 'snare' as const, x: s.pos.x, z: s.pos.z })),
-        ...this.hazard.steams.filter((s) => s.dead).map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z })),
+        ...this.hazard.steams.filter((s) => s.dead || s.valved === false || s.owner === 'player')
+          .map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z,
+            dead: s.dead, valved: s.valved, owner: s.owner })),
         ...this.hazard.fans.filter((f) => f.dead).map((f) => ({ room: f.room, kind: 'fan' as const, x: f.pos.x, z: f.pos.z })),
         ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
           room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
@@ -7686,6 +7811,8 @@ export class Game {
             eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
             // sprint 580 — and the plates still cocked on it
             trapsSet: this.setTraps.length || undefined,
+            // sprint 583 — and the lines still threaded your way
+            ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7744,6 +7871,8 @@ export class Game {
         eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
         // sprint 580 — the plates you left cocked on the floor
         trapsSet: this.setTraps.length || undefined,
+        // sprint 583 — the lines you left threaded your way
+        ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

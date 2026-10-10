@@ -160,6 +160,8 @@ export interface BooksClosed {
   eyesDazzled?: number;
   /** sprint 580 — plates the floor still holds cocked at the end */
   trapsSet?: number;
+  /** sprint 583 — steam lines still threaded with YOUR valve */
+  ventsOwned?: number;
 }
 
 export interface CheckpointSave {
@@ -214,7 +216,11 @@ export interface CheckpointSave {
   // the dead stay dead — hazards you spent a tool or a risk on don't
   // resurrect on a reload (positions key the match within a room)
   deadHazards?: { room: number; kind: 'snare' | 'steam' | 'fan' | 'eye';
-    x: number; z: number; dead?: boolean; filed?: boolean }[];
+    x: number; z: number; dead?: boolean; filed?: boolean;
+    /** sprint 581 — steam vents carry their throat + ownership: a
+     *  stripped valve (valved:false) stays stripped, a player-refit
+     *  line stays yours. */
+    valved?: boolean; owner?: 'player' }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload
