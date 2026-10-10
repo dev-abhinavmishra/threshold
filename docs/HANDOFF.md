@@ -4,6 +4,15 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 628–630 — the wet walls wore their aprons (splash-tile batch)
+
+- `tile-apron` subway-tile slabs (~1.5–1.9m × ~1.35–1.6m, proud of
+  wall by 0.016) behind basinSink/washStand/grateDrain/washer props
+  on their nearest wall — skipped when a door sits in the span.
+- `apron-grout` groutLines decal ghosted over the band; `tile-chip`
+  dark oak boxes where a tile fell off.
+- `frameHardware`-kept like all recent static dressing.
+
 ## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
 
 - `corridor-sconce` brass arms alternate e/w walls every ~2.6–3.2m in
