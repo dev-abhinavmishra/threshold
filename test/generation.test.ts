@@ -14,6 +14,7 @@ import { buildRoomMesh } from '../src/world/builder';
 import { MAT } from '../src/world/materials';
 import * as THREE from 'three';
 import { MAIN_TEMPLATES, propsClash, CLASH_OK } from '../src/world/templates';
+import { UNDERSCRIPT_TEMPLATES } from '../src/world/underscriptTemplates';
 import { DOCUMENTS } from '../src/game/documents';
 
 import { SeedStreams } from '../src/engine/rng';
@@ -5709,5 +5710,64 @@ describe('decals land where they claim (review fixes)', () => {
       }
     }
     expect(found, 'no decals found to check').toBeGreaterThan(0);
+  });
+});
+
+describe('the under kept its workings (sprint 580-582)', () => {
+  const NEW_UNDER = ['u-mail-sort', 'u-switchboard', 'u-tool-cage', 'u-locker-row', 'u-bunk-nook', 'u-dumbwaiter-bay', 'u-pump-vault', 'u-freight-bay', 'u-burn-room'];
+
+  it('every new under template builds a valid spec', () => {
+    for (const id of NEW_UNDER) {
+      const t = UNDERSCRIPT_TEMPLATES.find((tp) => tp.id === id);
+      expect(t, `template ${id} registered`).toBeTruthy();
+      const spec = t!.build(new Rng(`probe-${id}`));
+      expect(spec.width).toBeGreaterThan(0);
+      expect(spec.props.length, `${id} has no props`).toBeGreaterThan(3);
+      expect(spec.hiding.length, `${id} has no hiding spot`).toBeGreaterThan(0);
+      const tags = spec.nav.flatMap((n) => n.tags);
+      expect(tags).toContain('entry');
+      expect(tags).toContain('exit');
+    }
+  });
+
+  it('the new under templates appear across seeds', () => {
+    const seen = new Set<string>();
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, difficulty: 'standard', includeUnderscript: true });
+      for (const r of route.underRooms) if (NEW_UNDER.includes(r.templateId)) seen.add(r.templateId);
+    }
+    expect(seen.size, `only ${[...seen].join(',')} appeared`).toBeGreaterThan(3);
+  });
+
+  it('new under templates keep hiding spots inside the room', () => {
+    for (const id of NEW_UNDER) {
+      const spec = UNDERSCRIPT_TEMPLATES.find((tp) => tp.id === id)!.build(new Rng(`hide-${id}`));
+      for (const h of spec.hiding) {
+        expect(Math.abs(h.x), `${id} hide x`).toBeLessThan(spec.width / 2);
+        expect(Math.abs(h.z), `${id} hide z`).toBeLessThan(spec.depth / 2);
+      }
+    }
+  });
+
+  it('new under template props do not embed each other', () => {
+    // Under templates never got the propsClash sweep — run it here over the
+    // nine new rooms so authored placements stay clean.
+    for (const id of NEW_UNDER) {
+      const spec = UNDERSCRIPT_TEMPLATES.find((tp) => tp.id === id)!.build(new Rng(`clash-${id}`));
+      const floor = spec.props.filter((p) => (p.y ?? 0) < 0.2 && !p.meta?.wallDressing);
+      for (let i = 0; i < floor.length; i++) {
+        for (let j = i + 1; j < floor.length; j++) {
+          const a = floor[i], b = floor[j];
+          const ok = CLASH_OK.some(
+            ([x, y]) => (x === a.kind && y === b.kind) || (x === b.kind && y === a.kind),
+          );
+          if (ok) continue;
+          expect(
+            propsClash(a, b),
+            `${id}: ${a.kind}(${a.x},${a.z}) vs ${b.kind}(${b.x},${b.z})`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 });
