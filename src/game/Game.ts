@@ -1321,6 +1321,21 @@ export class Game {
           delete w.owner; // the glass is out — dead socket, nobody's
           return 'lens';
         }
+        // sprint 679 — or your throat's brass walks off: a 'work' mark
+        // by a threaded line and the valve comes off whole in ITS
+        // hands. The house only pinches a throat shut — the under
+        // takes the metal, the permanent kill your own strip deals:
+        // no throat, no re-lay. A crimped line still wears the valve,
+        // so dead is no shelter; the brass folds to wire under the
+        // rubble — stone has no pocket for steam.
+        const st = this.hazard.steams.find((s) => s.owner === 'player'
+          && s.valved !== false && near(s.pos));
+        if (st) {
+          st.valved = false;
+          st.dead = true;
+          delete st.owner; // the brass is out — bare thread, nobody's
+          return 'throat';
+        }
         return null;
       },
       spillSnare: (pos, room) => this.spillSnare(pos, room),

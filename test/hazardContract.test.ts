@@ -826,6 +826,25 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(graft).toContain("f.owner = 'under'");
     expect(graft).toContain("w.owner = 'under'");
   });
+
+  it('the brass walks off — the under unscrews what the house only pinches', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR threaded line — valved is the meat; a crimped
+    // line still wears the valve so dead is no shelter
+    expect(strip).toContain("s.owner === 'player'\n          && s.valved !== false");
+    expect(strip).toContain('s.valved = false');
+    expect(strip).toContain('s.dead = true');
+    expect(strip).toContain("return 'throat'");
+    // the kill is permanent: the house's line re-lay already refuses a
+    // stripped vent — no throat, no pressure, ever
+    const relay = gameSrc.slice(gameSrc.indexOf("kind === 'line'"));
+    expect(relay).toContain('st.valved !== false');
+    // and stone has no pocket for steam — the brass folds to wire, so
+    // no carriedKind keeps it out of the graft walk
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    expect(spSrc).toContain("got === 'belt' || got === 'lens'");
+  });
 });
 
 

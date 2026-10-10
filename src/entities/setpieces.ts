@@ -766,7 +766,8 @@ export class Grafter extends Entity {
               : got === 'plate' ? '[stone folds your cocked plate into its hands]'
                 : got === 'belt' ? '[stone tears the muscle off your wheel — the belt walks under the rubble]'
                   : got === 'lens' ? '[stone worries the glass out of your eye — the lens walks under the rubble]'
-                    : '[stone works the goods into its hands]', { severity: 'warn' });
+                    : got === 'throat' ? '[stone threads the brass off your throat — the valve walks under the rubble]'
+                      : '[stone works the goods into its hands]', { severity: 'warn' });
         }
       }
     }
