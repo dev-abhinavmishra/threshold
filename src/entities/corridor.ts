@@ -810,7 +810,8 @@ export class Warden extends Entity {
             }
           }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
-            || this.investigateKind === 'fan' || this.investigateKind === 'blind') {
+            || this.investigateKind === 'fan' || this.investigateKind === 'blind'
+            || this.investigateKind === 'spring') {
             const kind = this.investigateKind;
             const restored = this.ctx.rearmHazard?.(kind, this.investigate.x, this.investigate.z);
             if (restored === 'eye') this.pocketed++; // the wrap goes in his pocket — carried, until he staggers
@@ -819,7 +820,8 @@ export class Warden extends Entity {
                 restored === 'snare' ? '[it bends and re-lays the wire — the floor relearns your walk]'
                   : restored === 'steam' ? '[it works the valve back open — the line breathes again]'
                     : restored === 'fan' ? '[it re-engages the wheel — the blades turn again]'
-                      : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+                      : restored === 'trap' ? '[it cocks the plate back — the floor relearns your step]'
+                        : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't
               // pull to his own hands

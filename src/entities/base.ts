@@ -146,8 +146,8 @@ export interface EntityCtx {
    *  bled lines re-pressurized, killed wheels re-engaged, felt stripped
    *  off its eyes (the wrap is confiscated — the house pockets it).
    *  Returns what it restored, or null. Optional for headless ctxs. */
-  rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind', x: number, z: number)
-    => 'snare' | 'steam' | 'fan' | 'eye' | null;
+  rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind' | 'spring', x: number, z: number)
+    => 'snare' | 'steam' | 'fan' | 'eye' | 'trap' | null;
   /** sprint 433 — a walker reaching a coil-bound leaf works the wire:
    *  'strained' on first contact, 'freed' once the bind parts (the
    *  coil drops where it was worked loose), null when nothing wired. */

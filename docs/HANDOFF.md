@@ -7819,3 +7819,36 @@ Game's interact switch — `InteractKind` union must carry BOTH
 'wireSlip' and 'hookBack' or tsc rejects the add + the case.
 `lastSlip.snare` keeps the hazard record so `removeSnare` takes
 its mesh face with it.
+
+## Sprints 573–576 — the spring is scrap too
+
+- **s573 the pried trap testifies** — 'Pry the trap' pushed nothing;
+  it was the only kill that left no sign. Now it pushes
+  `{kind:'spring', by:'player'}` — the warden smells it, and aimed
+  light reads it: '[the beam finds a sprung plate — a trap was
+  pried here]'.
+- **s574 the house cocks its plates back** — `rearmHazard` gains
+  'spring': `trapPos` (key→pos, seeded at mint) finds a dead plate
+  within 1.4m, pried OR snapped, and clears the set — next mint
+  rejoins liveTraps and re-mints 'Pry'. Warden's kind list + the
+  '[it cocks the plate back — the floor relearns your step]' cue.
+- **s575 the plate is parts** — prying yields `springPart` (Spring
+  Plate, stacks 2): a sprung trap yields the mechanism whole.
+- **s576 set your own trap** — crouched with a plate, 'Set the
+  spring — 1 springPart' plants a live plate ~0.95m ahead under
+  `setTraps`/`set:` keys. Ordinary trap from there: both snap loops
+  see it (it bites you too — honest two-ways), it signs 'work'
+  `by:'player'`, 'Pry your own spring' un-sets while cocked (sign
+  scrubs — the trap never lay), a snapped one mints 'Gather the
+  sprung plate' back into parts. `setTraps` rides the checkpoint.
+
+Contract: every defuse signs AND yields — kill a hazard and the
+floor keeps the mark under your name while the mechanism becomes
+goods. Player-set work is real work: it bites both ways, testifies
+like house work, and the house will NOT re-lay it (`armedTraps`
+guard keeps re-lay jurisdiction on house plates only).
+
+Traps: `trapPos` must be seeded in the SAME mint pass that pushes
+liveTraps (armedTraps key = `${space}:${roomIdx}:${n}`); set-trap
+keys mint `set:` so they can't collide with seeded keys and can't
+be re-laid by the warden.

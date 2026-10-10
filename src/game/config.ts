@@ -308,6 +308,7 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   windAlarm: { name: 'Wind-up Alarm', desc: 'Wind it, set it down, walk away. It rings where you are not.', maxCharges: 1, slotItem: true },
   doorChock: { name: 'Door Chock', desc: 'A rubber wedge. Set it under a shut door — it holds until you take it back, or something worries it loose.', maxCharges: 2, slotItem: true },
   wireCoil: { name: 'Wire Coil', desc: 'A snare\'s worth of wire, coiled. Lay it where the living walk — it trips whoever steps on it.', maxCharges: 4, slotItem: true },
+  springPart: { name: 'Spring Plate', desc: 'A trap\'s works, pried whole. Crouch and set it — it bites whichever foot finds it first.', maxCharges: 2, slotItem: true },
 };
 
 // Fiction name shown on the death screen for each kill source.

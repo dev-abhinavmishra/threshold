@@ -82,6 +82,7 @@ export type ItemId =
   | 'windAlarm'
   | 'doorChock'
   | 'wireCoil'
+  | 'springPart'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 

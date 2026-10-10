@@ -702,7 +702,7 @@ export class Game {
     for (const e of cp?.evidence ?? []) {
       this.hazard.evidence.push({
         pos: v3(e.x, 0, e.z), room: e.room, kind: e.kind, t: e.t,
-        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped, by: e.by,
       });
     }
     // the dead stay dead — disarmed/bled/choked/killed hazards don't
@@ -770,6 +770,9 @@ export class Game {
     // sprint 404 — a spent or pried spring stays down across a reload
     for (const st of cp?.snappedTraps ?? []) this.snappedTraps.add(st);
     for (const pt of cp?.priedTraps ?? []) this.priedTraps.add(pt);
+    // sprint 576 — cocked plates you planted keep their bite: the
+    // mint's setTraps sweep re-pushes them into liveTraps each pass
+    this.setTraps = (cp?.setTraps ?? []).map((t) => ({ ...t }));
     // sprint 406 — a slid rug or splashed puddle is spent too
     for (const sr of cp?.slippedRugs ?? []) this.slippedRugs.add(sr);
     for (const sp of cp?.slippedPuddles ?? []) this.slippedPuddles.add(sp);
@@ -1432,6 +1435,23 @@ export class Game {
           if (!s) return null;
           s.dead = false;
           return 'steam';
+        }
+        if (kind === 'spring') {
+          // sprint 574 — the house cocks its plates back: a 'spring'
+          // mark near a dead trap re-arms it — pried OR snapped, the
+          // same way wire re-ties. Next mint the plate rejoins
+          // liveTraps and 'Pry the trap' re-mints for you.
+          let best: string | null = null;
+          let bd = 1.4;
+          for (const [k, p] of this.trapPos) {
+            const dd = Math.hypot(p.x - x, p.z - z);
+            if (dd < bd && this.armedTraps.get(k) === true
+              && (this.snappedTraps.has(k) || this.priedTraps.has(k))) { best = k; bd = dd; }
+          }
+          if (!best) return null;
+          this.snappedTraps.delete(best);
+          this.priedTraps.delete(best);
+          return 'trap';
         }
         if (kind === 'fan') {
           const f = this.hazard.fans.find((ff) => ff.dead && near(ff.pos));
@@ -2954,6 +2974,53 @@ export class Game {
         data: {},
       });
     }
+    // sprint 575-576 — the plate is parts AND a plant: 'Set the
+    // spring' lays your own trap ahead of the crouch — the same
+    // two-ways metal the house's is (both snap loops see it), and
+    // 'Pry your own spring' takes it back while it's still cocked.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'springPart' && i.count > 0)
+      && !this.setTraps.some((t) =>
+        Math.hypot(t.x - this.player.pos.x, t.z - this.player.pos.z) < 1.4)) {
+      const lk = v3(); this.player.lookDir(lk);
+      const px = this.player.pos.x + lk.x * 0.95, pz = this.player.pos.z + lk.z * 0.95;
+      this.interaction.add({
+        kind: 'setTrap', id: `settrap-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.25, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Set the spring — 1 springPart',
+        holdTime: 1.0, enabled: true, priority: 1,
+        data: { x: px, z: pz, room: this.activeRooms()[this.currentRoom]?.index ?? this.currentRoom },
+      });
+    }
+    // ...and each set plate stays live on every mint and re-mints its
+    // un-plant while it's still cocked. A snapped one is spent — dead
+    // metal like the house's.
+    for (const st of this.setTraps) {
+      if (!this.activeRooms().some((r) => r.index === st.room)) continue;
+      const dead = this.snappedTraps.has(st.key);
+      if (!dead) {
+        this.liveTraps.push({ key: st.key, x: st.x, z: st.z });
+        this.trapPos.set(st.key, { x: st.x, z: st.z });
+      }
+      if (Math.hypot(st.x - this.player.pos.x, st.z - this.player.pos.z) >= 2.4) continue;
+      if (dead) {
+        // spent metal gathers back like dead wire — the sprung plate
+        // is still parts
+        this.interaction.add({
+          kind: 'gatherTrap', id: `gatherTrap-${st.key}`,
+          pos: { x: st.x, y: 0.08, z: st.z },
+          prompt: 'Gather the sprung plate', holdTime: 0.7, enabled: true, priority: 2,
+          data: {},
+        });
+        continue;
+      }
+      this.interaction.add({
+        kind: 'unsetTrap', id: `unsetTrap-${st.key}`,
+        pos: { x: st.x, y: 0.08, z: st.z },
+        prompt: 'Pry your own spring', holdTime: 0.7, enabled: true, priority: 2,
+        data: {},
+      });
+    }
     // sprint 533 — 'Set the lamp down': the pulse lamp keeps burning
     // where you kneel. Light the wall eyes drink (s534), a hum the
     // ears follow — a lure that pays with its own battery and dies on
@@ -3522,6 +3589,7 @@ export class Game {
             if (!this.armedTraps.has(key)) {
               this.armedTraps.set(key, this.streams.roomStream('scare', pr.index * 611 + n * 17).bool(0.32));
             }
+            this.trapPos.set(key, { x: wx, z: wz });
             if (this.armedTraps.get(key) && !this.snappedTraps.has(key) && !this.priedTraps.has(key)) {
               this.liveTraps.push({ key, x: wx, z: wz });
               this.interaction.add({
@@ -5667,10 +5735,72 @@ export class Game {
       }
       case 'trap': {
         it.enabled = false;
-        this.priedTraps.add(it.id.replace(/^trap-/, ''));
+        const tkey = it.id.replace(/^trap-/, '');
+        this.priedTraps.add(tkey);
         const at = { x: it.pos.x, y: 0.05, z: it.pos.z };
-        this.audio.play('trap-click', at, '[the spring slackens]');
+        // sprint 573 — quiet work is marked work like every other kill:
+        // the pried plate testifies under YOUR name, and the warden's
+        // re-lay can cock it back (s574). Your own read stays silent.
+        const parts = tkey.split(':');
+        this.hazard.evidence.push({ pos: v3(at.x, 0, at.z), room: Number(parts[1]),
+          kind: 'spring', t: this.clock.time, readBy: ['player'], by: 'player' });
+        // sprint 575 — the plate is parts: a sprung trap yields the
+        // mechanism whole — set it somewhere the living walk.
+        this.giveItem('springPart', 1);
+        this.audio.play('trap-click', at, '[the spring slackens — the plate comes free]');
         this.sound.emit({ x: at.x, y: at.y, z: at.z, intensity: 0.2, category: 'ambient', caption: '' });
+        return;
+      }
+      case 'setTrap': {
+        // sprint 576 — the trap is re-settable: a springPart plants a
+        // live plate under your look ray. Ordinary trap from there:
+        // both snap loops see it, it testifies 'spring' under your
+        // name, and 'Pry your own spring' un-sets it while armed.
+        it.enabled = false;
+        const wi = this.inventory.findIndex((i) => i.id === 'springPart' && i.count > 0);
+        if (wi < 0) { this.cue('door-locked', it.pos, '[no spring to set]', 'warn'); return; }
+        this.inventory[wi].count--;
+        const d2 = it.data as { x: number; z: number; room: number };
+        const key2 = `set:${d2.room}:${Math.round(d2.x * 4)},${Math.round(d2.z * 4)}`;
+        this.setTraps.push({ key: key2, x: d2.x, z: d2.z, room: d2.room });
+        this.liveTraps.push({ key: key2, x: d2.x, z: d2.z });
+        this.trapPos.set(key2, { x: d2.x, z: d2.z });
+        this.hazard.evidence.push({ pos: v3(d2.x, 0, d2.z), room: d2.room, kind: 'work',
+          t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('trap-click', { x: d2.x, y: 0.05, z: d2.z }, '[the plate cocks under your palm]');
+        this.sound.emit({ x: d2.x, y: 0.1, z: d2.z, intensity: 0.3 * this.wantedPull, category: 'item', caption: '' });
+        return;
+      }
+      case 'unsetTrap': {
+        // sprint 576 — walk your own trap back while it's armed:
+        // un-set returns the plate whole, its sign scrubs with it —
+        // the trap never lay, same convention as hooking the coil.
+        it.enabled = false;
+        const key3 = it.id.replace(/^unsetTrap-/, '');
+        const si = this.setTraps.findIndex((t) => t.key === key3);
+        if (si < 0) return;
+        const [gone] = this.setTraps.splice(si, 1);
+        const li = this.liveTraps.findIndex((t) => t.key === key3);
+        if (li >= 0) this.liveTraps.splice(li, 1);
+        const ei = this.hazard.evidence.findIndex((ev) => ev.kind === 'work'
+          && !ev.old && Math.hypot(ev.pos.x - gone.x, ev.pos.z - gone.z) < 0.4
+          && ev.readBy.includes('player'));
+        if (ei >= 0) this.hazard.evidence.splice(ei, 1);
+        this.giveItem('springPart', 1);
+        this.audio.play('trap-click', { x: gone.x, y: 0.05, z: gone.z }, '[the plate comes back to your hand]');
+        return;
+      }
+      case 'gatherTrap': {
+        // sprint 576 — dead wire's convention for dead metal: a sprung
+        // plate you set is still parts — gather it back whole.
+        it.enabled = false;
+        const key4 = it.id.replace(/^gatherTrap-/, '');
+        const gi = this.setTraps.findIndex((t) => t.key === key4);
+        if (gi < 0) return;
+        this.setTraps.splice(gi, 1);
+        this.snappedTraps.delete(key4);
+        this.giveItem('springPart', 1);
+        this.audio.play('trap-click', it.pos, '[the spent plate comes back to your hand]');
         return;
       }
       case 'snip': {
@@ -7357,11 +7487,12 @@ export class Game {
         : undefined,
       snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
       priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
+      setTraps: this.setTraps.length > 0 ? this.setTraps.map((t) => ({ ...t })) : undefined,
       slippedRugs: this.slippedRugs.size > 0 ? [...this.slippedRugs] : undefined,
       slippedPuddles: this.slippedPuddles.size > 0 ? [...this.slippedPuddles] : undefined,
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
-        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped,
+        readBy: [...e.readBy], weak: e.weak, wiped: e.wiped, by: e.by,
       })),
     };
   }
@@ -8793,6 +8924,12 @@ export class Game {
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
+  /** sprint 574 — every trap's world pos by key, so the warden's
+   *  re-lay can find the plate a sign refers to. */
+  private trapPos = new Map<string, { x: number; z: number }>();
+  /** sprint 576 — traps you set: key `set:${room}:${x},${z}` so a
+   *  checkpoint reload can re-lay them into liveTraps. */
+  private setTraps: { key: string; x: number; z: number; room: number }[] = [];
   private liveTickProps: { x: number; z: number }[] = [];
   private pipeTickNext = 0;
   private liveBooks: { x: number; z: number; key: string }[] = [];

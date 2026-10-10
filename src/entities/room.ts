@@ -1007,7 +1007,7 @@ export class HazardField {
    *  record is the felt-wrap's shadow: the floor was worked clean, and only
    *  the warden's nose bothers to doubt sign planted near it. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
-    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work'; t: number; readBy: string[];
+    kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work' | 'spring'; t: number; readBy: string[];
     /** sprint 565 — the sign names the hand: the signer's key
      *  ('grafter:N', 'eye:N', ...) so reads can say WHO worked, not
      *  just that work happened. */
@@ -1360,7 +1360,7 @@ export class HazardField {
     // scrubbed patch — the wipe's shadow reads back under the beam.
     for (const ev of this.evidence) {
       if (ev.old || ev.room !== ctx.currentRoomIndex || ev.readBy.includes('player')) continue;
-      if (!(ev.wiped || ev.kind === 'wire' || ev.kind === 'line' || ev.kind === 'fan')) continue;
+      if (!(ev.wiped || ev.kind === 'wire' || ev.kind === 'line' || ev.kind === 'fan' || ev.kind === 'spring')) continue;
       const d = v3dist(p.pos, ev.pos);
       if (d > 9 || !(ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false)) continue;
       ev.readBy.push('player');
@@ -1370,7 +1370,9 @@ export class HazardField {
           ? '[the beam finds a fresh cut — wire died here, recently]'
           : ev.kind === 'line'
             ? '[the beam finds a bled line — somebody worked it, recently]'
-            : '[the beam finds a stilled wheel — somebody stopped the blades]', { severity: 'info' });
+            : ev.kind === 'spring'
+              ? '[the beam finds a sprung plate — a trap was pried here]'
+              : '[the beam finds a stilled wheel — somebody stopped the blades]', { severity: 'info' });
     }
     // sprint 560 — and the beam reads your own lamps' charge: aim at a
     // dropped lamp and its fuse reads back across the room — burning,
