@@ -4,6 +4,19 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
+
+- **Sprint 616**: procedural leaves split into four styles —
+  `panel` (62%, the estate six-panel), `plank` (ledged boards),
+  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
+  solid lower half). Style rolls inside `!industrial && !doorModel`;
+  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
+- **Sprint 617**: `threshold-strip` transition bars under each port —
+  brass inside, steelDark under — pushed into `frameHardware` keep list.
+- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
+  flanking the leaf — pairs with the existing emissive under-door seam.
+- 5 tests added (660 total).
+
 ## Sprint 613–615 — the doors kept their furniture (leaf + jamb hardware batch)
 
 - **Sprint 613**: interior leaves gained real hardware — `mail-slot`,
