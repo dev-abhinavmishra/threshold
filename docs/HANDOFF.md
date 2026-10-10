@@ -4,6 +4,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
+
+- **675** the asymmetry: the house has FIVE 'work' answers (crimp, pull, tear, sweep, grip) and the grafter already reads 'work' marks — but only dragged to them and ground the floor. New ctx hook `stripWork(x,z)` + a stoop-strip in the grafter: a fresh 'work' mark (`scentT` arming, `carrying===0`) is an armed surface. First two pockets: your live planted wire (`armed && planted && !claimed`) comes up as its coil via `removeSnare`; your cocked plate (`setTraps` minus `snappedTraps`/`priedTraps`) folds into stock and leaves every snap loop (`liveTraps.splice`, `trapPos.delete`). Claimed wires are the house's — outside its pocket.
+- **676** your wheel's muscle walks off: 'work' near a `owner==='player'` belted fan → `dead=true, belted=false, delete owner` → the belt rides as `carriedKind='belt'` — never touches the boards. A chocked wheel (`dead:true`, still belted) is fair meat — same as the pull — and the kicked chock lands as loot (`kickedWedges` + `mintWedgeDrops`), never swallowed. `graftTarget=null` rescan: the strip may have made substrate.
+- **677** your eye's glass walks off: `owner==='player'` lensed watcher → dead/glassless/nobody's → `carriedKind='lens'` — graft stock, not the floor pile the tear mints.
+- **678** the graft wears your face: after a muscle/glass strip the grafter re-queries `nearestGraft(mark,1.6,kind)` — the fresh kill is the site its goods seek — so your own housing rises under new hands where you left it, not a farther dead one. Existing `graft()` claims `owner:'under'` and signs 'work' under `grafter:${spawnRoom}`.
+- **679** the brass walks off: 'work' near your threaded line (`owner==='player' && valved!==false`) → `valved=false, dead=true, delete owner` — the PERMANENT kill a crimp never was (house pinches, under unscrews; `valved===false` blocks the line re-lay forever). A crimped line still wears the valve — `dead` is no shelter. Stone has no pocket for steam: no `carriedKind`, the brass folds to wire stock.
+- **680** e2e leg (`props.spec.ts`): seeds one of each armed surface → drives `ctx.stripWork(pos)` → 'coil'/'plate'/'belt'/'lens'/'throat' all return and leave honest corpses; under-owned wheels and far marks answer nothing.
+
+Traps: dispatch order is coil→plate→belt→lens→throat, first `near()` match wins — a mark mid-cluster answers whichever armed surface it names first. `stripWork` signs nothing itself — the conversion sign lands when `graft()` threads the stolen goods. The grafter only stoops while empty-handed and idle; a grafter carrying a claim ignores your fresh work until it settles.
+
+
 ## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
 
 - **652** the signature already existed: `stashTake`/`stashMark` sign `'work'` `by:'player'` when the lid fills (s528). What was missing was the reader — the last goods surface without a house answer.
