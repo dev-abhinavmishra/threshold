@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 681–683 — the stoves kept their stamp, the dials kept their ghosts & the hearth kept its irons (decals lane)
+\n\n## Sprint 684–686 — the cellars kept the stain, the whitewash kept its line & the tails dragged the dust (decals lane)
+
+- `wineStain` — dark spatter and tide rings under `wineBarrel`/`barrel`/`wineRack`/`wineBottles`.
+- `whitewashLine` — ghost band where a stopped paint job ended at waist height (`maintenance`/`unlit`/`!livedIn`, `pickWallSpot`).
+- `bellWire` — servant-bell wire runs stapled across ceiling boards (`maintenance`/`!livedIn`).
+- `kindling` — splinter chips and bark curls beside `fireplace`/`firePit`/`stove`/`wood`.
+- `matchBurn` — strike fans and spent matches beside `fireplace`/`mantelClock`/`candle`/`candelabra`.
+- `pressPlate` — ink films and chase shadows on `printer`/`printerRow`/`typewriter`/`writingDesk`/`catalogueDesk`/`linenPress`/`manglePress`.
+- `tailDrag` — fine wake lines along skirting in the dark rooms.
+- `chalkGame` — rubbed hopscotch grids on `isUnder` floors.
+- `sheetStand` — paper ghosts behind `pianoUpright`/`writingDesk`.
+
+Gates: tsc, lint, scoped vitest (sprints 684–686) green.\n\n## Sprint 681–683 — the stoves kept their stamp, the dials kept their ghosts & the hearth kept its irons (decals lane)
 
 - `ironStamp` — maker's plate, rivet heads, letter ghosts and flake rust on `stove`/`kitchenRange`/`stoveRange`/`masonryHeater`/`firePit`/`boilerDrum`/`boilerTank`.
 - `seatDust` — undisturbed dust film on 14 seat kinds (chair→wheelchair).
