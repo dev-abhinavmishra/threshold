@@ -4,6 +4,17 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 637–639 — the rails kept their smalls (service-hardware batch)
+
+- `rad-feed`/`rad-bypass`/`rad-bleed` plumbing under + beside
+  radiatorFin/radiatorTall props (~60%).
+- `towel-ring` + `towel-drop`, `robe-peg` + `robe-drop` beside
+  basinSink/washStand (~55%), skipped when a door sits in the span.
+- `glass-shelf` + `soap-dish` + `tooth-cup` over the same basins (~55%).
+- s634-636 dedup fix: baseboard outlets already existed (unnamed);
+  merged cord detail into that block instead of adding a second one.
+  ALWAYS grep for an existing feature before adding a look-alike.
+
 ## Sprint 634–636 — the openings wore their heads (molding batch)
 
 - `lintel-frieze` + `lintel-key` + `lintel-rosette` under the door
@@ -11,8 +22,8 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
   at ±0.26 there, not ±0.06).
 - `win-head`/`win-casing` trim + brass `curtain-rod` with `rod-finial`
   ends and 1–2 torn `rod-drape` drops over livedIn windows (~60%).
-- `outlet-plate` + `outlet-slot` + `cord-plug`/`flex-cord` low on
-  livedIn walls via `pickWallSpot`.
+- Existing baseboard outlets upgraded: named `outlet-plate`/`outlet-slot`
+  (now frameHardware-kept), ~45% carry a `cord-plug` + `flex-cord` drop.
 - New shared helper `placeOnWall(m, wall, off, y, proud)` — room-space
   placement for wall-mounted meshes (e/w auto-rotates y π/2, auto-pushes
   to frameHardware). Reuse it instead of hand-rolling per-wall math.
