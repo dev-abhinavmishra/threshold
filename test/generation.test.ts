@@ -6006,3 +6006,20 @@ describe('the sills kept the crossings (sprint 617-618)', () => {
     });
   }
 });
+
+describe('the veins ran the skirting (sprint 619-621)', () => {
+  for (const name of ['pipe-run', 'pipe-clamp', 'pipe-riser', 'pipe-valve'] as const) {
+    it(`rooms carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
