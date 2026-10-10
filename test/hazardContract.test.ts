@@ -544,7 +544,7 @@ describe('the house crimps your line (sprints 585-588)', () => {
     const crimp = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     expect(crimp).toContain("st.owner === 'player' && near(st.pos)");
     expect(crimp).toContain('s.dead = true');
-    expect(crimp).toContain("return 'crimp'");
+    expect(crimp).toContain("this.answerWork('crimp', x, z)");
     // and the re-open is free on your own throat
     const refit = gameSrc.slice(gameSrc.indexOf("case 'refitValve'"));
     expect(refit).toContain("st.owner === 'player' && st.valved !== false");
@@ -576,7 +576,7 @@ describe('the eye watches for you (sprints 589-593)', () => {
     // unthread — the camera was always the house's
     expect(baseSrc).toContain("'reclaim'");
     const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
-    expect(work).toContain("return 'reclaim'");
+    expect(work).toContain("this.answerWork('reclaim', x, z)");
     // aim+owner ride the checkpoint on eye records
     expect(gameSrc).toContain('aimBearing: w.aimBearing');
     expect(gameSrc).toContain('eyesAimed: this.hazard.watchers.filter');
@@ -652,12 +652,12 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
     // the house answers your wheel: 'work' near a live fitted fan is
     // the pull — beltless housing, belt on the boards
-    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | null");
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | 'lidHeld' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     // sprint 648 — 'work' near a claimed wheel pulls it whoever's
     // hands claim it: yours or the under's
     expect(pull).toContain("ff.owner !== undefined");
-    expect(pull).toContain("return 'pull'");
+    expect(pull).toContain("this.answerWork('pull', x, z)");
     expect(pull).toContain('this.droppedBelts.push');
     // a chocked house wheel re-engaging frees the wedge into his
     // pocket — confiscated like the felt, spillable like the plate
@@ -730,7 +730,7 @@ describe('your glass watches back (sprints 597-603)', () => {
     const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     // sprint 648 — same for the tear: any claimed socket answers
     expect(work).toContain("ww.owner !== undefined");
-    expect(work).toContain("return 'lensTear'");
+    expect(work).toContain("this.answerWork('lensTear', x, z)");
     expect(work).toContain('this.droppedLenses.push');
     // torn glass is tidy goods: the floorkeeper pockets it and spills
     // it going down, the under folds it into stock
@@ -1015,7 +1015,7 @@ describe('the under re-teeth the jaw (sprints 673-675)', () => {
     const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
     const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
     // fifth 'work' answer: foreign jaws get the pull, spring → pile
-    expect(gameSrc).toContain("return 'platePull'");
+    expect(gameSrc).toContain("this.answerWork('platePull', x, z)");
     expect(gameSrc).toContain('this.trapOwner.delete(pk)');
     expect(gameSrc).toContain('this.snappedTraps.add(pk)');
     expect(baseSrc).toContain("'platePull'");
@@ -1026,6 +1026,81 @@ describe('the under re-teeth the jaw (sprints 673-675)', () => {
     expect(gameSrc).toContain('this.setTraps.splice(si, 1)');
     expect(gameSrc).toContain('this.trapPos.delete(st.key)');
     expect(gameSrc).toContain('this.droppedSprings.push({ x: st.x, z: st.z })');
+  });
+});
+
+
+describe('the house keeps a tally (sprints 709-714)', () => {
+  it('every landed work answer strikes the site — a second strike files you', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // every 'work' answer the dispatch lands runs the tally — the
+    // strike is the answering, not the marking
+    for (const a of ['crimp', 'reclaim', 'pull', 'lensTear', 'platePull', 'lidSweep'])
+      expect(gameSrc).toContain(`this.answerWork('${a}', x, z)`);
+    const tally = gameSrc.slice(gameSrc.indexOf('strikeWorkSite(x: number'));
+    // unsigned/player-signed work is yours — a grafter's own sign
+    // files nothing against you (the under has its own tally)
+    expect(tally).toContain("ev.by !== 'player'");
+    expect(tally).toContain("ev.by.startsWith('eye:')");
+    // strike two names a repeat offender: every strike past the first
+    // writes a register line and counts itself for the epitaph
+    expect(tally).toContain('site.strikes += 1');
+    expect(tally).toContain('this.unpaidHeld += 1');
+    expect(tally).toContain('this.filedWork += 1');
+    expect(tally).toContain('the register keeps this floor');
+    // the streak cools like sign — six minutes unanswered is a fresh
+    // offense, and the ledger is short: twelve worked floors
+    expect(tally).toContain('this.clock.time - 360');
+    expect(tally).toContain('workSites.length > 12');
+    // the ledger rides the checkpoint like every other register book
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('workSites?:');
+    expect(storeSrc).toContain('filedWork?: number');
+    expect(gameSrc).toContain('workSites: this.workSites.length > 0');
+    expect(gameSrc).toContain('cp?.workSites ?? []');
+    // the ctx hook serves the patrol — uncooled twice-struck sites only
+    expect(baseSrc).toContain('filedFloors?:');
+    expect(gameSrc).toContain('s.strikes >= 2 && s.lastT >= cold');
+  });
+
+  it("a gripped lid blocks the sweep — the knee's ordering line", () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // the answer exists in the union
+    expect(baseSrc).toContain("| 'lidSweep' | 'lidHeld' | null");
+    // any grip holds the box — knee, rattle, bite are entity-agnostic,
+    // and the reach lands before the tip (the mark is still spent)
+    const sweep = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(sweep).toContain("if (spot.trappedBy) return 'lidHeld'");
+    expect(sweep.indexOf("return 'lidHeld'")).toBeLessThan(sweep.indexOf("answerWork('lidSweep'"));
+    // the warden reads the held answer out loud
+    expect(corridorSrc).toContain("restored === 'lidHeld'");
+    expect(corridorSrc).toContain('a knee already holds it shut');
+  });
+
+  it('the register reads the tally back — floors filed, books counted, patrol pulled', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const appSrc = readFileSync('src/ui/App.tsx', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // askReg names the floors it filed, like the lids it counts
+    expect(gameSrc).toContain('worked floor');
+    expect(gameSrc).toContain('workSites.filter((s) => s.strikes >= 2)');
+    // the books carry the count and the epitaph renders it
+    expect(storeSrc).toContain('filedWork?: number');
+    expect(gameSrc).toContain('filedWork: this.filedWork');
+    expect(appSrc).toContain('filedWork?: number');
+    expect(appSrc).toContain('the tally keeps its count');
+    // the patrol pulls a filed floor: ctx hook, per-strike dedupe,
+    // a stand over your worked spot — once per strike-count per site
+    expect(corridorSrc).toContain('this.ctx.filedFloors');
+    expect(corridorSrc).toContain('this.filedChecked.set(');
+    expect(corridorSrc).toContain("'filedSite'");
+    expect(corridorSrc).toContain('the floor the register named');
+    // a lid's own peep reads the grip holding it shut
+    expect(gameSrc).toContain('a knee holds it shut');
   });
 });
 
