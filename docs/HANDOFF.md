@@ -7752,3 +7752,70 @@ signs the work.
   `dazzleCued` — an eye that never drank has `dazzleT=-10`, so an
   ungated `now - dazzleT > 2.5` is true every frame and `settle = 0`
   stomped every plain watch (caught by the s285 settle specs).
+
+## Sprints 565–568 — the light testifies
+
+- **s565 the sign names the hand** — `evidence.by` stores the
+  signer's key; fresh-'work' reads now say WHO worked: 'grafter:N' →
+  '[stone fingers worked this dust]', 'eye:N' → '[a stare was worked
+  out of this spot — light held it]'. Both ankle and beam reads name
+  the hand.
+- **s566 your light confirms the description** — a FILED face
+  (`heldOwed>0`) moving on a dazzled eye's pinned bearing settles at
+  2.2× instead of 1.6× — walking into your own dazzle with a marked
+  face is the beam's real cost.
+- **s567 the dazzle's sign rings** — the s563 `signWork` now also
+  emits a positional 'machine' emit at the eye's mount: the stare's
+  report is a sound the house hears, not just dust to smell later.
+- **s568 the epitaph counts the drinks** — `watchers.everDazzled`
+  (persistent past the blink's episode reset) →
+  `BooksClosed.eyesDazzled` on both epitaphs: 'N eyes drank your
+  light before the end — the house remembers a beam that stares'.
+
+Contract: every use of the beam writes somewhere — reads write
+nothing (silent), but holding an eye signs the floor, rings its
+mount, and tallies the epitaph. Light is testimony.
+
+## Sprints 569–572 — the wire crosses the seam
+
+- **s569 slide the coil under** — crouched at a shut, non-false door
+  with a wireCoil, 'Slide the coil under Door N — 1 wireCoil' mints
+  on the seam lattice (lat −0.55, +1.05, p5). The action plants an
+  armed `planted:true` snare ~1.1m into `roomBeyondDoor(door)` —
+  the lure crosses your cover like the rolled lamp — signs 'work'
+  `by:'player'` at the far spot, and the slide's rasp is a real
+  sound (0.35·wantedPull 'item' emit at the far edge — quiet work,
+  not silent work).
+- **s570 the slipped wire works both ways** — a slid snare is an
+  ordinary armed wire: the walkers' trip loop staggers whoever hits
+  it, pushes `kind:'wire'` sign, and rings the snap — the warden
+  smells the kill and re-lays it as house wire (`claimed` → 'Cut
+  the seal'), all emergent, no code. New: the door-listen reads
+  your own wire — an armed planted snare within 3m of the leaf in
+  the far room reads '[fresh paper waits past the leaf — the wire
+  you slid]', lowest tier beside the stash's hum.
+- **s571 the fingers take the coil** — `Entity.takeCoil?(leaf)`:
+  a slid wire that crosses an ARMED seamReach never lands — the
+  reacher takes it into its carry (`carrying=max(carrying,1)`),
+  camps the leaf +22s, warns. The grafter's next graft on your
+  path is built of YOUR coil — the 'work' sign is deferred to the
+  graft it becomes.
+- **s572 hook the coil back** — ~4s after a slip, `lastSlip`
+  {doorId, snare, until} mints 'Hook the coil back — Door N' at
+  the slip's anchor: splices the snare (face off), returns the
+  wireCoil, and scrubs the fresh 'work' sign it pushed — the wire
+  never lay. The seam's un-plant, same convention as picking a
+  lure back up; after the rasp spends it's laid work like any wire.
+
+Contract: the seam sells AND delivers — wire you slide under lands
+armed on their side, answers your listen, staggers their walkers,
+and feeds the grafter's grafts if fingers were already under.
+Every un-plant is a window, not a refund: hook-back ~4s, lure
+pick-up while armed, wire pull while armed.
+
+Traps: `slip`-keyed verbs mint inside `addCrouchedDoorInteracts`
+(gated `hasWire`/`hasPebble` there); the action case lives in
+Game's interact switch — `InteractKind` union must carry BOTH
+'wireSlip' and 'hookBack' or tsc rejects the add + the case.
+`lastSlip.snare` keeps the hazard record so `removeSnare` takes
+its mesh face with it.

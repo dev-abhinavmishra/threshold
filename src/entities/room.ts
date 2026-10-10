@@ -1008,6 +1008,10 @@ export class HazardField {
    *  the warden's nose bothers to doubt sign planted near it. */
   evidence: { pos: import('../engine/math').Vec3; room: number;
     kind: 'wire' | 'line' | 'water' | 'fan' | 'wipe' | 'blind' | 'work'; t: number; readBy: string[];
+    /** sprint 565 — the sign names the hand: the signer's key
+     *  ('grafter:N', 'eye:N', ...) so reads can say WHO worked, not
+     *  just that work happened. */
+    by?: string;
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
 
   /** sprint 475 — a snare pos is free when no floor-band prop box
@@ -1052,7 +1056,11 @@ export class HazardField {
      *  last frame it drank, seconds drunk this episode, whether the
      *  work was signed, and whether the drink was announced. */
     dazzleBearing: number; dazzleT: number; dazzleAcc: number;
-    dazzleSigned: boolean; dazzleCued: boolean }[] = [];
+    dazzleSigned: boolean; dazzleCued: boolean;
+    /** sprint 568 — it drank at least once: the episode flags reset
+     *  on every blink, but the epitaph counts every eye the light
+     *  ever held. */
+    everDazzled: boolean }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
   /** sprint 560 — the beam's charge readout, per lamp position, on a
@@ -1117,7 +1125,7 @@ export class HazardField {
         phase0: hsh * 20,
         dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false, lampCued: false,
         dazzleBearing: NaN, dazzleT: -10, dazzleAcc: 0,
-        dazzleSigned: false, dazzleCued: false,
+        dazzleSigned: false, dazzleCued: false, everDazzled: false,
       });
     }
   }
@@ -1250,12 +1258,17 @@ export class HazardField {
           w.dazzleAcc += dt;
           if (!w.dazzleCued) {
             w.dazzleCued = true;
+            w.everDazzled = true;
             ctx.cue('steam-hiss', w.pos, '[the eye drinks your light — it stares where you stood]', { severity: 'warn' });
           }
           if (!w.dazzleSigned && w.dazzleAcc > 4) {
             w.dazzleSigned = true;
             ctx.signWork?.(w.pos, `eye:${w.room}`);
             ctx.cue('steam-hiss', w.pos, '[the eye\'s stare was worked — the floor keeps the sign]', { severity: 'info' });
+            // sprint 567 — the dazzle's sign rings the eye's spot too:
+            // the stare's report is a real sound the house can hear,
+            // not just dust a hunter might smell later
+            ctx.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.4, category: 'machine', caption: '' });
           }
         } else if (w.dazzleCued && ctx.now - w.dazzleT > 2.5) {
           // sprint 562 — the blink tells: the sweep coming back online
@@ -1279,7 +1292,11 @@ export class HazardField {
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       if (Math.abs(diff) > w.half) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
-      w.settle = wMoving ? w.settle + dt * (marked ? 1.6 : 1) : Math.max(0, w.settle - dt * 2);
+      // sprint 566 — the light testifies: on a FILED face a beam-held
+      // stare settles ~40% faster — your own light confirms the
+      // register's description when you stand in the dazzle's bearing
+      const lit = Number.isFinite(w.dazzleBearing);
+      w.settle = wMoving ? w.settle + dt * (marked ? (lit ? 2.2 : 1.6) : 1) : Math.max(0, w.settle - dt * 2);
       if (w.settle > 0.9 && ctx.now - w.lastReport > 5) {
         w.lastReport = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye settles on you — it has your position]', { severity: 'warn' });
@@ -1326,9 +1343,16 @@ export class HazardField {
       const aimed = d <= 9 && (ctx.beamCovers?.(ev.pos, 9, 0.75) ?? false);
       if (d > 2.6 && !aimed) continue;
       ev.readBy.push('player');
-      ctx.cue('floor-creak', ev.pos, aimed
-        ? '[the beam finds a hand in the dust — worked here, recently]'
-        : '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
+      // sprint 565 — the sign names the hand: a read says WHO worked
+      // when the signer left its key, not just that work happened
+      const hand = ev.by?.split(':')[0];
+      ctx.cue('floor-creak', ev.pos, hand === 'grafter'
+        ? '[stone fingers worked this dust — the under was here, recently]'
+        : hand === 'eye'
+          ? '[a stare was worked out of this spot — light held it, recently]'
+          : aimed
+            ? '[the beam finds a hand in the dust — worked here, recently]'
+            : '[the dust keeps a hand — worked here, recently]', { severity: 'info' });
     }
     // sprint 559 — the beam reads what the ankle can't: hunter-sign
     // (fresh wire/line/fan kills) and wiped floors are invisible to a

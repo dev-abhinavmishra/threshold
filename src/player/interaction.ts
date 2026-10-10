@@ -11,7 +11,7 @@ export type InteractKind =
   | 'door' | 'peek' | 'listen' | 'stoop' | 'slip' | 'call' | 'stampSeam' | 'feedSeam' | 'brace' | 'wedge' | 'unwedge' | 'wireDoor' | 'unwireDoor' | 'drawer' | 'socket' | 'hide' | 'exitHide' | 'vend' | 'claim' | 'register' | 'roster' | 'complaint' | 'workOrder' | 'crewBoard' | 'claimRegister' | 'watchSheet' | 'audit' | 'settle' | 'square' | 'docket' | 'counterClaim' | 'returnSlip' | 'affidavit' | 'tallyDrawer' | 'registerDrawer' | 'misfile' | 'wanted' | 'wantedTear'
   | 'item' | 'lore' | 'shop' | 'puzzle' | 'seal' | 'lift' | 'houseLine'
   | 'underEntrance' | 'underExit' | 'relay' | 'board' | 'isolator' | 'drain'
-  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'pouchDrop' | 'alarmDrop' | 'coilDrop' | 'keyring' | 'askTally' | 'baitFloor' | 'baitWrap' | 'baitWedge' | 'dragPile' | 'spillTake' | 'weighTake' | 'stashTake' | 'recoverStash' | 'markedStash' | 'peepLid' | 'setLamp' | 'lampDrop' | 'crankLamp' | 'douseLamp' | 'bleedLamp' | 'breakLamp' | 'rollLamp';
+  | 'pylon' | 'catalogue' | 'card' | 'alarm' | 'merchant' | 'coffin' | 'piano' | 'tv' | 'tvoff' | 'clock' | 'valve' | 'hearth' | 'douse' | 'phone' | 'offHook' | 'hangUp' | 'dial' | 'trap' | 'snip' | 'bleed' | 'coax' | 'scrub' | 'chock' | 'unchock' | 'forge' | 'pick' | 'strip' | 'washer' | 'basket' | 'printer' | 'typewriter' | 'window' | 'cooler' | 'seat' | 'toll' | 'tape' | 'untape' | 'pry' | 'cutWord' | 'cutRepost' | 'stripCheck' | 'fix' | 'ask' | 'askReg' | 'till' | 'bell' | 'purse' | 'fence' | 'restock' | 'book' | 'seizedClaim' | 'seizedCut' | 'buyback' | 'wedgeDrop' | 'wrapDrop' | 'pouchDrop' | 'alarmDrop' | 'coilDrop' | 'keyring' | 'askTally' | 'baitFloor' | 'baitWrap' | 'baitWedge' | 'dragPile' | 'spillTake' | 'weighTake' | 'stashTake' | 'recoverStash' | 'markedStash' | 'peepLid' | 'setLamp' | 'lampDrop' | 'crankLamp' | 'douseLamp' | 'bleedLamp' | 'breakLamp' | 'rollLamp' | 'wireSlip' | 'hookBack';
 
 export interface Interactable {
   kind: InteractKind;
@@ -310,6 +310,16 @@ export function addCrouchedDoorInteracts(sys: InteractionSystem, hasChock = fals
           kind: 'call', id: `call-${it.id}`,
           pos: { x: it.pos.x + latX * 0.28 + nX * side * 0.25, y: it.pos.y + 1.05, z: it.pos.z + latZ * 0.28 + nZ * side * 0.25 },
           prompt: `Call through the crack — Door ${d.label}`, holdTime: 1.2,
+          data: d, enabled: true, priority: 5,
+        });
+        // sprint 569 — the wire crosses the seam too: slide the coil
+        // under the leaf and it arms ~1.1m into the far room — a wired
+        // floor you never opened. A hand's-width wider on the slip's
+        // flank so the two slips split on aim, not on reach.
+        if (hasWire) sys.add({
+          kind: 'wireSlip', id: `wireSlip-${it.id}`,
+          pos: { x: it.pos.x - latX * 0.55 + nX * side * 0.25, y: it.pos.y + 1.05, z: it.pos.z - latZ * 0.55 + nZ * side * 0.25 },
+          prompt: `Slide the coil under Door ${d.label} — 1 wireCoil`, holdTime: 1.1,
           data: d, enabled: true, priority: 5,
         });
       }

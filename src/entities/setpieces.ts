@@ -791,6 +791,18 @@ export class Grafter extends Entity {
     }
   }
 
+  /** sprint 571 — wire fed to the hand is graft stock: the coil you
+   *  slid under a camped leaf goes straight into its carry — the next
+   *  graft on your path is built of YOUR coil. */
+  override takeCoil(leaf: Vec3): void {
+    this.carrying = Math.max(this.carrying, 1);
+    this.target = v3(leaf.x, 0, leaf.z);
+    this.roamT = 0;
+    this.crackCampUntil = Math.max(this.crackCampUntil, this.ctx.now + 22);
+    this.ctx.cue('grafter-grind', this.pos,
+      '[the fingers take your coil — stone already knows where to lay it]', { severity: 'warn' });
+  }
+
   /** A carried coil is lost work — it goes down, the splice spills
    *  unlaid at its feet. Dead wire again: strippable by the next
    *  scavenger — or by this one once it rises. */

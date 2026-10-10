@@ -1208,7 +1208,7 @@ export class Game {
           ?? this.route?.branchRooms.find((r) => pointInRoom(r, pos.x, pos.z))?.index
           ?? this.currentRoom;
         this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-          t: this.clock.time, readBy: [signerKey] });
+          t: this.clock.time, readBy: [signerKey], by: signerKey });
       },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
@@ -1992,7 +1992,7 @@ export class Game {
     // re-mint the wire silently (the mark was written when it was laid).
     if (planterKey) {
       this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-        t: this.clock.time, readBy: [planterKey] });
+        t: this.clock.time, readBy: [planterKey], by: planterKey });
     }
     snare.mesh = this.buildSnareProp(pos, room);
   }
@@ -2193,6 +2193,18 @@ export class Game {
       return { sfx: 'floor-creak', sev: strained ? 'warn' as const : 'info' as const,
         text: strained ? '[hands work your wire beyond — the bind strains]'
           : '[your wire still holds — nothing else moves]' };
+    }
+    // sprint 570 — and the seam reads your own wire: a coil you slid
+    // under rustles its fresh paper just past the leaf — your work
+    // answers the ear the way your bind and your clock do.
+    {
+      const wired = this.hazard.snares.find((hz) =>
+        hz.planted && hz.armed && hz.room === target.index
+          && Math.hypot(hz.pos.x - door.pos.x, hz.pos.z - door.pos.z) < 3);
+      if (wired) {
+        return { sfx: 'floor-creak', sev: 'info' as const,
+          text: '[fresh paper waits past the leaf — the wire you slid]' };
+      }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
     // you the lid still holds your take before you open the door —
@@ -3294,6 +3306,25 @@ export class Game {
           pos: { x: it.pos.x + nX * side * 0.55 - latX * 0.2, y: it.pos.y + 0.5, z: it.pos.z + nZ * side * 0.55 - latZ * 0.2 },
           prompt: `Slip a coin under Door ${d.label} — 1 imprint`,
           holdTime: 0.35, enabled: true, priority: 5, data: d,
+        });
+      }
+    }
+    // sprint 572 — a breath to take it back: while the slide's rasp
+    // hangs (~4s), 'Hook the coil back' mints at the leaf you wired —
+    // the seam's un-plant, same convention as picking a lure back up.
+    if (this.player.crouching && this.lastSlip && this.clock.time <= this.lastSlip.until) {
+      const ls = this.lastSlip;
+      const it0 = this.interaction.interactables.find((i) => i.kind === 'door' && (i.data as Door | undefined)?.id === ls.doorId);
+      const d = it0?.data as Door | undefined;
+      if (d) {
+        const nX = Math.sin(d.yaw), nZ = Math.cos(d.yaw);
+        const latX = Math.cos(d.yaw), latZ = -Math.sin(d.yaw);
+        const side = Math.sign((this.player.pos.x - it0!.pos.x) * nX + (this.player.pos.z - it0!.pos.z) * nZ) || 1;
+        this.interaction.add({
+          kind: 'hookBack', id: `hookBack-${d.id}`,
+          pos: { x: it0!.pos.x - latX * 0.55 + nX * side * 0.25, y: it0!.pos.y + 1.05, z: it0!.pos.z - latZ * 0.55 + nZ * side * 0.25 },
+          prompt: `Hook the coil back — Door ${d.label}`, holdTime: 0.9,
+          data: d, enabled: true, priority: 5,
         });
       }
     }
@@ -4462,6 +4493,68 @@ export class Game {
             break;
           }
         }
+        return;
+      }
+      case 'wireSlip': {
+        // sprint 569 — the wire crosses the seam: the coil slides under
+        // the leaf and arms ~1.1m into the far room — a wired floor you
+        // never opened. A planted snare (yours: 'Pull the wire free' /
+        // 'Gather the wire' reclaim it), and it signs 'work' the way
+        // every fresh wire does — hunters smell the floor you laid.
+        const wi = this.inventory.findIndex((i) => i.id === 'wireCoil' && i.count > 0);
+        if (wi < 0) { this.cue('door-locked', it.pos, '[your pack holds no coil]', 'warn'); return; }
+        const door = it.data as Door;
+        const far = this.roomBeyondDoor(door);
+        if (!far) { this.cue('door-locked', it.pos, '[dead dark — nothing behind it]', 'warn'); return; }
+        const nX = Math.sin(door.yaw), nZ = Math.cos(door.yaw);
+        const side = Math.sign((this.player.pos.x - door.pos.x) * nX + (this.player.pos.z - door.pos.z) * nZ) || 1;
+        const pos = v3(door.pos.x - nX * side * 1.1, 0, door.pos.z - nZ * side * 1.1);
+        // sprint 571 — a hand already working this leaf takes the coil
+        // mid-slide: wire fed to the camp is graft stock, not a plant.
+        if (this.seamReach?.doorId === door.id && this.clock.time <= this.seamReach.lingerUntil) {
+          this.inventory[wi].count--;
+          this.seamReach.reacher.takeCoil?.(door.pos);
+          this.cue('door-locked', door.pos, '[the fingers catch the coil as it slides — it never lands]', 'warn');
+          this.seamReach = null;
+          return;
+        }
+        this.inventory[wi].count--;
+        const snare = { pos, room: far.index, armed: true, planted: true,
+          mesh: undefined as THREE.Object3D | undefined };
+        this.hazard.snares.push(snare);
+        snare.mesh = this.buildSnareProp(pos, far.index);
+        // sprint 572 — a breath to take it back: while the slide's rasp
+        // still hangs you can hook the coil back under. After that the
+        // wire is laid work like any other.
+        this.lastSlip = { doorId: door.id, snare, until: this.clock.time + 4 };
+        this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room: far.index, kind: 'work',
+          t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('trap-click', pos, '[the coil unwinds under the leaf — wire on their side]');
+        // the slide's rasp is a real sound at the leaf's far edge —
+        // quiet work, not silent work
+        this.sound.emit({ x: pos.x, y: 0.2, z: pos.z, intensity: 0.35 * this.wantedPull, category: 'item', caption: '' });
+        return;
+      }
+      case 'hookBack': {
+        // sprint 572 — hook the coil back under while the rasp hangs:
+        // the seam's un-plant. Splices the slid wire, returns the
+        // wireCoil, and scrubs the fresh sign it pushed — the work
+        // never happened because the wire never lay.
+        const ls = this.lastSlip;
+        if (!ls || this.clock.time > ls.until) {
+          this.cue('door-locked', it.pos, '[the rasp is spent — the wire lies where it fell]', 'warn');
+          return;
+        }
+        this.lastSlip = null;
+        this.removeSnare(ls.snare);
+        const ei = this.hazard.evidence.findIndex((ev) => ev.kind === 'work'
+          && !ev.old && Math.hypot(ev.pos.x - ls.snare.pos.x, ev.pos.z - ls.snare.pos.z) < 0.4
+          && ev.readBy.includes('player'));
+        if (ei >= 0) this.hazard.evidence.splice(ei, 1);
+        const stack = this.inventory.find((i) => i.id === 'wireCoil');
+        if (stack) stack.count++;
+        else this.inventory.push({ id: 'wireCoil', count: 1, marked: [] } as typeof this.inventory[number]);
+        this.cue('door-locked', it.pos, '[you hook the coil back under — the wire never lay]');
         return;
       }
       case 'call': {
@@ -7348,6 +7441,8 @@ export class Game {
             lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
             // sprint 556 — and the litter the under will make wire of
             shellsLeft: this.litLamps.filter((l) => l.batt <= 0).length || undefined,
+            // sprint 568 — and the eyes your beam held
+            eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7401,6 +7496,8 @@ export class Game {
             .reduce((a, i) => a + i.count, 0), 0),
         // sprint 544 — the lamps still burning where you left them
         lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
+        // sprint 568 — the eyes your beam held along the way
+        eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -8426,6 +8523,10 @@ export class Game {
    *  s474 — the hand lingers a breath after the warn so the seam can
    *  offer the stamp. */
   private seamReach: { key: string; doorId: string; door: Door; t: number; lingerUntil: number; reacher: Entity } | null = null;
+  /** sprint 572 — the last coil slid under a leaf: a ~4s un-plant
+   *  window ('Hook the coil back') before it's laid work like any
+   *  other wire. */
+  private lastSlip: { doorId: string; snare: { pos: Vec3; room: number; armed: boolean; planted?: boolean; mesh?: THREE.Object3D }; until: number } | null = null;
   /** sprint 474 — doors whose fingers you stamped off, until they
    *  reach under again (a stamp buys ~8s of leaf, not the room). */
   private seamReachCd = new Map<string, number>();

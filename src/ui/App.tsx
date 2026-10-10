@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number; eyesDazzled?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -191,6 +191,10 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
   const shells = books.shellsLeft ?? 0;
   if (shells > 0) lines.push(
     `${shells === 1 ? 'a dead lamp lies' : `${shells} dead lamps lie`} where ${shells === 1 ? 'it' : 'they'} burned out — the under will make wire of ${shells === 1 ? 'it' : 'them'}`);
+  // sprint 568 — and the light's toll: every eye your beam held
+  const dazzled = books.eyesDazzled ?? 0;
+  if (dazzled > 0) lines.push(
+    `${dazzled === 1 ? 'one eye drank' : `${dazzled} eyes drank`} your light before the end — the house remembers a beam that stares`);
   return lines;
 }
 
