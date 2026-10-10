@@ -162,7 +162,14 @@ export interface BooksClosed {
   trapsSet?: number;
   /** sprint 583 — steam lines still threaded with YOUR valve */
   ventsOwned?: number;
-  /** sprint 593 — eyes still aimed your way at the end */
+  /** sprint 595 — wheels still turning on YOUR belt */
+  wheelsOwned?: number;
+  /** sprint 602 — eyes still panning on YOUR lens */
+  eyesOwned?: number;
+  /** sprint 650 — wheels and eyes the under grafted back awake */
+  graftedWork?: number;
+  lidsSwept?: number;
+  /** sprint 589b — eyes still aimed your way at the end */
   eyesAimed?: number;
 }
 
@@ -221,9 +228,17 @@ export interface CheckpointSave {
     x: number; z: number; dead?: boolean; filed?: boolean;
     /** sprint 581 — steam vents carry their throat + ownership: a
      *  stripped valve (valved:false) stays stripped, a player-refit
-     *  line stays yours. sprint 592 — eye records carry owner +
-     *  aimBearing for 'Aim the eye'. */
-    valved?: boolean; owner?: 'player'; aimBearing?: number }[];
+     *  line stays yours. sprint 646 — 'under' too: a wheel or eye the
+     *  under grafted stays grafted through the checkpoint. */
+    valved?: boolean; owner?: 'player' | 'under';
+    /** sprint 593 — fans carry their muscle + the wedge: a stripped
+     *  wheel (belted:false) stays stripped, a chocked wheel keeps its
+     *  jam, a refit wheel stays yours. */
+    belted?: boolean; chocked?: boolean;
+    /** sprint 597 — eyes carry their glass: a pried socket
+     *  (lensed:false) stays pried, a seated eye stays yours (owner is
+     *  shared with steam/fan records). */
+    lensed?: boolean; aimBearing?: number }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload
@@ -256,6 +271,12 @@ export interface CheckpointSave {
   // sprint 577 — sprung plates set out, spilled, or dropped loose:
   // litter waits as gatherable goods like the kicked chock
   droppedSprings?: { x: number; z: number }[];
+  // sprint 593 — belts pulled off your wheels or set out lie as
+  // gatherable goods like the sprung plate
+  droppedBelts?: { x: number; z: number }[];
+  // sprint 601 — lenses torn off your eyes or set out lie as
+  // gatherable goods like the pulled belt
+  droppedLenses?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];

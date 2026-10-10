@@ -720,6 +720,219 @@ test('the wheel chews — fan warns, bites a stander, and dies on the chock', as
   expect(errors).toEqual([]);
 });
 
+test('the belt is goods — the strip signs, the refit answers, the house pulls', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's'); // live fans at 39/48/60/...
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { fans: { pos: { x: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; owner?: 'player'; chocked?: boolean }[];
+        evidence: { kind: string; room: number; by?: string }[] };
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+      entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
+      droppedBelts: { x: number; z: number }[];
+    };
+    const fan = ga.hazard.fans.find((f) => !f.dead);
+    if (!fan) return { stage: 'no-fan' } as const;
+    const froom = g.route.rooms[fan.room];
+    const inX = froom.origin.x - fan.pos.x, inZ = froom.origin.z - fan.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    // stand near the blades, feed the chock — the wheel jams
+    g.player.teleport(fan.pos.x + (inX / inL) * 1.8, 0, fan.pos.z + (inZ / inL) * 1.8);
+    ga.currentRoom = fan.room;
+    ga.inventory.push({ id: 'doorChock', count: 1 });
+    for (let f = 0; f < 12; f++) g.frame();
+    const chockIt = g.interaction.interactables.find((i) => i.kind === 'chock');
+    const sys = g.interaction as unknown as {
+      focus: (eye: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+      focused: typeof g.interaction.focused;
+      interactables: typeof g.interaction.interactables;
+    };
+    const origFocus = sys.focus.bind(sys);
+    const pinTo = (id: string) => {
+      sys.focus = (eye, look, pos) => {
+        const here = sys.interactables.find((i) => i.id === id);
+        const r = here ?? origFocus(eye, look, pos);
+        sys.focused = r ?? null;
+        return r;
+      };
+    };
+    if (chockIt) {
+      pinTo(chockIt.id);
+      for (let f = 0; f < 80 && !fan.dead; f++) { if (g.interaction.focused?.id === chockIt.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const jammed = fan.dead && fan.chocked === true;
+    for (let f = 0; f < 12; f++) g.frame();
+    // the still wheel offers the strip
+    const strip = g.interaction.interactables.find((i) => i.kind === 'workBelt');
+    const stripPrompt = strip?.prompt ?? '';
+    const belts0 = (ga.inventory.find((i) => i.id === 'fanBelt')?.count) ?? 0;
+    if (strip) {
+      pinTo(strip.id);
+      for (let f = 0; f < 120 && fan.belted !== false; f++) { if (g.interaction.focused?.id === strip.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const stripped = fan.belted === false && fan.dead;
+    const beltGot = (ga.inventory.find((i) => i.id === 'fanBelt')?.count ?? 0) > belts0;
+    const chockBack = fan.chocked === false
+      && (ga.inventory.find((i) => i.id === 'doorChock')?.count ?? 0) > 0;
+    const signed = ga.hazard.evidence.some((e) => e.kind === 'work'
+      && e.by === 'player' && e.room === fan.room);
+    // a beltless housing is outside the house's re-engage
+    const rearmDead = ga.entityCtx().rearmHazard?.('fan', fan.pos.x, fan.pos.z);
+    for (let f = 0; f < 12; f++) g.frame();
+    // the stripped housing offers the refit — your belt, your wheel
+    const refit = g.interaction.interactables.find((i) => i.kind === 'refitBelt');
+    const refitPrompt = refit?.prompt ?? '';
+    if (refit) {
+      pinTo(refit.id);
+      for (let f = 0; f < 120 && fan.dead; f++) { if (g.interaction.focused?.id === refit.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    sys.focus = origFocus;
+    const owned = fan.owner === 'player' && !fan.dead && fan.belted !== false;
+    // jurisdiction: the house can't re-engage your live wheel — and a
+    // 'work' mark near it gets the pull instead
+    const rearmMine = ga.entityCtx().rearmHazard?.('fan', fan.pos.x, fan.pos.z);
+    const pull = ga.entityCtx().rearmHazard?.('work', fan.pos.x, fan.pos.z);
+    const pulled = fan.belted === false && fan.dead && fan.owner === undefined;
+    const beltOnBoards = ga.droppedBelts.length > 0;
+    return { stage: 'done', jammed, stripPrompt, stripped, beltGot, chockBack, signed,
+      rearmDead, refitPrompt, owned, rearmMine, pull, pulled, beltOnBoards } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.jammed, JSON.stringify(result)).toBe(true);
+  expect(result.stripPrompt, JSON.stringify(result)).toMatch(/Work the belt off/);
+  expect(result.stripped, JSON.stringify(result)).toBe(true);
+  expect(result.beltGot, JSON.stringify(result)).toBe(true);
+  expect(result.chockBack, JSON.stringify(result)).toBe(true);
+  expect(result.signed, JSON.stringify(result)).toBe(true);
+  expect(result.rearmDead, JSON.stringify(result)).toBeNull();
+  expect(result.refitPrompt, JSON.stringify(result)).toMatch(/Fit the belt back/);
+  expect(result.owned, JSON.stringify(result)).toBe(true);
+  expect(result.rearmMine, JSON.stringify(result)).toBeNull();
+  expect(result.pull, JSON.stringify(result)).toBe('pull');
+  expect(result.pulled, JSON.stringify(result)).toBe(true);
+  expect(result.beltOnBoards, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the glass is goods — the pry signs, the seat answers, the house tears', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      currentRoom: number;
+      hazard: { watchers: { pos: { x: number; z: number }; room: number; dead: boolean;
+          lensed?: boolean; owner?: 'player'; lensHoldUntil?: number }[];
+        evidence: { kind: string; room: number; by?: string }[] };
+      player: { health: number };
+      inventory: { id: string; count: number }[];
+      entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
+      droppedLenses: { x: number; z: number }[];
+    };
+    const eye = ga.hazard.watchers.find((w) => !w.dead
+      && g.route.rooms[w.room] && !g.route.rooms[w.room].darkRoom);
+    if (!eye) return { stage: 'no-eye' } as const;
+    const wroom = g.route.rooms[eye.room];
+    const inX = wroom.origin.x - eye.pos.x, inZ = wroom.origin.z - eye.pos.z;
+    const inL = Math.hypot(inX, inZ) || 1;
+    // stand under the eye, feed the felt — it goes blind
+    g.player.teleport(eye.pos.x + (inX / inL) * 1.6, 0, eye.pos.z + (inZ / inL) * 1.6);
+    ga.currentRoom = eye.room;
+    ga.inventory.push({ id: 'feltWrap', count: 1 });
+    const sys = g.interaction as unknown as {
+      focus: (eyeP: { x: number; y: number; z: number }, look: { x: number; y: number; z: number }, pos: { x: number; y: number; z: number }) => typeof g.interaction.focused;
+      focused: typeof g.interaction.focused;
+      interactables: typeof g.interaction.interactables;
+    };
+    const origFocus = sys.focus.bind(sys);
+    const pinTo = (id: string) => {
+      sys.focus = (eyeP, look, pos) => {
+        const here = sys.interactables.find((i) => i.id === id);
+        const r = here ?? origFocus(eyeP, look, pos);
+        sys.focused = r ?? null;
+        return r;
+      };
+    };
+    for (let f = 0; f < 12; f++) g.frame();
+    const tapeIt = g.interaction.interactables.find((i) => i.kind === 'tape');
+    if (tapeIt) {
+      pinTo(tapeIt.id);
+      for (let f = 0; f < 100 && !eye.dead; f++) { if (g.interaction.focused?.id === tapeIt.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const blinded = eye.dead;
+    for (let f = 0; f < 12; f++) g.frame();
+    // the blind eye offers the pry
+    const pry = g.interaction.interactables.find((i) => i.kind === 'pryLens');
+    const pryPrompt = pry?.prompt ?? '';
+    const lenses0 = (ga.inventory.find((i) => i.id === 'eyeLens')?.count) ?? 0;
+    if (pry) {
+      pinTo(pry.id);
+      for (let f = 0; f < 140 && eye.lensed !== false; f++) { if (g.interaction.focused?.id === pry.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    const pried = eye.lensed === false && eye.dead;
+    const lensGot = (ga.inventory.find((i) => i.id === 'eyeLens')?.count ?? 0) > lenses0;
+    const wrapBack = (ga.inventory.find((i) => i.id === 'feltWrap')?.count ?? 0) > 0;
+    const signed = ga.hazard.evidence.some((e) => e.kind === 'work'
+      && e.by === 'player' && e.room === eye.room);
+    // the empty socket is outside the house's wake — felt-stay-dead,
+    // and the pry already handed your felt back so there's nothing to strip
+    const rearmDead = ga.entityCtx().rearmHazard?.('blind', eye.pos.x, eye.pos.z);
+    for (let f = 0; f < 12; f++) g.frame();
+    // the pried socket offers the seat — your glass, your eye
+    const seat = g.interaction.interactables.find((i) => i.kind === 'seatLens');
+    const seatPrompt = seat?.prompt ?? '';
+    if (seat) {
+      pinTo(seat.id);
+      for (let f = 0; f < 120 && eye.dead; f++) { if (g.interaction.focused?.id === seat.id) g.keys.add('KeyE'); g.frame(); }
+      g.keys.delete('KeyE');
+    }
+    sys.focus = origFocus;
+    const owned = eye.owner === 'player' && !eye.dead && eye.lensed !== false;
+    // jurisdiction: the house can't wake your eye — a 'work' mark near
+    // it gets the tear instead
+    const rearmMine = ga.entityCtx().rearmHazard?.('blind', eye.pos.x, eye.pos.z);
+    const tear = ga.entityCtx().rearmHazard?.('work', eye.pos.x, eye.pos.z);
+    const torn = eye.lensed === false && eye.dead && eye.owner === undefined;
+    const lensOnBoards = ga.droppedLenses.length > 0;
+    return { stage: 'done', blinded, pryPrompt, pried, lensGot, wrapBack, signed,
+      rearmDead, seatPrompt, owned, rearmMine, tear, torn, lensOnBoards } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  expect(result.blinded, JSON.stringify(result)).toBe(true);
+  expect(result.pryPrompt, JSON.stringify(result)).toMatch(/Pry the lens out/);
+  expect(result.pried, JSON.stringify(result)).toBe(true);
+  expect(result.lensGot, JSON.stringify(result)).toBe(true);
+  expect(result.wrapBack, JSON.stringify(result)).toBe(true);
+  expect(result.signed, JSON.stringify(result)).toBe(true);
+  expect(result.rearmDead, JSON.stringify(result)).toBeNull();
+  expect(result.seatPrompt, JSON.stringify(result)).toMatch(/Seat the lens/);
+  expect(result.owned, JSON.stringify(result)).toBe(true);
+  expect(result.rearmMine, JSON.stringify(result)).toBeNull();
+  expect(result.tear, JSON.stringify(result)).toBe('lensTear');
+  expect(result.torn, JSON.stringify(result)).toBe(true);
+  expect(result.lensOnBoards, JSON.stringify(result)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('the scarred latch — a drawer somebody else already coaxed', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -1107,5 +1320,152 @@ test('dial the far line — the aimed pull', async ({ page }) => {
   expect(result.callDied, 'lifting the ringing phone kills the paid call').toBe(true);
   expect(result.ringStopped, 'the ring stops once answered').toBe(true);
   expect(result.refused, 'no live phones refuses free').toBe(true);
+  expect(errors).toEqual([]);
+});
+
+// sprint 646 — the under's grafts: a carried belt/lens re-threads dead
+// work against you. Driven through the same ctx hooks the grafter calls.
+test('the under grafts back — the wheel and the socket answer a third jurisdiction', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      hazard: {
+        fans: { pos: { x: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; owner?: 'player' | 'under' }[];
+        watchers: { pos: { x: number; z: number }; room: number; dead: boolean;
+          lensed?: boolean; owner?: 'player' | 'under' }[];
+        evidence: { kind: string; by?: string }[];
+      };
+      droppedBelts: { x: number; z: number }[];
+      entityCtx: () => {
+        nearestGraft?: (x: number, z: number, maxD: number, kind?: 'wheel' | 'socket')
+          => { x: number; z: number; kind: 'wheel' | 'socket' } | null;
+        graft?: (x: number, z: number, kind: 'wheel' | 'socket', byKey: string) => boolean;
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+      mintBeltDrops: () => void;
+    };
+    const ctx = ga.entityCtx();
+    // a stripped housing (belted:false) is the wheel substrate;
+    // a pried socket (lensed:false) is the eye substrate.
+    const wheel = ga.hazard.fans.find((f) => g.route.rooms[f.room]);
+    if (!wheel) return { stage: 'no-fan' } as const;
+    wheel.dead = true;
+    wheel.belted = false;
+    const socket = ga.hazard.watchers.find((w) => g.route.rooms[w.room]
+      && !g.route.rooms[w.room].darkRoom);
+    if (!socket) return { stage: 'no-eye' } as const;
+    socket.dead = true;
+    socket.lensed = false;
+    const evBefore = ga.hazard.evidence.length;
+    // the graft-seek finds each substrate under its own kind only
+    const wheelSite = ctx.nearestGraft?.(wheel.pos.x, wheel.pos.z, 30, 'wheel');
+    const socketSite = ctx.nearestGraft?.(socket.pos.x, socket.pos.z, 30, 'socket');
+    const wrongKind = ctx.nearestGraft?.(wheel.pos.x, wheel.pos.z, 30, 'socket');
+    const wrongKind2 = ctx.nearestGraft?.(socket.pos.x, socket.pos.z, 30, 'wheel');
+    // and the graft itself claims them for the under
+    const graftedWheel = ctx.graft?.(wheel.pos.x, wheel.pos.z, 'wheel', 'grafter:0');
+    const graftedSocket = ctx.graft?.(socket.pos.x, socket.pos.z, 'socket', 'grafter:0');
+    const graftSign = ga.hazard.evidence.slice(evBefore)
+      .every((e) => e.kind === 'work' && e.by === 'grafter:0');
+    // the house can't re-engage foreign work; 'work' near it pulls it back
+    const wheelOwner = wheel.owner, socketOwner = socket.owner;
+    const wheelLive = !wheel.dead && wheel.belted !== false;
+    const socketLive = !socket.dead && socket.lensed !== false;
+    const houseRearm = ctx.rearmHazard?.('fan', wheel.pos.x, wheel.pos.z) ?? 'x';
+    const pulled = ctx.rearmHazard?.('work', wheel.pos.x, wheel.pos.z);
+    const torn = ctx.rearmHazard?.('work', socket.pos.x, socket.pos.z);
+    return {
+      stage: 'done',
+      wheelSite: wheelSite?.kind, socketSite: socketSite?.kind,
+      wrongKind: wrongKind?.kind ?? null, wrongKind2: wrongKind2?.kind ?? null,
+      graftedWheel, graftedSocket, graftSign,
+      wheelOwner, socketOwner, wheelLive, socketLive,
+      houseRearm, pulled, torn,
+      beltDropped: ga.droppedBelts.length > 0,
+    } as const;
+  });
+
+  if (result.stage !== 'done') { expect(result.stage).toBe('done'); return; }
+  expect(result.wheelSite, 'a muscle-less housing is the belt substrate').toBe('wheel');
+  expect(result.socketSite, 'a pried socket is the lens substrate').toBe('socket');
+  expect(result.wrongKind, 'a belt cannot graft a socket').not.toBe('socket');
+  expect(result.wrongKind2, 'a lens cannot graft a wheel').not.toBe('wheel');
+  expect(result.graftedWheel, 'the wheel graft takes').toBe(true);
+  expect(result.graftedSocket, 'the socket graft takes').toBe(true);
+  expect(result.wheelOwner, 'the grafted wheel answers the under').toBe('under');
+  expect(result.socketOwner, 'the grafted eye answers the under').toBe('under');
+  expect(result.wheelLive, 'the grafted wheel spins again').toBe(true);
+  expect(result.graftSign, 'the graft signs work under the grafter key').toBe(true);
+  expect(result.houseRearm, 'the house cannot re-engage foreign work').toBe('x');
+  expect(result.pulled, 'work near a grafted wheel is the pull').toBe('pull');
+  expect(result.torn, 'work near a grafted socket is the tear').toBe('lensTear');
+  expect(result.beltDropped, 'the pull drops the grafted muscle as goods').toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the floorkeeper sweeps the lid — work near your stash scatters the take', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      space: string;
+      lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
+      droppedBelts: { x: number; z: number }[];
+      droppedCoils: { x: number; z: number }[];
+      sweptLids: number;
+      entityCtx: () => {
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+    };
+    const ctx = ga.entityCtx();
+    // pick a stashed lid: a hiding spot with goods on record. Force
+    // the stash — the e2e fixture seeds the ledger the way a real
+    // 'stashTake' deposit leaves it.
+    const spot = g.route.rooms.flatMap((r) =>
+      ((r as { hidingSpots?: { id: string; exitPos: { x: number; z: number } }[] })
+        .hidingSpots ?? []).map((s) => ({ s })))[0];
+    if (!spot) return { stage: 'no-spot' } as const;
+    const { s } = spot;
+    ga.lidStashes.set(`${ga.space}:${s.id}`, {
+      items: [{ id: 'fanBelt', count: 2 }, { id: 'wireCoil', count: 1 }, { id: 'documents', count: 1 }],
+      marked: ['fanBelt'],
+    });
+    const before = { belts: ga.droppedBelts.length, coils: ga.droppedCoils.length };
+    // a 'work' mark at the lid's mouth — the signature the stash
+    // itself leaves — gets the fourth dispatch
+    const swept = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
+    const stash = ga.lidStashes.get(`${ga.space}:${s.id}`);
+    return {
+      stage: 'swept' as const,
+      swept,
+      beltGain: ga.droppedBelts.length - before.belts,
+      coilGain: ga.droppedCoils.length - before.coils,
+      kept: stash?.items.map((i) => `${i.id}:${i.count}`) ?? ['deleted'],
+      marked: stash?.marked ?? [],
+      count: ga.sweptLids,
+    };
+  });
+
+  if (result.stage === 'no-spot') test.skip();
+  else {
+    expect(result.swept, 'work near a stuffed lid is the sweep').toBe('lidSweep');
+    expect(result.beltGain, 'the swept belts land as floor goods').toBe(2);
+    expect(result.coilGain, 'the swept coil lands as floor goods').toBe(1);
+    expect(result.kept, 'oddities keep the lid — documents do not pile').toEqual(['documents:1']);
+    expect(result.marked, 'marks ride off with the scattered goods').toEqual([]);
+    expect(result.count, 'the epitaph counts the tipped lid').toBe(1);
+  }
   expect(errors).toEqual([]);
 });

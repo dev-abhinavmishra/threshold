@@ -1048,7 +1048,15 @@ export class HazardField {
     }
     return pos;
   }
-  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number }[] = [];
+  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number;
+    /** sprint 589 — `belted=false` means the belt walked off: a chocked
+     *  wheel re-engages on a re-lay, a beltless one never can (the
+     *  strip is the PERMANENT kill). `owner` names whose belt is
+     *  fitted — 'player' is outside the house's re-lay jurisdiction.
+     *  `chocked` marks a wedge still jammed in the blades: 'Work the
+     *  chock free' mints only while one's in there — a seeded spent
+     *  wheel or a stripped housing holds none to free. */
+    belted?: boolean; owner?: 'player' | 'under'; chocked?: boolean }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles
    *  the eye — a settled eye rings your position to every listener in
@@ -1066,11 +1074,20 @@ export class HazardField {
      *  bearing you pointed from its mount. It still sees YOU — you
      *  can't blind your own camera — but its report is yours.
      *  `reportT` throttles the entity-sighting cues. */
-    aimBearing?: number; owner?: 'player'; reportT?: number;
+    aimBearing?: number; reportT?: number;
     /** sprint 568 — it drank at least once: the episode flags reset
      *  on every blink, but the epitaph counts every eye the light
      *  ever held. */
-    everDazzled: boolean }[] = [];
+    everDazzled: boolean;
+    /** sprint 597 — the glass itself is a good: pried out it yields
+     *  `eyeLens` and the socket can never wake again; `owner` marks a
+     *  socket a player seated their own lens into — an owned eye
+     *  never settles on you, it murmurs on the house's walkers
+     *  instead; `lensHoldUntil` pins the blink while a fed lens holds
+     *  the stare; `watchSettle`/`lastMurmur` are the owned eye's
+     *  settle clock + murmur throttle. */
+    lensed?: boolean; owner?: 'player' | 'under'; lensHoldUntil?: number;
+    watchSettle?: number; lastMurmur?: number }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;
   /** sprint 560 — the beam's charge readout, per lamp position, on a
@@ -1138,6 +1155,7 @@ export class HazardField {
         dead: false, settle: 0, lastReport: -10, warnT: -10, filed: false, lampCued: false,
         dazzleBearing: NaN, dazzleT: -10, dazzleAcc: 0,
         dazzleSigned: false, dazzleCued: false, everDazzled: false,
+        lensHoldUntil: -10, watchSettle: 0, lastMurmur: -10,
       });
     }
   }
@@ -1215,18 +1233,23 @@ export class HazardField {
     for (const w of this.watchers) {
       if (w.room !== ctx.currentRoomIndex) continue;
       const rm = ctx.rooms[w.room];
-      const live = !w.dead && !rm?.darkRoom; // dead mains kill the eye
+      // sprint 597 — a pried socket joins the dead mains: no glass,
+      // no pan, whatever the felt's state says.
+      const live = !w.dead && w.lensed !== false && !rm?.darkRoom;
       const dx = p.pos.x - w.pos.x, dz = p.pos.z - w.pos.z;
       const d = Math.hypot(dx, dz);
-      if (live && d < w.range + 1.5 && ctx.now - w.warnT > 7) {
+      // sprint 598 — your own eye doesn't report you: it knows your
+      // walk. The hiss and the register's talk-back are the house's
+      // tells; an owned socket stays quiet for you.
+      if (live && w.owner !== 'player' && d < w.range + 1.5 && ctx.now - w.warnT > 7) {
         w.warnT = ctx.now;
         ctx.cue('steam-hiss', w.pos, '[the eye pans — still feet pass it]', { severity: 'info' });
       }
-      if (marked && live && !this.markedWarned) {
+      if (marked && live && w.owner !== 'player' && !this.markedWarned) {
         this.markedWarned = true;
         ctx.cue('steam-hiss', w.pos, '[the register talks back — the eyes have your description]', { severity: 'warn' });
       }
-      if (!live || d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
+      if (!live) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
       let facing = w.yaw + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / w.cycle)) * w.arc;
       // sprint 534 — the eye drinks the light: a pulse lamp left
       // burning inside the sweep's reach holds the pan on it — the
@@ -1282,7 +1305,11 @@ export class HazardField {
             // not just dust a hunter might smell later
             ctx.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.4, category: 'machine', caption: '' });
           }
-        } else if (w.dazzleCued && ctx.now - w.dazzleT > 2.5) {
+        } else if (w.dazzleCued && ctx.now - w.dazzleT > 2.5
+          // sprint 599 — a fed lens pins the stare longer than a held
+          // beam does: while `lensHoldUntil` runs the eye can't blink,
+          // the glass it drank still tastes of itself
+          && !(w.lensHoldUntil !== undefined && ctx.now < w.lensHoldUntil)) {
           // sprint 562 — the blink tells: the sweep coming back online
           // is audible to whoever held it — your window is closing.
           // (dazzleCued gates it — an eye that never drank has
@@ -1294,6 +1321,7 @@ export class HazardField {
           w.settle = 0;
           w.dazzleBearing = NaN; w.dazzleAcc = 0;
           w.dazzleSigned = false; w.dazzleCued = false;
+          w.lensHoldUntil = -10;
         }
         if (Number.isFinite(w.dazzleBearing)) {
           facing = w.dazzleBearing
@@ -1308,6 +1336,35 @@ export class HazardField {
         facing = (w.aimBearing as number)
           + Math.sin((ctx.now + w.phase0) * (Math.PI * 2 / (w.cycle * 2))) * 0.06;
       }
+      // sprint 598 — YOUR eye works the hall for you: a socket seated
+      // with your lens never settles on your walk — it knows you — it
+      // settles on the house's walkers instead and murmurs crossings
+      // back to you. The whir is a real sound; the house can hear its
+      // own eye working for somebody else.
+      if (w.owner === 'player') {
+        let crossing = false;
+        for (const e of ctx.walkers?.(w.room) ?? []) {
+          const ex = e.x - w.pos.x, ez = e.z - w.pos.z;
+          const ed = Math.hypot(ex, ez);
+          if (ed > w.range || ed < 0.45) continue;
+          let ediff = Math.atan2(ex, ez) - facing;
+          while (ediff > Math.PI) ediff -= Math.PI * 2;
+          while (ediff < -Math.PI) ediff += Math.PI * 2;
+          if (Math.abs(ediff) > w.half) continue;
+          crossing = true;
+          break;
+        }
+        w.watchSettle = crossing ? (w.watchSettle ?? 0) + dt
+          : Math.max(0, (w.watchSettle ?? 0) - dt * 2);
+        if ((w.watchSettle ?? 0) > 0.9 && ctx.now - (w.lastMurmur ?? -10) > 6) {
+          w.lastMurmur = ctx.now;
+          w.watchSettle = 0;
+          ctx.cue('steam-hiss', w.pos, '[your eye murmurs — something crosses its arc]', { severity: 'info' });
+          ctx.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.3, category: 'machine', caption: '[an eye whirs]' });
+        }
+        continue;
+      }
+      if (d > w.range || d < 0.45) { w.settle = Math.max(0, w.settle - dt * 2); continue; }
       let diff = Math.atan2(dx, dz) - facing;
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;

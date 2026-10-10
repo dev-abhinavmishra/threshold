@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -664,6 +664,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
   // Door frames at ports
   const doorLeaves = new Map<string, THREE.Object3D>();
+  const frameHardware: THREE.Object3D[] = [];
   const doorPositions = [spec.entry, ...spec.exits];
   for (const port of doorPositions) {
     const lp = portLocalPos(port, w, d);
@@ -726,6 +727,70 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         frame.add(toggle);
       }
     }
+    // The jamb kept its metal — strike plate across from the latch,
+    // knuckles down the hinge stile, the stop strip the leaf slams into.
+    if (!(isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor')) {
+      const st = new THREE.Mesh(texBox(0.02, 0.12, 0.06), MAT.brass());
+      st.name = 'strike-plate';
+      st.position.set(fw / 2 - sideW - 0.004, 1.08, 0);
+      frame.add(st);
+      frameHardware.push(st);
+      for (const hy of [0.35, 1.15, 1.9]) {
+        const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8), MAT.brass());
+        kn.name = 'hinge-knuckle';
+        kn.position.set(-fw / 2 + sideW + 0.008, hy, 0.05);
+        frame.add(kn);
+        frameHardware.push(kn);
+      }
+      const stop = new THREE.Mesh(texBox(fw - 0.1, 0.03, 0.02), frameMat);
+      stop.name = 'door-stop';
+      stop.position.set(0, 2.28, 0.15);
+      frame.add(stop);
+      frameHardware.push(stop);
+      for (const sx of [-1, 1]) {
+        const sb = new THREE.Mesh(texBox(0.03, 2.2, 0.02), frameMat);
+        sb.position.set(sx * (fw / 2 - sideW - 0.015), 1.15, 0.15);
+        frame.add(sb);
+      }
+      // The opening wore its head — frieze band under the casing,
+      // keyblock center, rosette blocks over the side casings.
+      for (const zOff of [0.26, -0.26]) {
+        const frieze = new THREE.Mesh(texBox(fw + 0.1, 0.14, 0.035), caseMat);
+        frieze.name = 'lintel-frieze';
+        frieze.position.set(0, 2.42, zOff);
+        frame.add(frieze);
+        frameHardware.push(frieze);
+        const key = new THREE.Mesh(texBox(0.16, 0.2, 0.045), caseMat);
+        key.name = 'lintel-key';
+        key.position.set(0, 2.42, zOff);
+        frame.add(key);
+        frameHardware.push(key);
+        for (const sx of [-1, 1]) {
+          const ros = new THREE.Mesh(texBox(0.12, 0.12, 0.045), caseMat);
+          ros.name = 'lintel-rosette';
+          ros.position.set(sx * (fw / 2 - 0.05), 2.42, zOff);
+          frame.add(ros);
+          frameHardware.push(ros);
+        }
+      }
+      // The caller pressed here once — a brass bell-push on the
+      // hinge-side casing opposite the switch plate.
+      if (rng.float() < 0.35) {
+        for (const zOff of [0.26, -0.26]) {
+          const plate = new THREE.Mesh(texBox(0.07, 0.12, 0.015), MAT.brass());
+          plate.name = 'bell-plate';
+          plate.position.set(-fw / 2 - 0.14, 1.22, zOff);
+          frame.add(plate);
+          frameHardware.push(plate);
+          const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.02, 10), MAT.paper());
+          btn.name = 'bell-push';
+          btn.rotation.x = Math.PI / 2;
+          btn.position.set(-fw / 2 - 0.14, 1.22, zOff + (zOff > 0 ? 0.017 : -0.017));
+          frame.add(btn);
+          frameHardware.push(btn);
+        }
+      }
+    }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
     const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
     if (industrial && port !== spec.entry && rng.float() < 0.45) {
@@ -764,27 +829,110 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     } else {
       leaf.add(new THREE.Mesh(texBox(leafW, 2.2, 0.09), leafMat));
     }
-    // Raised 6-panel relief + brass hardware on interior (non-industrial)
-    // doors — the slab reads flat otherwise.
+    // Raised relief + brass hardware on interior (non-industrial)
+    // doors — the slab reads flat otherwise. The house hung more than
+    // one kind of door: most are the six-panel estate door, some are
+    // planked scullery doors, some are louvered cupboards, some are
+    // glazed half-glass parlour doors.
     if (!industrial && !doorModel) {
       const pw = port.width - 0.1;
       const panelMat = leafMat;
       const recessMat = MAT.darkOak();
-      for (const fz of [0.048, -0.048]) {
-        for (let col = 0; col < 2; col++) {
-          for (let row = 0; row < 3; row++) {
-            const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
-            const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
-            // shadowed recess behind each raised panel — reads as a real
-            // mortised panel instead of floating trim
-            const recess = new THREE.Mesh(texBox(pw * 0.4, ph + 0.05, 0.01), recessMat);
-            recess.position.set((col - 0.5) * pw * 0.44, py, fz - Math.sign(fz) * 0.012);
-            leaf.add(recess);
-            const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
-            panel.position.set((col - 0.5) * pw * 0.44, py, fz);
-            leaf.add(panel);
+      const styleRoll = rng.float();
+      const leafStyle = styleRoll < 0.62 ? 'panel' : styleRoll < 0.78 ? 'plank' : styleRoll < 0.9 ? 'louver' : 'glass';
+      if (leafStyle === 'panel') {
+        for (const fz of [0.048, -0.048]) {
+          for (let col = 0; col < 2; col++) {
+            for (let row = 0; row < 3; row++) {
+              const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
+              const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
+              // shadowed recess behind each raised panel — reads as a real
+              // mortised panel instead of floating trim
+              const recess = new THREE.Mesh(texBox(pw * 0.4, ph + 0.05, 0.01), recessMat);
+              recess.position.set((col - 0.5) * pw * 0.44, py, fz - Math.sign(fz) * 0.012);
+              leaf.add(recess);
+              const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
+              panel.position.set((col - 0.5) * pw * 0.44, py, fz);
+              leaf.add(panel);
+            }
           }
         }
+      } else if (leafStyle === 'plank') {
+        // Vertical boards + ledged braces — the scullery/pantry door.
+        for (const fz of [0.049, -0.049]) {
+          for (let b = 0; b < 5; b++) {
+            const bd = new THREE.Mesh(texBox(pw / 5 - 0.015, 2.1, 0.012), panelMat);
+            bd.name = 'leaf-plank';
+            bd.position.set(-pw / 2 + (b + 0.5) * (pw / 5), 0, fz);
+            leaf.add(bd);
+          }
+          for (const by of [0.78, -0.78]) {
+            const lg = new THREE.Mesh(texBox(pw - 0.12, 0.14, 0.016), recessMat);
+            lg.name = 'leaf-ledge';
+            lg.position.set(0, by, fz);
+            leaf.add(lg);
+          }
+        }
+        // Long strap hinges across the boards — the old T-iron a ledged
+        // door actually hangs on.
+        if (rng.bool(0.65)) {
+          for (const fz of [0.062, -0.062]) {
+            for (const hy of [0.72, -0.65]) {
+              const strap = new THREE.Mesh(texBox(pw * 0.55, 0.045, 0.014), MAT.steelDark());
+              strap.name = 'strap-hinge';
+              strap.position.set(-pw / 2 + pw * 0.32, hy, fz);
+              leaf.add(strap);
+              const end = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 8), MAT.steelDark());
+              end.name = 'strap-end';
+              end.rotation.x = Math.PI / 2;
+              end.position.set(-pw / 2 + 0.04, hy, fz);
+              leaf.add(end);
+            }
+          }
+        }
+      } else if (leafStyle === 'louver') {
+        // Angled slats in two banks — the linen cupboard door.
+        for (const fz of [0.049, -0.049]) {
+          for (const bankY of [0.52, -0.5]) {
+            for (let s = 0; s < 7; s++) {
+              const sl = new THREE.Mesh(texBox(pw - 0.18, 0.07, 0.008), recessMat);
+              sl.name = 'leaf-louver';
+              sl.rotation.x = -0.5;
+              sl.position.set(0, bankY + (s - 3) * 0.085, fz);
+              leaf.add(sl);
+            }
+          }
+        }
+      } else {
+        // Half-glazed parlour door — 2×3 panes over a solid lower half.
+        for (const fz of [0.049, -0.049]) {
+          const lower = new THREE.Mesh(texBox(pw - 0.14, 0.95, 0.014), panelMat);
+          lower.name = 'leaf-lower';
+          lower.position.set(0, -0.58, fz);
+          leaf.add(lower);
+        }
+        const gMat = new THREE.MeshStandardMaterial({
+          color: 0x141c24, emissive: 0x2c4054, emissiveIntensity: 0.3,
+          roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.65,
+        });
+        gMat.userData.decalMat = true;
+        for (let col = 0; col < 2; col++) {
+          for (let row = 0; row < 3; row++) {
+            const pane = new THREE.Mesh(texBox(pw * 0.36, 0.3, 0.008), gMat);
+            pane.name = 'leaf-pane';
+            pane.position.set((col - 0.5) * pw * 0.42, 0.38 + (row - 1) * 0.36, 0);
+            leaf.add(pane);
+            for (const fz of [0.049, -0.049]) {
+              const munt = new THREE.Mesh(texBox(pw * 0.36, 0.03, 0.012), recessMat);
+              munt.position.set((col - 0.5) * pw * 0.42, 0.38 + (row - 1) * 0.36 + 0.165, fz);
+              leaf.add(munt);
+            }
+          }
+        }
+        const stile = new THREE.Mesh(texBox(0.04, 1.15, 0.015), recessMat);
+        stile.name = 'leaf-stile';
+        stile.position.set(0, 0.38, 0.049);
+        leaf.add(stile);
       }
       // knob + backplate on the latch edge, both faces
       for (const fz of [0.06, -0.06]) {
@@ -806,11 +954,114 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           leaf.add(hg);
         }
       }
+      // The furniture a real door carries — mail slot, peephole,
+      // deadbolt, escutcheon, push plate, number. Seeded per leaf so
+      // no two doors read identical.
+      if (rng.bool(0.4)) {
+        for (const fz of [0.056, -0.056]) {
+          const ms = new THREE.Mesh(texBox(0.26, 0.06, 0.018), MAT.brass());
+          ms.name = 'mail-slot';
+          ms.position.set(0, -0.5, fz);
+          leaf.add(ms);
+        }
+      }
+      if (rng.bool(0.45)) {
+        for (const fz of [0.045, -0.045]) {
+          const ph = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.03, 8), MAT.brass());
+          ph.name = 'peephole';
+          ph.rotation.x = Math.PI / 2;
+          ph.position.set(pw / 2 - 0.14, 0.55, fz);
+          leaf.add(ph);
+        }
+      }
+      if (rng.bool(0.5)) {
+        for (const fz of [0.056, -0.056]) {
+          const db = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.024, 10), MAT.brass());
+          db.name = 'deadbolt';
+          db.rotation.x = Math.PI / 2;
+          db.position.set(pw / 2 - 0.14, 0.22, fz);
+          leaf.add(db);
+        }
+      }
+      if (rng.bool(0.6)) {
+        for (const fz of [0.052, -0.052]) {
+          const es = new THREE.Mesh(texBox(0.035, 0.07, 0.01), MAT.brass());
+          es.name = 'escutcheon';
+          es.position.set(pw / 2 - 0.14, -0.15, fz);
+          leaf.add(es);
+        }
+      }
+      if (rng.bool(0.4)) {
+        const fp = new THREE.Mesh(texBox(0.18, 0.5, 0.012), MAT.steelDark());
+        fp.name = 'finger-plate';
+        fp.position.set(pw / 2 - 0.19, -0.15, 0.055);
+        leaf.add(fp);
+      }
+      if (rng.bool(0.3)) {
+        const dn = new THREE.Mesh(texBox(0.12, 0.07, 0.012), MAT.brass());
+        dn.name = 'door-number';
+        dn.position.set(0, 0.58, 0.056);
+        leaf.add(dn);
+      }
+      // The leaf kept its teeth — a kick plate low, a chain on the
+      // inside face where somebody slept worse at night.
+      if (rng.bool(0.4)) {
+        for (const fz of [0.062, -0.062]) {
+          const kp2 = new THREE.Mesh(texBox(pw - 0.12, 0.24, 0.01), MAT.steelDark());
+          kp2.name = 'kick-plate';
+          kp2.position.set(0, -0.95, fz);
+          leaf.add(kp2);
+        }
+      }
+      if (rng.bool(0.3)) {
+        const keep = new THREE.Mesh(texBox(0.04, 0.1, 0.012), MAT.steelDark());
+        keep.name = 'chain-keeper';
+        keep.position.set(pw / 2 - 0.08, 0.5, -0.062);
+        leaf.add(keep);
+        for (let li = 0; li < 4; li++) {
+          const link = new THREE.Mesh(texBox(0.035, 0.02, 0.008), MAT.steel());
+          link.name = 'chain-link';
+          link.position.set(pw / 2 - 0.02 + li * 0.045, 0.5 - li * 0.008, -0.062);
+          link.rotation.z = -0.15;
+          leaf.add(link);
+        }
+        const mount = new THREE.Mesh(texBox(0.05, 0.1, 0.015), MAT.steelDark());
+        mount.name = 'chain-mount';
+        mount.position.set(pw / 2 + 0.19, 0.5, -0.06);
+        leaf.add(mount);
+      }
     } else {
       // kick plate + rivets on service doors
       const kp = new THREE.Mesh(texBox(port.width - 0.16, 0.3, 0.02), MAT.steelDark());
       kp.position.set(0, -0.88, 0.05);
       leaf.add(kp);
+      // The service doors kept their bar — a crash bar at hip height
+      // where the night shift ran them flat-handed.
+      if (rng.bool(0.55)) {
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, port.width - 0.3, 8), MAT.steelDark());
+        bar.name = 'crash-bar';
+        bar.rotation.z = Math.PI / 2;
+        bar.position.set(0, -0.1, 0.07);
+        leaf.add(bar);
+        for (const sx of [-1, 1]) {
+          const mnt = new THREE.Mesh(texBox(0.05, 0.08, 0.05), MAT.steelDark());
+          mnt.position.set(sx * (port.width / 2 - 0.16), -0.1, 0.05);
+          leaf.add(mnt);
+        }
+      }
+      // And its eye — a wire-glass window up high to see what waits
+      // behind the fire door before you owe it your face.
+      if (rng.bool(0.4)) {
+        const wpMat = new THREE.MeshStandardMaterial({
+          color: 0x1a2630, emissive: 0x39506a, emissiveIntensity: 0.35,
+          roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.7,
+        });
+        wpMat.userData.decalMat = true;
+        const wp = new THREE.Mesh(texBox(0.3, 0.4, 0.02), wpMat);
+        wp.name = 'wire-window';
+        wp.position.set(0, 0.62, 0.05);
+        leaf.add(wp);
+      }
     }
     // The door was kicked in once — the split by the latch, the
     // splinters still raised, the shoe shadow under the blow.
@@ -887,6 +1138,27 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (plaque && !industrial) {
       plaque.position.set(port.width / 2 + 0.34, 1.92, 0.05);
       frame.add(plaque);
+    }
+    // The sill kept the crossing — a transition strip where the two
+    // rooms' floors meet under the leaf line.
+    if (rng.float() < (industrial ? 0.35 : 0.6)) {
+      const strip = new THREE.Mesh(texBox(port.width + 0.06, 0.008, 0.14), industrial ? MAT.steelDark() : MAT.brass());
+      strip.name = 'threshold-strip';
+      strip.position.set(0, 0.004, 0);
+      frame.add(strip);
+      frameHardware.push(strip);
+    }
+    // The seam throws a fan — light pooling on the floor just outside
+    // the leaf, the tell that something lit waits on the far side.
+    if (rng.float() < 0.3) {
+      for (const gz of [0.5, -0.5]) {
+        const gl = decalQuad(doorGlow(rng), 1.1, 1.1);
+        gl.name = 'door-glow';
+        gl.rotation.x = -Math.PI / 2;
+        gl.position.set(0, 0.012, gz);
+        if (gz < 0) gl.rotation.z = Math.PI;
+        frame.add(gl);
+      }
     }
     frame.position.set(lp.x, 0, lp.z);
     if (port.wall === 'e') frame.rotation.y = -Math.PI / 2;
@@ -1041,19 +1313,35 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
 
     // Power outlets at baseboard height — twin-socket boxes on inside
-    // faces; institutional detail that reads at eye level.
+    // faces; institutional detail that reads at eye level. Some still
+    // hold a flex cord that drops straight to the floor.
     if (!isUnder && rng.float() < 0.55) {
       const nOut = 1 + (rng.float() < 0.4 ? 1 : 0);
       for (let i = 0; i < nOut; i++) {
         const spot = pickWallSpot(0.3);
         if (!spot) break;
         const outlet = new THREE.Mesh(texBox(0.16, 0.09, 0.02), MAT.paper());
+        outlet.name = 'outlet-plate';
         const socket = new THREE.Mesh(texBox(0.11, 0.05, 0.012), MAT.charcoal());
+        socket.name = 'outlet-slot';
         if (spot.wall === 'e') { outlet.rotation.y = -Math.PI / 2; outlet.position.set(w / 2 - 0.135, 0.28, spot.along); socket.rotation.y = -Math.PI / 2; socket.position.set(w / 2 - 0.142, 0.28, spot.along); }
         else if (spot.wall === 'w') { outlet.rotation.y = Math.PI / 2; outlet.position.set(-w / 2 + 0.135, 0.28, spot.along); socket.rotation.y = Math.PI / 2; socket.position.set(-w / 2 + 0.142, 0.28, spot.along); }
         else if (spot.wall === 'n') { outlet.rotation.y = Math.PI; outlet.position.set(spot.along, 0.28, d / 2 - 0.135); socket.rotation.y = Math.PI; socket.position.set(spot.along, 0.28, d / 2 - 0.142); }
         else { outlet.position.set(spot.along, 0.28, -d / 2 + 0.135); socket.position.set(spot.along, 0.28, -d / 2 + 0.142); }
         group.add(outlet, socket);
+        frameHardware.push(outlet, socket);
+        if (rng.float() < 0.45) {
+          const plug = new THREE.Mesh(texBox(0.035, 0.06, 0.03), MAT.charcoal());
+          plug.name = 'cord-plug';
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.24, 6), MAT.charcoal());
+          cord.name = 'flex-cord';
+          if (spot.wall === 'e') { plug.position.set(w / 2 - 0.15, 0.26, spot.along); cord.position.set(w / 2 - 0.15, 0.12, spot.along); }
+          else if (spot.wall === 'w') { plug.position.set(-w / 2 + 0.15, 0.26, spot.along); cord.position.set(-w / 2 + 0.15, 0.12, spot.along); }
+          else if (spot.wall === 'n') { plug.position.set(spot.along, 0.26, d / 2 - 0.15); cord.position.set(spot.along, 0.12, d / 2 - 0.15); }
+          else { plug.position.set(spot.along, 0.26, -d / 2 + 0.15); cord.position.set(spot.along, 0.12, -d / 2 + 0.15); }
+          group.add(plug, cord);
+          frameHardware.push(plug, cord);
+        }
       }
     }
 
@@ -2269,7 +2557,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The shafts fell — pale trapezoids of window light with the
     // motes still in them, on the floor beside windows.
     for (const p of spec.props) {
-      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.35) continue;
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.65) continue;
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const sw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
@@ -2872,6 +3160,647 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(hw, hoseScuff(rng), 0.8 + rng.float() * 0.2, 0.9 + rng.float() * 0.2, along, 1.4 + rng.float() * 0.3);
       const hs = group.children[group.children.length - 1];
       if (hs && !hs.name) hs.name = 'hose-scuff';
+    }
+
+    // The lockers kept the kicks — a scuffed band runs the floor
+    // in front of every row where the doors took boots.
+    if (isUnder) {
+      const done = new Set<string>();
+      for (const p of spec.props) {
+        if (p.kind !== 'locker' && p.kind !== 'cageLocker') continue;
+        const gx = Math.round(p.x), gz = Math.round(p.z);
+        if (done.has(`${gx}:${gz}`)) continue;
+        done.add(`${gx}:${gz}`);
+        if (rng.float() >= 0.8) continue;
+        const lk = decalQuad(lockerKick(rng), 1.5 + rng.float() * 0.5, 0.7);
+        lk.name = 'locker-kick';
+        lk.rotation.x = -Math.PI / 2;
+        const yaw = p.yaw ?? 0;
+        lk.rotation.z = yaw + (rng.float() - 0.5) * 0.15;
+        // step off the wall face toward the room
+        const ox = Math.sin(yaw) * 0.5, oz = Math.cos(yaw) * 0.5;
+        lk.position.set(p.x + ox, 0.0085, p.z + oz);
+        group.add(lk);
+      }
+    }
+
+    // The pumps kept their seep — a drip line every sump leaves
+    // walking toward the floor's lowest word.
+    if (isUnder) {
+      const drain = spec.props.find((p) => p.kind === 'grateDrain');
+      for (const p of spec.props) {
+        if (p.kind !== 'sumpPump' || rng.float() >= 0.75) continue;
+        const ps = decalQuad(pumpSeep(rng), 1.1 + rng.float() * 0.3, 1.1 + rng.float() * 0.3);
+        ps.name = 'pump-seep';
+        ps.rotation.x = -Math.PI / 2;
+        ps.rotation.z = drain ? Math.atan2(drain.x - p.x, drain.z - p.z) + Math.PI : rng.float() * Math.PI * 2;
+        ps.position.set(p.x, 0.009, p.z);
+        group.add(ps);
+      }
+    }
+
+    // The mail kept drifting — envelope fans under every cart and
+    // cubby that never finished the round.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'mailCart' && p.kind !== 'stackShelf') continue;
+        if (rng.float() >= 0.7) continue;
+        const md = decalQuad(mailDrift(rng), 1.0 + rng.float() * 0.4, 1.0 + rng.float() * 0.4);
+        md.name = 'mail-drift';
+        md.rotation.x = -Math.PI / 2;
+        md.rotation.z = rng.float() * Math.PI * 2;
+        md.position.set(p.x + (rng.float() - 0.5) * 0.6, 0.008, p.z + (rng.float() - 0.5) * 0.6);
+        group.add(md);
+      }
+    }
+
+    // The drum kept blowing back — soot fans blow sideways off the
+    // burn room's mouth, the scorched signature of a cheap fire.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'boilerDrum' || rng.float() >= 0.85) continue;
+        const sf = decalQuad(sootFan(rng), 1.4 + rng.float() * 0.4, 1.4 + rng.float() * 0.4);
+        sf.name = 'soot-fan';
+        sf.rotation.x = -Math.PI / 2;
+        sf.rotation.z = rng.float() * Math.PI * 2;
+        sf.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0092, p.z + (rng.float() - 0.5) * 0.4);
+        group.add(sf);
+      }
+    }
+
+    // The panels kept the count — chalk tallies beside every box
+    // that died often enough to earn one.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'breakerPanel' && p.kind !== 'powerBox' && p.kind !== 'utilityBox') continue;
+        if (rng.float() >= 0.7) continue;
+        // tally rides the wall just beside the panel's face
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = (hw === 'e' || hw === 'w' ? p.z : p.x) + (rng.float() < 0.5 ? -0.55 : 0.55);
+        wallDecal(hw, fuseTally(rng), 0.5 + rng.float() * 0.15, 0.5 + rng.float() * 0.15, along, (p.y ?? 1.0) + 0.15);
+        const ft = group.children[group.children.length - 1];
+        if (ft && !ft.name) ft.name = 'fuse-tally';
+      }
+    }
+
+    // The hatches kept the grease — smears under every dumbwaiter
+    // lip where the cable and thumbs ran.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'dumbwaiter' && p.kind !== 'dumbWaiterDoor') continue;
+        if (rng.float() >= 0.8) continue;
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+        wallDecal(hw, hatchGrease(rng), 0.45 + rng.float() * 0.1, 0.85 + rng.float() * 0.2, along, (p.y ?? 0.9) - 0.35);
+        const hg = group.children[group.children.length - 1];
+        if (hg && !hg.name) hg.name = 'hatch-grease';
+      }
+    }
+
+    // The bunk kept the boots — paired prints that paced the nook
+    // and stopped. Nobody swept the under floors.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'bed' && p.kind !== 'bedOld' && p.kind !== 'daybed') continue;
+        if (rng.float() >= 0.75) continue;
+        const bb = decalQuad(bunkBoots(rng), 1.2 + rng.float() * 0.4, 1.2 + rng.float() * 0.4);
+        bb.name = 'bunk-boots';
+        bb.rotation.x = -Math.PI / 2;
+        bb.rotation.z = rng.float() * Math.PI * 2;
+        bb.position.set(p.x + (rng.float() - 0.5) * 0.8, 0.0082, p.z + (rng.float() - 0.5) * 0.8);
+        group.add(bb);
+      }
+    }
+
+    // The racks kept the shadows — peg silhouettes and a reach-shine
+    // where a hundred hands took the same tools down.
+    if (isUnder) {
+      const seen = new Set<string>();
+      for (const p of spec.props) {
+        if (p.kind !== 'rack' && p.kind !== 'toolChest' && p.kind !== 'stackShelf') continue;
+        const gx = Math.round(p.x * 2), gz = Math.round(p.z * 2);
+        if (seen.has(`${gx}:${gz}`)) continue;
+        seen.add(`${gx}:${gz}`);
+        if (rng.float() >= 0.65) continue;
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+        wallDecal(hw, hookShadow(rng), 1.2 + rng.float() * 0.3, 0.8 + rng.float() * 0.15, along, 1.35 + rng.float() * 0.2);
+        const hs = group.children[group.children.length - 1];
+        if (hs && !hs.name) hs.name = 'hook-shadow';
+      }
+    }
+
+    // The freight kept the drag — a polished path where the chain
+    // ran its length out, link kisses and a rust tail.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'chainFence' && p.kind !== 'handTruck' && p.kind !== 'overheadCrane') continue;
+        if (rng.float() >= 0.7) continue;
+        const cd = decalQuad(chainDrag(rng), 1.6 + rng.float() * 0.5, 1.0 + rng.float() * 0.25);
+        cd.name = 'chain-drag';
+        cd.rotation.x = -Math.PI / 2;
+        cd.rotation.z = rng.float() * Math.PI * 2;
+        cd.position.set(p.x + (rng.float() - 0.5) * 0.7, 0.0088, p.z + (rng.float() - 0.5) * 0.7);
+        group.add(cd);
+      }
+    }
+
+    // The ceiling kept the leak — mineral rings where water pooled
+    // overhead in wet bones before it found the floor.
+    const wetCeil = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
+      || spec.props.some((p) => p.kind === 'basinSink' || p.kind === 'puddle' || p.kind === 'washStand');
+    if (wetCeil && rng.float() < 0.4) {
+      const cr = decalQuad(ceilingRing(rng), 1.3 + rng.float() * 0.5, 1.1 + rng.float() * 0.4);
+      cr.name = 'ceiling-ring';
+      cr.rotation.x = Math.PI / 2;
+      cr.rotation.z = rng.float() * Math.PI * 2;
+      cr.position.set((rng.float() - 0.5) * (w - 3), h - 0.056, (rng.float() - 0.5) * (d - 3));
+      group.add(cr);
+    }
+
+    // The ceiling kept the settling — a vein with tributaries where
+    // the house moved and the plaster wrote it down.
+    if (rng.float() < 0.3) {
+      const pv = decalQuad(plasterVein(rng), 1.5 + rng.float() * 0.6, 1.2 + rng.float() * 0.4);
+      pv.name = 'plaster-vein';
+      pv.rotation.x = Math.PI / 2;
+      pv.rotation.z = rng.float() * Math.PI * 2;
+      pv.position.set((rng.float() - 0.5) * (w - 3), h - 0.056, (rng.float() - 0.5) * (d - 3));
+      group.add(pv);
+    }
+
+    // The ceiling kept the ring — a pale ghost where a shade hung
+    // before the house took the fixture back.
+    if (livedIn && rng.float() < 0.22) {
+      const pg = decalQuad(pendantGhost(rng), 0.6 + rng.float() * 0.2, 0.6 + rng.float() * 0.2);
+      pg.name = 'pendant-ghost';
+      pg.rotation.x = Math.PI / 2;
+      pg.rotation.z = rng.float() * Math.PI * 2;
+      pg.position.set((rng.float() - 0.5) * (w - 2.4), h - 0.056, (rng.float() - 0.5) * (d - 2.4));
+      group.add(pg);
+    }
+
+    // The lamps wrote their soot — a smoke halo on the ceiling
+    // over every burning fixture that kept its post.
+    for (const p of spec.props) {
+      if (p.kind !== 'chainBulb' && p.kind !== 'cageLight' && p.kind !== 'fluoroTube') continue;
+      if (rng.float() >= 0.6) continue;
+      const fs = decalQuad(fixtureSoot(rng), 0.8 + rng.float() * 0.3, 0.8 + rng.float() * 0.3);
+      fs.name = 'fixture-soot';
+      fs.rotation.x = Math.PI / 2;
+      fs.rotation.z = rng.float() * Math.PI * 2;
+      fs.position.set(p.x, h - 0.056, p.z);
+      group.add(fs);
+    }
+
+    // The tiles kept the sag — grid ghosts and one drunk panel
+    // in the service ceilings that drank a leak.
+    if (!livedIn && rng.float() < 0.3) {
+      const ts = decalQuad(tileSag(rng), 1.6 + rng.float() * 0.5, 1.6 + rng.float() * 0.5);
+      ts.name = 'tile-sag';
+      ts.rotation.x = Math.PI / 2;
+      ts.rotation.z = rng.float() * Math.PI * 2;
+      ts.position.set((rng.float() - 0.5) * (w - 3), h - 0.057, (rng.float() - 0.5) * (d - 3));
+      group.add(ts);
+    }
+
+    // The seam kept the dust — a grey ledge where the wall hands
+    // the ceiling its dirt, combed by the draft.
+    if (rng.float() < 0.35) {
+      const spot = pickWallSpot(1.6);
+      if (spot) {
+        wallDecal(spot.wall, corniceLine(rng), 1.5 + rng.float() * 0.5, 0.45, spot.along, h - 0.3);
+        const cl = group.children[group.children.length - 1];
+        if (cl && !cl.name) cl.name = 'cornice-line';
+      }
+    }
+
+    // The ceiling kept the bloom — a broad damp spread that outgrew
+    // its ring, mould freckles seeding the wet.
+    if (!livedIn && rng.float() < 0.3) {
+      const as = decalQuad(atticStain(rng), 1.5 + rng.float() * 0.6, 1.4 + rng.float() * 0.5);
+      as.name = 'attic-stain';
+      as.rotation.x = Math.PI / 2;
+      as.rotation.z = rng.float() * Math.PI * 2;
+      as.position.set((rng.float() - 0.5) * (w - 2.6), h - 0.058, (rng.float() - 0.5) * (d - 2.6));
+      group.add(as);
+    }
+
+    // The paint kept letting go — curled tongues and the scars they
+    // left where the ceiling shed its skin.
+    if (livedIn && rng.float() < 0.28) {
+      const pf = decalQuad(paintFlake(rng), 1.3 + rng.float() * 0.5, 1.3 + rng.float() * 0.5);
+      pf.name = 'paint-flake';
+      pf.rotation.x = Math.PI / 2;
+      pf.rotation.z = rng.float() * Math.PI * 2;
+      pf.position.set((rng.float() - 0.5) * (w - 3), h - 0.059, (rng.float() - 0.5) * (d - 3));
+      group.add(pf);
+    }
+
+    // The wall kept the heat — a brown halo and convection streaks
+    // over every radiator that burned through the winters.
+    for (const p of spec.props) {
+      if (p.kind !== 'radiatorFin' && p.kind !== 'radiatorTall' && p.kind !== 'masonryHeater' && p.kind !== 'boilerDrum' && p.kind !== 'boilerTank') continue;
+      if (rng.float() >= 0.7) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md2 = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, heaterGhost(rng), 1.4 + rng.float() * 0.3, 0.9 + rng.float() * 0.2, along, 1.5 + rng.float() * 0.2);
+      const hg = group.children[group.children.length - 1];
+      if (hg && !hg.name) hg.name = 'heater-ghost';
+    }
+
+    // The halls kept their lamps — sconce arms marching the corridor,
+    // alternating walls the way the porters wired them. Emissive
+    // bulbs only; the pool of thrown light is faked with a wall decal.
+    if (spec.biome === 'corridor' && d > w * 1.15 && !isUnder) {
+      const step = 2.6 + rng.float() * 0.6;
+      const count = Math.max(1, Math.floor((d - 1.2) / step));
+      let side = rng.bool(0.5) ? 1 : -1;
+      for (let i = 0; i < count; i++) {
+        const sz = -d / 2 + (i + 0.5) * ((d - 1.2) / count) + 0.6;
+        const sx = side * (w / 2 - 0.05);
+        const py = 1.9 + rng.float() * 0.15;
+        // arm out from the wall
+        const arm = new THREE.Mesh(texBox(0.05, 0.05, 0.14), MAT.brass());
+        arm.name = 'corridor-sconce';
+        arm.position.set(sx - side * 0.06, py, sz);
+        group.add(arm);
+        frameHardware.push(arm);
+        // shade cone, mouth down
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.11, 8, 1, true), MAT.brass());
+        shade.name = 'sconce-shade';
+        shade.position.set(sx - side * 0.13, py + 0.06, sz);
+        group.add(shade);
+        frameHardware.push(shade);
+        // bulb — warm emissive, sometimes dead
+        const lit = rng.float() < 0.7;
+        const bMat = new THREE.MeshStandardMaterial({
+          color: 0x1a1208, emissive: lit ? 0xd8a050 : 0x202028,
+          emissiveIntensity: lit ? 0.9 : 0.2, roughness: 0.6, metalness: 0,
+        });
+        bMat.userData.decalMat = true;
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), bMat);
+        bulb.name = lit ? 'sconce-bulb-lit' : 'sconce-bulb';
+        bulb.position.set(sx - side * 0.13, py + 0.02, sz);
+        group.add(bulb);
+        frameHardware.push(bulb);
+        // the thrown pool on the plaster beneath
+        if (lit && rng.float() < 0.8) {
+          wallDecal(side === 1 ? 'e' : 'w', sconcePool(rng), 0.7, 0.9, sz, py - 0.45);
+          const wl2 = group.children[group.children.length - 1];
+          if (wl2 && !wl2.name) wl2.name = 'sconce-pool';
+        }
+        side = -side;
+      }
+    }
+
+    // The sills kept their keepers — the little things left standing
+    // on window ledges: dead pots, candle stubs, jam jars, folded cloth.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.65) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const sillY = 0.95;
+      const inset = (hw === 'e' ? w / 2 : hw === 'w' ? -w / 2 : 0) - (hw === 'e' ? 0.05 : hw === 'w' ? -0.05 : 0);
+      const zin = (hw === 'n' ? d / 2 : hw === 's' ? -d / 2 : 0) - (hw === 'n' ? 0.05 : hw === 's' ? -0.05 : 0);
+      const put = (m: THREE.Mesh, off: number, y: number) => {
+        if (hw === 'e' || hw === 'w') m.position.set(inset, y, along + off);
+        else m.position.set(along + off, y, zin);
+        group.add(m);
+        frameHardware.push(m);
+      };
+      const nItems = 2 + rng.int(0, 1);
+      const kindStart = rng.int(0, 3);
+      const spots = [-0.35, 0.3, 0, -0.15, 0.15].sort(() => rng.float() - 0.5);
+      for (let i = 0; i < nItems; i++) {
+        const kind = (kindStart + i) % 4;
+        const ox = spots[i % spots.length] + (rng.float() - 0.5) * 0.06;
+        if (kind === 0) {
+          // dead plant — pot and two dry stems
+          const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.09, 8), MAT.darkOak());
+          pot.name = 'sill-pot';
+          put(pot, ox, sillY + 0.045);
+          for (let st = 0; st < 2; st++) {
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.16 + rng.float() * 0.08, 5), MAT.darkOak());
+            stem.name = 'sill-stem';
+            put(stem, ox + (st - 0.5) * 0.03, sillY + 0.15);
+            stem.rotation.z = (rng.float() - 0.5) * 0.5;
+          }
+        } else if (kind === 1) {
+          const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.05 + rng.float() * 0.04, 8), MAT.paperOld());
+          stub.name = 'sill-candle';
+          put(stub, ox, sillY + 0.03);
+        } else if (kind === 2) {
+          const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, 0.1, 8), MAT.steelDark());
+          jar.name = 'sill-jar';
+          put(jar, ox, sillY + 0.05);
+        } else {
+          const cloth = new THREE.Mesh(texBox(0.16, 0.02, 0.1), MAT.paper());
+          cloth.name = 'sill-cloth';
+          put(cloth, ox, sillY + 0.01);
+          cloth.rotation.y = rng.float() * 0.8 - 0.4;
+        }
+      }
+    }
+
+    // Wall-mounted mesh placer — `off` runs along the wall, `proud` is the
+    // center distance off the wall face; e/w meshes turn to face the room.
+    const placeOnWall = (m: THREE.Mesh, wall: 'n' | 's' | 'e' | 'w', off: number, y: number, proud: number) => {
+      if (wall === 'e') m.position.set(w / 2 - proud, y, off);
+      else if (wall === 'w') m.position.set(-w / 2 + proud, y, off);
+      else if (wall === 'n') m.position.set(off, y, -d / 2 + proud);
+      else m.position.set(off, y, d / 2 - proud);
+      if (wall === 'e' || wall === 'w') m.rotation.y = Math.PI / 2;
+      group.add(m);
+      frameHardware.push(m);
+    };
+
+    // The windows wore their heads — casing cap over the frame, a brass
+    // curtain rod, and whatever torn drop the last tenant left hanging.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const head = new THREE.Mesh(texBox(1.5, 0.09, 0.05), MAT.oak());
+      head.name = 'win-head';
+      placeOnWall(head, hw, along, 2.56, 0.035);
+      for (const sx of [-1, 1]) {
+        const cs = new THREE.Mesh(texBox(0.07, 1.74, 0.04), MAT.darkOak());
+        cs.name = 'win-casing';
+        placeOnWall(cs, hw, along + sx * 0.665, 1.7, 0.028);
+      }
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.7, 8), MAT.brass());
+      rod.name = 'curtain-rod';
+      placeOnWall(rod, hw, along, 2.68, 0.1);
+      if (hw === 'e' || hw === 'w') rod.rotation.set(Math.PI / 2, 0, 0);
+      else rod.rotation.set(0, 0, Math.PI / 2);
+      for (const sx of [-1, 1]) {
+        const fin = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), MAT.brass());
+        fin.name = 'rod-finial';
+        placeOnWall(fin, hw, along + sx * 0.85, 2.68, 0.1);
+      }
+      const nDrops = rng.float() < 0.75 ? 1 : 2;
+      let firstSide = 1;
+      for (let i = 0; i < nDrops; i++) {
+        const dl = 0.5 + rng.float() * 0.8;
+        const side = i === 0 ? (firstSide = rng.bool() ? -1 : 1) : -firstSide;
+        const dr = new THREE.Mesh(texBox(0.3, dl, 0.02), TEX.fabricDark());
+        dr.name = 'rod-drape';
+        placeOnWall(dr, hw, along + side * (0.45 + rng.float() * 0.15), 2.68 - dl / 2, 0.1);
+      }
+    }
+
+    // The radiators kept their plumbing — feed stubs rising off the
+    // floor into each end, a bleed nub at the high corner.
+    for (const p of spec.props) {
+      if ((p.kind !== 'radiatorFin' && p.kind !== 'radiatorTall') || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      for (const sx of [-0.35, 0.35]) {
+        const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.32, 8), MAT.steel());
+        feed.name = 'rad-feed';
+        placeOnWall(feed, hw, along + sx, 0.16, 0.05);
+      }
+      const bypass = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 6), MAT.steelDark());
+      bypass.name = 'rad-bypass';
+      placeOnWall(bypass, hw, along, 0.08, 0.05);
+      if (hw === 'e' || hw === 'w') bypass.rotation.set(Math.PI / 2, 0, 0);
+      else bypass.rotation.set(0, 0, Math.PI / 2);
+      const bleed = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 6), MAT.brass());
+      bleed.name = 'rad-bleed';
+      placeOnWall(bleed, hw, along + (rng.bool() ? -0.35 : 0.35), 0.62, 0.06);
+    }
+
+    // The rails kept their smalls — towel rings, hanging cloth and robe
+    // drops beside the basins; glass shelf with the bits left on it.
+    const WASH_KINDS = new Set(['basinSink', 'washStand']);
+    for (const p of spec.props) {
+      if (!WASH_KINDS.has(p.kind) || rng.float() >= 0.55) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      if (portOffsetsOn(hw).some((o) => Math.abs(along - o) < 0.9)) continue;
+      const side = rng.bool() ? -1 : 1;
+      // ring + cloth
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.012, 8, 16), MAT.steel());
+      ring.name = 'towel-ring';
+      placeOnWall(ring, hw, along + side * 0.7, 1.35, 0.045);
+      if (rng.float() < 0.65) {
+        const tl = 0.28 + rng.float() * 0.2;
+        const tw = new THREE.Mesh(texBox(0.16, tl, 0.02), MAT.paperOld());
+        tw.name = 'towel-drop';
+        placeOnWall(tw, hw, along + side * 0.7, 1.35 - tl / 2 - 0.04, 0.05);
+      }
+      // robe peg + drop on the other side
+      if (rng.float() < 0.5) {
+        const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.018, 0.08, 8), MAT.oak());
+        peg.name = 'robe-peg';
+        placeOnWall(peg, hw, along - side * 0.6, 1.6, 0.05);
+        peg.rotation.x = hw === 'e' || hw === 'w' ? 0 : Math.PI / 2 * (hw === 'n' ? 1 : -1);
+        if (hw === 'e' || hw === 'w') peg.rotation.z = Math.PI / 2 * (hw === 'e' ? 1 : -1);
+        if (rng.float() < 0.7) {
+          const rl = 0.5 + rng.float() * 0.3;
+          const robe = new THREE.Mesh(texBox(0.22, rl, 0.06), TEX.fabricDark());
+          robe.name = 'robe-drop';
+          placeOnWall(robe, hw, along - side * 0.6, 1.6 - rl / 2 - 0.02, 0.07);
+        }
+      }
+      // glass shelf + dish above the basin
+      if (rng.float() < 0.55) {
+        const shelfMat = new THREE.MeshStandardMaterial({ color: 0x9fb4bd, transparent: true, opacity: 0.4, roughness: 0.2, metalness: 0 });
+        const shelf = new THREE.Mesh(texBox(0.5, 0.015, 0.14), shelfMat);
+        shelf.name = 'glass-shelf';
+        placeOnWall(shelf, hw, along, 1.52, 0.09);
+        const dish = new THREE.Mesh(texBox(0.09, 0.02, 0.06), MAT.paper());
+        dish.name = 'soap-dish';
+        placeOnWall(dish, hw, along - 0.12, 1.545, 0.09);
+        if (rng.float() < 0.5) {
+          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.09, 8), MAT.steelDark());
+          cup.name = 'tooth-cup';
+          placeOnWall(cup, hw, along + 0.14, 1.575, 0.09);
+        }
+      }
+    }
+
+    // The wet walls wore their aprons — a tiled splash band behind
+    // sinks, stands and drains; grout ghosted on, a tile or two lost.
+    const WET_KINDS = new Set(['basinSink', 'washStand', 'grateDrain', 'washer']);
+    for (const p of spec.props) {
+      if (!WET_KINDS.has(p.kind) || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const aw = 1.5 + rng.float() * 0.4;
+      if (portOffsetsOn(hw).some((o) => Math.abs(along - o) < aw / 2 + 0.9)) continue;
+      const ah = 1.35 + rng.float() * 0.25;
+      const ap = new THREE.Mesh(texBox(aw, ah, 0.018), TEX.tilesSubway());
+      ap.name = 'tile-apron';
+      if (hw === 'e') ap.position.set(w / 2 - 0.016, ah / 2 + 0.35, along);
+      else if (hw === 'w') ap.position.set(-w / 2 + 0.016, ah / 2 + 0.35, along);
+      else if (hw === 'n') ap.position.set(along, ah / 2 + 0.35, d / 2 - 0.012);
+      else ap.position.set(along, ah / 2 + 0.35, -d / 2 + 0.016);
+      group.add(ap);
+      frameHardware.push(ap);
+      // grout ghosting across the band
+      if (rng.float() < 0.7) {
+        wallDecal(hw, groutLines(rng), aw * 0.92, ah * 0.85, along, ah / 2 + 0.35);
+        const gl2 = group.children[group.children.length - 1];
+        if (gl2 && !gl2.name) gl2.name = 'apron-grout';
+      }
+      // a missing tile or two — the plaster darks behind the loss
+      if (rng.float() < 0.45) {
+        const chip = new THREE.Mesh(texBox(0.09, 0.09, 0.006), MAT.darkOak());
+        chip.name = 'tile-chip';
+        const cx = along + (rng.float() - 0.5) * aw * 0.7;
+        const cy = 0.5 + rng.float() * 0.8;
+        if (hw === 'e') chip.position.set(w / 2 - 0.004, cy, cx);
+        else if (hw === 'w') chip.position.set(-w / 2 + 0.004, cy, cx);
+        else if (hw === 'n') chip.position.set(cx, cy, d / 2 - 0.004);
+        else chip.position.set(cx, cy, -d / 2 + 0.004);
+        group.add(chip);
+        frameHardware.push(chip);
+      }
+    }
+
+    // The veins ran the skirting — supply pipes hugging the wall in
+    // rooms that carry heat or service kit: a horizontal run with
+    // clamps, a riser at one end, sometimes a valve wheel. Segments
+    // stop short of any door opening.
+    {
+      const HEAT = new Set(['radiatorFin', 'radiatorTall', 'masonryHeater', 'stove', 'stoveRange', 'boilerDrum', 'boilerTank', 'fireplace']);
+      const heated = spec.props.some((p) => HEAT.has(p.kind)) || spec.biome === 'maintenance' || isUnder;
+      if (heated && rng.float() < 0.65) {
+        const pipeMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.brass();
+        // pick a wall, then cut its span into segments clear of ports
+        const walls = (['n', 's', 'e', 'w'] as const);
+        const wall = walls[Math.floor(rng.float() * 4)];
+        const span = (wall === 'e' || wall === 'w' ? d : w) - 0.5;
+        const offs = portOffsetsOn(wall);
+        // forbidden zones: port offset ±(leaf width + margin)
+        const segs: [number, number][] = [[-span / 2, span / 2]];
+        for (const o of offs) {
+          for (let i = segs.length - 1; i >= 0; i--) {
+            const [a, b] = segs[i];
+            if (o - 1.0 < b && o + 1.0 > a) {
+              segs.splice(i, 1);
+              if (o - 1.0 - a > 0.7) segs.push([a, o - 1.0]);
+              if (b - o - 1.0 > 0.7) segs.push([o + 1.0, b]);
+            }
+          }
+        }
+        const pipeY = 0.16 + rng.float() * 0.08;
+        const pipeR = 0.018 + rng.float() * 0.012;
+        for (const [a, b] of segs) {
+          const len = b - a;
+          const mid = (a + b) / 2;
+          const run = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, len, 8), pipeMat);
+          run.name = 'pipe-run';
+          if (wall === 'e' || wall === 'w') {
+            run.rotation.x = Math.PI / 2;
+            run.position.set((wall === 'e' ? w / 2 : -w / 2) - Math.sign(wall === 'e' ? 1 : -1) * 0.07, pipeY, mid);
+          } else {
+            run.rotation.z = Math.PI / 2;
+            run.position.set(mid, pipeY, (wall === 'n' ? d / 2 : -d / 2) - Math.sign(wall === 'n' ? 1 : -1) * 0.07);
+          }
+          group.add(run);
+          frameHardware.push(run);
+          // clamps pinning the run to the plaster
+          const nClamps = Math.max(1, Math.floor(len / 1.3));
+          for (let c = 0; c < nClamps; c++) {
+            const t = a + (c + 0.5) * (len / nClamps);
+            const cl = new THREE.Mesh(texBox(0.05, 0.05, 0.03), pipeMat);
+            cl.name = 'pipe-clamp';
+            if (wall === 'e' || wall === 'w') cl.position.set(run.position.x - (wall === 'e' ? 0.035 : -0.035), pipeY, t);
+            else cl.position.set(t, pipeY, run.position.z - (wall === 'n' ? 0.035 : -0.035));
+            group.add(cl);
+            frameHardware.push(cl);
+          }
+          // riser at one end — the run turns down and drops to the floor
+          if (rng.float() < 0.55) {
+            const end = rng.bool(0.5) ? a : b;
+            const riser = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, pipeY + 0.04, 8), pipeMat);
+            riser.name = 'pipe-riser';
+            if (wall === 'e' || wall === 'w') riser.position.set(run.position.x, pipeY / 2 - 0.01, end);
+            else riser.position.set(end, pipeY / 2 - 0.01, run.position.z);
+            group.add(riser);
+            frameHardware.push(riser);
+          }
+          // a wheel the night porter could still turn
+          if (rng.float() < 0.3) {
+            const vx = wall === 'e' || wall === 'w' ? run.position.x : mid + (rng.float() - 0.5) * len * 0.6;
+            const vz = wall === 'e' || wall === 'w' ? mid + (rng.float() - 0.5) * len * 0.6 : run.position.z;
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 12), pipeMat);
+            wheel.name = 'pipe-valve';
+            if (wall === 'e' || wall === 'w') { wheel.rotation.y = Math.PI / 2; wheel.position.set(vx - (wall === 'e' ? 0.05 : -0.05), pipeY, vz); }
+            else { wheel.position.set(vx, pipeY, vz - (wall === 'n' ? 0.05 : -0.05)); }
+            group.add(wheel);
+            frameHardware.push(wheel);
+          }
+        }
+      }
+    }
+
+    // The ceiling carried its mains — parallel conduit runs overhead
+    // in the service bones, hung on straps, broken by junction boxes.
+    if ((isUnder || spec.biome === 'maintenance') && rng.float() < 0.6) {
+      const pipeMat = MAT.steelDark();
+      const axis = rng.bool(0.5) ? 'x' : 'z';
+      const runLen = (axis === 'x' ? w : d) - 0.6;
+      const lanes = 1 + Math.floor(rng.float() * 2.4); // 1-3 parallel runs
+      for (let lane = 0; lane < lanes; lane++) {
+        const off = (lane - (lanes - 1) / 2) * 0.22 + (rng.float() - 0.5) * 0.3;
+        const py = h - 0.12 - lane * 0.02;
+        const run = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, runLen, 8), pipeMat);
+        run.name = 'ceiling-main';
+        if (axis === 'x') { run.rotation.z = Math.PI / 2; run.position.set(0, py, off); }
+        else { run.rotation.x = Math.PI / 2; run.position.set(off, py, 0); }
+        group.add(run);
+        frameHardware.push(run);
+        // hanger straps every ~1.4m reaching the slab
+        const nH = Math.max(1, Math.floor(runLen / 1.4));
+        for (let c = 0; c < nH; c++) {
+          const t = -runLen / 2 + (c + 0.5) * (runLen / nH);
+          const hg2 = new THREE.Mesh(texBox(0.035, 0.09, 0.035), pipeMat);
+          hg2.name = 'main-hanger';
+          if (axis === 'x') hg2.position.set(t, py + 0.045, off);
+          else hg2.position.set(off, py + 0.045, t);
+          group.add(hg2);
+          frameHardware.push(hg2);
+        }
+      }
+      // junction box where a feed splits — conduit stubs branch off it
+      if (rng.float() < 0.5) {
+        const jb = new THREE.Mesh(texBox(0.22, 0.12, 0.22), pipeMat);
+        jb.name = 'main-junction';
+        const jx = axis === 'x' ? (rng.float() - 0.5) * runLen * 0.4 : 0;
+        const jz = axis === 'x' ? 0 : (rng.float() - 0.5) * runLen * 0.4;
+        jb.position.set(jx, h - 0.1, jz);
+        group.add(jb);
+        frameHardware.push(jb);
+        // a stub crossing the room the other way
+        const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, (axis === 'x' ? d : w) * 0.4, 8), pipeMat);
+        stub.name = 'main-stub';
+        if (axis === 'x') { stub.rotation.x = Math.PI / 2; stub.position.set(jx, h - 0.13, jz + (rng.bool() ? 0.1 : -0.1)); }
+        else { stub.rotation.z = Math.PI / 2; stub.position.set(jx + (rng.bool() ? 0.1 : -0.1), h - 0.13, jz); }
+        group.add(stub);
+        frameHardware.push(stub);
+      }
     }
 
     // The water line — a room that flooded once keeps the tide mark:
@@ -4253,6 +5182,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const keep = new Set<THREE.Object3D>();
     for (const m of doorLeaves.values()) keep.add(m);
     for (const m of lampMeshes) keep.add(m);
+    for (const m of frameHardware) keep.add(m);
     for (const m of shafts) keep.add(m);
     if (dust) keep.add(dust);
     group.updateMatrixWorld(true);

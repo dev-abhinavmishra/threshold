@@ -536,7 +536,7 @@ describe('the house crimps your line (sprints 585-588)', () => {
     // the crimp is a real answer, not a re-lay — 'work' joins the
     // investigate kinds and the return names the squeeze
     expect(baseSrc).toContain("'blind' | 'spring' | 'work'");
-    expect(baseSrc).toContain("'crimp'");
+    expect(baseSrc).toContain("| 'crimp'");
     expect(corridorSrc).toContain("|| this.investigateKind === 'work'");
     expect(corridorSrc).toContain("restored === 'crimp'");
     // the ctx impl finds a live player-threaded vent and deads it,
@@ -574,7 +574,7 @@ describe('the eye watches for you (sprints 589-593)', () => {
     expect(gameSrc).toContain('your eye marks');
     // the house's answer: a 'work' mark by your eye → reclaim, not
     // unthread — the camera was always the house's
-    expect(baseSrc).toContain("| 'reclaim' | null");
+    expect(baseSrc).toContain("'reclaim'");
     const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     expect(work).toContain("return 'reclaim'");
     // aim+owner ride the checkpoint on eye records
@@ -604,5 +604,238 @@ describe('the pan is real (sprints 596-598)', () => {
     // the blink reasserts the lock — dazzle clears to NaN, aimBearing
     // keeps hold (the lock only yields to live light, never resets)
     expect(roomSrc).toContain('!Number.isFinite(w.dazzleBearing)\n        && !Number.isFinite(lampBearing)');
+  });
+});
+
+describe('the wheel is goods (sprints 589-596)', () => {
+  it('a still wheel yields its belt; refit wheels are player work the house leaves alone', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // the muscle is a part: strip yields fanBelt, refit spends it —
+    // gather + leave-out mint like the plate's pile
+    for (const k of ['workBelt', 'refitBelt', 'baitBelt', 'beltDrop']) {
+      expect(interactionSrc).toContain(`| '${k}'`);
+      expect(gameSrc).toContain(`case '${k}'`);
+    }
+    expect(gameSrc).toContain("giveItem('fanBelt'");
+    // the strip is the permanent kill — no belt, no re-engage; and
+    // player-fitted wheels are outside the house's re-lay jurisdiction
+    expect(roomSrc).toContain('belted?: boolean');
+    expect(roomSrc).toContain("owner?: 'player'");
+    expect(roomSrc).toContain('chocked?: boolean');
+    const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'fan'"),
+      gameSrc.indexOf("kind === 'blind'"));
+    expect(rearm).toContain('ff.belted !== false');
+    // sprint 648 — ownerless only: the house re-engages neither your
+    // wheel nor the under's grafted one
+    expect(rearm).toContain("ff.owner === undefined");
+    // the strip signs 'work' by:'player' — the price of the permanent
+    // kill is the name it leaves for the floorkeeper to read
+    const strip = gameSrc.slice(gameSrc.indexOf("case 'workBelt'"),
+      gameSrc.indexOf("case 'refitBelt'"));
+    expect(strip).toContain('f.belted = false');
+    expect(strip).toContain("by: 'player'");
+    // chocking your own wheel signs 'work', never 'fan' — the house
+    // doesn't get jurisdiction over a wedge in your own belt
+    const chock = gameSrc.slice(gameSrc.indexOf("case 'chock'"),
+      gameSrc.indexOf("case 'unchock'"));
+    expect(chock).toContain("f.owner === 'player'");
+    expect(chock).toContain("by: 'player'");
+    // muscle + wedge + ownership ride deadHazards through the checkpoint;
+    // the loose belt rides its own pile field
+    expect(storeSrc).toContain('belted?: boolean; chocked?: boolean');
+    expect(storeSrc).toContain('droppedBelts?:');
+    expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
+    // the house answers your wheel: 'work' near a live fitted fan is
+    // the pull — beltless housing, belt on the boards
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'lidSweep' | null");
+    const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    // sprint 648 — 'work' near a claimed wheel pulls it whoever's
+    // hands claim it: yours or the under's
+    expect(pull).toContain("ff.owner !== undefined");
+    expect(pull).toContain("return 'pull'");
+    expect(pull).toContain('this.droppedBelts.push');
+    // a chocked house wheel re-engaging frees the wedge into his
+    // pocket — confiscated like the felt, spillable like the plate
+    expect(baseSrc).toContain("| 'fanChock'");
+    expect(corridorSrc).toContain("restored === 'fanChock'");
+    expect(corridorSrc).toContain('this.pocketedChocks++');
+    // a loose belt is tidy goods: the floorkeeper pockets it, the under
+    // folds it, the seam reads your wheel
+    expect(corridorSrc).toContain('pocketedBelts');
+    expect(baseSrc).toContain("'spring' | 'belt'");
+    expect(gameSrc).toContain('your wheel hums past the leaf');
+  });
+});
+
+describe('your glass watches back (sprints 597-603)', () => {
+  it('a taped eye yields its lens; a seated eye is player work the house can only tear', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the glass is a part: pry yields eyeLens, seat spends it —
+    // gather + leave-out mint like the wheel's pile
+    for (const k of ['pryLens', 'seatLens', 'baitLens', 'lensDrop']) {
+      expect(interactionSrc).toContain(`| '${k}'`);
+      expect(gameSrc).toContain(`case '${k}'`);
+    }
+    expect(gameSrc).toContain("giveItem('eyeLens'");
+    // the pry is the permanent kill — lensed:false blinds like dead
+    // mains, and the socket never opens again
+    expect(roomSrc).toContain('lensed?: boolean');
+    expect(roomSrc).toContain('w.lensed !== false');
+    // the seated eye is owned: it never warns on you, it murmurs
+    // walkers instead, and the lens hold pins a dazzled stare
+    expect(roomSrc).toContain("w.owner === 'player'");
+    expect(roomSrc).toContain('ctx.walkers?.(w.room)');
+    expect(roomSrc).toContain('lensHoldUntil');
+    // the pry signs 'work' by:'player'; the seat signs too — the name
+    // your hands leave is the price of the permanent kill
+    const pry = gameSrc.slice(gameSrc.indexOf("case 'pryLens'"),
+      gameSrc.indexOf("case 'seatLens'"));
+    expect(pry).toContain('w.lensed = false');
+    expect(pry).toContain("by: 'player'");
+    const seat = gameSrc.slice(gameSrc.indexOf("case 'seatLens'"),
+      gameSrc.indexOf("case 'drain'"));
+    expect(seat).toContain("w.owner = 'player'");
+    expect(seat).toContain("by: 'player'");
+    // felt over YOUR OWN eye reroutes to 'work' — the house doesn't
+    // get jurisdiction over a wrap on your own glass
+    const tape = gameSrc.slice(gameSrc.indexOf("case 'tape'"),
+      gameSrc.indexOf("case 'untape'"));
+    expect(tape).toContain("w.owner === 'player'");
+    expect(tape).toContain("by: 'player'");
+    // the consumable dazzle: hold the glass to a live eye and the
+    // blink holds nine seconds — no sign, it just drinks its own
+    const use = gameSrc.slice(gameSrc.indexOf("case 'eyeLens'"),
+      gameSrc.indexOf("case 'chalkSpool'"));
+    expect(use).toContain('w.dazzleCued = true');
+    expect(use).toContain('lensHoldUntil = this.clock.time + 9');
+    // glass + ownership ride deadHazards through the checkpoint; the
+    // loose lens rides its own pile field
+    expect(storeSrc).toContain('lensed?: boolean');
+    expect(storeSrc).toContain('droppedLenses?:');
+    expect(gameSrc).toContain('eyesOwned: this.hazard.watchers.filter');
+    // the house answers your eye: 'work' near a live seated socket is
+    // the tear — dead glass, lens on the boards
+    expect(baseSrc).toContain("'lensTear'");
+    const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    // sprint 648 — same for the tear: any claimed socket answers
+    expect(work).toContain("ww.owner !== undefined");
+    expect(work).toContain("return 'lensTear'");
+    expect(work).toContain('this.droppedLenses.push');
+    // torn glass is tidy goods: the floorkeeper pockets it and spills
+    // it going down, the under folds it into stock
+    expect(corridorSrc).toContain('pocketedLenses');
+    expect(corridorSrc).toContain("restored === 'lensTear'");
+    expect(corridorSrc).toContain('spillLenses');
+    expect(baseSrc).toContain("'belt' | 'lens'");
+    expect(setpiecesSrc).toContain("kind === 'lens'");
+    // the seam reads your eye too
+    expect(gameSrc).toContain('your eye pans past the leaf');
+  });
+});
+
+describe('the under grafts back (sprints 646-650)', () => {
+  it('a carried belt or lens keeps its kind and seeks a substrate', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the under re-threads, it doesn't unspool: belt → dead housing,
+    // lens → pried socket. Everything else still folds to wire.
+    expect(setpiecesSrc).toContain("carriedKind: 'belt' | 'lens' | null");
+    expect(setpiecesSrc).toContain("this.carriedKind = 'belt'");
+    expect(setpiecesSrc).toContain("this.carriedKind = 'lens'");
+    expect(setpiecesSrc).toContain('nearestGraft');
+    expect(setpiecesSrc).toContain('spillCarriedKind');
+    // the ctx hooks exist and are kind-filtered — a belt can't graft
+    // a socket
+    expect(baseSrc).toContain('nearestGraft');
+    expect(baseSrc).toContain('graft?:');
+    expect(gameSrc).toContain("kind === 'socket'");
+    expect(gameSrc).toContain("kind === 'wheel'");
+  });
+
+  it('the graft claims jurisdiction and signs its work', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    // wheel: dead housing wakes on the under's muscle, marked 'under'
+    // and signed 'work' under the grafter's key — the house reads it.
+    expect(gameSrc).toContain("f.owner = 'under'");
+    expect(gameSrc).toContain("w.owner = 'under'");
+    expect(gameSrc).toContain('graftedWork');
+    expect(storeSrc).toContain('graftedWork');
+    // jurisdiction rides the checkpoint and the record type
+    expect(storeSrc).toContain("owner?: 'player' | 'under'");
+    expect(gameSrc).toContain('if (h.owner) f.owner = h.owner;');
+    expect(gameSrc).toContain('if (h.owner) w.owner = h.owner;');
+    // the house only re-engages ownerless work; the pull answers any
+    // foreign jurisdiction
+    const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'blind'"));
+    expect(rearm).toContain("ww.owner === undefined");
+    // the seam warns on grafted work
+    expect(gameSrc).toContain('muscle you stripped');
+    expect(gameSrc).toContain('glass you pried');
+    // the pry ends ANY jurisdiction — re-strip a grafted socket
+    expect(gameSrc).toContain('delete w.owner');
+  });
+
+  it('a grafted wheel staggers the house, not the under', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the wake spares the hands that threaded it — UNDER_FACTION ids
+    // slip through a grafted wheel's bite
+    expect(gameSrc).toContain('UNDER_FACTION');
+    expect(gameSrc).toContain("f.owner === 'under' ? UNDER_FACTION : null");
+    expect(gameSrc).toContain("'grafter'");
+    expect(gameSrc).toContain('exempt?.has(ent.id)');
+  });
+});
+
+
+describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
+  it("'work' near a stuffed lid tips it — the take comes out as piles", () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // the fourth 'work' dispatch — after eye tear, before null
+    expect(baseSrc).toContain("'lensTear' | 'lidSweep'");
+    expect(gameSrc).toContain('floorkeeper tips');
+    expect(gameSrc).toContain('near(s.exitPos)');
+    // scattered, not confiscated — six pile kinds mirror the take
+    for (const pile of ['droppedWraps', 'kickedWedges', 'droppedCoils',
+      'droppedSprings', 'droppedBelts', 'droppedLenses'])
+      expect(gameSrc).toContain(`this.${pile}.push`);
+    // oddities keep the lid; emptied stashes drop out of the ledger
+    expect(gameSrc).toContain('oddities keep the lid');
+    expect(gameSrc).toContain('this.lidStashes.delete');
+    expect(gameSrc).toContain('this.sweptLids');
+    // the warden reads the sweep out loud
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    expect(corridorSrc).toContain("restored === 'lidSweep'");
+    expect(corridorSrc).toContain('tips your lid');
+    // the epitaph counts the tipped lids
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('lidsSwept');
+  });
+
+  it('the stash signs the work the sweep answers', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // s528 — stuffing the box already signs 'work' by the player;
+    // the sweep is the reader, not a new signature
+    const stash = gameSrc.slice(gameSrc.indexOf("case 'stashTake'"));
+    expect(gameSrc).toContain('the lid signs the work');
+    expect(gameSrc).toContain("kind: 'work'");
+    expect(gameSrc).toContain("readBy: ['player']");
+    // a lid with no stackable goods is not sweepable — the mark
+    // stays for other readers
+    expect(gameSrc).toContain('if (!spot) return null');
+    void stash;
   });
 });

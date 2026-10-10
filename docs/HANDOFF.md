@@ -4,6 +4,253 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
+
+- **652** the signature already existed: `stashTake`/`stashMark` sign `'work'` `by:'player'` when the lid fills (s528). What was missing was the reader — the last goods surface without a house answer.
+- **653** fourth `'work'` dispatch in `rearmHazard`: crimp → pull → tear → **sweep**. A `'work'` mark near a stashed lid (`near(s.exitPos)` + non-empty stash) tips the box: the six stackable goods come out as their honest floor piles at the lid's mouth — scattered, not confiscated. Oddities (pile-less ids like documents) keep the box; marks ride off with the scattered goods; emptied stashes drop out of `lidStashes`.
+- **654** the warden reads the sweep aloud (`[it tips your lid — the take scatters the floor]`, corridor cue), and the epitaph counts tipped lids (`books.lidsSwept`).
+- **655** contract spec: `'sweep'` in the `rearmHazard` union, pile-set parity with the take, delete-on-empty, the `if (!spot) return null` no-stash path.
+- **656** e2e leg (`props.spec.ts`): seeded stash → `rearmHazard('work', exitPos)` → `'sweep'`, belts+coils minted on the floor, documents kept, marked cleared, `sweptLids=1`.
+
+Traps: place the mark clear of owned housings/sockets — pull and tear dispatch BEFORE the sweep in the 'work' chain, so a mark near a grafted wheel answers the wheel instead of the lid. A stash of pure oddities is unsweepable (returns null, mark stays for other readers).
+
+
+
+## Sprint 646–650 — the under grafts back (third jurisdiction: owner:'under')
+
+- **Sprint 646**: the grafter stops folding every good into wire — a
+  claimed `belt` or `lens` keeps its kind (`carriedKind`) and seeks a
+  substrate via new ctx hooks `nearestGraft(x,z,maxD,kind)` /
+  `graft(x,z,kind,byKey)`: muscle-less housings (`belted===false`) take
+  belts, pried sockets (`lensed===false`) take lenses. Out-of-room or
+  missing substrate falls back to the old wire fold — nothing strands.
+- **Sprint 647**: `UNDER_FACTION` — a grafted wheel's wake exempts the
+  hands that threaded it (`exempt?.has(ent.id)` in the fan stagger loop).
+  House walkers and you still get bitten; player wheels bite all.
+- **Sprint 648**: jurisdiction is now three-way. `owner:'under'` rides
+  deadHazards + checkpoint (serialize filter widened to
+  `owner !== undefined`, restore `if (h.owner)`). 'work' pull/tear
+  fires on ANY claimed hazard (`ff.owner !== undefined`,
+  `ww.owner !== undefined`); rearm 'fan'/'blind' gates tightened to
+  `owner === undefined` — the house re-engages only ownerless work.
+  Pry deletes owner (re-strip a grafted socket); `workBelt` already
+  did — grafted goods are re-strippable through normal verbs.
+- **Sprint 649**: graft signs `work` under `grafter:<spawnRoom>` — the
+  house smells whose hands went there, so the warden's pull reaches
+  under-owned work the same as player-owned.
+- **Sprint 650**: seam reads grafted work at warn tier ('muscle you
+  stripped'/'glass you pried'); epitaph + victory books count
+  `graftedWork`. Carried-kind spills spill as themselves
+  (`spillCarriedKind` → `spillBelts`/`spillLenses`), never as wire.
+- Tests: hazardContract +3 pins (45 total); new e2e leg 'the under
+  grafts back' in props.spec.ts — site-kind pairing, jurisdiction,
+  house answer, goods on boards.
+- Trap: graft targets must pair kind→substrate (`nearestGraft` takes
+  the kind filter) — a belt can't graft a socket.
+- Note for decals lane: no shared files touched this arc.
+
+
+
+
+
+
+
+## Sprint 640–642 — the doors kept their teeth (door-hardware batch)
+
+- `strap-hinge` + `strap-end` T-irons across plank-style leaves (~65%
+  of planks), both faces — leaf-local, x from the hinge edge inward.
+- `kick-plate` steel low on livedIn leaves (~40%); `chain-keeper` +
+  `chain-link`×4 + `chain-mount` on the inside face (~30%).
+- `bell-plate` + `bell-push` on the wall beside the hinge-side casing
+  (~35% of non-industrial doors), both wall faces.
+- Leaf-local x past `pw/2` lands past the leaf edge — fine for
+  jamb-mounted pieces (chain-mount) since the leaf group carries them.
+
+## Sprint 637–639 — the rails kept their smalls (service-hardware batch)
+
+- `rad-feed`/`rad-bypass`/`rad-bleed` plumbing under + beside
+  radiatorFin/radiatorTall props (~60%).
+- `towel-ring` + `towel-drop`, `robe-peg` + `robe-drop` beside
+  basinSink/washStand (~55%), skipped when a door sits in the span.
+- `glass-shelf` + `soap-dish` + `tooth-cup` over the same basins (~55%).
+- s634-636 dedup fix: baseboard outlets already existed (unnamed);
+  merged cord detail into that block instead of adding a second one.
+  ALWAYS grep for an existing feature before adding a look-alike.
+
+## Sprint 634–636 — the openings wore their heads (molding batch)
+
+- `lintel-frieze` + `lintel-key` + `lintel-rosette` under the door
+  architrave on both wall faces (frame-space z ±0.26 — wall faces sit
+  at ±0.26 there, not ±0.06).
+- `win-head`/`win-casing` trim + brass `curtain-rod` with `rod-finial`
+  ends and 1–2 torn `rod-drape` drops over livedIn windows (~60%).
+- Existing baseboard outlets upgraded: named `outlet-plate`/`outlet-slot`
+  (now frameHardware-kept), ~45% carry a `cord-plug` + `flex-cord` drop.
+- New shared helper `placeOnWall(m, wall, off, y, proud)` — room-space
+  placement for wall-mounted meshes (e/w auto-rotates y π/2, auto-pushes
+  to frameHardware). Reuse it instead of hand-rolling per-wall math.
+
+## Sprint 631–633 — the sills kept their keepers (window-ledge batch)
+
+- `sill-pot` + `sill-stem` dead plants, `sill-candle` stubs,
+  `sill-jar`s, `sill-cloth` folds — 2–3 items per window sill (y 0.95,
+  inset 0.05 off the wall) in livedIn rooms (~70% of windows).
+- Item kinds CYCLE per sill (`(kindStart + i) % 4`), never rolled —
+  windows are rare (~10/seed), so a uniform roll starves edge kinds;
+  keep this pattern whenever a rare host gates a multi-kind batch.
+- All `frameHardware`-kept like the rest of the static dressing.
+
+## Sprint 628–630 — the wet walls wore their aprons (splash-tile batch)
+
+- `tile-apron` subway-tile slabs (~1.5–1.9m × ~1.35–1.6m, proud of
+  wall by 0.016) behind basinSink/washStand/grateDrain/washer props
+  on their nearest wall — skipped when a door sits in the span.
+- `apron-grout` groutLines decal ghosted over the band; `tile-chip`
+  dark oak boxes where a tile fell off.
+- `frameHardware`-kept like all recent static dressing.
+
+## Sprint 625–627 — the halls kept their lamps (corridor sconce batch)
+
+- `corridor-sconce` brass arms alternate e/w walls every ~2.6–3.2m in
+  long corridor rooms; `sconce-shade` cones; `sconce-bulb-lit`/
+  `sconce-bulb` emissive bulbs (30% dead); `sconcePool` wall decal
+  + `sconce-pool` thrown light under lit arms.
+- Emissive only — no point lights (a corridor chain would blow the
+  light budget); hardware kept via `frameHardware`.
+
+## Sprint 622–624 — the ceiling carried its mains (overhead conduit batch)
+
+- `ceiling-main` 1–3 parallel conduit runs along one axis at h-0.12
+  in under/maintenance rooms; `main-hanger` straps to the slab every
+  ~1.4m; `main-junction` feed box + `main-stub` crossing run (~50%).
+- All `frameHardware`-kept like the skirting pipes.
+
+## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
+
+- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
+  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
+  stove*/boiler*/fireplace) or maintenance/under — steelDark in
+  service space, brass inside.
+- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
+  the floor at a run end; `pipe-valve` torus wheel mid-run.
+- Port-aware: the wall span is cut into segments clear of door
+  offsets (±1.0 margin) so pipes never cross an opening.
+- All pieces pushed into `frameHardware` so names survive static
+  consolidation.
+- 4 tests added (664 total).
+
+## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
+
+- **Sprint 616**: procedural leaves split into four styles —
+  `panel` (62%, the estate six-panel), `plank` (ledged boards),
+  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
+  solid lower half). Style rolls inside `!industrial && !doorModel`;
+  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
+- **Sprint 617**: `threshold-strip` transition bars under each port —
+  brass inside, steelDark under — pushed into `frameHardware` keep list.
+- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
+  flanking the leaf — pairs with the existing emissive under-door seam.
+- 5 tests added (660 total).
+
+## Sprint 613–615 — the doors kept their furniture (leaf + jamb hardware batch)
+
+- **Sprint 613**: interior leaves gained real hardware — `mail-slot`,
+  `peephole`, `deadbolt`, `escutcheon`, `finger-plate`, `door-number`,
+  each seeded independently so no two doors carry the same set.
+- **Sprint 614**: service leaves got theirs — `crash-bar` with stanchion
+  mounts at hip height, `wire-window` transom pane up top.
+- **Sprint 615**: the jamb — `strike-plate`, `hinge-knuckle`×3, `door-stop`
+  head + side strips on every non-industrial frame.
+- Trap hit + fix: frame children are **static-consolidated** — named meshes
+  merge away. `userData.decalMat` on the mesh skips the merge BUT makes
+  disposeRoom() free its material — fatal on shared MAT.* (). Correct
+  escape hatch: push meshes into a `frameHardware` list added to the
+  consolidation `keep` set (like doorLeaves/lampMeshes).
+- 9 tests added (655 total); all on `buildRoomMesh` group traverse counts.
+
+## Sprint 610–612 — the ceiling kept its weather (ceiling decal batch)
+
+The last undecorated surface: ceilings ran flat until now. Nine
+generators, ceiling decals at `rotation.x = Math.PI/2`, `y = h-0.056`
+(to -0.059 for z-fight spacing):
+
+- **s610**: `ceilingRing` (mineral water rings + drip point, wet bones),
+  `plasterVein` (settlement crack with tributaries + spall), 
+  `pendantGhost` (pale ring + hook scar, livedIn only).
+- **s611**: `fixtureSoot` (smoke halo + convection fingers over
+  chainBulb/cageLight/fluoroTube), `tileSag` (ceiling-grid ghosts +
+  sagging panel shadow, !livedIn), `corniceLine` (dust ledge + cobweb
+  anchors riding the wall at h-0.3).
+- **s612**: `atticStain` (broad damp bloom + mould freckles, !livedIn),
+  `paintFlake` (curled paint tongues + under-scars, livedIn),
+  `heaterGhost` (convection halo + soot lip on the wall over
+  radiatorFin/radiatorTall/masonryHeater/boilerDrum/boilerTank).
+
+Prop-kind trap caught again: 'radiator'/'barrelStove' aren't in the
+union — real heat kinds are radiatorFin/radiatorTall/masonryHeater/
+stove/stoveRange/boilerDrum/boilerTank/fireplace.
+
+## Sprint 607–609 — the under kept its marks (under decal batch)
+
+The nine new under rooms had props but no wear. Nine decal generators,
+all `isUnder`-gated in the dressing block:
+
+- **s607**: `lockerKick` (toe-scuff band + dent dimples on the floor
+  before locker/cageLocker rows, yaw-aligned off the wall face),
+  `pumpSeep` (drip trail from each sumpPump walking toward the room's
+  grateDrain — rotation aims via `atan2(drain−pump)`), `mailDrift`
+  (envelope fans under mailCart/stackShelf).
+- **s608**: `sootFan` (blowback plume + ember pits beside boilerDrum),
+  `fuseTally` (chalk gate-counts beside breakerPanel/powerBox/
+  utilityBox — nearest-wall via dE/dW/dN/dS, offset ±0.55 along),
+  `hatchGrease` (vertical grease run + cable polish + thumb smears
+  under dumbwaiter/dumbWaiterDoor).
+- **s609**: `bunkBoots` (paired prints that stop mid-room at under
+  bunks), `hookShadow` (peg ghosts + reach-shine on rack/toolChest/
+  stackShelf walls), `chainDrag` (polished drag path + link kisses +
+  rust tail at chainFence/handTruck/overheadCrane).
+
+All floor decals sit y≈0.008–0.009; wall decals ride nearest-wall.
+Under decals must respect door lanes same as main — see the s604-606
+entry for the offline lane-audit recipe (scratch vitest spec, 4s, vs
+three 49-min full-suite trips).
+
+## Sprint 604–606 — the under kept its workings (nine new under templates)
+
+The Underscript ran ~120 rooms on 14 templates — its largest variety gap.
+Nine new room templates across three batches:
+
+- **s604 the workings**: `u-mail-sort` (8×7 sort floor — stackShelf cubby
+  wall, two dead mail carts, key cabinet, parcel crates), `u-switchboard`
+  (6×6 electrical vault — breaker/utility bank on two walls, machine box,
+  cage light + conduit runs), `u-tool-cage` (7×6 tool crib — mesh-front
+  cageLocker row, racks, tool chest/cart, bench vice on a crate, gas
+  bottles).
+- **s605 the people**: `u-locker-row` (8×6 locker room — four lockers on
+  the north wall, cage lockers west, benches + floor drains, water cooler),
+  `u-bunk-nook` (5×5 squatter bedroom — one partition screen walls the
+  north-west corner off, bed flush against the wall, camp crate with
+  lantern/rations/cigs/thermos, under-bed hide), `u-dumbwaiter-bay`
+  (4×5 freight alcove — dead dumbwaiter hatch + service door, trolley,
+  hand truck, mail cart).
+- **s606 the machines**: `u-pump-vault` (7×7 sump vault — two sump pumps,
+  pipe manifold wall, valve wheels, overhead pipe runs, floor drains),
+  `u-freight-bay` (8×6 loading nook — roller shutter east, overhead crane
+  hoist, crate rows, tyre pile, chain fence), `u-burn-room` (6×6 waste
+  furnace — boiler drum, coal scuttle, meat hook, trolley).
+
+**Bug fixed along the way**: `us()` ignored `weight`, `perfCost`,
+`darkChance`, `minRoom` in opts — every under template spawned at weight
+10 regardless of its declared value. Now wired through, so the existing
+templates' declared weights are live for the first time (corridors/lobbies
+up, set-pieces down — check under room mix if distribution drifts).
+
+New tests: each of the nine builds a valid spec (props > 3, hiding spot,
+entry+exit nav), ≥4 of the nine appear across 5 seeds, hiding spots stay
+inside room bounds, and a propsClash sweep over the nine (under templates
+were never swept) — caught and fixed two real embeds (partition/bed,
+crane/shutter).
+
 ## Review-fix sweep — the decals land where they claim
 
 All Devin Review findings on the merged decal PRs (#182–#218, 54 findings)
@@ -7931,7 +8178,40 @@ Contract: every defuse signs AND yields — the bleed was the last gap; the valv
 
 Traps: a live player-refit vent must serialize into deadHazards too (owner flag) — steam records now carry explicit `dead` or a live owned vent would restore bled. 'workValve'/'refitValve' mint only on DEAD vents, 'bleed' only on live — no focus overlap. `refitValve` branch order matters: own-throat (free) before bare-thread (paid).
 
-## Sprints 589–593 — the eye watches for you
+## Sprints 589–596 — the wheel is goods / the belt is scrap too
+
+- **Work the belt off** (s589): any still wheel mints the strip — `dead`, no refit. The belt walks off the rim whole into `fanBelt` (Drive Belt, stack 2), the wedge that jammed it drops back into your hand, `belted=false` makes it the PERMANENT kill a chock never was — a beltless housing never re-engages. Signs `kind:'work'` by:'player', the name the strip costs.
+- **Fit the belt back — 1 fanBelt** (s590): a stripped housing takes YOUR belt — `dead=false, belted=true, owner='player'` + 'work' sign. The blades' wake staggers any walker within a meter, you included (the fan stagger loop was already honest two-ways). `rearmHazard 'fan'` skips `belted===false` AND `owner==='player'` — no belt, no re-engage; your wheel, your jurisdiction.
+- **The chock is a real object now** (s589): `chocked` flags the wedge actually in the blades. 'Work the chock free' mints only while one's in there — a seeded spent wheel and a stripped housing hold none to free (the free-chock fabrication bug is closed). `unchock` clears it; the strip frees it to your hand; a house re-engage of a chocked wheel returns `'fanChock'` and the warden pockets the wedge — confiscated like the felt, spilled like the plate.
+- **The pull** (s592): the house answers your wheel too — a 'work' mark near a live `owner==='player'` fan returns `'pull'`: beltless housing, belt on the boards as loose goods, any wedge kicked loose beside it. "[it pulls the belt off your wheel — the muscle slaps the boards]". He can't re-engage your wheel so he strips its muscle — the belt lies where it fell for you to gather back, unless he stoops to tidy it first.
+- **The belt is floor goods** (s593): `droppedBelts` is a full pile — 'Gather the drive belt' (`beltDrop`), 'Leave a belt out' (`baitBelt`), draggable (`mintDragVerb 'belt'` + arr switch), bootable by scatterSpill, taken by spillTake, rides the checkpoint. Warden `pocketedBelts`→`spillBelts` on both stagger and settle ("[it pockets the loose belt — the floor is tidy again]"); grafter folds it into `carrying` stock like the plate ("[stone folds the belt into wire — the under takes your wheels]"). Precedence: coin first, belt last — a pile shared with a pouch still pays the pouch.
+- **Chock your own wheel** (s594): a wedge in an owned wheel re-routes the sign — `kind:'work'` by:'player', never the house's 'fan' mark. Your hands stay silent on your wheel.
+- **The seam reads your wheel** (s595): a door-listen answers a live owned fan <3m past the leaf — '[your wheel hums past the leaf — the belt you fit]' — same tier as your line. `wheelsOwned` joins both epitaphs; `droppedBelts` counts toward `spilled`; fanBelt joins the Broker's seeded stock (12-18).
+- **Contract spec** (s596): `hazardContract` pins strip-yield/refit-gates/'work'-sign/chocked-verbs/pull-dispatch/pile-surface/seam-read; the s585 crimp spec's union pin widened for 'fanChock'+'pull'.
+
+Contract: every defuse signs AND yields, every yield is goods — the wheel completes the surface the line and plate already closed (chock → strip → carry → refit → chock/pull → re-fit). A belt is never destroyed, only relocated: rim → hand → boards → pocket → boards. `deadHazards` fan records carry `dead`/`belted`/`chocked`/`owner` — a live owned wheel serializes too or it would resurrect dead.
+
+Traps: same-anchor verbs split on Y, not azimuth — workBelt at y1.55, refitBelt at y1.35, unchock at y1.15 (the s525 azimuth rule is for lamps that share keyYaw; fan verbs share the housing center so they stack vertically). `rearmHazard 'fan'` must NOT clear `owner` — the house simply can't reach it (the filter does that); clearing owner on pull IS required or the beltless housing would stay 'yours' forever. A pull on your CHOCKED wheel drops the wedge as a kickedWedges pile — the jam is an object, it doesn't vanish. deadHazards fan records previously serialized `f.dead` only — a live owned wheel would have restored dead without the explicit `h.dead !== false` convention.
+
+## Sprints 597–603 — your glass watches back
+
+The blind was the last unsigned defuse: felt a watcher and the eye yielded nothing but the wrap back. Now the eye honors the full goods contract — pry → eyeLens → seat → owned murmur → consumable dazzle → the house's tear → lens pile → epitaph + seam read.
+
+- **Pry the lens out** (s597): any felt-wrapped (dead) eye mints the pry at wy−0.35 — same-anchor split on Y under the untape, like the wheel's verbs. The glass levers out whole into `eyeLens` (Wall Lens, stack 2, slot item), the mounted felt comes back to your hand (parked tool, like the chock), and `lensed=false` joins `dead` in the `live` gate so the socket NEVER opens again — no untape, no rearm, no dazzle. Signs 'work' by:'player'. `rearmHazard 'blind'` now gates `ww.lensed !== false && ww.owner !== 'player'` — the pry already handed your felt back, there's nothing to strip.
+- **Seat the lens — 1 wall lens** (s598): a pried socket takes YOUR lens — `lensed=true, dead=false, owner='player'` + 'work' sign. The owned eye is quiet for you (warn hiss and marked register cue skip `owner==='player'`), and instead of hunting your walk it murmurs on walker crossings via the new `ctx.walkers(room)` hook — watchSettle>0.9 inside its arc and range, throttled 6s, info cue '[your eye murmurs — something crosses its arc]'. It never lists you; the eye knows your walk.
+- **Hold it to a live eye** (s599): the eyeLens is a 2-charge slot consumable — aimed within 60° at a live eye ≤7m it feeds the dazzle (`dazzleCued/everDazzled/dazzleBearing/dazzleT` like s561) plus `lensHoldUntil = now+9`, which the blink-reset gate honors so the stare holds on nothing for nine seconds. '[it drinks its own — the stare holds on nothing]'. No 'work' sign — the glass drinking itself is nobody's evidence.
+- **The tear** (s600): the house answers your eye too — a 'work' mark near a live `owner==='player'` lensed watcher falls through the fan check and returns `'lensTear'`: dead socket, `delete owner`, glass on the boards as loose goods. "[it tears the lens off your eye — the glass slaps the boards]". Gather it back before the floorkeeper stoops.
+- **The lens is floor goods** (s601): `droppedLenses` is the full pile surface — 'Gather the watch glass' (`lensDrop`), 'Leave a lens out' (`baitLens`), draggable (`mintDragVerb 'lens'`), bootable, spillTake-able, checkpointed. Warden `pocketedLenses`→`spillLenses` on both stagger and settle; grafter folds it ("[stone folds the glass into wire — the under takes your eyes]"); scatterSpill's hit mints it; 'Spill the take' counts it.
+- **The seam reads your eye** (s602): a door-listen answers a live owned watcher <3m past the leaf — '[your eye pans past the leaf — the lens you set]'. `eyesOwned` joins both epitaphs; `droppedLenses` counts toward `spilled`; eyeLens joins the Broker's seeded stock (16–24, priced above the belt — the under can't pull the same socket twice). Felt over YOUR OWN eye reroutes to 'work' by:'player' — the house doesn't get jurisdiction over a wrap on your own glass.
+- **Contract spec + e2e** (s603): `hazardContract` pins the whole surface (42 tests) and `props.spec.ts` gets the drive leg: tape → pry (lens+wrap back, sign, permanent) → seat (owned, murmur path) → 'blind' rearm dead on both sides of jurisdiction → 'work' → lensTear, glass on the boards.
+
+Contract: every defuse signs AND yields, every yield is goods — the eye completes the set the line, plate, and wheel already closed. A lens is never destroyed, only relocated: socket → hand → socket/boards → pocket → boards. `deadHazards` watcher records carry `dead`/`filed`/`lensed`/`owner` — a pried socket or live owned eye serializes or it would resurrect.
+
+Traps: watchers spawn from PROPS not sockets — the pry/seat mint in the same isWatch block, anchored on the wrap's wall key and split on Y (`wy−0.35`), not on watcher.pos. `live` must test `w.lensed !== false` separately from `w.dead` — a pried socket stays 'dead' but the flag is what makes it permanent (dead mains can kill an eye without touching its glass). The owned-eye branch in room.ts `continue`s before the player-distance gate or your own eye would still settle on you. `rearmHazard 'work'` dispatches steam→fan→eye inside the same !f fallthrough — a pull without a fan near mustn't return null before the eye is checked. pocketedBelts staggered-settle: verified both spill sites zero the count before the callback — no double-spill possible; closed.
+
+NEXT SPRINT IDEAS (mechanics): the crimp's mirror — the under should be able to re-thread your pulled belt for a price (grafted wheels — a wheel that answers the under, staggers the house). The same mirror now exists for the eye: a grafted socket that answers the under and murmurs AGAINST you (an eye that isn't yours anymore but still pans). Or the last goods surface without a house answer: the stash/lid — a 'work' mark near your lid could get it swept (your take scattered, not confiscated).
+
+## Sprints 664–666 (eye arc — renumbered; main claimed 589-596) — the eye watches for you
 
 - **'Aim the eye — it stares where you point'** (s589): crouched under a live watcher — the pan locks to the bearing you point ~3m out from its mount (`aimBearing`, `owner:'player'` on the watcher) + 'work' sign by:'player'. Standing/tape vs crouched/aim — no twin-verb churn; re-mints on owned eyes to re-point.
 - **The report** (s590): an owned eye's locked sweep marks entities crossing its cone — `[your eye marks warden crossing its sweep]` + tick emit, throttled 8s per eye. The planted CCTV.
