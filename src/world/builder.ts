@@ -2459,7 +2459,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The shafts fell — pale trapezoids of window light with the
     // motes still in them, on the floor beside windows.
     for (const p of spec.props) {
-      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.35) continue;
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.65) continue;
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const sw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
@@ -3361,6 +3361,57 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           if (wl2 && !wl2.name) wl2.name = 'sconce-pool';
         }
         side = -side;
+      }
+    }
+
+    // The sills kept their keepers — the little things left standing
+    // on window ledges: dead pots, candle stubs, jam jars, folded cloth.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.65) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const sillY = 0.95;
+      const inset = (hw === 'e' ? w / 2 : hw === 'w' ? -w / 2 : 0) - (hw === 'e' ? 0.05 : hw === 'w' ? -0.05 : 0);
+      const zin = (hw === 'n' ? d / 2 : hw === 's' ? -d / 2 : 0) - (hw === 'n' ? 0.05 : hw === 's' ? -0.05 : 0);
+      const put = (m: THREE.Mesh, off: number, y: number) => {
+        if (hw === 'e' || hw === 'w') m.position.set(inset, y, along + off);
+        else m.position.set(along + off, y, zin);
+        group.add(m);
+        frameHardware.push(m);
+      };
+      const nItems = 2 + rng.int(0, 1);
+      const kindStart = rng.int(0, 3);
+      const spots = [-0.35, 0.3, 0, -0.15, 0.15].sort(() => rng.float() - 0.5);
+      for (let i = 0; i < nItems; i++) {
+        const kind = (kindStart + i) % 4;
+        const ox = spots[i % spots.length] + (rng.float() - 0.5) * 0.06;
+        if (kind === 0) {
+          // dead plant — pot and two dry stems
+          const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.035, 0.09, 8), MAT.darkOak());
+          pot.name = 'sill-pot';
+          put(pot, ox, sillY + 0.045);
+          for (let st = 0; st < 2; st++) {
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.16 + rng.float() * 0.08, 5), MAT.darkOak());
+            stem.name = 'sill-stem';
+            put(stem, ox + (st - 0.5) * 0.03, sillY + 0.15);
+            stem.rotation.z = (rng.float() - 0.5) * 0.5;
+          }
+        } else if (kind === 1) {
+          const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.05 + rng.float() * 0.04, 8), MAT.paperOld());
+          stub.name = 'sill-candle';
+          put(stub, ox, sillY + 0.03);
+        } else if (kind === 2) {
+          const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, 0.1, 8), MAT.steelDark());
+          jar.name = 'sill-jar';
+          put(jar, ox, sillY + 0.05);
+        } else {
+          const cloth = new THREE.Mesh(texBox(0.16, 0.02, 0.1), MAT.paper());
+          cloth.name = 'sill-cloth';
+          put(cloth, ox, sillY + 0.01);
+          cloth.rotation.y = rng.float() * 0.8 - 0.4;
+        }
       }
     }
 

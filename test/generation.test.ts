@@ -6074,3 +6074,20 @@ describe('the wet walls wore their aprons (sprint 628-630)', () => {
     });
   }
 });
+
+describe('the sills kept their keepers (sprint 631-633)', () => {
+  for (const name of ['sill-pot', 'sill-candle', 'sill-jar', 'sill-cloth'] as const) {
+    it(`windows carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
