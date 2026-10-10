@@ -5972,3 +5972,37 @@ describe('the jamb kept its metal (sprint 615)', () => {
     });
   }
 });
+
+describe('the doors wore different faces (sprint 616)', () => {
+  for (const name of ['leaf-plank', 'leaf-louver', 'leaf-pane'] as const) {
+    it(`leaves carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
+
+describe('the sills kept the crossings (sprint 617-618)', () => {
+  for (const name of ['threshold-strip', 'door-glow'] as const) {
+    it(`frames carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});

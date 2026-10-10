@@ -11432,3 +11432,21 @@ export function heaterGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+// The light leaked — a warm fan of glow spilling under a door and
+// thinning into the dark, like a room that refuses to stay empty.
+export function doorGlow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const g = ctx.createRadialGradient(48, 8, 2, 48, 20, 64);
+    g.addColorStop(0, `rgba(255,214,150,${0.5 + rng.float() * 0.2})`);
+    g.addColorStop(0.45, `rgba(216,168,96,${0.22 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(120,84,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 96);
+    // uneven bleed — the glow frays where the sill is uneven
+    for (let i = 0; i < 14; i++) {
+      ctx.fillStyle = `rgba(255,220,160,${0.06 + rng.float() * 0.08})`;
+      ctx.fillRect(20 + rng.float() * 56, 4 + rng.float() * 40, 2 + rng.float() * 5, 2);
+    }
+  });
+}
