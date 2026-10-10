@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 694–696 — the copper ran green, the jars kept their rings & the planes kept their curls (decals lane)
+\n\n## Sprint 697–699 — the sparks kept their scatter, the candles kept their singe & the desks kept their weights (decals lane)
+
+- `sparkScatter` — forge pits around blowtorch/propaneTorch/firePit/heater props.
+- `loomThread` — warp shadows under spinningWheel.
+- `wheelGroove` — cart ruts on corridor/maintenance/under floors.
+- `flameSinge` — soot tongues above candle kinds.
+- `dishRack` — drip lines under drainers/racks.
+- `powderPuff` — talc blooms on vanity/dresser tops (props overlay).
+- `paperWeight` — glass rings on desk kinds.
+- `crayonMark` — wax scrawls near toy/game props.
+- `squareMark` — carpenter's-square L-shadows on benches.
+
+Gates: tsc, lint, scoped vitest (697–699) green.\n\n## Sprint 694–696 — the copper ran green, the jars kept their rings & the planes kept their curls (decals lane)
 
 - `verdigrisStreak` — green patina runs under copperSet/brassPot/pipe kinds.
 - `lidPry` — pry-bar gouges on crate/chest/box lids.
