@@ -5771,3 +5771,126 @@ describe('the under kept its workings (sprint 604-606)', () => {
     }
   });
 });
+
+describe('the under kept its marks (sprint 607)', () => {
+  it('scuffed bands run the floor in front of locker rows', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'locker-kick') n++; });
+      }
+    }
+    expect(n, 'no locker kicks').toBeGreaterThan(0);
+  });
+
+  it('drip lines walk away from the sump pumps', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'pump-seep') n++; });
+      }
+    }
+    expect(n, 'no pump seeps').toBeGreaterThan(0);
+  });
+
+  it('envelope fans sit under the carts and cubbies', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'mail-drift') n++; });
+      }
+    }
+    expect(n, 'no mail drifts').toBeGreaterThan(0);
+  });
+});
+
+describe('the under kept its marks (sprint 608)', () => {
+  it('soot fans blow sideways off the burn rooms', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'soot-fan') n++; });
+      }
+    }
+    expect(n, 'no soot fans').toBeGreaterThan(0);
+  });
+
+  it('chalk tallies ride beside the dead panels', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'fuse-tally') n++; });
+      }
+    }
+    expect(n, 'no fuse tallies').toBeGreaterThan(0);
+  });
+
+  it('grease runs drip under the freight hatches', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'hatch-grease') n++; });
+      }
+    }
+    expect(n, 'no hatch grease').toBeGreaterThan(0);
+  });
+});
+
+describe('the under kept its marks (sprint 609)', () => {
+  it('paired prints stop beside the under bunks', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'bunk-boots') n++; });
+      }
+    }
+    expect(n, 'no bunk boots').toBeGreaterThan(0);
+  });
+
+  it('peg shadows and reach-shine mark the racks', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'hook-shadow') n++; });
+      }
+    }
+    expect(n, 'no hook shadows').toBeGreaterThan(0);
+  });
+
+  it('polished drag paths run where the chain ran out', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of route.underRooms) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'chain-drag') n++; });
+      }
+    }
+    expect(n, 'no chain drags').toBeGreaterThan(0);
+  });
+});

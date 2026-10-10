@@ -4,6 +4,31 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 607–609 — the under kept its marks (under decal batch)
+
+The nine new under rooms had props but no wear. Nine decal generators,
+all `isUnder`-gated in the dressing block:
+
+- **s607**: `lockerKick` (toe-scuff band + dent dimples on the floor
+  before locker/cageLocker rows, yaw-aligned off the wall face),
+  `pumpSeep` (drip trail from each sumpPump walking toward the room's
+  grateDrain — rotation aims via `atan2(drain−pump)`), `mailDrift`
+  (envelope fans under mailCart/stackShelf).
+- **s608**: `sootFan` (blowback plume + ember pits beside boilerDrum),
+  `fuseTally` (chalk gate-counts beside breakerPanel/powerBox/
+  utilityBox — nearest-wall via dE/dW/dN/dS, offset ±0.55 along),
+  `hatchGrease` (vertical grease run + cable polish + thumb smears
+  under dumbwaiter/dumbWaiterDoor).
+- **s609**: `bunkBoots` (paired prints that stop mid-room at under
+  bunks), `hookShadow` (peg ghosts + reach-shine on rack/toolChest/
+  stackShelf walls), `chainDrag` (polished drag path + link kisses +
+  rust tail at chainFence/handTruck/overheadCrane).
+
+All floor decals sit y≈0.008–0.009; wall decals ride nearest-wall.
+Under decals must respect door lanes same as main — see the s604-606
+entry for the offline lane-audit recipe (scratch vitest spec, 4s, vs
+three 49-min full-suite trips).
+
 ## Sprint 604–606 — the under kept its workings (nine new under templates)
 
 The Underscript ran ~120 rooms on 14 templates — its largest variety gap.
