@@ -4414,7 +4414,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The kindling kept its chips — splinters and bark curls on the
     // floors beside the wood the fires ate.
     for (const p of spec.props) {
-      if ((p.kind !== 'fireplace' && p.kind !== 'firePit' && p.kind !== 'stove' && p.kind !== 'wood') || rng.float() >= 0.45) continue;
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit' && p.kind !== 'stove') || rng.float() >= 0.45) continue;
       const kd = decalQuad(kindling(rng), 0.8 + rng.float() * 0.15, 0.6 + rng.float() * 0.1);
       kd.rotation.x = -Math.PI / 2;
       kd.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0085, p.z + 0.6 + rng.float() * 0.3);
