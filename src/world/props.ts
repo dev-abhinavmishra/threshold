@@ -7,12 +7,22 @@ import * as THREE from 'three';
 import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
-import { modelInstance, modelCollider } from './modelLibrary';
+import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
 const geoCache = new Map<string, THREE.BufferGeometry>();
+
+// Vendored GLBs report zero-size colliders, so a zero axis means "unknown":
+// height falls back to the model's declared display height, other axes to
+// the caller's guess. Center-anchored models (wall/ceiling mounts) measure
+// vertical offsets from their mid-height, not their base.
+const decalDim = (kind: string, dc: [number, number, number] | null, i: 0 | 1 | 2, fb: number) =>
+  (dc && dc[i] > 0.01 ? dc[i] : (i === 1 ? MODEL_FOR[kind]?.height : undefined) ?? fb);
+const decalY = (kind: string, dc: [number, number, number] | null, frac: number, fb: number) =>
+  MODEL_FOR[kind]?.anchor === 'center' ? decalDim(kind, dc, 1, fb) * (frac - 0.5) : decalDim(kind, dc, 1, fb) * frac;
+
 
 /** Scale a BoxGeometry's per-face UVs so 1 uv unit = 1 meter on every face. */
 export function uvFixBox(g: THREE.BoxGeometry, w: number, h: number, d: number): THREE.BoxGeometry {
@@ -1454,7 +1464,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ch.name = 'chair-halo';
     ch.userData.decalMat = true;
-    ch.position.set(0, (dc?.[1] ?? 0.9) * 0.82, -((dc?.[2] ?? 0.5) * 0.38));
+    ch.position.set(0, decalY(spec.kind, dc, 0.82, 0.9), -(decalDim(spec.kind, dc, 2, 0.5) * 0.38));
     prop.group.add(ch);
     if (!prop.group.name) prop.group.name = 'chair-halo';
   }
@@ -1482,7 +1492,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ss.name = 'soap-scum';
     ss.userData.decalMat = true;
     ss.rotation.x = -Math.PI / 2;
-    ss.position.set(0, (dc?.[1] ?? 0.8) - 0.04, 0.02);
+    ss.position.set(0, decalY(spec.kind, dc, 1, 0.8) - 0.04, 0.02);
     prop.group.add(ss);
     if (!prop.group.name) prop.group.name = 'soap-scum';
   }
@@ -1524,7 +1534,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cd.name = 'counter-drips';
     cd.userData.decalMat = true;
-    cd.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.005);
+    cd.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 0.55, 0.9), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.005);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'counter-drips';
   }
@@ -1541,7 +1551,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     fd.userData.decalMat = true;
     fd.rotation.x = -Math.PI / 2;
     fd.rotation.z = rng.float() * Math.PI * 2;
-    fd.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.85) + 0.004, (rng.float() - 0.5) * 0.16);
+    fd.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, dc, 1, 0.85) + 0.004, (rng.float() - 0.5) * 0.16);
     prop.group.add(fd);
     if (!prop.group.name) prop.group.name = 'flour-dust';
   }
@@ -1555,7 +1565,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     br.name = 'bath-ring';
     br.userData.decalMat = true;
-    br.position.set(0, (dc?.[1] ?? 0.6) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.004);
+    br.position.set(0, decalY(spec.kind, dc, 0.55, 0.6), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.004);
     prop.group.add(br);
     if (!prop.group.name) prop.group.name = 'bath-ring';
   }
@@ -1569,7 +1579,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     wd.name = 'wardrobe-dark';
     wd.userData.decalMat = true;
-    wd.position.set(0, (dc?.[1] ?? 1.8) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    wd.position.set(0, decalY(spec.kind, dc, 0.55, 1.8), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.006);
     prop.group.add(wd);
     if (!prop.group.name) prop.group.name = 'wardrobe-dark';
   }
@@ -1584,7 +1594,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     bg.name = 'book-gap';
     bg.userData.decalMat = true;
-    bg.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 1.6) * (0.35 + rng.float() * 0.45), (dc?.[2] ?? 0.4) / 2 + 0.005);
+    bg.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 1.6) * (0.35 + rng.float() * 0.45), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.005);
     prop.group.add(bg);
     if (!prop.group.name) prop.group.name = 'book-gap';
   }
@@ -1600,7 +1610,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     di.userData.decalMat = true;
     di.rotation.x = -Math.PI / 2;
     di.rotation.z = rng.float() * Math.PI * 2;
-    di.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.8) + 0.004, (rng.float() - 0.5) * 0.2);
+    di.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 1, 0.8) + 0.004, (rng.float() - 0.5) * 0.2);
     prop.group.add(di);
     if (!prop.group.name) prop.group.name = 'desk-ink';
   }
@@ -1614,7 +1624,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pd.name = 'piano-dust';
     pd.userData.decalMat = true;
     pd.rotation.x = -Math.PI / 2;
-    pd.position.set(0, (dc?.[1] ?? 1.1) + 0.004, 0);
+    pd.position.set(0, decalY(spec.kind, dc, 1, 1.1) + 0.004, 0);
     prop.group.add(pd);
     if (!prop.group.name) prop.group.name = 'piano-dust';
   }
@@ -1629,7 +1639,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ds.name = 'drawer-slit';
     ds.userData.decalMat = true;
-    ds.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.1) * (0.3 + rng.float() * 0.5), (dc?.[2] ?? 0.4) / 2 + 0.006);
+    ds.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 1, 1.1) * (0.3 + rng.float() * 0.5), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'drawer-slit';
   }
@@ -1645,7 +1655,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sh.userData.decalMat = true;
     sh.rotation.x = -Math.PI / 2;
     sh.rotation.z = rng.float() * Math.PI * 2;
-    sh.position.set(0, (dc?.[1] ?? 0.5) + 0.004, (rng.float() - 0.5) * 0.3);
+    sh.position.set(0, decalY(spec.kind, dc, 1, 0.5) + 0.004, (rng.float() - 0.5) * 0.3);
     prop.group.add(sh);
     if (!prop.group.name) prop.group.name = 'sheet-shape';
   }
@@ -1658,7 +1668,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     lg.name = 'label-ghost';
     lg.userData.decalMat = true;
-    lg.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    lg.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 0.55, 1.4), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.005);
     prop.group.add(lg);
     if (!prop.group.name) prop.group.name = 'label-ghost';
   }
@@ -1673,7 +1683,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cd.name = 'candle-drip';
     cd.userData.decalMat = true;
-    cd.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    cd.position.set(0, decalY(spec.kind, dc, 0.5, 0.3), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'candle-drip';
   }
@@ -1698,7 +1708,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     tc.name = 'tap-calc';
     tc.userData.decalMat = true;
-    tc.position.set((rng.float() - 0.5) * 0.1, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.006);
+    tc.position.set((rng.float() - 0.5) * 0.1, decalY(spec.kind, dc, 0.55, 0.9), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.006);
     prop.group.add(tc);
     if (!prop.group.name) prop.group.name = 'tap-calc';
   }
@@ -1713,7 +1723,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pc.name = 'porcelain-craze';
     pc.userData.decalMat = true;
     pc.rotation.x = -Math.PI / 2;
-    pc.position.set(0, (dc?.[1] ?? 0.9) - 0.02, 0);
+    pc.position.set(0, decalY(spec.kind, dc, 1, 0.9) - 0.02, 0);
     prop.group.add(pc);
     if (!prop.group.name) prop.group.name = 'porcelain-craze';
   }
@@ -1727,7 +1737,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cs.name = 'chain-shine';
     cs.userData.decalMat = true;
-    cs.position.set(0, (modelCollider(spec.kind)?.[1] ?? 0.4) * 0.4, (modelCollider(spec.kind)?.[2] ?? 0.3) / 2 + 0.006);
+    cs.position.set(0, decalY(spec.kind, modelCollider(spec.kind), 0.4, 0.4), decalDim(spec.kind, modelCollider(spec.kind), 2, 0.3) / 2 + 0.006);
     prop.group.add(cs);
     if (!prop.group.name) prop.group.name = 'chain-shine';
   }
@@ -1741,7 +1751,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     rf.name = 'rope-fray';
     rf.userData.decalMat = true;
-    rf.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.005);
+    rf.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, dc, 0.55, 0.9), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.005);
     prop.group.add(rf);
     if (!prop.group.name) prop.group.name = 'rope-fray';
   }
@@ -1756,7 +1766,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     wb.name = 'web-drape';
     wb.userData.decalMat = true;
-    wb.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 1.8) - 0.05, -(dc?.[2] ?? 0.4) / 2 - 0.004);
+    wb.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 1.8) - 0.05, -decalDim(spec.kind, dc, 2, 0.4) / 2 - 0.004);
     prop.group.add(wb);
     if (!prop.group.name) prop.group.name = 'web-drape';
   }
@@ -1770,7 +1780,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cs.name = 'candle-skin';
     cs.userData.decalMat = true;
-    cs.position.set(0, 0, (modelCollider(spec.kind)?.[2] ?? 0.15) / 2 + 0.006);
+    cs.position.set(0, 0.17, decalDim(spec.kind, modelCollider(spec.kind), 2, 0.15) / 2 + 0.006);
     prop.group.add(cs);
     if (!prop.group.name) prop.group.name = 'candle-skin';
   }
@@ -1785,7 +1795,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ts.userData.decalMat = true;
     ts.rotation.x = -Math.PI / 2;
     ts.rotation.z = rng.float() * Math.PI * 2;
-    ts.position.set((rng.float() - 0.5) * 0.4, 0.38, (rng.float() - 0.5) * 0.4);
+    ts.position.set((rng.float() - 0.5) * 0.4, spec.kind === 'stairLanding' ? 0.02 : 0.16, (rng.float() - 0.5) * 0.4);
     prop.group.add(ts);
     if (!prop.group.name) prop.group.name = 'tread-shine';
   }
@@ -1800,7 +1810,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     mb.name = 'moth-bites';
     mb.userData.decalMat = true;
-    mb.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 2) * (0.2 + rng.float() * 0.5), (dc?.[2] ?? 0.15) / 2 + 0.006);
+    mb.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 1, 2) * (0.2 + rng.float() * 0.5), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(mb);
     if (!prop.group.name) prop.group.name = 'moth-bites';
   }
@@ -1813,13 +1823,13 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     vd.name = 'valance-dust';
     vd.userData.decalMat = true;
-    vd.position.set(0, (dc?.[1] ?? 2) - 0.06, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    vd.position.set(0, decalY(spec.kind, dc, 1, 2) - 0.06, decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(vd);
     if (!prop.group.name) prop.group.name = 'valance-dust';
   }
   // The pots kept their rings — scorch brands on worktops the
   // kitchen put down hot.
-  const POT_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['table', 'diningTable', 'counter', 'merchantCounter', 'breakTable', 'sculleryRack', 'stove', 'stoveRange', 'kitchenRange']);
+  const POT_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['table', 'diningTable', 'counter', 'merchantCounter', 'breakTable', 'stove', 'stoveRange', 'kitchenRange']);
   if (POT_TOPS.has(spec.kind) && rng.bool(0.25)) {
     const dc = modelCollider(spec.kind);
     const pr = new THREE.Mesh(
@@ -1830,13 +1840,13 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pr.userData.decalMat = true;
     pr.rotation.x = -Math.PI / 2;
     pr.rotation.z = rng.float() * Math.PI * 2;
-    pr.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 0.85) + 0.005, (rng.float() - 0.5) * 0.3);
+    pr.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 0.85) + 0.005, (rng.float() - 0.5) * 0.3);
     prop.group.add(pr);
     if (!prop.group.name) prop.group.name = 'pot-ring';
   }
   // The lids kept the steam — wet rings and drip beads under the
   // lidded pots and kettles.
-  const LIDDED: ReadonlySet<PropSpec['kind']> = new Set(['brassPot', 'enamelPot', 'pan', 'kettle', 'potRack', 'jug']);
+  const LIDDED: ReadonlySet<PropSpec['kind']> = new Set(['brassPot', 'enamelPot', 'pan', 'kettle', 'jug']);
   if (LIDDED.has(spec.kind) && rng.bool(0.45)) {
     const ls = new THREE.Mesh(
       new THREE.PlaneGeometry(0.34, 0.34),
@@ -1859,7 +1869,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     rg.name = 'rack-ghost';
     rg.userData.decalMat = true;
-    rg.position.set(0, (dc?.[1] ?? 1.4) * 0.6, (dc?.[2] ?? 0.4) / 2 + 0.006);
+    rg.position.set(0, decalY(spec.kind, dc, 0.6, 1.4), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.006);
     prop.group.add(rg);
     if (!prop.group.name) prop.group.name = 'rack-ghost';
   }
@@ -1887,7 +1897,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cd.name = 'case-dust';
     cd.userData.decalMat = true;
-    cd.position.set(0, (dc?.[1] ?? 1.2) * 0.62, (dc?.[2] ?? 0.4) / 2 + 0.006);
+    cd.position.set(0, decalY(spec.kind, dc, 0.62, 1.2), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.006);
     prop.group.add(cd);
     if (!prop.group.name) prop.group.name = 'case-dust';
   }
@@ -1901,7 +1911,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cf.name = 'carpet-fray';
     cf.userData.decalMat = true;
     cf.rotation.x = -Math.PI / 2;
-    cf.position.set(0, 0.008, (dc?.[2] ?? 1.2) / 2 + 0.06);
+    cf.position.set(0, 0.024, decalDim(spec.kind, dc, 2, 1.2) / 2 + 0.06);
     prop.group.add(cf);
     if (!prop.group.name) prop.group.name = 'carpet-fray';
   }
@@ -1915,7 +1925,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ps.name = 'pin-scars';
     ps.userData.decalMat = true;
-    ps.position.set(0, (dc?.[1] ?? 1.2) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    ps.position.set(0, decalY(spec.kind, dc, 0.55, 1.2), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(ps);
     if (!prop.group.name) prop.group.name = 'pin-scars';
   }
@@ -1932,7 +1942,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wr.userData.decalMat = true;
     wr.rotation.x = -Math.PI / 2;
     wr.rotation.z = rng.float() * Math.PI * 2;
-    wr.position.set(0, (dc?.[1] ?? 0.75) + 0.006, 0);
+    wr.position.set(0, decalY(spec.kind, dc, 1, 0.75) + 0.006, 0);
     prop.group.add(wr);
     if (!prop.group.name) prop.group.name = 'wax-rings';
   }
@@ -1947,8 +1957,9 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cs.name = 'clock-stopped';
     cs.userData.decalMat = true;
-    cs.position.set(0, (dc?.[1] ?? 1.6) * 0.72, (dc?.[2] ?? 0.3) / 2 + 0.006);
+    cs.position.set(0, decalY(spec.kind, dc, 0.72, 1.6), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.006);
     prop.group.add(cs);
+    prop.group.traverse((o) => { if (o.userData.anim) o.userData.anim = undefined; });
     if (!prop.group.name) prop.group.name = 'clock-stopped';
   }
   // The shelf lip kept the dust — a grey line on the front edge,
@@ -1962,7 +1973,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sl.name = 'shelf-lip';
     sl.userData.decalMat = true;
-    sl.position.set(0, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.35) / 2 + 0.006);
+    sl.position.set(0, decalY(spec.kind, dc, 0.55, 1.6), decalDim(spec.kind, dc, 2, 0.35) / 2 + 0.006);
     prop.group.add(sl);
     if (!prop.group.name) prop.group.name = 'shelf-lip';
   }
@@ -1977,7 +1988,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     rgm.name = 'rail-grime';
     rgm.userData.decalMat = true;
     rgm.rotation.x = -Math.PI / 2;
-    rgm.position.set(0, (dc?.[1] ?? 0.9) + 0.006, 0);
+    rgm.position.set(0, decalY(spec.kind, dc, 1, 0.9) + 0.006, 0);
     prop.group.add(rgm);
     if (!prop.group.name) prop.group.name = 'rail-grime';
   }
@@ -1992,7 +2003,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ls.name = 'lift-scuff';
     ls.userData.decalMat = true;
-    ls.position.set(0, (dc?.[1] ?? 1.8) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    ls.position.set(0, decalY(spec.kind, dc, 0.5, 1.8), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(ls);
     if (!prop.group.name) prop.group.name = 'lift-scuff';
   }
@@ -2007,7 +2018,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     pb.name = 'panel-bow';
     pb.userData.decalMat = true;
-    pb.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
+    pb.position.set(0, decalY(spec.kind, dc, 0.5, 1.4), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.006);
     prop.group.add(pb);
     if (!prop.group.name) prop.group.name = 'panel-bow';
   }
@@ -2024,7 +2035,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sw.userData.decalMat = true;
     sw.rotation.x = -Math.PI / 2;
     sw.rotation.z = (rng.float() - 0.5) * 0.6;
-    sw.position.set(0, (dc?.[1] ?? 0.9) * 0.52, 0);
+    sw.position.set(0, decalY(spec.kind, dc, 0.52, 0.9), 0);
     prop.group.add(sw);
     if (!prop.group.name) prop.group.name = 'seat-wipe';
   }
@@ -2039,7 +2050,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pf.name = 'page-fan';
     pf.userData.decalMat = true;
     pf.rotation.x = -Math.PI / 2;
-    pf.position.set(0, (dc?.[1] ?? 0.5) + 0.006, 0);
+    pf.position.set(0, decalY(spec.kind, dc, 1, 0.5) + 0.006, 0);
     prop.group.add(pf);
     if (!prop.group.name) prop.group.name = 'page-fan';
   }
@@ -2056,7 +2067,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pc.userData.decalMat = true;
     pc.rotation.x = -Math.PI / 2;
     pc.rotation.z = rng.float() * Math.PI * 2;
-    pc.position.set(0, (dc?.[1] ?? 0.2) + 0.006, 0);
+    pc.position.set(0, decalY(spec.kind, dc, 1, 0.2) + 0.006, 0);
     prop.group.add(pc);
     if (!prop.group.name) prop.group.name = 'paper-curl';
   }
@@ -2071,7 +2082,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sp.name = 'sill-peel';
     sp.userData.decalMat = true;
-    sp.position.set(0, (dc?.[1] ?? 1.6) * 0.22, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    sp.position.set(0, decalY(spec.kind, dc, 0.22, 1.6), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(sp);
     if (!prop.group.name) prop.group.name = 'sill-peel';
   }
@@ -2086,7 +2097,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ds.name = 'drawer-scars';
     ds.userData.decalMat = true;
-    ds.position.set(0, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    ds.position.set(0, decalY(spec.kind, dc, 0.55, 0.9), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'drawer-scars';
   }
@@ -2101,7 +2112,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     og.name = 'oven-grease';
     og.userData.decalMat = true;
-    og.position.set(0, (dc?.[1] ?? 0.9) * 0.5, (dc?.[2] ?? 0.6) / 2 + 0.006);
+    og.position.set(0, decalY(spec.kind, dc, 0.5, 0.9), decalDim(spec.kind, dc, 2, 0.6) / 2 + 0.006);
     prop.group.add(og);
     if (!prop.group.name) prop.group.name = 'oven-grease';
   }
@@ -2116,7 +2127,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     dr.name = 'dial-rubs';
     dr.userData.decalMat = true;
-    dr.position.set(0, (dc?.[1] ?? 0.35) * 0.55, (dc?.[2] ?? 0.25) / 2 + 0.005);
+    dr.position.set(0, decalY(spec.kind, dc, 0.55, 0.35), decalDim(spec.kind, dc, 2, 0.25) / 2 + 0.005);
     prop.group.add(dr);
     if (!prop.group.name) prop.group.name = 'dial-rubs';
   }
@@ -2129,7 +2140,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ma.name = 'mirror-amalgam';
     ma.userData.decalMat = true;
-    ma.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.005);
+    ma.position.set(0, decalY(spec.kind, dc, 0.5, 1.4), decalDim(spec.kind, dc, 2, 0.08) / 2 + 0.005);
     prop.group.add(ma);
     if (!prop.group.name) prop.group.name = 'mirror-amalgam';
   }
@@ -2144,7 +2155,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     br.name = 'basin-ring';
     br.userData.decalMat = true;
     br.rotation.x = -Math.PI / 2;
-    br.position.set(0, (dc?.[1] ?? 0.8) + 0.005, 0);
+    br.position.set(0, decalY(spec.kind, dc, 1, 0.8) + 0.005, 0);
     prop.group.add(br);
     if (!prop.group.name) prop.group.name = 'basin-ring';
   }
@@ -2159,7 +2170,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     hw.name = 'hinge-wear';
     hw.userData.decalMat = true;
-    hw.position.set(0, (dc?.[1] ?? 1.3) * 0.55, (dc?.[2] ?? 0.45) / 2 + 0.006);
+    hw.position.set(0, decalY(spec.kind, dc, 0.55, 1.3), decalDim(spec.kind, dc, 2, 0.45) / 2 + 0.006);
     prop.group.add(hw);
     if (!prop.group.name) prop.group.name = 'hinge-wear';
   }
@@ -2174,7 +2185,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     hg.name = 'head-grease';
     hg.userData.decalMat = true;
-    hg.position.set(0, (dc?.[1] ?? 1.1) * 0.75, -(dc?.[2] ?? 1.8) / 2 + 0.12);
+    hg.position.set(0, decalY(spec.kind, dc, 0.75, 1.1), spec.kind === 'headboard' ? decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.015 : -decalDim(spec.kind, dc, 2, 1.8) / 2 + 0.12);
     prop.group.add(hg);
     if (!prop.group.name) prop.group.name = 'head-grease';
   }
@@ -2190,7 +2201,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sg.name = 'seat-sag';
     sg.userData.decalMat = true;
     sg.rotation.x = -Math.PI / 2;
-    sg.position.set(0, (dc?.[1] ?? 0.85) * 0.55 + 0.006, 0);
+    sg.position.set(0, spec.kind === 'sofa' ? 0.5 : decalY(spec.kind, dc, 0.55, 0.85) + 0.006, 0);
     prop.group.add(sg);
     if (!prop.group.name) prop.group.name = 'seat-sag';
   }
@@ -2204,7 +2215,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     pi.name = 'platen-ink';
     pi.userData.decalMat = true;
-    pi.position.set(0, (dc?.[1] ?? 0.25) * 0.7, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    pi.position.set(0, decalY(spec.kind, dc, 0.7, 0.25), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.005);
     prop.group.add(pi);
     if (!prop.group.name) prop.group.name = 'platen-ink';
   }
@@ -2218,7 +2229,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ss.name = 'spark-scorch';
     ss.userData.decalMat = true;
-    ss.position.set(0, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    ss.position.set(0, decalY(spec.kind, dc, 0.55, 1.4), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(ss);
     if (!prop.group.name) prop.group.name = 'spark-scorch';
   }
@@ -2233,7 +2244,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     jd.name = 'jar-dust';
     jd.userData.decalMat = true;
-    jd.position.set(0, (dc?.[1] ?? 0.35) * 0.6, (dc?.[2] ?? 0.25) / 2 + 0.005);
+    jd.position.set(0, decalY(spec.kind, dc, 0.6, 0.35), decalDim(spec.kind, dc, 2, 0.25) / 2 + 0.005);
     prop.group.add(jd);
     if (!prop.group.name) prop.group.name = 'jar-dust';
   }
@@ -2247,7 +2258,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sd.name = 'spin-dust';
     sd.userData.decalMat = true;
-    sd.position.set(0, (dc?.[1] ?? 0.9) * 0.6, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    sd.position.set(0, decalY(spec.kind, dc, 0.6, 0.9), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.005);
     prop.group.add(sd);
     if (!prop.group.name) prop.group.name = 'spin-dust';
   }
@@ -2263,7 +2274,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     cb.name = 'counter-belt';
     cb.userData.decalMat = true;
     cb.rotation.x = -Math.PI / 2;
-    cb.position.set(0, (dc?.[1] ?? 0.9) + 0.006, 0);
+    cb.position.set(0, spec.kind === 'merchantCounter' ? 1.19 : decalY(spec.kind, dc, 1, 0.9) + 0.006, 0);
     prop.group.add(cb);
     if (!prop.group.name) prop.group.name = 'counter-belt';
   }
@@ -2278,7 +2289,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bt.name = 'bell-tap';
     bt.userData.decalMat = true;
     bt.rotation.x = -Math.PI / 2;
-    bt.position.set(0, (dc?.[1] ?? 0.1) + 0.004, 0);
+    bt.position.set(0, decalY(spec.kind, dc, 1, 0.1) + 0.004, 0);
     prop.group.add(bt);
     if (!prop.group.name) prop.group.name = 'bell-tap';
   }
@@ -2292,7 +2303,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     pw.name = 'pew-wear';
     pw.userData.decalMat = true;
-    pw.position.set(0, (dc?.[1] ?? 0.6) * 0.5, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    pw.position.set(0, decalY(spec.kind, dc, 0.5, 0.6), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.006);
     prop.group.add(pw);
     if (!prop.group.name) prop.group.name = 'pew-wear';
   }
@@ -2306,7 +2317,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     kr.name = 'kneel-rubs';
     kr.userData.decalMat = true;
-    kr.position.set(0, (dc?.[1] ?? 0.7) * 0.55, (dc?.[2] ?? 0.5) / 2 + 0.006);
+    kr.position.set(0, decalY(spec.kind, dc, 0.55, 0.7), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.006);
     prop.group.add(kr);
     if (!prop.group.name) prop.group.name = 'kneel-rubs';
   }
@@ -2320,7 +2331,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     hr.name = 'hatch-ring';
     hr.userData.decalMat = true;
-    hr.position.set(0, (dc?.[1] ?? 1.0) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.006);
+    hr.position.set(0, decalY(spec.kind, dc, 0.5, 1.0), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.006);
     prop.group.add(hr);
     if (!prop.group.name) prop.group.name = 'hatch-ring';
   }
@@ -2335,7 +2346,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cc.name = 'canvas-crackle';
     cc.userData.decalMat = true;
-    cc.position.set(0, (dc?.[1] ?? 1.4) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.005);
+    cc.position.set(0, decalY(spec.kind, dc, 0.5, 1.4), decalDim(spec.kind, dc, 2, 0.08) / 2 + 0.005);
     prop.group.add(cc);
     if (!prop.group.name) prop.group.name = 'canvas-crackle';
   }
@@ -2349,7 +2360,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ds.name = 'dart-splash';
     ds.userData.decalMat = true;
-    ds.position.set(0, (dc?.[1] ?? 1.6) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.006);
+    ds.position.set(0, decalY(spec.kind, dc, 0.5, 1.6), decalDim(spec.kind, dc, 2, 0.08) / 2 + 0.006);
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'dart-splash';
   }
@@ -2364,7 +2375,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     hk.name = 'hook-ring';
     hk.userData.decalMat = true;
-    hk.position.set(0, (dc?.[1] ?? 0.6) * 0.6, (dc?.[2] ?? 0.2) / 2 + 0.005);
+    hk.position.set(0, decalY(spec.kind, dc, 0.6, 0.6), decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.005);
     prop.group.add(hk);
     if (!prop.group.name) prop.group.name = 'hook-ring';
   }
@@ -2379,7 +2390,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     rw.name = 'rack-weight';
     rw.userData.decalMat = true;
-    rw.position.set(0, (dc?.[1] ?? 1.5) * 0.55, (dc?.[2] ?? 0.3) / 2 + 0.006);
+    rw.position.set(0, decalY(spec.kind, dc, 0.55, 1.5), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.006);
     prop.group.add(rw);
     if (!prop.group.name) prop.group.name = 'rack-weight';
   }
@@ -2408,7 +2419,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     pw.name = 'peg-wear';
     pw.userData.decalMat = true;
-    pw.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.9) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.006);
+    pw.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 0.55, 0.9), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.006);
     prop.group.add(pw);
     if (!prop.group.name) prop.group.name = 'peg-wear';
   }
@@ -2421,7 +2432,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     et.name = 'exting-tag';
     et.userData.decalMat = true;
-    et.position.set(0.04, (modelCollider(spec.kind)?.[1] ?? 0.6) * 0.5, 0.09);
+    et.position.set(0.04, decalY(spec.kind, modelCollider(spec.kind), 0.5, 0.6), 0.09);
     prop.group.add(et);
     if (!prop.group.name) prop.group.name = 'exting-tag';
   }
@@ -2434,7 +2445,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     pl.name = 'pin-lines';
     pl.userData.decalMat = true;
-    pl.position.set((rng.float() - 0.5) * 0.2, (modelCollider(spec.kind)?.[1] ?? 1.3) * 0.55, (modelCollider(spec.kind)?.[2] ?? 0.1) / 2 + 0.006);
+    pl.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, modelCollider(spec.kind), 0.55, 1.3), decalDim(spec.kind, modelCollider(spec.kind), 2, 0.16) / 2 + 0.012);
     prop.group.add(pl);
     if (!prop.group.name) prop.group.name = 'pin-lines';
   }
@@ -2448,7 +2459,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ff.name = 'fan-film';
     ff.userData.decalMat = true;
-    ff.position.set(0, (dc?.[1] ?? 1.6) * 0.6, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    if (spec.kind === 'ceilingFan') {
+      ff.rotation.x = Math.PI / 2;
+      ff.position.set(0, -0.15, 0);
+    } else {
+      ff.position.set(0, decalY(spec.kind, dc, 0.6, 1.6), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.005);
+    }
     prop.group.add(ff);
     if (!prop.group.name) prop.group.name = 'fan-film';
   }
@@ -2463,7 +2479,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     bb.name = 'bottle-bloom';
     bb.userData.decalMat = true;
-    bb.position.set((rng.float() - 0.5) * 0.15, (dc?.[1] ?? 0.3) * 0.55, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    bb.position.set((rng.float() - 0.5) * 0.15, decalY(spec.kind, dc, 0.55, 0.3), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.004);
     prop.group.add(bb);
     if (!prop.group.name) prop.group.name = 'bottle-bloom';
   }
@@ -2478,7 +2494,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     bc.name = 'bust-cap';
     bc.userData.decalMat = true;
-    bc.position.set(0, (dc?.[1] ?? 1.4) * 0.72, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    bc.position.set(0, decalY(spec.kind, dc, 0.72, 1.4), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.005);
     prop.group.add(bc);
     if (!prop.group.name) prop.group.name = 'bust-cap';
   }
@@ -2494,7 +2510,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ps.name = 'piece-squares';
     ps.userData.decalMat = true;
     ps.rotation.x = -Math.PI / 2;
-    ps.position.set(0, (dc?.[1] ?? 0.08) + 0.004, 0);
+    ps.position.set(0, decalY(spec.kind, dc, 1, 0.08) + 0.004, 0);
     prop.group.add(ps);
     if (!prop.group.name) prop.group.name = 'piece-squares';
   }
@@ -2508,7 +2524,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     gs.name = 'globe-spin';
     gs.userData.decalMat = true;
-    gs.position.set(0, (dc?.[1] ?? 0.9) * 0.6, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    gs.position.set(0, decalY(spec.kind, dc, 0.6, 0.9), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.005);
     prop.group.add(gs);
     if (!prop.group.name) prop.group.name = 'globe-spin';
   }
@@ -2523,7 +2539,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     gt.name = 'gate-track';
     gt.userData.decalMat = true;
     gt.rotation.x = -Math.PI / 2;
-    gt.position.set(0, 0.006, 0);
+    gt.position.set(0, 0.006 - (spec.y ?? 0), 0);
     prop.group.add(gt);
     if (!prop.group.name) prop.group.name = 'gate-track';
   }
@@ -2538,7 +2554,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     lh.name = 'lift-heels';
     lh.userData.decalMat = true;
-    lh.position.set(0, (dc?.[1] ?? 1.8) * 0.45, (dc?.[2] ?? 0.15) / 2 + 0.005);
+    lh.position.set(0, decalY(spec.kind, dc, 0.45, 1.8), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.005);
     prop.group.add(lh);
     if (!prop.group.name) prop.group.name = 'lift-heels';
   }
@@ -2553,7 +2569,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sc.name = 'shutter-chain';
     sc.userData.decalMat = true;
-    sc.position.set((dc?.[0] ?? 0.8) / 2 - 0.08, (dc?.[1] ?? 1.6) * 0.55, (dc?.[2] ?? 0.15) / 2 + 0.005);
+    sc.position.set(decalDim(spec.kind, dc, 0, 0.8) / 2 - 0.08, decalY(spec.kind, dc, 0.55, 1.6), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.005);
     prop.group.add(sc);
     if (!prop.group.name) prop.group.name = 'shutter-chain';
   }
@@ -2567,7 +2583,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     tr.name = 'tea-ring';
     tr.userData.decalMat = true;
     tr.rotation.x = -Math.PI / 2;
-    tr.position.set(0, (dc?.[1] ?? 0.1) + 0.004, 0);
+    tr.position.set(0, decalY(spec.kind, dc, 0.55, 0.1), 0);
     prop.group.add(tr);
     if (!prop.group.name) prop.group.name = 'tea-ring';
   }
@@ -2582,7 +2598,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     lv.name = 'lens-veil';
     lv.userData.decalMat = true;
-    lv.position.set(0, 0, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    lv.position.set(0, decalY(spec.kind, dc, 0.62, 0.22), decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.004);
     prop.group.add(lv);
     if (!prop.group.name) prop.group.name = 'lens-veil';
   }
@@ -2597,7 +2613,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sd.name = 'sheet-drag';
     sd.userData.decalMat = true;
     sd.rotation.x = -Math.PI / 2;
-    sd.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
+    sd.position.set(0, decalY(spec.kind, dc, 1, 0.9) + 0.004, 0);
     prop.group.add(sd);
     if (!prop.group.name) prop.group.name = 'sheet-drag';
   }
@@ -2611,7 +2627,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     tl.name = 'tube-lip';
     tl.userData.decalMat = true;
-    tl.position.set(0, (dc?.[1] ?? 1.2) * 0.7, (dc?.[2] ?? 0.15) / 2 + 0.004);
+    tl.position.set(0, 1.65, decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.004);
     prop.group.add(tl);
     if (!prop.group.name) prop.group.name = 'tube-lip';
   }
@@ -2625,7 +2641,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ap.name = 'alarm-pull';
     ap.userData.decalMat = true;
-    ap.position.set(0, 0, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    ap.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.1) / 2 + 0.004);
     prop.group.add(ap);
     if (!prop.group.name) prop.group.name = 'alarm-pull';
   }
@@ -2639,7 +2655,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     vg.name = 'valve-grip';
     vg.userData.decalMat = true;
-    vg.position.set(0, 0, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    vg.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.012);
     prop.group.add(vg);
     if (!prop.group.name) prop.group.name = 'valve-grip';
   }
@@ -2654,7 +2670,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ng.name = 'needle-ghost';
     ng.userData.decalMat = true;
-    ng.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 1.2) * 0.6, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    ng.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, dc, 0.6, 1.2), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.004);
     prop.group.add(ng);
     if (!prop.group.name) prop.group.name = 'needle-ghost';
   }
@@ -2669,7 +2685,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cs.name = 'cable-sleeve';
     cs.userData.decalMat = true;
-    cs.position.set(0, (dc?.[1] ?? 1) * 0.5, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    cs.position.set(0, decalY(spec.kind, dc, 0.5, 1), decalDim(spec.kind, dc, 2, 0.06) / 2 + 0.004);
     prop.group.add(cs);
     if (!prop.group.name) prop.group.name = 'cable-sleeve';
   }
@@ -2684,7 +2700,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     kg.name = 'key-ghost';
     kg.userData.decalMat = true;
-    kg.position.set(0, (dc?.[1] ?? 1.2) * 0.5, (dc?.[2] ?? 0.08) / 2 + 0.004);
+    kg.position.set(0, decalY(spec.kind, dc, 0.5, 1.2), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
     prop.group.add(kg);
     if (!prop.group.name) prop.group.name = 'key-ghost';
   }
@@ -2698,7 +2714,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     vk.name = 'vend-kick';
     vk.userData.decalMat = true;
-    vk.position.set(0, (dc?.[1] ?? 1.8) * 0.4, (dc?.[2] ?? 0.6) / 2 + 0.004);
+    vk.position.set(0, decalY(spec.kind, dc, 0.4, 1.8), decalDim(spec.kind, dc, 2, 0.6) / 2 + 0.004);
     prop.group.add(vk);
     if (!prop.group.name) prop.group.name = 'vend-kick';
   }
@@ -2717,7 +2733,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The tape kept its curl — sweep lines and hook curls under the
   // measures.
-  const TAPES: ReadonlySet<PropSpec['kind']> = new Set(['tapeMeasure', 'trowel', 'stapler', 'crowbar', 'plunger', 'boltCutters']);
+  const TAPES: ReadonlySet<PropSpec['kind']> = new Set(['tapeMeasure']);
   if (TAPES.has(spec.kind) && rng.bool(0.5)) {
     const tc = new THREE.Mesh(
       new THREE.PlaneGeometry(0.5, 0.18),
@@ -2741,7 +2757,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     mr.name = 'manifold-rust';
     mr.userData.decalMat = true;
-    mr.position.set(0, (dc?.[1] ?? 1) * 0.5, (dc?.[2] ?? 0.2) / 2 + 0.005);
+    mr.position.set(0, decalY(spec.kind, dc, 0.5, 1), decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.005);
     prop.group.add(mr);
     if (!prop.group.name) prop.group.name = 'manifold-rust';
   }
@@ -2755,7 +2771,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ch.name = 'crane-hook';
     ch.userData.decalMat = true;
-    ch.position.set(0, (dc?.[1] ?? 2.4) * 0.5, (dc?.[2] ?? 0.3) / 2 + 0.005);
+    ch.position.set(0, decalY(spec.kind, dc, 0.5, 2.4), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.005);
     prop.group.add(ch);
     if (!prop.group.name) prop.group.name = 'crane-hook';
   }
@@ -2763,7 +2779,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   // dust sheets.
   if (spec.kind === 'coveredCar' && rng.bool(0.7)) {
     const cv = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.6, 1.0),
+      new THREE.PlaneGeometry(4.4, 1.8),
       new THREE.MeshStandardMaterial({ map: carVeil(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     cv.name = 'car-veil';
@@ -2784,7 +2800,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sb.name = 'steam-bleach';
     sb.userData.decalMat = true;
-    sb.position.set(0, -(dc?.[1] ?? 0.4) * 0.3, (dc?.[2] ?? 0.15) / 2 + 0.004);
+    if (spec.kind === 'steamVent' && (spec.y ?? 0) < 0.5) {
+      sb.rotation.x = -Math.PI / 2;
+      sb.position.set(0, 0.007, 0.12);
+    } else {
+      sb.position.set(0, -decalY(spec.kind, dc, 0.3, 0.4), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.004);
+    }
     prop.group.add(sb);
     if (!prop.group.name) prop.group.name = 'steam-bleach';
   }
@@ -2799,8 +2820,13 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ds.name = 'duct-seam';
     ds.userData.decalMat = true;
-    ds.position.set(0, -(dc?.[1] ?? 0.3) / 2 - 0.004, 0);
-    ds.rotation.x = Math.PI / 2;
+    if (spec.kind === 'cableTray' && (spec.y ?? 0) < 0.5) {
+      ds.position.set(0, 0.09, 0);
+      ds.rotation.x = -Math.PI / 2;
+    } else {
+      ds.position.set(0, -decalY(spec.kind, dc, 1, 0.3) / 2 - 0.004, 0);
+      ds.rotation.x = Math.PI / 2;
+    }
     prop.group.add(ds);
     if (!prop.group.name) prop.group.name = 'duct-seam';
   }
@@ -2813,7 +2839,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     bf.name = 'buoy-fade';
     bf.userData.decalMat = true;
-    bf.position.set(0, 0, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    bf.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.1) / 2 + 0.004);
     prop.group.add(bf);
     if (!prop.group.name) prop.group.name = 'buoy-fade';
   }
@@ -2828,7 +2854,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     gc.name = 'gaze-crack';
     gc.userData.decalMat = true;
-    gc.position.set(0, (dc?.[1] ?? 0.9) * 0.2, (dc?.[2] ?? 0.05) / 2 + 0.004);
+    gc.position.set(0, decalY(spec.kind, dc, 0.2, 0.9), decalDim(spec.kind, dc, 2, 0.05) / 2 + 0.004);
     prop.group.add(gc);
     if (!prop.group.name) prop.group.name = 'gaze-crack';
   }
@@ -2842,7 +2868,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     td.name = 'trophy-dust';
     td.userData.decalMat = true;
-    td.position.set(0, 0, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    td.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.004);
     prop.group.add(td);
     if (!prop.group.name) prop.group.name = 'trophy-dust';
   }
@@ -2856,7 +2882,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     rd.name = 'rigging-dust';
     rd.userData.decalMat = true;
-    rd.position.set(0, (dc?.[1] ?? 0.4) * 0.5, (dc?.[2] ?? 0.15) / 2 + 0.005);
+    rd.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.15) / 2 + 0.005);
     prop.group.add(rd);
     if (!prop.group.name) prop.group.name = 'rigging-dust';
   }
@@ -2871,7 +2897,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sg.name = 'stencil-ghost';
     sg.userData.decalMat = true;
-    sg.position.set(0, (dc?.[1] ?? 0.4) * 0.5, (dc?.[2] ?? 0.5) / 2 + 0.004);
+    sg.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.5) / 2 + 0.004);
     prop.group.add(sg);
     if (!prop.group.name) prop.group.name = 'stencil-ghost';
   }
@@ -2902,7 +2928,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cg.name = 'cosmo-grease';
     cg.userData.decalMat = true;
-    cg.position.set(0, (dc?.[1] ?? 0.25) * 0.6, (dc?.[2] ?? 0.3) / 2 + 0.004);
+    cg.position.set(0, decalY(spec.kind, dc, 0.6, 0.25), decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.004);
     prop.group.add(cg);
     if (!prop.group.name) prop.group.name = 'cosmo-grease';
   }
@@ -2918,7 +2944,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     fr.name = 'flask-ring';
     fr.userData.decalMat = true;
     fr.rotation.x = -Math.PI / 2;
-    fr.position.set(0, (dc?.[1] ?? 0.9) + 0.004, 0);
+    fr.position.set(0, decalY(spec.kind, dc, 1, 0.9) + 0.004, 0);
     prop.group.add(fr);
     if (!prop.group.name) prop.group.name = 'flask-ring';
   }
@@ -2933,7 +2959,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bc.name = 'block-cuts';
     bc.userData.decalMat = true;
     bc.rotation.x = -Math.PI / 2;
-    bc.position.set(0, (dc?.[1] ?? 0.5) + 0.004, 0);
+    bc.position.set(0, decalY(spec.kind, dc, 1, 0.5) + 0.004, 0);
     prop.group.add(bc);
     if (!prop.group.name) prop.group.name = 'block-cuts';
   }
@@ -2946,7 +2972,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ts.name = 'torch-soot';
     ts.userData.decalMat = true;
-    ts.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.1) / 2 + 0.004);
+    ts.position.set(0, decalY(spec.kind, dc, 0.5, 0.3), decalDim(spec.kind, dc, 2, 0.1) / 2 + 0.004);
     prop.group.add(ts);
     if (!prop.group.name) prop.group.name = 'torch-soot';
   }
@@ -2960,7 +2986,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     cc.name = 'card-curl';
     cc.userData.decalMat = true;
-    cc.position.set(0, (dc?.[1] ?? 1.2) * 0.3, (dc?.[2] ?? 0.05) / 2 + 0.004);
+    cc.position.set(0, decalY(spec.kind, dc, 0.3, 1.2), decalDim(spec.kind, dc, 2, 0.05) / 2 + 0.004);
     prop.group.add(cc);
     if (!prop.group.name) prop.group.name = 'card-curl';
   }
@@ -2974,7 +3000,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     lf.name = 'label-fade';
     lf.userData.decalMat = true;
-    lf.position.set(0, 0, (dc?.[2] ?? 0.02) / 2 + 0.003);
+    lf.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.02) / 2 + 0.003);
     prop.group.add(lf);
     if (!prop.group.name) prop.group.name = 'label-fade';
   }
@@ -2989,7 +3015,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sd2.name = 'speaker-dust';
     sd2.userData.decalMat = true;
-    sd2.position.set(0, (dc?.[1] ?? 0.2) * 0.5, (dc?.[2] ?? 0.12) / 2 + 0.004);
+    sd2.position.set(0, decalY(spec.kind, dc, 0.5, 0.2), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.004);
     prop.group.add(sd2);
     if (!prop.group.name) prop.group.name = 'speaker-dust';
   }
@@ -2997,12 +3023,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (spec.kind === 'barrel' && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const hr = new THREE.Mesh(
-      new THREE.PlaneGeometry(dc?.[0] ?? 0.7, (dc?.[1] ?? 0.9) * 0.8),
+      new THREE.PlaneGeometry(dc?.[0] ?? 0.7, decalDim(spec.kind, dc, 1, 0.9) * 0.8),
       new THREE.MeshStandardMaterial({ map: hoopRust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     hr.name = 'hoop-rust';
     hr.userData.decalMat = true;
-    hr.position.set(0, (dc?.[1] ?? 0.9) * 0.4, (dc?.[2] ?? 0.35) / 2 + 0.005);
+    hr.position.set(0, decalY(spec.kind, dc, 0.4, 0.9), decalDim(spec.kind, dc, 2, 0.35) / 2 + 0.005);
     prop.group.add(hr);
     if (!prop.group.name) prop.group.name = 'hoop-rust';
   }
@@ -3016,7 +3042,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ar.name = 'ash-ring';
     ar.userData.decalMat = true;
     ar.rotation.x = -Math.PI / 2;
-    ar.position.set(0, 0.006, (dc?.[2] ?? 0.3) / 2 + 0.1);
+    ar.position.set(0, 0.006, decalDim(spec.kind, dc, 2, 0.3) / 2 + 0.1);
     prop.group.add(ar);
     if (!prop.group.name) prop.group.name = 'ash-ring';
   }
@@ -3025,12 +3051,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (LOCKERS.has(spec.kind) && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const lg = new THREE.Mesh(
-      new THREE.PlaneGeometry((dc?.[0] ?? 0.5) * 0.6, (dc?.[1] ?? 1.8) * 0.7),
+      new THREE.PlaneGeometry(decalDim(spec.kind, dc, 0, 0.5) * 0.6, decalDim(spec.kind, dc, 1, 1.8) * 0.7),
       new THREE.MeshStandardMaterial({ map: lockerGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     lg.name = 'locker-ghost';
     lg.userData.decalMat = true;
-    lg.position.set(0, (dc?.[1] ?? 1.8) * 0.45, (dc?.[2] ?? 0.45) / 2 + 0.004);
+    lg.position.set(0, decalY(spec.kind, dc, 0.45, 1.8), decalDim(spec.kind, dc, 2, 0.45) / 2 + 0.004);
     prop.group.add(lg);
     if (!prop.group.name) prop.group.name = 'locker-ghost';
   }
@@ -3044,7 +3070,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ks.name = 'kettle-scale';
     ks.userData.decalMat = true;
-    ks.position.set(0, (dc?.[1] ?? 0.25) * 0.35, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    ks.position.set(0, decalY(spec.kind, dc, 0.35, 0.25), decalDim(spec.kind, dc, 2, 0.24) / 2 + 0.008);
     prop.group.add(ks);
     if (!prop.group.name) prop.group.name = 'kettle-scale';
   }
@@ -3058,7 +3084,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     bs.name = 'board-scores';
     bs.userData.decalMat = true;
     bs.rotation.x = -Math.PI / 2;
-    bs.position.set(0, (dc?.[1] ?? 0.04) + 0.002, 0);
+    bs.position.set(0, decalY(spec.kind, dc, 1, 0.04) + 0.002, 0);
     prop.group.add(bs);
     if (!prop.group.name) prop.group.name = 'board-scores';
   }
@@ -3071,7 +3097,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     dh.name = 'dart-halo';
     dh.userData.decalMat = true;
-    dh.position.set(0, 0, (dc?.[2] ?? 0.04) / 2 + 0.004);
+    dh.position.set(0, 0, decalDim(spec.kind, dc, 2, 0.04) / 2 + 0.004);
     prop.group.add(dh);
     if (!prop.group.name) prop.group.name = 'dart-halo';
   }
@@ -3085,7 +3111,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     js.name = 'jug-sweat';
     js.userData.decalMat = true;
-    js.position.set(0, (dc?.[1] ?? 0.3) * 0.4, (dc?.[2] ?? 0.16) / 2 + 0.004);
+    js.position.set(0, decalY(spec.kind, dc, 0.4, 0.3), decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.008);
     prop.group.add(js);
     if (!prop.group.name) prop.group.name = 'jug-sweat';
   }
@@ -3093,12 +3119,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (spec.kind === 'linenShelf' && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const fp = new THREE.Mesh(
-      new THREE.PlaneGeometry((dc?.[0] ?? 0.9) * 0.7, 0.4),
+      new THREE.PlaneGeometry(decalDim(spec.kind, dc, 0, 0.9) * 0.7, 0.4),
       new THREE.MeshStandardMaterial({ map: foldPulls(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     fp.name = 'fold-pulls';
     fp.userData.decalMat = true;
-    fp.position.set(0, (dc?.[1] ?? 1.6) * 0.5, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    fp.position.set(0, decalY(spec.kind, dc, 0.5, 1.6), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.005);
     prop.group.add(fp);
     if (!prop.group.name) prop.group.name = 'fold-pulls';
   }
@@ -3106,13 +3132,13 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (spec.kind === 'displayCase' && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const sdx = new THREE.Mesh(
-      new THREE.PlaneGeometry((dc?.[0] ?? 1.0) * 0.8, 0.45),
+      new THREE.PlaneGeometry(decalDim(spec.kind, dc, 0, 1.0) * 0.8, 0.45),
       new THREE.MeshStandardMaterial({ map: shelfDust(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     sdx.name = 'shelf-dust';
     sdx.userData.decalMat = true;
     sdx.rotation.x = -Math.PI / 2;
-    sdx.position.set(0, (dc?.[1] ?? 0.9) * 0.55, 0);
+    sdx.position.set(0, spec.kind === 'displayCase' ? 0.77 : decalY(spec.kind, dc, 0.55, 0.9), 0);
     prop.group.add(sdx);
     if (!prop.group.name) prop.group.name = 'shelf-dust';
   }
@@ -3126,7 +3152,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     ts2.name = 'till-scratch';
     ts2.userData.decalMat = true;
-    ts2.position.set(0, (dc?.[1] ?? 0.4) * 0.5, (dc?.[2] ?? 0.4) / 2 + 0.004);
+    ts2.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.47) / 2 + 0.004);
     prop.group.add(ts2);
     if (!prop.group.name) prop.group.name = 'till-scratch';
   }
@@ -3134,12 +3160,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (spec.kind === 'television' && rng.bool(0.65)) {
     const dc = modelCollider(spec.kind);
     const sg = new THREE.Mesh(
-      new THREE.PlaneGeometry((dc?.[0] ?? 0.6) * 0.8, (dc?.[1] ?? 0.5) * 0.7),
+      new THREE.PlaneGeometry(decalDim(spec.kind, dc, 0, 0.6) * 0.8, decalDim(spec.kind, dc, 1, 0.5) * 0.7),
       new THREE.MeshStandardMaterial({ map: screenGhost(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     sg.name = 'screen-ghost';
     sg.userData.decalMat = true;
-    sg.position.set(0, (dc?.[1] ?? 0.5) * 0.5, (dc?.[2] ?? 0.4) / 2 + 0.004);
+    sg.position.set(0, decalY(spec.kind, dc, 0.5, 0.5), decalDim(spec.kind, dc, 2, 0.4) / 2 + 0.004);
     prop.group.add(sg);
     if (!prop.group.name) prop.group.name = 'screen-ghost';
   }
@@ -3152,7 +3178,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     sf.name = 'splat-film';
     sf.userData.decalMat = true;
-    sf.position.set(0, (dc?.[1] ?? 0.3) * 0.5, (dc?.[2] ?? 0.35) / 2 + 0.004);
+    sf.position.set(0, decalY(spec.kind, dc, 0.5, 0.3), decalDim(spec.kind, dc, 2, 0.35) / 2 + 0.004);
     prop.group.add(sf);
     if (!prop.group.name) prop.group.name = 'splat-film';
   }
@@ -3179,7 +3205,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     og.name = 'oily-grip';
     og.userData.decalMat = true;
-    og.position.set(0, (dc?.[1] ?? 0.1) * 0.4, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    og.position.set(0, decalY(spec.kind, dc, 0.4, 0.1), decalDim(spec.kind, dc, 2, 0.06) / 2 + 0.004);
     prop.group.add(og);
     if (!prop.group.name) prop.group.name = 'oily-grip';
   }
@@ -3193,7 +3219,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     hs.name = 'haft-shine';
     hs.userData.decalMat = true;
-    hs.position.set(0, (dc?.[1] ?? 0.9) * 0.5, (dc?.[2] ?? 0.06) / 2 + 0.004);
+    hs.position.set(0, decalY(spec.kind, dc, 0.5, 0.9), decalDim(spec.kind, dc, 2, 0.06) / 2 + 0.004);
     prop.group.add(hs);
     if (!prop.group.name) prop.group.name = 'haft-shine';
   }
@@ -3201,12 +3227,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   if (spec.kind === 'suitcase' && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const ss = new THREE.Mesh(
-      new THREE.PlaneGeometry((dc?.[0] ?? 0.6) * 0.8, (dc?.[1] ?? 0.4) * 0.8),
+      new THREE.PlaneGeometry(decalDim(spec.kind, dc, 0, 0.6) * 0.8, decalDim(spec.kind, dc, 1, 0.4) * 0.8),
       new THREE.MeshStandardMaterial({ map: strapScuff(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
     );
     ss.name = 'strap-scuff';
     ss.userData.decalMat = true;
-    ss.position.set(0, (dc?.[1] ?? 0.4) * 0.5, (dc?.[2] ?? 0.2) / 2 + 0.004);
+    ss.position.set(0, decalY(spec.kind, dc, 0.5, 0.4), decalDim(spec.kind, dc, 2, 0.2) / 2 + 0.004);
     prop.group.add(ss);
     if (!prop.group.name) prop.group.name = 'strap-scuff';
   }
@@ -3233,7 +3259,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     md.name = 'mail-dust';
     md.userData.decalMat = true;
     md.rotation.x = -Math.PI / 2;
-    md.position.set(0, (dc?.[1] ?? 0.7) * 0.7, 0);
+    md.position.set(0, decalY(spec.kind, dc, 0.7, 0.7), 0);
     prop.group.add(md);
     if (!prop.group.name) prop.group.name = 'mail-dust';
   }

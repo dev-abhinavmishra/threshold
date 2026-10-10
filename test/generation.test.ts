@@ -7,7 +7,6 @@ import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
 import { portLocalPos, inDoorLane, footprintInDoorLane, footprintInDoorLeaf } from '../src/world/spec';
-import { modelCollider } from '../src/world/modelLibrary';
 import { modelCollider, MODEL_FOR } from '../src/world/modelLibrary';
 import { buildProp } from '../src/world/props';
 import { Rng } from '../src/engine/rng';
@@ -5668,5 +5667,47 @@ describe('the cart kept the mail dust (sprint 559)', () => {
       }
     }
     expect(n, 'no mail dust').toBeGreaterThan(0);
+  });
+});
+
+describe('decals land where they claim (review fixes)', () => {
+  it('door dust, jug rings and wall marks stay inside their rooms', () => {
+    let found = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const hw = room.width / 2, hd = room.depth / 2;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'door-drift') {
+            found++;
+            expect(Math.abs(o.position.x), 'door-drift x out of room').toBeLessThanOrEqual(hw);
+            expect(Math.abs(o.position.z), 'door-drift z out of room').toBeLessThanOrEqual(hd);
+          }
+          if (o.name === 'jug-ring') {
+            found++;
+            expect(o.position.y, 'jug-ring sank below its surface').toBeGreaterThan(0.005);
+          }
+          if (o.name === 'frame-rattle' || o.name === 'call-grub') {
+            found++;
+            expect(Math.abs(o.position.x), `${o.name} mark beyond the wall`).toBeLessThanOrEqual(hw);
+            expect(Math.abs(o.position.z), `${o.name} mark beyond the wall`).toBeLessThanOrEqual(hd);
+          }
+          if (o.name === 'kick-split') {
+            found++;
+            const wp = new THREE.Vector3();
+            o.getWorldPosition(wp);
+            expect(wp.y, 'kick-split below the floor').toBeGreaterThan(0.15);
+          }
+          if (o.name === 'lath-expose') {
+            found++;
+            expect(['tile', 'corrugated', 'woodPanel', 'brick'],
+              `lath-expose on ${room.spec.wallMaterial}`).not.toContain(room.spec.wallMaterial);
+          }
+        });
+      }
+    }
+    expect(found, 'no decals found to check').toBeGreaterThan(0);
   });
 });
