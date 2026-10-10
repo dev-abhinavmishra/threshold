@@ -2,7 +2,13 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
-## Sprint log
+## Sprint 663–665 — the wire walks under the knee
+
+- **663** the under's wire-rob was already indifferent to a planted knee — the grafter's wireLid scan never gates on `trappedBy` — but nothing said so.
+- **664** `robStashWire` now tells the room when it pulls wire out of a swept lid: `[the wire walks out from under the knee — the hands do not care whose lid it is]`. Jurisdiction is now legible: the house scatters your take, the knee holds it, the under does not care whose hands are on the box.
+- **665** contract spec pins both halves: the sweep-grip branch in `robStashWire` + the grafter scan's absence of a `trappedBy` gate.
+
+Next: the third graft substrate (the plate) is the biggest remaining mechanics family — grafted plates that snap on house walkers and spare the under, answering the same 'work' pull. Below that: the warden's scatter vs a gripped lid ordering line, and a peepLid read on a gripped lid.
 
 ## Sprint 657–662 — the sweep plants a knee (a second house reader)
 

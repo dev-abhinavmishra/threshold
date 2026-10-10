@@ -1210,6 +1210,13 @@ export class Game {
         }
         stash.robbedWire = true; // sprint 532 — the lid remembers the robbery
         if (stash.items.length === 0) this.lidStashes.delete(key);
+        // sprint 664 — the wire walks under the knee: the sweep's grip
+        // holds the box shut for YOU, not for the hands — they pull
+        // wire out from under a planted knee like it was never there.
+        const heldSpot = this.activeRooms().flatMap((r) => r.hidingSpots)
+          .find((s) => s.id === spotId && s.trappedBy === 'sweep');
+        if (heldSpot) this.cue('grafter-grind', heldSpot.exitPos,
+          '[the wire walks out from under the knee — the hands do not care whose lid it is]', 'warn');
         return true;
       },
       // sprint 534 — the eyes read the lamps you leave burning

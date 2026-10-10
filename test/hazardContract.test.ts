@@ -813,4 +813,19 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
     expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
   });
+
+  describe('the wire walks under the knee (sprints 663-665)', () => {
+    it('the under robs a gripped lid and the house tells you the hands do not care', () => {
+      const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+      const ents = readFileSync('src/entities/setpieces.ts', 'utf8');
+      expect(gameSrc).toContain("trappedBy === 'sweep'");
+      expect(gameSrc).toContain('the wire walks out from under the knee');
+      // sprint 665 — the grafter's wireLid scan never gates on trappedBy:
+      // the knee holds the box for you, not for the under's wire.
+      expect(ents).toContain('stashWire?.(s.id)');
+      const scan = ents.slice(ents.indexOf('stashWire?.(s.id)') - 800,
+        ents.indexOf('stashWire?.(s.id)') + 200);
+      expect(scan).not.toContain('trappedBy');
+    });
+  });
 });
