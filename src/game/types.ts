@@ -84,6 +84,7 @@ export type ItemId =
   | 'wireCoil'
   | 'springPart'
   | 'steamValve'
+  | 'fanBelt'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 

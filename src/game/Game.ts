@@ -724,7 +724,15 @@ export class Game {
         }
       } else if (h.kind === 'fan') {
         const f = this.hazard.fans.find((x) => x.room === h.room && near(x.pos));
-        if (f) f.dead = true;
+        if (f) {
+          // sprint 593 — same trap as the line: serialize the whole
+          // state, restore the whole state (a live owned wheel would
+          // else resurrect dead; a stripped one would regrow its belt).
+          f.dead = h.dead !== false;
+          if (h.belted === false) f.belted = false;
+          if (h.chocked) f.chocked = true;
+          if (h.owner === 'player') f.owner = 'player';
+        }
       } else {
         const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
         if (w) { if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true; }
@@ -812,6 +820,9 @@ export class Game {
     // sprint 577 — loose plates outlive the reload like every pile
     this.droppedSprings = cp?.droppedSprings?.map((w) => ({ ...w })) ?? [];
     this.mintSpringDrops();
+    // sprint 593 — and the pulled belts do the same
+    this.droppedBelts = cp?.droppedBelts?.map((w) => ({ ...w })) ?? [];
+    this.mintBeltDrops();
     // the grafter's grafts stay grafted — planted wire survives a
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
@@ -1003,6 +1014,9 @@ export class Game {
       // strips what the house pries out — a cocked jaw sells cheap
       // because the scavenger never runs out of them.
       { id: 'springPart', price: rng.int(12, 18) },
+      // sprint 595 — and drive belts for the wheel-less: the under
+      // pulls what the house strips — muscle sells cheap too.
+      { id: 'fanBelt', price: rng.int(12, 18) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -1234,7 +1248,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring' | 'belt'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1278,6 +1292,12 @@ export class Game {
         if (kinds.includes('spring')) for (const w of this.droppedSprings) {
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'spring' }; }
+        }
+        // sprint 593 — a loose belt reads like every other pile: the
+        // floorkeeper tidies it, the under folds it into stock.
+        if (kinds.includes('belt')) for (const w of this.droppedBelts) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'belt' }; }
         }
         return best;
       },
@@ -1344,6 +1364,16 @@ export class Game {
             return { kind: 'spring' };
           }
         }
+        // sprint 593 — belt is last: same precedence convention as the
+        // plate, so a pile shared with coin still pays the coin first.
+        if (take.belt) {
+          const bi = this.droppedBelts.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (bi >= 0) {
+            this.droppedBelts.splice(bi, 1);
+            this.mintBeltDrops();
+            return { kind: 'belt' };
+          }
+        }
         return null;
       },
       // sprint 489 — a pocketed chock spills back as kicked-wedge drop
@@ -1392,6 +1422,8 @@ export class Game {
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         for (const w of this.droppedSprings)
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
+        for (const w of this.droppedBelts)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         // sprint 543 — and the light is bootable too: a striding walker
         // kicks the burning lamp and it rolls, still lit — the lure
         // moves under the house's own feet.
@@ -1402,7 +1434,7 @@ export class Game {
         if (hit) {
           this.mintWedgeDrops(); this.mintWrapDrops();
           this.mintPouchDrops(); this.mintCoilDrops();
-          this.mintLampDrops(); this.mintSpringDrops();
+          this.mintLampDrops(); this.mintSpringDrops(); this.mintBeltDrops();
           this.syncLampLights();
           this.sound.emit({ x, y: 0.3, z, intensity: 0.34,
             category: 'item', caption: '[a boot finds the loose goods]' });
@@ -1420,6 +1452,12 @@ export class Game {
         this.mintSpringDrops();
         this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
           category: 'item', caption: '[sprung plates scatter on the boards]' });
+      },
+      spillBelts: (pos, n) => {
+        for (let i = 0; i < n; i++) this.droppedBelts.push({ x: pos.x - i * 0.15, z: pos.z + i * 0.06 });
+        this.mintBeltDrops();
+        this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
+          category: 'item', caption: '[drive belts slap the boards]' });
       },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -1482,9 +1520,26 @@ export class Game {
           // stays yours ('Re-pressurize your line' opens it again).
           const s = this.hazard.steams.find((st) => !st.dead
             && st.owner === 'player' && near(st.pos));
-          if (!s) return null;
-          s.dead = true;
-          return 'crimp';
+          if (s) { s.dead = true; return 'crimp'; }
+          // sprint 592 — or your wheel gets the pull: a 'work' mark by
+          // a live player-fitted fan and the belt comes off in his
+          // hands. He can't re-engage your wheel, so he strips its
+          // muscle loose — the belt lands on the boards as loose
+          // goods (gather it back before he comes round to tidy it).
+          const f = this.hazard.fans.find((ff) => ff.owner === 'player'
+            && ff.belted !== false && near(ff.pos));
+          if (!f) return null;
+          f.dead = true;
+          f.belted = false;
+          delete f.owner; // the muscle's off — dead housing, nobody's
+          if (f.chocked) {
+            f.chocked = false;
+            this.kickedWedges.push({ x: f.pos.x + 0.2, z: f.pos.z - 0.1 });
+            this.mintWedgeDrops();
+          }
+          this.droppedBelts.push({ x: f.pos.x, z: f.pos.z });
+          this.mintBeltDrops();
+          return 'pull';
         }
         if (kind === 'spring') {
           // sprint 574 — the house cocks its plates back: a 'spring'
@@ -1504,10 +1559,19 @@ export class Game {
           return 'trap';
         }
         if (kind === 'fan') {
-          const f = this.hazard.fans.find((ff) => ff.dead && near(ff.pos));
+          // sprint 591 — a stripped wheel can't re-engage: no belt, no
+          // blades. And the house only re-engages HOUSE wheels — a fan
+          // fitted with your belt is yours even jammed.
+          const f = this.hazard.fans.find((ff) => ff.dead
+            && ff.belted !== false && ff.owner !== 'player' && near(ff.pos));
           if (!f) return null;
           f.dead = false;
-          return 'fan';
+          // a chocked wheel's wedge doesn't vanish — it comes out in
+          // his pocket, confiscated like the felt wrap (spills on a
+          // stagger). A seeded spent wheel yields none.
+          const wasChocked = f.chocked === true;
+          f.chocked = false;
+          return wasChocked ? 'fanChock' : 'fan';
         }
         if (kind === 'blind') {
           const w = this.hazard.watchers.find((ww) => ww.dead && near(ww.pos));
@@ -1555,6 +1619,10 @@ export class Game {
    *  or confiscated-and-dropped, they're floor litter like chocks —
    *  readable, bootable, gatherable. */
   private droppedSprings: { x: number; z: number }[] = [];
+  /** sprint 593 — pulled drive belts: the house's pull strips your
+   *  wheel's muscle onto the boards where it lies as loose goods —
+   *  gatherable, pocketable, foldable like the sprung plate. */
+  private droppedBelts: { x: number; z: number }[] = [];
   /** Coils the house worked off a bound leaf — same drop convention:
    *  wire isn't destroyed by the strain, it lands as loot. */
   private droppedCoils: { x: number; z: number }[] = [];
@@ -1803,7 +1871,7 @@ export class Game {
    *  Crouched within reach, a pile offers an anchor a third of a metre
    *  TOWARD you — aim past the pile to pull it a step per hold, instead
    *  of pocketing it. Quiet work: a faint scrape, no sign left. */
-  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil' | 'spring',
+  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil' | 'spring' | 'belt',
     id: string, w: { x: number; z: number }): void {
     if (!this.player.crouching) return;
     const dx = this.player.pos.x - w.x, dz = this.player.pos.z - w.z;
@@ -1881,6 +1949,21 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
       this.mintDragVerb('spring', `spring-drop-drag-${this.space}-${i}`, w);
+    });
+  }
+
+  /** sprint 593 — loose drive belts: gather-minted like sprung plates,
+   *  one verb per drop, re-minted space-agnostic. */
+  private mintBeltDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('belt-drop-'));
+    this.droppedBelts.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'beltDrop', id: `belt-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the drive belt',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+      this.mintDragVerb('belt', `belt-drop-drag-${this.space}-${i}`, w);
     });
   }
   /** sprint 533 — 'Set the lamp down' / sprint 535 — 'Pick the lamp
@@ -2315,6 +2398,17 @@ export class Game {
       if (line) {
         return { sfx: 'steam-hiss', sev: 'info' as const,
           text: '[your line breathes past the leaf — the valve you set]' };
+      }
+    }
+    // sprint 595 — your wheel hums through the boards too: a live
+    // player-fitted fan just past the leaf reads at the seam.
+    {
+      const wheel = this.hazard.fans.find((f) =>
+        f.owner === 'player' && !f.dead && f.room === target.index
+          && Math.hypot(f.pos.x - door.pos.x, f.pos.z - door.pos.z) < 3);
+      if (wheel) {
+        return { sfx: 'steam-hiss', sev: 'info' as const,
+          text: '[your wheel hums past the leaf — the belt you fit]' };
       }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
@@ -3167,6 +3261,21 @@ export class Game {
         data: {},
       });
     }
+    // sprint 593 — and the belt is loose goods too: 'Leave a belt out'
+    // drops the wheel's muscle where both jurisdictions read it.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'fanBelt' && i.count > 0)
+      && !this.droppedBelts.some((w) =>
+        Math.hypot(w.x - this.player.pos.x, w.z - this.player.pos.z) < 1.2)) {
+      const lk = v3(); this.player.lookDir(lk);
+      this.interaction.add({
+        kind: 'baitBelt', id: `baitbelt-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.25, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Leave a belt out',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
     // sprint 533 — 'Set the lamp down': the pulse lamp keeps burning
     // where you kneel. Light the wall eyes drink (s534), a hum the
     // ears follow — a lure that pays with its own battery and dies on
@@ -3192,7 +3301,8 @@ export class Game {
     {
       const stackN = (id: ItemId) =>
         this.inventory.find((i) => i.id === id)?.count ?? 0;
-      const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil') + stackN('springPart');
+      const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil') + stackN('springPart')
+        + stackN('fanBelt');
       if (this.player.crouching && n > 0) {
         const lk = v3(); this.player.lookDir(lk);
         this.interaction.add({
@@ -3331,7 +3441,33 @@ export class Game {
       const dx = f.pos.x - this.player.pos.x, dz = f.pos.z - this.player.pos.z;
       if (dx * dx + dz * dz > 2.6 * 2.6) continue;
       if (f.dead) {
+        if (f.belted === false) {
+          // sprint 590 — a stripped housing takes YOUR belt: refit is
+          // player work, the wheel answers whoever stands under it.
+          this.interaction.add({
+            kind: 'refitBelt', id: `refitbelt-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+            pos: { x: f.pos.x, y: 1.35, z: f.pos.z },
+            prompt: this.inventory.some((i) => i.id === 'fanBelt' && i.count > 0)
+              ? 'Fit the belt back — 1 fanBelt'
+              : 'Fit the belt back (needs a drive belt)',
+            holdTime: 1.5, enabled: true, priority: 4,
+            data: f,
+          });
+          continue;
+        }
+        // sprint 589 — a still wheel is worked metal: 'Work the belt
+        // off' strips the drive whole, frees whatever jammed it, and
+        // kills the wheel for good — the belt's price is the 'work'
+        // sign your name leaves. Mints above the blades; the chock
+        // verb keeps the low anchor so the two split on aim.
         this.interaction.add({
+          kind: 'workBelt', id: `workbelt-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
+          pos: { x: f.pos.x, y: 1.55, z: f.pos.z },
+          prompt: 'Work the belt off',
+          holdTime: 1.6, enabled: true, priority: 4,
+          data: f,
+        });
+        if (f.chocked) this.interaction.add({
           kind: 'unchock', id: `unchock-${this.space}:${f.room}:${Math.round(f.pos.x * 7)}x${Math.round(f.pos.z * 7)}`,
           pos: { x: f.pos.x, y: 1.15, z: f.pos.z },
           prompt: 'Work the chock free — the wheel spins up',
@@ -4162,6 +4298,7 @@ export class Game {
           : dd.list === 'wrap' ? this.droppedWraps
           : dd.list === 'wedge' ? this.kickedWedges
           : dd.list === 'spring' ? this.droppedSprings
+          : dd.list === 'belt' ? this.droppedBelts
           : this.droppedCoils;
         const w = arr.find((p) => Math.abs(p.x - dd.x) < 0.06 && Math.abs(p.z - dd.z) < 0.06);
         if (!w) { it.enabled = false; return; }
@@ -4174,6 +4311,7 @@ export class Game {
         }
         this.mintPouchDrops(); this.mintWrapDrops();
         this.mintWedgeDrops(); this.mintCoilDrops(); this.mintSpringDrops();
+        this.mintBeltDrops();
         this.sound.emit({ x: w.x, y: 0.2, z: w.z, intensity: 0.14 * this.wantedPull,
           category: 'item', caption: '[the pile scrapes across the boards]' });
         return;
@@ -4202,8 +4340,8 @@ export class Game {
           return n;
         };
         const wraps = grab('feltWrap'), chocks = grab('doorChock'), coils = grab('wireCoil'),
-          springs = grab('springPart');
-        if (!wraps && !chocks && !coils && !springs) { it.enabled = false; return; }
+          springs = grab('springPart'), belts = grab('fanBelt');
+        if (!wraps && !chocks && !coils && !springs && !belts) { it.enabled = false; return; }
         const lk = v3(); this.player.lookDir(lk);
         const sx = this.player.pos.x + lk.x * 0.55, sz = this.player.pos.z + lk.z * 0.55;
         const spot = this.scatterSpot(sx, sz, Math.atan2(lk.z, lk.x), 0.1) ?? { x: sx, z: sz };
@@ -4211,7 +4349,9 @@ export class Game {
         for (let k = 0; k < chocks; k++) this.kickedWedges.push({ x: spot.x + k * 0.07, z: spot.z + k * 0.04 });
         for (let k = 0; k < coils; k++) this.droppedCoils.push({ x: spot.x - k * 0.08, z: spot.z - k * 0.03 });
         for (let k = 0; k < springs; k++) this.droppedSprings.push({ x: spot.x + k * 0.09, z: spot.z - k * 0.06 });
+        for (let k = 0; k < belts; k++) this.droppedBelts.push({ x: spot.x - k * 0.1, z: spot.z + k * 0.05 });
         this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops(); this.mintSpringDrops();
+        this.mintBeltDrops();
         const marked = this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0);
         this.cue('pickup', it.pos, marked
           ? '[you spill the take — the marked stock stays sewn to your back]'
@@ -6079,7 +6219,8 @@ export class Game {
         return;
       }
       case 'chock': {
-        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        const f = it.data as { pos: Vec3; room: number; dead: boolean;
+          owner?: 'player'; chocked?: boolean };
         const chock = this.inventory.find((i) => i.id === 'doorChock' && i.count > 0);
         if (!chock) {
           this.cue('drawer', it.pos, '[a door chock would jam the wheel]', 'warn');
@@ -6088,7 +6229,16 @@ export class Game {
         chock.count--;
         it.enabled = false;
         f.dead = true;
-        this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
+        f.chocked = true;
+        // sprint 594 — a wedge in YOUR OWN wheel isn't the house's kill:
+        // the sign reroutes to 'work' under your name, same convention
+        // as bleeding your own line (s584). The house's wheel still
+        // signs 'fan' so its keeper can re-engage.
+        if (f.owner === 'player')
+          this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
+            kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        else
+          this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
         this.sound.emit({ x: it.pos.x, y: 1.1, z: it.pos.z, intensity: 0.3, category: 'item', caption: '[wood into the wheel]' });
         return;
@@ -6097,12 +6247,56 @@ export class Game {
         // sprint 394 — the jam isn't welded: work the chock free and the
         // wheel spins back up. The blades' wake is a real sound — the
         // recovery prices the noise and the live hazard, not the tool.
-        const f = it.data as { pos: Vec3; room: number; dead: boolean };
+        const f = it.data as { pos: Vec3; room: number; dead: boolean; chocked?: boolean };
         f.dead = false;
+        f.chocked = false; // sprint 589 — the wedge is out, not merely loose
         it.enabled = false;
         this.giveItem('doorChock', 1);
         this.cue('item', it.pos, '[the chock works free — the blades remember how to spin]');
         this.sound.emit({ x: f.pos.x, y: 1.1, z: f.pos.z, intensity: 0.45, category: 'machine', caption: '[the wheel grinds back to life]' });
+        return;
+      }
+      case 'workBelt': {
+        // sprint 589 — the strip: a still wheel walks its belt off the
+        // rim whole. Whatever jammed it drops back into your hand — the
+        // blades can't catch it again — and the beltless housing never
+        // re-engages: the strip is the PERMANENT kill a chock never
+        // was, priced by the 'work' sign it leaves under your name.
+        it.enabled = false;
+        const f = it.data as { pos: Vec3; room: number; dead: boolean;
+          belted?: boolean; chocked?: boolean; owner?: 'player' };
+        if (f.belted === false) return;
+        f.belted = false;
+        f.dead = true;
+        delete f.owner; // the muscle's off — it's dead housing, nobody's
+        if (f.chocked) { f.chocked = false; this.giveItem('doorChock', 1); }
+        this.giveItem('fanBelt', 1);
+        this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('trap-click', { x: f.pos.x, y: 1.2, z: f.pos.z },
+          '[the belt walks off the rim — the wheel will never chew again]');
+        this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.3, category: 'item', caption: '[leather off the rim]' });
+        return;
+      }
+      case 'refitBelt': {
+        // sprint 590 — the belt cycles: fit YOUR belt on a stripped
+        // wheel and the blades answer whoever stands under them —
+        // player work, live hazard, house hands off the re-lay.
+        it.enabled = false;
+        const f = it.data as { pos: Vec3; room: number; dead: boolean;
+          belted?: boolean; chocked?: boolean; owner?: 'player' };
+        if (f.belted !== false) return;
+        const bi = this.inventory.findIndex((i) => i.id === 'fanBelt' && i.count > 0);
+        if (bi < 0) return;
+        this.inventory[bi].count--;
+        f.belted = true;
+        f.dead = false;
+        f.owner = 'player';
+        this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.audio.play('steam-hiss', { x: f.pos.x, y: 1.2, z: f.pos.z },
+          '[the belt seats on the rim — the wheel spins on your word]');
+        this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.4, category: 'machine', caption: '[a belt seats on the rim]' });
         return;
       }
       case 'keyring': {
@@ -6611,6 +6805,32 @@ export class Game {
         this.mintSpringDrops();
         this.giveItem('springPart', 1);
         this.audio.play('trap-click', it.pos, '[the plate comes back to your hand]');
+        return;
+      }
+      case 'baitBelt': {
+        // sprint 593 — the belt on the floor is loose goods like the
+        // plate: bait for the tidy, donation for the under.
+        it.enabled = false;
+        const bi = this.inventory.findIndex((i) => i.id === 'fanBelt' && i.count > 0);
+        if (bi < 0) return;
+        this.inventory[bi].count--;
+        const lk = v3(); this.player.lookDir(lk);
+        const bx = this.player.pos.x + lk.x * 0.55, bz = this.player.pos.z + lk.z * 0.55;
+        this.droppedBelts.push({ x: bx, z: bz });
+        this.mintBeltDrops();
+        this.audio.play('trap-click', { x: bx, y: 0.2, z: bz }, '[the belt lies down — loose leather on the boards]');
+        this.sound.emit({ x: bx, y: 0.25, z: bz, intensity: 0.2 * this.wantedPull, category: 'item', caption: '' });
+        return;
+      }
+      case 'beltDrop': {
+        // gather the loose belt — your litter comes home, same as
+        // the plate's
+        it.enabled = false;
+        const i2 = (it.data as { i: number }).i;
+        this.droppedBelts.splice(i2, 1);
+        this.mintBeltDrops();
+        this.giveItem('fanBelt', 1);
+        this.audio.play('trap-click', it.pos, '[the belt coils back on your arm]');
         return;
       }
       case 'baitWedge': {
@@ -7662,7 +7882,14 @@ export class Game {
         ...this.hazard.steams.filter((s) => s.dead || s.valved === false || s.owner === 'player')
           .map((s) => ({ room: s.room, kind: 'steam' as const, x: s.pos.x, z: s.pos.z,
             dead: s.dead, valved: s.valved, owner: s.owner })),
-        ...this.hazard.fans.filter((f) => f.dead).map((f) => ({ room: f.room, kind: 'fan' as const, x: f.pos.x, z: f.pos.z })),
+        // sprint 593 — the wheel rides the checkpoint like the line:
+        // a live player-fitted wheel, a stripped housing, a chocked
+        // wheel all serialize — never just 'the ones that died'.
+        ...this.hazard.fans.filter((f) => f.dead || f.belted === false
+          || f.owner === 'player' || f.chocked)
+          .map((f) => ({ room: f.room, kind: 'fan' as const,
+            x: f.pos.x, z: f.pos.z, dead: f.dead, belted: f.belted,
+            owner: f.owner, chocked: f.chocked })),
         ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
           room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
           dead: w.dead || undefined, filed: w.filed || undefined })),
@@ -7682,6 +7909,8 @@ export class Game {
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
       droppedSprings: this.droppedSprings.length > 0
         ? this.droppedSprings.map((w) => ({ ...w })) : undefined,
+      droppedBelts: this.droppedBelts.length > 0
+        ? this.droppedBelts.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
       droppedCoils: this.droppedCoils.length > 0
@@ -7791,7 +8020,7 @@ export class Game {
             spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
               + this.droppedWraps.reduce((n, w) => n + w.n, 0)
               + this.kickedWedges.length + this.droppedCoils.length
-              + this.droppedSprings.length,
+              + this.droppedSprings.length + this.droppedBelts.length,
             // sprint 513 — and what your back kept: the take you died
             // carrying reads beside what the floor and the count kept
             carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -7813,6 +8042,8 @@ export class Game {
             trapsSet: this.setTraps.length || undefined,
             // sprint 583 — and the lines still threaded your way
             ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
+            // sprint 595 — and the wheels still spinning on your belt
+            wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7853,7 +8084,7 @@ export class Game {
         spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
           + this.droppedWraps.reduce((n, w) => n + w.n, 0)
           + this.kickedWedges.length + this.droppedCoils.length
-          + this.droppedSprings.length,
+          + this.droppedSprings.length + this.droppedBelts.length,
         // sprint 513 — and what walked out on your back: the take kept
         // its weight to the door
         carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -7873,6 +8104,8 @@ export class Game {
         trapsSet: this.setTraps.length || undefined,
         // sprint 583 — the lines you left threaded your way
         ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
+        // sprint 595 — the wheels you left spinning on your belt
+        wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

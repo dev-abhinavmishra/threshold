@@ -1048,7 +1048,15 @@ export class HazardField {
     }
     return pos;
   }
-  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number }[] = [];
+  fans: { pos: import('../engine/math').Vec3; room: number; dead: boolean; hitT: number; warnT: number; entT?: number;
+    /** sprint 589 — `belted=false` means the belt walked off: a chocked
+     *  wheel re-engages on a re-lay, a beltless one never can (the
+     *  strip is the PERMANENT kill). `owner` names whose belt is
+     *  fitted — 'player' is outside the house's re-lay jurisdiction.
+     *  `chocked` marks a wedge still jammed in the blades: 'Work the
+     *  chock free' mints only while one's in there — a seeded spent
+     *  wheel or a stripped housing holds none to free. */
+    belted?: boolean; owner?: 'player'; chocked?: boolean }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles
    *  the eye — a settled eye rings your position to every listener in
