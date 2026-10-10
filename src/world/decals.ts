@@ -13294,3 +13294,244 @@ export function drainAge(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Plate shadow — the ghost a removed wall plate leaves: pale surround,
+ * dark socket hole, wire stub, screw pits. */
+export function plateShadow(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32, cy = 42;
+    // pale surround — the wall kept its clean patch inside the plate
+    ctx.fillStyle = `rgba(182,176,158,${0.3 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 14, cy - 20, 28, 40);
+    // grime line — the dirt that lipped around the plate's edge
+    ctx.strokeStyle = `rgba(80,72,58,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(cx - 14, cy - 20, 28, 40);
+    // socket hole — the dark mouth the wires came out of
+    ctx.fillStyle = 'rgba(24,20,16,0.75)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 4, 5, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // wire stub — what was left poking out
+    ctx.strokeStyle = `rgba(50,40,30,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 2);
+    ctx.quadraticCurveTo(cx + 3, cy + 4, cx + (rng.float() - 0.5) * 8, cy + 9 + rng.float() * 4);
+    ctx.stroke();
+    // screw pits — the two bores that held the plate
+    for (const sy of [cy - 16, cy + 16]) {
+      ctx.fillStyle = 'rgba(40,34,26,0.6)';
+      ctx.beginPath();
+      ctx.arc(cx + (rng.float() - 0.5) * 4, sy, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust lip — the grey along the surround's top edge
+    ctx.fillStyle = `rgba(160,152,134,${0.3 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 13, cy - 20, 26, 1.6);
+  });
+}
+
+/** Headboard rub — the scrape a bed's headboard makes on the wall:
+ * vertical polish, grease crescent, post dents, plaster dust. */
+export function headboardRub(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cx = 48;
+    // the broad scrape — a vertical polish where the board rocks
+    const g = ctx.createLinearGradient(cx - 20, 20, cx + 20, 20);
+    g.addColorStop(0, 'rgba(160,150,130,0)');
+    g.addColorStop(0.5, `rgba(160,150,130,${0.3 + rng.float() * 0.14})`);
+    g.addColorStop(1, 'rgba(160,150,130,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - 22, 14, 44, 56);
+    // grease crescent — the skin-oil halo where the head rests
+    const rg = ctx.createRadialGradient(cx, 42, 3, cx, 42, 18);
+    rg.addColorStop(0, `rgba(70,60,46,${0.3 + rng.float() * 0.16})`);
+    rg.addColorStop(1, 'rgba(70,60,46,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(cx - 20, 24, 40, 36);
+    // post dents — the two points the bed's posts bite the wall
+    for (const px of [cx - 14, cx + 14]) {
+      ctx.fillStyle = `rgba(48,40,32,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(px + (rng.float() - 0.5) * 3, 30 + rng.float() * 6, 1.6 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // plaster dust — crumbs shaken down by the rocking
+    for (let i = 0; i < 9; i++) {
+      ctx.fillStyle = `rgba(170,162,142,${0.28 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 36, 66 + rng.float() * 16, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rock scars — the short arcs the frame's corners cut
+    for (let i = 0; i < 4; i++) {
+      const sx = cx - 16 + rng.float() * 32;
+      ctx.strokeStyle = `rgba(90,80,64,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx, 22 + rng.float() * 8);
+      ctx.lineTo(sx + (rng.float() - 0.5) * 4, 30 + rng.float() * 8);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Mortise gap — the dark seam an old door's latch edge keeps:
+ * the plate shadow, strike gap, screw pits, brass ghost. */
+export function mortiseGap(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const cx = 24;
+    // the seam — a near-black line down the latch edge
+    ctx.fillStyle = `rgba(22,18,14,${0.55 + rng.float() * 0.15})`;
+    ctx.fillRect(cx - 2.5, 12, 5, 62);
+    // plate ghost — the pale rectangle the mortise plate covered
+    ctx.strokeStyle = `rgba(140,120,90,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(cx - 8, 40, 16, 18);
+    // strike gap — the mouth the tongue seats into
+    ctx.fillStyle = 'rgba(20,16,12,0.7)';
+    ctx.fillRect(cx - 3, 46, 6, 7);
+    // screw pits — two bores for the plate screws
+    for (const sy of [42, 56]) {
+      ctx.fillStyle = 'rgba(36,30,24,0.6)';
+      ctx.beginPath();
+      ctx.arc(cx, sy, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // brass ghost — the polished polish of a plate removed
+    ctx.strokeStyle = `rgba(170,140,90,${0.24 + rng.float() * 0.12})`;
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(cx - 7, 41, 14, 16);
+    // wood bruise — the darkened grain around the mortise
+    const g = ctx.createRadialGradient(cx, 50, 6, cx, 50, 18);
+    g.addColorStop(0, 'rgba(60,48,34,0)');
+    g.addColorStop(1, `rgba(60,48,34,${0.24 + rng.float() * 0.1})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 30, 48, 40);
+    // scratches — keys that missed the plate
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(70,60,46,${0.3 + rng.float() * 0.18})`;
+      ctx.lineWidth = 0.7;
+      const sx = cx - 6 + rng.float() * 12;
+      ctx.beginPath();
+      ctx.moveTo(sx, 60 + rng.float() * 6);
+      ctx.lineTo(sx + (rng.float() - 0.5) * 3, 68 + rng.float() * 8);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Card ghost — the rectangle a removed index card leaves:
+ * pale frame, pin pits, corner bruises, paste crumb. */
+export function cardGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // pale card patch — the unsoiled rectangle where a card was pinned
+    ctx.fillStyle = `rgba(190,182,158,${0.34 + rng.float() * 0.14})`;
+    ctx.fillRect(cx - 12, cy - 9, 24, 17);
+    // grime edge — the dirt lipped around the card's sides
+    ctx.strokeStyle = `rgba(76,66,52,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(cx - 12, cy - 9, 24, 17);
+    // pin pits — the bores where tacks held it
+    for (const [px, py] of [[cx - 9, cy - 6], [cx + 9, cy - 6], [cx - 9, cy + 5], [cx + 9, cy + 5]] as const) {
+      ctx.fillStyle = 'rgba(40,34,26,0.6)';
+      ctx.beginPath();
+      ctx.arc(px + (rng.float() - 0.5) * 1.5, py + (rng.float() - 0.5) * 1.5, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // corner bruise — one corner darkened where the card curled
+    const g = ctx.createRadialGradient(cx + 10, cy + 7, 1, cx + 10, cy + 7, 7);
+    g.addColorStop(0, `rgba(60,50,40,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(60,50,40,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx + 3, cy, 14, 13);
+    // paste crumb — dried glue smudge left behind
+    ctx.fillStyle = `rgba(150,140,110,${0.3 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.ellipse(cx - 4 + rng.float() * 8, cy + 9 + rng.float() * 2, 4 + rng.float() * 2, 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // scribe ghost — the faded line of the card's title edge
+    ctx.strokeStyle = `rgba(100,90,70,${0.24 + rng.float() * 0.1})`;
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy - 3);
+    ctx.lineTo(cx + 8, cy - 3 + (rng.float() - 0.5));
+    ctx.stroke();
+  });
+}
+
+/** Rod scar — the rubbed-through band a curtain rod leaves:
+ * polish strip, ring dents, end nubs, cord graze. */
+export function rodScar(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    const ly = 18 + rng.float() * 4;
+    // polish strip — the horizontal band rings and rings wore
+    ctx.fillStyle = `rgba(140,126,100,${0.28 + rng.float() * 0.14})`;
+    ctx.fillRect(8, ly - 1.4, 80, 3);
+    // ring dents — the evenly-spaced grind marks of curtain rings
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(90,78,60,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(12 + i * 6.4 + rng.float() * 2, ly + rng.float() * 1.5, 0.9 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // end nubs — heavier wear where finials sat in brackets
+    for (const ex of [10, 84]) {
+      ctx.fillStyle = `rgba(70,60,44,${0.4 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(ex, ly + 1, 2.2 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // cord graze — the thin track a pull-cord sawed at one end
+    ctx.strokeStyle = `rgba(100,88,66,${0.34 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.9;
+    const side = rng.bool(0.5) ? 16 : 76;
+    ctx.beginPath();
+    ctx.moveTo(side, ly + 2);
+    ctx.quadraticCurveTo(side + (rng.float() - 0.5) * 4, ly + 14, side + (rng.float() - 0.5) * 6, ly + 24);
+    ctx.stroke();
+    // dust shelf — the pale film riding the rod's top
+    ctx.fillStyle = `rgba(178,170,150,${0.26 + rng.float() * 0.1})`;
+    ctx.fillRect(9, ly - 3.4, 78, 1.4);
+  });
+}
+
+/** Bin shadow — the grain-shadow and drip ghosts an old grain bin
+ * keeps: seed tide lines, chaff flecks, mouse trails. */
+export function binShadow(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // tide lines — the grain's old levels inside the bin
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,100,64,${0.32 - i * 0.07 + rng.float() * 0.1})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(48, 30 + i * 12 + rng.float() * 3, 30 + rng.float() * 4, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+    // chaff — husks and husk dust settled in the corners
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(170,140,84,${0.3 + rng.float() * 0.2})`;
+      ctx.fillRect(14 + rng.float() * 68, 66 + rng.float() * 22, 1.8 + rng.float() * 2.4, 0.9 + rng.float() * 0.7);
+    }
+    // mouse trails — the dust-skimmed runs where feet passed
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(96,82,60,${0.28 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(16 + rng.float() * 20, 78 + rng.float() * 8);
+      ctx.quadraticCurveTo(48, 70 + rng.float() * 14, 72 + rng.float() * 8, 80 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // seed shadow — the dark residue left in the bottom seam
+    ctx.fillStyle = `rgba(60,50,34,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(20, 84, 56, 3);
+    // scoop polish — the sheen the grain-scoop's bowl kept fresh
+    const g = ctx.createRadialGradient(52, 44, 3, 52, 44, 14);
+    g.addColorStop(0, `rgba(186,164,110,${0.3 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(186,164,110,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(36, 30, 32, 28);
+  });
+}
