@@ -4,25 +4,25 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
-## Sprint 580–582 — the under kept its workings (nine new under templates)
+## Sprint 604–606 — the under kept its workings (nine new under templates)
 
 The Underscript ran ~120 rooms on 14 templates — its largest variety gap.
 Nine new room templates across three batches:
 
-- **s580 the workings**: `u-mail-sort` (8×7 sort floor — stackShelf cubby
+- **s604 the workings**: `u-mail-sort` (8×7 sort floor — stackShelf cubby
   wall, two dead mail carts, key cabinet, parcel crates), `u-switchboard`
   (6×6 electrical vault — breaker/utility bank on two walls, machine box,
   cage light + conduit runs), `u-tool-cage` (7×6 tool crib — mesh-front
   cageLocker row, racks, tool chest/cart, bench vice on a crate, gas
   bottles).
-- **s581 the people**: `u-locker-row` (8×6 locker room — four lockers on
+- **s605 the people**: `u-locker-row` (8×6 locker room — four lockers on
   the north wall, cage lockers west, benches + floor drains, water cooler),
   `u-bunk-nook` (5×5 squatter bedroom — one partition screen walls the
   north-west corner off, bed flush against the wall, camp crate with
   lantern/rations/cigs/thermos, under-bed hide), `u-dumbwaiter-bay`
   (4×5 freight alcove — dead dumbwaiter hatch + service door, trolley,
   hand truck, mail cart).
-- **s582 the machines**: `u-pump-vault` (7×7 sump vault — two sump pumps,
+- **s606 the machines**: `u-pump-vault` (7×7 sump vault — two sump pumps,
   pipe manifold wall, valve wheels, overhead pipe runs, floor drains),
   `u-freight-bay` (8×6 loading nook — roller shutter east, overhead crane
   hoist, crate rows, tyre pile, chain fence), `u-burn-room` (6×6 waste

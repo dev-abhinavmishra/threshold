@@ -5713,7 +5713,7 @@ describe('decals land where they claim (review fixes)', () => {
   });
 });
 
-describe('the under kept its workings (sprint 580-582)', () => {
+describe('the under kept its workings (sprint 604-606)', () => {
   const NEW_UNDER = ['u-mail-sort', 'u-switchboard', 'u-tool-cage', 'u-locker-row', 'u-bunk-nook', 'u-dumbwaiter-bay', 'u-pump-vault', 'u-freight-bay', 'u-burn-room'];
 
   it('every new under template builds a valid spec', () => {
