@@ -385,8 +385,8 @@ export class Grafter extends Entity {
    *  housings, it doesn't unspool them as wire. Everything else
    *  (coil, stripped spring, stripped shell) stays feedstock for a
    *  snare like always. */
-  private carriedKind: 'belt' | 'lens' | null = null;
-  private graftTarget: { x: number; z: number; kind: 'wheel' | 'socket' } | null = null;
+  private carriedKind: 'belt' | 'lens' | 'spring' | null = null;
+  private graftTarget: { x: number; z: number; kind: 'wheel' | 'socket' | 'plate' } | null = null;
   private carryCued = false;
   /** sprint 524 — the under robs wire out of lids: a stash's coil is
    *  dead wire to the scavenger. It works a stashed lid like a pile —
@@ -658,7 +658,11 @@ export class Grafter extends Entity {
       // sprint 578 — a sprung plate is graft feedstock too: stone
       // folds the mechanism into a coil's worth of stock. The under
       // takes your litter the same as the lamp's corpse.
+      // sprint 673 — and it KEEPS its kind now: a carried spring heads
+      // for a dead plate still bolted to the floor — the under
+      // re-teeth the jaw the house left toothless.
       this.carrying = Math.max(this.carrying, 1);
+      this.carriedKind = 'spring';
       this.carryCued = false; this.spillCued = false;
       c.cue('grafter-grind', this.pos,
         '[stone folds the plate into wire — the under takes your teeth]', { severity: 'info' });
@@ -740,7 +744,8 @@ export class Grafter extends Entity {
       if (this.carriedKind) {
         const g = this.graftTarget
           ?? (this.graftTarget = c.nearestGraft?.(this.pos.x, this.pos.z, 30,
-            this.carriedKind === 'belt' ? 'wheel' : 'socket') ?? null);
+            this.carriedKind === 'belt' ? 'wheel'
+              : this.carriedKind === 'lens' ? 'socket' : 'plate') ?? null);
         // a site outside its room is no site — the grafter doesn't
         // leave the room it rose in, so far substrate folds to wire
         if (g && this.roomOf(v3(g.x, 0, g.z)) !== this.spawnRoom) {
@@ -757,9 +762,11 @@ export class Grafter extends Entity {
             this.graftTarget = null;
             c.cue('grafter-grind', this.pos, g.kind === 'wheel'
               ? '[it threads the muscle onto a dead housing — the under\'s wheel spins]'
-              : '[stone seats the glass in a dead socket — the under\'s eye pans]', { severity: 'warn' });
+              : g.kind === 'socket' ? '[stone seats the glass in a dead socket — the under\'s eye pans]'
+                : '[stone re-teeth the dead plate — the under\'s jaw sets]', { severity: 'warn' });
             c.sound.emit({ x: g.x, y: 1.2, z: g.z, intensity: 0.4,
-              category: 'item', caption: g.kind === 'wheel' ? '[a wheel spins back]' : '[an eye wakes]', source: this.id });
+              category: 'item', caption: g.kind === 'wheel' ? '[a wheel spins back]'
+                : g.kind === 'socket' ? '[an eye wakes]' : '[teeth snap live]', source: this.id });
           }
         } else {
           // no substrate — the goods fold back to wire stock
@@ -906,6 +913,7 @@ export class Grafter extends Entity {
   private spillCarriedKind(): boolean {
     if (this.carriedKind === 'belt') this.ctx.spillBelts?.(this.pos, 1);
     else if (this.carriedKind === 'lens') this.ctx.spillLenses?.(this.pos, 1);
+    else if (this.carriedKind === 'spring') this.ctx.spillSprings?.(this.pos, 1);
     else return false;
     this.carriedKind = null;
     this.graftTarget = null;

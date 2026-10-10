@@ -147,7 +147,7 @@ export interface EntityCtx {
    *  off its eyes (the wrap is confiscated — the house pockets it).
    *  Returns what it restored, or null. Optional for headless ctxs. */
   rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind' | 'spring' | 'work', x: number, z: number)
-    => 'snare' | 'steam' | 'fan' | 'fanChock' | 'eye' | 'trap' | 'crimp' | 'reclaim' | 'pull' | 'lensTear' | 'lidSweep' | null;
+    => 'snare' | 'steam' | 'fan' | 'fanChock' | 'eye' | 'trap' | 'crimp' | 'reclaim' | 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | null;
   /** sprint 433 — a walker reaching a coil-bound leaf works the wire:
    *  'strained' on first contact, 'freed' once the bind parts (the
    *  coil drops where it was worked loose), null when nothing wired. */
@@ -208,13 +208,13 @@ export interface EntityCtx {
    *  substrate is a muscle-less fan housing (`belted===false`) for a
    *  carried belt, or a pried socket (`lensed===false`) for a carried
    *  lens. Returns the nearest site within maxD, or null. */
-  nearestGraft?: (x: number, z: number, maxD: number, kind?: 'wheel' | 'socket')
-    => { x: number; z: number; kind: 'wheel' | 'socket' } | null;
+  nearestGraft?: (x: number, z: number, maxD: number, kind?: 'wheel' | 'socket' | 'plate')
+    => { x: number; z: number; kind: 'wheel' | 'socket' | 'plate' } | null;
   /** sprint 646 — and the graft itself: claims the substrate for the
    *  under (owner='under'), wakes it, and signs 'work' under the
    *  grafter's key so the house can smell whose hands went there.
    *  Returns true when the kind matched a live site. */
-  graft?: (x: number, z: number, kind: 'wheel' | 'socket', byKey: string) => boolean;
+  graft?: (x: number, z: number, kind: 'wheel' | 'socket' | 'plate', byKey: string) => boolean;
   /** sprint 494 — a striding walker boots loose goods it doesn't read:
    *  any pile within reach is scattered further along, not pocketed.
    *  Returns true if it kicked anything. */

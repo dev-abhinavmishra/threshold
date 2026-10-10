@@ -695,3 +695,82 @@ test('the sweep plants a knee — a work-marked lid waits behind its hands', asy
   }
   expect(errors).toEqual([]);
 });
+
+test('the under re-teeth the jaw — a grafted plate answers its own hands, not the house', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      space: string;
+      trapPos: Map<string, { x: number; z: number }>;
+      armedTraps: Map<string, boolean>;
+      snappedTraps: Set<string>;
+      trapOwner: Map<string, string>;
+      droppedSprings: { x: number; z: number }[];
+      hazard: { evidence: { pos: { x: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      entityCtx: () => { rearmHazard?: (k: string, x: number, z: number) => string | null };
+      spawnById: (id: string) => void;
+      entities: { id: string; state: string; pos: { x: number; z: number };
+        carriedKind?: string; carrying?: number }[];
+    };
+    g.godMode = true;
+    // a dead plate still bolted to the floor: armed seed, marked snapped —
+    // the toothless substrate the under re-teeths. Traps mint lazily per
+    // room visit and only ~a third seed armed — hop rooms until one
+    // answers, so currentRoom anchors the grafter's spawnRoom there.
+    let key: string | null = null;
+    let tp: { x: number; z: number } | null = null;
+    for (const r of g.route.rooms.slice(0, 30)) {
+      g.player.teleport(r.origin.x, 0, r.origin.z);
+      for (let i = 0; i < 40; i++) g.frame();
+      for (const [k, p] of ga.trapPos) {
+        if (ga.armedTraps.get(k) === true) { key = k; tp = p; break; }
+      }
+      if (key) break;
+    }
+    if (!key || !tp) return { stage: 'no-trap' } as const;
+    ga.snappedTraps.add(key);
+    g.player.teleport(tp.x + 1.2, 0, tp.z + 1.2);
+    for (let i = 0; i < 10; i++) g.frame();
+    ga.spawnById('grafter');
+    for (let i = 0; i < 20; i++) g.frame();
+    const gr = ga.entities.find((e) => e.id === 'grafter');
+    if (!gr) return { stage: 'no-grafter' } as const;
+    // stone already carrying the spring: it walks the teeth to the dead plate
+    gr.carriedKind = 'spring';
+    gr.carrying = 1;
+    gr.pos.x = tp.x + 0.4; gr.pos.z = tp.z + 0.4;
+    let grafted = false, frames = 0;
+    for (let i = 0; i < 2000; i++) {
+      g.frame(); frames = i;
+      if (ga.trapOwner.get(key) === 'under') { grafted = true; break; }
+    }
+    if (!grafted) return { stage: 'no-graft' as const, frames };
+    // the house answers — 'work' by the under's jaw wrenches the teeth:
+    // jurisdiction ends (trapOwner cleared), the jaw goes snapped dead,
+    // and the mechanism lands on the boards as loose goods.
+    ga.hazard.evidence.push({ pos: { x: tp.x, z: tp.z },
+      room: 0, kind: 'work', t: g.clock.time, readBy: ['player'] });
+    const springsBefore = ga.droppedSprings.length;
+    const restored = ga.entityCtx().rearmHazard?.('work', tp.x, tp.z);
+    return { stage: 'pulled' as const, restored,
+      cleared: !ga.trapOwner.has(key), snapped: ga.snappedTraps.has(key),
+      springGain: ga.droppedSprings.length - springsBefore, frames };
+  });
+
+  if (result.stage === 'no-trap' || result.stage === 'no-grafter') test.skip();
+  else if (result.stage === 'no-graft') {
+    expect(false, `the grafter never re-toothed the dead plate (${result.frames} frames)`).toBe(true);
+  } else {
+    expect(result.restored, 'the house wrenches the under\'s jaw').toBe('platePull');
+    expect(result.cleared, 'the pull ends the under\'s jurisdiction').toBe(true);
+    expect(result.snapped, 'the pulled jaw lies toothless again').toBe(true);
+    expect(result.springGain, 'the mechanism lands on the boards').toBe(1);
+  }
+  expect(errors).toEqual([]);
+});
