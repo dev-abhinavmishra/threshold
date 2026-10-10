@@ -752,6 +752,27 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         sb.position.set(sx * (fw / 2 - sideW - 0.015), 1.15, 0.15);
         frame.add(sb);
       }
+      // The opening wore its head — frieze band under the casing,
+      // keyblock center, rosette blocks over the side casings.
+      for (const zOff of [0.26, -0.26]) {
+        const frieze = new THREE.Mesh(texBox(fw + 0.1, 0.14, 0.035), caseMat);
+        frieze.name = 'lintel-frieze';
+        frieze.position.set(0, 2.42, zOff);
+        frame.add(frieze);
+        frameHardware.push(frieze);
+        const key = new THREE.Mesh(texBox(0.16, 0.2, 0.045), caseMat);
+        key.name = 'lintel-key';
+        key.position.set(0, 2.42, zOff);
+        frame.add(key);
+        frameHardware.push(key);
+        for (const sx of [-1, 1]) {
+          const ros = new THREE.Mesh(texBox(0.12, 0.12, 0.045), caseMat);
+          ros.name = 'lintel-rosette';
+          ros.position.set(sx * (fw / 2 - 0.05), 2.42, zOff);
+          frame.add(ros);
+          frameHardware.push(ros);
+        }
+      }
     }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
     const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
@@ -1231,19 +1252,35 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
 
     // Power outlets at baseboard height — twin-socket boxes on inside
-    // faces; institutional detail that reads at eye level.
+    // faces; institutional detail that reads at eye level. Some still
+    // hold a flex cord that drops straight to the floor.
     if (!isUnder && rng.float() < 0.55) {
       const nOut = 1 + (rng.float() < 0.4 ? 1 : 0);
       for (let i = 0; i < nOut; i++) {
         const spot = pickWallSpot(0.3);
         if (!spot) break;
         const outlet = new THREE.Mesh(texBox(0.16, 0.09, 0.02), MAT.paper());
+        outlet.name = 'outlet-plate';
         const socket = new THREE.Mesh(texBox(0.11, 0.05, 0.012), MAT.charcoal());
+        socket.name = 'outlet-slot';
         if (spot.wall === 'e') { outlet.rotation.y = -Math.PI / 2; outlet.position.set(w / 2 - 0.135, 0.28, spot.along); socket.rotation.y = -Math.PI / 2; socket.position.set(w / 2 - 0.142, 0.28, spot.along); }
         else if (spot.wall === 'w') { outlet.rotation.y = Math.PI / 2; outlet.position.set(-w / 2 + 0.135, 0.28, spot.along); socket.rotation.y = Math.PI / 2; socket.position.set(-w / 2 + 0.142, 0.28, spot.along); }
         else if (spot.wall === 'n') { outlet.rotation.y = Math.PI; outlet.position.set(spot.along, 0.28, d / 2 - 0.135); socket.rotation.y = Math.PI; socket.position.set(spot.along, 0.28, d / 2 - 0.142); }
         else { outlet.position.set(spot.along, 0.28, -d / 2 + 0.135); socket.position.set(spot.along, 0.28, -d / 2 + 0.142); }
         group.add(outlet, socket);
+        frameHardware.push(outlet, socket);
+        if (rng.float() < 0.45) {
+          const plug = new THREE.Mesh(texBox(0.035, 0.06, 0.03), MAT.charcoal());
+          plug.name = 'cord-plug';
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.24, 6), MAT.charcoal());
+          cord.name = 'flex-cord';
+          if (spot.wall === 'e') { plug.position.set(w / 2 - 0.15, 0.26, spot.along); cord.position.set(w / 2 - 0.15, 0.12, spot.along); }
+          else if (spot.wall === 'w') { plug.position.set(-w / 2 + 0.15, 0.26, spot.along); cord.position.set(-w / 2 + 0.15, 0.12, spot.along); }
+          else if (spot.wall === 'n') { plug.position.set(spot.along, 0.26, d / 2 - 0.15); cord.position.set(spot.along, 0.12, d / 2 - 0.15); }
+          else { plug.position.set(spot.along, 0.26, -d / 2 + 0.15); cord.position.set(spot.along, 0.12, -d / 2 + 0.15); }
+          group.add(plug, cord);
+          frameHardware.push(plug, cord);
+        }
       }
     }
 
@@ -3411,6 +3448,130 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           cloth.name = 'sill-cloth';
           put(cloth, ox, sillY + 0.01);
           cloth.rotation.y = rng.float() * 0.8 - 0.4;
+        }
+      }
+    }
+
+    // Wall-mounted mesh placer — `off` runs along the wall, `proud` is the
+    // center distance off the wall face; e/w meshes turn to face the room.
+    const placeOnWall = (m: THREE.Mesh, wall: 'n' | 's' | 'e' | 'w', off: number, y: number, proud: number) => {
+      if (wall === 'e') m.position.set(w / 2 - proud, y, off);
+      else if (wall === 'w') m.position.set(-w / 2 + proud, y, off);
+      else if (wall === 'n') m.position.set(off, y, -d / 2 + proud);
+      else m.position.set(off, y, d / 2 - proud);
+      if (wall === 'e' || wall === 'w') m.rotation.y = Math.PI / 2;
+      group.add(m);
+      frameHardware.push(m);
+    };
+
+    // The windows wore their heads — casing cap over the frame, a brass
+    // curtain rod, and whatever torn drop the last tenant left hanging.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const head = new THREE.Mesh(texBox(1.5, 0.09, 0.05), MAT.oak());
+      head.name = 'win-head';
+      placeOnWall(head, hw, along, 2.56, 0.035);
+      for (const sx of [-1, 1]) {
+        const cs = new THREE.Mesh(texBox(0.07, 1.74, 0.04), MAT.darkOak());
+        cs.name = 'win-casing';
+        placeOnWall(cs, hw, along + sx * 0.665, 1.7, 0.028);
+      }
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.7, 8), MAT.brass());
+      rod.name = 'curtain-rod';
+      placeOnWall(rod, hw, along, 2.68, 0.1);
+      if (hw === 'e' || hw === 'w') rod.rotation.set(Math.PI / 2, 0, 0);
+      else rod.rotation.set(0, 0, Math.PI / 2);
+      for (const sx of [-1, 1]) {
+        const fin = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), MAT.brass());
+        fin.name = 'rod-finial';
+        placeOnWall(fin, hw, along + sx * 0.85, 2.68, 0.1);
+      }
+      const nDrops = rng.float() < 0.75 ? 1 : 2;
+      let firstSide = 1;
+      for (let i = 0; i < nDrops; i++) {
+        const dl = 0.5 + rng.float() * 0.8;
+        const side = i === 0 ? (firstSide = rng.bool() ? -1 : 1) : -firstSide;
+        const dr = new THREE.Mesh(texBox(0.3, dl, 0.02), TEX.fabricDark());
+        dr.name = 'rod-drape';
+        placeOnWall(dr, hw, along + side * (0.45 + rng.float() * 0.15), 2.68 - dl / 2, 0.1);
+      }
+    }
+
+    // The radiators kept their plumbing — feed stubs rising off the
+    // floor into each end, a bleed nub at the high corner.
+    for (const p of spec.props) {
+      if ((p.kind !== 'radiatorFin' && p.kind !== 'radiatorTall') || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      for (const sx of [-0.35, 0.35]) {
+        const feed = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.32, 8), MAT.steel());
+        feed.name = 'rad-feed';
+        placeOnWall(feed, hw, along + sx, 0.16, 0.05);
+      }
+      const bypass = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.7, 6), MAT.steelDark());
+      bypass.name = 'rad-bypass';
+      placeOnWall(bypass, hw, along, 0.08, 0.05);
+      if (hw === 'e' || hw === 'w') bypass.rotation.set(Math.PI / 2, 0, 0);
+      else bypass.rotation.set(0, 0, Math.PI / 2);
+      const bleed = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.05, 6), MAT.brass());
+      bleed.name = 'rad-bleed';
+      placeOnWall(bleed, hw, along + (rng.bool() ? -0.35 : 0.35), 0.62, 0.06);
+    }
+
+    // The rails kept their smalls — towel rings, hanging cloth and robe
+    // drops beside the basins; glass shelf with the bits left on it.
+    const WASH_KINDS = new Set(['basinSink', 'washStand']);
+    for (const p of spec.props) {
+      if (!WASH_KINDS.has(p.kind) || rng.float() >= 0.55) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      if (portOffsetsOn(hw).some((o) => Math.abs(along - o) < 0.9)) continue;
+      const side = rng.bool() ? -1 : 1;
+      // ring + cloth
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.012, 8, 16), MAT.steel());
+      ring.name = 'towel-ring';
+      placeOnWall(ring, hw, along + side * 0.7, 1.35, 0.045);
+      if (rng.float() < 0.65) {
+        const tl = 0.28 + rng.float() * 0.2;
+        const tw = new THREE.Mesh(texBox(0.16, tl, 0.02), MAT.paperOld());
+        tw.name = 'towel-drop';
+        placeOnWall(tw, hw, along + side * 0.7, 1.35 - tl / 2 - 0.04, 0.05);
+      }
+      // robe peg + drop on the other side
+      if (rng.float() < 0.5) {
+        const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.018, 0.08, 8), MAT.oak());
+        peg.name = 'robe-peg';
+        placeOnWall(peg, hw, along - side * 0.6, 1.6, 0.05);
+        peg.rotation.x = hw === 'e' || hw === 'w' ? 0 : Math.PI / 2 * (hw === 'n' ? 1 : -1);
+        if (hw === 'e' || hw === 'w') peg.rotation.z = Math.PI / 2 * (hw === 'e' ? 1 : -1);
+        if (rng.float() < 0.7) {
+          const rl = 0.5 + rng.float() * 0.3;
+          const robe = new THREE.Mesh(texBox(0.22, rl, 0.06), TEX.fabricDark());
+          robe.name = 'robe-drop';
+          placeOnWall(robe, hw, along - side * 0.6, 1.6 - rl / 2 - 0.02, 0.07);
+        }
+      }
+      // glass shelf + dish above the basin
+      if (rng.float() < 0.55) {
+        const shelfMat = new THREE.MeshStandardMaterial({ color: 0x9fb4bd, transparent: true, opacity: 0.4, roughness: 0.2, metalness: 0 });
+        const shelf = new THREE.Mesh(texBox(0.5, 0.015, 0.14), shelfMat);
+        shelf.name = 'glass-shelf';
+        placeOnWall(shelf, hw, along, 1.52, 0.09);
+        const dish = new THREE.Mesh(texBox(0.09, 0.02, 0.06), MAT.paper());
+        dish.name = 'soap-dish';
+        placeOnWall(dish, hw, along - 0.12, 1.545, 0.09);
+        if (rng.float() < 0.5) {
+          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.025, 0.09, 8), MAT.steelDark());
+          cup.name = 'tooth-cup';
+          placeOnWall(cup, hw, along + 0.14, 1.575, 0.09);
         }
       }
     }
