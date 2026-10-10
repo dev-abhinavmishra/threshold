@@ -305,6 +305,9 @@ export interface CheckpointSave {
   // (a reload can't re-arm a spent spring)
   snappedTraps?: string[];
   priedTraps?: string[];
+  /** sprint 674 — plates the under re-toothed keep their jurisdiction:
+   *  trap keys whose bite answers the under across a reload. */
+  trapOwner?: string[];
   /** sprint 576 — traps you set ride the checkpoint: cocked plates
    *  re-lay into liveTraps on the next mint. */
   setTraps?: { key: string; x: number; z: number; room: number }[];

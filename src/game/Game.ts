@@ -637,6 +637,7 @@ export class Game {
     this.armedTraps.clear();
     this.snappedTraps.clear();
     this.priedTraps.clear();
+    this.trapOwner.clear();
     this.liveTraps = [];
     this.liveTickProps = [];
     this.pipeTickNext = 0;
@@ -800,6 +801,9 @@ export class Game {
     // sprint 404 — a spent or pried spring stays down across a reload
     for (const st of cp?.snappedTraps ?? []) this.snappedTraps.add(st);
     for (const pt of cp?.priedTraps ?? []) this.priedTraps.add(pt);
+    // sprint 674 — a plate the under re-toothed keeps its jurisdiction:
+    // the graft survives the reload like every other owner's bite.
+    for (const to of cp?.trapOwner ?? []) this.trapOwner.set(to, 'under');
     // sprint 576 — cocked plates you planted keep their bite: the
     // mint's setTraps sweep re-pushes them into liveTraps each pass
     this.setTraps = (cp?.setTraps ?? []).map((t) => ({ ...t }));
@@ -1612,19 +1616,31 @@ export class Game {
       // lens. The under re-threads what it folds — it never makes
       // goods, only moves them onto housings the house left dead.
       nearestGraft: (x, z, maxD, kind) => {
-        let best: { x: number; z: number; kind: 'wheel' | 'socket' } | null = null;
+        let best: { x: number; z: number; kind: 'wheel' | 'socket' | 'plate' } | null = null;
         let bd = maxD;
         for (const f of this.hazard.fans) {
-          if (kind === 'socket') break;
+          if (kind === 'socket' || kind === 'plate') break;
           if (f.belted !== false || f.owner === 'under') continue;
           const d = Math.hypot(f.pos.x - x, f.pos.z - z);
           if (d < bd) { bd = d; best = { x: f.pos.x, z: f.pos.z, kind: 'wheel' }; }
         }
         for (const w of this.hazard.watchers) {
-          if (kind === 'wheel') break;
+          if (kind === 'wheel' || kind === 'plate') break;
           if (w.lensed !== false || w.owner === 'under') continue;
           const d = Math.hypot(w.pos.x - x, w.pos.z - z);
           if (d < bd) { bd = d; best = { x: w.pos.x, z: w.pos.z, kind: 'socket' }; }
+        }
+        // sprint 673 — the third substrate: a dead plate still bolted
+        // to the floor (armed seed, sprung or pried, in nobody's hands)
+        // is graft stock for a carried spring — the under re-teeth it.
+        if (kind === 'plate') {
+          for (const [k, p] of this.trapPos) {
+            if (this.armedTraps.get(k) !== true) continue;
+            if (!this.snappedTraps.has(k) && !this.priedTraps.has(k)) continue;
+            if (this.trapOwner.has(k)) continue;
+            const d = Math.hypot(p.x - x, p.z - z);
+            if (d < bd) { bd = d; best = { x: p.x, z: p.z, kind: 'plate' }; }
+          }
         }
         return best;
       },
@@ -1637,6 +1653,23 @@ export class Game {
           f.belted = true;
           f.owner = 'under';
           this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
+            kind: 'work', t: this.clock.time, readBy: [byKey], by: byKey });
+          return true;
+        }
+        if (kind === 'plate') {
+          // sprint 673 — a carried spring re-teeth a dead plate: the
+          // bite comes back in the under's name — it still finds every
+          // foot but the under's own, and the graft signs 'work' under
+          // the planter's key so the house can smell whose hands went.
+          const pk = [...this.trapPos.entries()].find(([, p]) =>
+            Math.hypot(p.x - x, p.z - z) < 0.8)?.[0];
+          if (!pk) return false;
+          this.snappedTraps.delete(pk);
+          this.priedTraps.delete(pk);
+          this.trapOwner.set(pk, 'under');
+          const p = this.trapPos.get(pk)!;
+          this.hazard.evidence.push({ pos: v3(p.x, 0, p.z),
+            room: underRoomOf(this.activeRooms(), { x: p.x, z: p.z }),
             kind: 'work', t: this.clock.time, readBy: [byKey], by: byKey });
           return true;
         }
@@ -1742,6 +1775,23 @@ export class Game {
             const w = this.hazard.watchers.find((ww) => ww.owner !== undefined
               && ww.lensed !== false && near(ww.pos));
             if (!w) {
+              // sprint 675 — or the under's jaw gets the pull: a
+              // grafted plate (trapOwner 'under') is outside the
+              // house's jurisdiction — 'work' near it means wrench
+              // the teeth back out. The mechanism lands on the
+              // boards as loose goods like every pull before it.
+              const pk = [...this.trapOwner.keys()].find((k) => {
+                const p2 = this.trapPos.get(k);
+                return p2 && Math.hypot(p2.x - x, p2.z - z) < 1.4;
+              });
+              if (pk) {
+                this.trapOwner.delete(pk);
+                this.snappedTraps.add(pk);
+                const p2 = this.trapPos.get(pk)!;
+                this.droppedSprings.push({ x: p2.x, z: p2.z });
+                this.mintSpringDrops();
+                return 'platePull';
+              }
               // sprint 653 — or your lid gets the sweep: the stash
               // signs 'work' when you fill it (s528), and the last
               // surface without a house answer pays it now — the
@@ -8446,6 +8496,7 @@ export class Game {
           }))
         : undefined,
       snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
+      trapOwner: this.trapOwner.size > 0 ? [...this.trapOwner.keys()] : undefined,
       priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
       setTraps: this.setTraps.length > 0 ? this.setTraps.map((t) => ({ ...t })) : undefined,
       slippedRugs: this.slippedRugs.size > 0 ? [...this.slippedRugs] : undefined,
@@ -8546,7 +8597,8 @@ export class Game {
             eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
             // sprint 650 — and what the under grafted back against you
             graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
-              + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
+              + this.hazard.watchers.filter((w) => w.owner === 'under').length
+              + this.trapOwner.size) || undefined,
             // sprint 653 — and the lids the floorkeeper tipped out
             lidsSwept: this.sweptLids || undefined,
             // sprint 664 — and the eyes still aimed your way
@@ -8618,7 +8670,8 @@ export class Game {
         eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
         // sprint 650 — the work the under re-threaded against you
         graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
-          + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
+          + this.hazard.watchers.filter((w) => w.owner === 'under').length
+          + this.trapOwner.size) || undefined,
         // sprint 653 — and the lids the floorkeeper tipped out
         lidsSwept: this.sweptLids || undefined,
             // sprint 664 — and the eyes still aimed your way
@@ -9915,6 +9968,13 @@ export class Game {
   private spentPhones = new Set<string>();
   private hookRings: { key: string; pos: Vec3; at: number; until: number; lastRing: number; dial?: boolean }[] = [];
   private armedTraps = new Map<string, boolean>();
+  /** sprint 674 — jaws in foreign hands: trap keys the under re-toothed.
+   *  The bite below spares the under's own cast on these plates. */
+  private trapOwner = new Map<string, 'under'>();
+  /** Underscript cast ids — the feet a grafted jaw was set for, not at. */
+  private static readonly UNDER_CAST = new Set<EntityId>([
+    'redline', 'stillframe', 'returner', 'margin', 'editor', 'grafter',
+    'swamper', 'hauler', 'laundress', 'auditor', 'filer']);
   private snappedTraps = new Set<string>();
   private priedTraps = new Set<string>();
   private liveTraps: { key: string; x: number; z: number }[] = [];
@@ -11623,6 +11683,10 @@ export class Game {
       if (this.snappedTraps.has(tp.key)) continue;
       for (const ent of this.entities) {
         if (ent.state === 'done') continue;
+        // sprint 674 — the under's jaw was not set at the under's
+        // feet: a grafted plate still bites every other stride,
+        // its own hands pass over like the spring was never there.
+        if (this.trapOwner.get(tp.key) === 'under' && Game.UNDER_CAST.has(ent.id)) continue;
         const epos = ent.threatPos();
         if (!epos) continue;
         const edx = epos.x - tp.x, edz = epos.z - tp.z;

@@ -652,7 +652,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     expect(gameSrc).toContain('wheelsOwned: this.hazard.fans.filter');
     // the house answers your wheel: 'work' near a live fitted fan is
     // the pull — beltless housing, belt on the boards
-    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'lidSweep' | null");
+    expect(baseSrc).toContain("| 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
     // sprint 648 — 'work' near a claimed wheel pulls it whoever's
     // hands claim it: yours or the under's
@@ -751,7 +751,7 @@ describe('the under grafts back (sprints 646-650)', () => {
     const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
     // the under re-threads, it doesn't unspool: belt → dead housing,
     // lens → pried socket. Everything else still folds to wire.
-    expect(setpiecesSrc).toContain("carriedKind: 'belt' | 'lens' | null");
+    expect(setpiecesSrc).toContain("carriedKind: 'belt' | 'lens' | 'spring' | null");
     expect(setpiecesSrc).toContain("this.carriedKind = 'belt'");
     expect(setpiecesSrc).toContain("this.carriedKind = 'lens'");
     expect(setpiecesSrc).toContain('nearestGraft');
@@ -907,7 +907,7 @@ describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
     // the fourth 'work' dispatch — after eye tear, before null
-    expect(baseSrc).toContain("'lensTear' | 'lidSweep'");
+    expect(baseSrc).toContain("'lensTear' | 'platePull' | 'lidSweep'");
     expect(gameSrc).toContain('floorkeeper tips');
     expect(gameSrc).toContain('near(s.exitPos)');
     // scattered, not confiscated — six pile kinds mirror the take
@@ -985,3 +985,41 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     });
   });
 });
+
+
+describe('the under re-teeth the jaw (sprints 673-675)', () => {
+  it('a carried spring keeps its kind and grafts a dead plate — the bite spares the hands that set it', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // spring → plate is the third substrate mapping
+    expect(setpiecesSrc).toContain("carriedKind: 'belt' | 'lens' | 'spring' | null");
+    expect(setpiecesSrc).toContain("this.carriedKind = 'spring'");
+    expect(baseSrc).toContain("'wheel' | 'socket' | 'plate'");
+    // substrate = armed, dead (snapped or pried), ownerless plate
+    expect(gameSrc).toContain("kind === 'plate'");
+    expect(gameSrc).toContain("this.trapOwner.set(pk, 'under')");
+    // the graft claims jurisdiction and the bite spares under cast
+    expect(gameSrc).toContain('UNDER_CAST');
+    expect(gameSrc).toContain("this.trapOwner.get(tp.key) === 'under'");
+    // jurisdiction rides the checkpoint like every other graft
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    expect(storeSrc).toContain('trapOwner');
+    expect(gameSrc).toContain("this.trapOwner.set(to, 'under')");
+    // the under's work counts in the books
+    expect(gameSrc).toContain('+ this.trapOwner.size');
+  });
+
+  it("the house wrenches the under's teeth — 'work' answers a grafted plate", () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    // fifth 'work' answer: foreign jaws get the pull, spring → pile
+    expect(gameSrc).toContain("return 'platePull'");
+    expect(gameSrc).toContain('this.trapOwner.delete(pk)');
+    expect(gameSrc).toContain('this.snappedTraps.add(pk)');
+    expect(baseSrc).toContain("'platePull'");
+    expect(corridorSrc).toContain("restored === 'platePull'");
+  });
+});
+
