@@ -85,6 +85,7 @@ export type ItemId =
   | 'springPart'
   | 'steamValve'
   | 'fanBelt'
+  | 'eyeLens'
   | 'imprints'      // currency, counter not a slot
   | 'marginalia';   // subfloor score, counter not a slot
 

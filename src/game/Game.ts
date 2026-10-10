@@ -735,7 +735,16 @@ export class Game {
         }
       } else {
         const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
-        if (w) { if (h.dead === true) w.dead = true; if (h.filed === true) w.filed = true; }
+        // sprint 597 — the eye rides the checkpoint like the wheel:
+        // `dead` is carried explicitly or a live owned eye would
+        // resurrect blinded; a pried socket stays pried, a seated
+        // lens stays yours.
+        if (w) {
+          w.dead = h.dead === true;
+          if (h.filed === true) w.filed = true;
+          if (h.lensed === false) w.lensed = false;
+          if (h.owner === 'player') w.owner = 'player';
+        }
       }
     }
     this.drainedRooms = new Set(cp?.drainedRooms ?? []);
@@ -823,6 +832,8 @@ export class Game {
     // sprint 593 — and the pulled belts do the same
     this.droppedBelts = cp?.droppedBelts?.map((w) => ({ ...w })) ?? [];
     this.mintBeltDrops();
+    this.droppedLenses = cp?.droppedLenses?.map((w) => ({ ...w })) ?? [];
+    this.mintLensDrops();
     // the grafter's grafts stay grafted — planted wire survives a
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
@@ -1017,6 +1028,10 @@ export class Game {
       // sprint 595 — and drive belts for the wheel-less: the under
       // pulls what the house strips — muscle sells cheap too.
       { id: 'fanBelt', price: rng.int(12, 18) },
+      // sprint 602 — and wall lenses for the blind: ground glass is
+      // rarer than muscle — the under charges for what it can't pull
+      // twice off the same socket.
+      { id: 'eyeLens', price: rng.int(16, 24) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -1248,7 +1263,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring' | 'belt'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring' | 'belt' | 'lens'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1298,6 +1313,12 @@ export class Game {
         if (kinds.includes('belt')) for (const w of this.droppedBelts) {
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'belt' }; }
+        }
+        // sprint 601 — torn glass reads like every other pile: the
+        // floorkeeper tidies it, the under folds it into stock.
+        if (kinds.includes('lens')) for (const w of this.droppedLenses) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'lens' }; }
         }
         return best;
       },
@@ -1374,6 +1395,14 @@ export class Game {
             return { kind: 'belt' };
           }
         }
+        if (take.lens) {
+          const li = this.droppedLenses.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (li >= 0) {
+            this.droppedLenses.splice(li, 1);
+            this.mintLensDrops();
+            return { kind: 'lens' };
+          }
+        }
         return null;
       },
       // sprint 489 — a pocketed chock spills back as kicked-wedge drop
@@ -1424,6 +1453,10 @@ export class Game {
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         for (const w of this.droppedBelts)
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
+        // sprint 601 — the glass boots like the belt: torn lenses
+        // scatter under a striding walker too.
+        for (const w of this.droppedLenses)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         // sprint 543 — and the light is bootable too: a striding walker
         // kicks the burning lamp and it rolls, still lit — the lure
         // moves under the house's own feet.
@@ -1435,6 +1468,7 @@ export class Game {
           this.mintWedgeDrops(); this.mintWrapDrops();
           this.mintPouchDrops(); this.mintCoilDrops();
           this.mintLampDrops(); this.mintSpringDrops(); this.mintBeltDrops();
+          this.mintLensDrops();
           this.syncLampLights();
           this.sound.emit({ x, y: 0.3, z, intensity: 0.34,
             category: 'item', caption: '[a boot finds the loose goods]' });
@@ -1458,6 +1492,29 @@ export class Game {
         this.mintBeltDrops();
         this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
           category: 'item', caption: '[drive belts slap the boards]' });
+      },
+      // sprint 601 — the glass the floorkeeper tore off your eyes
+      // spills loose where it goes down, gatherable like the belt.
+      spillLenses: (pos, n) => {
+        for (let i = 0; i < n; i++) this.droppedLenses.push({ x: pos.x - i * 0.15, z: pos.z + i * 0.06 });
+        this.mintLensDrops();
+        this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
+          category: 'item', caption: '[loose glass slaps the boards]' });
+      },
+      // sprint 598 — a player-seated eye reads the cast: every living
+      // walker's spot inside the asked room (its own player never
+      // lists — the eye knows your walk).
+      walkers: (room) => {
+        const out: { x: number; z: number }[] = [];
+        for (const e of this.entities) {
+          if (e.state === 'done') continue;
+          const tp = e.threatPos();
+          if (!tp) continue;
+          const rm = this.activeRooms().find((r) => pointInRoom(r, tp.x, tp.z))
+            ?? this.route?.branchRooms.find((r) => pointInRoom(r, tp.x, tp.z));
+          if (rm?.index === room) out.push({ x: tp.x, z: tp.z });
+        }
+        return out;
       },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -1528,7 +1585,22 @@ export class Game {
           // goods (gather it back before he comes round to tidy it).
           const f = this.hazard.fans.find((ff) => ff.owner === 'player'
             && ff.belted !== false && near(ff.pos));
-          if (!f) return null;
+          if (!f) {
+            // sprint 600 — or your eye gets the tear: a 'work' mark by a
+            // live player-seated socket and the lens comes off in his
+            // hands. He can't un-seat your glass, so he tears it loose —
+            // it lands on the boards as loose goods (gather it back
+            // before he comes round to tidy it).
+            const w = this.hazard.watchers.find((ww) => ww.owner === 'player'
+              && ww.lensed !== false && near(ww.pos));
+            if (!w) return null;
+            w.dead = true;
+            w.lensed = false;
+            delete w.owner; // the glass is off — dead socket, nobody's
+            this.droppedLenses.push({ x: w.pos.x, z: w.pos.z });
+            this.mintLensDrops();
+            return 'lensTear';
+          }
           f.dead = true;
           f.belted = false;
           delete f.owner; // the muscle's off — dead housing, nobody's
@@ -1574,7 +1646,11 @@ export class Game {
           return wasChocked ? 'fanChock' : 'fan';
         }
         if (kind === 'blind') {
-          const w = this.hazard.watchers.find((ww) => ww.dead && near(ww.pos));
+          // sprint 597 — a pried socket is out of jurisdiction too: the
+          // pry already handed your felt back, and there's no glass to
+          // wake. Felt-strip only answers where felt still mounts.
+          const w = this.hazard.watchers.find((ww) => ww.dead
+            && ww.lensed !== false && ww.owner !== 'player' && near(ww.pos));
           if (!w) return null;
           w.dead = false; // the felt is confiscated — the house pockets your wrap
           return 'eye';
@@ -1623,6 +1699,10 @@ export class Game {
    *  wheel's muscle onto the boards where it lies as loose goods —
    *  gatherable, pocketable, foldable like the sprung plate. */
   private droppedBelts: { x: number; z: number }[] = [];
+  /** sprint 601 — torn eye lenses: the house's pull strips your
+   *  socket's glass onto the boards where it lies as loose goods —
+   *  gatherable, pocketable, foldable like the belt. */
+  private droppedLenses: { x: number; z: number }[] = [];
   /** Coils the house worked off a bound leaf — same drop convention:
    *  wire isn't destroyed by the strain, it lands as loot. */
   private droppedCoils: { x: number; z: number }[] = [];
@@ -1871,7 +1951,7 @@ export class Game {
    *  Crouched within reach, a pile offers an anchor a third of a metre
    *  TOWARD you — aim past the pile to pull it a step per hold, instead
    *  of pocketing it. Quiet work: a faint scrape, no sign left. */
-  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil' | 'spring' | 'belt',
+  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil' | 'spring' | 'belt' | 'lens',
     id: string, w: { x: number; z: number }): void {
     if (!this.player.crouching) return;
     const dx = this.player.pos.x - w.x, dz = this.player.pos.z - w.z;
@@ -1964,6 +2044,21 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
       this.mintDragVerb('belt', `belt-drop-drag-${this.space}-${i}`, w);
+    });
+  }
+
+  /** sprint 601 — loose eye lenses: gather-minted like the pulled
+   *  belt, one verb per drop, re-minted space-agnostic. */
+  private mintLensDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('lens-drop-'));
+    this.droppedLenses.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'lensDrop', id: `lens-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the watch glass',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+      this.mintDragVerb('lens', `lens-drop-drag-${this.space}-${i}`, w);
     });
   }
   /** sprint 533 — 'Set the lamp down' / sprint 535 — 'Pick the lamp
@@ -2409,6 +2504,17 @@ export class Game {
       if (wheel) {
         return { sfx: 'steam-hiss', sev: 'info' as const,
           text: '[your wheel hums past the leaf — the belt you fit]' };
+      }
+    }
+    // sprint 602 — and your eye pans past the leaf too: a live
+    // player-seated watcher near the seam reads at the crack.
+    {
+      const eye = this.hazard.watchers.find((w) =>
+        w.owner === 'player' && !w.dead && w.lensed !== false && w.room === target.index
+          && Math.hypot(w.pos.x - door.pos.x, w.pos.z - door.pos.z) < 3);
+      if (eye) {
+        return { sfx: 'steam-hiss', sev: 'info' as const,
+          text: '[your eye pans past the leaf — the lens you set]' };
       }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
@@ -3276,6 +3382,21 @@ export class Game {
         data: {},
       });
     }
+    // sprint 601 — and the glass is loose goods too: 'Leave a lens
+    // out' drops torn glass where both jurisdictions read it.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'eyeLens' && i.count > 0)
+      && !this.droppedLenses.some((w) =>
+        Math.hypot(w.x - this.player.pos.x, w.z - this.player.pos.z) < 1.2)) {
+      const lk = v3(); this.player.lookDir(lk);
+      this.interaction.add({
+        kind: 'baitLens', id: `baitlens-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.25, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Leave a lens out',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
     // sprint 533 — 'Set the lamp down': the pulse lamp keeps burning
     // where you kneel. Light the wall eyes drink (s534), a hum the
     // ears follow — a lure that pays with its own battery and dies on
@@ -3302,7 +3423,7 @@ export class Game {
       const stackN = (id: ItemId) =>
         this.inventory.find((i) => i.id === id)?.count ?? 0;
       const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil') + stackN('springPart')
-        + stackN('fanBelt');
+        + stackN('fanBelt') + stackN('eyeLens');
       if (this.player.crouching && n > 0) {
         const lk = v3(); this.player.lookDir(lk);
         this.interaction.add({
@@ -3821,6 +3942,25 @@ export class Game {
               prompt: 'Take the felt back — it wakes',
               holdTime: 1.0, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
             });
+            // sprint 597 — a felt-wrapped eye is worked goods too: pry
+            // under the wrap and its glass levers out whole — the
+            // PERMANENT kill a tape never was, priced by the 'work'
+            // sign. Low anchor: the pry and the untape split on aim
+            // like the wheel's verbs do.
+            if (wHere?.dead && wHere.lensed !== false) this.interaction.add({
+              kind: 'pryLens', id: `prylens-${key}`, pos: { x: wx, y: wy - 0.35, z: wz },
+              prompt: 'Pry the lens out',
+              holdTime: 1.7, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
+            });
+            // sprint 598 — a pried socket takes YOUR lens: seat is
+            // player work, the pan answers the house's walkers for you.
+            if (wHere?.lensed === false) this.interaction.add({
+              kind: 'seatLens', id: `seatlens-${key}`, pos: { x: wx, y: wy - 0.35, z: wz },
+              prompt: this.inventory.some((i) => i.id === 'eyeLens' && i.count > 0)
+                ? 'Seat the lens — 1 wall lens'
+                : 'Seat the lens (needs a wall lens)',
+              holdTime: 1.5, enabled: true, priority: 2, data: { watchPos: { x: wx, z: wz } },
+            });
           } else if (isVent && !this.crackedVents.has(key)) {
             this.interaction.add({
               kind: 'valve', id: `valve-${key}`,
@@ -4299,6 +4439,7 @@ export class Game {
           : dd.list === 'wedge' ? this.kickedWedges
           : dd.list === 'spring' ? this.droppedSprings
           : dd.list === 'belt' ? this.droppedBelts
+          : dd.list === 'lens' ? this.droppedLenses
           : this.droppedCoils;
         const w = arr.find((p) => Math.abs(p.x - dd.x) < 0.06 && Math.abs(p.z - dd.z) < 0.06);
         if (!w) { it.enabled = false; return; }
@@ -4340,8 +4481,8 @@ export class Game {
           return n;
         };
         const wraps = grab('feltWrap'), chocks = grab('doorChock'), coils = grab('wireCoil'),
-          springs = grab('springPart'), belts = grab('fanBelt');
-        if (!wraps && !chocks && !coils && !springs && !belts) { it.enabled = false; return; }
+          springs = grab('springPart'), belts = grab('fanBelt'), lenses = grab('eyeLens');
+        if (!wraps && !chocks && !coils && !springs && !belts && !lenses) { it.enabled = false; return; }
         const lk = v3(); this.player.lookDir(lk);
         const sx = this.player.pos.x + lk.x * 0.55, sz = this.player.pos.z + lk.z * 0.55;
         const spot = this.scatterSpot(sx, sz, Math.atan2(lk.z, lk.x), 0.1) ?? { x: sx, z: sz };
@@ -4350,8 +4491,9 @@ export class Game {
         for (let k = 0; k < coils; k++) this.droppedCoils.push({ x: spot.x - k * 0.08, z: spot.z - k * 0.03 });
         for (let k = 0; k < springs; k++) this.droppedSprings.push({ x: spot.x + k * 0.09, z: spot.z - k * 0.06 });
         for (let k = 0; k < belts; k++) this.droppedBelts.push({ x: spot.x - k * 0.1, z: spot.z + k * 0.05 });
+        for (let k = 0; k < lenses; k++) this.droppedLenses.push({ x: spot.x + k * 0.08, z: spot.z - k * 0.07 });
         this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops(); this.mintSpringDrops();
-        this.mintBeltDrops();
+        this.mintBeltDrops(); this.mintLensDrops();
         const marked = this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0);
         this.cue('pickup', it.pos, marked
           ? '[you spill the take — the marked stock stays sewn to your back]'
@@ -6833,6 +6975,31 @@ export class Game {
         this.audio.play('trap-click', it.pos, '[the belt coils back on your arm]');
         return;
       }
+      case 'baitLens': {
+        // sprint 601 — the glass on the floor is loose goods like the
+        // belt: bait for the tidy, donation for the under.
+        it.enabled = false;
+        const bi = this.inventory.findIndex((i) => i.id === 'eyeLens' && i.count > 0);
+        if (bi < 0) return;
+        this.inventory[bi].count--;
+        const lk = v3(); this.player.lookDir(lk);
+        const bx = this.player.pos.x + lk.x * 0.55, bz = this.player.pos.z + lk.z * 0.55;
+        this.droppedLenses.push({ x: bx, z: bz });
+        this.mintLensDrops();
+        this.audio.play('trap-click', { x: bx, y: 0.2, z: bz }, '[the glass lies down — ground glass on the boards]');
+        this.sound.emit({ x: bx, y: 0.25, z: bz, intensity: 0.2 * this.wantedPull, category: 'item', caption: '' });
+        return;
+      }
+      case 'lensDrop': {
+        // sprint 601 — gather the torn glass: your litter comes home
+        it.enabled = false;
+        const i2 = (it.data as { i: number }).i;
+        this.droppedLenses.splice(i2, 1);
+        this.mintLensDrops();
+        this.giveItem('eyeLens', 1);
+        this.audio.play('trap-click', it.pos, '[the lens goes back in your palm]');
+        return;
+      }
       case 'baitWedge': {
         // sprint 492 — the chock lure: a set-down wedge reads exactly
         // like a kicked one to the floorkeeper's tidying (s489).
@@ -6901,8 +7068,15 @@ export class Game {
           // the tape is testimony — a mounted felt patch reads as your
           // work to every hunter that smells it. Fresh sign, not ash:
           // unlike a forged lie this pulls both readers once.
-          this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
-            kind: 'blind', t: this.clock.time, readBy: [] });
+          // sprint 602 — but felt over YOUR OWN seated eye isn't the
+          // house's kill: the sign reroutes to 'work' under your name,
+          // same convention as chocking your own wheel (s594).
+          if (w.owner === 'player')
+            this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          else
+            this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+              kind: 'blind', t: this.clock.time, readBy: [] });
         }
         this.cue('item', it.pos, '[the eye goes blind under the felt — and the felt smells of your work]');
         this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.25, category: 'item', caption: '[felt over the lens]' });
@@ -6920,6 +7094,55 @@ export class Game {
         this.giveItem('feltWrap', 1);
         this.cue('item', it.pos, '[the felt is yours again — the eye blinks awake]', 'warn');
         this.sound.emit({ x: it.pos.x, y: 1.2, z: it.pos.z, intensity: 0.15, category: 'item', caption: '[felt pulled free]' });
+        return;
+      }
+      case 'pryLens': {
+        // sprint 597 — the blind's permanent version: pry under the
+        // wrap and the glass levers out whole. Felt comes back to hand
+        // (parked tool, like the chock); the socket NEVER opens again —
+        // no untape, no rearm, no dazzle. Player work signs so the
+        // house smells where your hands went.
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          x.dead && x.lensed !== false
+          && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (!w) { it.enabled = false; return; }
+        w.lensed = false;
+        it.enabled = false;
+        this.giveItem('eyeLens', 1);
+        this.giveItem('feltWrap', 1); // the wrap levers out with the glass
+        this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.cue('item', it.pos, '[the lens works free — the socket will never open again]', 'warn');
+        this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 0.3,
+          category: 'item', caption: '[glass levers out whole]' });
+        return;
+      }
+      case 'seatLens': {
+        // sprint 598 — YOUR glass, their pan: a pried socket takes a
+        // wall lens and the eye wakes OWNER'D — it watches for you,
+        // never at you. Player work signs; the house can tear it back
+        // off ('work' mark → lensTear).
+        const lens = this.inventory.find((i) => i.id === 'eyeLens' && i.count > 0);
+        if (!lens) {
+          this.cue('drawer', it.pos, '[you need a wall lens to seat]', 'warn');
+          return;
+        }
+        const wp = (it.data as { watchPos?: { x: number; z: number } }).watchPos;
+        const w = wp && this.hazard.watchers.find((x) =>
+          x.lensed === false
+          && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
+        if (!w) { it.enabled = false; return; }
+        lens.count--;
+        w.lensed = true;
+        w.dead = false;
+        w.owner = 'player';
+        it.enabled = false;
+        this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+        this.cue('item', it.pos, '[the glass seats — the pan answers you now]', 'warn');
+        this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 0.32,
+          category: 'item', caption: '[the eye is yours]' });
         return;
       }
       case 'drain': {
@@ -7417,6 +7640,37 @@ export class Game {
         }
         this.cue('heal', null, '[steps muffled]');
         return;
+      case 'eyeLens': {
+        // sprint 599 — hold the glass up to a live eye: it drinks its
+        // own and stares at nothing for ~9s. The blink the dazzle
+        // already cues (s561) pins the pan — the lens just makes it
+        // HELD. 2 charges per lens.
+        let bw: { w: HazardField['watchers'][number]; d: number } | null = null;
+        const lk = v3(); this.player.lookDir(lk);
+        for (const w of this.hazard.watchers) {
+          if (w.dead || w.lensed === false) continue;
+          const dx = w.pos.x - this.player.pos.x, dz = w.pos.z - this.player.pos.z;
+          const d = Math.hypot(dx, dz);
+          if (d > 7 || d < 0.4) continue;
+          const dot = (dx * lk.x + dz * lk.z) / (d || 1);
+          if (dot < 0.5) continue;
+          if (!bw || d < bw.d) bw = { w, d };
+        }
+        if (!bw) {
+          this.cue('drawer', null, '[no live eye in sight to drink the glass]', 'warn');
+          return;
+        }
+        const w = bw.w;
+        item.count--;
+        w.dazzleCued = true;
+        w.everDazzled = true;
+        w.dazzleBearing = Math.atan2(this.player.pos.x - w.pos.x, this.player.pos.z - w.pos.z);
+        w.dazzleT = this.clock.time;
+        w.lensHoldUntil = this.clock.time + 9;
+        this.cue('ui-click', null, '[it drinks its own — the stare holds on nothing]', 'info');
+        this.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.35, category: 'item', caption: '[glass catches]' });
+        return;
+      }
       case 'chalkSpool': {
         item.count--;
         // Mark the focused door (or nearest within 3m) with a chalk tally —
@@ -7890,9 +8144,15 @@ export class Game {
           .map((f) => ({ room: f.room, kind: 'fan' as const,
             x: f.pos.x, z: f.pos.z, dead: f.dead, belted: f.belted,
             owner: f.owner, chocked: f.chocked })),
-        ...this.hazard.watchers.filter((w) => w.dead || w.filed).map((w) => ({
+        // sprint 597 — the eye rides the book like the line and the
+        // wheel: a pried socket (lensed:false), a live owned eye, a
+        // taped eye all serialize — never just 'the ones that died'.
+        ...this.hazard.watchers.filter((w) => w.dead || w.filed
+          || w.lensed === false || w.owner === 'player').map((w) => ({
           room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
-          dead: w.dead || undefined, filed: w.filed || undefined })),
+          dead: w.dead || undefined, filed: w.filed || undefined,
+          lensed: w.lensed === false ? false : undefined,
+          owner: w.owner })),
       ],
       drainedRooms: [...this.drainedRooms],
       stockFiled: [...this.stockFiled],
@@ -7911,6 +8171,8 @@ export class Game {
         ? this.droppedSprings.map((w) => ({ ...w })) : undefined,
       droppedBelts: this.droppedBelts.length > 0
         ? this.droppedBelts.map((w) => ({ ...w })) : undefined,
+      droppedLenses: this.droppedLenses.length > 0
+        ? this.droppedLenses.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
       droppedCoils: this.droppedCoils.length > 0
@@ -8020,7 +8282,8 @@ export class Game {
             spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
               + this.droppedWraps.reduce((n, w) => n + w.n, 0)
               + this.kickedWedges.length + this.droppedCoils.length
-              + this.droppedSprings.length + this.droppedBelts.length,
+              + this.droppedSprings.length + this.droppedBelts.length
+              + this.droppedLenses.length,
             // sprint 513 — and what your back kept: the take you died
             // carrying reads beside what the floor and the count kept
             carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -8044,6 +8307,8 @@ export class Game {
             ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
             // sprint 595 — and the wheels still spinning on your belt
             wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
+            // sprint 602 — and the eyes you seated count too
+            eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -8084,7 +8349,8 @@ export class Game {
         spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
           + this.droppedWraps.reduce((n, w) => n + w.n, 0)
           + this.kickedWedges.length + this.droppedCoils.length
-          + this.droppedSprings.length + this.droppedBelts.length,
+          + this.droppedSprings.length + this.droppedBelts.length
+          + this.droppedLenses.length,
         // sprint 513 — and what walked out on your back: the take kept
         // its weight to the door
         carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -8106,6 +8372,8 @@ export class Game {
         ventsOwned: this.hazard.steams.filter((s) => s.owner === 'player').length || undefined,
         // sprint 595 — the wheels you left spinning on your belt
         wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
+        // sprint 602 — the eyes still panning on YOUR lens
+        eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

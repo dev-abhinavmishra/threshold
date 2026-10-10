@@ -451,6 +451,7 @@ export class Warden extends Entity {
   private pocketedChocks = 0; // sprint 489 — kicked chocks confiscated off the floor, same rule
   private pocketedSprings = 0; // sprint 578 — loose sprung plates pocket the same way
   private pocketedBelts = 0; // sprint 593 — pulled drive belts pocket the same way
+  private pocketedLenses = 0; // sprint 601 — torn eye lenses pocket the same way
   // sprint 537 — a burning lamp is loose goods too: he pinches it out
   // and pockets it, charge still draining under the coat. A stagger
   // spills it back still burning (s539).
@@ -489,6 +490,13 @@ export class Warden extends Entity {
       this.ctx.spillBelts?.(this.pos, n);
       this.ctx.cue('floor-creak', this.pos,
         '[it goes down — the belts it pocketed slap the boards]', { severity: 'warn' });
+    }
+    if (this.pocketedLenses > 0) {
+      const n = this.pocketedLenses;
+      this.pocketedLenses = 0;
+      this.ctx.spillLenses?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it goes down — the glass it pocketed slaps the boards]', { severity: 'warn' });
     }
     if (this.pocketedLamps.length > 0) {
       const bs = this.pocketedLamps;
@@ -795,7 +803,7 @@ export class Warden extends Entity {
             // sprint 489 — a kicked chock is loose goods on the same
             // floor: it gets pocketed, not left for you.
             const got = this.ctx.scavengeSpill?.(this.investigate.x, this.investigate.z,
-              { wrap: true, wedge: true, lamp: true, spring: true, belt: true });
+              { wrap: true, wedge: true, lamp: true, spring: true, belt: true, lens: true });
             if (got?.kind === 'wrap') {
               this.pocketed += got.n;
               this.ctx.cue('floor-creak', this.investigate,
@@ -843,6 +851,16 @@ export class Warden extends Entity {
                 x: this.investigate.x, y: 0.4, z: this.investigate.z,
                 intensity: 0.3, category: 'item', caption: '[a belt disappears]',
                 source: this.id });
+            } else if (got?.kind === 'lens') {
+              // sprint 601 — a torn lens is tidy goods too: he pockets
+              // the glass he pulled off your eye like the belt.
+              this.pocketedLenses++;
+              this.ctx.cue('floor-creak', this.investigate,
+                '[it pockets the loose glass — the floor is tidy again]', { severity: 'warn' });
+              this.ctx.sound.emit({
+                x: this.investigate.x, y: 0.4, z: this.investigate.z,
+                intensity: 0.3, category: 'item', caption: '[a lens disappears]',
+                source: this.id });
             }
           }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
@@ -863,7 +881,8 @@ export class Warden extends Entity {
                         : restored === 'trap' ? '[it cocks the plate back — the floor relearns your step]'
                           : restored === 'crimp' ? '[it crimps your line shut — the pressure dies in your own throat]'
                             : restored === 'pull' ? '[it pulls the belt off your wheel — the muscle slaps the boards]'
-                              : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+                              : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
+                                : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't
               // pull to his own hands
@@ -1013,6 +1032,13 @@ export class Warden extends Entity {
       this.ctx.spillBelts?.(this.pos, n);
       this.ctx.cue('floor-creak', this.pos,
         '[it settles — the belts it pocketed spill loose]', { severity: 'warn' });
+    }
+    if (this.pocketedLenses > 0) {
+      const n = this.pocketedLenses;
+      this.pocketedLenses = 0;
+      this.ctx.spillLenses?.(this.pos, n);
+      this.ctx.cue('floor-creak', this.pos,
+        '[it settles — the glass it pocketed spills loose]', { severity: 'warn' });
     }
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) { this.ctx.removeEntityMesh(this.mesh); this.mesh = null; }

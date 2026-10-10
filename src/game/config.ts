@@ -311,6 +311,7 @@ export const ITEM_DEFS: Record<string, { name: string; desc: string; maxCharges:
   springPart: { name: 'Spring Plate', desc: 'A trap\'s works, pried whole. Crouch and set it — it bites whichever foot finds it first.', maxCharges: 2, slotItem: true },
   steamValve: { name: 'Brass Valve', desc: 'A vent\'s throat, threaded whole. Refit it on a stripped line — the blast answers whoever passes.', maxCharges: 2, slotItem: true },
   fanBelt: { name: 'Drive Belt', desc: 'A wheel\'s muscle, walked off the rim whole. Fit it on a stripped wheel — the blades answer whoever stands under them.', maxCharges: 2, slotItem: true },
+  eyeLens: { name: 'Wall Lens', desc: 'An eye\'s glass, worked out of its socket whole. Seat it in a pried socket and the pan answers you. Or hold it up to a live eye — it drinks its own and stares at nothing.', maxCharges: 2, slotItem: true },
 };
 
 // Fiction name shown on the death screen for each kill source.
