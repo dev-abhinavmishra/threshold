@@ -112,6 +112,11 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
  *  used by the rouse tell and by ear-to-the-seam listens. */
 /** Pipe-family props a flooded room's water can be drained through. */
 const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
+// sprint 617 — the under's own cast: a grafted wheel's wake spares the
+// hands that threaded it. House walkers (and you) still get bitten.
+const UNDER_FACTION = new Set([
+  'grafter', 'margin', 'stillframe', 'hauler', 'auditor', 'swamper', 'filer', 'editor',
+]);
 
 /** The count's locker: an unclaimed tag rots — the count fences the
  *  goods when the ink dries. Fading is told a minute out. */
@@ -731,7 +736,7 @@ export class Game {
           f.dead = h.dead !== false;
           if (h.belted === false) f.belted = false;
           if (h.chocked) f.chocked = true;
-          if (h.owner === 'player') f.owner = 'player';
+          if (h.owner) f.owner = h.owner;
         }
       } else {
         const w = this.hazard.watchers.find((x) => x.room === h.room && near(x.pos));
@@ -743,7 +748,7 @@ export class Game {
           w.dead = h.dead === true;
           if (h.filed === true) w.filed = true;
           if (h.lensed === false) w.lensed = false;
-          if (h.owner === 'player') w.owner = 'player';
+          if (h.owner) w.owner = h.owner;
         }
       }
     }
@@ -1516,6 +1521,49 @@ export class Game {
         }
         return out;
       },
+      // sprint 616 — the under's substrates: a muscle-less wheel
+      // housing takes a carried belt, a pried socket takes a carried
+      // lens. The under re-threads what it folds — it never makes
+      // goods, only moves them onto housings the house left dead.
+      nearestGraft: (x, z, maxD, kind) => {
+        let best: { x: number; z: number; kind: 'wheel' | 'socket' } | null = null;
+        let bd = maxD;
+        for (const f of this.hazard.fans) {
+          if (kind === 'socket') break;
+          if (f.belted !== false || f.owner === 'under') continue;
+          const d = Math.hypot(f.pos.x - x, f.pos.z - z);
+          if (d < bd) { bd = d; best = { x: f.pos.x, z: f.pos.z, kind: 'wheel' }; }
+        }
+        for (const w of this.hazard.watchers) {
+          if (kind === 'wheel') break;
+          if (w.lensed !== false || w.owner === 'under') continue;
+          const d = Math.hypot(w.pos.x - x, w.pos.z - z);
+          if (d < bd) { bd = d; best = { x: w.pos.x, z: w.pos.z, kind: 'socket' }; }
+        }
+        return best;
+      },
+      graft: (x, z, kind, byKey) => {
+        if (kind === 'wheel') {
+          const f = this.hazard.fans.find((ff) => ff.belted === false
+            && Math.hypot(ff.pos.x - x, ff.pos.z - z) < 0.8);
+          if (!f) return false;
+          f.dead = false;
+          f.belted = true;
+          f.owner = 'under';
+          this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
+            kind: 'work', t: this.clock.time, readBy: [byKey], by: byKey });
+          return true;
+        }
+        const w = this.hazard.watchers.find((ww) => ww.lensed === false
+          && Math.hypot(ww.pos.x - x, ww.pos.z - z) < 0.8);
+        if (!w) return false;
+        w.lensed = true;
+        w.dead = false;
+        w.owner = 'under';
+        this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
+          kind: 'work', t: this.clock.time, readBy: [byKey], by: byKey });
+        return true;
+      },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
         // The Warden smells fresh kills; the dumber rubble chases ghosts —
@@ -1583,7 +1631,7 @@ export class Game {
           // hands. He can't re-engage your wheel, so he strips its
           // muscle loose — the belt lands on the boards as loose
           // goods (gather it back before he comes round to tidy it).
-          const f = this.hazard.fans.find((ff) => ff.owner === 'player'
+          const f = this.hazard.fans.find((ff) => ff.owner !== undefined
             && ff.belted !== false && near(ff.pos));
           if (!f) {
             // sprint 600 — or your eye gets the tear: a 'work' mark by a
@@ -1591,7 +1639,10 @@ export class Game {
             // hands. He can't un-seat your glass, so he tears it loose —
             // it lands on the boards as loose goods (gather it back
             // before he comes round to tidy it).
-            const w = this.hazard.watchers.find((ww) => ww.owner === 'player'
+            // sprint 618 — the pull reaches the under's grafts too: a
+            // wheel or eye in ANY foreign hands is outside the house's
+            // jurisdiction — 'work' near it means tear it back.
+            const w = this.hazard.watchers.find((ww) => ww.owner !== undefined
               && ww.lensed !== false && near(ww.pos));
             if (!w) return null;
             w.dead = true;
@@ -1635,7 +1686,7 @@ export class Game {
           // blades. And the house only re-engages HOUSE wheels — a fan
           // fitted with your belt is yours even jammed.
           const f = this.hazard.fans.find((ff) => ff.dead
-            && ff.belted !== false && ff.owner !== 'player' && near(ff.pos));
+            && ff.belted !== false && ff.owner === undefined && near(ff.pos));
           if (!f) return null;
           f.dead = false;
           // a chocked wheel's wedge doesn't vanish — it comes out in
@@ -1650,7 +1701,7 @@ export class Game {
           // pry already handed your felt back, and there's no glass to
           // wake. Felt-strip only answers where felt still mounts.
           const w = this.hazard.watchers.find((ww) => ww.dead
-            && ww.lensed !== false && ww.owner !== 'player' && near(ww.pos));
+            && ww.lensed !== false && ww.owner === undefined && near(ww.pos));
           if (!w) return null;
           w.dead = false; // the felt is confiscated — the house pockets your wrap
           return 'eye';
@@ -2515,6 +2566,22 @@ export class Game {
       if (eye) {
         return { sfx: 'steam-hiss', sev: 'info' as const,
           text: '[your eye pans past the leaf — the lens you set]' };
+      }
+    }
+    // sprint 620 — the under's grafts read at the seam too: a wheel or
+    // eye in its hands just past the leaf warns before the room does.
+    {
+      const grafted = this.hazard.fans.find((f) =>
+        f.owner === 'under' && !f.dead && f.room === target.index
+          && Math.hypot(f.pos.x - door.pos.x, f.pos.z - door.pos.z) < 3);
+      const graftedEye = grafted ? null : this.hazard.watchers.find((w) =>
+        w.owner === 'under' && !w.dead && w.lensed !== false && w.room === target.index
+          && Math.hypot(w.pos.x - door.pos.x, w.pos.z - door.pos.z) < 3);
+      if (grafted || graftedEye) {
+        return { sfx: 'steam-hiss', sev: 'warn' as const,
+          text: grafted
+            ? '[a wheel spins past the leaf — muscle you stripped]'
+            : '[an eye pans past the leaf — glass you pried]' };
       }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
@@ -7108,6 +7175,9 @@ export class Game {
           && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
         if (!w) { it.enabled = false; return; }
         w.lensed = false;
+        delete w.owner; // sprint 618 — the pry ends any jurisdiction:
+        // a grafted lens levers out like a housed one — dead socket,
+        // nobody's, and the under's claim comes off with the glass
         it.enabled = false;
         this.giveItem('eyeLens', 1);
         this.giveItem('feltWrap', 1); // the wrap levers out with the glass
@@ -8140,7 +8210,7 @@ export class Game {
         // a live player-fitted wheel, a stripped housing, a chocked
         // wheel all serialize — never just 'the ones that died'.
         ...this.hazard.fans.filter((f) => f.dead || f.belted === false
-          || f.owner === 'player' || f.chocked)
+          || f.owner !== undefined || f.chocked)
           .map((f) => ({ room: f.room, kind: 'fan' as const,
             x: f.pos.x, z: f.pos.z, dead: f.dead, belted: f.belted,
             owner: f.owner, chocked: f.chocked })),
@@ -8148,7 +8218,7 @@ export class Game {
         // wheel: a pried socket (lensed:false), a live owned eye, a
         // taped eye all serialize — never just 'the ones that died'.
         ...this.hazard.watchers.filter((w) => w.dead || w.filed
-          || w.lensed === false || w.owner === 'player').map((w) => ({
+          || w.lensed === false || w.owner !== undefined).map((w) => ({
           room: w.room, kind: 'eye' as const, x: w.pos.x, z: w.pos.z,
           dead: w.dead || undefined, filed: w.filed || undefined,
           lensed: w.lensed === false ? false : undefined,
@@ -8309,6 +8379,9 @@ export class Game {
             wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
             // sprint 602 — and the eyes you seated count too
             eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
+            // sprint 620 — and what the under grafted back against you
+            graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
+              + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -8374,6 +8447,9 @@ export class Game {
         wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
         // sprint 602 — the eyes still panning on YOUR lens
         eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
+        // sprint 620 — the work the under re-threaded against you
+        graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
+          + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();
@@ -11496,8 +11572,13 @@ export class Game {
     for (const f of this.hazard.fans) {
       if (f.dead || f.room !== curRoomIdx) continue;
       if (tA - (f.entT ?? -1) <= 1.4) continue;
+      // sprint 617 — a grafted wheel staggers the HOUSE, not its
+      // makers: the under walks the timing it threaded. Player wheels
+      // still bite everything that isn't you.
+      const exempt = f.owner === 'under' ? UNDER_FACTION : null;
       for (const ent of this.entities) {
         if (ent.state === 'done') continue;
+        if (exempt?.has(ent.id)) continue;
         const epos = ent.threatPos();
         if (!epos) continue;
         const edx = epos.x - f.pos.x, edz = epos.z - f.pos.z;

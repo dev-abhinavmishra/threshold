@@ -576,7 +576,9 @@ describe('the wheel is goods (sprints 589-596)', () => {
     const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'fan'"),
       gameSrc.indexOf("kind === 'blind'"));
     expect(rearm).toContain('ff.belted !== false');
-    expect(rearm).toContain("ff.owner !== 'player'");
+    // sprint 618 — ownerless only: the house re-engages neither your
+    // wheel nor the under's grafted one
+    expect(rearm).toContain("ff.owner === undefined");
     // the strip signs 'work' by:'player' — the price of the permanent
     // kill is the name it leaves for the floorkeeper to read
     const strip = gameSrc.slice(gameSrc.indexOf("case 'workBelt'"),
@@ -598,7 +600,9 @@ describe('the wheel is goods (sprints 589-596)', () => {
     // the pull — beltless housing, belt on the boards
     expect(baseSrc).toContain("| 'pull' | 'lensTear' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
-    expect(pull).toContain("ff.owner === 'player'");
+    // sprint 618 — 'work' near a claimed wheel pulls it whoever's
+    // hands claim it: yours or the under's
+    expect(pull).toContain("ff.owner !== undefined");
     expect(pull).toContain("return 'pull'");
     expect(pull).toContain('this.droppedBelts.push');
     // a chocked house wheel re-engaging frees the wedge into his
@@ -670,7 +674,8 @@ describe('your glass watches back (sprints 597-603)', () => {
     // the tear — dead glass, lens on the boards
     expect(baseSrc).toContain("'lensTear'");
     const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
-    expect(work).toContain("ww.owner === 'player'");
+    // sprint 618 — same for the tear: any claimed socket answers
+    expect(work).toContain("ww.owner !== undefined");
     expect(work).toContain("return 'lensTear'");
     expect(work).toContain('this.droppedLenses.push');
     // torn glass is tidy goods: the floorkeeper pockets it and spills
@@ -682,5 +687,63 @@ describe('your glass watches back (sprints 597-603)', () => {
     expect(setpiecesSrc).toContain("kind === 'lens'");
     // the seam reads your eye too
     expect(gameSrc).toContain('your eye pans past the leaf');
+  });
+});
+
+describe('the under grafts back (sprints 616-620)', () => {
+  it('a carried belt or lens keeps its kind and seeks a substrate', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the under re-threads, it doesn't unspool: belt → dead housing,
+    // lens → pried socket. Everything else still folds to wire.
+    expect(setpiecesSrc).toContain("carriedKind: 'belt' | 'lens' | null");
+    expect(setpiecesSrc).toContain("this.carriedKind = 'belt'");
+    expect(setpiecesSrc).toContain("this.carriedKind = 'lens'");
+    expect(setpiecesSrc).toContain('nearestGraft');
+    expect(setpiecesSrc).toContain('spillCarriedKind');
+    // the ctx hooks exist and are kind-filtered — a belt can't graft
+    // a socket
+    expect(baseSrc).toContain('nearestGraft');
+    expect(baseSrc).toContain('graft?:');
+    expect(gameSrc).toContain("kind === 'socket'");
+    expect(gameSrc).toContain("kind === 'wheel'");
+  });
+
+  it('the graft claims jurisdiction and signs its work', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // wheel: dead housing wakes on the under's muscle, marked 'under'
+    // and signed 'work' under the grafter's key — the house reads it.
+    expect(gameSrc).toContain("f.owner = 'under'");
+    expect(gameSrc).toContain("w.owner = 'under'");
+    expect(gameSrc).toContain('graftedWork');
+    expect(storeSrc).toContain('graftedWork');
+    // jurisdiction rides the checkpoint and the record type
+    expect(storeSrc).toContain("owner?: 'player' | 'under'");
+    expect(gameSrc).toContain('if (h.owner) f.owner = h.owner;');
+    expect(gameSrc).toContain('if (h.owner) w.owner = h.owner;');
+    // the house only re-engages ownerless work; the pull answers any
+    // foreign jurisdiction
+    const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'blind'"));
+    expect(rearm).toContain("ww.owner === undefined");
+    // the seam warns on grafted work
+    expect(gameSrc).toContain('muscle you stripped');
+    expect(gameSrc).toContain('glass you pried');
+    // the pry ends ANY jurisdiction — re-strip a grafted socket
+    expect(gameSrc).toContain('delete w.owner');
+  });
+
+  it('a grafted wheel staggers the house, not the under', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the wake spares the hands that threaded it — UNDER_FACTION ids
+    // slip through a grafted wheel's bite
+    expect(gameSrc).toContain('UNDER_FACTION');
+    expect(gameSrc).toContain("f.owner === 'under' ? UNDER_FACTION : null");
+    expect(gameSrc).toContain("'grafter'");
+    expect(gameSrc).toContain('exempt?.has(ent.id)');
   });
 });

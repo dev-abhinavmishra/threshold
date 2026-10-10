@@ -4,6 +4,39 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 616–620 — the under grafts back (third jurisdiction: owner:'under')
+
+- **Sprint 616**: the grafter stops folding every good into wire — a
+  claimed `belt` or `lens` keeps its kind (`carriedKind`) and seeks a
+  substrate via new ctx hooks `nearestGraft(x,z,maxD,kind)` /
+  `graft(x,z,kind,byKey)`: muscle-less housings (`belted===false`) take
+  belts, pried sockets (`lensed===false`) take lenses. Out-of-room or
+  missing substrate falls back to the old wire fold — nothing strands.
+- **Sprint 617**: `UNDER_FACTION` — a grafted wheel's wake exempts the
+  hands that threaded it (`exempt?.has(ent.id)` in the fan stagger loop).
+  House walkers and you still get bitten; player wheels bite all.
+- **Sprint 618**: jurisdiction is now three-way. `owner:'under'` rides
+  deadHazards + checkpoint (serialize filter widened to
+  `owner !== undefined`, restore `if (h.owner)`). 'work' pull/tear
+  fires on ANY claimed hazard (`ff.owner !== undefined`,
+  `ww.owner !== undefined`); rearm 'fan'/'blind' gates tightened to
+  `owner === undefined` — the house re-engages only ownerless work.
+  Pry deletes owner (re-strip a grafted socket); `workBelt` already
+  did — grafted goods are re-strippable through normal verbs.
+- **Sprint 619**: graft signs `work` under `grafter:<spawnRoom>` — the
+  house smells whose hands went there, so the warden's pull reaches
+  under-owned work the same as player-owned.
+- **Sprint 620**: seam reads grafted work at warn tier ('muscle you
+  stripped'/'glass you pried'); epitaph + victory books count
+  `graftedWork`. Carried-kind spills spill as themselves
+  (`spillCarriedKind` → `spillBelts`/`spillLenses`), never as wire.
+- Tests: hazardContract +3 pins (45 total); new e2e leg 'the under
+  grafts back' in props.spec.ts — site-kind pairing, jurisdiction,
+  house answer, goods on boards.
+- Trap: graft targets must pair kind→substrate (`nearestGraft` takes
+  the kind filter) — a belt can't graft a socket.
+- Note for decals lane: no shared files touched this arc.
+
 ## Sprint 613–615 — the doors kept their furniture (leaf + jamb hardware batch)
 
 - **Sprint 613**: interior leaves gained real hardware — `mail-slot`,
