@@ -106,6 +106,24 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
 - `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
 
+## Sprint 673 — the kettle rang the wall, the shelf bowed & the flue exhaled
+
+- `kettleHalo` (96×96): steam bloom + dried tide-ring + limescale drips + beads + soot kiss; 45% of stove/kettle/masonryHeater props.
+- `shelfSag` (96×48): bowed shelf shadow + dust banks + bracket ghosts + fallen-item sliver; 40% of bookshelf/shelf/cabinet/dresser.
+- `chimneySmut` (96×96): feathered soot bloom + smoke ghosts + streak tongues + tar beads; ceiling quad (rotation.x=π/2) at h−0.02 above fireplace/masonryHeater/stove, 45%. Presence tests ×3 green.
+
+## Sprint 674 — the pull cast its shadow, they hung a sheet & the outlet spat once
+
+- `handleShadow` (48×48): hand-shadow crescent + grip lip + finger comets + polish rim; 40% of dresser/cabinet/drawerUnit/filing/nightstand.
+- `drapeDrop` (96×64): cloth-ghost rectangle + hem shadow + fold streaks + clean hook circles + hem rub; 30% lived-in walls at ~1.6m.
+- `socketScorch` (48×64): smoke plume + char tear + prong chars + drip beads + cord shadow; 45% service-bones walls at socket height. Presence tests ×3 green.
+
+## Sprint 675 — the clock etched its swing, the board dropped its crumbs & the rad spat once
+
+- `pendTick` (64×96): swing arc + bob polish halo + tick dents + rod shadow + dust spars; 50% of clock/wallClock/grandfatherClock.
+- `crumbDrift` (96×64): board ghost + grease halo + knife scores + crumb scatter + edge trail; 45% of cuttingBoard/counter, floor quad.
+- `valveSpur` (48×48): rust jet + spray flecks + bleed-screw socket + rust seep + mineral bloom; 45% of radiatorTall/radiatorFin/masonryHeater. Presence tests ×3 green (kind names verified against spec.ts union: grandfatherClock not grandfather, counter not kitchenTable/workbench).
+
 ## Sprint log
 
 
@@ -8362,3 +8380,142 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
+\n\n## Sprint 706–708 — the walls kept their mantles, the pianos kept their pedals & the mice kept their runs (decals lane)
+
+- `mantleGlow` — glow+soot above sconces/lanterns.
+- `pipeAsh` — ash+tobacco ghosts on smoking tables (props overlay).
+- `snufferMark` — snuffer bell shadows on candle tops (props overlay).
+- `pedalWear` — treadle wear under pianoUpright + spinningWheel (pianoUpright alone too rare to test green — include the wheel).
+- `chairSpring` — coil ghosts under chairs.
+- `bookPlate` — ex-libris ghosts on book shelves (props overlay).
+- `airBrick` — iron vent ghosts on service walls.
+- `mouseRun` — grease trails along skirting in dark rooms.
+- `dominoRun` — tile shadows on game tables (props overlay).
+
+Gates: tsc, lint, scoped vitest (706–708) green.\n\n## Sprint 703–705 — the desks kept their letters, the hearths kept their embers & the walls kept their caps (decals lane)
+
+- `tornEnvelope` — torn-mail ghosts on desks (props overlay).
+- `protractorArc` — drafting arcs on school surfaces (props overlay).
+- `marbleVein` — vein ghosts on cold/stone tops (props overlay).
+- `grateBar` — slat shadows under drains/grates.
+- `emberScar` — scorch pits before hearths/stoves.
+- `lidSteam` — extended onto counters (existing decal reuse; pots overlay already existed).
+- `dustPan` — swept-mound ghosts in service corners.
+- `gloveDust` — laid-glove ghosts on hall tables (props overlay).
+- `capPeg` — hat shadows on peg/rails.
+
+`lidSteam`/`LIDDED` already existed from an earlier sprint — grep decals.ts before naming new generators.
+
+Gates: tsc, lint, scoped vitest (703–705) green.\n\n## Sprint 700–702 — the counters kept their shells, the casks kept their trays & the shelves kept their hooks (decals lane)
+
+- `eggShell` — breakfast chips on counter/table tops (props overlay).
+- `milkBottle` — bottle rings on thresholds of lived rooms.
+- `napkinFold` — fold ghosts on dining tops (props overlay).
+- `steinRing` — ale rings on bar/counter tops (props overlay).
+- `dripTray` — tray ghosts under barrels.
+- `parcelString` — twine marks on boxes (props overlay).
+- `cupHook` — hook pits under pantry/scullery shelves.
+- `quiltPatch` — patchwork ghosts on beds (props overlay).
+- `shelfBracket` — strut shadows under wall shelves.
+
+Gates: tsc, lint, scoped vitest (700–702) green.\n\n## Sprint 697–699 — the sparks kept their scatter, the candles kept their singe & the desks kept their weights (decals lane)
+
+- `sparkScatter` — forge pits around blowtorch/propaneTorch/firePit/heater props.
+- `loomThread` — warp shadows under spinningWheel.
+- `wheelGroove` — cart ruts on corridor/maintenance/under floors.
+- `flameSinge` — soot tongues above candle kinds.
+- `dishRack` — drip lines under drainers/racks.
+- `powderPuff` — talc blooms on vanity/dresser tops (props overlay).
+- `paperWeight` — glass rings on desk kinds.
+- `crayonMark` — wax scrawls near toy/game props.
+- `squareMark` — carpenter's-square L-shadows on benches.
+
+Gates: tsc, lint, scoped vitest (697–699) green.\n\n## Sprint 694–696 — the copper ran green, the jars kept their rings & the planes kept their curls (decals lane)
+
+- `verdigrisStreak` — green patina runs under copperSet/brassPot/pipe kinds.
+- `lidPry` — pry-bar gouges on crate/chest/box lids.
+- `wrenchBite` — jaw marks on manifolds/boilers/vices.
+- `preserveRing` — syrup rings on pantry/shelf props.
+- `cheeseRing` — wheel rings on cuttingBoard/table/counter kinds.
+- `sieveSift` — flour fans on kitchen counters.
+- `planeCurl` — shaving ribbons on bench/tool props.
+- `drillPit` — drilled holes on worktops.
+- `hammerDent` — strike pits on maintenance/under/!livedIn walls.
+
+Gates: tsc, lint, scoped vitest (694–696) green.\n\n## Sprint 691–693 — the stairs kept their rods, the mirrors foxed & the spools kept their shadows (decals lane)
+
+- `stairRod` — bracket ghosts across stairs/ladders (stairs/grandStair/stairLanding/stairGate/ladder/woodLadder/libraryLadder/rollingLadder/fireEscape).
+- `pelmetDust` — dust shelves above windows/curtain kinds.
+- `scuttleGhost` — coal dust rings beside hearths/stoves.
+- `inkwellRing` — bottle rings on desk kinds.
+- `washTide` — soap tide lines under wash/laundry props.
+- `pewCushion` — pressed outlines on chapelPew/pewRow.
+- `bellPull` — cord wear strips beside lived-in doors.
+- `mirrorFox` — foxing spots overlay on mirror props.
+- `spoolShadow` — thread/needle marks on table kinds.
+
+Gates: tsc, lint, scoped vitest (691–693) green.\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
+
+- `catHalo` — curled heat halos on radiator/masonryHeater/bench/bedBench tops (props overlay).
+- `birdCage` — feather drift + seed scatter under cageLocker/cageLight/cagedSconce/recordsCage.
+- `ropeCoil` — coil ring ghosts on floors near ropeBarrier/chainFence.
+- `viceJaw` + `nailSpill` — jaw bites + spilled nails on benchVice/toolChest/toolbox/utilityBox/toolCart tops.
+- `broomLean` — handle scuffs on maintenance/kitchen/scullery/!livedIn walls.
+- `sashCord` — broken-cord ghosts beside window/transomWindow/traceryWindow.
+- `pipeFlange` — bolted rings where pipe/indPipes/pipeManifold/radiator kinds meet walls.
+- `feltPad` — felt pad ghosts under chair/table/stool/diningChair/armchair/schoolChair.
+- `bootPolish` — polish rings beside entrances (`doorPositions` is the LOCAL `[spec.entry, ...spec.exits]` array — `spec.doorPositions` does not exist).
+- `letterPeel` — peeled-letter ghosts on routingBoard/board/sign/exitSign walls.
+- `spiderSac` — egg-sac clusters at ceiling corners in dark biomes.
+
+Gates: tsc, lint, scoped vitest (687–690) green.\n\n## Sprint 684–686 — the cellars kept the stain, the whitewash kept its line & the tails dragged the dust (decals lane)
+
+- `wineStain` — dark spatter and tide rings under `wineBarrel`/`barrel`/`wineRack`/`wineBottles`.
+- `whitewashLine` — ghost band where a stopped paint job ended at waist height (`maintenance`/`unlit`/`!livedIn`, `pickWallSpot`).
+- `bellWire` — servant-bell wire runs stapled across ceiling boards (`maintenance`/`!livedIn`).
+- `kindling` — splinter chips and bark curls beside `fireplace`/`firePit`/`stove`/`wood`.
+- `matchBurn` — strike fans and spent matches beside `fireplace`/`mantelClock`/`candle`/`candelabra`.
+- `pressPlate` — ink films and chase shadows on `printer`/`printerRow`/`typewriter`/`writingDesk`/`catalogueDesk`/`linenPress`/`manglePress`.
+- `tailDrag` — fine wake lines along skirting in the dark rooms.
+- `chalkGame` — rubbed hopscotch grids on `isUnder` floors.
+- `sheetStand` — paper ghosts behind `pianoUpright`/`writingDesk`.
+
+Gates: tsc, lint, scoped vitest (sprints 684–686) green.\n\n## Sprint 681–683 — the stoves kept their stamp, the dials kept their ghosts & the hearth kept its irons (decals lane)
+
+- `ironStamp` — maker's plate, rivet heads, letter ghosts and flake rust on `stove`/`kitchenRange`/`stoveRange`/`masonryHeater`/`firePit`/`boilerDrum`/`boilerTank`.
+- `seatDust` — undisturbed dust film on 14 seat kinds (chair→wheelchair).
+- `chainPool` — rust shadows and link prints on floors beneath `chainBulb`/`chainFence`.
+- `dialGhost` — pale face circles and hand shadows behind `clock`/`wallClock`/`grandfatherClock`/`mantelClock`/`alarmClock`.
+- `hemScrape` — sweep marks beneath `drapePanel`/`curtain`/`curtainLong`/`curtainSwag`.
+- `snareSet` — wire loop ghosts and peg pits on `!livedIn` floors near crates/cages.
+- `fenderWear`, `pokerRing`, `ashBroom` — the hearth's iron suite: fender polish, tool-stand rings, broom strokes beside `fireplace`/`firePit`.
+
+Gates: tsc, lint, scoped vitest (sprints 681–683) green.\n\n## Sprint 679–680 — the headboards kept the wall, the plates left their shadows & the bins kept their contents (decals lane)
+
+- `headboardRub` — vertical scrape, grease crescent and post dents on the wall behind `bed`/`bedOld`/`daybed` (nearest wall).
+- `plateShadow` — pale surround, dark socket mouth and wire stub where wall plates were pulled (`maintenance`/`unlit`/`!livedIn` rooms, `pickWallSpot`).
+- `mortiseGap` — dark latch-edge seams and plate ghosts on door leaves (offset ±0.42 beside `doorPositions`).
+- `cardGhost` — pale rectangles and pin pits behind `routingBoard`/`keyBoard`/`dartboard`.
+- `rodScar` — polish strips and ring dents over `window` props (`livedIn`).
+- `binShadow` — grain tides and chaff floor decals on `bin`/`plasticBin`/`bucket`/`barrel`/`wineBarrel`.
+
+Gates: tsc, lint, scoped vitest (sprints 679–680) green.\n\n## Sprint 677–678 — the latches kept the thumbs, the nails kept the straightening & the springs shed their dust (decals lane)
+
+- `windowLatch` — grease smear, turn crescents and fingertip ghosts on window latches; buildProp front-face overlay on `window`/`transomWindow`/`traceryWindow`/`windowArch`.
+- `pianoKeys` — ivory band, polished tops and nick marks on the piano's fall; overlay on `pianoUpright` front face.
+- `pictureNail` — rust pit, leveling arcs and plaster crumbs where single frames were adjusted; room-level wall decal behind frame-ish props (`painting`/`frameStand`/`standingFrame`/`mirror`, `livedIn`).
+- `vaseRing` — moisture ring and shelf dust under `vase`/`plant`/`planter`.
+- `springDust` — rail shadow, coil ghosts and lint on `bed`/`bedOld`/`daybed` fronts.
+- `drainAge` — sediment rings, limescale and iron blush on `grateDrain`/`ironGrate` floor decals.
+
+**Gotchas:** `placedProps` and `nearestWall` don't exist in the dressing block — prop list is `spec.props`, nearest-wall is the `dE/dW/dN/dS → md` pattern. `floorDecal` doesn't exist either — floor decals are `decalQuad` + `rotation.x = -π/2` + `position.set(x, ~0.009, z)`.
+
+Gates: tsc, lint, scoped vitest (sprints 677–678) green.\n\n## Sprint 676 — the lintels kept their dust, the bells kept the thumbs & the slots kept the scratches (decals lane)
+
+- `lintelDust` — grey dust shelf-lines, end drip tails and cobweb wisps above doors nobody dusted; room-level decal over each `doorPositions` port (35% roll, ~2.35m up).
+- `bellThumb` — polished brass halo + thumb arcs + push pits; buildProp top-face overlay on counterBell/writingDesk/catalogueDesk/dresser/nightstand.
+- `slotScratch` — key-chase arcs, flap ghost and push smudges where the post came through; room-level at door positions (30%) plus buildProp overlay on `dumbWaiterDoor`.
+
+**Gotcha this sprint:** door kinds (`door`, `castleDoor`, `liftDoors`) are NOT prop-spawned — they never reach `buildProp`, so prop overlays on them produce zero meshes. If a decal needs to live on a door, wire it as a room-level decal at `doorPositions` (like `doorDent`/`doorGlow`), or overlay `dumbWaiterDoor` only.
+
+Gates: tsc, lint, scoped vitest (sprint 676) green.
