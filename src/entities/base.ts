@@ -147,7 +147,7 @@ export interface EntityCtx {
    *  off its eyes (the wrap is confiscated — the house pockets it).
    *  Returns what it restored, or null. Optional for headless ctxs. */
   rearmHazard?: (kind: 'wire' | 'line' | 'fan' | 'blind' | 'spring' | 'work', x: number, z: number)
-    => 'snare' | 'steam' | 'fan' | 'fanChock' | 'eye' | 'trap' | 'crimp' | 'reclaim' | 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | null;
+    => 'snare' | 'steam' | 'fan' | 'fanChock' | 'eye' | 'trap' | 'crimp' | 'reclaim' | 'pull' | 'lensTear' | 'platePull' | 'lidSweep' | 'lidHeld' | null;
   /** sprint 433 — a walker reaching a coil-bound leaf works the wire:
    *  'strained' on first contact, 'freed' once the bind parts (the
    *  coil drops where it was worked loose), null when nothing wired. */
@@ -227,6 +227,12 @@ export interface EntityCtx {
    *  any pile within reach is scattered further along, not pocketed.
    *  Returns true if it kicked anything. */
   scatterSpill?: (x: number, z: number) => boolean;
+  /** sprint 710 — a filed floor pulls the patrol: sites the tally
+   *  struck twice and hasn't cooled drag a floorkeeper back to stand
+   *  over your worked spot — the register's mark is a standing order.
+   *  Optional for headless ctxs. */
+  filedFloors?: (x: number, z: number, radius: number)
+    => { x: number; z: number; room: number; strikes: number }[];
 }
 
 export type EntityState = 'idle' | 'warn' | 'engage' | 'resolve' | 'done';

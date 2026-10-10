@@ -151,7 +151,7 @@ function PauseMenu() {
 
 // the books are read back as epitaph lines — victory closes them,
 // death leaves them open on you
-function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number; eyesDazzled?: number; trapsSet?: number; ventsOwned?: number; eyesAimed?: number } | undefined): string[] {
+function bookLines(books: { thefts: number; held: number; asks: number; hotCoin: number; hotGoods: number; hotPages?: number; seized?: number; coinKept?: number; spilled?: number; carried?: number; stashed?: number; stashedMarked?: number; lampsLeft?: number; shellsLeft?: number; eyesDazzled?: number; trapsSet?: number; ventsOwned?: number; eyesAimed?: number; filedWork?: number } | undefined): string[] {
   const lines: string[] = [];
   if (!books) return lines;
   const seized = books.seized ?? 0;
@@ -207,6 +207,10 @@ function bookLines(books: { thefts: number; held: number; asks: number; hotCoin:
   const aimed = books.eyesAimed ?? 0;
   if (aimed > 0) lines.push(
     `${aimed === 1 ? 'an eye still stares' : `${aimed} eyes still stare`} your way — the floor keeps your look`);
+  // sprint 711 — and the tally's toll: floors it filed you working twice
+  const filed = books.filedWork ?? 0;
+  if (filed > 0) lines.push(
+    `the register filed ${filed === 1 ? 'a worked floor' : `${filed} worked-floor strikes`} against you — the tally keeps its count`);
   return lines;
 }
 
