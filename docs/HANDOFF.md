@@ -4,18 +4,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
-## Sprint 640–644 — the under grafts back (third jurisdiction: owner:'under')
+## Sprint 646–650 — the under grafts back (third jurisdiction: owner:'under')
 
-- **Sprint 640**: the grafter stops folding every good into wire — a
+- **Sprint 646**: the grafter stops folding every good into wire — a
   claimed `belt` or `lens` keeps its kind (`carriedKind`) and seeks a
   substrate via new ctx hooks `nearestGraft(x,z,maxD,kind)` /
   `graft(x,z,kind,byKey)`: muscle-less housings (`belted===false`) take
   belts, pried sockets (`lensed===false`) take lenses. Out-of-room or
   missing substrate falls back to the old wire fold — nothing strands.
-- **Sprint 641**: `UNDER_FACTION` — a grafted wheel's wake exempts the
+- **Sprint 647**: `UNDER_FACTION` — a grafted wheel's wake exempts the
   hands that threaded it (`exempt?.has(ent.id)` in the fan stagger loop).
   House walkers and you still get bitten; player wheels bite all.
-- **Sprint 642**: jurisdiction is now three-way. `owner:'under'` rides
+- **Sprint 648**: jurisdiction is now three-way. `owner:'under'` rides
   deadHazards + checkpoint (serialize filter widened to
   `owner !== undefined`, restore `if (h.owner)`). 'work' pull/tear
   fires on ANY claimed hazard (`ff.owner !== undefined`,
@@ -23,10 +23,10 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
   `owner === undefined` — the house re-engages only ownerless work.
   Pry deletes owner (re-strip a grafted socket); `workBelt` already
   did — grafted goods are re-strippable through normal verbs.
-- **Sprint 643**: graft signs `work` under `grafter:<spawnRoom>` — the
+- **Sprint 649**: graft signs `work` under `grafter:<spawnRoom>` — the
   house smells whose hands went there, so the warden's pull reaches
   under-owned work the same as player-owned.
-- **Sprint 644**: seam reads grafted work at warn tier ('muscle you
+- **Sprint 650**: seam reads grafted work at warn tier ('muscle you
   stripped'/'glass you pried'); epitaph + victory books count
   `graftedWork`. Carried-kind spills spill as themselves
   (`spillCarriedKind` → `spillBelts`/`spillLenses`), never as wire.
@@ -41,6 +41,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 
 
+
+
+## Sprint 640–642 — the doors kept their teeth (door-hardware batch)
+
+- `strap-hinge` + `strap-end` T-irons across plank-style leaves (~65%
+  of planks), both faces — leaf-local, x from the hinge edge inward.
+- `kick-plate` steel low on livedIn leaves (~40%); `chain-keeper` +
+  `chain-link`×4 + `chain-mount` on the inside face (~30%).
+- `bell-plate` + `bell-push` on the wall beside the hinge-side casing
+  (~35% of non-industrial doors), both wall faces.
+- Leaf-local x past `pw/2` lands past the leaf edge — fine for
+  jamb-mounted pieces (chain-mount) since the leaf group carries them.
 
 ## Sprint 637–639 — the rails kept their smalls (service-hardware batch)
 

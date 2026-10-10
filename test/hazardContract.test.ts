@@ -576,7 +576,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'fan'"),
       gameSrc.indexOf("kind === 'blind'"));
     expect(rearm).toContain('ff.belted !== false');
-    // sprint 642 — ownerless only: the house re-engages neither your
+    // sprint 648 — ownerless only: the house re-engages neither your
     // wheel nor the under's grafted one
     expect(rearm).toContain("ff.owner === undefined");
     // the strip signs 'work' by:'player' — the price of the permanent
@@ -600,7 +600,7 @@ describe('the wheel is goods (sprints 589-596)', () => {
     // the pull — beltless housing, belt on the boards
     expect(baseSrc).toContain("| 'pull' | 'lensTear' | null");
     const pull = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
-    // sprint 642 — 'work' near a claimed wheel pulls it whoever's
+    // sprint 648 — 'work' near a claimed wheel pulls it whoever's
     // hands claim it: yours or the under's
     expect(pull).toContain("ff.owner !== undefined");
     expect(pull).toContain("return 'pull'");
@@ -674,7 +674,7 @@ describe('your glass watches back (sprints 597-603)', () => {
     // the tear — dead glass, lens on the boards
     expect(baseSrc).toContain("'lensTear'");
     const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
-    // sprint 642 — same for the tear: any claimed socket answers
+    // sprint 648 — same for the tear: any claimed socket answers
     expect(work).toContain("ww.owner !== undefined");
     expect(work).toContain("return 'lensTear'");
     expect(work).toContain('this.droppedLenses.push');
@@ -690,7 +690,7 @@ describe('your glass watches back (sprints 597-603)', () => {
   });
 });
 
-describe('the under grafts back (sprints 640-644)', () => {
+describe('the under grafts back (sprints 646-650)', () => {
   it('a carried belt or lens keeps its kind and seeks a substrate', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     const baseSrc = readFileSync('src/entities/base.ts', 'utf8');

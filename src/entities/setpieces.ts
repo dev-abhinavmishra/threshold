@@ -380,7 +380,7 @@ export class Grafter extends Entity {
    *  dead wire it stumbles on and drags the coil with it, laying it
    *  fresh when it reaches the living's room. */
   private carrying = 0;
-  /** sprint 640 — what the carry IS when it matters: a belt or a lens
+  /** sprint 646 — what the carry IS when it matters: a belt or a lens
    *  folds differently — the under re-threads muscle and glass onto
    *  housings, it doesn't unspool them as wire. Everything else
    *  (coil, stripped spring, stripped shell) stays feedstock for a
@@ -666,7 +666,7 @@ export class Grafter extends Entity {
       // sprint 593 — a pulled belt is feedstock too: stone folds the
       // leather and lugwork into stock like it folds the plate. The
       // under takes your wheels' muscle the same as their teeth.
-      // sprint 640 — and it KEEPS its kind: a carried belt heads for
+      // sprint 646 — and it KEEPS its kind: a carried belt heads for
       // a muscle-less housing, not the coil pile.
       this.carrying = Math.max(this.carrying, 1);
       this.carriedKind = 'belt';
@@ -677,7 +677,7 @@ export class Grafter extends Entity {
       // sprint 601 — a torn lens is feedstock too: stone folds the
       // ground glass into stock like it folds the belt. The under
       // takes your eyes' sight the same as their muscle.
-      // sprint 640 — and it KEEPS its kind: a carried lens heads for
+      // sprint 646 — and it KEEPS its kind: a carried lens heads for
       // a pried socket — an eye that pans against you.
       this.carrying = Math.max(this.carrying, 1);
       this.carriedKind = 'lens';
@@ -732,7 +732,7 @@ export class Grafter extends Entity {
         c.sound.emit({ x: this.pos.x, y: 0.3, z: this.pos.z, intensity: 0.35,
           category: 'item', caption: '[wire scraping stone]', source: this.id });
       }
-      // sprint 640 — muscle and glass graft instead of unspooling: a
+      // sprint 646 — muscle and glass graft instead of unspooling: a
       // carried belt seeks a muscle-less housing, a carried lens a
       // pried socket, and the walk to it is honest pathing like the
       // spill drag. No substrate in reach means the goods fold into
@@ -881,7 +881,7 @@ export class Grafter extends Entity {
     super.stagger(seconds);
     if (this.carrying > 0) {
       this.carrying = 0;
-      // sprint 640 — a belt or lens on its back spills as itself,
+      // sprint 646 — a belt or lens on its back spills as itself,
       // not as wire: the goods stay goods even dropped.
       if (!this.spillCarriedKind()) {
         const pr = this.roomOf(this.pos);
@@ -900,7 +900,7 @@ export class Grafter extends Entity {
     }
   }
 
-  /** sprint 640 — carried goods spill as THEMSELVES: a belt drops a
+  /** sprint 646 — carried goods spill as THEMSELVES: a belt drops a
    *  belt, a lens drops glass — the under relocates, never destroys.
    *  Returns true when a carried kind spilled. */
   private spillCarriedKind(): boolean {
@@ -928,7 +928,7 @@ export class Grafter extends Entity {
       // dispose() re-invokes onDone — the coil must leave the rubble's
       // hands once planted or a settled body plants it twice
       this.carrying = 0;
-      // sprint 640 — a belt or lens on its back settles as itself,
+      // sprint 646 — a belt or lens on its back settles as itself,
       // not armed wire: spill the good where the rubble sank.
       if (!this.spillCarriedKind()) {
         const pr = this.roomOf(this.pos);
