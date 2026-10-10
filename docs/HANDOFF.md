@@ -8366,7 +8366,21 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 684–686 — the cellars kept the stain, the whitewash kept its line & the tails dragged the dust (decals lane)
+\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
+
+- `catHalo` — curled heat halos on radiator/masonryHeater/bench/bedBench tops (props overlay).
+- `birdCage` — feather drift + seed scatter under cageLocker/cageLight/cagedSconce/recordsCage.
+- `ropeCoil` — coil ring ghosts on floors near ropeBarrier/chainFence.
+- `viceJaw` + `nailSpill` — jaw bites + spilled nails on benchVice/toolChest/toolbox/utilityBox/toolCart tops.
+- `broomLean` — handle scuffs on maintenance/kitchen/scullery/!livedIn walls.
+- `sashCord` — broken-cord ghosts beside window/transomWindow/traceryWindow.
+- `pipeFlange` — bolted rings where pipe/indPipes/pipeManifold/radiator kinds meet walls.
+- `feltPad` — felt pad ghosts under chair/table/stool/diningChair/armchair/schoolChair.
+- `bootPolish` — polish rings beside entrances (`doorPositions` is the LOCAL `[spec.entry, ...spec.exits]` array — `spec.doorPositions` does not exist).
+- `letterPeel` — peeled-letter ghosts on routingBoard/board/sign/exitSign walls.
+- `spiderSac` — egg-sac clusters at ceiling corners in dark biomes.
+
+Gates: tsc, lint, scoped vitest (687–690) green.\n\n## Sprint 684–686 — the cellars kept the stain, the whitewash kept its line & the tails dragged the dust (decals lane)
 
 - `wineStain` — dark spatter and tide rings under `wineBarrel`/`barrel`/`wineRack`/`wineBottles`.
 - `whitewashLine` — ghost band where a stopped paint job ended at waist height (`maintenance`/`unlit`/`!livedIn`, `pickWallSpot`).
