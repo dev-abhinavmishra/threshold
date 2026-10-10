@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 691–693 — the stairs kept their rods, the mirrors foxed & the spools kept their shadows (decals lane)
+\n\n## Sprint 694–696 — the copper ran green, the jars kept their rings & the planes kept their curls (decals lane)
+
+- `verdigrisStreak` — green patina runs under copperSet/brassPot/pipe kinds.
+- `lidPry` — pry-bar gouges on crate/chest/box lids.
+- `wrenchBite` — jaw marks on manifolds/boilers/vices.
+- `preserveRing` — syrup rings on pantry/shelf props.
+- `cheeseRing` — wheel rings on cuttingBoard/table/counter kinds.
+- `sieveSift` — flour fans on kitchen counters.
+- `planeCurl` — shaving ribbons on bench/tool props.
+- `drillPit` — drilled holes on worktops.
+- `hammerDent` — strike pits on maintenance/under/!livedIn walls.
+
+Gates: tsc, lint, scoped vitest (694–696) green.\n\n## Sprint 691–693 — the stairs kept their rods, the mirrors foxed & the spools kept their shadows (decals lane)
 
 - `stairRod` — bracket ghosts across stairs/ladders (stairs/grandStair/stairLanding/stairGate/ladder/woodLadder/libraryLadder/rollingLadder/fireEscape).
 - `pelmetDust` — dust shelves above windows/curtain kinds.
