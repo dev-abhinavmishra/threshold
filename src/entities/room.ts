@@ -1001,7 +1001,12 @@ export class HazardField {
     mesh?: THREE.Object3D }[] = [];
   puddles: { pos: import('../engine/math').Vec3; room: number; radius: number; humT?: number; entT?: number }[] = [];
   steams: { pos: import('../engine/math').Vec3; room: number; phase: number;
-    cycle: number; dead: boolean; hitT?: number; warnT?: number; entT?: number }[] = [];
+    cycle: number; dead: boolean; hitT?: number; warnT?: number; entT?: number;
+    /** sprint 581 — `valved=false` means the throat is stripped: a
+     *  bled line can re-lay, a throatless one never can. `owner`
+     *  names whose valve is threaded — 'player' means player work
+     *  the house won't re-lay. */
+    valved?: boolean; owner?: 'player' }[] = [];
   /** Fresh sign: every hazard that dies (cut, sprung, bled, drained) leaves
    *  scent a posted hunter can read — quiet work is marked work. A `wipe`
    *  record is the felt-wrap's shadow: the floor was worked clean, and only

@@ -498,3 +498,57 @@ describe('the plate is goods (sprints 577-580)', () => {
     expect(gameSrc).toContain('trapsSet: this.setTraps.length');
   });
 });
+
+describe('the valve is scrap too (sprints 581-584)', () => {
+  it('a bled line yields its throat; refit vents are player work the house leaves alone', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    // the throat is a part: strip yields steamValve, refit spends it
+    expect(interactionSrc).toContain("| 'workValve'");
+    expect(interactionSrc).toContain("| 'refitValve'");
+    expect(gameSrc).toContain("case 'workValve'");
+    expect(gameSrc).toContain("case 'refitValve'");
+    expect(gameSrc).toContain("giveItem('steamValve'");
+    // the strip is the permanent kill — no throat, no re-lay; and
+    // player-threaded lines are outside the house's re-lay jurisdiction
+    expect(roomSrc).toContain('valved?: boolean');
+    expect(roomSrc).toContain("owner?: 'player'");
+    const rearm = gameSrc.slice(gameSrc.indexOf("kind === 'line'"), gameSrc.indexOf("kind === 'spring'"));
+    expect(rearm).toContain('st.valved !== false');
+    expect(rearm).toContain("st.owner !== 'player'");
+    // bleeding your own refit signs 'work' by:'player', never 'line'
+    const bleed = gameSrc.slice(gameSrc.indexOf("case 'bleed'"), gameSrc.indexOf("case 'scrub'"));
+    expect(bleed).toContain("st.owner === 'player'");
+    expect(bleed).toContain("by: 'player'");
+    // throat + ownership ride deadHazards through the checkpoint
+    expect(storeSrc).toContain('valved?: boolean; owner?:');
+    expect(gameSrc).toContain('ventsOwned: this.hazard.steams.filter');
+  });
+});
+
+describe('the house crimps your line (sprints 585-588)', () => {
+  it('a work-sign near your live valve gets pinched shut — and yours re-opens free', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // the crimp is a real answer, not a re-lay — 'work' joins the
+    // investigate kinds and the return names the squeeze
+    expect(baseSrc).toContain("'blind' | 'spring' | 'work'");
+    expect(baseSrc).toContain("| 'crimp' | null");
+    expect(corridorSrc).toContain("|| this.investigateKind === 'work'");
+    expect(corridorSrc).toContain("restored === 'crimp'");
+    // the ctx impl finds a live player-threaded vent and deads it,
+    // keeping ownership — your throat, pinched, not unthreaded
+    const crimp = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(crimp).toContain("st.owner === 'player' && near(st.pos)");
+    expect(crimp).toContain('s.dead = true');
+    expect(crimp).toContain("return 'crimp'");
+    // and the re-open is free on your own throat
+    const refit = gameSrc.slice(gameSrc.indexOf("case 'refitValve'"));
+    expect(refit).toContain("st.owner === 'player' && st.valved !== false");
+    // the seam reads your live line
+    expect(gameSrc).toContain("your line breathes past the leaf");
+  });
+});
