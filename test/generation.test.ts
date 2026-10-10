@@ -7,7 +7,6 @@ import { validateRoute } from '../src/world/validation';
 import type { RoomInstance } from '../src/game/types';
 import { aabbFromMinMax, v3 } from '../src/engine/math';
 import { portLocalPos, inDoorLane, footprintInDoorLane, footprintInDoorLeaf } from '../src/world/spec';
-import { modelCollider } from '../src/world/modelLibrary';
 import { modelCollider, MODEL_FOR } from '../src/world/modelLibrary';
 import { buildProp } from '../src/world/props';
 import { Rng } from '../src/engine/rng';
@@ -5694,6 +5693,17 @@ describe('decals land where they claim (review fixes)', () => {
             found++;
             expect(Math.abs(o.position.x), `${o.name} mark beyond the wall`).toBeLessThanOrEqual(hw);
             expect(Math.abs(o.position.z), `${o.name} mark beyond the wall`).toBeLessThanOrEqual(hd);
+          }
+          if (o.name === 'kick-split') {
+            found++;
+            const wp = new THREE.Vector3();
+            o.getWorldPosition(wp);
+            expect(wp.y, 'kick-split below the floor').toBeGreaterThan(0.15);
+          }
+          if (o.name === 'lath-expose') {
+            found++;
+            expect(['tile', 'corrugated', 'woodPanel', 'brick'],
+              `lath-expose on ${room.spec.wallMaterial}`).not.toContain(room.spec.wallMaterial);
           }
         });
       }

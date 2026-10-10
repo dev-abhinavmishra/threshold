@@ -817,7 +817,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (!industrial && rng.float() < 0.15) {
       const ks = decalQuad(kickSplit(rng), 0.5, 0.75);
       ks.name = 'kick-split';
-      ks.position.set(port.width / 2 - 0.5, -1.3, 0.052);
+      // Leaf-local y=0 is door mid-height — keep the blow just above
+      // the kick plate, ~0.4m off the floor, not below it.
+      ks.position.set(port.width / 2 - 0.5, -0.72, 0.052);
       leaf.add(ks);
     }
     // The knobs kept the hands — a burnished ring in the paint where
@@ -2387,8 +2389,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     }
 
     // The walls opened — where the render failed, the wood lath shows
-    // through like a rib, plaster crumbs dropped at its foot.
-    if (!livedIn && rng.bool(0.5)) {
+    // through like a rib, plaster crumbs dropped at its foot. Only on
+    // rendered walls: tile, steel, panelling and brick have no lath to bare.
+    if (!livedIn && spec.wallMaterial !== 'tile' && spec.wallMaterial !== 'corrugated'
+      && spec.wallMaterial !== 'woodPanel' && spec.wallMaterial !== 'brick' && rng.bool(0.5)) {
       const spot = pickWallSpot(0.9);
       if (spot) {
         wallDecal(spot.wall, lathExpose(rng), 0.7 + rng.float() * 0.2, 0.55 + rng.float() * 0.15, spot.along, 1.15 + rng.float() * 0.5);
