@@ -1409,3 +1409,62 @@ test('the under grafts back — the wheel and the socket answer a third jurisdic
   expect(result.beltDropped, 'the pull drops the grafted muscle as goods').toBe(true);
   expect(errors).toEqual([]);
 });
+
+test('the floorkeeper sweeps the lid — work near your stash scatters the take', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
+      droppedBelts: { x: number; z: number }[];
+      droppedCoils: { x: number; z: number }[];
+      sweptLids: number;
+      entityCtx: () => {
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+    };
+    const ctx = ga.entityCtx();
+    // pick a stashed lid: a hiding spot with goods on record. Force
+    // the stash — the e2e fixture seeds the ledger the way a real
+    // 'stashTake' deposit leaves it.
+    const spot = g.route.rooms.flatMap((r) =>
+      ((r as { hidingSpots?: { id: string; exitPos: { x: number; z: number } }[] })
+        .hidingSpots ?? []).map((s) => ({ s })))[0];
+    if (!spot) return { stage: 'no-spot' } as const;
+    const { s } = spot;
+    ga.lidStashes.set(`${g.space}:${s.id}`, {
+      items: [{ id: 'fanBelt', count: 2 }, { id: 'wireCoil', count: 1 }, { id: 'documents', count: 1 }],
+      marked: ['fanBelt'],
+    });
+    const before = { belts: ga.droppedBelts.length, coils: ga.droppedCoils.length };
+    // a 'work' mark at the lid's mouth — the signature the stash
+    // itself leaves — gets the fourth dispatch
+    const swept = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
+    const stash = ga.lidStashes.get(`${g.space}:${s.id}`);
+    return {
+      stage: 'swept' as const,
+      swept,
+      beltGain: ga.droppedBelts.length - before.belts,
+      coilGain: ga.droppedCoils.length - before.coils,
+      kept: stash?.items.map((i) => `${i.id}:${i.count}`) ?? ['deleted'],
+      marked: stash?.marked ?? [],
+      count: ga.sweptLids,
+    };
+  });
+
+  if (result.stage === 'no-spot') test.skip();
+  else {
+    expect(result.swept, 'work near a stuffed lid is the sweep').toBe('sweep');
+    expect(result.beltGain, 'the swept belts land as floor goods').toBe(2);
+    expect(result.coilGain, 'the swept coil lands as floor goods').toBe(1);
+    expect(result.kept, 'oddities keep the lid — documents do not pile').toEqual(['documents:1']);
+    expect(result.marked, 'marks ride off with the scattered goods').toEqual([]);
+    expect(result.count, 'the epitaph counts the tipped lid').toBe(1);
+  }
+  expect(errors).toEqual([]);
+});

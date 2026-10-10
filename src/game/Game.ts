@@ -1645,7 +1645,43 @@ export class Game {
             // jurisdiction — 'work' near it means tear it back.
             const w = this.hazard.watchers.find((ww) => ww.owner !== undefined
               && ww.lensed !== false && near(ww.pos));
-            if (!w) return null;
+            if (!w) {
+              // sprint 653 — or your lid gets the sweep: the stash
+              // signs 'work' when you fill it (s528), and the last
+              // surface without a house answer pays it now — the
+              // floorkeeper tips the box, your take comes out as
+              // floor piles. Scattered, not confiscated.
+              const spot = this.activeRooms().flatMap((r) => r.hidingSpots)
+                .find((s) => near(s.exitPos)
+                  && (this.lidStashes.get(`${this.space}:${s.id}`)?.items.length ?? 0) > 0);
+              if (!spot) return null;
+              const stash = this.lidStashes.get(`${this.space}:${spot.id}`)!;
+              const pileIds = ['feltWrap', 'doorChock', 'wireCoil',
+                'springPart', 'fanBelt', 'eyeLens'] as const;
+              const count = (id: string) => stash.items
+                .filter((i) => i.id === id).reduce((a, i) => a + i.count, 0);
+              const wraps = count('feltWrap'), chocks = count('doorChock'),
+                coils = count('wireCoil'), springs = count('springPart'),
+                belts = count('fanBelt'), lenses = count('eyeLens');
+              if (!wraps && !chocks && !coils && !springs && !belts && !lenses)
+                return null; // oddities keep the lid — only goods sweep
+              const swept = new Set<string>(pileIds);
+              stash.items = stash.items.filter((i) => !swept.has(i.id));
+              stash.marked = stash.marked.filter((m) => !swept.has(m));
+              if (!stash.items.length && !stash.marked.length)
+                this.lidStashes.delete(`${this.space}:${spot.id}`);
+              const p = spot.exitPos;
+              if (wraps) this.droppedWraps.push({ x: p.x, z: p.z, n: wraps });
+              for (let k = 0; k < chocks; k++) this.kickedWedges.push({ x: p.x + k * 0.07, z: p.z + k * 0.04 });
+              for (let k = 0; k < coils; k++) this.droppedCoils.push({ x: p.x - k * 0.08, z: p.z - k * 0.03 });
+              for (let k = 0; k < springs; k++) this.droppedSprings.push({ x: p.x + k * 0.09, z: p.z - k * 0.06 });
+              for (let k = 0; k < belts; k++) this.droppedBelts.push({ x: p.x - k * 0.1, z: p.z + k * 0.05 });
+              for (let k = 0; k < lenses; k++) this.droppedLenses.push({ x: p.x + k * 0.08, z: p.z - k * 0.07 });
+              this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops();
+              this.mintSpringDrops(); this.mintBeltDrops(); this.mintLensDrops();
+              this.sweptLids = (this.sweptLids ?? 0) + 1;
+              return 'sweep';
+            }
             w.dead = true;
             w.lensed = false;
             delete w.owner; // the glass is off — dead socket, nobody's
@@ -1755,6 +1791,7 @@ export class Game {
    *  socket's glass onto the boards where it lies as loose goods —
    *  gatherable, pocketable, foldable like the belt. */
   private droppedLenses: { x: number; z: number }[] = [];
+  private sweptLids = 0;
   /** Coils the house worked off a bound leaf — same drop convention:
    *  wire isn't destroyed by the strain, it lands as loot. */
   private droppedCoils: { x: number; z: number }[] = [];
@@ -8383,6 +8420,8 @@ export class Game {
             // sprint 650 — and what the under grafted back against you
             graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
               + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
+            // sprint 653 — and the lids the floorkeeper tipped out
+            lidsSwept: this.sweptLids || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -8451,6 +8490,8 @@ export class Game {
         // sprint 650 — the work the under re-threaded against you
         graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
           + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
+        // sprint 653 — and the lids the floorkeeper tipped out
+        lidsSwept: this.sweptLids || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

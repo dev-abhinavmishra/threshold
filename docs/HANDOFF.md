@@ -4,6 +4,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
+
+- **652** the signature already existed: `stashTake`/`stashMark` sign `'work'` `by:'player'` when the lid fills (s528). What was missing was the reader — the last goods surface without a house answer.
+- **653** fourth `'work'` dispatch in `rearmHazard`: crimp → pull → tear → **sweep**. A `'work'` mark near a stashed lid (`near(s.exitPos)` + non-empty stash) tips the box: the six stackable goods come out as their honest floor piles at the lid's mouth — scattered, not confiscated. Oddities (pile-less ids like documents) keep the box; marks ride off with the scattered goods; emptied stashes drop out of `lidStashes`.
+- **654** the warden reads the sweep aloud (`[it tips your lid — the take scatters the floor]`, corridor cue), and the epitaph counts tipped lids (`books.lidsSwept`).
+- **655** contract spec: `'sweep'` in the `rearmHazard` union, pile-set parity with the take, delete-on-empty, the `if (!spot) return null` no-stash path.
+- **656** e2e leg (`props.spec.ts`): seeded stash → `rearmHazard('work', exitPos)` → `'sweep'`, belts+coils minted on the floor, documents kept, marked cleared, `sweptLids=1`.
+
+Traps: place the mark clear of owned housings/sockets — pull and tear dispatch BEFORE the sweep in the 'work' chain, so a mark near a grafted wheel answers the wheel instead of the lid. A stash of pure oddities is unsweepable (returns null, mark stays for other readers).
+
+
+
 ## Sprint 646–650 — the under grafts back (third jurisdiction: owner:'under')
 
 - **Sprint 646**: the grafter stops folding every good into wire — a
