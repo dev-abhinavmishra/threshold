@@ -11450,3 +11450,16 @@ export function doorGlow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+// The sconce kept its halo — warm bloom thrown on the plaster under
+// a working wall lamp, cooling to nothing at the edge.
+export function sconcePool(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const g = ctx.createRadialGradient(32, 10, 2, 32, 26, 42);
+    g.addColorStop(0, `rgba(255,200,130,${0.32 + rng.float() * 0.14})`);
+    g.addColorStop(0.5, `rgba(200,140,80,${0.12 + rng.float() * 0.08})`);
+    g.addColorStop(1, 'rgba(140,90,50,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+  });
+}

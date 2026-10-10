@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -3317,6 +3317,51 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(hw, heaterGhost(rng), 1.4 + rng.float() * 0.3, 0.9 + rng.float() * 0.2, along, 1.5 + rng.float() * 0.2);
       const hg = group.children[group.children.length - 1];
       if (hg && !hg.name) hg.name = 'heater-ghost';
+    }
+
+    // The halls kept their lamps — sconce arms marching the corridor,
+    // alternating walls the way the porters wired them. Emissive
+    // bulbs only; the pool of thrown light is faked with a wall decal.
+    if (spec.biome === 'corridor' && d > w * 1.15 && !isUnder) {
+      const step = 2.6 + rng.float() * 0.6;
+      const count = Math.max(1, Math.floor((d - 1.2) / step));
+      let side = rng.bool(0.5) ? 1 : -1;
+      for (let i = 0; i < count; i++) {
+        const sz = -d / 2 + (i + 0.5) * ((d - 1.2) / count) + 0.6;
+        const sx = side * (w / 2 - 0.05);
+        const py = 1.9 + rng.float() * 0.15;
+        // arm out from the wall
+        const arm = new THREE.Mesh(texBox(0.05, 0.05, 0.14), MAT.brass());
+        arm.name = 'corridor-sconce';
+        arm.position.set(sx - side * 0.06, py, sz);
+        group.add(arm);
+        frameHardware.push(arm);
+        // shade cone, mouth down
+        const shade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.11, 8, 1, true), MAT.brass());
+        shade.name = 'sconce-shade';
+        shade.position.set(sx - side * 0.13, py + 0.06, sz);
+        group.add(shade);
+        frameHardware.push(shade);
+        // bulb — warm emissive, sometimes dead
+        const lit = rng.float() < 0.7;
+        const bMat = new THREE.MeshStandardMaterial({
+          color: 0x1a1208, emissive: lit ? 0xd8a050 : 0x202028,
+          emissiveIntensity: lit ? 0.9 : 0.2, roughness: 0.6, metalness: 0,
+        });
+        bMat.userData.decalMat = true;
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), bMat);
+        bulb.name = lit ? 'sconce-bulb-lit' : 'sconce-bulb';
+        bulb.position.set(sx - side * 0.13, py + 0.02, sz);
+        group.add(bulb);
+        frameHardware.push(bulb);
+        // the thrown pool on the plaster beneath
+        if (lit && rng.float() < 0.8) {
+          wallDecal(side === 1 ? 'e' : 'w', sconcePool(rng), 0.7, 0.9, sz, py - 0.45);
+          const wl2 = group.children[group.children.length - 1];
+          if (wl2 && !wl2.name) wl2.name = 'sconce-pool';
+        }
+        side = -side;
+      }
     }
 
     // The veins ran the skirting — supply pipes hugging the wall in
