@@ -970,6 +970,23 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
   });
 
+  describe('the knee outranks the broom (sprints 700-703)', () => {
+    it('the scatter waits for hands that are free', () => {
+      const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+      // the lidSweep find refuses held lids — 'work' near a gripped
+      // lid answers nothing while a knee or a rattle claims the box
+      expect(gameSrc).toContain('!s.trappedBy && near(s.exitPos)');
+      // the peep read names its holder — a knee is part of the tell
+      expect(gameSrc).toContain("heldBy === 'sweep' ? ' · a knee sits on it'");
+      expect(gameSrc).toContain("' · hands hold it shut'");
+      // and the release cues like the planting did — the room hears
+      // the weight come off the box
+      const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+      expect(corridorSrc).toContain('the knee lifts off the lid');
+      expect(corridorSrc).toContain("s.trappedBy = undefined");
+    });
+  });
+
   describe('the wire walks under the knee (sprints 663-665)', () => {
     it('the under robs a gripped lid and the house tells you the hands do not care', () => {
       const gameSrc = readFileSync('src/game/Game.ts', 'utf8');

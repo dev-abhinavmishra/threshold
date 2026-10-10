@@ -1470,6 +1470,60 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
   expect(errors).toEqual([]);
 });
 
+// sprint 700 — ordering: the scatter waits for hands that are free.
+// A knee on the lid outranks the warden's broom; the 'work' sign
+// stands and a later read still answers.
+test('the knee outranks the broom — a held lid keeps its take', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      space: string;
+      lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
+      droppedCoils: { x: number; z: number }[];
+      entityCtx: () => {
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+    };
+    const ctx = ga.entityCtx();
+    const spot = g.route.rooms.flatMap((r) =>
+      ((r as { hidingSpots?: { id: string; exitPos: { x: number; z: number }; trappedBy?: string }[] })
+        .hidingSpots ?? []).map((s) => ({ s })))[0];
+    if (!spot) return { stage: 'no-spot' } as const;
+    const { s } = spot;
+    ga.lidStashes.set(`${ga.space}:${s.id}`, {
+      items: [{ id: 'wireCoil', count: 1 }], marked: [],
+    });
+    // the knee sits: 'work' by the held lid must answer nothing —
+    // the sign stands, the take waits.
+    s.trappedBy = 'sweep';
+    const held = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
+    const keptWhileHeld = ga.lidStashes.get(`${ga.space}:${s.id}`)?.items.length ?? 0;
+    // the knee lifts: the same mark now scatters the take.
+    s.trappedBy = undefined;
+    const coilsBefore = ga.droppedCoils.length;
+    const freed = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
+    return { stage: 'done' as const, held, keptWhileHeld,
+      freed, coilGain: ga.droppedCoils.length - coilsBefore,
+      stashGone: !ga.lidStashes.has(`${ga.space}:${s.id}`) };
+  });
+
+  if (result.stage === 'no-spot') test.skip();
+  else {
+    expect(result.held, 'a gripped lid answers the broom nothing').toBeNull();
+    expect(result.keptWhileHeld, 'the knee keeps the take in the box').toBe(1);
+    expect(result.freed, 'the freed lid answers the next read').toBe('lidSweep');
+    expect(result.coilGain, 'the freed take scatters to the floor').toBe(1);
+    expect(result.stashGone, 'the emptied lid is gone from the ledger').toBe(true);
+  }
+  expect(errors).toEqual([]);
+});
+
 // sprint 680 — the under strips your hands: 'work' marks arm the
 // grafter's strip, and every armed surface answers its pocket. Driven
 // through the same ctx hooks the grafter calls.

@@ -2,6 +2,15 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 700–703 — the knee outranks the broom (mechanics lane)
+
+- **700** the ordering line the sweep arc left open: `lidSweep`'s find ignored `trappedBy` — the warden could tip a lid a knee (or a rattle's grip) was already sitting on, scattering the take out from under a hold that claimed it. The find now requires `!s.trappedBy`: 'work' near a held lid answers nothing — the sign stands, the take waits, and a later read still pays.
+- **701** `peepLid` names its holder: a look at a gripped lid now reads `[the lid keeps N goods — a knee sits on it]` ('sweep') or `· hands hold it shut` for the other grips — the hold is part of the tell, not a footnote the recover refuses later.
+- **702** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
+- **703** pins + live: contract 61/61 (new describe pins ordering + peep holder + release cue); e2e leg 'the knee outranks the broom' drives it — held lid + 'work' → `null`, stash intact; knee lifts → same mark → `lidSweep`, coils on the floor. Both lid legs green.
+
+Next: the knee family is closed (plants / holds / robs / outranks / releases). Backlog: the 'work'-streak escalation surface (repeat marks near an outstanding sign — wanted already tightens; a room-local streak needs its own design), milestone-set hearing (design call), the purse-sink gap in gallery/records wings (fines drawer / coatrack), and the ghost: locked leaves let the Bellman through the seam but the knock loop still skips them — deliberately, watch if the new tell makes it legible.
+
 ## Sprint 681–683 — your jaw answers too (mechanics lane)
 
 - **681** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.

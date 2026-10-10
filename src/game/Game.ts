@@ -1814,8 +1814,13 @@ export class Game {
               // surface without a house answer pays it now — the
               // floorkeeper tips the box, your take comes out as
               // floor piles. Scattered, not confiscated.
+              // sprint 700 — ordering line: the scatter only tips a
+              // lid NO hand holds. A knee already planted on the box
+              // ('sweep') or a rattle's grip ('hollow'/'inspector')
+              // outranks the warden's broom — the held lid keeps its
+              // take, and its 'work' sign stands for later hands.
               const spot = this.activeRooms().flatMap((r) => r.hidingSpots)
-                .find((s) => near(s.exitPos)
+                .find((s) => !s.trappedBy && near(s.exitPos)
                   && (this.lidStashes.get(`${this.space}:${s.id}`)?.items.length ?? 0) > 0);
               if (!spot) return null;
               const stash = this.lidStashes.get(`${this.space}:${spot.id}`)!;
@@ -4859,9 +4864,15 @@ export class Game {
         // grafter worked tells you its wire walked.
         const robbed = stash.robbedWire && !stash.items.some((i) => i.id === 'wireCoil')
           ? ' · its wire walked' : '';
+        // sprint 701 — and the lid names its holder: a knee or a grip
+        // on the box is part of the read, not a footnote after it.
+        const heldBy = this.activeRooms().flatMap((r) => r.hidingSpots)
+          .find((s) => s.id === spotId)?.trappedBy;
+        const held = heldBy === 'sweep' ? ' · a knee sits on it'
+          : heldBy ? ' · hands hold it shut' : '';
         this.cue('info', it.pos, m > 0
-          ? `[the lid keeps ${n} goods — ${m} of it marked${robbed}]`
-          : `[the lid keeps ${n} goods${robbed}]`);
+          ? `[the lid keeps ${n} goods — ${m} of it marked${robbed}${held}]`
+          : `[the lid keeps ${n} goods${robbed}${held}]`);
         return;
       }
       case 'recoverStash': {
