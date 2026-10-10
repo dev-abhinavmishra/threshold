@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -4076,6 +4076,40 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         wallDecal(spot.wall, cordBite(rng), 0.45 + rng.float() * 0.1, 0.85 + rng.float() * 0.1, spot.along, 1.7 + rng.float() * 0.25);
         const cb = group.children[group.children.length - 1];
         if (cb && !cb.name) cb.name = 'cord-bite';
+      }
+    }
+
+    // The kettle rang the wall — steam halo above cooking props.
+    for (const p of spec.props) {
+      if ((p.kind !== 'stove' && p.kind !== 'kettle' && p.kind !== 'masonryHeater') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, kettleHalo(rng), 0.9 + rng.float() * 0.2, 0.9 + rng.float() * 0.2, along, 1.5 + rng.float() * 0.3);
+      const kh = group.children[group.children.length - 1];
+      if (kh && !kh.name) kh.name = 'kettle-halo';
+    }
+    // The shelf bowed — sag shadows under loaded shelving.
+    for (const p of spec.props) {
+      if ((p.kind !== 'bookshelf' && p.kind !== 'shelf' && p.kind !== 'cabinet' && p.kind !== 'dresser') || rng.float() >= 0.4) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, shelfSag(rng), 0.9 + rng.float() * 0.15, 0.45 + rng.float() * 0.1, along, 1.5 + rng.float() * 0.4);
+      const ss = group.children[group.children.length - 1];
+      if (ss && !ss.name) ss.name = 'shelf-sag';
+    }
+    // The flue exhaled — soot blooms on ceilings above hearths.
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'masonryHeater' && p.kind !== 'stove') || rng.float() >= 0.45) continue;
+      const cs = decalQuad(chimneySmut(rng), 1.0 + rng.float() * 0.25, 1.0 + rng.float() * 0.25);
+      if (cs) {
+        cs.rotation.x = Math.PI / 2;
+        cs.position.set(p.x + (rng.float() - 0.5) * 0.3, h - 0.02, p.z + (rng.float() - 0.5) * 0.3);
+        cs.name = 'chimney-smut';
+        group.add(cs);
       }
     }
 

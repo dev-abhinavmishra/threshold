@@ -12583,3 +12583,128 @@ export function cordBite(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Kettle halo — the kettle rang the wall: a circular steam halo
+ * above the stove, condensation beads and limescale drip. */
+export function kettleHalo(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // steam halo — a broad moisture bloom where the spout vented
+    const g = ctx.createRadialGradient(48, 40, 6, 48, 40, 38);
+    g.addColorStop(0, `rgba(160,165,160,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(0.6, `rgba(150,155,150,${0.18 + rng.float() * 0.1})`);
+    g.addColorStop(1, 'rgba(150,155,150,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(48, 40, 38, 0, Math.PI * 2);
+    ctx.fill();
+    // ring edge — the tide line where the bloom dried
+    ctx.strokeStyle = `rgba(140,135,115,${0.35 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(48, 40, 36 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // limescale drips — mineral trails running off the ring
+    for (let i = 0; i < 4; i++) {
+      const dx = 30 + rng.float() * 36;
+      const len = 14 + rng.float() * 26;
+      ctx.strokeStyle = `rgba(190,195,185,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.8 + rng.float() * 0.7;
+      ctx.beginPath();
+      ctx.moveTo(dx, 62);
+      ctx.quadraticCurveTo(dx + (rng.float() - 0.5) * 3, 62 + len * 0.6, dx + (rng.float() - 0.5) * 5, 62 + len);
+      ctx.stroke();
+    }
+    // bead specks — droplets caught mid-run
+    for (let i = 0; i < 10; i++) {
+      ctx.fillStyle = `rgba(195,200,190,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 56, 50 + rng.float() * 38, 0.6 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // soot kiss — a faint smoke edge along the top
+    ctx.fillStyle = `rgba(60,55,48,${0.15 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 8, 30, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Shelf sag — the shelf bowed under the weight it kept: a
+ * deflection shadow, dust banks piled to the low side, lost items. */
+export function shelfSag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the bow — a curved shadow under the shelf line, deepest mid-span
+    ctx.strokeStyle = `rgba(50,42,34,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(8, 16);
+    ctx.quadraticCurveTo(48, 24 + rng.float() * 6, 88, 16);
+    ctx.stroke();
+    // shelf line itself — the board's edge
+    ctx.strokeStyle = `rgba(90,80,66,${0.4 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(8, 15);
+    ctx.quadraticCurveTo(48, 22 + rng.float() * 5, 88, 15);
+    ctx.stroke();
+    // dust banks — piled drifts at the supported ends
+    for (const bx of [14, 78]) {
+      ctx.fillStyle = `rgba(160,150,130,${0.35 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.ellipse(bx + rng.float() * 4, 10, 8 + rng.float() * 4, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // bracket ghosts — pale rectangles where brackets caught nothing
+    for (const gx of [16, 74]) {
+      ctx.fillStyle = `rgba(140,130,112,${0.25 + rng.float() * 0.12})`;
+      ctx.fillRect(gx, 18, 4, 12 + rng.float() * 4);
+    }
+    // the lost item — one thing fell behind: a dark sliver at wall level
+    ctx.fillStyle = `rgba(45,38,30,${0.45 + rng.float() * 0.2})`;
+    ctx.fillRect(46 + rng.float() * 14, 22, 3, 14);
+  });
+}
+
+/** Chimney smut — the flue exhaled against the ceiling: a soot
+ * bloom with feathered edges and drifting smoke ghosts. */
+export function chimneySmut(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the main bloom — dense core, feathered out
+    const g = ctx.createRadialGradient(48, 30, 4, 48, 30, 34);
+    g.addColorStop(0, `rgba(40,34,28,${0.55 + rng.float() * 0.2})`);
+    g.addColorStop(0.5, `rgba(45,38,32,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(45,38,32,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(48, 30, 34, 0, Math.PI * 2);
+    ctx.fill();
+    // smoke ghosts — fainter drifts the draft carried wider
+    for (let i = 0; i < 3; i++) {
+      const gx = 20 + rng.float() * 56, gy = 55 + rng.float() * 28;
+      const gg = ctx.createRadialGradient(gx, gy, 1, gx, gy, 10 + rng.float() * 8);
+      gg.addColorStop(0, `rgba(50,44,38,${0.2 + rng.float() * 0.12})`);
+      gg.addColorStop(1, 'rgba(50,44,38,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 10 + rng.float() * 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // feather streaks — soot tongues reaching down the wall
+    for (let i = 0; i < 5; i++) {
+      const sx = 32 + rng.float() * 32;
+      ctx.strokeStyle = `rgba(48,42,36,${0.25 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(sx, 40);
+      ctx.quadraticCurveTo(sx + (rng.float() - 0.5) * 6, 55, sx + (rng.float() - 0.5) * 9, 66 + rng.float() * 12);
+      ctx.stroke();
+    }
+    // tar drops — hardened beads at the bloom's bottom lip
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(30,26,22,${0.5 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(36 + rng.float() * 24, 48 + rng.float() * 8, 0.8 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

@@ -67,6 +67,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
 - `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
 
+## Sprint 673 — the kettle rang the wall, the shelf bowed & the flue exhaled
+
+- `kettleHalo` (96×96): steam bloom + dried tide-ring + limescale drips + beads + soot kiss; 45% of stove/kettle/masonryHeater props.
+- `shelfSag` (96×48): bowed shelf shadow + dust banks + bracket ghosts + fallen-item sliver; 40% of bookshelf/shelf/cabinet/dresser.
+- `chimneySmut` (96×96): feathered soot bloom + smoke ghosts + streak tongues + tar beads; ceiling quad (rotation.x=π/2) at h−0.02 above fireplace/masonryHeater/stove, 45%. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
