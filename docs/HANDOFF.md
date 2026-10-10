@@ -4,6 +4,13 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 622–624 — the ceiling carried its mains (overhead conduit batch)
+
+- `ceiling-main` 1–3 parallel conduit runs along one axis at h-0.12
+  in under/maintenance rooms; `main-hanger` straps to the slab every
+  ~1.4m; `main-junction` feed box + `main-stub` crossing run (~50%).
+- All `frameHardware`-kept like the skirting pipes.
+
 ## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
 
 - `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in

@@ -6023,3 +6023,20 @@ describe('the veins ran the skirting (sprint 619-621)', () => {
     });
   }
 });
+
+describe('the ceiling carried its mains (sprint 622-624)', () => {
+  for (const name of ['ceiling-main', 'main-hanger', 'main-junction', 'main-stub'] as const) {
+    it(`rooms carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
