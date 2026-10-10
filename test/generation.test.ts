@@ -6091,3 +6091,20 @@ describe('the sills kept their keepers (sprint 631-633)', () => {
     });
   }
 });
+
+describe('the openings wore their heads (sprint 634-636)', () => {
+  for (const name of ['lintel-frieze', 'lintel-key', 'lintel-rosette', 'win-head', 'win-casing', 'curtain-rod', 'rod-finial', 'rod-drape', 'outlet-plate', 'flex-cord'] as const) {
+    it(`rooms carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});

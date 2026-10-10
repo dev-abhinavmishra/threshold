@@ -752,6 +752,27 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         sb.position.set(sx * (fw / 2 - sideW - 0.015), 1.15, 0.15);
         frame.add(sb);
       }
+      // The opening wore its head — frieze band under the casing,
+      // keyblock center, rosette blocks over the side casings.
+      for (const zOff of [0.26, -0.26]) {
+        const frieze = new THREE.Mesh(texBox(fw + 0.1, 0.14, 0.035), caseMat);
+        frieze.name = 'lintel-frieze';
+        frieze.position.set(0, 2.42, zOff);
+        frame.add(frieze);
+        frameHardware.push(frieze);
+        const key = new THREE.Mesh(texBox(0.16, 0.2, 0.045), caseMat);
+        key.name = 'lintel-key';
+        key.position.set(0, 2.42, zOff);
+        frame.add(key);
+        frameHardware.push(key);
+        for (const sx of [-1, 1]) {
+          const ros = new THREE.Mesh(texBox(0.12, 0.12, 0.045), caseMat);
+          ros.name = 'lintel-rosette';
+          ros.position.set(sx * (fw / 2 - 0.05), 2.42, zOff);
+          frame.add(ros);
+          frameHardware.push(ros);
+        }
+      }
     }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
     const industrial = isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor';
@@ -3411,6 +3432,81 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           cloth.name = 'sill-cloth';
           put(cloth, ox, sillY + 0.01);
           cloth.rotation.y = rng.float() * 0.8 - 0.4;
+        }
+      }
+    }
+
+    // Wall-mounted mesh placer — `off` runs along the wall, `proud` is the
+    // center distance off the wall face; e/w meshes turn to face the room.
+    const placeOnWall = (m: THREE.Mesh, wall: 'n' | 's' | 'e' | 'w', off: number, y: number, proud: number) => {
+      if (wall === 'e') m.position.set(w / 2 - proud, y, off);
+      else if (wall === 'w') m.position.set(-w / 2 + proud, y, off);
+      else if (wall === 'n') m.position.set(off, y, -d / 2 + proud);
+      else m.position.set(off, y, d / 2 - proud);
+      if (wall === 'e' || wall === 'w') m.rotation.y = Math.PI / 2;
+      group.add(m);
+      frameHardware.push(m);
+    };
+
+    // The windows wore their heads — casing cap over the frame, a brass
+    // curtain rod, and whatever torn drop the last tenant left hanging.
+    for (const p of spec.props) {
+      if (p.kind !== 'window' || !livedIn || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const head = new THREE.Mesh(texBox(1.5, 0.09, 0.05), MAT.oak());
+      head.name = 'win-head';
+      placeOnWall(head, hw, along, 2.56, 0.035);
+      for (const sx of [-1, 1]) {
+        const cs = new THREE.Mesh(texBox(0.07, 1.74, 0.04), MAT.darkOak());
+        cs.name = 'win-casing';
+        placeOnWall(cs, hw, along + sx * 0.665, 1.7, 0.028);
+      }
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.7, 8), MAT.brass());
+      rod.name = 'curtain-rod';
+      placeOnWall(rod, hw, along, 2.68, 0.1);
+      if (hw === 'e' || hw === 'w') rod.rotation.set(Math.PI / 2, 0, 0);
+      else rod.rotation.set(0, 0, Math.PI / 2);
+      for (const sx of [-1, 1]) {
+        const fin = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 6), MAT.brass());
+        fin.name = 'rod-finial';
+        placeOnWall(fin, hw, along + sx * 0.85, 2.68, 0.1);
+      }
+      const nDrops = rng.float() < 0.75 ? 1 : 2;
+      let firstSide = 1;
+      for (let i = 0; i < nDrops; i++) {
+        const dl = 0.5 + rng.float() * 0.8;
+        const side = i === 0 ? (firstSide = rng.bool() ? -1 : 1) : -firstSide;
+        const dr = new THREE.Mesh(texBox(0.3, dl, 0.02), TEX.fabricDark());
+        dr.name = 'rod-drape';
+        placeOnWall(dr, hw, along + side * (0.45 + rng.float() * 0.15), 2.68 - dl / 2, 0.1);
+      }
+    }
+
+    // The skirting kept its sockets — outlet plates low on the walls,
+    // some still holding a cord that drops straight to the floor.
+    if (livedIn) {
+      const nOut = 1 + rng.int(0, 2);
+      for (let i = 0; i < nOut; i++) {
+        const spot = pickWallSpot(0.35);
+        if (!spot) break;
+        const op = new THREE.Mesh(texBox(0.09, 0.14, 0.012), MAT.paperOld());
+        op.name = 'outlet-plate';
+        placeOnWall(op, spot.wall, spot.along, 0.28, 0.008);
+        for (const sx of [-0.02, 0.02]) {
+          const slot = new THREE.Mesh(texBox(0.012, 0.03, 0.006), MAT.charcoal());
+          slot.name = 'outlet-slot';
+          placeOnWall(slot, spot.wall, spot.along + sx, 0.28, 0.004);
+        }
+        if (rng.float() < 0.5) {
+          const plug = new THREE.Mesh(texBox(0.035, 0.06, 0.03), MAT.charcoal());
+          plug.name = 'cord-plug';
+          placeOnWall(plug, spot.wall, spot.along, 0.26, 0.014);
+          const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.26, 6), MAT.charcoal());
+          cord.name = 'flex-cord';
+          placeOnWall(cord, spot.wall, spot.along, 0.13, 0.012);
         }
       }
     }
