@@ -4266,7 +4266,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The cards kept their ghosts — pale rectangles and pin pits on
     // boards and walls where index cards were pulled down.
     for (const p of spec.props) {
-      if ((p.kind !== 'routingBoard' && p.kind !== 'keyBoard' && p.kind !== 'dartboard') || rng.float() >= 0.5) continue;
+      if ((p.kind !== 'routingBoard' && p.kind !== 'dartboard' && p.kind !== 'circuitBoard' && p.kind !== 'board') || rng.float() >= 0.5) continue;
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
