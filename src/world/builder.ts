@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -3801,6 +3801,95 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         group.add(stub);
         frameHardware.push(stub);
       }
+    }
+
+    // The rats chewed through — gnawed arches low on walls with
+    // rub runs and fresh shavings.
+    if (livedIn && rng.bool(0.35)) {
+      const spot = pickWallSpot(0.85);
+      if (spot) {
+        wallDecal(spot.wall, ratHole(rng), 0.85 + rng.float() * 0.15, 0.5 + rng.float() * 0.1, spot.along, 0.14 + rng.float() * 0.06);
+        const rh = group.children[group.children.length - 1];
+        if (rh && !rh.name) rh.name = 'rat-hole';
+      }
+    }
+    // The nails kept the hooks — clusters of bent nails and wire
+    // loops where pictures hung and failed.
+    if (livedIn && rng.bool(0.4)) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, nailCluster(rng), 0.85 + rng.float() * 0.15, 0.85 + rng.float() * 0.15, spot.along, 1.6 + rng.float() * 0.4);
+        const nc = group.children[group.children.length - 1];
+        if (nc && !nc.name) nc.name = 'nail-cluster';
+      }
+    }
+    // The wallpaper kept the standing — a faint figure-shaped fade
+    // where something stood in the light too long.
+    if (livedIn && rng.bool(0.12)) {
+      const spot = pickWallSpot(1.0);
+      if (spot) {
+        wallDecal(spot.wall, figureShadow(rng), 0.85 + rng.float() * 0.15, 1.2 + rng.float() * 0.15, spot.along, 1.25 + rng.float() * 0.15);
+        const fs = group.children[group.children.length - 1];
+        if (fs && !fs.name) fs.name = 'figure-shadow';
+      }
+    }
+
+    // The beetles bored — exit holes and frass cones low on boards.
+    if (livedIn && rng.bool(0.3)) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, frassLine(rng), 0.85 + rng.float() * 0.15, 0.45 + rng.float() * 0.1, spot.along, 0.12 + rng.float() * 0.05);
+        const fl = group.children[group.children.length - 1];
+        if (fl && !fl.name) fl.name = 'frass-line';
+      }
+    }
+    // The carpet snagged — a lifted thread loop with toe drag on rugs.
+    if (livedIn && rng.bool(0.35)) {
+      const decal = decalQuad(threadSnag(rng), 0.9 + rng.float() * 0.15, 0.6 + rng.float() * 0.1);
+      if (decal) {
+        decal.name = 'thread-snag';
+        decal.rotation.x = -Math.PI / 2;
+        decal.rotation.z = rng.float() * Math.PI * 2;
+        decal.position.set((rng.float() - 0.5) * (w - 1.6), 0.008, (rng.float() - 0.5) * (d - 1.6));
+        group.add(decal);
+      }
+    }
+    // The seals broke — snapped wax and cord on door jambs.
+    for (const dw of doorPositions) {
+      if (!livedIn || !rng.bool(0.22)) continue;
+      const side = dw.offset > 0 ? -0.62 : 0.62;
+      wallDecal(dw.wall, sealBreak(rng), 0.5 + rng.float() * 0.1, 0.8 + rng.float() * 0.15, dw.offset + side, 1.35 + rng.float() * 0.15);
+      const sb = group.children[group.children.length - 1];
+      if (sb && !sb.name) sb.name = 'seal-break';
+    }
+
+    // The paint ran — repaint drips and brush bands on baseboards.
+    if (livedIn && rng.bool(0.3)) {
+      const spot = pickWallSpot(0.9);
+      if (spot) {
+        wallDecal(spot.wall, paintDrip(rng), 0.85 + rng.float() * 0.15, 0.45 + rng.float() * 0.1, spot.along, 0.16 + rng.float() * 0.06);
+        const pd = group.children[group.children.length - 1];
+        if (pd && !pd.name) pd.name = 'paint-drip';
+      }
+    }
+    // The news browned — rotted paper sheets on floors near walls.
+    if (livedIn && rng.bool(0.3)) {
+      const decal = decalQuad(paperRot(rng), 0.9 + rng.float() * 0.15, 0.6 + rng.float() * 0.1);
+      if (decal) {
+        decal.name = 'paper-rot';
+        decal.rotation.x = -Math.PI / 2;
+        decal.rotation.z = rng.float() * Math.PI * 2;
+        decal.position.set((rng.float() - 0.5) * (w - 1.4), 0.009, (rng.float() - 0.5) * (d - 1.4));
+        group.add(decal);
+      }
+    }
+    // The hinges wept — oil runs down from hinge barrels by doors.
+    for (const dw of doorPositions) {
+      if (!livedIn || !rng.bool(0.4)) continue;
+      const side = dw.offset > 0 ? -0.58 : 0.58;
+      wallDecal(dw.wall, hingeWeep(rng), 0.4 + rng.float() * 0.08, 0.75 + rng.float() * 0.15, dw.offset + side, 1.5 + rng.float() * 0.1);
+      const hw = group.children[group.children.length - 1];
+      if (hw && !hw.name) hw.name = 'hinge-weep';
     }
 
     // The water line — a room that flooded once keeps the tide mark:

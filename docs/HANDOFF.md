@@ -2,6 +2,24 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 661 — the rats chewed through, the nails kept the hooks & the wallpaper kept the standing
+
+- `ratHole` (96×64): dark arched chew opening + ragged gnaw rim + run rub line + fresh shavings + dropping specks; 35% lived-in walls, y≈0.14 (baseboard level).
+- `nailCluster` (96×96): 4–7 bent nails w/ rust blooms & drip, wire-loop crescents on ~45%, pale dust-lip above ~40%, one torn-out pit; 40% lived-in walls, y≈1.7.
+- `figureShadow` (96×128): radial shoulder + head blooms + pale floor gap + sun-burn ring — an eerie silhouette fade in the paper; rare 12% lived-in walls, y≈1.3. Presence tests ×3 green.
+
+## Sprint 662 — the beetles bored, the carpet snagged & the seals broke
+
+- `frassLine` (96×48): woodworm exit pinholes + pale frass cones + weak-board sag; 30% lived-in walls, baseboard level.
+- `threadSnag` (96×64): lifted carpet loop + fray strays + toe-drag scuff + pile dent; 35% lived-in floors, free placement.
+- `sealBreak` (64×96): snapped cord ends + cracked wax head + crest ghost + fallen flecks; 22% lived-in doors, at jamb edge via `portLocalPos` + ±0.62 side offset. Presence tests ×3 green.
+
+## Sprint 663 — the paint ran, the news browned & the hinges wept
+
+- `paintDrip` (96×48): repaint band + brush strokes + thin drips w/ end beads + old-colour edge bleed; 30% lived-in walls, baseboard level.
+- `paperRot` (96×64): browned newsprint + edge rot veins + print ghosts + headline bar + lifted corner + damp halo; 30% lived-in floors.
+- `hingeWeep` (48×96): rust pin kiss + thin oil run + caught-dust bead + knuckle shadow; 40% lived-in doors at jamb edge. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 657–662 — the sweep plants a knee (a second house reader)
