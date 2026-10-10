@@ -3857,9 +3857,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The seals broke — snapped wax and cord on door jambs.
     for (const dw of doorPositions) {
       if (!livedIn || !rng.bool(0.22)) continue;
-      const spot = portLocalPos({ wall: dw.wall, offset: dw.offset, width: 0.9 }, w, d);
       const side = dw.offset > 0 ? -0.62 : 0.62;
-      wallDecal(dw.wall, sealBreak(rng), 0.5 + rng.float() * 0.1, 0.8 + rng.float() * 0.15, spot.along + side, 1.35 + rng.float() * 0.15);
+      wallDecal(dw.wall, sealBreak(rng), 0.5 + rng.float() * 0.1, 0.8 + rng.float() * 0.15, dw.offset + side, 1.35 + rng.float() * 0.15);
       const sb = group.children[group.children.length - 1];
       if (sb && !sb.name) sb.name = 'seal-break';
     }
@@ -3887,9 +3886,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The hinges wept — oil runs down from hinge barrels by doors.
     for (const dw of doorPositions) {
       if (!livedIn || !rng.bool(0.4)) continue;
-      const spot = portLocalPos({ wall: dw.wall, offset: dw.offset, width: 0.9 }, w, d);
       const side = dw.offset > 0 ? -0.58 : 0.58;
-      wallDecal(dw.wall, hingeWeep(rng), 0.4 + rng.float() * 0.08, 0.75 + rng.float() * 0.15, spot.along + side, 1.5 + rng.float() * 0.1);
+      wallDecal(dw.wall, hingeWeep(rng), 0.4 + rng.float() * 0.08, 0.75 + rng.float() * 0.15, dw.offset + side, 1.5 + rng.float() * 0.1);
       const hw = group.children[group.children.length - 1];
       if (hw && !hw.name) hw.name = 'hinge-weep';
     }
