@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1962,6 +1962,85 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     pp2.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.75) + 0.004, (rng.float() - 0.5) * 0.3);
     prop.group.add(pp2);
     if (!prop.group.name) prop.group.name = 'powder-puff';
+  }
+  // The counters kept their shells — breakfast chips on the
+  // kitchen tops where eggs were cracked.
+  const CRACKED: ReadonlySet<PropSpec['kind']> = new Set(['counter', 'merchantCounter', 'cuttingBoard', 'table', 'diningTable', 'sideboard']);
+  if (CRACKED.has(spec.kind) && rng.bool(0.35)) {
+    const dc = modelCollider(spec.kind);
+    const es = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: eggShell(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    es.name = 'egg-shell';
+    es.userData.decalMat = true;
+    es.rotation.x = -Math.PI / 2;
+    es.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 0.85) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(es);
+    if (!prop.group.name) prop.group.name = 'egg-shell';
+  }
+  // The tables kept their napkins — fold ghosts on the dining
+  // tops where places were set.
+  const SETTABLE: ReadonlySet<PropSpec['kind']> = new Set(['diningTable', 'table', 'breakTable', 'sideboard', 'roundTable']);
+  if (SETTABLE.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const nf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.28, 0.28),
+      new THREE.MeshStandardMaterial({ map: napkinFold(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    nf.name = 'napkin-fold';
+    nf.userData.decalMat = true;
+    nf.rotation.x = -Math.PI / 2;
+    nf.position.set((rng.float() - 0.5) * 0.5, (dc?.[1] ?? 0.8) + 0.004, (rng.float() - 0.5) * 0.4);
+    prop.group.add(nf);
+    if (!prop.group.name) prop.group.name = 'napkin-fold';
+  }
+  // The bars kept their steins — ale rings and foam ghosts on
+  // the counters where mugs stood.
+  const BARRED: ReadonlySet<PropSpec['kind']> = new Set(['counter', 'merchantCounter', 'table', 'diningTable', 'barStool', 'sideboard', 'roundTable']);
+  if (BARRED.has(spec.kind) && rng.bool(0.35)) {
+    const dc = modelCollider(spec.kind);
+    const sr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: steinRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sr.name = 'stein-ring';
+    sr.userData.decalMat = true;
+    sr.rotation.x = -Math.PI / 2;
+    sr.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 0.85) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(sr);
+    if (!prop.group.name) prop.group.name = 'stein-ring';
+  }
+  // The parcels kept their string — twine marks on the boxes
+  // that were tied and sent.
+  const PARCELLED: ReadonlySet<PropSpec['kind']> = new Set(['cardboardBox', 'crate', 'milCrate', 'chest']);
+  if (PARCELLED.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const ps = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.4, 0.3),
+      new THREE.MeshStandardMaterial({ map: parcelString(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ps.name = 'parcel-string';
+    ps.userData.decalMat = true;
+    ps.rotation.x = -Math.PI / 2;
+    ps.position.set(0, (dc?.[1] ?? 0.5) + 0.004, 0);
+    prop.group.add(ps);
+    if (!prop.group.name) prop.group.name = 'parcel-string';
+  }
+  // The beds kept their quilts — patchwork ghosts on the covers.
+  const QUILTED: ReadonlySet<PropSpec['kind']> = new Set(['bed', 'bedOld', 'daybed']);
+  if (QUILTED.has(spec.kind) && rng.bool(0.4)) {
+    const dc = modelCollider(spec.kind);
+    const qp = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.35),
+      new THREE.MeshStandardMaterial({ map: quiltPatch(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    qp.name = 'quilt-patch';
+    qp.userData.decalMat = true;
+    qp.rotation.x = -Math.PI / 2;
+    qp.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 0.6) + 0.004, (rng.float() - 0.5) * 0.4);
+    prop.group.add(qp);
+    if (!prop.group.name) prop.group.name = 'quilt-patch';
   }
   // The candles shed their skins — collapsed wax shells on the
   // holders that burned all the way down.

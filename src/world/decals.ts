@@ -16185,3 +16185,457 @@ export function squareMark(rng: Rng): THREE.Texture | null {
     ctx.fill();
   });
 }
+
+/** Egg shell — the shell chips and yolk ghosts a breakfast's
+ * cracking leaves on a counter: shell shards, yolk ghost, white
+ * smear, whisk trails. */
+export function eggShell(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // yolk ghost — the amber film where one broke
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 12);
+    g.addColorStop(0, `rgba(210,160,60,${0.3 + rng.float() * 0.14})`);
+    g.addColorStop(0.6, `rgba(200,170,110,${0.16 + rng.float() * 0.08})`);
+    g.addColorStop(1, 'rgba(200,170,110,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // shell shards — the curved chips of white
+    for (let i = 0; i < 7; i++) {
+      const sx = cx - 18 + rng.float() * 36, sy = cy - 14 + rng.float() * 28;
+      ctx.strokeStyle = `rgba(210,204,186,${0.36 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2 + rng.float() * 1.6, rng.float() * Math.PI, Math.PI * (0.5 + rng.float() * 0.8));
+      ctx.stroke();
+    }
+    // white smear — the albumen run
+    ctx.fillStyle = `rgba(200,204,190,${0.2 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 8, cy + 10, 10, 4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // whisk trails — the quick strokes of beating
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(190,180,150,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 16 + i * 8 + rng.float() * 3, cy - 16);
+      ctx.quadraticCurveTo(cx - 14 + i * 8, cy - 10, cx - 12 + i * 8 + rng.float() * 2, cy - 4);
+      ctx.stroke();
+    }
+    // crack line — where the shell was split on the counter edge
+    ctx.strokeStyle = `rgba(170,164,146,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx - 20, cy + 16);
+    ctx.lineTo(cx + 8 + rng.float() * 8, cy + 17 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // shell dust — the fine grit
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(200,194,176,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(cx - 20 + rng.float() * 40, cy - 18 + rng.float() * 36, 0.5 + rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Milk bottle — the bottle rings a morning delivery leaves on
+ * a doorstep: ring marks, straw ghosts, foil caps, drip tails. */
+export function milkBottle(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // bottle rings — the two-or-three pressed circles of the set
+    for (let i = 0; i < 3; i++) {
+      const bx = cx - 12 + i * 11 + rng.float() * 2, by = cy - 2 + rng.float() * 4;
+      ctx.strokeStyle = `rgba(190,196,186,${0.36 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(bx, by, 4.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+      // cream line inside the ring
+      ctx.fillStyle = `rgba(220,222,204,${0.22 + rng.float() * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(bx, by, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // foil caps — the crimped foil ghosts
+    for (let i = 0; i < 2; i++) {
+      ctx.strokeStyle = `rgba(170,168,150,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx + 14 + i * 7, cy + 10 + rng.float() * 4, 3, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let j = 0; j < 4; j++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + 14 + i * 7, cy + 10);
+        ctx.lineTo(cx + 14 + i * 7 + Math.cos(j * 1.6) * 3, cy + 10 + Math.sin(j * 1.6) * 3);
+        ctx.stroke();
+      }
+    }
+    // straw ghosts — the bent straws of a drunk bottle
+    ctx.strokeStyle = `rgba(180,170,140,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 18, cy + 12);
+    ctx.lineTo(cx - 16, cy + 18);
+    ctx.lineTo(cx - 12, cy + 19);
+    ctx.stroke();
+    // drip tails — the milk runs down the step edge
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(210,214,196,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.9;
+      const dx = cx - 10 + i * 9 + rng.float() * 3;
+      ctx.beginPath();
+      ctx.moveTo(dx, cy + 8);
+      ctx.lineTo(dx + (rng.float() - 0.5), cy + 16 + rng.float() * 4);
+      ctx.stroke();
+    }
+    // crate kiss — the carry crate's corner dent
+    ctx.strokeStyle = `rgba(130,120,100,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.1;
+    ctx.strokeRect(cx - 22, cy - 14, 10, 8);
+  });
+}
+
+/** Napkin fold — the folded-linen ghosts on a dining table:
+ * fold creases, napkin corners, ring ghosts, crumb flecks. */
+export function napkinFold(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // napkin ghost — the pale folded square
+    ctx.fillStyle = `rgba(200,196,178,${0.28 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 12, cy - 8, 24, 16);
+    // fold creases — the pressed lines of the fold
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(150,144,126,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 12 + i * 8, cy - 8);
+      ctx.lineTo(cx - 12 + i * 8 + (rng.float() - 0.5), cy + 8);
+      ctx.stroke();
+    }
+    // diagonal fold — the point fold's crease
+    ctx.strokeStyle = `rgba(160,154,136,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy + 8);
+    ctx.lineTo(cx + 12, cy - 8);
+    ctx.stroke();
+    // napkin ring — the wooden ring's pressed circle
+    ctx.strokeStyle = `rgba(120,100,70,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(cx + 18, cy - 12, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // crumb flecks — the bread bits the napkin caught
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(180,160,110,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(cx - 16 + rng.float() * 36, cy + 10 + rng.float() * 8, 0.6 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // monogram ghost — the embroidered corner letter
+    ctx.strokeStyle = `rgba(140,120,100,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(cx - 11, cy + 3, 4, 4);
+  });
+}
+
+/** Stein ring — the mug rings and foam ghosts a stein leaves on
+ * a bar top: ale rings, foam bloom, drip trails, thirst arcs. */
+export function steinRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // ale rings — the pressed circles of standing steins
+    for (let i = 0; i < 3; i++) {
+      const sx = cx - 14 + i * 13 + rng.float() * 3, sy = cy - 4 + rng.float() * 8;
+      ctx.strokeStyle = `rgba(150,110,50,${0.38 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5 + rng.float(), 0, Math.PI * 2);
+      ctx.stroke();
+      // ale film inside
+      ctx.fillStyle = `rgba(160,110,50,${0.18 + rng.float() * 0.1})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // foam bloom — the head that spilled over
+    ctx.fillStyle = `rgba(210,200,170,${0.24 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 14, cy - 12, 6, 3.4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // drip trails — the runs off the mug's side
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(140,100,44,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.9;
+      const dx = cx - 12 + i * 8 + rng.float() * 4;
+      ctx.beginPath();
+      ctx.moveTo(dx, cy + 4);
+      ctx.lineTo(dx + (rng.float() - 0.5), cy + 12 + rng.float() * 5);
+      ctx.stroke();
+    }
+    // thirst arcs — the wiped circles of a lifted glass
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(170,160,136,${0.24 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx - 18 + rng.float() * 40, cy + 14 + rng.float() * 6, 4 + rng.float() * 2, Math.PI * (0.2 + rng.float() * 0.5), Math.PI * (0.9 + rng.float() * 0.5));
+      ctx.stroke();
+    }
+    // salt flecks — the pretzel salt
+    for (let i = 0; i < 7; i++) {
+      ctx.fillStyle = `rgba(210,204,186,${0.3 + rng.float() * 0.18})`;
+      ctx.fillRect(cx - 20 + rng.float() * 40, cy + 6 + rng.float() * 12, 1, 1);
+    }
+    // coaster ghost — the pressed cardboard square
+    ctx.strokeStyle = `rgba(130,116,90,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 24, cy - 14, 10, 10);
+  });
+}
+
+/** Drip tray — the tray ghosts and drip spots under a cask tap:
+ * tray rect, tap drips, foam puddle, wood stain. */
+export function dripTray(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // tray rect — the pressed outline of the drip tray
+    ctx.strokeStyle = `rgba(120,100,70,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(cx - 16, cy - 8, 32, 16);
+    // grate lines — the tray's slats
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(100,86,60,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 14 + i * 5, cy - 7);
+      ctx.lineTo(cx - 14 + i * 5, cy + 7);
+      ctx.stroke();
+    }
+    // tap drips — the amber drops that missed the tray
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(150,104,44,${0.34 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(cx - 22 + rng.float() * 44, cy + 10 + rng.float() * 10, 0.8 + rng.float() * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // foam puddle — the spilled head's dried ghost
+    ctx.fillStyle = `rgba(200,190,160,${0.22 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 8, cy + 16, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // wood stain — the dark soak where the tray overflowed
+    const g = ctx.createRadialGradient(cx - 8, cy + 12, 1, cx - 8, cy + 12, 10);
+    g.addColorStop(0, `rgba(90,66,34,${0.3 + rng.float() * 0.14})`);
+    g.addColorStop(1, 'rgba(90,66,34,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // tap ghost — the spigot's pressed circle at the tray's edge
+    ctx.strokeStyle = `rgba(140,116,78,${0.34 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(cx - 16, cy - 10, 3, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
+/** Parcel string — the string marks a tied parcel leaves on a
+ * surface: string cross, knot ghost, paper crease, wax seal. */
+export function parcelString(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48, cy = 32;
+    // paper ghost — the kraft wrap's pressed rectangle
+    ctx.fillStyle = `rgba(170,150,110,${0.22 + rng.float() * 0.1})`;
+    ctx.fillRect(cx - 28, cy - 16, 56, 32);
+    // string cross — the binding twine's two runs
+    ctx.strokeStyle = `rgba(110,90,60,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 28, cy);
+    ctx.lineTo(cx + 28, cy);
+    ctx.moveTo(cx, cy - 16);
+    ctx.lineTo(cx, cy + 16);
+    ctx.stroke();
+    // knot ghost — the darker press at the crossing
+    ctx.fillStyle = `rgba(80,66,44,${0.4 + rng.float() * 0.16})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2.2 + rng.float() * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    // paper crease — the wrap's folded edge
+    ctx.strokeStyle = `rgba(140,124,94,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx - 28, cy - 10);
+    ctx.lineTo(cx + 28, cy - 10 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+    // wax seal — the stamp's pressed dot
+    ctx.fillStyle = `rgba(140,60,44,${0.36 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.arc(cx + 8, cy + 4, 2 + rng.float() * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    // label ghost — the tied tag's pale corner
+    ctx.strokeStyle = `rgba(190,180,152,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(cx - 22, cy - 14, 9, 6);
+    // string tail — the loose end that curled off
+    ctx.strokeStyle = `rgba(120,100,70,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(cx + 4, cy + 2);
+    ctx.quadraticCurveTo(cx + 10, cy + 6, cx + 12 + rng.float() * 4, cy + 10 + rng.float() * 3);
+    ctx.stroke();
+  });
+}
+
+/** Cup hook — the hook pits and mug ghosts under a shelf where
+ * cups hung: hook pits, cup rings, drip tails, handle shadows. */
+export function cupHook(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    const cy = 20;
+    // hook pits — the screw points in the shelf's underside
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(40,34,26,${0.44 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(14 + i * 14 + rng.float() * 2, cy - 6, 1.2 + rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // the hook's curl shadow
+      ctx.strokeStyle = `rgba(100,90,70,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(14 + i * 14, cy - 4, 2, 0, Math.PI * 1.2);
+      ctx.stroke();
+    }
+    // cup rings — the pale ellipses the rims pressed
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(170,164,146,${0.28 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(18 + i * 18 + rng.float() * 3, cy + 10, 4, 2.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // drip tails — the runs where a wet cup dripped
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(150,160,150,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.8;
+      const dx = 20 + i * 16 + rng.float() * 4;
+      ctx.beginPath();
+      ctx.moveTo(dx, cy + 6);
+      ctx.lineTo(dx + (rng.float() - 0.5), cy + 14 + rng.float() * 4);
+      ctx.stroke();
+    }
+    // handle shadows — the curl ghosts of hung handles
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,110,92,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(24 + i * 22 + rng.float() * 4, cy + 2, 3, Math.PI * 0.2, Math.PI * 1.4);
+      ctx.stroke();
+    }
+    // dust line — the film along the shelf's back edge
+    ctx.fillStyle = `rgba(160,152,134,${0.22 + rng.float() * 0.1})`;
+    ctx.fillRect(10, cy - 12, 76, 1.6);
+  });
+}
+
+/** Quilt patch — the patchwork ghosts on a bed's top: patch
+ * squares, seam lines, worn patches, thread ghosts. */
+export function quiltPatch(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48, cy = 32;
+    // patch grid — the faded squares of the quilt's top
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+      const tone = 130 + rng.float() * 60;
+      ctx.fillStyle = `rgba(${tone},${tone - 14},${tone - 30},${0.16 + rng.float() * 0.1})`;
+      ctx.fillRect(cx - 30 + c * 12, cy - 18 + r * 12, 11, 11);
+    }
+    // seam lines — the stitched borders between patches
+    for (let c = 0; c < 6; c++) {
+      ctx.strokeStyle = `rgba(110,100,82,${0.24 + rng.float() * 0.12})`;
+      ctx.lineWidth = 0.6;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.moveTo(cx - 30 + c * 12, cy - 18);
+      ctx.lineTo(cx - 30 + c * 12, cy + 18);
+      ctx.stroke();
+    }
+    for (let r = 0; r < 4; r++) {
+      ctx.beginPath();
+      ctx.moveTo(cx - 30, cy - 18 + r * 12);
+      ctx.lineTo(cx + 30, cy - 18 + r * 12);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // worn patch — the square rubbed thinner than the rest
+    ctx.fillStyle = `rgba(190,180,150,${0.24 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 6 + rng.float() * 12, cy - 6 + rng.float() * 12, 11, 11);
+    // thread ghosts — the loose stitches along a seam
+    for (let i = 0; i < 5; i++) {
+      ctx.strokeStyle = `rgba(150,140,118,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 24 + rng.float() * 48, cy - 6 + rng.float() * 12);
+      ctx.lineTo(cx - 22 + rng.float() * 48, cy - 5 + rng.float() * 12);
+      ctx.stroke();
+    }
+    // the turned-back corner — where the quilt was folded down
+    ctx.fillStyle = `rgba(200,192,168,${0.26 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.moveTo(cx + 18, cy - 18);
+    ctx.lineTo(cx + 30, cy - 18);
+    ctx.lineTo(cx + 30, cy - 6);
+    ctx.closePath();
+    ctx.fill();
+  });
+}
+
+/** Shelf bracket — the bracket shadows under a shelf's edge:
+ * bracket diagonals, screw pits, shadow line, dust shelf. */
+export function shelfBracket(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cy = 20;
+    // shadow line — the shelf's underside pressed dark
+    ctx.fillStyle = `rgba(70,62,50,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(10, cy - 4, 76, 3);
+    // bracket diagonals — the two struts' ghosts
+    for (const bx of [22, 70]) {
+      ctx.strokeStyle = `rgba(100,90,72,${0.38 + rng.float() * 0.16})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(bx, cy);
+      ctx.lineTo(bx + 10 + rng.float() * 2, cy + 18);
+      ctx.stroke();
+      // bracket foot
+      ctx.beginPath();
+      ctx.moveTo(bx + 10, cy + 18);
+      ctx.lineTo(bx + 10, cy + 24);
+      ctx.stroke();
+    }
+    // screw pits — the bracket's fixings
+    for (const bx of [22, 70]) {
+      for (let i = 0; i < 2; i++) {
+        ctx.fillStyle = 'rgba(30,26,20,0.5)';
+        ctx.beginPath();
+        ctx.arc(bx + 10, cy + 20 + i * 3, 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // dust shelf — the film where the bracket met the wall
+    ctx.fillStyle = `rgba(160,152,134,${0.22 + rng.float() * 0.1})`;
+    ctx.fillRect(12, cy + 24, 72, 1.4);
+    // rust kiss — where a bracket's iron bled
+    ctx.strokeStyle = `rgba(130,80,44,${0.3 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(32, cy + 14);
+    ctx.lineTo(32 + (rng.float() - 0.5) * 3, cy + 26 + rng.float() * 4);
+    ctx.stroke();
+    // load bow — the faint sag of the shelf between brackets
+    ctx.strokeStyle = `rgba(140,130,112,${0.24 + rng.float() * 0.12})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(22, cy - 1);
+    ctx.quadraticCurveTo(46, cy + 3, 70, cy - 1);
+    ctx.stroke();
+  });
+}

@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow, chainPool, dialGhost, hemScrape, snareSet, fenderWear, pokerRing, ashBroom, wineStain, whitewashLine, bellWire, kindling, matchBurn, pressPlate, tailDrag, chalkGame, sheetStand, birdCage, ropeCoil, broomLean, sashCord, pipeFlange, feltPad, bootPolish, letterPeel, spiderSac, stairRod, pelmetDust, scuttleGhost, inkwellRing, washTide, pewCushion, bellPull, spoolShadow, verdigrisStreak, lidPry, wrenchBite, preserveRing, cheeseRing, sieveSift, planeCurl, drillPit, hammerDent, sparkScatter, loomThread, wheelGroove, flameSinge, dishRack, paperWeight, crayonMark, squareMark } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow, chainPool, dialGhost, hemScrape, snareSet, fenderWear, pokerRing, ashBroom, wineStain, whitewashLine, bellWire, kindling, matchBurn, pressPlate, tailDrag, chalkGame, sheetStand, birdCage, ropeCoil, broomLean, sashCord, pipeFlange, feltPad, bootPolish, letterPeel, spiderSac, stairRod, pelmetDust, scuttleGhost, inkwellRing, washTide, pewCushion, bellPull, spoolShadow, verdigrisStreak, lidPry, wrenchBite, preserveRing, cheeseRing, sieveSift, planeCurl, drillPit, hammerDent, sparkScatter, loomThread, wheelGroove, flameSinge, dishRack, paperWeight, crayonMark, squareMark, milkBottle, dripTray, cupHook, shelfBracket } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -4877,6 +4877,60 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       sq.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
       sq.name = 'square-mark';
       group.add(sq);
+    }
+
+    // The steps kept their bottles — milk rings on the thresholds
+    // of the lived rooms.
+    if (livedIn && doorPositions.length > 0 && rng.bool(0.3)) {
+      const port = doorPositions[rng.int(0, doorPositions.length - 1)];
+      const lp8 = portLocalPos(port, w, d);
+      const mb = decalQuad(milkBottle(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      mb.rotation.x = -Math.PI / 2;
+      const moff = 0.5 + rng.float() * 0.3;
+      mb.position.set(
+        lp8.x + (port.wall === 'n' || port.wall === 's' ? (rng.float() - 0.5) * 0.8 : 0) + (port.wall === 'e' ? -moff : port.wall === 'w' ? moff : 0),
+        0.009,
+        lp8.z + (port.wall === 'e' || port.wall === 'w' ? (rng.float() - 0.5) * 0.8 : 0) + (port.wall === 'n' ? moff : port.wall === 's' ? -moff : 0),
+      );
+      mb.name = 'milk-bottle';
+      group.add(mb);
+    }
+
+    // The casks kept their trays — drip trays and foam ghosts
+    // under the taps.
+    for (const p of spec.props) {
+      if ((p.kind !== 'barrel' && p.kind !== 'wineBarrel') || rng.float() >= 0.45) continue;
+      const dt = decalQuad(dripTray(rng), 0.5 + rng.float() * 0.1, 0.5 + rng.float() * 0.1);
+      dt.rotation.x = -Math.PI / 2;
+      dt.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.5 + rng.float() * 0.3);
+      dt.name = 'drip-tray';
+      group.add(dt);
+    }
+
+    // The shelves kept their hooks — cup hook pits under the
+    // pantry and scullery shelves.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pantryShelf' && p.kind !== 'sculleryRack' && p.kind !== 'shelfWood' && p.kind !== 'linenShelf' && p.kind !== 'potRack' && p.kind !== 'shelf') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, cupHook(rng), 0.9 + rng.float() * 0.15, 0.45 + rng.float() * 0.08, along, 1.55 + rng.float() * 0.15);
+      const ch2 = group.children[group.children.length - 1];
+      if (ch2 && !ch2.name) ch2.name = 'cup-hook';
+    }
+
+    // The brackets kept their shadows — strut ghosts under the
+    // wall shelves where they carried their loads.
+    for (const p of spec.props) {
+      if ((p.kind !== 'shelfWood' && p.kind !== 'stackShelf' && p.kind !== 'pantryShelf' && p.kind !== 'linenShelf' && p.kind !== 'bookshelf' && p.kind !== 'shelf') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, shelfBracket(rng), 0.9 + rng.float() * 0.15, 0.5 + rng.float() * 0.1, along, 0.9 + rng.float() * 0.4);
+      const sb = group.children[group.children.length - 1];
+      if (sb && !sb.name) sb.name = 'shelf-bracket';
     }
 
     // The water line — a room that flooded once keeps the tide mark:
