@@ -3,6 +3,13 @@
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 
+## Sprint 690–692 — the rail keeps its hour (captions rail ages, folds & announces)
+
+- s690 `the rail keeps its hour` — `src/ui/captions.ts`: `visibleCaptions(subs, now)` ages reads out by severity (info 4.2s / warn 5.2s / danger 7s — the last thing before a death stays up longest), folds consecutive identical reads into a ×N run riding the newest stamp, caps the rail at 3 live lines.
+- s691 `the rail speaks once` — App.tsx renders the rail through the helper instead of `subtitles.slice(-3)`; stale tells ("stone drags to the fresh sign") no longer read as if they just happened. The rail is a `role="log" aria-live="polite"` region; folded repeats show ` ×N`.
+- s692 `the room names its instruments` — HUD bars announce `role="progressbar"` with aria-valuenow/min/max/label; vignette + crosshair go `aria-hidden` so the reader hears the house, not its chrome.
+- Tests: `test/captions.test.ts` (13) — dwell boundaries per severity, exact-dwell edge, fold rules (severity/text break the run, non-consecutive doesn't fold back, fold refreshes dwell), cap + expired-not-counting, App wiring pins.
+
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
 
 - **675** the asymmetry: the house has FIVE 'work' answers (crimp, pull, tear, sweep, grip) and the grafter already reads 'work' marks — but only dragged to them and ground the floor. New ctx hook `stripWork(x,z)` + a stoop-strip in the grafter: a fresh 'work' mark (`scentT` arming, `carrying===0`) is an armed surface. First two pockets: your live planted wire (`armed && planted && !claimed`) comes up as its coil via `removeSnare`; your cocked plate (`setTraps` minus `snappedTraps`/`priedTraps`) folds into stock and leaves every snap loop (`liveTraps.splice`, `trapPos.delete`). Claimed wires are the house's — outside its pocket.
