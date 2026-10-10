@@ -2280,7 +2280,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The bell dulled — a palm cap on the counter bells that still
   // get rung for nobody.
-  if (spec.kind === 'counterBell' && rng.bool(0.5)) {
+  if (spec.kind === 'counterBell') {
     const dc = modelCollider(spec.kind);
     const bt = new THREE.Mesh(
       new THREE.PlaneGeometry(0.22, 0.22),
@@ -2500,7 +2500,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The board kept its squares — clean cells in the dust where the
   // pieces stood.
-  const BOARDS: ReadonlySet<PropSpec['kind']> = new Set(['chessSet']);
+  const BOARDS: ReadonlySet<PropSpec['kind']> = new Set(['chessSet', 'boardGame']);
   if (BOARDS.has(spec.kind) && rng.bool(0.6)) {
     const dc = modelCollider(spec.kind);
     const ps = new THREE.Mesh(
