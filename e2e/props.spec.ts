@@ -1499,8 +1499,8 @@ test('the knee outranks the broom — a held lid keeps its take', async ({ page 
     ga.lidStashes.set(`${ga.space}:${s.id}`, {
       items: [{ id: 'wireCoil', count: 1 }], marked: [],
     });
-    // the knee sits: 'work' by the held lid must answer nothing —
-    // the sign stands, the take waits.
+    // the knee sits: 'work' by the held lid names the hold — the
+    // mark is spent but the take keeps its shelter.
     s.trappedBy = 'sweep';
     const held = ctx.rearmHazard?.('work', s.exitPos.x, s.exitPos.z);
     const keptWhileHeld = ga.lidStashes.get(`${ga.space}:${s.id}`)?.items.length ?? 0;
@@ -1515,7 +1515,7 @@ test('the knee outranks the broom — a held lid keeps its take', async ({ page 
 
   if (result.stage === 'no-spot') test.skip();
   else {
-    expect(result.held, 'a gripped lid answers the broom nothing').toBeNull();
+    expect(result.held, 'a gripped lid names the hold').toBe('lidHeld');
     expect(result.keptWhileHeld, 'the knee keeps the take in the box').toBe(1);
     expect(result.freed, 'the freed lid answers the next read').toBe('lidSweep');
     expect(result.coilGain, 'the freed take scatters to the floor').toBe(1);
@@ -1617,5 +1617,111 @@ test('the under strips your hands — every armed surface answers its pocket', a
   expect(result.throatDead, 'the thread ends dead, valveless, nobody\'s').toBe(true);
   expect(result.underFan, 'the under never strips the under\'s own graft').not.toBe('belt');
   expect(result.nothing, 'a mark near nothing answers nothing').toBeNull();
+  expect(errors).toEqual([]);
+});
+
+// sprint 709-714 — the house keeps a tally: every landed 'work' answer
+// strikes the site, strike two files a register line and the filed
+// floor stands as a standing order — and a gripped lid orders the
+// sweep ('lidHeld'), its own peep reading the knee that holds it shut.
+test('the house keeps a tally — struck sites file, a held lid answers, the peep reads the grip', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      space: string;
+      unpaidHeld: number;
+      filedWork: number;
+      workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+      lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
+      hazard: {
+        steams: { pos: { x: number; y: number; z: number }; room: number; dead: boolean;
+          valved?: boolean; owner?: string }[];
+        fans: { pos: { x: number; y: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; chocked?: boolean; owner?: string }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string;
+          t: number; readBy: string[]; by?: string }[];
+      };
+      entityCtx: () => {
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+        filedFloors?: (x: number, z: number, r: number)
+          => { x: number; z: number; room: number; strikes: number }[];
+      };
+      interaction: { focused: { kind: string;
+        pos: { x: number; y: number; z: number }; data: unknown; enabled: boolean } | null };
+      tryInteract: () => void;
+    };
+    const ctx = ga.entityCtx();
+
+    // a fake floor far from every real hazard: a player-threaded vent
+    // and a player-belted wheel at the same spot — two armed surfaces,
+    // two 'work' answers, one struck site.
+    const spot = { x: g.route.rooms[0].entryPos.x + 30, z: g.route.rooms[0].entryPos.z + 30 };
+    ga.hazard.steams.push({ pos: { x: spot.x, y: 0.5, z: spot.z }, room: 0,
+      dead: false, valved: true, owner: 'player' });
+    ga.hazard.fans.push({ pos: { x: spot.x, y: 0, z: spot.z }, room: 0,
+      dead: false, belted: true, chocked: false, owner: 'player' });
+    ga.hazard.evidence.push({ pos: { x: spot.x, y: 0, z: spot.z }, room: 0,
+      kind: 'work', t: g.clock.time, readBy: ['player'], by: 'player' });
+    const held0 = ga.unpaidHeld;
+    const first = ctx.rearmHazard?.('work', spot.x, spot.z);   // the crimp — strike 1
+    const second = ctx.rearmHazard?.('work', spot.x, spot.z);  // the pull — strike 2 files
+    const sites = ga.workSites.map((s) => ({ strikes: s.strikes }));
+    const filed = ctx.filedFloors?.(spot.x, spot.z, 14) ?? [];
+
+    // the knee's ordering line: a gripped stash lid can't be tipped —
+    // the sweep answers 'lidHeld' and the take keeps its shelter
+    const lid = g.route.rooms.flatMap((r) =>
+      ((r as { index: number; hidingSpots?: { id: string;
+        exitPos: { x: number; z: number }; trappedBy?: string }[] })
+        .hidingSpots ?? []).map((s) => ({ room: (r as { index: number }).index, s })))[0];
+    if (!lid) return { stage: 'no-spot' } as const;
+    const { s: spotLid } = lid;
+    ga.lidStashes.set(`${ga.space}:${spotLid.id}`, {
+      items: [{ id: 'fanBelt', count: 1 }], marked: [],
+    });
+    spotLid.trappedBy = 'sweep';
+    const heldLid = ctx.rearmHazard?.('work', spotLid.exitPos.x, spotLid.exitPos.z);
+    const kept = ga.lidStashes.get(`${ga.space}:${spotLid.id}`)?.items.length ?? -1;
+    // a held lid files nothing — the knee's stand is the answer, not the tally's
+    const sitesAfterHeld = ga.workSites.length;
+
+    // and the lid's own look reads the grip — drive the peep case
+    const capsBefore = caps.length;
+    ga.interaction.focused = { kind: 'peepLid',
+      pos: { x: spotLid.exitPos.x, y: 0.5, z: spotLid.exitPos.z },
+      data: { spotId: spotLid.id }, enabled: true };
+    ga.tryInteract();
+    const peep = caps.slice(capsBefore).some((c) => /knee holds it shut/.test(c));
+    ga.interaction.focused = null;
+
+    const tally = caps.some((c) => /register keeps this floor/.test(c));
+    return { stage: 'done', first, second, sites, filed: filed.length,
+      heldGain: ga.unpaidHeld - held0, filedWork: ga.filedWork,
+      heldLid, kept, sitesAfterHeld, peep, tally } as const;
+  });
+
+  if (result.stage === 'no-spot') test.skip();
+  else {
+    expect(result.first, 'a player vent answers the crimp').toBe('crimp');
+    expect(result.second, 'a player wheel answers the pull').toBe('pull');
+    expect(result.sites, 'one site, two strikes').toEqual([{ strikes: 2 }]);
+    expect(result.heldGain, 'the second strike files a register line').toBe(1);
+    expect(result.filedWork, 'the epitaph count ticks').toBe(1);
+    expect(result.filed, 'the filed floor stands as a standing order').toBe(1);
+    expect(result.tally, 'the tally warns out loud').toBe(true);
+    expect(result.heldLid, 'a gripped lid answers the held line').toBe('lidHeld');
+    expect(result.kept, 'the take keeps its shelter under the knee').toBe(1);
+    expect(result.sitesAfterHeld, 'a held answer files no site of its own').toBe(1);
+    expect(result.peep, 'the peep reads the grip').toBe(true);
+  }
   expect(errors).toEqual([]);
 });

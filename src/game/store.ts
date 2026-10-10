@@ -171,6 +171,9 @@ export interface BooksClosed {
   lidsSwept?: number;
   /** sprint 589b — eyes still aimed your way at the end */
   eyesAimed?: number;
+  /** sprint 711 — register lines the tally wrote on repeat-offender
+   *  floors (every strike past the first at a worked site) */
+  filedWork?: number;
 }
 
 export interface CheckpointSave {
@@ -311,6 +314,11 @@ export interface CheckpointSave {
   /** sprint 576 — traps you set ride the checkpoint: cocked plates
    *  re-lay into liveTraps on the next mint. */
   setTraps?: { key: string; x: number; z: number; room: number }[];
+  /** sprint 709 — the tally's struck floors ride the checkpoint: every
+   *  site the house answered keeps its strikes (cooled, it stays in
+   *  the register's book); filedWork is the count of lines written. */
+  workSites?: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+  filedWork?: number;
   // sprint 406 — a slid rug or splashed puddle is spent too; the floor
   // doesn't re-slip on a reload (same class as the springs)
   slippedRugs?: string[];

@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow, chainPool, dialGhost, hemScrape, snareSet, fenderWear, pokerRing, ashBroom, wineStain, whitewashLine, bellWire, kindling, matchBurn, pressPlate, tailDrag, chalkGame, sheetStand, birdCage, ropeCoil, broomLean, sashCord, pipeFlange, feltPad, bootPolish, letterPeel, spiderSac } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow, chainPool, dialGhost, hemScrape, snareSet, fenderWear, pokerRing, ashBroom, wineStain, whitewashLine, bellWire, kindling, matchBurn, pressPlate, tailDrag, chalkGame, sheetStand, birdCage, ropeCoil, broomLean, sashCord, pipeFlange, feltPad, bootPolish, letterPeel, spiderSac, stairRod, pelmetDust, scuttleGhost, inkwellRing, washTide, pewCushion, bellPull, spoolShadow, verdigrisStreak, lidPry, wrenchBite, preserveRing, cheeseRing, sieveSift, planeCurl, drillPit, hammerDent, sparkScatter, loomThread, wheelGroove, flameSinge, dishRack, paperWeight, crayonMark, squareMark, milkBottle, dripTray, cupHook, shelfBracket, grateBar, emberScar, dustPan, capPeg, mantleGlow, pedalWear, chairSpring, airBrick, mouseRun } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -4592,6 +4592,449 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       sp.position.set(cxm * (w / 2 - 0.4 - rng.float() * 0.3), h - 0.06, czm * (d / 2 - 0.4 - rng.float() * 0.3));
       sp.name = 'spider-sac';
       group.add(sp);
+    }
+
+    // The stairs kept their rods — bracket ghosts across the treads
+    // where runner rods were lifted.
+    for (const p of spec.props) {
+      if ((p.kind !== 'stairs' && p.kind !== 'grandStair' && p.kind !== 'stairLanding' && p.kind !== 'stairGate' && p.kind !== 'ladder' && p.kind !== 'woodLadder' && p.kind !== 'libraryLadder' && p.kind !== 'rollingLadder' && p.kind !== 'fireEscape') || rng.float() >= 0.45) continue;
+      const sr = decalQuad(stairRod(rng), 0.8 + rng.float() * 0.15, 0.35 + rng.float() * 0.08);
+      sr.rotation.x = -Math.PI / 2;
+      sr.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.011, p.z + (rng.float() - 0.5) * 0.3);
+      sr.name = 'stair-rod';
+      group.add(sr);
+    }
+
+    // The pelmets kept their dust — dust shelves on the valances
+    // above the windows.
+    for (const p of spec.props) {
+      if ((p.kind !== 'window' && p.kind !== 'transomWindow' && p.kind !== 'traceryWindow' && p.kind !== 'windowArch' && p.kind !== 'curtain' && p.kind !== 'curtainLong' && p.kind !== 'curtainSwag' && p.kind !== 'drapePanel') || rng.float() >= 0.4) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, pelmetDust(rng), 0.9 + rng.float() * 0.15, 0.4 + rng.float() * 0.08, along, 2.45 + rng.float() * 0.1);
+      const pd = group.children[group.children.length - 1];
+      if (pd && !pd.name) pd.name = 'pelmet-dust';
+    }
+
+    // The scuttles left their rings — coal dust rings beside the
+    // hearths and stoves.
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit' && p.kind !== 'stove' && p.kind !== 'stoveRange' && p.kind !== 'kitchenRange' && p.kind !== 'masonryHeater' && p.kind !== 'boilerDrum' && p.kind !== 'boilerTank') || rng.float() >= 0.5) continue;
+      const sg = decalQuad(scuttleGhost(rng), 0.5 + rng.float() * 0.1, 0.5 + rng.float() * 0.1);
+      sg.rotation.x = -Math.PI / 2;
+      sg.position.set(p.x + (rng.bool(0.5) ? 0.7 : -0.7) + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.4 + rng.float() * 0.3);
+      sg.name = 'scuttle-ghost';
+      group.add(sg);
+    }
+
+    // The inkwells kept their rings — bottle rings and dip marks
+    // on the desks where letters were written.
+    for (const p of spec.props) {
+      if ((p.kind !== 'writingDesk' && p.kind !== 'catalogueDesk' && p.kind !== 'schoolDesk' && p.kind !== 'desk' && p.kind !== 'typewriter') || rng.float() >= 0.45) continue;
+      const ir = decalQuad(inkwellRing(rng), 0.35 + rng.float() * 0.08, 0.35 + rng.float() * 0.08);
+      ir.rotation.x = -Math.PI / 2;
+      ir.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.012, p.z + (rng.float() - 0.5) * 0.4);
+      ir.name = 'inkwell-ring';
+      group.add(ir);
+    }
+
+    // The washboards kept their tides — soap tide lines under the
+    // wash stands and washers.
+    for (const p of spec.props) {
+      if ((p.kind !== 'washStand' && p.kind !== 'washer' && p.kind !== 'basinSink' && p.kind !== 'manglePress' && p.kind !== 'linenPress' && p.kind !== 'linenHamper' && p.kind !== 'stackedLinen' && p.kind !== 'linenShelf') || rng.float() >= 0.45) continue;
+      const wt = decalQuad(washTide(rng), 0.55 + rng.float() * 0.1, 0.55 + rng.float() * 0.1);
+      wt.rotation.x = -Math.PI / 2;
+      wt.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.0085, p.z + 0.5 + rng.float() * 0.3);
+      wt.name = 'wash-tide';
+      group.add(wt);
+    }
+
+    // The pews kept their cushions — pressed outlines on the pew
+    // seats where the cushions went.
+    for (const p of spec.props) {
+      if ((p.kind !== 'chapelPew' && p.kind !== 'pewRow') || rng.float() >= 0.5) continue;
+      const pc = decalQuad(pewCushion(rng), 0.9 + rng.float() * 0.15, 0.4 + rng.float() * 0.08);
+      pc.rotation.x = -Math.PI / 2;
+      pc.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.011, p.z + (rng.float() - 0.5) * 0.3);
+      pc.name = 'pew-cushion';
+      group.add(pc);
+    }
+
+    // The bells kept their pulls — cord wear strips on the walls
+    // beside the doors of the lived rooms.
+    if (livedIn && doorPositions.length > 0 && rng.bool(0.3)) {
+      const port = doorPositions[rng.int(0, doorPositions.length - 1)];
+      const lp6 = portLocalPos(port, w, d);
+      const a6 = port.wall === 'e' || port.wall === 'w' ? lp6.z : lp6.x;
+      wallDecal(port.wall, bellPull(rng), 0.35 + rng.float() * 0.08, 0.9 + rng.float() * 0.15,
+        a6 + (rng.bool(0.5) ? 0.7 : -0.7), 1.35 + rng.float() * 0.15);
+      const bpu = group.children[group.children.length - 1];
+      if (bpu && !bpu.name) bpu.name = 'bell-pull';
+    }
+
+    // The spools kept their shadows — thread and needle marks on
+    // the work tables where sewing was done.
+    for (const p of spec.props) {
+      if ((p.kind !== 'table' && p.kind !== 'sideTable' && p.kind !== 'consoleTable' && p.kind !== 'vanityTable' && p.kind !== 'diningTable' && p.kind !== 'desk' && p.kind !== 'writingDesk') || rng.float() >= 0.4) continue;
+      const ss2 = decalQuad(spoolShadow(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1);
+      ss2.rotation.x = -Math.PI / 2;
+      ss2.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      ss2.name = 'spool-shadow';
+      group.add(ss2);
+    }
+
+    // The copper ran green — verdigris streaks under the copper
+    // and brass fittings.
+    for (const p of spec.props) {
+      if ((p.kind !== 'copperSet' && p.kind !== 'brassPot' && p.kind !== 'pipe' && p.kind !== 'indPipes' && p.kind !== 'pipeManifold' && p.kind !== 'basinSink' && p.kind !== 'pipeLamp') || rng.float() >= 0.4) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, verdigrisStreak(rng), 0.4 + rng.float() * 0.08, 0.9 + rng.float() * 0.15, along + (rng.float() - 0.5) * 0.4, 1.3 + rng.float() * 0.4);
+      const vs = group.children[group.children.length - 1];
+      if (vs && !vs.name) vs.name = 'verdigris-streak';
+    }
+
+    // The lids kept the pry — gouge marks on the crates and chests
+    // that were forced open.
+    for (const p of spec.props) {
+      if ((p.kind !== 'crate' && p.kind !== 'milCrate' && p.kind !== 'plasticCrate' && p.kind !== 'chest' && p.kind !== 'toolChest' && p.kind !== 'ammoBox' && p.kind !== 'cardboardBox' && p.kind !== 'machineBox' && p.kind !== 'medBox' && p.kind !== 'powerBox' && p.kind !== 'utilityBox') || rng.float() >= 0.4) continue;
+      const lp7 = decalQuad(lidPry(rng), 0.7 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
+      lp7.rotation.x = -Math.PI / 2;
+      lp7.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      lp7.name = 'lid-pry';
+      group.add(lp7);
+    }
+
+    // The wrenches kept their bite — jaw marks on the manifolds
+    // and boilers where fittings were forced.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pipeManifold' && p.kind !== 'boilerDrum' && p.kind !== 'boilerTank' && p.kind !== 'indPipes' && p.kind !== 'masonryHeater' && p.kind !== 'compressor' && p.kind !== 'drillPress' && p.kind !== 'benchVice') || rng.float() >= 0.45) continue;
+      const wb = decalQuad(wrenchBite(rng), 0.35 + rng.float() * 0.08, 0.35 + rng.float() * 0.08);
+      wb.rotation.x = -Math.PI / 2;
+      wb.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.011, p.z + (rng.float() - 0.5) * 0.4);
+      wb.name = 'wrench-bite';
+      group.add(wb);
+    }
+
+    // The jars kept their rings — syrup rings on the pantry and
+    // cellar shelves where preserves stood.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pantryShelf' && p.kind !== 'linenShelf' && p.kind !== 'shelfWood' && p.kind !== 'stackShelf' && p.kind !== 'wineRack') || rng.float() >= 0.45) continue;
+      const pr2 = decalQuad(preserveRing(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      pr2.rotation.x = -Math.PI / 2;
+      pr2.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.011, p.z + 0.3 + rng.float() * 0.3);
+      pr2.name = 'preserve-ring';
+      group.add(pr2);
+    }
+
+    // The boards kept the cheese — wheel rings and crumb trails
+    // on the cutting boards and tables.
+    for (const p of spec.props) {
+      if ((p.kind !== 'cuttingBoard' && p.kind !== 'cheeseBox' && p.kind !== 'table' && p.kind !== 'diningTable' && p.kind !== 'breakTable' && p.kind !== 'sideboard' && p.kind !== 'counter') || rng.float() >= 0.4) continue;
+      const cr = decalQuad(cheeseRing(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      cr.rotation.x = -Math.PI / 2;
+      cr.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.011, p.z + (rng.float() - 0.5) * 0.3);
+      cr.name = 'cheese-ring';
+      group.add(cr);
+    }
+
+    // The sieves kept their sift — flour fans on the kitchen
+    // counters where baking happened.
+    for (const p of spec.props) {
+      if ((p.kind !== 'cuttingBoard' && p.kind !== 'counter' && p.kind !== 'merchantCounter' && p.kind !== 'table' && p.kind !== 'kitchenRange' && p.kind !== 'sculleryRack' && p.kind !== 'sideboard') || rng.float() >= 0.4) continue;
+      const sv = decalQuad(sieveSift(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      sv.rotation.x = -Math.PI / 2;
+      sv.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      sv.name = 'sieve-sift';
+      group.add(sv);
+    }
+
+    // The planes kept their curls — shaving ribbons on the benches
+    // where wood was dressed.
+    for (const p of spec.props) {
+      if ((p.kind !== 'benchVice' && p.kind !== 'toolChest' && p.kind !== 'toolbox' && p.kind !== 'toolCart' && p.kind !== 'bench' && p.kind !== 'utilityBox') || rng.float() >= 0.4) continue;
+      const pc2 = decalQuad(planeCurl(rng), 0.7 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
+      pc2.rotation.x = -Math.PI / 2;
+      pc2.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      pc2.name = 'plane-curl';
+      group.add(pc2);
+    }
+
+    // The drills kept their pits — holes and swarf on the worktops
+    // where things were bored.
+    for (const p of spec.props) {
+      if ((p.kind !== 'benchVice' && p.kind !== 'drillPress' && p.kind !== 'toolChest' && p.kind !== 'bench' && p.kind !== 'utilityBox' && p.kind !== 'machineBox') || rng.float() >= 0.4) continue;
+      const dp2 = decalQuad(drillPit(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1);
+      dp2.rotation.x = -Math.PI / 2;
+      dp2.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      dp2.name = 'drill-pit';
+      group.add(dp2);
+    }
+
+    // The hammers kept their dents — strike pits on the walls of
+    // the work rooms.
+    if (spec.biome === 'maintenance' || isUnder || !livedIn) {
+      if (rng.bool(0.4)) {
+        const spot = pickWallSpot(0.7);
+        if (spot) {
+          wallDecal(spot.wall, hammerDent(rng), 0.55 + rng.float() * 0.1, 0.55 + rng.float() * 0.1, spot.along, 1.1 + rng.float() * 0.5);
+          const hd = group.children[group.children.length - 1];
+          if (hd && !hd.name) hd.name = 'hammer-dent';
+        }
+      }
+    }
+
+    // The sparks kept their scatter — forge marks around torches,
+    // heaters and the places hot work happened.
+    for (const p of spec.props) {
+      if ((p.kind !== 'blowtorch' && p.kind !== 'propaneTorch' && p.kind !== 'firePit' && p.kind !== 'masonryHeater' && p.kind !== 'boilerDrum') || rng.float() >= 0.45) continue;
+      const sp2 = decalQuad(sparkScatter(rng), 0.55 + rng.float() * 0.1, 0.55 + rng.float() * 0.1);
+      sp2.rotation.x = -Math.PI / 2;
+      sp2.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.009, p.z + 0.4 + rng.float() * 0.3);
+      sp2.name = 'spark-scatter';
+      group.add(sp2);
+    }
+
+    // The looms kept their threads — warp shadows and lint drifts
+    // where cloth was worked.
+    for (const p of spec.props) {
+      if ((p.kind !== 'spinningWheel') || rng.float() >= 0.45) continue;
+      const lt = decalQuad(loomThread(rng), 0.8 + rng.float() * 0.15, 0.6 + rng.float() * 0.1);
+      lt.rotation.x = -Math.PI / 2;
+      lt.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.4 + rng.float() * 0.4);
+      lt.name = 'loom-thread';
+      group.add(lt);
+    }
+
+    // The wheels kept their grooves — ruts worn in the floors of
+    // the corridors where carts rolled.
+    if ((spec.biome === 'corridor' || spec.biome === 'maintenance' || isUnder) && rng.bool(0.3)) {
+      const wg = decalQuad(wheelGroove(rng), 1.1 + rng.float() * 0.2, 0.5 + rng.float() * 0.1);
+      wg.rotation.x = -Math.PI / 2;
+      wg.rotation.z = (rng.bool(0.6) ? 0 : Math.PI / 2) + (rng.float() - 0.5) * 0.2;
+      wg.position.set((rng.float() - 0.5) * w * 0.4, 0.0085, (rng.float() - 0.5) * d * 0.4);
+      wg.name = 'wheel-groove';
+      group.add(wg);
+    }
+
+    // The candles kept their singe — soot tongues on the walls
+    // above the candle stands.
+    for (const p of spec.props) {
+      if ((p.kind !== 'candle' && p.kind !== 'candelabra' && p.kind !== 'candelabrum' && p.kind !== 'votiveStand' && p.kind !== 'lantern' && p.kind !== 'wallLantern') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, flameSinge(rng), 0.4 + rng.float() * 0.08, 0.8 + rng.float() * 0.15, along + (rng.float() - 0.5) * 0.3, 1.5 + rng.float() * 0.3);
+      const fs = group.children[group.children.length - 1];
+      if (fs && !fs.name) fs.name = 'flame-singe';
+    }
+
+    // The racks kept their drips — drip lines under the dish
+    // drainers and scullery racks.
+    for (const p of spec.props) {
+      if ((p.kind !== 'dishDrainer' && p.kind !== 'sculleryRack' && p.kind !== 'potRack' && p.kind !== 'rack' && p.kind !== 'luggageRack') || rng.float() >= 0.5) continue;
+      const dr = decalQuad(dishRack(rng), 0.8 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
+      dr.rotation.x = -Math.PI / 2;
+      dr.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.3 + rng.float() * 0.3);
+      dr.name = 'dish-rack';
+      group.add(dr);
+    }
+
+    // The desks kept their weights — glass rings and page ghosts
+    // where paper piles sat.
+    for (const p of spec.props) {
+      if ((p.kind !== 'writingDesk' && p.kind !== 'catalogueDesk' && p.kind !== 'schoolDesk' && p.kind !== 'desk' && p.kind !== 'filing' && p.kind !== 'drawerUnit') || rng.float() >= 0.45) continue;
+      const pw = decalQuad(paperWeight(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1);
+      pw.rotation.x = -Math.PI / 2;
+      pw.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      pw.name = 'paper-weight';
+      group.add(pw);
+    }
+
+    // The floors kept the crayons — wax scrawls where the children
+    // drew on the boards.
+    for (const p of spec.props) {
+      if ((p.kind !== 'dollCluster' && p.kind !== 'boardGame' && p.kind !== 'sportsBall' && p.kind !== 'football' && p.kind !== 'baseballBat' && p.kind !== 'gameConsole' && p.kind !== 'gamepad' && p.kind !== 'cassettePlayer') || rng.float() >= 0.55) continue;
+      const cm = decalQuad(crayonMark(rng), 0.7 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
+      cm.rotation.x = -Math.PI / 2;
+      cm.rotation.z = rng.float() * Math.PI;
+      cm.position.set(p.x + (rng.float() - 0.5) * 0.6, 0.009, p.z + (rng.float() - 0.5) * 0.6);
+      cm.name = 'crayon-mark';
+      group.add(cm);
+    }
+
+    // The benches kept their squares — L-shadows on the worktops
+    // where wood was marked out.
+    for (const p of spec.props) {
+      if ((p.kind !== 'benchVice' && p.kind !== 'toolChest' && p.kind !== 'bench' && p.kind !== 'toolbox' && p.kind !== 'utilityBox') || rng.float() >= 0.4) continue;
+      const sq = decalQuad(squareMark(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1);
+      sq.rotation.x = -Math.PI / 2;
+      sq.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.012, p.z + (rng.float() - 0.5) * 0.3);
+      sq.name = 'square-mark';
+      group.add(sq);
+    }
+
+    // The steps kept their bottles — milk rings on the thresholds
+    // of the lived rooms.
+    if (livedIn && doorPositions.length > 0 && rng.bool(0.3)) {
+      const port = doorPositions[rng.int(0, doorPositions.length - 1)];
+      const lp8 = portLocalPos(port, w, d);
+      const mb = decalQuad(milkBottle(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      mb.rotation.x = -Math.PI / 2;
+      const moff = 0.5 + rng.float() * 0.3;
+      mb.position.set(
+        lp8.x + (port.wall === 'n' || port.wall === 's' ? (rng.float() - 0.5) * 0.8 : 0) + (port.wall === 'e' ? -moff : port.wall === 'w' ? moff : 0),
+        0.009,
+        lp8.z + (port.wall === 'e' || port.wall === 'w' ? (rng.float() - 0.5) * 0.8 : 0) + (port.wall === 'n' ? moff : port.wall === 's' ? -moff : 0),
+      );
+      mb.name = 'milk-bottle';
+      group.add(mb);
+    }
+
+    // The casks kept their trays — drip trays and foam ghosts
+    // under the taps.
+    for (const p of spec.props) {
+      if ((p.kind !== 'barrel' && p.kind !== 'wineBarrel') || rng.float() >= 0.45) continue;
+      const dt = decalQuad(dripTray(rng), 0.5 + rng.float() * 0.1, 0.5 + rng.float() * 0.1);
+      dt.rotation.x = -Math.PI / 2;
+      dt.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.5 + rng.float() * 0.3);
+      dt.name = 'drip-tray';
+      group.add(dt);
+    }
+
+    // The shelves kept their hooks — cup hook pits under the
+    // pantry and scullery shelves.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pantryShelf' && p.kind !== 'sculleryRack' && p.kind !== 'shelfWood' && p.kind !== 'linenShelf' && p.kind !== 'potRack' && p.kind !== 'shelf') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, cupHook(rng), 0.9 + rng.float() * 0.15, 0.45 + rng.float() * 0.08, along, 1.55 + rng.float() * 0.15);
+      const ch2 = group.children[group.children.length - 1];
+      if (ch2 && !ch2.name) ch2.name = 'cup-hook';
+    }
+
+    // The brackets kept their shadows — strut ghosts under the
+    // wall shelves where they carried their loads.
+    for (const p of spec.props) {
+      if ((p.kind !== 'shelfWood' && p.kind !== 'stackShelf' && p.kind !== 'pantryShelf' && p.kind !== 'linenShelf' && p.kind !== 'bookshelf' && p.kind !== 'shelf') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, shelfBracket(rng), 0.9 + rng.float() * 0.15, 0.5 + rng.float() * 0.1, along, 0.9 + rng.float() * 0.4);
+      const sb = group.children[group.children.length - 1];
+      if (sb && !sb.name) sb.name = 'shelf-bracket';
+    }
+
+    // The grates kept their bars — slat shadows and sifted ash
+    // under the floor grates and drains.
+    for (const p of spec.props) {
+      if ((p.kind !== 'grateDrain' && p.kind !== 'ironGrate') || rng.float() >= 0.55) continue;
+      const gb = decalQuad(grateBar(rng), 0.6 + rng.float() * 0.1, 0.6 + rng.float() * 0.1);
+      gb.rotation.x = -Math.PI / 2;
+      gb.position.set(p.x, 0.009, p.z);
+      gb.name = 'grate-bar';
+      group.add(gb);
+    }
+
+    // The hearths kept their embers — scorch pits on the floor
+    // before the fire.
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit' && p.kind !== 'stoveRange' && p.kind !== 'stove') || rng.float() >= 0.5) continue;
+      const es = decalQuad(emberScar(rng), 0.7 + rng.float() * 0.15, 0.7 + rng.float() * 0.15);
+      es.rotation.x = -Math.PI / 2;
+      es.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.009, p.z + 0.5 + rng.float() * 0.3);
+      es.name = 'ember-scar';
+      group.add(es);
+    }
+
+    // The corners kept their pans — dustpan ghosts in the swept
+    // service rooms.
+    if ((spec.biome === 'maintenance' || isUnder) && rng.bool(0.4)) {
+      const corner = [[-w/2+0.5,-d/2+0.5],[w/2-0.5,-d/2+0.5],[-w/2+0.5,d/2-0.5],[w/2-0.5,d/2-0.5]][rng.int(0,3)];
+      const dp = decalQuad(dustPan(rng), 0.5 + rng.float() * 0.1, 0.5 + rng.float() * 0.1);
+      dp.rotation.x = -Math.PI / 2;
+      dp.rotation.z = rng.float() * Math.PI * 2;
+      dp.position.set(corner[0] + (rng.float() - 0.5) * 0.4, 0.009, corner[1] + (rng.float() - 0.5) * 0.4);
+      dp.name = 'dust-pan';
+      group.add(dp);
+    }
+
+    // The walls kept their caps — peg marks and hat shadows
+    // where the hooks held them.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pegRail' && p.kind !== 'ceilingHook' && p.kind !== 'meatHook' && p.kind !== 'hallTree') || rng.float() >= 0.5) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, capPeg(rng), 0.4 + rng.float() * 0.08, 0.6 + rng.float() * 0.1, along, 1.6 + rng.float() * 0.2);
+      const cp = group.children[group.children.length - 1];
+      if (cp && !cp.name) cp.name = 'cap-peg';
+    }
+
+    // The walls kept their mantles — glow and soot above the
+    // gas fixtures.
+    for (const p of spec.props) {
+      if ((p.kind !== 'wallSconce' && p.kind !== 'cagedSconce' && p.kind !== 'wallLantern') || rng.float() >= 0.5) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, mantleGlow(rng), 0.4 + rng.float() * 0.08, 0.6 + rng.float() * 0.1, along, 1.9 + rng.float() * 0.3);
+      const mg = group.children[group.children.length - 1];
+      if (mg && !mg.name) mg.name = 'mantle-glow';
+    }
+
+    // The pianos kept their pedals — wear where feet worked
+    // under the keyboard.
+    for (const p of spec.props) {
+      if ((p.kind !== 'pianoUpright' && p.kind !== 'spinningWheel') || rng.float() >= 0.5) continue;
+      const pw = decalQuad(pedalWear(rng), 0.6 + rng.float() * 0.1, 0.6 + rng.float() * 0.1);
+      pw.rotation.x = -Math.PI / 2;
+      pw.position.set(p.x, 0.009, p.z + 0.45);
+      pw.name = 'pedal-wear';
+      group.add(pw);
+    }
+
+    // The chairs kept their springs — coil ghosts under the
+    // seats that gave.
+    for (const p of spec.props) {
+      if ((p.kind !== 'chair' && p.kind !== 'armchair' && p.kind !== 'diningChair' && p.kind !== 'plasticChair' && p.kind !== 'schoolChair' && p.kind !== 'wheelchair') || rng.float() >= 0.45) continue;
+      const cs = decalQuad(chairSpring(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      cs.rotation.x = -Math.PI / 2;
+      cs.position.set(p.x, 0.009, p.z);
+      cs.name = 'chair-spring';
+      group.add(cs);
+    }
+
+    // The vents kept their bricks — cast-iron ghosts in the
+    // service walls.
+    if ((spec.biome === 'maintenance' || isUnder || !livedIn) && rng.bool(0.5)) {
+      const pick = pickWallSpot(1.6);
+      if (pick) {
+        wallDecal(pick.wall, airBrick(rng), 0.55 + rng.float() * 0.1, 0.55 + rng.float() * 0.1, pick.along, 0.4 + rng.float() * 0.3);
+        const ab = group.children[group.children.length - 1];
+        if (ab && !ab.name) ab.name = 'air-brick';
+      }
+    }
+
+    // The mice kept their runs — grease trails along the
+    // skirting of the dark rooms.
+    if ((spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder || !livedIn) && rng.bool(0.6)) {
+      const pick = pickWallSpot(2.2);
+      if (pick) {
+        wallDecal(pick.wall, mouseRun(rng), 1.4 + rng.float() * 0.3, 0.4 + rng.float() * 0.1, pick.along, 0.1 + rng.float() * 0.06);
+        const mr = group.children[group.children.length - 1];
+        if (mr && !mr.name) mr.name = 'mouse-run';
+      }
     }
 
     // The water line — a room that flooded once keeps the tide mark:

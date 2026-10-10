@@ -686,6 +686,10 @@ export class Game {
     this.unpaidTheft = cp?.unpaidTheft ?? 0;
     this.unpaidHeld = cp?.unpaidHeld ?? 0;
     this.paperTrail = cp?.paperTrail ?? 0;
+    // the tally's struck floors ride the checkpoint — a filed site
+    // keeps its strikes, a cooled one stays in the register's book
+    this.workSites = (cp?.workSites ?? []).map((s) => ({ ...s }));
+    this.filedWork = cp?.filedWork ?? 0;
     this.wantedActive = false;
     this.wantedRooms.clear();
     this.spillMeshes.clear();
@@ -1711,6 +1715,14 @@ export class Game {
       // eyes. Death flags are the source of truth: a restored hazard
       // simply leaves the deadHazards checkpoint list, and the
       // tug-of-war is symmetric — restored work threatens walkers too.
+      // sprint 710 — a filed floor pulls the patrol: sites the tally
+      // struck twice and hasn't cooled stand as a standing order.
+      filedFloors: (x, z, r) => {
+        const cold = this.clock.time - 360;
+        return this.workSites.filter((s) => s.strikes >= 2 && s.lastT >= cold
+          && Math.hypot(s.x - x, s.z - z) < r)
+          .map((s) => ({ x: s.x, z: s.z, room: s.room, strikes: s.strikes }));
+      },
       rearmHazard: (kind, x, z) => {
         const near = (p: { x: number; z: number }) => Math.hypot(p.x - x, p.z - z) < 1.4;
         if (kind === 'wire') {
@@ -1744,7 +1756,7 @@ export class Game {
           // stays yours ('Re-pressurize your line' opens it again).
           const s = this.hazard.steams.find((st) => !st.dead
             && st.owner === 'player' && near(st.pos));
-          if (s) { s.dead = true; return 'crimp'; }
+          if (s) { s.dead = true; return this.answerWork('crimp', x, z); }
           // sprint 592 — or your wheel gets the pull: a 'work' mark by
           // a live player-fitted fan and the belt comes off in his
           // hands. He can't re-engage your wheel, so he strips its
@@ -1770,7 +1782,7 @@ export class Game {
             if (aimed) {
               delete aimed.owner;
               aimed.aimBearing = undefined;
-              return 'reclaim';
+              return this.answerWork('reclaim', x, z);
             }
             const w = this.hazard.watchers.find((ww) => ww.owner !== undefined
               && ww.lensed !== false && near(ww.pos));
@@ -1790,7 +1802,7 @@ export class Game {
                 const p2 = this.trapPos.get(pk)!;
                 this.droppedSprings.push({ x: p2.x, z: p2.z });
                 this.mintSpringDrops();
-                return 'platePull';
+                return this.answerWork('platePull', x, z);
               }
               // sprint 681 — or YOUR jaw gets the pull: a plate you
               // set signs 'work' under your name, and the house's
@@ -1807,22 +1819,23 @@ export class Game {
                 this.trapPos.delete(st.key);
                 this.droppedSprings.push({ x: st.x, z: st.z });
                 this.mintSpringDrops();
-                return 'platePull';
+                return this.answerWork('platePull', x, z);
               }
               // sprint 653 — or your lid gets the sweep: the stash
               // signs 'work' when you fill it (s528), and the last
               // surface without a house answer pays it now — the
               // floorkeeper tips the box, your take comes out as
               // floor piles. Scattered, not confiscated.
-              // sprint 700 — ordering line: the scatter only tips a
-              // lid NO hand holds. A knee already planted on the box
-              // ('sweep') or a rattle's grip ('hollow'/'inspector')
-              // outranks the warden's broom — the held lid keeps its
-              // take, and its 'work' sign stands for later hands.
               const spot = this.activeRooms().flatMap((r) => r.hidingSpots)
-                .find((s) => !s.trappedBy && near(s.exitPos)
+                .find((s) => near(s.exitPos)
                   && (this.lidStashes.get(`${this.space}:${s.id}`)?.items.length ?? 0) > 0);
               if (!spot) return null;
+              // sprint 712 — the knee orders the lid: a gripped box
+              // can't be tipped while the grip stands — the scatter
+              // needs a free lid, and the hold is already an answer.
+              // The mark is spent; the take keeps its shelter until
+              // the pass ends (any grip holds: knee, rattle, bite).
+              if (spot.trappedBy) return 'lidHeld';
               const stash = this.lidStashes.get(`${this.space}:${spot.id}`)!;
               const pileIds = ['feltWrap', 'doorChock', 'wireCoil',
                 'springPart', 'fanBelt', 'eyeLens'] as const;
@@ -1848,14 +1861,14 @@ export class Game {
               this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops();
               this.mintSpringDrops(); this.mintBeltDrops(); this.mintLensDrops();
               this.sweptLids = (this.sweptLids ?? 0) + 1;
-              return 'lidSweep';
+              return this.answerWork('lidSweep', x, z);
             }
             w.dead = true;
             w.lensed = false;
             delete w.owner; // the glass is off — dead socket, nobody's
             this.droppedLenses.push({ x: w.pos.x, z: w.pos.z });
             this.mintLensDrops();
-            return 'lensTear';
+            return this.answerWork('lensTear', x, z);
           }
           f.dead = true;
           f.belted = false;
@@ -1867,7 +1880,7 @@ export class Game {
           }
           this.droppedBelts.push({ x: f.pos.x, z: f.pos.z });
           this.mintBeltDrops();
-          return 'pull';
+          return this.answerWork('pull', x, z);
         }
         if (kind === 'spring') {
           // sprint 574 — the house cocks its plates back: a 'spring'
@@ -1960,6 +1973,16 @@ export class Game {
    *  gatherable, pocketable, foldable like the belt. */
   private droppedLenses: { x: number; z: number }[] = [];
   private sweptLids = 0;
+  /** sprint 709 — the house keeps a tally: every 'work' mark the
+   *  house answers leaves a struck site — the spot your work paid
+   *  for. A second answer inside the site's reach names a repeat
+   *  offender: every strike past the first writes a register line
+   *  (the same hands on the same floor becomes a name). Sites cool
+   *  like sign — ~6 minutes unanswered and the floor forgets the
+   *  streak. */
+  private workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[] = [];
+  /** Register lines the tally wrote — the epitaph counts them. */
+  private filedWork = 0;
   /** Coils the house worked off a bound leaf — same drop convention:
    *  wire isn't destroyed by the strain, it lands as loot. */
   private droppedCoils: { x: number; z: number }[] = [];
@@ -4603,9 +4626,13 @@ export class Game {
         // s548 — only burning lights count; shells and doused don't burn unattended
         const lampN = this.litLamps.filter((l) => l.space === 'main' && l.lit && l.batt > 0).length;
         const lamps = lampN > 0 ? ` · it counts ${lampN} light${lampN === 1 ? '' : 's'} burning unattended` : '';
+        // sprint 711 — and the floors the tally filed: worked sites
+        // struck twice read in its book like the lids it counts
+        const floorN = this.workSites.filter((s) => s.strikes >= 2).length;
+        const floors = floorN > 0 ? ` · it keeps ${floorN} worked floor${floorN === 1 ? '' : 's'} filed` : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}]`
-          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}]`);
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}${floors}]`
+          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}${floors}]`);
         return;
       }
       case 'till': {
@@ -4864,15 +4891,15 @@ export class Game {
         // grafter worked tells you its wire walked.
         const robbed = stash.robbedWire && !stash.items.some((i) => i.id === 'wireCoil')
           ? ' · its wire walked' : '';
-        // sprint 701 — and the lid names its holder: a knee or a grip
-        // on the box is part of the read, not a footnote after it.
-        const heldBy = this.activeRooms().flatMap((r) => r.hidingSpots)
+        // sprint 713 — and the lid reads its own grip: a look still
+        // works under a knee — it just can't reach in
+        const held = this.activeRooms().flatMap((r) => r.hidingSpots)
           .find((s) => s.id === spotId)?.trappedBy;
-        const held = heldBy === 'sweep' ? ' · a knee sits on it'
-          : heldBy ? ' · hands hold it shut' : '';
+        const heldTxt = held === 'sweep' ? ' · a knee holds it shut'
+          : held ? ' · hands hold it shut' : '';
         this.cue('info', it.pos, m > 0
-          ? `[the lid keeps ${n} goods — ${m} of it marked${robbed}${held}]`
-          : `[the lid keeps ${n} goods${robbed}${held}]`);
+          ? `[the lid keeps ${n} goods — ${m} of it marked${robbed}${heldTxt}]`
+          : `[the lid keeps ${n} goods${robbed}${heldTxt}]`);
         return;
       }
       case 'recoverStash': {
@@ -8096,6 +8123,50 @@ export class Game {
     return true;
   }
 
+  /** sprint 709 — the tally's strike: the house answered your work
+   *  at (x,z), and the site remembers. The read mark names the hand —
+   *  unsigned and 'player'/'eye:' signs are yours; a grafter's own
+   *  sign files nothing against you. A second answer inside the
+   *  site's reach names a repeat offender: every strike past the
+   *  first writes a register line — the same hands on the same
+   *  floor becomes a name the counter can read. */
+  private strikeWorkSite(x: number, z: number): void {
+    const ev = this.hazard.evidence.find((e) => e.kind === 'work'
+      && Math.hypot(e.pos.x - x, e.pos.z - z) < 1.8);
+    if (ev?.by && ev.by !== 'player' && !ev.by.startsWith('eye:')) return;
+    const cold = this.clock.time - 360;
+    let site = this.workSites.find((s) => Math.hypot(s.x - x, s.z - z) < 2.5);
+    if (site && site.lastT < cold) site.strikes = 0; // a cold floor is a fresh offense, not a streak
+    if (!site) {
+      site = { x, z,
+        room: this.activeRooms().find((r) => pointInRoom(r, x, z))?.index
+          ?? this.route?.branchRooms.find((r) => pointInRoom(r, x, z))?.index
+          ?? this.currentRoom,
+        strikes: 0, lastT: this.clock.time };
+      this.workSites.push(site);
+      // the ledger is short — twelve worked floors, cooled-first out
+      if (this.workSites.length > 12) {
+        this.workSites.sort((a, b) => a.lastT - b.lastT);
+        this.workSites.splice(0, this.workSites.length - 12);
+      }
+    }
+    site.strikes += 1;
+    site.lastT = this.clock.time;
+    if (site.strikes >= 2) {
+      this.unpaidHeld += 1;
+      this.filedWork += 1;
+      this.cue('chalk-mark', v3(x, 0.5, z),
+        '[the register keeps this floor — the same hands have worked it before]', 'warn');
+    }
+  }
+
+  /** Every 'work' answer the dispatch lands runs the tally — the
+   *  strike is the answering, not the marking. */
+  private answerWork<T extends string>(answer: T, x: number, z: number): T {
+    this.strikeWorkSite(x, z);
+    return answer;
+  }
+
   /** Service refusal at a staffed counter — a cold counter folds its
    *  hands; a face six lines deep in the register buys nothing at any
    *  counter (the desk is the only answer, and the affidavit's rate).
@@ -8525,6 +8596,8 @@ export class Game {
         : undefined,
       snappedTraps: this.snappedTraps.size > 0 ? [...this.snappedTraps] : undefined,
       trapOwner: this.trapOwner.size > 0 ? [...this.trapOwner.keys()] : undefined,
+      workSites: this.workSites.length > 0 ? this.workSites.map((s) => ({ ...s })) : undefined,
+      filedWork: this.filedWork > 0 ? this.filedWork : undefined,
       priedTraps: this.priedTraps.size > 0 ? [...this.priedTraps] : undefined,
       setTraps: this.setTraps.length > 0 ? this.setTraps.map((t) => ({ ...t })) : undefined,
       slippedRugs: this.slippedRugs.size > 0 ? [...this.slippedRugs] : undefined,
@@ -8631,6 +8704,8 @@ export class Game {
             lidsSwept: this.sweptLids || undefined,
             // sprint 664 — and the eyes still aimed your way
             eyesAimed: this.hazard.watchers.filter((w) => w.owner === 'player' && Number.isFinite(w.aimBearing)).length || undefined,
+            // sprint 711 — and the floors the tally filed on you
+            filedWork: this.filedWork || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -8704,6 +8779,8 @@ export class Game {
         lidsSwept: this.sweptLids || undefined,
             // sprint 664 — and the eyes still aimed your way
             eyesAimed: this.hazard.watchers.filter((w) => w.owner === 'player' && Number.isFinite(w.aimBearing)).length || undefined,
+            // sprint 711 — and the floors the tally filed on you
+            filedWork: this.filedWork || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

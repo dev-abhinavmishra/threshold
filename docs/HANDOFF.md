@@ -2,14 +2,26 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
-## Sprint 700–703 — the knee outranks the broom (mechanics lane)
+## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
-- **700** the ordering line the sweep arc left open: `lidSweep`'s find ignored `trappedBy` — the warden could tip a lid a knee (or a rattle's grip) was already sitting on, scattering the take out from under a hold that claimed it. The find now requires `!s.trappedBy`: 'work' near a held lid answers nothing — the sign stands, the take waits, and a later read still pays.
-- **701** `peepLid` names its holder: a look at a gripped lid now reads `[the lid keeps N goods — a knee sits on it]` ('sweep') or `· hands hold it shut` for the other grips — the hold is part of the tell, not a footnote the recover refuses later.
-- **702** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
-- **703** pins + live: contract 61/61 (new describe pins ordering + peep holder + release cue); e2e leg 'the knee outranks the broom' drives it — held lid + 'work' → `null`, stash intact; knee lifts → same mark → `lidSweep`, coils on the floor. Both lid legs green.
+- **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
+- **716** merge-down of the 700-703 arc: the sibling lane's tally arc (709-714) landed the same ordering + holder-read surface first and further — `lidHeld` answers a gripped lid (mark spent, take sheltered) and the peep reads the knee. My scatter-ordering and peep pins conceded to theirs; what survives is the release tell + the held→lidHeld→freed→lidSweep transition leg. Contract 67/67.
 
-Next: the knee family is closed (plants / holds / robs / outranks / releases). Backlog: the 'work'-streak escalation surface (repeat marks near an outstanding sign — wanted already tightens; a room-local streak needs its own design), milestone-set hearing (design call), the purse-sink gap in gallery/records wings (fines drawer / coatrack), and the ghost: locked leaves let the Bellman through the seam but the knock loop still skips them — deliberately, watch if the new tell makes it legible.
+Next: the knee family is closed (plants / holds / robs / outranks / releases / is told). Backlog: the tally arc's own note — a counter answering a filed floor; inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
+## Sprint 709–714 — the house keeps a tally (mechanics lane)
+
+- **709** work-site ledger: every 'work' answer the dispatch lands now runs `strikeWorkSite` — the answering itself is the strike, bucketed ~2.5m, keyed off the read mark's `by` (unsigned/'player'/'eye:' signs are yours; a grafter's own sign files nothing). Strike 2 at the same site names a repeat offender: `unpaidHeld + 1` and `filedWork + 1` per strike past the first, warn cue `[the register keeps this floor — the same hands have worked it before]`. Sites cool like sign (360s unanswered = fresh offense); ledger capped at 12, cooled-first out. `workSites` + `filedWork` ride `CheckpointSave`.
+- **710** a filed floor pulls the patrol: new ctx hook `filedFloors(x,z,r)` serves uncooled twice-struck sites. The warden polls it inside `scentT` (after sign and spill, never in the under), dedupes per `room:x,z → strikes` (`filedChecked`) so a re-struck site pulls again, investigates kind `'filedSite'`, and stands over it reading the floor — the standing order is a detour, not a new sign (`seenSpills` untouched).
+- **711** the register keeps count: `askReg` readout appends `· it keeps N worked floors filed`; `filedWork` joins `BooksClosed` + both epitaph/victory books literals; `bookLines` renders "the register filed N worked-floor strikes against you".
+- **712** the knee's ordering line: `spot.trappedBy` (any grip — knee, rattle, bite) now blocks the warden's `lidSweep` and answers new `'lidHeld'` — the mark is still spent, the take keeps its shelter while the grip stands, and the answer files no strike (no work was answered). Corridor cue `[it reaches for the lid — a knee already holds it shut]`; base union + contract pins updated.
+- **713** the peep reads the grip: `peepLid` appends `· a knee holds it shut` ('sweep') / `· hands hold it shut` (other grips) — a look still works under a knee, it just can't reach in.
+- **714** contract spec (3 new describes, 66 tests) pins the tally chain, the ordering line, and the readbacks; e2e leg in `props.spec.ts` drives `ctx.rearmHazard` twice at a seeded player-vent+wheel spot → 'crimp' then 'pull', one site two strikes, `unpaidHeld +1`, `filedFloors` returns it, warn fires; then a `trappedBy:'sweep'` stash answers 'lidHeld' with the take intact and the peep reads the grip.
+
+Traps: `answerWork` wraps ONLY the returns that land — `return null` and `lidHeld` strike nothing (nothing was answered). The strike names the SIGNER via the nearest 'work' mark within 1.8m — a grafter's own sign near your work is a real edge the `by` check exists for. `filedChecked` keys on strike-count not time, so a cooled-then-restruck site re-pulls correctly.
+
+Next: the tally is a surface — a natural third leg is the counter *answering* a filed floor (the clerk's rate could name the floor it refuses on), and the streak idea still has no escalation beyond +1 line per strike (wanted already tightens at 6). Other backlog: lidSweep under a sweep-grip is now ordered, but an inspector rattle mid-sweep has no ordering line of its own.
+
 
 ## Sprint 681–683 — your jaw answers too (mechanics lane)
 
@@ -8375,7 +8387,81 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
+\n\n## Sprint 706–708 — the walls kept their mantles, the pianos kept their pedals & the mice kept their runs (decals lane)
+
+- `mantleGlow` — glow+soot above sconces/lanterns.
+- `pipeAsh` — ash+tobacco ghosts on smoking tables (props overlay).
+- `snufferMark` — snuffer bell shadows on candle tops (props overlay).
+- `pedalWear` — treadle wear under pianoUpright + spinningWheel (pianoUpright alone too rare to test green — include the wheel).
+- `chairSpring` — coil ghosts under chairs.
+- `bookPlate` — ex-libris ghosts on book shelves (props overlay).
+- `airBrick` — iron vent ghosts on service walls.
+- `mouseRun` — grease trails along skirting in dark rooms.
+- `dominoRun` — tile shadows on game tables (props overlay).
+
+Gates: tsc, lint, scoped vitest (706–708) green.\n\n## Sprint 703–705 — the desks kept their letters, the hearths kept their embers & the walls kept their caps (decals lane)
+
+- `tornEnvelope` — torn-mail ghosts on desks (props overlay).
+- `protractorArc` — drafting arcs on school surfaces (props overlay).
+- `marbleVein` — vein ghosts on cold/stone tops (props overlay).
+- `grateBar` — slat shadows under drains/grates.
+- `emberScar` — scorch pits before hearths/stoves.
+- `lidSteam` — extended onto counters (existing decal reuse; pots overlay already existed).
+- `dustPan` — swept-mound ghosts in service corners.
+- `gloveDust` — laid-glove ghosts on hall tables (props overlay).
+- `capPeg` — hat shadows on peg/rails.
+
+`lidSteam`/`LIDDED` already existed from an earlier sprint — grep decals.ts before naming new generators.
+
+Gates: tsc, lint, scoped vitest (703–705) green.\n\n## Sprint 700–702 — the counters kept their shells, the casks kept their trays & the shelves kept their hooks (decals lane)
+
+- `eggShell` — breakfast chips on counter/table tops (props overlay).
+- `milkBottle` — bottle rings on thresholds of lived rooms.
+- `napkinFold` — fold ghosts on dining tops (props overlay).
+- `steinRing` — ale rings on bar/counter tops (props overlay).
+- `dripTray` — tray ghosts under barrels.
+- `parcelString` — twine marks on boxes (props overlay).
+- `cupHook` — hook pits under pantry/scullery shelves.
+- `quiltPatch` — patchwork ghosts on beds (props overlay).
+- `shelfBracket` — strut shadows under wall shelves.
+
+Gates: tsc, lint, scoped vitest (700–702) green.\n\n## Sprint 697–699 — the sparks kept their scatter, the candles kept their singe & the desks kept their weights (decals lane)
+
+- `sparkScatter` — forge pits around blowtorch/propaneTorch/firePit/heater props.
+- `loomThread` — warp shadows under spinningWheel.
+- `wheelGroove` — cart ruts on corridor/maintenance/under floors.
+- `flameSinge` — soot tongues above candle kinds.
+- `dishRack` — drip lines under drainers/racks.
+- `powderPuff` — talc blooms on vanity/dresser tops (props overlay).
+- `paperWeight` — glass rings on desk kinds.
+- `crayonMark` — wax scrawls near toy/game props.
+- `squareMark` — carpenter's-square L-shadows on benches.
+
+Gates: tsc, lint, scoped vitest (697–699) green.\n\n## Sprint 694–696 — the copper ran green, the jars kept their rings & the planes kept their curls (decals lane)
+
+- `verdigrisStreak` — green patina runs under copperSet/brassPot/pipe kinds.
+- `lidPry` — pry-bar gouges on crate/chest/box lids.
+- `wrenchBite` — jaw marks on manifolds/boilers/vices.
+- `preserveRing` — syrup rings on pantry/shelf props.
+- `cheeseRing` — wheel rings on cuttingBoard/table/counter kinds.
+- `sieveSift` — flour fans on kitchen counters.
+- `planeCurl` — shaving ribbons on bench/tool props.
+- `drillPit` — drilled holes on worktops.
+- `hammerDent` — strike pits on maintenance/under/!livedIn walls.
+
+Gates: tsc, lint, scoped vitest (694–696) green.\n\n## Sprint 691–693 — the stairs kept their rods, the mirrors foxed & the spools kept their shadows (decals lane)
+
+- `stairRod` — bracket ghosts across stairs/ladders (stairs/grandStair/stairLanding/stairGate/ladder/woodLadder/libraryLadder/rollingLadder/fireEscape).
+- `pelmetDust` — dust shelves above windows/curtain kinds.
+- `scuttleGhost` — coal dust rings beside hearths/stoves.
+- `inkwellRing` — bottle rings on desk kinds.
+- `washTide` — soap tide lines under wash/laundry props.
+- `pewCushion` — pressed outlines on chapelPew/pewRow.
+- `bellPull` — cord wear strips beside lived-in doors.
+- `mirrorFox` — foxing spots overlay on mirror props.
+- `spoolShadow` — thread/needle marks on table kinds.
+
+Gates: tsc, lint, scoped vitest (691–693) green.\n\n## Sprint 687–690 — the warm spots kept the cat, the letters peeled & the sacs kept their corners (decals lane)
 
 - `catHalo` — curled heat halos on radiator/masonryHeater/bench/bedBench tops (props overlay).
 - `birdCage` — feather drift + seed scatter under cageLocker/cageLight/cagedSconce/recordsCage.
