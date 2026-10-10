@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1889,6 +1889,50 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     sdz.position.set((rng.float() - 0.5) * 0.15, (dc?.[1] ?? 0.46) * 0.55 + 0.004, (rng.float() - 0.5) * 0.15);
     prop.group.add(sdz);
     if (!prop.group.name) prop.group.name = 'seat-dust';
+  }
+  // The warm spots kept the cat — curled heat halos on the warm
+  // tops where a pet used to sleep.
+  const WARM_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['radiator', 'masonryHeater', 'bench', 'bedBench']);
+  if (WARM_TOPS.has(spec.kind) && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const ch = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.26, 0.26),
+      new THREE.MeshStandardMaterial({ map: catHalo(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ch.name = 'cat-halo';
+    ch.userData.decalMat = true;
+    ch.rotation.x = -Math.PI / 2;
+    ch.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 0.6) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(ch);
+    if (!prop.group.name) prop.group.name = 'cat-halo';
+  }
+  // The vices kept their jaws — bite marks and filings on the tops
+  // of benches and chests that took the grip.
+  const VICED: ReadonlySet<PropSpec['kind']> = new Set(['benchVice', 'toolChest', 'toolbox', 'utilityBox', 'toolCart']);
+  if (VICED.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const vj = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: viceJaw(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    vj.name = 'vice-jaw';
+    vj.userData.decalMat = true;
+    vj.rotation.x = -Math.PI / 2;
+    vj.position.set((rng.float() - 0.5) * 0.2, (dc?.[1] ?? 0.8) + 0.004, (rng.float() - 0.5) * 0.2);
+    prop.group.add(vj);
+    // the spilled nails
+    if (rng.bool(0.4)) {
+      const ns = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.28, 0.28),
+        new THREE.MeshStandardMaterial({ map: nailSpill(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+      );
+      ns.name = 'nail-spill';
+      ns.userData.decalMat = true;
+      ns.rotation.x = -Math.PI / 2;
+      ns.position.set((rng.float() - 0.5) * 0.4, (dc?.[1] ?? 0.8) + 0.005, (rng.float() - 0.5) * 0.4);
+      prop.group.add(ns);
+    }
+    if (!prop.group.name) prop.group.name = 'vice-jaw';
   }
   // The candles shed their skins — collapsed wax shells on the
   // holders that burned all the way down.
