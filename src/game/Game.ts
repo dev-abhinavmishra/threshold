@@ -115,7 +115,8 @@ const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant'
 // sprint 617 — the under's own cast: a grafted wheel's wake spares the
 // hands that threaded it. House walkers (and you) still get bitten.
 const UNDER_FACTION = new Set([
-  'grafter', 'margin', 'stillframe', 'hauler', 'auditor', 'swamper', 'filer', 'editor',
+  'grafter', 'margin', 'stillframe', 'hauler', 'auditor', 'swamper',
+  'filer', 'editor', 'redline', 'returner',
 ]);
 
 /** The count's locker: an unclaimed tag rots — the count fences the

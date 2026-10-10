@@ -693,7 +693,6 @@ describe('your glass watches back (sprints 597-603)', () => {
 describe('the under grafts back (sprints 616-620)', () => {
   it('a carried belt or lens keeps its kind and seeks a substrate', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
-    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
     const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
     const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
     // the under re-threads, it doesn't unspool: belt → dead housing,
@@ -714,8 +713,6 @@ describe('the under grafts back (sprints 616-620)', () => {
   it('the graft claims jurisdiction and signs its work', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
     const storeSrc = readFileSync('src/game/store.ts', 'utf8');
-    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
-    const setpiecesSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
     // wheel: dead housing wakes on the under's muscle, marked 'under'
     // and signed 'work' under the grafter's key — the house reads it.
     expect(gameSrc).toContain("f.owner = 'under'");
