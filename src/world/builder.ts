@@ -3364,6 +3364,47 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // The wet walls wore their aprons — a tiled splash band behind
+    // sinks, stands and drains; grout ghosted on, a tile or two lost.
+    const WET_KINDS = new Set(['basinSink', 'washStand', 'grateDrain', 'washer']);
+    for (const p of spec.props) {
+      if (!WET_KINDS.has(p.kind) || rng.float() >= 0.6) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      const aw = 1.5 + rng.float() * 0.4;
+      if (portOffsetsOn(hw).some((o) => Math.abs(along - o) < aw / 2 + 0.9)) continue;
+      const ah = 1.35 + rng.float() * 0.25;
+      const ap = new THREE.Mesh(texBox(aw, ah, 0.018), TEX.tilesSubway());
+      ap.name = 'tile-apron';
+      if (hw === 'e') ap.position.set(w / 2 - 0.016, ah / 2 + 0.35, along);
+      else if (hw === 'w') ap.position.set(-w / 2 + 0.016, ah / 2 + 0.35, along);
+      else if (hw === 'n') ap.position.set(along, ah / 2 + 0.35, d / 2 - 0.012);
+      else ap.position.set(along, ah / 2 + 0.35, -d / 2 + 0.016);
+      group.add(ap);
+      frameHardware.push(ap);
+      // grout ghosting across the band
+      if (rng.float() < 0.7) {
+        wallDecal(hw, groutLines(rng), aw * 0.92, ah * 0.85, along, ah / 2 + 0.35);
+        const gl2 = group.children[group.children.length - 1];
+        if (gl2 && !gl2.name) gl2.name = 'apron-grout';
+      }
+      // a missing tile or two — the plaster darks behind the loss
+      if (rng.float() < 0.45) {
+        const chip = new THREE.Mesh(texBox(0.09, 0.09, 0.006), MAT.darkOak());
+        chip.name = 'tile-chip';
+        const cx = along + (rng.float() - 0.5) * aw * 0.7;
+        const cy = 0.5 + rng.float() * 0.8;
+        if (hw === 'e') chip.position.set(w / 2 - 0.004, cy, cx);
+        else if (hw === 'w') chip.position.set(-w / 2 + 0.004, cy, cx);
+        else if (hw === 'n') chip.position.set(cx, cy, d / 2 - 0.004);
+        else chip.position.set(cx, cy, -d / 2 + 0.004);
+        group.add(chip);
+        frameHardware.push(chip);
+      }
+    }
+
     // The veins ran the skirting — supply pipes hugging the wall in
     // rooms that carry heat or service kit: a horizontal run with
     // clamps, a riser at one end, sometimes a valve wheel. Segments
