@@ -11860,3 +11860,155 @@ export function hingeWeep(rng: Rng): THREE.Texture | null {
     ctx.fillRect(20, 12, 8, 72);
   });
 }
+
+/** Tally wall — the prisoner counted: columned chalk ticks in
+ * fives, a broken line where the count stopped, smudged restarts. */
+export function tallyWall(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const cols = 3 + Math.floor(rng.float() * 2);
+    for (let c = 0; c < cols; c++) {
+      const x0 = 14 + c * (64 / cols);
+      const rows = 2 + Math.floor(rng.float() * 3);
+      for (let r = 0; r < rows; r++) {
+        const y = 16 + r * 22 + rng.float() * 3;
+        // four verticals + one diagonal slash — the five-count
+        const five = rng.bool(0.8);
+        ctx.strokeStyle = `rgba(200,196,180,${0.5 + rng.float() * 0.25})`;
+        ctx.lineWidth = 1.1;
+        const n = five ? 4 : 1 + Math.floor(rng.float() * 3);
+        for (let i = 0; i < n; i++) {
+          ctx.beginPath();
+          ctx.moveTo(x0 + i * 3 + rng.float(), y);
+          ctx.lineTo(x0 + i * 3 + rng.float() - 0.5, y + 9 + rng.float() * 2);
+          ctx.stroke();
+        }
+        if (five) {
+          ctx.beginPath();
+          ctx.moveTo(x0 - 2, y + 9);
+          ctx.lineTo(x0 + 13, y - 1);
+          ctx.stroke();
+        }
+      }
+    }
+    // the restart — a smudged attempt rubbed out below
+    if (rng.bool(0.7)) {
+      ctx.fillStyle = `rgba(190,186,172,${0.16 + rng.float() * 0.1})`;
+      ctx.beginPath();
+      ctx.ellipse(30 + rng.float() * 36, 80, 14, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the drag — one desperate long stroke ending mid-pull
+    if (rng.bool(0.5)) {
+      ctx.strokeStyle = `rgba(205,200,185,${0.35 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(20 + rng.float() * 40, 88);
+      ctx.quadraticCurveTo(50, 90, 70 + rng.float() * 20, 86 - rng.float() * 4);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Board flex — the floor gives where the joists are gone: a long
+ * dark gap along a board edge, lifted lip, loose nail heads. */
+export function boardFlex(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    const y = 22 + rng.float() * 6;
+    // the gap — dark seam running the board's edge
+    ctx.fillStyle = `rgba(20,14,10,${0.5 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.moveTo(4, y);
+    for (let x = 4; x < 92; x += 8) {
+      ctx.lineTo(x, y + (rng.float() - 0.5) * 3);
+    }
+    ctx.lineTo(92, y + 2.4);
+    for (let x = 92; x > 4; x -= 8) {
+      ctx.lineTo(x, y + 2 + (rng.float() - 0.5) * 2.5);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // lifted lip — pale edge where the board rises off the joist
+    ctx.strokeStyle = `rgba(170,150,120,${0.3 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(6, y - 2);
+    ctx.quadraticCurveTo(48, y - 4 - rng.float() * 2, 90, y - 1.5);
+    ctx.stroke();
+    // loose nail heads — popped heads sitting proud along the seam
+    const nails = 2 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < nails; i++) {
+      const nx = 15 + rng.float() * 66;
+      const ny = y - 4 - rng.float() * 2;
+      ctx.fillStyle = `rgba(60,50,42,${0.5 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(nx, ny, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      // rust bleed under the head
+      ctx.fillStyle = `rgba(100,60,36,${0.25 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(nx, ny + 1.5, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // dust gathered in the gap
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(150,140,118,${0.2 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, y + 1 + rng.float() * 2, 0.5 + rng.float() * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Frost fern — the window grew its garden: branching crystal
+ * ferns climbing from a corner, thawed tear where breath stayed. */
+export function frostFern(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    const x0 = 12 + rng.float() * 16;
+    const y0 = 84 - rng.float() * 8;
+    // fern fronds — branching crystal strokes climbing from the corner
+    const fronds = 4 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < fronds; i++) {
+      const a = -Math.PI / 2 + (rng.float() - 0.5) * 0.9;
+      const len = 22 + rng.float() * 30;
+      const bx = x0 + rng.float() * 14;
+      const by = y0 - rng.float() * 6;
+      ctx.strokeStyle = `rgba(215,228,232,${0.35 + rng.float() * 0.25})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      let cx = bx, cy = by;
+      const segs = 5 + Math.floor(rng.float() * 4);
+      for (let sgi = 0; sgi < segs; sgi++) {
+        const step = (len / segs) * (0.7 + rng.float() * 0.6);
+        const aa = a + (rng.float() - 0.5) * 0.5;
+        const nx = cx + Math.cos(aa) * step;
+        const ny = cy + Math.sin(aa) * step;
+        ctx.lineTo(nx, ny);
+        // barbs — little V branches off each segment
+        if (rng.bool(0.7)) {
+          const ba = aa + (rng.bool(0.5) ? 1 : -1) * (0.7 + rng.float() * 0.4);
+          const bl = 3 + rng.float() * 6;
+          ctx.moveTo(nx, ny);
+          ctx.lineTo(nx + Math.cos(ba) * bl, ny + Math.sin(ba) * bl);
+          ctx.moveTo(nx, ny);
+        }
+        cx = nx; cy = ny;
+      }
+      ctx.stroke();
+    }
+    // feather dust — a faint scatter of ice specks around the fronds
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = `rgba(215,228,232,${0.2 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(x0 + rng.float() * 50, y0 - rng.float() * 55, 0.4 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the thawed tear — a bare channel where breath kept it clear
+    ctx.strokeStyle = `rgba(80,70,64,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 3 + rng.float() * 2;
+    ctx.beginPath();
+    ctx.moveTo(x0 + 20 + rng.float() * 30, y0 - 4);
+    ctx.quadraticCurveTo(x0 + 30, y0 - 20, x0 + 36 + rng.float() * 20, y0 - 34 - rng.float() * 8);
+    ctx.stroke();
+  });
+}

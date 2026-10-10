@@ -20,6 +20,12 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - `paperRot` (96×64): browned newsprint + edge rot veins + print ghosts + headline bar + lifted corner + damp halo; 30% lived-in floors.
 - `hingeWeep` (48×96): rust pin kiss + thin oil run + caught-dust bead + knuckle shadow; 40% lived-in doors at jamb edge. Presence tests ×3 green.
 
+## Sprint 667 — the dust kept its tally, the boards flexed & the frost crept
+
+- `tallyWall` (96×96): chalk five-counts in columns + smudged restarts + one long desperate stroke; rare 10% lived-in walls, y≈1.2.
+- `boardFlex` (96×48): dark gap along a board edge + lifted lip + popped nail heads w/ rust + gathered dust; 35% lived-in floors.
+- `frostFern` (96×96): branching crystal fronds + barbs + ice-speck dust + thawed tear channel; 40% of windows via prop loop. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 657–662 — the sweep plants a knee (a second house reader)
