@@ -4,6 +4,17 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 657–662 — the sweep plants a knee (a second house reader)
+
+- **657** premise: the warden is not the only hand that reads your work. The `'sweep'` runner — sprint-pressure, thematically named — now reads fresh `'work'` marks on the pass, under its own claim key (`sweep:${startRoom}`), 1.8m radius, polled every 0.15s while engaged.
+- **658** its answer is a grip, not a scatter: a `'work'` mark within 1.4m of a stashed lid (`stashLoad > 0`, `trappedBy` free) → `spot.trappedBy = 'sweep'` — it plants a knee on the lid. The existing hold-shut surface answers unchanged (stash/hide verbs block on `trappedBy`), the box waits behind its hands.
+- **659** the grip is run-scoped: `gripped[]` releases in `onDone` — when the pass ends the lids breathe again. Scatter holds your goods on the floor forever; the knee holds them only while the pressure is on.
+- **660** contract spec: claim key, `'work'`-only filter, grip not scatter, stashLoad gate, `onDone` release loop, the entity-agnostic `trappedBy` answers.
+- **661** e2e leg (`runflow.spec.ts`): spawn sweep → read its path → seed a stashed lid + `'work'` mark at the midpoint between exitPos and nearest polyline point → step until `trappedBy==='sweep'` → run ends → released. Green at ~13s.
+- **662** trap found: `playwright.config` `reuseExistingServer` serves a STALE dist if a preview is already on :4173 — a green-looking run can test old code. `curl :4173` + kill before diagnosing "impossible" e2e failures. New-Run boot is also >20s now (sibling dressing) — runflow legs use `seededRun`.
+
+
+
 ## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
 
 - **652** the signature already existed: `stashTake`/`stashMark` sign `'work'` `by:'player'` when the lid fills (s528). What was missing was the reader — the last goods surface without a house answer.
