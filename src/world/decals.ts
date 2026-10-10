@@ -11732,3 +11732,131 @@ export function sealBreak(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Paint drip — the walls were repainted in a hurry: thin runs down
+ * the baseboard, brush-stroke bands, an old colour bleeding at the edge. */
+export function paintDrip(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // brush band — uneven coverage of a repaint pass
+    const band = ctx.createLinearGradient(0, 0, 0, 48);
+    band.addColorStop(0, `rgba(160,150,132,${0.14 + rng.float() * 0.08})`);
+    band.addColorStop(1, `rgba(160,150,132,${0.05 + rng.float() * 0.05})`);
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 0, 96, 48);
+    // stroke marks — faint horizontal brush lines
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(140,130,114,${0.1 + rng.float() * 0.1})`;
+      ctx.lineWidth = 1 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(4, 6 + i * 7 + rng.float() * 2);
+      ctx.bezierCurveTo(30, 5 + i * 7, 60, 7 + i * 7, 92, 6 + i * 7 + rng.float() * 2);
+      ctx.stroke();
+    }
+    // drips — thin runs where the roller loaded too much
+    const drips = 3 + Math.floor(rng.float() * 3);
+    for (let i = 0; i < drips; i++) {
+      const dx = 12 + rng.float() * 72;
+      const len = 12 + rng.float() * 20;
+      ctx.fillStyle = `rgba(150,140,120,${0.28 + rng.float() * 0.16})`;
+      ctx.fillRect(dx - 0.6, 4, 1.2 + rng.float() * 0.6, len);
+      // bead at the run's end
+      ctx.beginPath();
+      ctx.arc(dx, 4 + len, 1.1 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // edge bleed — a darker strip where the old colour still shows
+    ctx.fillStyle = `rgba(96,80,62,${0.18 + rng.float() * 0.12})`;
+    ctx.fillRect(0, 44, 96, 4);
+  });
+}
+
+/** Paper rot — the news browned where it fell: a curled sheet,
+ * dark rot veins at its edges, print ghosted through the damp. */
+export function paperRot(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48;
+    const cy = 30;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate((rng.float() - 0.5) * 0.7);
+    // the sheet — browned newsprint gone brittle
+    ctx.fillStyle = `rgba(150,128,88,${0.55 + rng.float() * 0.15})`;
+    ctx.fillRect(-24, -14, 48, 28);
+    // rot veins — dark damp eating the edges inward
+    for (let i = 0; i < 8; i++) {
+      const side = Math.floor(rng.float() * 4);
+      ctx.fillStyle = `rgba(70,54,34,${0.3 + rng.float() * 0.2})`;
+      let rx = 0; let ry = 0;
+      if (side === 0) { rx = -24 + rng.float() * 48; ry = -14; }
+      else if (side === 1) { rx = -24 + rng.float() * 48; ry = 14; }
+      else if (side === 2) { rx = -24; ry = -14 + rng.float() * 28; }
+      else { rx = 24; ry = -14 + rng.float() * 28; }
+      ctx.beginPath();
+      ctx.ellipse(rx, ry, 2 + rng.float() * 3, 1.5 + rng.float() * 2, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // print ghost — column rules fading through
+    ctx.strokeStyle = `rgba(80,66,46,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 0.7;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-20, -8 + i * 4);
+      ctx.lineTo(20 - rng.float() * 8, -8 + i * 4);
+      ctx.stroke();
+    }
+    // headline bar — one bolder line still readable
+    ctx.fillStyle = `rgba(80,66,46,${0.4 + rng.float() * 0.2})`;
+    ctx.fillRect(-20, -11, 22 + rng.float() * 10, 2.4);
+    // curled corner — one corner lifted, shadowed beneath
+    const ccx = 24 * (rng.bool(0.5) ? 1 : -1);
+    const ccy = 14 * (rng.bool(0.5) ? 1 : -1);
+    ctx.fillStyle = 'rgba(60,48,30,0.4)';
+    ctx.beginPath();
+    ctx.moveTo(ccx, ccy);
+    ctx.lineTo(ccx - Math.sign(ccx) * 8, ccy);
+    ctx.lineTo(ccx, ccy - Math.sign(ccy) * 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    // damp halo — the damp it sat in
+    const dg = ctx.createRadialGradient(cx, cy, 12, cx, cy, 34);
+    dg.addColorStop(0, `rgba(70,58,40,${0.16 + rng.float() * 0.1})`);
+    dg.addColorStop(1, 'rgba(70,58,40,0)');
+    ctx.fillStyle = dg;
+    ctx.fillRect(0, 0, 96, 64);
+  });
+}
+
+/** Hinge weep — the oil ran out of the knuckle: a thin dark weep
+ * under each barrel, rust kiss at the pin, dust caught in the run. */
+export function hingeWeep(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 96, (ctx) => {
+    const barrels = 2 + Math.floor(rng.float() * 2);
+    for (let i = 0; i < barrels; i++) {
+      const hy = 14 + i * (60 / Math.max(1, barrels - 1)) + rng.float() * 4;
+      const hx = 24 + (rng.float() - 0.5) * 4;
+      // pin kiss — rust bloom at the barrel
+      ctx.fillStyle = `rgba(110,64,34,${0.35 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 3 + rng.float() * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // the weep — thin oil run straight down
+      const len = 14 + rng.float() * 18;
+      const wg = ctx.createLinearGradient(0, hy, 0, hy + len);
+      wg.addColorStop(0, `rgba(50,38,26,${0.4 + rng.float() * 0.2})`);
+      wg.addColorStop(1, 'rgba(50,38,26,0)');
+      ctx.fillStyle = wg;
+      ctx.fillRect(hx - 0.8, hy + 2, 1.6 + rng.float() * 0.6, len);
+      // dust caught — grey bead mid-run
+      if (rng.bool(0.6)) {
+        ctx.fillStyle = 'rgba(120,110,96,0.35)';
+        ctx.beginPath();
+        ctx.arc(hx, hy + 4 + rng.float() * len * 0.5, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // knuckle shadow — the barrel's faint presence
+    ctx.fillStyle = `rgba(44,36,28,${0.2 + rng.float() * 0.1})`;
+    ctx.fillRect(20, 12, 8, 72);
+  });
+}

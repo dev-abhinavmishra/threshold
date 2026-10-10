@@ -14,6 +14,12 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - `threadSnag` (96×64): lifted carpet loop + fray strays + toe-drag scuff + pile dent; 35% lived-in floors, free placement.
 - `sealBreak` (64×96): snapped cord ends + cracked wax head + crest ghost + fallen flecks; 22% lived-in doors, at jamb edge via `portLocalPos` + ±0.62 side offset. Presence tests ×3 green.
 
+## Sprint 663 — the paint ran, the news browned & the hinges wept
+
+- `paintDrip` (96×48): repaint band + brush strokes + thin drips w/ end beads + old-colour edge bleed; 30% lived-in walls, baseboard level.
+- `paperRot` (96×64): browned newsprint + edge rot veins + print ghosts + headline bar + lifted corner + damp halo; 30% lived-in floors.
+- `hingeWeep` (48×96): rust pin kiss + thin oil run + caught-dust bead + knuckle shadow; 40% lived-in doors at jamb edge. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
