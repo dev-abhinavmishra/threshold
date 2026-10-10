@@ -12935,3 +12935,118 @@ export function valveSpur(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Lintel dust — the lip of undisturbed dust a door's lintel keeps:
+ * a grey shelf-line, drip tails at the ends, a settled crust. */
+export function lintelDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the shelf — a pale dust line across the lintel top
+    const ly = 16 + rng.float() * 4;
+    ctx.fillStyle = `rgba(166,158,140,${0.3 + rng.float() * 0.15})`;
+    ctx.fillRect(4, ly, 88, 2.6);
+    ctx.fillStyle = 'rgba(180,172,154,0.18)';
+    ctx.fillRect(4, ly - 1.4, 88, 1.4);
+    // crust bumps — dust piled thicker at intervals
+    for (let i = 0; i < 12; i++) {
+      ctx.fillStyle = `rgba(172,164,146,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(8 + rng.float() * 80, ly + 1, 0.8 + rng.float() * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // drip tails — dust that tumbled at the jamb ends
+    for (const ex of [8, 86]) {
+      ctx.strokeStyle = `rgba(150,142,126,${0.24 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(ex + rng.float() * 3, ly + 2);
+      ctx.lineTo(ex + rng.float() * 2, ly + 9 + rng.float() * 8);
+      ctx.stroke();
+    }
+    // cobweb wisps — threads off the lintel's underside
+    for (let i = 0; i < 3; i++) {
+      const wx = 18 + rng.float() * 60;
+      ctx.strokeStyle = `rgba(196,192,182,${0.24 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(wx, ly + 3);
+      ctx.quadraticCurveTo(wx + 2, ly + 8 + rng.float() * 5, wx + (rng.float() - 0.5) * 6, ly + 13 + rng.float() * 7);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Bell thumb — the greasy rub a counter bell takes: polished
+ * brass halo under the dome, thumb arcs, push pits. */
+export function bellThumb(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 34;
+    // brass halo — a warm polished ring under the dome
+    const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, 22);
+    g.addColorStop(0, `rgba(190,160,100,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(0.6, 'rgba(190,160,100,0.12)');
+    g.addColorStop(1, 'rgba(190,160,100,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // thumb arcs — greasy wipe crescents where hands pressed
+    for (let i = 0; i < 5; i++) {
+      const a = rng.float() * Math.PI * 2;
+      ctx.strokeStyle = `rgba(160,132,80,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8 + rng.float() * 8, a, a + 0.6 + rng.float() * 0.8);
+      ctx.stroke();
+    }
+    // push pits — the dome's dimples from a thousand rings
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(120,96,56,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(cx - 6 + rng.float() * 12, cy - 5 + rng.float() * 10, 0.7 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the ring mark — where the base ground the counter
+    ctx.strokeStyle = 'rgba(100,84,56,0.35)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 10, 14, Math.PI * 0.15, Math.PI * 0.85);
+    ctx.stroke();
+  });
+}
+
+/** Slot scratch — the scratch fan a mail slot's flap carries:
+ * key-chase arcs from outside, hinge shadow, flap ghosts. */
+export function slotScratch(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cy = 32;
+    // flap ghost — a pale rectangle where the flap sat for years
+    ctx.strokeStyle = `rgba(150,142,124,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 2.4;
+    ctx.strokeRect(18, cy - 9, 60, 18);
+    // hinge shadow — dark seam at the flap's top
+    ctx.fillStyle = 'rgba(50,42,34,0.4)';
+    ctx.fillRect(18, cy - 10, 60, 1.8);
+    // scratch arcs — key and nail arcs chasing the slot from outside
+    for (let i = 0; i < 8; i++) {
+      const sx = 30 + rng.float() * 36;
+      const a = rng.float() * Math.PI * 0.8 + Math.PI * 0.6;
+      ctx.strokeStyle = `rgba(90,78,62,${0.35 + rng.float() * 0.25})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.arc(sx, cy + 4 + rng.float() * 8, 5 + rng.float() * 9, a, a + 0.5 + rng.float() * 0.6);
+      ctx.stroke();
+    }
+    // push smudges — fingers that shoved the flap
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(70,60,48,${0.24 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.ellipse(30 + rng.float() * 40, cy - 2 + rng.float() * 8, 3 + rng.float() * 2, 1.8 + rng.float(), rng.float() * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // flap's side scars — dents at the slot's ends
+    for (const ex of [17, 79]) {
+      ctx.fillStyle = 'rgba(44,36,28,0.5)';
+      ctx.beginPath();
+      ctx.arc(ex, cy + (rng.float() - 0.5) * 4, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}

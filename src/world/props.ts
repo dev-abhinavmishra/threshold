@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1769,6 +1769,37 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wb.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 1.8) - 0.05, -decalDim(spec.kind, dc, 2, 0.4) / 2 - 0.004);
     prop.group.add(wb);
     if (!prop.group.name) prop.group.name = 'web-drape';
+  }
+  // The bells kept the thumbs — polished brass and greasy arcs on
+  // counter bells rung a thousand times.
+  const BELL_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['counterBell', 'writingDesk', 'catalogueDesk', 'dresser', 'nightstand']);
+  if (BELL_TOPS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const bt = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.2),
+      new THREE.MeshStandardMaterial({ map: bellThumb(rng) ?? undefined, transparent: true, roughness: 0.85, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bt.name = 'bell-thumb';
+    bt.userData.decalMat = true;
+    bt.rotation.x = -Math.PI / 2;
+    bt.position.set(0, (dc?.[1] ?? 0.12) + 0.004, 0);
+    prop.group.add(bt);
+    if (!prop.group.name) prop.group.name = 'bell-thumb';
+  }
+  // The slots kept the scratches — key arcs and push smudges on the
+  // flaps that took the post.
+  const SLOTS: ReadonlySet<PropSpec['kind']> = new Set(['dumbWaiterDoor']);
+  if (SLOTS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const ss = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.36),
+      new THREE.MeshStandardMaterial({ map: slotScratch(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    ss.name = 'slot-scratch';
+    ss.userData.decalMat = true;
+    ss.position.set(0, (dc?.[1] ?? 2) * 0.28, (dc?.[2] ?? 0.08) / 2 + 0.006);
+    prop.group.add(ss);
+    if (!prop.group.name) prop.group.name = 'slot-scratch';
   }
   // The candles shed their skins — collapsed wax shells on the
   // holders that burned all the way down.

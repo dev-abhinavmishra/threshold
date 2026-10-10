@@ -8339,3 +8339,12 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
+\n\n## Sprint 676 — the lintels kept their dust, the bells kept the thumbs & the slots kept the scratches (decals lane)
+
+- `lintelDust` — grey dust shelf-lines, end drip tails and cobweb wisps above doors nobody dusted; room-level decal over each `doorPositions` port (35% roll, ~2.35m up).
+- `bellThumb` — polished brass halo + thumb arcs + push pits; buildProp top-face overlay on counterBell/writingDesk/catalogueDesk/dresser/nightstand.
+- `slotScratch` — key-chase arcs, flap ghost and push smudges where the post came through; room-level at door positions (30%) plus buildProp overlay on `dumbWaiterDoor`.
+
+**Gotcha this sprint:** door kinds (`door`, `castleDoor`, `liftDoors`) are NOT prop-spawned — they never reach `buildProp`, so prop overlays on them produce zero meshes. If a decal needs to live on a door, wire it as a room-level decal at `doorPositions` (like `doorDent`/`doorGlow`), or overlay `dumbWaiterDoor` only.
+
+Gates: tsc, lint, scoped vitest (sprint 676) green.
