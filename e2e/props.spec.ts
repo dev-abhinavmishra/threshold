@@ -1469,3 +1469,99 @@ test('the floorkeeper sweeps the lid — work near your stash scatters the take'
   }
   expect(errors).toEqual([]);
 });
+
+// sprint 680 — the under strips your hands: 'work' marks arm the
+// grafter's strip, and every armed surface answers its pocket. Driven
+// through the same ctx hooks the grafter calls.
+test('the under strips your hands — every armed surface answers its pocket', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      hazard: {
+        snares: { pos: { x: number; z: number }; room: number; armed: boolean;
+          planted?: boolean; claimed?: boolean }[];
+        fans: { pos: { x: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; owner?: 'player' | 'under' }[];
+        watchers: { pos: { x: number; z: number }; room: number; dead: boolean;
+          lensed?: boolean; owner?: 'player' | 'under' }[];
+        steams: { pos: { x: number; z: number }; room: number; dead: boolean;
+          valved?: boolean; owner?: 'player' | 'under' }[];
+      };
+      setTraps: { key: string; x: number; z: number; room: number }[];
+      liveTraps: { key: string; x: number; z: number }[];
+      trapPos: Map<string, { x: number; z: number }>;
+      snappedTraps: Set<string>;
+      priedTraps: Set<string>;
+      entityCtx: () => {
+        stripWork?: (x: number, z: number)
+          => 'coil' | 'plate' | 'belt' | 'lens' | 'throat' | null;
+      };
+    };
+    const ctx = ga.entityCtx();
+    // seed one of each armed surface, each tagged as YOUR work
+    const snare: {
+      pos: { x: number; z: number }; room: number; armed: boolean;
+      planted?: boolean; claimed?: boolean;
+    } = ga.hazard.snares.find((s) => g.route.rooms[s.room]) ?? {
+      pos: { x: g.route.rooms[0].entryPos.x + 1, z: g.route.rooms[0].entryPos.z + 1 },
+      room: 0, armed: false, planted: false,
+    };
+    snare.armed = true; snare.planted = true; delete snare.claimed;
+    const trapKey = 'strip-e2e';
+    const tp = { x: snare.pos.x + 40, z: snare.pos.z + 40 }; // far from every real hazard
+    ga.setTraps.push({ key: trapKey, x: tp.x, z: tp.z, room: 0 });
+    ga.liveTraps.push({ key: trapKey, x: tp.x, z: tp.z });
+    ga.trapPos.set(trapKey, { x: tp.x, z: tp.z });
+    const fan = ga.hazard.fans.find((f) => g.route.rooms[f.room]);
+    if (fan) { fan.owner = 'player'; fan.belted = true; }
+    const watcher = ga.hazard.watchers.find((w) => g.route.rooms[w.room]);
+    if (watcher) { watcher.owner = 'player'; watcher.lensed = true; watcher.dead = false; }
+    const steam = ga.hazard.steams.find((s) => g.route.rooms[s.room]);
+    if (steam) { steam.owner = 'player'; steam.valved = true; steam.dead = false; }
+    const snaresBefore = ga.hazard.snares.length;
+    const stripAt = (x: number, z: number) => ctx.stripWork ? ctx.stripWork(x, z) : 'missing';
+    return {
+      coil: stripAt(snare.pos.x, snare.pos.z),
+      snareGone: ga.hazard.snares.length < snaresBefore || !ga.hazard.snares.includes(snare),
+      plate: stripAt(tp.x, tp.z),
+      plateGone: !ga.setTraps.some((t) => t.key === trapKey)
+        && !ga.liveTraps.some((t) => t.key === trapKey)
+        && !ga.trapPos.has(trapKey),
+      belt: fan ? stripAt(fan.pos.x, fan.pos.z) : 'no-fan',
+      fanDead: fan ? fan.dead && fan.belted === false && fan.owner === undefined : null,
+      lens: watcher ? stripAt(watcher.pos.x, watcher.pos.z) : 'no-eye',
+      eyeDead: watcher ? watcher.dead && watcher.lensed === false && watcher.owner === undefined : null,
+      throat: steam ? stripAt(steam.pos.x, steam.pos.z) : 'no-steam',
+      throatDead: steam ? steam.dead && steam.valved === false && steam.owner === undefined : null,
+      // jurisdiction: the under never strips the under's own graft
+      underFan: (() => {
+        const f2 = ga.hazard.fans.find((f) => g.route.rooms[f.room] && f !== fan);
+        if (!f2) return 'no-second-fan';
+        f2.owner = 'under'; f2.belted = true;
+        return stripAt(f2.pos.x, f2.pos.z);
+      })(),
+      // and a dead plain mark nowhere near your work answers nothing
+      nothing: stripAt(123456, 123456),
+    };
+  });
+
+  expect(result.coil, 'your live wire comes up as its coil').toBe('coil');
+  expect(result.snareGone, 'the wire leaves the floor').toBe(true);
+  expect(result.plate, 'your cocked plate folds into stock').toBe('plate');
+  expect(result.plateGone, 'the plate leaves every snap loop').toBe(true);
+  expect(result.belt, 'your wheel\'s muscle walks off').toBe('belt');
+  expect(result.fanDead, 'the housing ends dead, beltless, nobody\'s').toBe(true);
+  expect(result.lens, 'your eye\'s glass walks off').toBe('lens');
+  expect(result.eyeDead, 'the socket ends dead, glassless, nobody\'s').toBe(true);
+  expect(result.throat, 'your throat\'s brass walks off').toBe('throat');
+  expect(result.throatDead, 'the thread ends dead, valveless, nobody\'s').toBe(true);
+  expect(result.underFan, 'the under never strips the under\'s own graft').not.toBe('belt');
+  expect(result.nothing, 'a mark near nothing answers nothing').toBeNull();
+  expect(errors).toEqual([]);
+});

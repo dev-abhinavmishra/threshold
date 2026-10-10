@@ -1273,6 +1273,83 @@ export class Game {
         this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
           t: this.clock.time, readBy: [signerKey], by: signerKey });
       },
+      // sprint 675 — the under's answer to your 'work': the grafter
+      // strips the armed work the mark names into its own carry. Where
+      // the house deads your work (crimp, pull, tear) the under LIFTS
+      // it — live wire, a cocked plate — and walks it to a substrate
+      // or a fresh snare on your path. Jurisdiction is honest: it has
+      // no pocket for the house's work, and a claimed wire the warden
+      // re-tied is the house's again, outside its hands.
+      stripWork: (x, z) => {
+        const near = (p: { x: number; z: number }) => Math.hypot(p.x - x, p.z - z) < 1.4;
+        // your live wire comes up as its coil — planted and still
+        // armed, never house-claimed. A claimed wire is the house's
+        // work and stays outside the under's pocket.
+        const s = this.hazard.snares.find((hz) => hz.armed && hz.planted
+          && !hz.claimed && near(hz.pos));
+        if (s) { this.removeSnare(s); return 'coil'; }
+        // or your cocked plate folds into stock — a live setTrap the
+        // mark named lifts whole. Sprung or pried plates are dead
+        // work; the 'spring' sign already owns their answer.
+        const t = this.setTraps.find((tt) => !this.snappedTraps.has(tt.key)
+          && !this.priedTraps.has(tt.key) && near(tt));
+        if (t) {
+          this.setTraps.splice(this.setTraps.indexOf(t), 1);
+          const li = this.liveTraps.findIndex((tt) => tt.key === t.key);
+          if (li >= 0) this.liveTraps.splice(li, 1);
+          this.trapPos.delete(t.key);
+          return 'plate';
+        }
+        // sprint 676 — or your wheel's muscle walks off: a 'work' mark
+        // by a live player-fitted fan and the belt comes off in ITS
+        // hands, carried whole toward a dead housing it can claim.
+        // The housing ends like the house's pull leaves it — dead,
+        // beltless, nobody's — except the belt never touches the
+        // boards: it rides under the rubble as graft stock.
+        const f = this.hazard.fans.find((ff) => ff.owner === 'player'
+          && ff.belted !== false && near(ff.pos));
+        if (f) {
+          f.dead = true;
+          f.belted = false;
+          delete f.owner; // the muscle's off — dead housing, nobody's
+          if (f.chocked) {
+            f.chocked = false;
+            this.kickedWedges.push({ x: f.pos.x + 0.2, z: f.pos.z - 0.1 });
+            this.mintWedgeDrops();
+          }
+          return 'belt';
+        }
+        // sprint 677 — or your eye's glass walks off: a 'work' mark by
+        // a live player-seated socket and the lens comes out in ITS
+        // hands, carried whole toward a pried socket it can claim.
+        // The socket ends like the house's tear leaves it — dead,
+        // glassless, nobody's — except the lens never touches the
+        // boards: it rides under the rubble as graft stock.
+        const w = this.hazard.watchers.find((ww) => ww.owner === 'player'
+          && ww.lensed !== false && near(ww.pos));
+        if (w) {
+          w.dead = true;
+          w.lensed = false;
+          delete w.owner; // the glass is out — dead socket, nobody's
+          return 'lens';
+        }
+        // sprint 679 — or your throat's brass walks off: a 'work' mark
+        // by a threaded line and the valve comes off whole in ITS
+        // hands. The house only pinches a throat shut — the under
+        // takes the metal, the permanent kill your own strip deals:
+        // no throat, no re-lay. A crimped line still wears the valve,
+        // so dead is no shelter; the brass folds to wire under the
+        // rubble — stone has no pocket for steam.
+        const st = this.hazard.steams.find((s) => s.owner === 'player'
+          && s.valved !== false && near(s.pos));
+        if (st) {
+          st.valved = false;
+          st.dead = true;
+          delete st.owner; // the brass is out — bare thread, nobody's
+          return 'throat';
+        }
+        return null;
+      },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
       // sprint 477 — a paid hand keeps the coin in its pouch: a staggered
       // grafter drops it where it goes down, gatherable like any spill.
