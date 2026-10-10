@@ -664,6 +664,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
   // Door frames at ports
   const doorLeaves = new Map<string, THREE.Object3D>();
+  const frameHardware: THREE.Object3D[] = [];
   const doorPositions = [spec.entry, ...spec.exits];
   for (const port of doorPositions) {
     const lp = portLocalPos(port, w, d);
@@ -724,6 +725,32 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         toggle.position.set(fw / 2 + 0.14, 1.22, zOff + (zOff > 0 ? 0.013 : -0.013));
         toggle.rotation.x = zOff > 0 ? 0.25 : -0.25;
         frame.add(toggle);
+      }
+    }
+    // The jamb kept its metal — strike plate across from the latch,
+    // knuckles down the hinge stile, the stop strip the leaf slams into.
+    if (!(isUnder || spec.biome === 'maintenance' || spec.biome === 'corridor')) {
+      const st = new THREE.Mesh(texBox(0.02, 0.12, 0.06), MAT.brass());
+      st.name = 'strike-plate';
+      st.position.set(fw / 2 - sideW - 0.004, 1.08, 0);
+      frame.add(st);
+      frameHardware.push(st);
+      for (const hy of [0.35, 1.15, 1.9]) {
+        const kn = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8), MAT.brass());
+        kn.name = 'hinge-knuckle';
+        kn.position.set(-fw / 2 + sideW + 0.008, hy, 0.05);
+        frame.add(kn);
+        frameHardware.push(kn);
+      }
+      const stop = new THREE.Mesh(texBox(fw - 0.1, 0.03, 0.02), frameMat);
+      stop.name = 'door-stop';
+      stop.position.set(0, 2.28, 0.15);
+      frame.add(stop);
+      frameHardware.push(stop);
+      for (const sx of [-1, 1]) {
+        const sb = new THREE.Mesh(texBox(0.03, 2.2, 0.02), frameMat);
+        sb.position.set(sx * (fw / 2 - sideW - 0.015), 1.15, 0.15);
+        frame.add(sb);
       }
     }
     // Exit signage: service areas get a red EXIT box instead of a number plate.
@@ -806,11 +833,87 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           leaf.add(hg);
         }
       }
+      // The furniture a real door carries — mail slot, peephole,
+      // deadbolt, escutcheon, push plate, number. Seeded per leaf so
+      // no two doors read identical.
+      if (rng.bool(0.4)) {
+        for (const fz of [0.056, -0.056]) {
+          const ms = new THREE.Mesh(texBox(0.26, 0.06, 0.018), MAT.brass());
+          ms.name = 'mail-slot';
+          ms.position.set(0, -0.5, fz);
+          leaf.add(ms);
+        }
+      }
+      if (rng.bool(0.45)) {
+        for (const fz of [0.045, -0.045]) {
+          const ph = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.03, 8), MAT.brass());
+          ph.name = 'peephole';
+          ph.rotation.x = Math.PI / 2;
+          ph.position.set(pw / 2 - 0.14, 0.55, fz);
+          leaf.add(ph);
+        }
+      }
+      if (rng.bool(0.5)) {
+        for (const fz of [0.056, -0.056]) {
+          const db = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, 0.024, 10), MAT.brass());
+          db.name = 'deadbolt';
+          db.rotation.x = Math.PI / 2;
+          db.position.set(pw / 2 - 0.14, 0.22, fz);
+          leaf.add(db);
+        }
+      }
+      if (rng.bool(0.6)) {
+        for (const fz of [0.052, -0.052]) {
+          const es = new THREE.Mesh(texBox(0.035, 0.07, 0.01), MAT.brass());
+          es.name = 'escutcheon';
+          es.position.set(pw / 2 - 0.14, -0.15, fz);
+          leaf.add(es);
+        }
+      }
+      if (rng.bool(0.4)) {
+        const fp = new THREE.Mesh(texBox(0.18, 0.5, 0.012), MAT.steelDark());
+        fp.name = 'finger-plate';
+        fp.position.set(pw / 2 - 0.19, -0.15, 0.055);
+        leaf.add(fp);
+      }
+      if (rng.bool(0.3)) {
+        const dn = new THREE.Mesh(texBox(0.12, 0.07, 0.012), MAT.brass());
+        dn.name = 'door-number';
+        dn.position.set(0, 0.58, 0.056);
+        leaf.add(dn);
+      }
     } else {
       // kick plate + rivets on service doors
       const kp = new THREE.Mesh(texBox(port.width - 0.16, 0.3, 0.02), MAT.steelDark());
       kp.position.set(0, -0.88, 0.05);
       leaf.add(kp);
+      // The service doors kept their bar — a crash bar at hip height
+      // where the night shift ran them flat-handed.
+      if (rng.bool(0.55)) {
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, port.width - 0.3, 8), MAT.steelDark());
+        bar.name = 'crash-bar';
+        bar.rotation.z = Math.PI / 2;
+        bar.position.set(0, -0.1, 0.07);
+        leaf.add(bar);
+        for (const sx of [-1, 1]) {
+          const mnt = new THREE.Mesh(texBox(0.05, 0.08, 0.05), MAT.steelDark());
+          mnt.position.set(sx * (port.width / 2 - 0.16), -0.1, 0.05);
+          leaf.add(mnt);
+        }
+      }
+      // And its eye — a wire-glass window up high to see what waits
+      // behind the fire door before you owe it your face.
+      if (rng.bool(0.4)) {
+        const wpMat = new THREE.MeshStandardMaterial({
+          color: 0x1a2630, emissive: 0x39506a, emissiveIntensity: 0.35,
+          roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.7,
+        });
+        wpMat.userData.decalMat = true;
+        const wp = new THREE.Mesh(texBox(0.3, 0.4, 0.02), wpMat);
+        wp.name = 'wire-window';
+        wp.position.set(0, 0.62, 0.05);
+        leaf.add(wp);
+      }
     }
     // The door was kicked in once — the split by the latch, the
     // splinters still raised, the shoe shadow under the blow.
@@ -4508,6 +4611,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     const keep = new Set<THREE.Object3D>();
     for (const m of doorLeaves.values()) keep.add(m);
     for (const m of lampMeshes) keep.add(m);
+    for (const m of frameHardware) keep.add(m);
     for (const m of shafts) keep.add(m);
     if (dust) keep.add(dust);
     group.updateMatrixWorld(true);

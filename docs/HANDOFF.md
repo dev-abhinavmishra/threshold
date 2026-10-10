@@ -4,6 +4,22 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 613–615 — the doors kept their furniture (leaf + jamb hardware batch)
+
+- **Sprint 613**: interior leaves gained real hardware — `mail-slot`,
+  `peephole`, `deadbolt`, `escutcheon`, `finger-plate`, `door-number`,
+  each seeded independently so no two doors carry the same set.
+- **Sprint 614**: service leaves got theirs — `crash-bar` with stanchion
+  mounts at hip height, `wire-window` transom pane up top.
+- **Sprint 615**: the jamb — `strike-plate`, `hinge-knuckle`×3, `door-stop`
+  head + side strips on every non-industrial frame.
+- Trap hit + fix: frame children are **static-consolidated** — named meshes
+  merge away. `userData.decalMat` on the mesh skips the merge BUT makes
+  disposeRoom() free its material — fatal on shared MAT.* (). Correct
+  escape hatch: push meshes into a `frameHardware` list added to the
+  consolidation `keep` set (like doorLeaves/lampMeshes).
+- 9 tests added (655 total); all on `buildRoomMesh` group traverse counts.
+
 ## Sprint 610–612 — the ceiling kept its weather (ceiling decal batch)
 
 The last undecorated surface: ceilings ran flat until now. Nine
