@@ -3397,6 +3397,53 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       }
     }
 
+    // The ceiling carried its mains — parallel conduit runs overhead
+    // in the service bones, hung on straps, broken by junction boxes.
+    if ((isUnder || spec.biome === 'maintenance') && rng.float() < 0.6) {
+      const pipeMat = MAT.steelDark();
+      const axis = rng.bool(0.5) ? 'x' : 'z';
+      const runLen = (axis === 'x' ? w : d) - 0.6;
+      const lanes = 1 + Math.floor(rng.float() * 2.4); // 1-3 parallel runs
+      for (let lane = 0; lane < lanes; lane++) {
+        const off = (lane - (lanes - 1) / 2) * 0.22 + (rng.float() - 0.5) * 0.3;
+        const py = h - 0.12 - lane * 0.02;
+        const run = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, runLen, 8), pipeMat);
+        run.name = 'ceiling-main';
+        if (axis === 'x') { run.rotation.z = Math.PI / 2; run.position.set(0, py, off); }
+        else { run.rotation.x = Math.PI / 2; run.position.set(off, py, 0); }
+        group.add(run);
+        frameHardware.push(run);
+        // hanger straps every ~1.4m reaching the slab
+        const nH = Math.max(1, Math.floor(runLen / 1.4));
+        for (let c = 0; c < nH; c++) {
+          const t = -runLen / 2 + (c + 0.5) * (runLen / nH);
+          const hg2 = new THREE.Mesh(texBox(0.035, 0.09, 0.035), pipeMat);
+          hg2.name = 'main-hanger';
+          if (axis === 'x') hg2.position.set(t, py + 0.045, off);
+          else hg2.position.set(off, py + 0.045, t);
+          group.add(hg2);
+          frameHardware.push(hg2);
+        }
+      }
+      // junction box where a feed splits — conduit stubs branch off it
+      if (rng.float() < 0.5) {
+        const jb = new THREE.Mesh(texBox(0.22, 0.12, 0.22), pipeMat);
+        jb.name = 'main-junction';
+        const jx = axis === 'x' ? (rng.float() - 0.5) * runLen * 0.4 : 0;
+        const jz = axis === 'x' ? 0 : (rng.float() - 0.5) * runLen * 0.4;
+        jb.position.set(jx, h - 0.1, jz);
+        group.add(jb);
+        frameHardware.push(jb);
+        // a stub crossing the room the other way
+        const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, (axis === 'x' ? d : w) * 0.4, 8), pipeMat);
+        stub.name = 'main-stub';
+        if (axis === 'x') { stub.rotation.x = Math.PI / 2; stub.position.set(jx, h - 0.13, jz + (rng.bool() ? 0.1 : -0.1)); }
+        else { stub.rotation.z = Math.PI / 2; stub.position.set(jx + (rng.bool() ? 0.1 : -0.1), h - 0.13, jz); }
+        group.add(stub);
+        frameHardware.push(stub);
+      }
+    }
+
     // The water line — a room that flooded once keeps the tide mark:
     // sediment band and a sharp top edge at baseboard height.
     const wetRoom = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
