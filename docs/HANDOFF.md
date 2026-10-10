@@ -16,6 +16,31 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `paperRot` (96×64): browned newsprint + edge rot veins + print ghosts + headline bar + lifted corner + damp halo; 30% lived-in floors.
 - `hingeWeep` (48×96): rust pin kiss + thin oil run + caught-dust bead + knuckle shadow; 40% lived-in doors at jamb edge. Presence tests ×3 green.
 
+## Sprint 667 — the dust kept its tally, the boards flexed & the frost crept
+
+- `tallyWall` (96×96): chalk five-counts in columns + smudged restarts + one long desperate stroke; rare 10% lived-in walls, y≈1.2.
+- `boardFlex` (96×48): dark gap along a board edge + lifted lip + popped nail heads w/ rust + gathered dust; 35% lived-in floors.
+- `frostFern` (96×96): branching crystal fronds + barbs + ice-speck dust + thawed tear channel; 40% of windows via prop loop. Presence tests ×3 green.
+
+## Sprint 668 — the latch missed its catch, the salt lined the seam & the flies kept the shade
+
+- `latchScore` (48×48): swung arc scratches + deep gouge + tongue sheen + strike ghost; 45% lived-in doors at catch height.
+- `saltLine` (96×32): uneven mineral crust + piled ends + dark seam + crystals; 30% lived-in door feet.
+- `flySpot` (64×64): amber halo + rim-sparse speck cluster + dragged smear; 30% lived-in walls high near lamps. Presence tests ×3 green.
+
+## Sprint 669 — the chair left its tracks, the shelf kept its outline & the kettle steamed the wall
+
+- `chairScrape` (96×64): twin leg drag-lines + dust walls at ends + foot divots + turn smear; 35% lived-in floors.
+- `bookDust` (96×64): pale tipped book ghost + spine ridge + fore-edge dust lip + thumb smudge; 50% of `bookshelf` props.
+- `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
+
+## Fixes — singleton prop decals + review debt
+
+- **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
+- PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
+
+## Sprint log
+
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
 
 - `frassLine` (96×48): woodworm exit pinholes + pale frass cones + weak-board sag; 30% lived-in walls, baseboard level.
