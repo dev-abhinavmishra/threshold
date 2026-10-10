@@ -12216,3 +12216,126 @@ export function vaporGhost(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Putty crack — the glazing let go: a crack net across the putty bead,
+ * lifted flakes, and the glass-edge grime line the seal once hid. */
+export function puttyCrack(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the bead — a pale putty band along the frame edge
+    ctx.fillStyle = `rgba(190,182,166,${0.25 + rng.float() * 0.15})`;
+    ctx.fillRect(6, 18, 84, 10);
+    // crack net — branching dark lines across the bead
+    for (let i = 0; i < 6; i++) {
+      let x = 10 + rng.float() * 70;
+      let y = 22;
+      ctx.strokeStyle = `rgba(60,52,42,${0.5 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let s = 0; s < 4; s++) {
+        x += (rng.float() - 0.3) * 8;
+        y += (rng.float() - 0.5) * 5;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // lifted flakes — pale slivers that popped off the bead
+    for (let i = 0; i < 5; i++) {
+      const fx = 12 + rng.float() * 72;
+      ctx.fillStyle = `rgba(210,202,184,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.moveTo(fx, 20);
+      ctx.lineTo(fx + 3 + rng.float() * 3, 21 + rng.float() * 3);
+      ctx.lineTo(fx + 1, 25);
+      ctx.fill();
+    }
+    // glass-edge grime — the dark line the seal used to hide
+    ctx.fillStyle = `rgba(45,38,30,${0.3 + rng.float() * 0.2})`;
+    ctx.fillRect(8, 12, 80, 2);
+    // shadow under the bead
+    ctx.fillStyle = `rgba(70,60,48,${0.2 + rng.float() * 0.12})`;
+    ctx.fillRect(6, 28, 84, 2);
+  });
+}
+
+/** Mat ghost — the doormat walked away years ago but its outline
+ * stayed: a soil rectangle, corner fray, and the grit line. */
+export function matGhost(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // the soil rectangle — darker inside where the mat trapped dirt
+    ctx.fillStyle = `rgba(55,45,34,${0.3 + rng.float() * 0.18})`;
+    ctx.fillRect(12, 10, 72, 44);
+    // frayed rim — broken outline where edges crushed
+    ctx.strokeStyle = `rgba(80,66,50,${0.45 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.2;
+    for (let x = 12; x < 84; x += 4) {
+      ctx.beginPath();
+      ctx.moveTo(x, 10);
+      ctx.lineTo(x + 2, 10 + rng.float() * 3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, 54);
+      ctx.lineTo(x + 2, 54 - rng.float() * 3);
+      ctx.stroke();
+    }
+    // corner fray — fibers dragging off the corners
+    for (const [cx, cy, dx, dy] of [[12, 10, -1, -1], [84, 10, 1, -1], [12, 54, -1, 1], [84, 54, 1, 1]] as const) {
+      for (let i = 0; i < 3; i++) {
+        ctx.strokeStyle = `rgba(95,80,60,${0.35 + rng.float() * 0.2})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + dx * (3 + rng.float() * 4), cy + dy * (2 + rng.float() * 3));
+        ctx.stroke();
+      }
+    }
+    // the grit line — heavier soil along the door-side edge
+    ctx.fillStyle = `rgba(40,32,24,${0.4 + rng.float() * 0.2})`;
+    ctx.fillRect(12, 50, 72, 4);
+    // clean center — where feet wiped hardest
+    ctx.fillStyle = `rgba(120,108,90,${0.15 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 30, 18, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Joint weep — the joint sweats green: verdigris bloom haloing a
+ * pipe coupling, with the drip tail running down. */
+export function jointWeep(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    // the coupling ghost — where the collar sat
+    ctx.fillStyle = `rgba(70,64,52,${0.3 + rng.float() * 0.15})`;
+    ctx.fillRect(14, 26, 20, 12);
+    // verdigris bloom — green-blue crust around the collar
+    const g = ctx.createRadialGradient(24, 32, 2, 24, 32, 16);
+    g.addColorStop(0, `rgba(90,140,110,${0.5 + rng.float() * 0.2})`);
+    g.addColorStop(0.6, `rgba(70,120,95,${0.3 + rng.float() * 0.15})`);
+    g.addColorStop(1, 'rgba(70,120,95,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 48, 64);
+    // crust specks — crystalline verdigris grains
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 3 + rng.float() * 9;
+      ctx.fillStyle = `rgba(${95 + rng.float() * 40},${140 + rng.float() * 30},${105 + rng.float() * 30},${0.4 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(24 + Math.cos(a) * r, 32 + Math.sin(a) * r * 0.8, 0.5 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the drip tail — green-white run below the joint
+    ctx.strokeStyle = `rgba(110,150,120,${0.35 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(24 + (rng.float() - 0.5) * 6, 38);
+    ctx.lineTo(23 + (rng.float() - 0.5) * 4, 56 + rng.float() * 6);
+    ctx.stroke();
+    // mineral edge — pale limescale ring on the run
+    ctx.strokeStyle = `rgba(190,195,180,${0.25 + rng.float() * 0.15})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(26, 40);
+    ctx.lineTo(25.5, 54);
+    ctx.stroke();
+  });
+}

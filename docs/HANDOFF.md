@@ -39,6 +39,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
 - PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
 
+## Sprint 670 — the putty cracked, the mats wore through & the joints wept green
+
+- `puttyCrack` (96×48): crazed putty bead + crack net + lifted flakes + glass-edge grime; 45% of `window` props.
+- `matGhost` (96×64): vanished doormat's soil rectangle + frayed rim + corner fibers + grit line; 30% lived-in door feet, floor-anchored via `portLocalPos` − `portOutwardDir(dw)*0.55` (takes a Port, not a wall string).
+- `jointWeep` (48×64): verdigris bloom + crust specks + drip tail + limescale edge; 45% of pipeManifold/indPipes/radiatorTall/radiatorFin props via nearest-wall. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
