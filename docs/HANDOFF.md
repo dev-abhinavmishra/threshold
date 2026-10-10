@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 697–699 — the sparks kept their scatter, the candles kept their singe & the desks kept their weights (decals lane)
+\n\n## Sprint 700–702 — the counters kept their shells, the casks kept their trays & the shelves kept their hooks (decals lane)
+
+- `eggShell` — breakfast chips on counter/table tops (props overlay).
+- `milkBottle` — bottle rings on thresholds of lived rooms.
+- `napkinFold` — fold ghosts on dining tops (props overlay).
+- `steinRing` — ale rings on bar/counter tops (props overlay).
+- `dripTray` — tray ghosts under barrels.
+- `parcelString` — twine marks on boxes (props overlay).
+- `cupHook` — hook pits under pantry/scullery shelves.
+- `quiltPatch` — patchwork ghosts on beds (props overlay).
+- `shelfBracket` — strut shadows under wall shelves.
+
+Gates: tsc, lint, scoped vitest (700–702) green.\n\n## Sprint 697–699 — the sparks kept their scatter, the candles kept their singe & the desks kept their weights (decals lane)
 
 - `sparkScatter` — forge pits around blowtorch/propaneTorch/firePit/heater props.
 - `loomThread` — warp shadows under spinningWheel.
