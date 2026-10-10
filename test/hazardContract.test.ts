@@ -810,6 +810,22 @@ describe('the under strips your hands (sprints 675-680)', () => {
     const tearStrip = strip.slice(strip.indexOf("return 'lens'") - 400, strip.indexOf("return 'lens'"));
     expect(tearStrip).not.toContain('droppedLenses.push');
   });
+
+  it('the graft wears your face — the strip site is the site it seeds', () => {
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // after a muscle/glass strip the grafter asks the floor for the
+    // substrate at the MARK — the fresh kill — so your own housing
+    // rises under new hands, not a farther dead one it smelled first
+    const stooped = spSrc.slice(spSrc.indexOf('const got = c.stripWork'));
+    expect(stooped).toContain("c.nearestGraft?.(workNear.x, workNear.z, 1.6");
+    expect(stooped).toContain("got === 'belt' ? 'wheel' : 'socket'");
+    // and the graft itself still claims the substrate for the under —
+    // owner:'under' is what puts it outside the house's re-engagement
+    const graft = gameSrc.slice(gameSrc.indexOf('graft: (x, z'));
+    expect(graft).toContain("f.owner = 'under'");
+    expect(graft).toContain("w.owner = 'under'");
+  });
 });
 
 

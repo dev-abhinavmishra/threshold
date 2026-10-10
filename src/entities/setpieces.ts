@@ -752,7 +752,15 @@ export class Grafter extends Entity {
           this.graftTarget = null;
           // sprint 676 — muscle and glass keep their kind: a torn belt
           // or lens heads for a graft, not the coil pile
-          if (got === 'belt' || got === 'lens') this.carriedKind = got;
+          // sprint 678 — and the graft prefers the kill it just made:
+          // ask the floor for the fresh substrate at the mark so your
+          // wheel rises under new hands where you left it, not some
+          // farther dead housing it happened to smell first.
+          if (got === 'belt' || got === 'lens') {
+            this.carriedKind = got;
+            this.graftTarget = c.nearestGraft?.(workNear.x, workNear.z, 1.6,
+              got === 'belt' ? 'wheel' : 'socket') ?? null;
+          }
           c.cue('grafter-grind', this.pos,
             got === 'coil' ? '[stone worries your wire up — the coil goes under the rubble]'
               : got === 'plate' ? '[stone folds your cocked plate into its hands]'
