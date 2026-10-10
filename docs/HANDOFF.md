@@ -8366,7 +8366,16 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 677–678 — the latches kept the thumbs, the nails kept the straightening & the springs shed their dust (decals lane)
+\n\n## Sprint 679–680 — the headboards kept the wall, the plates left their shadows & the bins kept their contents (decals lane)
+
+- `headboardRub` — vertical scrape, grease crescent and post dents on the wall behind `bed`/`bedOld`/`daybed` (nearest wall).
+- `plateShadow` — pale surround, dark socket mouth and wire stub where wall plates were pulled (`maintenance`/`unlit`/`!livedIn` rooms, `pickWallSpot`).
+- `mortiseGap` — dark latch-edge seams and plate ghosts on door leaves (offset ±0.42 beside `doorPositions`).
+- `cardGhost` — pale rectangles and pin pits behind `routingBoard`/`keyBoard`/`dartboard`.
+- `rodScar` — polish strips and ring dents over `window` props (`livedIn`).
+- `binShadow` — grain tides and chaff floor decals on `bin`/`plasticBin`/`bucket`/`barrel`/`wineBarrel`.
+
+Gates: tsc, lint, scoped vitest (sprints 679–680) green.\n\n## Sprint 677–678 — the latches kept the thumbs, the nails kept the straightening & the springs shed their dust (decals lane)
 
 - `windowLatch` — grease smear, turn crescents and fingertip ghosts on window latches; buildProp front-face overlay on `window`/`transomWindow`/`traceryWindow`/`windowArch`.
 - `pianoKeys` — ivory band, polished tops and nick marks on the piano's fall; overlay on `pianoUpright` front face.
