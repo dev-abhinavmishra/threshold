@@ -4,6 +4,20 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
+
+- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
+  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
+  stove*/boiler*/fireplace) or maintenance/under — steelDark in
+  service space, brass inside.
+- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
+  the floor at a run end; `pipe-valve` torus wheel mid-run.
+- Port-aware: the wall span is cut into segments clear of door
+  offsets (±1.0 margin) so pipes never cross an opening.
+- All pieces pushed into `frameHardware` so names survive static
+  consolidation.
+- 4 tests added (664 total).
+
 ## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
 
 - **Sprint 616**: procedural leaves split into four styles —

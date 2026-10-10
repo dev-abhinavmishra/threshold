@@ -3319,6 +3319,84 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (hg && !hg.name) hg.name = 'heater-ghost';
     }
 
+    // The veins ran the skirting — supply pipes hugging the wall in
+    // rooms that carry heat or service kit: a horizontal run with
+    // clamps, a riser at one end, sometimes a valve wheel. Segments
+    // stop short of any door opening.
+    {
+      const HEAT = new Set(['radiatorFin', 'radiatorTall', 'masonryHeater', 'stove', 'stoveRange', 'boilerDrum', 'boilerTank', 'fireplace']);
+      const heated = spec.props.some((p) => HEAT.has(p.kind)) || spec.biome === 'maintenance' || isUnder;
+      if (heated && rng.float() < 0.65) {
+        const pipeMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.brass();
+        // pick a wall, then cut its span into segments clear of ports
+        const walls = (['n', 's', 'e', 'w'] as const);
+        const wall = walls[Math.floor(rng.float() * 4)];
+        const span = (wall === 'e' || wall === 'w' ? d : w) - 0.5;
+        const offs = portOffsetsOn(wall);
+        // forbidden zones: port offset ±(leaf width + margin)
+        const segs: [number, number][] = [[-span / 2, span / 2]];
+        for (const o of offs) {
+          for (let i = segs.length - 1; i >= 0; i--) {
+            const [a, b] = segs[i];
+            if (o - 1.0 < b && o + 1.0 > a) {
+              segs.splice(i, 1);
+              if (o - 1.0 - a > 0.7) segs.push([a, o - 1.0]);
+              if (b - o - 1.0 > 0.7) segs.push([o + 1.0, b]);
+            }
+          }
+        }
+        const pipeY = 0.16 + rng.float() * 0.08;
+        const pipeR = 0.018 + rng.float() * 0.012;
+        for (const [a, b] of segs) {
+          const len = b - a;
+          const mid = (a + b) / 2;
+          const run = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, len, 8), pipeMat);
+          run.name = 'pipe-run';
+          if (wall === 'e' || wall === 'w') {
+            run.rotation.x = Math.PI / 2;
+            run.position.set((wall === 'e' ? w / 2 : -w / 2) - Math.sign(wall === 'e' ? 1 : -1) * 0.07, pipeY, mid);
+          } else {
+            run.rotation.z = Math.PI / 2;
+            run.position.set(mid, pipeY, (wall === 'n' ? d / 2 : -d / 2) - Math.sign(wall === 'n' ? 1 : -1) * 0.07);
+          }
+          group.add(run);
+          frameHardware.push(run);
+          // clamps pinning the run to the plaster
+          const nClamps = Math.max(1, Math.floor(len / 1.3));
+          for (let c = 0; c < nClamps; c++) {
+            const t = a + (c + 0.5) * (len / nClamps);
+            const cl = new THREE.Mesh(texBox(0.05, 0.05, 0.03), pipeMat);
+            cl.name = 'pipe-clamp';
+            if (wall === 'e' || wall === 'w') cl.position.set(run.position.x - (wall === 'e' ? 0.035 : -0.035), pipeY, t);
+            else cl.position.set(t, pipeY, run.position.z - (wall === 'n' ? 0.035 : -0.035));
+            group.add(cl);
+            frameHardware.push(cl);
+          }
+          // riser at one end — the run turns down and drops to the floor
+          if (rng.float() < 0.55) {
+            const end = rng.bool(0.5) ? a : b;
+            const riser = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, pipeY + 0.04, 8), pipeMat);
+            riser.name = 'pipe-riser';
+            if (wall === 'e' || wall === 'w') riser.position.set(run.position.x, pipeY / 2 - 0.01, end);
+            else riser.position.set(end, pipeY / 2 - 0.01, run.position.z);
+            group.add(riser);
+            frameHardware.push(riser);
+          }
+          // a wheel the night porter could still turn
+          if (rng.float() < 0.3) {
+            const vx = wall === 'e' || wall === 'w' ? run.position.x : mid + (rng.float() - 0.5) * len * 0.6;
+            const vz = wall === 'e' || wall === 'w' ? mid + (rng.float() - 0.5) * len * 0.6 : run.position.z;
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 12), pipeMat);
+            wheel.name = 'pipe-valve';
+            if (wall === 'e' || wall === 'w') { wheel.rotation.y = Math.PI / 2; wheel.position.set(vx - (wall === 'e' ? 0.05 : -0.05), pipeY, vz); }
+            else { wheel.position.set(vx, pipeY, vz - (wall === 'n' ? 0.05 : -0.05)); }
+            group.add(wheel);
+            frameHardware.push(wheel);
+          }
+        }
+      }
+    }
+
     // The water line — a room that flooded once keeps the tide mark:
     // sediment band and a sharp top edge at baseboard height.
     const wetRoom = spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
