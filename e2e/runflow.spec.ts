@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { seededRun, ThresholdG } from './harness';
 
 /**
  * Run-flow regression: the death → retry loop must work end-to-end on the
@@ -607,5 +608,90 @@ test('powered emissives die with room power: break and dim scale device glow', a
   expect(result.afterDim).toBeLessThan(result.before * 0.7);
   expect(result.afterDim).toBeGreaterThan(0.01);
   expect(result.afterBreak).toBeLessThan(0.05);
+  expect(errors).toEqual([]);
+});
+
+test('the sweep plants a knee — a work-marked lid waits behind its hands', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      space: string;
+      lidStashes: Map<string, { items: { id: string; count: number }[]; marked: string[] }>;
+      hazard: { evidence: { pos: { x: number; z: number }; room: number; kind: string; t: number; readBy: string[] }[] };
+      spawnById: (id: string) => void;
+      entities: { id: string; state: string; path?: { x: number; z: number }[] }[];
+    };
+    g.godMode = true;
+    ga.spawnById('sweep');
+    // settle a few frames so the runner exists with its path laid
+    for (let i = 0; i < 30; i++) g.frame();
+    const sw = ga.entities.find((e) => e.id === 'sweep');
+    if (!sw?.path?.length) return { stage: 'no-sweep' } as const;
+    // find a hiding spot within reach of the runner's path, and drop
+    // the mark between its mouth and the path — inside BOTH the read
+    // radius (1.8m of the runner) and the lid radius (1.4m of exitPos)
+    type Spot = { id: string; exitPos: { x: number; z: number }; trappedBy?: string };
+    let spot: Spot | null = null;
+    let mark = { x: 0, z: 0 };
+    for (const r of g.route.rooms) {
+      for (const s of ((r as { hidingSpots?: Spot[] }).hidingSpots ?? [])) {
+        if (!s) continue;
+        // nearest point on the runner's polyline (not just vertices) —
+        // the pass-line may dip much closer mid-segment
+        let nx = sw.path[0].x, nz = sw.path[0].z, nd = Infinity;
+        for (let i = 0; i + 1 < sw.path.length; i++) {
+          const a = sw.path[i], b = sw.path[i + 1];
+          const bx = b.x - a.x, bz = b.z - a.z;
+          const t = Math.max(0, Math.min(1,
+            ((s.exitPos.x - a.x) * bx + (s.exitPos.z - a.z) * bz) / (bx * bx + bz * bz || 1)));
+          const px = a.x + bx * t, pz = a.z + bz * t;
+          const d = Math.hypot(px - s.exitPos.x, pz - s.exitPos.z);
+          if (d < nd) { nd = d; nx = px; nz = pz; }
+        }
+        if (nd < 2.8) {
+          spot = s;
+          // mark halfway: within 1.4 of the lid AND the pass-line
+          mark = { x: s.exitPos.x + (nx - s.exitPos.x) * 0.5,
+            z: s.exitPos.z + (nz - s.exitPos.z) * 0.5 };
+          break;
+        }
+      }
+      if (spot) break;
+    }
+    if (!spot) return { stage: 'no-spot' } as const;
+    ga.lidStashes.set(`${ga.space}:${spot.id}`, {
+      items: [{ id: 'fanBelt', count: 2 }], marked: [],
+    });
+    ga.hazard.evidence.push({ pos: { x: mark.x, z: mark.z },
+      room: 0, kind: 'work', t: g.clock.time, readBy: ['player'] });
+    // step until the runner passes the lid or finishes
+    let gripped = false, frames = 0;
+    for (let i = 0; i < 4000; i++) {
+      g.frame(); frames = i;
+      if (spot.trappedBy === 'sweep') { gripped = true; break; }
+      const sw2 = ga.entities.find((e) => e.id === 'sweep');
+      if (!sw2 || sw2.state === 'done') break;
+    }
+    // let the run end — the grip must release with it
+    for (let i = 0; i < 4000; i++) {
+      g.frame();
+      const sw2 = ga.entities.find((e) => e.id === 'sweep');
+      if (!sw2 || sw2.state === 'done') break;
+    }
+    for (let i = 0; i < 30; i++) g.frame();
+    return { stage: 'ran' as const, gripped, released: spot.trappedBy !== 'sweep', frames };
+  });
+
+  if (result.stage === 'no-sweep' || result.stage === 'no-spot') test.skip();
+  else {
+    expect(result.gripped, 'the sweep plants a knee on the marked lid').toBe(true);
+    expect(result.released, 'the grip ends with the run').toBe(true);
+  }
   expect(errors).toEqual([]);
 });

@@ -785,3 +785,32 @@ describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
     void stash;
   });
 });
+
+
+describe('the sweep plants a knee (sprints 657-662)', () => {
+  it('the sweep reads work marks on the pass — a knee on the lid, not a tidy', () => {
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // a second house reader: the sweep claims marks under its own key
+    expect(corridorSrc).toContain('`sweep:${this.startRoom}`');
+    expect(corridorSrc).toContain("ev.kind !== 'work'");
+    // the answer is a grip, not a scatter — the box waits behind its hands
+    expect(corridorSrc).toContain("spot.trappedBy = 'sweep'");
+    expect(corridorSrc).toContain('plants a knee');
+    // grips live only while the run lasts — onDone releases them all
+    expect(corridorSrc).toContain('this.gripped.length = 0');
+    expect(corridorSrc).toContain("s.trappedBy === 'sweep'");
+  });
+
+  it('a gripped lid pays nothing out while the sweep runs', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the existing hold-shut surface answers 'sweep' grips unchanged —
+    // trappedBy is entity-agnostic
+    expect(gameSrc).toContain('trappedSpot?.trappedBy');
+    expect(gameSrc).toContain('it holds the lid shut');
+    // and the stash prompt hides itself under a grip
+    expect(gameSrc).toContain('carrying && !spot.trappedBy');
+    // only stashed lids can be gripped — stashLoad gates the read
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
+  });
+});
