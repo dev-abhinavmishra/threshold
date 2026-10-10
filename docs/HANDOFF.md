@@ -73,6 +73,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `shelfSag` (96×48): bowed shelf shadow + dust banks + bracket ghosts + fallen-item sliver; 40% of bookshelf/shelf/cabinet/dresser.
 - `chimneySmut` (96×96): feathered soot bloom + smoke ghosts + streak tongues + tar beads; ceiling quad (rotation.x=π/2) at h−0.02 above fireplace/masonryHeater/stove, 45%. Presence tests ×3 green.
 
+## Sprint 674 — the pull cast its shadow, they hung a sheet & the outlet spat once
+
+- `handleShadow` (48×48): hand-shadow crescent + grip lip + finger comets + polish rim; 40% of dresser/cabinet/drawerUnit/filing/nightstand.
+- `drapeDrop` (96×64): cloth-ghost rectangle + hem shadow + fold streaks + clean hook circles + hem rub; 30% lived-in walls at ~1.6m.
+- `socketScorch` (48×64): smoke plume + char tear + prong chars + drip beads + cord shadow; 45% service-bones walls at socket height. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)

@@ -12708,3 +12708,109 @@ export function chimneySmut(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Handle shadow — the pull cast the same shadow a thousand
+ * mornings: a smudged crescent under a drawer/cupboard handle. */
+export function handleShadow(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 48, (ctx) => {
+    // the crescent — a dark half-moon the hand's shadow ground in
+    ctx.fillStyle = `rgba(50,42,34,${0.45 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(24, 20, 10, 7, 0, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.fill();
+    // pulled lip — deeper smudge at the grip's underside
+    ctx.fillStyle = `rgba(45,38,30,${0.5 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(24, 22, 6, 3, 0, 0, Math.PI);
+    ctx.fill();
+    // finger comets — short smears trailing below
+    for (let i = 0; i < 4; i++) {
+      const fx = 15 + i * 6 + rng.float() * 3;
+      ctx.strokeStyle = `rgba(60,52,42,${0.35 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(fx, 26);
+      ctx.quadraticCurveTo(fx + 1, 32, fx + (rng.float() - 0.5) * 4, 38 + rng.float() * 4);
+      ctx.stroke();
+    }
+    // polish rim — the high edge the cloth never reached
+    ctx.strokeStyle = `rgba(180,172,150,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(24, 19, 12, 8.5, 0, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.stroke();
+  });
+}
+
+/** Mirror blind — they hung a sheet over the mirror and the sheet
+ * left its hem: two hook ghosts and a cloth shadow line. */
+export function drapeDrop(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // cloth shadow — a broad rectangle ghost where the drape hung
+    ctx.fillStyle = `rgba(120,110,95,${0.28 + rng.float() * 0.12})`;
+    ctx.fillRect(14, 8, 68, 44);
+    // hem shadow — darker line at the drape's bottom edge
+    ctx.fillStyle = `rgba(90,80,66,${0.4 + rng.float() * 0.15})`;
+    ctx.fillRect(14, 50, 68, 4);
+    // fold streaks — vertical shade lines the folds threw
+    for (let i = 0; i < 5; i++) {
+      const fx = 20 + rng.float() * 56;
+      ctx.fillStyle = `rgba(100,90,76,${0.2 + rng.float() * 0.12})`;
+      ctx.fillRect(fx, 10, 2 + rng.float() * 2, 40);
+    }
+    // hook ghosts — clean circles where the hooks covered the wall
+    for (const hx of [20, 76]) {
+      ctx.fillStyle = `rgba(170,160,140,${0.35 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(hx, 12, 3.5 + rng.float() * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(80,70,58,${0.4 + rng.float() * 0.15})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(hx, 12, 4.5 + rng.float() * 1.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // hem rub — the wall's skin polished by the swinging bottom
+    ctx.fillStyle = `rgba(150,140,120,${0.25 + rng.float() * 0.15})`;
+    ctx.fillRect(16, 56, 64, 3);
+  });
+}
+
+/** Socket scorch — the outlet spat once and kept the mark: a char
+ * tear above the socket with a smoke tail and drip beads. */
+export function socketScorch(rng: Rng): THREE.Texture | null {
+  return canvasTex(48, 64, (ctx) => {
+    // smoke tail — the plume that climbed the wall
+    const g = ctx.createRadialGradient(24, 26, 2, 24, 26, 22);
+    g.addColorStop(0, `rgba(42,36,30,${0.5 + rng.float() * 0.2})`);
+    g.addColorStop(1, 'rgba(42,36,30,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(24, 24, 13, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // the char — a dense tear at the socket's lip
+    ctx.fillStyle = `rgba(28,24,20,${0.65 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(24, 46, 7, 9, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    // twin prong chars — the slots' signature
+    for (const px of [21, 27]) {
+      ctx.fillStyle = `rgba(20,17,14,${0.6 + rng.float() * 0.15})`;
+      ctx.fillRect(px - 1, 42, 2, 7);
+    }
+    // drip beads — molten flecks that ran and froze
+    for (let i = 0; i < 3; i++) {
+      ctx.fillStyle = `rgba(35,30,25,${0.5 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(20 + rng.float() * 9, 52 + rng.float() * 8, 1 + rng.float() * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // wire shadow — the cord's line vanishing below
+    ctx.strokeStyle = `rgba(70,60,50,${0.3 + rng.float() * 0.12})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(24, 55);
+    ctx.quadraticCurveTo(26 + rng.float() * 4, 60, 25, 64);
+    ctx.stroke();
+  });
+}
