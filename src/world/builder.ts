@@ -13,10 +13,10 @@ import { aabb } from '../engine/math';
 import { portLocalPos, portOutwardDir, footprintInDoorLane, footprintInDoorLeaf } from './spec';
 import { TEX } from './textures';
 import { box as texBox } from './props';
-import { modelInstance, modelCollider } from './modelLibrary';
+import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2309,7 +2309,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (rng.float() >= 0.3) continue;
       const hit = portLocalPos({ wall: port.wall, offset: port.offset, width: 0.9 }, w, d);
       const inx = port.wall === 'e' ? -1 : port.wall === 'w' ? 1 : 0;
-      const inz = port.wall === 's' ? -1 : port.wall === 'n' ? 1 : 0;
+      const inz = port.wall === 's' ? 1 : port.wall === 'n' ? -1 : 0;
       const along = (port.wall === 'e' || port.wall === 'w' ? hit.z : hit.x)
         + (rng.bool(0.5) ? port.width / 2 + 0.12 : -port.width / 2 - 0.12);
       wallDecal(port.wall, doorDent(rng), 0.4 + rng.float() * 0.1, 0.4 + rng.float() * 0.1, along + inx * 0 + inz * 0, 0.95 + rng.float() * 0.15);
@@ -2375,7 +2375,11 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         || rng.float() >= 0.4) continue;
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
-      const cw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      let cw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      if (p.yaw !== undefined) {
+        const sy = Math.sin(p.yaw), cyv = Math.cos(p.yaw);
+        cw = Math.abs(sy) > Math.abs(cyv) ? (sy > 0 ? 'w' : 'e') : (cyv > 0 ? 's' : 'n');
+      }
       const along = cw === 'e' || cw === 'w' ? p.z : p.x;
       wallDecal(cw, curtainShade(rng), 0.9 + rng.float() * 0.2, 1.4 + rng.float() * 0.3, along + (rng.float() - 0.5) * 0.2, 1.55 + rng.float() * 0.2);
       const cs = group.children[group.children.length - 1];
@@ -2421,7 +2425,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
     // The paper let go — a wallpaper flap curls off its seam, the
     // paste stain and bare plaster showing behind it.
-    if (livedIn && rng.bool(0.35)) {
+    if (livedIn && spec.wallMaterial !== 'woodPanel' && spec.wallMaterial !== 'tile' && spec.wallMaterial !== 'corrugated' && spec.wallMaterial !== 'brick' && rng.bool(0.35)) {
       const spot = pickWallSpot(0.9);
       if (spot) {
         wallDecal(spot.wall, paperPeel(rng), 0.6 + rng.float() * 0.15, 0.8 + rng.float() * 0.2, spot.along, 1.2 + rng.float() * 0.4);
@@ -2433,7 +2437,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     // The tiles broke — crack webs and dark grout where the wet rooms
     // wore their floors out under boots and buckets.
     if ((spec.biome === 'maintenance' || spec.biome === 'unlit' || isUnder
-      || spec.props.some((p) => p.kind === 'basinSink' || p.kind === 'puddle')) && rng.bool(0.4)) {
+      || spec.props.some((p) => p.kind === 'basinSink' || p.kind === 'puddle')) && spec.floorMaterial !== 'carpet' && rng.bool(0.4)) {
       const tc = decalQuad(tileCrack(rng), 1.2 + rng.float() * 0.3, 1.2 + rng.float() * 0.3);
       tc.name = 'tile-crack';
       tc.rotation.x = -Math.PI / 2;
@@ -2535,12 +2539,12 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (rng.float() >= 0.35) continue;
       const hit = portLocalPos({ wall: port.wall, offset: port.offset, width: 0.9 }, w, d);
       const inx = port.wall === 'e' ? -1 : port.wall === 'w' ? 1 : 0;
-      const inz = port.wall === 's' ? -1 : port.wall === 'n' ? 1 : 0;
       const dd = decalQuad(doorDrift(rng), 0.9 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
       dd.name = 'door-drift';
       dd.rotation.x = -Math.PI / 2;
       dd.rotation.z = port.wall === 'e' || port.wall === 'w' ? Math.PI / 2 : 0;
-      dd.position.set(hit.x + inx * 0.3, 0.0096, hit.z + inz * 0.3);
+      // 'n' is the +z wall and 's' the -z wall — dust piles inside.
+      dd.position.set(hit.x + inx * 0.3, 0.0096, hit.z + (port.wall === 'n' ? -0.3 : port.wall === 's' ? 0.3 : 0));
       group.add(dd);
     }
 
@@ -2552,7 +2556,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const md = Math.min(dE, dW, dN, dS);
       const bw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
       const along = bw === 'e' || bw === 'w' ? p.z : p.x;
-      wallDecal(bw, battenGhost(rng), 0.8 + rng.float() * 0.15, 0.8 + rng.float() * 0.15, along, 1.6 + rng.float() * 0.2);
+      wallDecal(bw, battenGhost(rng), 0.8 + rng.float() * 0.15, 0.8 + rng.float() * 0.15, along, (p.y ?? 0) + 1.45 + rng.float() * 0.2);
       const bg = group.children[group.children.length - 1];
       if (bg && !bg.name) bg.name = 'batten-ghost';
     }
@@ -2565,7 +2569,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       jr.name = 'jug-ring';
       jr.rotation.x = -Math.PI / 2;
       jr.rotation.z = rng.float() * Math.PI * 2;
-      jr.position.set(p.x, 0.0097, p.z);
+      jr.position.set(p.x, (p.y ?? 0) + 0.0097, p.z);
       group.add(jr);
     }
 
@@ -2662,7 +2666,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const wall: 'n' | 'e' | 'w' | 's' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
-      const along = wall === 'e' || wall === 'w' ? p.z + d / 2 : p.x + w / 2;
+      const along = wall === 'e' || wall === 'w' ? p.z : p.x;
       wallDecal(wall, frameRattle(rng), 0.8 + rng.float() * 0.2, 0.8 + rng.float() * 0.2, along, 1.0 + rng.float() * 0.2);
       const fr = group.children[group.children.length - 1];
       if (fr && !fr.name) fr.name = 'frame-rattle';
@@ -2755,7 +2759,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       lw.name = 'landing-wear';
       lw.rotation.x = -Math.PI / 2;
       lw.rotation.z = rng.float() * Math.PI * 2;
-      lw.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.0089, p.z + (rng.float() - 0.5) * 0.3 + 0.4);
+      const stairTop = (MODEL_FOR[p.kind]?.height ?? 0) > 0 ? (MODEL_FOR[p.kind]?.height ?? 2.9) - 0.24 : 0;
+      lw.position.set(p.x + (rng.float() - 0.5) * 0.3, p.kind === 'stairLanding' ? (p.y ?? 0) + 0.02 : p.kind === 'newelPost' ? 0.0089 : (p.y ?? 0) + stairTop, p.z + (rng.float() - 0.5) * 0.3 + 0.4);
       group.add(lw);
     }
 
@@ -2780,10 +2785,26 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const wall: 'n' | 'e' | 'w' | 's' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
-      const along = wall === 'e' || wall === 'w' ? p.z + d / 2 + rng.range(-0.5, 0.5) : p.x + w / 2 + rng.range(-0.5, 0.5);
+      const along = wall === 'e' || wall === 'w' ? p.z + rng.range(-0.5, 0.5) : p.x + rng.range(-0.5, 0.5);
       wallDecal(wall, callGrub(rng), 0.45 + rng.float() * 0.1, 0.65 + rng.float() * 0.15, along, 1.4 + rng.float() * 0.1);
       const cg = group.children[group.children.length - 1];
       if (cg && !cg.name) cg.name = 'call-grub';
+    }
+
+    // The oche wore through — a toe-gouged line on the floor a
+    // throwing-step out from every dartboard.
+    for (const p of spec.props) {
+      if (p.kind !== 'dartboard' || rng.float() >= 0.5) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const inx2 = md === dE ? -1 : md === dW ? 1 : 0;
+      const inz2 = md === dN ? -1 : md === dS ? 1 : 0;
+      const oc = decalQuad(ocheLine(rng), 1.4 + rng.float() * 0.2, 0.5 + rng.float() * 0.1);
+      oc.name = 'oche-line';
+      oc.rotation.x = -Math.PI / 2;
+      oc.rotation.z = inx2 !== 0 ? Math.PI / 2 : 0;
+      oc.position.set(p.x + inx2 * 0.75, 0.0092, p.z + inz2 * 0.75);
+      group.add(oc);
     }
 
     // The printers coughed toner — grey scatter and jam streaks
@@ -2818,7 +2839,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (p.kind !== 'beamRun' || rng.float() >= 0.6) continue;
       const bd = decalQuad(beamDust(rng), 1.2 + rng.float() * 0.3, 0.4 + rng.float() * 0.1);
       bd.name = 'beam-dust';
-      bd.rotation.x = -Math.PI / 2;
+      bd.rotation.x = Math.PI / 2;
       bd.rotation.z = rng.float() * Math.PI * 2;
       bd.position.set(p.x, h - 0.3 - rng.float() * 0.3, p.z + (rng.float() - 0.5) * 0.3);
       group.add(bd);
@@ -3403,7 +3424,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       template.group.updateMatrixWorld(true);
       template.group.traverse((o) => {
         const m = o as THREE.Mesh;
-        if (!m.isMesh || Array.isArray(m.material)) return;
+        if (!m.isMesh || Array.isArray(m.material) || m.userData.decalMat) return;
         if (!mat) mat = m.material as THREE.Material;
         geos.push(m.geometry.clone().applyMatrix4(m.matrixWorld));
       });

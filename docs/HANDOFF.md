@@ -1,4 +1,28 @@
-# THRESH
+# THRESHOLD — sprint handoff
+
+Newest sprint first. The old bootstrap prompt lives at the bottom.
+
+## Sprint log
+
+## Review-fix sweep — the decals land where they claim
+
+All Devin Review findings on the merged decal PRs (#182–#218, 54 findings)
+addressed. Two structural fixes: `decalDim`/`decalY` helpers in props.ts read
+`MODEL_FOR[kind].height` + `anchor:'center'` for zero-collider GLBs (vendored
+models report `[0,0,0]` colliders) so overlays anchor on wall mounts and prop
+tops instead of floating; and the instanced-prop bake now skips
+`userData.decalMat` meshes so ≥3 same-kind props keep their decal textures.
+Bespoke: door-drift inz (n/s sign), clock-stopped clears `userData.anim`,
+counter-belt/bell-top per-kind heights, landing-wear rides stair tops,
+pin-lines/valve/key/kettle/jug depth offsets, steam-bleach + duct-seam floor
+variants, car-veil widened to the car's 4.4m, `ocheLine` floor decal under
+dartboards (dartSplash wall texture cropped), TAPES narrowed to tapeMeasure,
+piece-squares drops sungka boards, counterBell back to ~half, lath/paper/tile
+material gates, frame-rattle/call-grub centered alongs, gate-track ignores
+spec.y, jug-ring rides p.y, beam-dust faces down, fan-film on the blades.
+New `ocheLine` decal. New placement test: door-drift/jug-ring/frame-rattle/
+call-grub stay inside their rooms. HANDOFF restructured (sprint log vs OLD
+prompt appendix).
 
 ## Sprint 557–559 — the till kept the scratch, the saw kept its dust & the case kept the journey
 
@@ -72,7 +96,9 @@ Another room-history decal batch — wear where equipment lived.
 Gotcha: `'bucket'` and `'wallHose'` are real PropKinds but sparse — gate by kind AND spawn rate; verify counts across all SEEDS before committing. Import-merge regexes must match the ACTUAL import tail (sibling merges shift names around) — print the tail line before regexing.
 
 *Branch devin/…-sprint-533+ — 535 total decal wiring points after this batch.*
-OLD — session handoff prompt
+---
+
+## Appendix — OLD session handoff prompt
 
 Paste this into a fresh session to continue the autonomous sprint work with full
 context. Keep it updated when conventions change.

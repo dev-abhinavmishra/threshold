@@ -7240,7 +7240,7 @@ export function mirrorAmalgam(rng: Rng): THREE.Texture | null {
       for (let i = 0; i < 4; i++) {
         g.fillStyle = `rgba(18,15,12,${0.4 + rng.float() * 0.3})`;
         g.beginPath();
-        g.ellipse(cx + rng.range(-2, 2) || rng.range(3, 10) * (cx === 0 ? 1 : -1), cy + rng.range(3, 12) * (cy === 0 ? 1 : -1), 1 + rng.float() * 2.2, 2.5 + rng.float() * 3, rng.float(), 0, Math.PI * 2);
+        g.ellipse(cx + rng.range(-2, 2), cy + rng.range(3, 12) * (cy === 0 ? 1 : -1), 1 + rng.float() * 2.2, 2.5 + rng.float() * 3, rng.float(), 0, Math.PI * 2);
         g.fill();
       }
     }
@@ -8497,25 +8497,35 @@ export function dartSplash(rng: Rng): THREE.Texture | null {
     g.beginPath();
     g.arc(48, 46, 20 + rng.float(), 0, Math.PI * 2);
     g.stroke();
-    // The stand-off groove — a dragged line down from the board to
-    // the throwing line the toes always mark.
-    const lane = g.createLinearGradient(0, 66, 0, 88);
-    lane.addColorStop(0, 'rgba(150,134,108,0)');
-    lane.addColorStop(0.6, `rgba(150,134,108,${0.18 + rng.float() * 0.14})`);
-    lane.addColorStop(1, 'rgba(150,134,108,0)');
-    g.fillStyle = lane;
-    g.fillRect(20, 66, 56, 22);
-    // Toe-line gouge — the oche's scuffed edge.
-    g.strokeStyle = `rgba(120,102,78,${0.3 + rng.float() * 0.2})`;
-    g.lineWidth = 1.4;
-    g.beginPath();
-    g.moveTo(18, 84 + rng.range(-1, 1));
-    g.lineTo(78, 84 + rng.range(-1, 1));
-    g.stroke();
     // Chalk dust under the scoring spot.
     for (let i = 0; i < 8; i++) {
       g.fillStyle = `rgba(190,184,170,${0.2 + rng.float() * 0.24})`;
       g.fillRect(66 + rng.float() * 20, 60 + rng.float() * 8, 0.9, 0.9);
+    }
+  });
+}
+
+/** The toes kept the line — a gouged oche and the chalk smear of a
+ *  thousand throws, on the floor out from the dartboard. */
+export function ocheLine(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (g) => {
+    // Chalk smear thrown forward of the line.
+    const lane = g.createLinearGradient(0, 0, 0, 48);
+    lane.addColorStop(0, 'rgba(150,134,108,0)');
+    lane.addColorStop(0.55, `rgba(150,134,108,${0.16 + rng.float() * 0.12})`);
+    lane.addColorStop(1, 'rgba(150,134,108,0)');
+    g.fillStyle = lane;
+    g.fillRect(18, 4, 60, 40);
+    // The gouge itself — a dragged toe-mark, ends worn past the chalk.
+    g.strokeStyle = `rgba(120,102,78,${0.32 + rng.float() * 0.2})`;
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(16 + rng.range(-2, 2), 12 + rng.range(-1, 1));
+    g.lineTo(80 + rng.range(-2, 2), 12 + rng.range(-1, 1));
+    g.stroke();
+    for (let i = 0; i < 10; i++) {
+      g.fillStyle = `rgba(190,184,170,${0.18 + rng.float() * 0.2})`;
+      g.fillRect(20 + rng.float() * 56, 16 + rng.float() * 22, 0.9, 0.9);
     }
   });
 }
