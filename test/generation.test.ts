@@ -5921,3 +5921,54 @@ describe('the ceiling kept its weather (sprint 610-612)', () => {
     });
   }
 });
+
+describe('the doors kept their furniture (sprint 613)', () => {
+  for (const name of ['mail-slot', 'peephole', 'deadbolt', 'escutcheon', 'finger-plate', 'door-number'] as const) {
+    it(`leaves carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
+
+describe('the service doors kept their bar (sprint 614)', () => {
+  for (const name of ['crash-bar', 'wire-window'] as const) {
+    it(`leaves carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
+
+describe('the jamb kept its metal (sprint 615)', () => {
+  for (const name of ['strike-plate', 'hinge-knuckle', 'door-stop'] as const) {
+    it(`frames carry ${name}`, () => {
+      let n = 0;
+      for (const seed of SEEDS) {
+        const route = generateRoute({ seedText: seed, includeUnderscript: true });
+        for (const room of [...mainRooms(route), ...route.underRooms]) {
+          if (!room.spec) continue;
+          const built = buildRoomMesh(room, room.spec, room.index, 'high');
+          built.group.traverse((o) => { if (o.name === name) n++; });
+        }
+      }
+      expect(n, `no ${name}`).toBeGreaterThan(0);
+    });
+  }
+});
