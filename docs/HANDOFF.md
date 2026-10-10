@@ -4,6 +4,17 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 640–642 — the doors kept their teeth (door-hardware batch)
+
+- `strap-hinge` + `strap-end` T-irons across plank-style leaves (~65%
+  of planks), both faces — leaf-local, x from the hinge edge inward.
+- `kick-plate` steel low on livedIn leaves (~40%); `chain-keeper` +
+  `chain-link`×4 + `chain-mount` on the inside face (~30%).
+- `bell-plate` + `bell-push` on the wall beside the hinge-side casing
+  (~35% of non-industrial doors), both wall faces.
+- Leaf-local x past `pw/2` lands past the leaf edge — fine for
+  jamb-mounted pieces (chain-mount) since the leaf group carries them.
+
 ## Sprint 637–639 — the rails kept their smalls (service-hardware batch)
 
 - `rad-feed`/`rad-bypass`/`rad-bleed` plumbing under + beside
