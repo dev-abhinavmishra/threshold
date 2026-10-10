@@ -773,6 +773,27 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(strip).toContain('this.liveTraps.splice');
     expect(strip).toContain('this.trapPos.delete(t.key)');
   });
+
+  it('the muscle walks off — your wheel\'s belt rides under the rubble', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR belted wheel only — the under has no pocket for
+    // the house's live work, and never strips its own grafts. A
+    // chocked wheel (dead:true, still belted) is fair meat, same as
+    // the house's pull.
+    expect(strip).toContain("ff.owner === 'player'\n          && ff.belted !== false");
+    expect(strip).toContain('f.belted = false');
+    expect(strip).toContain('delete f.owner');
+    expect(strip).toContain("return 'belt'");
+    // a wedge in the wheel skids loose like the pull leaves it — the
+    // chock lands as loot, never swallowed
+    expect(strip).toContain('this.kickedWedges.push');
+    // the belt keeps its kind — it heads for a dead housing, not the
+    // coil pile, and the strip rescans substrates it may have made
+    expect(spSrc).toContain("this.carriedKind = got");
+    expect(spSrc).toContain('this.graftTarget = null');
+  });
 });
 
 

@@ -744,16 +744,20 @@ export class Grafter extends Entity {
         this.stripT = 0;
         this.workMark = null;
         const got = c.stripWork?.(workNear.x, workNear.z) ?? null;
-        if (got === 'coil') {
+        if (got) {
           this.carrying = 1;
           this.carryCued = false;
+          // the strip may have made substrate — a housing your belt
+          // just left is the site your belt now seeks
+          this.graftTarget = null;
+          // sprint 676 — muscle and glass keep their kind: a torn belt
+          // or lens heads for a graft, not the coil pile
+          if (got === 'belt' || got === 'lens') this.carriedKind = got;
           c.cue('grafter-grind', this.pos,
-            '[stone worries your wire up — the coil goes under the rubble]', { severity: 'warn' });
-        } else if (got === 'plate') {
-          this.carrying = 1;
-          this.carryCued = false;
-          c.cue('grafter-grind', this.pos,
-            '[stone folds your cocked plate into its hands]', { severity: 'warn' });
+            got === 'coil' ? '[stone worries your wire up — the coil goes under the rubble]'
+              : got === 'plate' ? '[stone folds your cocked plate into its hands]'
+                : got === 'belt' ? '[stone tears the muscle off your wheel — the belt walks under the rubble]'
+                  : '[stone works the goods into its hands]', { severity: 'warn' });
         }
       }
     }

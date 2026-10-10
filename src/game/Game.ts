@@ -1288,6 +1288,25 @@ export class Game {
           this.trapPos.delete(t.key);
           return 'plate';
         }
+        // sprint 676 — or your wheel's muscle walks off: a 'work' mark
+        // by a live player-fitted fan and the belt comes off in ITS
+        // hands, carried whole toward a dead housing it can claim.
+        // The housing ends like the house's pull leaves it — dead,
+        // beltless, nobody's — except the belt never touches the
+        // boards: it rides under the rubble as graft stock.
+        const f = this.hazard.fans.find((ff) => ff.owner === 'player'
+          && ff.belted !== false && near(ff.pos));
+        if (f) {
+          f.dead = true;
+          f.belted = false;
+          delete f.owner; // the muscle's off — dead housing, nobody's
+          if (f.chocked) {
+            f.chocked = false;
+            this.kickedWedges.push({ x: f.pos.x + 0.2, z: f.pos.z - 0.1 });
+            this.mintWedgeDrops();
+          }
+          return 'belt';
+        }
         return null;
       },
       spillSnare: (pos, room) => this.spillSnare(pos, room),
