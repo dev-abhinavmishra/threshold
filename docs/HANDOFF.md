@@ -43,9 +43,29 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
 
 ## Fixes — singleton prop decals + review debt
+- `pinLines` gate removed (`rng.bool(0.5)` → unconditional): routingBoard is one-per-run at milestoneSpecs.ts:336 — same index-seeded trap as speakingTube. Its s534 presence test went cold; now green.
+
 
 - **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
 - PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
+
+## Sprint 670 — the putty cracked, the mats wore through & the joints wept green
+
+- `puttyCrack` (96×48): crazed putty bead + crack net + lifted flakes + glass-edge grime; 45% of `window` props.
+- `matGhost` (96×64): vanished doormat's soil rectangle + frayed rim + corner fibers + grit line; 30% lived-in door feet, floor-anchored via `portLocalPos` − `portOutwardDir(dw)*0.55` (takes a Port, not a wall string).
+- `jointWeep` (48×64): verdigris bloom + crust specks + drip tail + limescale edge; 45% of pipeManifold/indPipes/radiatorTall/radiatorFin props via nearest-wall. Presence tests ×3 green.
+
+## Sprint 671 — the noses pressed, the ink soaked through & the skirting took the kicks
+
+- `nosePrint` (64×64): breath halo + nose smudge w/ nostrils + cheek fade + wipe streak; 30% of `window` props, y≈1.0–1.35 (small watcher height).
+- `inkSoak` (96×48): dense soak pool + splatter ring + pen-drag tail + board-seam wicking; 40% of rooms holding desk/writingDesk props.
+- `shoeScuff` (96×48): heel drags + toe arcs + rubber streaks + dust lip; 35% lived-in walls at skirting height. Presence tests ×3 green.
+
+## Sprint 672 — they taped the mirror, the hand pressed the door & the cord chewed the plaster
+
+- `mirrorTape` (96×96): crossing adhesive strips + backing wrinkles + peel ghost + dust frame + clean-glass patch; 35% of `mirror` props.
+- `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
+- `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
 
 ## Sprint log
 
