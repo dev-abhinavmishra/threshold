@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sconcePool, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost, ratHole, nailCluster, figureShadow, frassLine, threadSnag, sealBreak, paintDrip, paperRot, hingeWeep, tallyWall, boardFlex, frostFern, latchScore, saltLine, flySpot, chairScrape, bookDust, vaporGhost, puttyCrack, matGhost, jointWeep, nosePrint, inkSoak, shoeScuff, mirrorTape, glovePrint, cordBite, kettleHalo, shelfSag, chimneySmut, handleShadow, drapeDrop, socketScorch, pendTick, crumbDrift, valveSpur, lintelDust, slotScratch, pictureNail, drainAge, headboardRub, plateShadow, mortiseGap, cardGhost, rodScar, binShadow, chainPool, dialGhost, hemScrape, snareSet, fenderWear, pokerRing, ashBroom } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -4145,7 +4145,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
     // The clock's swing etched the wall — pendulum traces behind tall clocks.
     for (const p of spec.props) {
-      if ((p.kind !== 'clock' && p.kind !== 'wallClock' && p.kind !== 'grandfatherClock') || !livedIn || rng.float() >= 0.5) continue;
+      if ((p.kind !== 'clock' && p.kind !== 'wallClock' && p.kind !== 'grandfatherClock' && p.kind !== 'mantelClock' && p.kind !== 'alarmClock') || !livedIn || rng.float() >= 0.5) continue;
       const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
       const md = Math.min(dE, dW, dN, dS);
       const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
@@ -4298,6 +4298,80 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       bs.position.set(p.x, 0.02, p.z);
       bs.name = 'bin-shadow';
       group.add(bs);
+    }
+
+    // The chains kept their pool — rust shadows and link prints on
+    // the floor beneath the hanging runs.
+    for (const p of spec.props) {
+      if ((p.kind !== 'chainBulb' && p.kind !== 'chainFence') || rng.float() >= 0.5) continue;
+      const cp = decalQuad(chainPool(rng), 0.6 + rng.float() * 0.12, 0.6 + rng.float() * 0.12);
+      cp.rotation.x = -Math.PI / 2;
+      cp.position.set(p.x, 0.011, p.z);
+      cp.name = 'chain-pool';
+      group.add(cp);
+    }
+
+    // The dials kept their ghosts — pale face circles and hand
+    // shadows where clocks were lifted off the wall.
+    for (const p of spec.props) {
+      if ((p.kind !== 'clock' && p.kind !== 'wallClock' && p.kind !== 'grandfatherClock' && p.kind !== 'mantelClock' && p.kind !== 'alarmClock') || rng.float() >= 0.45) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, dialGhost(rng), 0.55 + rng.float() * 0.1, 0.55 + rng.float() * 0.1, along + (rng.float() - 0.5) * 0.3, 1.9 + rng.float() * 0.2);
+      const dg = group.children[group.children.length - 1];
+      if (dg && !dg.name) dg.name = 'dial-ghost';
+    }
+
+    // The flags kept their hem — sweep marks where banners brushed
+    // the plaster all the way down.
+    for (const p of spec.props) {
+      if ((p.kind !== 'drapePanel' && p.kind !== 'curtain' && p.kind !== 'curtainLong' && p.kind !== 'curtainSwag') || rng.float() >= 0.4) continue;
+      const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+      const md = Math.min(dE, dW, dN, dS);
+      const hw: 'n' | 's' | 'e' | 'w' = md === dE ? 'e' : md === dW ? 'w' : md === dN ? 'n' : 's';
+      const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+      wallDecal(hw, hemScrape(rng), 1.2 + rng.float() * 0.2, 0.6 + rng.float() * 0.15, along + (rng.float() - 0.5) * 0.3, 1.0 + rng.float() * 0.3);
+      const hs = group.children[group.children.length - 1];
+      if (hs && !hs.name) hs.name = 'hem-scrape';
+    }
+
+    // The snares kept their set — loop ghosts and peg pits on the
+    // floors where vermin lines were laid.
+    if (spec.biome === 'maintenance' || spec.biome === 'unlit' || !livedIn) {
+      for (const p of spec.props) {
+        if ((p.kind !== 'crate' && p.kind !== 'milCrate' && p.kind !== 'plasticCrate' && p.kind !== 'recordsCage' && p.kind !== 'cageLocker') || rng.float() >= 0.35) continue;
+        const sn = decalQuad(snareSet(rng), 0.6 + rng.float() * 0.15, 0.4 + rng.float() * 0.1);
+        sn.rotation.x = -Math.PI / 2;
+        sn.position.set(p.x + (rng.float() - 0.5) * 0.6, 0.008, p.z + (rng.float() - 0.5) * 0.6);
+        sn.name = 'snare-set';
+        group.add(sn);
+      }
+    }
+
+    // The hearth kept its irons — fender polish, poker rings and
+    // broom strokes on the stones the fire warmed.
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit' && p.kind !== 'grateDrain' && p.kind !== 'stove' && p.kind !== 'kitchenRange' && p.kind !== 'masonryHeater') || rng.float() >= 0.5) continue;
+      const fw = decalQuad(fenderWear(rng), 1.0 + rng.float() * 0.15, 0.5 + rng.float() * 0.1);
+      fw.rotation.x = -Math.PI / 2;
+      fw.position.set(p.x, 0.009, p.z + 0.7);
+      fw.name = 'fender-wear';
+      group.add(fw);
+    }
+    for (const p of spec.props) {
+      if ((p.kind !== 'fireplace' && p.kind !== 'firePit') || rng.float() >= 0.45) continue;
+      const pr = decalQuad(pokerRing(rng), 0.45 + rng.float() * 0.1, 0.45 + rng.float() * 0.1);
+      pr.rotation.x = -Math.PI / 2;
+      pr.position.set(p.x + (rng.bool(0.5) ? 0.9 : -0.9), 0.01, p.z + 0.5 + rng.float() * 0.2);
+      pr.name = 'poker-ring';
+      group.add(pr);
+      const ab = decalQuad(ashBroom(rng), 0.9 + rng.float() * 0.15, 0.6 + rng.float() * 0.1);
+      ab.rotation.x = -Math.PI / 2;
+      ab.position.set(p.x + (rng.float() - 0.5) * 0.3, 0.0085, p.z + 1.0 + rng.float() * 0.3);
+      ab.name = 'ash-broom';
+      group.add(ab);
     }
 
     // The water line — a room that flooded once keeps the tide mark:

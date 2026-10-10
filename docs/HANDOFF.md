@@ -8366,7 +8366,17 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 679–680 — the headboards kept the wall, the plates left their shadows & the bins kept their contents (decals lane)
+\n\n## Sprint 681–683 — the stoves kept their stamp, the dials kept their ghosts & the hearth kept its irons (decals lane)
+
+- `ironStamp` — maker's plate, rivet heads, letter ghosts and flake rust on `stove`/`kitchenRange`/`stoveRange`/`masonryHeater`/`firePit`/`boilerDrum`/`boilerTank`.
+- `seatDust` — undisturbed dust film on 14 seat kinds (chair→wheelchair).
+- `chainPool` — rust shadows and link prints on floors beneath `chainBulb`/`chainFence`.
+- `dialGhost` — pale face circles and hand shadows behind `clock`/`wallClock`/`grandfatherClock`/`mantelClock`/`alarmClock`.
+- `hemScrape` — sweep marks beneath `drapePanel`/`curtain`/`curtainLong`/`curtainSwag`.
+- `snareSet` — wire loop ghosts and peg pits on `!livedIn` floors near crates/cages.
+- `fenderWear`, `pokerRing`, `ashBroom` — the hearth's iron suite: fender polish, tool-stand rings, broom strokes beside `fireplace`/`firePit`.
+
+Gates: tsc, lint, scoped vitest (sprints 681–683) green.\n\n## Sprint 679–680 — the headboards kept the wall, the plates left their shadows & the bins kept their contents (decals lane)
 
 - `headboardRub` — vertical scrape, grease crescent and post dents on the wall behind `bed`/`bedOld`/`daybed` (nearest wall).
 - `plateShadow` — pale surround, dark socket mouth and wire stub where wall plates were pulled (`maintenance`/`unlit`/`!livedIn` rooms, `pickWallSpot`).
