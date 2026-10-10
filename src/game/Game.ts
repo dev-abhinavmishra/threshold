@@ -112,7 +112,7 @@ const LISTEN_CUES: Record<EntityId, { sfx: string; text: string; sev?: 'info' | 
  *  used by the rouse tell and by ear-to-the-seam listens. */
 /** Pipe-family props a flooded room's water can be drained through. */
 const DRAIN_PROPS = new Set(['pipeManifold', 'conduitRun', 'sumpPump', 'hydrant', 'wallVent']);
-// sprint 617 — the under's own cast: a grafted wheel's wake spares the
+// sprint 623 — the under's own cast: a grafted wheel's wake spares the
 // hands that threaded it. House walkers (and you) still get bitten.
 const UNDER_FACTION = new Set([
   'grafter', 'margin', 'stillframe', 'hauler', 'auditor', 'swamper',
@@ -1522,7 +1522,7 @@ export class Game {
         }
         return out;
       },
-      // sprint 616 — the under's substrates: a muscle-less wheel
+      // sprint 622 — the under's substrates: a muscle-less wheel
       // housing takes a carried belt, a pried socket takes a carried
       // lens. The under re-threads what it folds — it never makes
       // goods, only moves them onto housings the house left dead.
@@ -1640,7 +1640,7 @@ export class Game {
             // hands. He can't un-seat your glass, so he tears it loose —
             // it lands on the boards as loose goods (gather it back
             // before he comes round to tidy it).
-            // sprint 618 — the pull reaches the under's grafts too: a
+            // sprint 624 — the pull reaches the under's grafts too: a
             // wheel or eye in ANY foreign hands is outside the house's
             // jurisdiction — 'work' near it means tear it back.
             const w = this.hazard.watchers.find((ww) => ww.owner !== undefined
@@ -2569,7 +2569,7 @@ export class Game {
           text: '[your eye pans past the leaf — the lens you set]' };
       }
     }
-    // sprint 620 — the under's grafts read at the seam too: a wheel or
+    // sprint 626 — the under's grafts read at the seam too: a wheel or
     // eye in its hands just past the leaf warns before the room does.
     {
       const grafted = this.hazard.fans.find((f) =>
@@ -7176,7 +7176,7 @@ export class Game {
           && Math.hypot(x.pos.x - wp.x, x.pos.z - wp.z) < 0.6);
         if (!w) { it.enabled = false; return; }
         w.lensed = false;
-        delete w.owner; // sprint 618 — the pry ends any jurisdiction:
+        delete w.owner; // sprint 624 — the pry ends any jurisdiction:
         // a grafted lens levers out like a housed one — dead socket,
         // nobody's, and the under's claim comes off with the glass
         it.enabled = false;
@@ -8380,7 +8380,7 @@ export class Game {
             wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
             // sprint 602 — and the eyes you seated count too
             eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
-            // sprint 620 — and what the under grafted back against you
+            // sprint 626 — and what the under grafted back against you
             graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
               + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
           },
@@ -8448,7 +8448,7 @@ export class Game {
         wheelsOwned: this.hazard.fans.filter((f) => f.owner === 'player').length || undefined,
         // sprint 602 — the eyes still panning on YOUR lens
         eyesOwned: this.hazard.watchers.filter((w) => w.owner === 'player').length || undefined,
-        // sprint 620 — the work the under re-threaded against you
+        // sprint 626 — the work the under re-threaded against you
         graftedWork: (this.hazard.fans.filter((f) => f.owner === 'under').length
           + this.hazard.watchers.filter((w) => w.owner === 'under').length) || undefined,
       },
@@ -11573,7 +11573,7 @@ export class Game {
     for (const f of this.hazard.fans) {
       if (f.dead || f.room !== curRoomIdx) continue;
       if (tA - (f.entT ?? -1) <= 1.4) continue;
-      // sprint 617 — a grafted wheel staggers the HOUSE, not its
+      // sprint 623 — a grafted wheel staggers the HOUSE, not its
       // makers: the under walks the timing it threaded. Player wheels
       // still bite everything that isn't you.
       const exempt = f.owner === 'under' ? UNDER_FACTION : null;

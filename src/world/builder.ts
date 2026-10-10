@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, doorGlow, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag, ceilingRing, plasterVein, pendantGhost, fixtureSoot, tileSag, corniceLine, atticStain, paintFlake, heaterGhost } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -791,27 +791,93 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     } else {
       leaf.add(new THREE.Mesh(texBox(leafW, 2.2, 0.09), leafMat));
     }
-    // Raised 6-panel relief + brass hardware on interior (non-industrial)
-    // doors — the slab reads flat otherwise.
+    // Raised relief + brass hardware on interior (non-industrial)
+    // doors — the slab reads flat otherwise. The house hung more than
+    // one kind of door: most are the six-panel estate door, some are
+    // planked scullery doors, some are louvered cupboards, some are
+    // glazed half-glass parlour doors.
     if (!industrial && !doorModel) {
       const pw = port.width - 0.1;
       const panelMat = leafMat;
       const recessMat = MAT.darkOak();
-      for (const fz of [0.048, -0.048]) {
-        for (let col = 0; col < 2; col++) {
-          for (let row = 0; row < 3; row++) {
-            const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
-            const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
-            // shadowed recess behind each raised panel — reads as a real
-            // mortised panel instead of floating trim
-            const recess = new THREE.Mesh(texBox(pw * 0.4, ph + 0.05, 0.01), recessMat);
-            recess.position.set((col - 0.5) * pw * 0.44, py, fz - Math.sign(fz) * 0.012);
-            leaf.add(recess);
-            const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
-            panel.position.set((col - 0.5) * pw * 0.44, py, fz);
-            leaf.add(panel);
+      const styleRoll = rng.float();
+      const leafStyle = styleRoll < 0.62 ? 'panel' : styleRoll < 0.78 ? 'plank' : styleRoll < 0.9 ? 'louver' : 'glass';
+      if (leafStyle === 'panel') {
+        for (const fz of [0.048, -0.048]) {
+          for (let col = 0; col < 2; col++) {
+            for (let row = 0; row < 3; row++) {
+              const ph = row === 0 ? 0.55 : row === 1 ? 0.72 : 0.5;
+              const py = row === 0 ? 0.62 : row === 1 ? -0.02 : -0.63;
+              // shadowed recess behind each raised panel — reads as a real
+              // mortised panel instead of floating trim
+              const recess = new THREE.Mesh(texBox(pw * 0.4, ph + 0.05, 0.01), recessMat);
+              recess.position.set((col - 0.5) * pw * 0.44, py, fz - Math.sign(fz) * 0.012);
+              leaf.add(recess);
+              const panel = new THREE.Mesh(texBox(pw * 0.34, ph, 0.018), panelMat);
+              panel.position.set((col - 0.5) * pw * 0.44, py, fz);
+              leaf.add(panel);
+            }
           }
         }
+      } else if (leafStyle === 'plank') {
+        // Vertical boards + ledged braces — the scullery/pantry door.
+        for (const fz of [0.049, -0.049]) {
+          for (let b = 0; b < 5; b++) {
+            const bd = new THREE.Mesh(texBox(pw / 5 - 0.015, 2.1, 0.012), panelMat);
+            bd.name = 'leaf-plank';
+            bd.position.set(-pw / 2 + (b + 0.5) * (pw / 5), 0, fz);
+            leaf.add(bd);
+          }
+          for (const by of [0.78, -0.78]) {
+            const lg = new THREE.Mesh(texBox(pw - 0.12, 0.14, 0.016), recessMat);
+            lg.name = 'leaf-ledge';
+            lg.position.set(0, by, fz);
+            leaf.add(lg);
+          }
+        }
+      } else if (leafStyle === 'louver') {
+        // Angled slats in two banks — the linen cupboard door.
+        for (const fz of [0.049, -0.049]) {
+          for (const bankY of [0.52, -0.5]) {
+            for (let s = 0; s < 7; s++) {
+              const sl = new THREE.Mesh(texBox(pw - 0.18, 0.07, 0.008), recessMat);
+              sl.name = 'leaf-louver';
+              sl.rotation.x = -0.5;
+              sl.position.set(0, bankY + (s - 3) * 0.085, fz);
+              leaf.add(sl);
+            }
+          }
+        }
+      } else {
+        // Half-glazed parlour door — 2×3 panes over a solid lower half.
+        for (const fz of [0.049, -0.049]) {
+          const lower = new THREE.Mesh(texBox(pw - 0.14, 0.95, 0.014), panelMat);
+          lower.name = 'leaf-lower';
+          lower.position.set(0, -0.58, fz);
+          leaf.add(lower);
+        }
+        const gMat = new THREE.MeshStandardMaterial({
+          color: 0x141c24, emissive: 0x2c4054, emissiveIntensity: 0.3,
+          roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.65,
+        });
+        gMat.userData.decalMat = true;
+        for (let col = 0; col < 2; col++) {
+          for (let row = 0; row < 3; row++) {
+            const pane = new THREE.Mesh(texBox(pw * 0.36, 0.3, 0.008), gMat);
+            pane.name = 'leaf-pane';
+            pane.position.set((col - 0.5) * pw * 0.42, 0.38 + (row - 1) * 0.36, 0);
+            leaf.add(pane);
+            for (const fz of [0.049, -0.049]) {
+              const munt = new THREE.Mesh(texBox(pw * 0.36, 0.03, 0.012), recessMat);
+              munt.position.set((col - 0.5) * pw * 0.42, 0.38 + (row - 1) * 0.36 + 0.165, fz);
+              leaf.add(munt);
+            }
+          }
+        }
+        const stile = new THREE.Mesh(texBox(0.04, 1.15, 0.015), recessMat);
+        stile.name = 'leaf-stile';
+        stile.position.set(0, 0.38, 0.049);
+        leaf.add(stile);
       }
       // knob + backplate on the latch edge, both faces
       for (const fz of [0.06, -0.06]) {
@@ -990,6 +1056,27 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (plaque && !industrial) {
       plaque.position.set(port.width / 2 + 0.34, 1.92, 0.05);
       frame.add(plaque);
+    }
+    // The sill kept the crossing — a transition strip where the two
+    // rooms' floors meet under the leaf line.
+    if (rng.float() < (industrial ? 0.35 : 0.6)) {
+      const strip = new THREE.Mesh(texBox(port.width + 0.06, 0.008, 0.14), industrial ? MAT.steelDark() : MAT.brass());
+      strip.name = 'threshold-strip';
+      strip.position.set(0, 0.004, 0);
+      frame.add(strip);
+      frameHardware.push(strip);
+    }
+    // The seam throws a fan — light pooling on the floor just outside
+    // the leaf, the tell that something lit waits on the far side.
+    if (rng.float() < 0.3) {
+      for (const gz of [0.5, -0.5]) {
+        const gl = decalQuad(doorGlow(rng), 1.1, 1.1);
+        gl.name = 'door-glow';
+        gl.rotation.x = -Math.PI / 2;
+        gl.position.set(0, 0.012, gz);
+        if (gz < 0) gl.rotation.z = Math.PI;
+        frame.add(gl);
+      }
     }
     frame.position.set(lp.x, 0, lp.z);
     if (port.wall === 'e') frame.rotation.y = -Math.PI / 2;
@@ -3230,6 +3317,84 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(hw, heaterGhost(rng), 1.4 + rng.float() * 0.3, 0.9 + rng.float() * 0.2, along, 1.5 + rng.float() * 0.2);
       const hg = group.children[group.children.length - 1];
       if (hg && !hg.name) hg.name = 'heater-ghost';
+    }
+
+    // The veins ran the skirting — supply pipes hugging the wall in
+    // rooms that carry heat or service kit: a horizontal run with
+    // clamps, a riser at one end, sometimes a valve wheel. Segments
+    // stop short of any door opening.
+    {
+      const HEAT = new Set(['radiatorFin', 'radiatorTall', 'masonryHeater', 'stove', 'stoveRange', 'boilerDrum', 'boilerTank', 'fireplace']);
+      const heated = spec.props.some((p) => HEAT.has(p.kind)) || spec.biome === 'maintenance' || isUnder;
+      if (heated && rng.float() < 0.65) {
+        const pipeMat = isUnder || spec.biome === 'maintenance' ? MAT.steelDark() : MAT.brass();
+        // pick a wall, then cut its span into segments clear of ports
+        const walls = (['n', 's', 'e', 'w'] as const);
+        const wall = walls[Math.floor(rng.float() * 4)];
+        const span = (wall === 'e' || wall === 'w' ? d : w) - 0.5;
+        const offs = portOffsetsOn(wall);
+        // forbidden zones: port offset ±(leaf width + margin)
+        const segs: [number, number][] = [[-span / 2, span / 2]];
+        for (const o of offs) {
+          for (let i = segs.length - 1; i >= 0; i--) {
+            const [a, b] = segs[i];
+            if (o - 1.0 < b && o + 1.0 > a) {
+              segs.splice(i, 1);
+              if (o - 1.0 - a > 0.7) segs.push([a, o - 1.0]);
+              if (b - o - 1.0 > 0.7) segs.push([o + 1.0, b]);
+            }
+          }
+        }
+        const pipeY = 0.16 + rng.float() * 0.08;
+        const pipeR = 0.018 + rng.float() * 0.012;
+        for (const [a, b] of segs) {
+          const len = b - a;
+          const mid = (a + b) / 2;
+          const run = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, len, 8), pipeMat);
+          run.name = 'pipe-run';
+          if (wall === 'e' || wall === 'w') {
+            run.rotation.x = Math.PI / 2;
+            run.position.set((wall === 'e' ? w / 2 : -w / 2) - Math.sign(wall === 'e' ? 1 : -1) * 0.07, pipeY, mid);
+          } else {
+            run.rotation.z = Math.PI / 2;
+            run.position.set(mid, pipeY, (wall === 'n' ? d / 2 : -d / 2) - Math.sign(wall === 'n' ? 1 : -1) * 0.07);
+          }
+          group.add(run);
+          frameHardware.push(run);
+          // clamps pinning the run to the plaster
+          const nClamps = Math.max(1, Math.floor(len / 1.3));
+          for (let c = 0; c < nClamps; c++) {
+            const t = a + (c + 0.5) * (len / nClamps);
+            const cl = new THREE.Mesh(texBox(0.05, 0.05, 0.03), pipeMat);
+            cl.name = 'pipe-clamp';
+            if (wall === 'e' || wall === 'w') cl.position.set(run.position.x - (wall === 'e' ? 0.035 : -0.035), pipeY, t);
+            else cl.position.set(t, pipeY, run.position.z - (wall === 'n' ? 0.035 : -0.035));
+            group.add(cl);
+            frameHardware.push(cl);
+          }
+          // riser at one end — the run turns down and drops to the floor
+          if (rng.float() < 0.55) {
+            const end = rng.bool(0.5) ? a : b;
+            const riser = new THREE.Mesh(new THREE.CylinderGeometry(pipeR, pipeR, pipeY + 0.04, 8), pipeMat);
+            riser.name = 'pipe-riser';
+            if (wall === 'e' || wall === 'w') riser.position.set(run.position.x, pipeY / 2 - 0.01, end);
+            else riser.position.set(end, pipeY / 2 - 0.01, run.position.z);
+            group.add(riser);
+            frameHardware.push(riser);
+          }
+          // a wheel the night porter could still turn
+          if (rng.float() < 0.3) {
+            const vx = wall === 'e' || wall === 'w' ? run.position.x : mid + (rng.float() - 0.5) * len * 0.6;
+            const vz = wall === 'e' || wall === 'w' ? mid + (rng.float() - 0.5) * len * 0.6 : run.position.z;
+            const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 12), pipeMat);
+            wheel.name = 'pipe-valve';
+            if (wall === 'e' || wall === 'w') { wheel.rotation.y = Math.PI / 2; wheel.position.set(vx - (wall === 'e' ? 0.05 : -0.05), pipeY, vz); }
+            else { wheel.position.set(vx, pipeY, vz - (wall === 'n' ? 0.05 : -0.05)); }
+            group.add(wheel);
+            frameHardware.push(wheel);
+          }
+        }
+      }
     }
 
     // The water line — a room that flooded once keeps the tide mark:

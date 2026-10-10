@@ -4,18 +4,18 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
-## Sprint 616–620 — the under grafts back (third jurisdiction: owner:'under')
+## Sprint 622–626 — the under grafts back (third jurisdiction: owner:'under')
 
-- **Sprint 616**: the grafter stops folding every good into wire — a
+- **Sprint 622**: the grafter stops folding every good into wire — a
   claimed `belt` or `lens` keeps its kind (`carriedKind`) and seeks a
   substrate via new ctx hooks `nearestGraft(x,z,maxD,kind)` /
   `graft(x,z,kind,byKey)`: muscle-less housings (`belted===false`) take
   belts, pried sockets (`lensed===false`) take lenses. Out-of-room or
   missing substrate falls back to the old wire fold — nothing strands.
-- **Sprint 617**: `UNDER_FACTION` — a grafted wheel's wake exempts the
+- **Sprint 623**: `UNDER_FACTION` — a grafted wheel's wake exempts the
   hands that threaded it (`exempt?.has(ent.id)` in the fan stagger loop).
   House walkers and you still get bitten; player wheels bite all.
-- **Sprint 618**: jurisdiction is now three-way. `owner:'under'` rides
+- **Sprint 624**: jurisdiction is now three-way. `owner:'under'` rides
   deadHazards + checkpoint (serialize filter widened to
   `owner !== undefined`, restore `if (h.owner)`). 'work' pull/tear
   fires on ANY claimed hazard (`ff.owner !== undefined`,
@@ -23,10 +23,10 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
   `owner === undefined` — the house re-engages only ownerless work.
   Pry deletes owner (re-strip a grafted socket); `workBelt` already
   did — grafted goods are re-strippable through normal verbs.
-- **Sprint 619**: graft signs `work` under `grafter:<spawnRoom>` — the
+- **Sprint 625**: graft signs `work` under `grafter:<spawnRoom>` — the
   house smells whose hands went there, so the warden's pull reaches
   under-owned work the same as player-owned.
-- **Sprint 620**: seam reads grafted work at warn tier ('muscle you
+- **Sprint 626**: seam reads grafted work at warn tier ('muscle you
   stripped'/'glass you pried'); epitaph + victory books count
   `graftedWork`. Carried-kind spills spill as themselves
   (`spillCarriedKind` → `spillBelts`/`spillLenses`), never as wire.
@@ -36,6 +36,34 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - Trap: graft targets must pair kind→substrate (`nearestGraft` takes
   the kind filter) — a belt can't graft a socket.
 - Note for decals lane: no shared files touched this arc.
+
+
+## Sprint 619–621 — the veins ran the skirting (service-pipe batch)
+
+- `pipe-run` horizontal supply pipes along a wall at y≈0.16–0.24 in
+  rooms with heat props (radiatorFin/radiatorTall/masonryHeater/
+  stove*/boiler*/fireplace) or maintenance/under — steelDark in
+  service space, brass inside.
+- `pipe-clamp` wall clamps every ~1.3m; `pipe-riser` vertical drop to
+  the floor at a run end; `pipe-valve` torus wheel mid-run.
+- Port-aware: the wall span is cut into segments clear of door
+  offsets (±1.0 margin) so pipes never cross an opening.
+- All pieces pushed into `frameHardware` so names survive static
+  consolidation.
+- 4 tests added (664 total).
+
+## Sprint 616–618 — the doors wore different faces (leaf styles + sill crossings)
+
+- **Sprint 616**: procedural leaves split into four styles —
+  `panel` (62%, the estate six-panel), `plank` (ledged boards),
+  `louver` (angled slat banks), `glass` (2×3 glazed panes over a
+  solid lower half). Style rolls inside `!industrial && !doorModel`;
+  named parts `leaf-plank/leaf-ledge/leaf-louver/leaf-lower/leaf-pane/leaf-stile`.
+- **Sprint 617**: `threshold-strip` transition bars under each port —
+  brass inside, steelDark under — pushed into `frameHardware` keep list.
+- **Sprint 618**: `doorGlow` decal generator + `door-glow` floor fans
+  flanking the leaf — pairs with the existing emissive under-door seam.
+- 5 tests added (660 total).
 
 ## Sprint 613–615 — the doors kept their furniture (leaf + jamb hardware batch)
 
