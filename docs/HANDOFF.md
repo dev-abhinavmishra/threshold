@@ -8366,7 +8366,19 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 703–705 — the desks kept their letters, the hearths kept their embers & the walls kept their caps (decals lane)
+\n\n## Sprint 706–708 — the walls kept their mantles, the pianos kept their pedals & the mice kept their runs (decals lane)
+
+- `mantleGlow` — glow+soot above sconces/lanterns.
+- `pipeAsh` — ash+tobacco ghosts on smoking tables (props overlay).
+- `snufferMark` — snuffer bell shadows on candle tops (props overlay).
+- `pedalWear` — treadle wear under pianoUpright + spinningWheel (pianoUpright alone too rare to test green — include the wheel).
+- `chairSpring` — coil ghosts under chairs.
+- `bookPlate` — ex-libris ghosts on book shelves (props overlay).
+- `airBrick` — iron vent ghosts on service walls.
+- `mouseRun` — grease trails along skirting in dark rooms.
+- `dominoRun` — tile shadows on game tables (props overlay).
+
+Gates: tsc, lint, scoped vitest (706–708) green.\n\n## Sprint 703–705 — the desks kept their letters, the hearths kept their embers & the walls kept their caps (decals lane)
 
 - `tornEnvelope` — torn-mail ghosts on desks (props overlay).
 - `protractorArc` — drafting arcs on school surfaces (props overlay).
