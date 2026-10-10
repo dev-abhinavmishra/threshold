@@ -63,6 +63,10 @@ export class CorridorRunner extends Entity {
   private playerHidAt = -99;
   /** Rebound variant: sweep reverses once for a faster surprise pass. */
   private rebounded = false;
+  // sprint 659 — lids the sweep planted a knee on: gripped while the
+  // run lasts, released when it ends (the box opens again).
+  private gripped: { exitPos: { x: number; z: number }; trappedBy?: 'sweep' }[] = [];
+  private gripT = 0;
   private reboundBoost = 1;
   private stepT = 0;
   private noiseUnsub: (() => void) | null = null;
@@ -358,6 +362,30 @@ export class CorridorRunner extends Entity {
         this.brokeLights.add(c.currentRoomIndex);
         if (this.rng.bool(0.5)) c.flickerRoom(c.currentRoomIndex, 'break');
       }
+      // sprint 659 — the sweep reads your work on the fly: it doesn't
+      // stop to tidy (that's the warden's patience) — it plants a knee
+      // on any stashed lid it passes near a fresh 'work' mark. The box
+      // waits behind its hands for as long as the run lasts.
+      if (this.id === 'sweep') {
+        this.gripT -= dt;
+        if (this.gripT <= 0) {
+          this.gripT = 0.15;
+          const evs = c.hazardEvidence?.(`sweep:${this.startRoom}`, f.pos.x, f.pos.z, 1.8) ?? [];
+          for (const ev of evs) {
+            if (ev.kind !== 'work') continue;
+            const spot = c.rooms.flatMap((r) => r?.hidingSpots ?? [])
+              .find((s) => !s.trappedBy
+                && Math.hypot(s.exitPos.x - ev.pos.x, s.exitPos.z - ev.pos.z) < 1.4
+                && (c.stashLoad?.(s.id) ?? 0) > 0);
+            if (!spot) continue;
+            spot.trappedBy = 'sweep';
+            this.gripped.push(spot as typeof this.gripped[number]);
+            c.cue('door-locked', spot.exitPos,
+              '[it plants a knee on your lid — the box will not open while it runs]',
+              { severity: 'warn' });
+          }
+        }
+      }
       if (f.doneT || this.traveled >= this.totalLen) {
         this.pass++;
         // Rebound variant (sweep only): an unannounced second pass back
@@ -414,6 +442,10 @@ export class CorridorRunner extends Entity {
   }
 
   protected override onDone(): void {
+    // the grip outlives nothing — when the run ends the lids it held
+    // breathe again.
+    for (const s of this.gripped) if (s.trappedBy === 'sweep') s.trappedBy = undefined;
+    this.gripped.length = 0;
     if (this.hideWatch) clearInterval(this.hideWatch);
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
     if (this.mesh) {
@@ -883,7 +915,8 @@ export class Warden extends Entity {
                             : restored === 'pull' ? '[it pulls the belt off your wheel — the muscle slaps the boards]'
                               : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
                                 : restored === 'lidSweep' ? '[it tips your lid — the take scatters the floor]'
-                                  : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
+                                  : restored === 'reclaim' ? '[it turns your eye back to the house — the pan is its own again]'
+                                    : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
               // rustles where it happens, tagged to him so he doesn't
               // pull to his own hands

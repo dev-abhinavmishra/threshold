@@ -553,6 +553,60 @@ describe('the house crimps your line (sprints 585-588)', () => {
   });
 });
 
+describe('the eye watches for you (sprints 589-593)', () => {
+  it('an aimed eye locks its pan, reports what crosses, and the house can turn it back', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    // 'Aim the eye' is real — kind registered, minted crouched only
+    // (standing = tape; no twin-verb churn), case locks owner+bearing
+    expect(interactionSrc).toContain("| 'focusEye'");
+    expect(gameSrc).toContain("kind: 'focusEye'");
+    expect(gameSrc).toContain("this.player.crouching) this.interaction.add({\n              kind: 'focusEye'");
+    expect(gameSrc).toContain("case 'focusEye'");
+    expect(gameSrc).toContain('w.aimBearing = Math.atan2');
+    expect(gameSrc).toContain("w.owner = 'player'");
+    // the pan lock lives in the eye's own facing computation
+    expect(roomSrc).toContain('aimBearing?: number');
+    expect(roomSrc).toContain('Number.isFinite(w.aimBearing)');
+    // the report: your eye marks entities inside its locked cone
+    expect(gameSrc).toContain('your eye marks');
+    // the house's answer: a 'work' mark by your eye → reclaim, not
+    // unthread — the camera was always the house's
+    expect(baseSrc).toContain("'reclaim'");
+    const work = gameSrc.slice(gameSrc.indexOf("kind === 'work'"));
+    expect(work).toContain("return 'reclaim'");
+    // aim+owner ride the checkpoint on eye records
+    expect(gameSrc).toContain('aimBearing: w.aimBearing');
+    expect(gameSrc).toContain('eyesAimed: this.hazard.watchers.filter');
+  });
+});
+
+describe('your eye still sees you (sprint 595)', () => {
+  it('the honest price: the aimed eye\'s player-settle has no owner exemption', () => {
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    // ownership only steers the pan — the settle accumulation still
+    // runs identically for the player: no owner check gates it
+    const settleRegion = roomSrc.slice(roomSrc.indexOf('w.settle = wMoving'), roomSrc.indexOf('w.settle = wMoving') + 400);
+    expect(settleRegion).not.toContain('owner');
+    // and ownership never mutes the eye's own warn/settle cues
+    expect(roomSrc).not.toContain("w.owner === 'player' &&");
+  });
+});
+
+describe('the pan is real (sprints 596-598)', () => {
+  it('the beam reads your aim back, and your lock survives the blink', () => {
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    // beam readout: owned eyes answer aimed light with the aim report
+    expect(roomSrc).toContain('eyeBeamRead');
+    expect(roomSrc).toContain('its stare still holds your bearing');
+    // the blink reasserts the lock — dazzle clears to NaN, aimBearing
+    // keeps hold (the lock only yields to live light, never resets)
+    expect(roomSrc).toContain('!Number.isFinite(w.dazzleBearing)\n        && !Number.isFinite(lampBearing)');
+  });
+});
+
 describe('the wheel is goods (sprints 589-596)', () => {
   it('a still wheel yields its belt; refit wheels are player work the house leaves alone', () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
@@ -885,5 +939,49 @@ describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
     // stays for other readers
     expect(gameSrc).toContain('if (!spot) return null');
     void stash;
+  });
+});
+
+
+describe('the sweep plants a knee (sprints 657-662)', () => {
+  it('the sweep reads work marks on the pass — a knee on the lid, not a tidy', () => {
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // a second house reader: the sweep claims marks under its own key
+    expect(corridorSrc).toContain('`sweep:${this.startRoom}`');
+    expect(corridorSrc).toContain("ev.kind !== 'work'");
+    // the answer is a grip, not a scatter — the box waits behind its hands
+    expect(corridorSrc).toContain("spot.trappedBy = 'sweep'");
+    expect(corridorSrc).toContain('plants a knee');
+    // grips live only while the run lasts — onDone releases them all
+    expect(corridorSrc).toContain('this.gripped.length = 0');
+    expect(corridorSrc).toContain("s.trappedBy === 'sweep'");
+  });
+
+  it('a gripped lid pays nothing out while the sweep runs', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // the existing hold-shut surface answers 'sweep' grips unchanged —
+    // trappedBy is entity-agnostic
+    expect(gameSrc).toContain('trappedSpot?.trappedBy');
+    expect(gameSrc).toContain('it holds the lid shut');
+    // and the stash prompt hides itself under a grip
+    expect(gameSrc).toContain('carrying && !spot.trappedBy');
+    // only stashed lids can be gripped — stashLoad gates the read
+    const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
+  });
+
+  describe('the wire walks under the knee (sprints 663-665)', () => {
+    it('the under robs a gripped lid and the house tells you the hands do not care', () => {
+      const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+      const ents = readFileSync('src/entities/setpieces.ts', 'utf8');
+      expect(gameSrc).toContain("trappedBy === 'sweep'");
+      expect(gameSrc).toContain('the wire walks out from under the knee');
+      // sprint 665 — the grafter's wireLid scan never gates on trappedBy:
+      // the knee holds the box for you, not for the under's wire.
+      expect(ents).toContain('stashWire?.(s.id)');
+      const scan = ents.slice(ents.indexOf('stashWire?.(s.id)') - 800,
+        ents.indexOf('stashWire?.(s.id)') + 200);
+      expect(scan).not.toContain('trappedBy');
+    });
   });
 });

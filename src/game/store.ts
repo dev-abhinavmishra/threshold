@@ -169,6 +169,8 @@ export interface BooksClosed {
   /** sprint 650 — wheels and eyes the under grafted back awake */
   graftedWork?: number;
   lidsSwept?: number;
+  /** sprint 589b — eyes still aimed your way at the end */
+  eyesAimed?: number;
 }
 
 export interface CheckpointSave {
@@ -236,7 +238,7 @@ export interface CheckpointSave {
     /** sprint 597 — eyes carry their glass: a pried socket
      *  (lensed:false) stays pried, a seated eye stays yours (owner is
      *  shared with steam/fan records). */
-    lensed?: boolean }[];
+    lensed?: boolean; aimBearing?: number }[];
   // drained flooded halls — physical water state, same class as deadLines
   drainedRooms?: string[];
   // registers that already filed a marked-stock sighting — a reload

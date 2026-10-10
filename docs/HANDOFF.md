@@ -2,8 +2,6 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
-## Sprint log
-
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
 
 - **675** the asymmetry: the house has FIVE 'work' answers (crimp, pull, tear, sweep, grip) and the grafter already reads 'work' marks — but only dragged to them and ground the floor. New ctx hook `stripWork(x,z)` + a stoop-strip in the grafter: a fresh 'work' mark (`scentT` arming, `carrying===0`) is an armed surface. First two pockets: your live planted wire (`armed && planted && !claimed`) comes up as its coil via `removeSnare`; your cocked plate (`setTraps` minus `snappedTraps`/`priedTraps`) folds into stock and leaves every snap loop (`liveTraps.splice`, `trapPos.delete`). Claimed wires are the house's — outside its pocket.
@@ -14,6 +12,70 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - **680** e2e leg (`props.spec.ts`): seeds one of each armed surface → drives `ctx.stripWork(pos)` → 'coil'/'plate'/'belt'/'lens'/'throat' all return and leave honest corpses; under-owned wheels and far marks answer nothing.
 
 Traps: dispatch order is coil→plate→belt→lens→throat, first `near()` match wins — a mark mid-cluster answers whichever armed surface it names first. `stripWork` signs nothing itself — the conversion sign lands when `graft()` threads the stolen goods. The grafter only stoops while empty-handed and idle; a grafter carrying a claim ignores your fresh work until it settles.
+
+
+## Sprint 663–665 — the wire walks under the knee (mechanics lane)
+
+- **663** the under's wire-rob was already indifferent to a planted knee — the grafter's wireLid scan never gates on `trappedBy` — but nothing said so.
+- **664** `robStashWire` now tells the room when it pulls wire out of a swept lid: `[the wire walks out from under the knee — the hands do not care whose lid it is]`. Jurisdiction is now legible: the house scatters your take, the knee holds it, the under does not care whose hands are on the box.
+- **665** contract spec pins both halves: the sweep-grip branch in `robStashWire` + the grafter scan's absence of a `trappedBy` gate.
+
+Next: the third graft substrate (the plate) is the biggest remaining mechanics family — grafted plates that snap on house walkers and spare the under, answering the same 'work' pull. Below that: the warden's scatter vs a gripped lid ordering line, and a peepLid read on a gripped lid.
+
+## Sprint 663 — the paint ran, the news browned & the hinges wept (decals lane)
+
+- `paintDrip` (96×48): repaint band + brush strokes + thin drips w/ end beads + old-colour edge bleed; 30% lived-in walls, baseboard level.
+- `paperRot` (96×64): browned newsprint + edge rot veins + print ghosts + headline bar + lifted corner + damp halo; 30% lived-in floors.
+- `hingeWeep` (48×96): rust pin kiss + thin oil run + caught-dust bead + knuckle shadow; 40% lived-in doors at jamb edge. Presence tests ×3 green.
+
+## Sprint 667 — the dust kept its tally, the boards flexed & the frost crept
+
+- `tallyWall` (96×96): chalk five-counts in columns + smudged restarts + one long desperate stroke; rare 10% lived-in walls, y≈1.2.
+- `boardFlex` (96×48): dark gap along a board edge + lifted lip + popped nail heads w/ rust + gathered dust; 35% lived-in floors.
+- `frostFern` (96×96): branching crystal fronds + barbs + ice-speck dust + thawed tear channel; 40% of windows via prop loop. Presence tests ×3 green.
+
+## Sprint 668 — the latch missed its catch, the salt lined the seam & the flies kept the shade
+
+- `latchScore` (48×48): swung arc scratches + deep gouge + tongue sheen + strike ghost; 45% lived-in doors at catch height.
+- `saltLine` (96×32): uneven mineral crust + piled ends + dark seam + crystals; 30% lived-in door feet.
+- `flySpot` (64×64): amber halo + rim-sparse speck cluster + dragged smear; 30% lived-in walls high near lamps. Presence tests ×3 green.
+
+## Sprint 669 — the chair left its tracks, the shelf kept its outline & the kettle steamed the wall
+
+- `chairScrape` (96×64): twin leg drag-lines + dust walls at ends + foot divots + turn smear; 35% lived-in floors.
+- `bookDust` (96×64): pale tipped book ghost + spine ridge + fore-edge dust lip + thumb smudge; 50% of `bookshelf` props.
+- `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
+
+## Fixes — singleton prop decals + review debt
+
+- **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
+- PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
+
+## Sprint log
+
+
+## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
+
+- `frassLine` (96×48): woodworm exit pinholes + pale frass cones + weak-board sag; 30% lived-in walls, baseboard level.
+- `threadSnag` (96×64): lifted carpet loop + fray strays + toe-drag scuff + pile dent; 35% lived-in floors, free placement.
+- `sealBreak` (64×96): snapped cord ends + cracked wax head + crest ghost + fallen flecks; 22% lived-in doors, at jamb edge via `portLocalPos` + ±0.62 side offset. Presence tests ×3 green.
+
+## Sprint 661 — the rats chewed through, the nails kept the hooks & the wallpaper kept the standing (decals lane)
+
+- `ratHole` (96×64): dark arched chew opening + ragged gnaw rim + run rub line + fresh shavings + dropping specks; 35% lived-in walls, y≈0.14 (baseboard level).
+- `nailCluster` (96×96): 4–7 bent nails w/ rust blooms & drip, wire-loop crescents on ~45%, pale dust-lip above ~40%, one torn-out pit; 40% lived-in walls, y≈1.7.
+- `figureShadow` (96×128): radial shoulder + head blooms + pale floor gap + sun-burn ring — an eerie silhouette fade in the paper; rare 12% lived-in walls, y≈1.3. Presence tests ×3 green.
+
+## Sprint 657–662 — the sweep plants a knee (a second house reader)
+
+- **657** premise: the warden is not the only hand that reads your work. The `'sweep'` runner — sprint-pressure, thematically named — now reads fresh `'work'` marks on the pass, under its own claim key (`sweep:${startRoom}`), 1.8m radius, polled every 0.15s while engaged.
+- **658** its answer is a grip, not a scatter: a `'work'` mark within 1.4m of a stashed lid (`stashLoad > 0`, `trappedBy` free) → `spot.trappedBy = 'sweep'` — it plants a knee on the lid. The existing hold-shut surface answers unchanged (stash/hide verbs block on `trappedBy`), the box waits behind its hands.
+- **659** the grip is run-scoped: `gripped[]` releases in `onDone` — when the pass ends the lids breathe again. Scatter holds your goods on the floor forever; the knee holds them only while the pressure is on.
+- **660** contract spec: claim key, `'work'`-only filter, grip not scatter, stashLoad gate, `onDone` release loop, the entity-agnostic `trappedBy` answers.
+- **661** e2e leg (`runflow.spec.ts`): spawn sweep → read its path → seed a stashed lid + `'work'` mark at the midpoint between exitPos and nearest polyline point → step until `trappedBy==='sweep'` → run ends → released. Green at ~13s.
+- **662** trap found: `playwright.config` `reuseExistingServer` serves a STALE dist if a preview is already on :4173 — a green-looking run can test old code. `curl :4173` + kill before diagnosing "impossible" e2e failures. New-Run boot is also >20s now (sibling dressing) — runflow legs use `seededRun`.
+
+
 
 
 ## Sprint 652–656 — the floorkeeper sweeps the lid ('work' answers the stash)
@@ -8222,3 +8284,26 @@ Contract: every defuse signs AND yields, every yield is goods — the eye comple
 Traps: watchers spawn from PROPS not sockets — the pry/seat mint in the same isWatch block, anchored on the wrap's wall key and split on Y (`wy−0.35`), not on watcher.pos. `live` must test `w.lensed !== false` separately from `w.dead` — a pried socket stays 'dead' but the flag is what makes it permanent (dead mains can kill an eye without touching its glass). The owned-eye branch in room.ts `continue`s before the player-distance gate or your own eye would still settle on you. `rearmHazard 'work'` dispatches steam→fan→eye inside the same !f fallthrough — a pull without a fan near mustn't return null before the eye is checked. pocketedBelts staggered-settle: verified both spill sites zero the count before the callback — no double-spill possible; closed.
 
 NEXT SPRINT IDEAS (mechanics): the crimp's mirror — the under should be able to re-thread your pulled belt for a price (grafted wheels — a wheel that answers the under, staggers the house). The same mirror now exists for the eye: a grafted socket that answers the under and murmurs AGAINST you (an eye that isn't yours anymore but still pans). Or the last goods surface without a house answer: the stash/lid — a 'work' mark near your lid could get it swept (your take scattered, not confiscated).
+
+## Sprints 664–666 (eye arc — renumbered; main claimed 589-596) — the eye watches for you
+
+- **'Aim the eye — it stares where you point'** (s589): crouched under a live watcher — the pan locks to the bearing you point ~3m out from its mount (`aimBearing`, `owner:'player'` on the watcher) + 'work' sign by:'player'. Standing/tape vs crouched/aim — no twin-verb churn; re-mints on owned eyes to re-point.
+- **The report** (s590): an owned eye's locked sweep marks entities crossing its cone — `[your eye marks warden crossing its sweep]` + tick emit, throttled 8s per eye. The planted CCTV.
+- **The honest price** (s595): your eye still settles on YOU — the settle path has no owner exemption; you can't blind your own camera. Report is the yield, exposure the price.
+- **The reclaim** (s591): the house answers — a 'work' mark by your eye gets `rearmHazard → 'reclaim'`: he turns your eye back ("[it turns your eye back to the house — the pan is its own again]"). The camera was always the house's; your bearing was the only loan.
+- **The seam reads your watch** (s594): a door-listen answers a live owned eye <3m past the leaf, same tier as your line/plate/wire.
+- **Rides the book** (s592-593): owner+aimBearing on eye `deadHazards` records; `eyesAimed` joins both epitaphs.
+
+Contract: ownership is one axis across every hazard kind now — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`. The pan lock is the dazzle pin made permanent; your beam still outranks your own lock (light is the stronger command).
+
+Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim share one anchor otherwise (twin-verb churn). An owned eye mints focusEye again for re-aiming — the case must NOT return early on `owner==='player'`.
+
+## Sprints 594–598 — the pan is real
+
+- **The seam reads your watch** (s594): listen answers a live owned eye <3m past the leaf — '[your eye keeps watch past the leaf — its pan holds]'.
+- **The honest price, spec'd** (s595): your eye still settles on you — `w.settle` has no owner exemption; you can't blind your own camera.
+- **The beam reads your aim** (s596): aimed light on an owned eye answers '[the beam finds your eye — its stare still holds your bearing]' on the same 45s decay as lamp-charge reads (`eyeBeamRead`).
+- **The lock survives the blink** (s597): dazzle clears to NaN on the blink; `aimBearing` persists and reasserts — your beam outranks the lock only while it drinks.
+- **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
+
+Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
