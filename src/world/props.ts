@@ -2618,8 +2618,10 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     if (!prop.group.name) prop.group.name = 'sheet-drag';
   }
   // The tube kept the voice — lip polish and breath tarnish on the
-  // speaking tubes.
-  if (spec.kind === 'speakingTube' && rng.bool(0.6)) {
+  // speaking tubes. A singleton prop (the custodian's only tube), so no
+  // gate: the builder rng is index-seeded, not seed-seeded — a gate that
+  // lands cold stays cold on every seed.
+  if (spec.kind === 'speakingTube') {
     const dc = modelCollider(spec.kind);
     const tl = new THREE.Mesh(
       new THREE.PlaneGeometry(0.16, 0.22),
