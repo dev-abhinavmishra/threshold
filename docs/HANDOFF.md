@@ -4,6 +4,28 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 610–612 — the ceiling kept its weather (ceiling decal batch)
+
+The last undecorated surface: ceilings ran flat until now. Nine
+generators, ceiling decals at `rotation.x = Math.PI/2`, `y = h-0.056`
+(to -0.059 for z-fight spacing):
+
+- **s610**: `ceilingRing` (mineral water rings + drip point, wet bones),
+  `plasterVein` (settlement crack with tributaries + spall), 
+  `pendantGhost` (pale ring + hook scar, livedIn only).
+- **s611**: `fixtureSoot` (smoke halo + convection fingers over
+  chainBulb/cageLight/fluoroTube), `tileSag` (ceiling-grid ghosts +
+  sagging panel shadow, !livedIn), `corniceLine` (dust ledge + cobweb
+  anchors riding the wall at h-0.3).
+- **s612**: `atticStain` (broad damp bloom + mould freckles, !livedIn),
+  `paintFlake` (curled paint tongues + under-scars, livedIn),
+  `heaterGhost` (convection halo + soot lip on the wall over
+  radiatorFin/radiatorTall/masonryHeater/boilerDrum/boilerTank).
+
+Prop-kind trap caught again: 'radiator'/'barrelStove' aren't in the
+union — real heat kinds are radiatorFin/radiatorTall/masonryHeater/
+stove/stoveRange/boilerDrum/boilerTank/fireplace.
+
 ## Sprint 607–609 — the under kept its marks (under decal batch)
 
 The nine new under rooms had props but no wear. Nine decal generators,
