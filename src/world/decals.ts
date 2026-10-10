@@ -11599,3 +11599,136 @@ export function figureShadow(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Frass line — the woodworms keep their hours: a row of tiny exit
+ * pinholes along the boards with pale powder cones beneath them. */
+export function frassLine(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    const holes = 4 + Math.floor(rng.float() * 4);
+    for (let i = 0; i < holes; i++) {
+      const hx = 10 + (i + rng.float()) * (76 / holes);
+      const hy = 14 + rng.float() * 8;
+      // exit pinhole
+      ctx.fillStyle = `rgba(24,18,14,${0.55 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 0.9 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      // frass cone — fine powder settled under the hole
+      ctx.fillStyle = `rgba(180,160,120,${0.3 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.moveTo(hx - 4 - rng.float() * 2, hy + 16 + rng.float() * 8);
+      ctx.lineTo(hx + 4 + rng.float() * 2, hy + 16 + rng.float() * 8);
+      ctx.lineTo(hx + 1, hy + 2);
+      ctx.lineTo(hx - 1, hy + 2);
+      ctx.closePath();
+      ctx.fill();
+      // drill dust — the freshest crumb at the hole's lip
+      if (rng.bool(0.5)) {
+        ctx.fillStyle = 'rgba(210,190,150,0.5)';
+        ctx.beginPath();
+        ctx.arc(hx + 1, hy + 2, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // weak sag — a shallow shadow where the board's core is gone
+    ctx.fillStyle = `rgba(60,50,40,${0.12 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 30, 34 + rng.float() * 8, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Thread snag — the carpet gave up a loop: one lifted thread arc,
+ * fray strays at its ends, a drag scuff where the toe caught it. */
+export function threadSnag(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 40 + rng.float() * 16;
+    const cy = 34;
+    // the lifted loop — a bright thread arc standing off the pile
+    ctx.strokeStyle = `rgba(150,120,80,${0.55 + rng.float() * 0.2})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy + 8);
+    ctx.quadraticCurveTo(cx, cy - 12 - rng.float() * 6, cx + 12, cy + 8);
+    ctx.stroke();
+    // strays at both ends
+    for (const sx of [cx - 12, cx + 12]) {
+      for (let i = 0; i < 4; i++) {
+        ctx.strokeStyle = `rgba(140,112,74,${0.4 + rng.float() * 0.25})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(sx, cy + 8);
+        ctx.lineTo(sx + (rng.float() - 0.5) * 8, cy + 8 + rng.float() * 6);
+        ctx.stroke();
+      }
+    }
+    // toe scuff — the dark arc where the shoe dragged it
+    ctx.strokeStyle = `rgba(50,40,30,${0.3 + rng.float() * 0.18})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 18, cy + 14);
+    ctx.quadraticCurveTo(cx, cy + 18, cx + 18, cy + 13);
+    ctx.stroke();
+    // pile dent — crushed nap along the drag
+    ctx.fillStyle = `rgba(70,58,44,${0.2 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 16, 20, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // dust in the dent
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(180,168,140,${0.2 + rng.float() * 0.15})`;
+      ctx.beginPath();
+      ctx.arc(cx - 16 + rng.float() * 32, cy + 13 + rng.float() * 6, 0.5 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Seal break — the door kept its wax: snapped cord ends hanging off
+ * the jamb, red wax flecks flaked onto the floor below. */
+export function sealBreak(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32 + (rng.float() - 0.5) * 8;
+    // cord ends — two snapped strings dangling from the wax
+    for (const dir of [-1, 1]) {
+      ctx.strokeStyle = `rgba(90,76,58,${0.55 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(cx + dir * 6, 30);
+      ctx.quadraticCurveTo(cx + dir * (10 + rng.float() * 4), 44 + rng.float() * 8, cx + dir * (8 + rng.float() * 4), 58 + rng.float() * 10);
+      ctx.stroke();
+      // frayed tip
+      ctx.strokeStyle = 'rgba(110,94,72,0.5)';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx + dir * 8, 56);
+      ctx.lineTo(cx + dir * 10, 62 + rng.float() * 6);
+      ctx.stroke();
+    }
+    // the wax head — cracked seal still holding on the jamb side
+    ctx.fillStyle = `rgba(122,32,28,${0.6 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, 30, 9, 7, rng.float() * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // crack through the seal
+    ctx.strokeStyle = 'rgba(60,14,12,0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, 27);
+    ctx.lineTo(cx + 6, 33);
+    ctx.stroke();
+    // stamp ghost — faint relief of the seal's crest
+    ctx.strokeStyle = 'rgba(150,60,52,0.4)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, 30, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // flaked flecks below — wax chips that fell when it snapped
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(122,32,28,${0.4 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 8 + rng.float() * 16, 68 + rng.float() * 20, 0.8 + rng.float() * 0.8, 0.6 + rng.float() * 0.6, rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
