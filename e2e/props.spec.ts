@@ -1322,3 +1322,90 @@ test('dial the far line — the aimed pull', async ({ page }) => {
   expect(result.refused, 'no live phones refuses free').toBe(true);
   expect(errors).toEqual([]);
 });
+
+// sprint 646 — the under's grafts: a carried belt/lens re-threads dead
+// work against you. Driven through the same ctx hooks the grafter calls.
+test('the under grafts back — the wheel and the socket answer a third jurisdiction', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const ga = g as unknown as {
+      hazard: {
+        fans: { pos: { x: number; z: number }; room: number; dead: boolean;
+          belted?: boolean; owner?: 'player' | 'under' }[];
+        watchers: { pos: { x: number; z: number }; room: number; dead: boolean;
+          lensed?: boolean; owner?: 'player' | 'under' }[];
+        evidence: { kind: string; by?: string }[];
+      };
+      droppedBelts: { x: number; z: number }[];
+      entityCtx: () => {
+        nearestGraft?: (x: number, z: number, maxD: number, kind?: 'wheel' | 'socket')
+          => { x: number; z: number; kind: 'wheel' | 'socket' } | null;
+        graft?: (x: number, z: number, kind: 'wheel' | 'socket', byKey: string) => boolean;
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+      mintBeltDrops: () => void;
+    };
+    const ctx = ga.entityCtx();
+    // a stripped housing (belted:false) is the wheel substrate;
+    // a pried socket (lensed:false) is the eye substrate.
+    const wheel = ga.hazard.fans.find((f) => g.route.rooms[f.room]);
+    if (!wheel) return { stage: 'no-fan' } as const;
+    wheel.dead = true;
+    wheel.belted = false;
+    const socket = ga.hazard.watchers.find((w) => g.route.rooms[w.room]
+      && !g.route.rooms[w.room].darkRoom);
+    if (!socket) return { stage: 'no-eye' } as const;
+    socket.dead = true;
+    socket.lensed = false;
+    const evBefore = ga.hazard.evidence.length;
+    // the graft-seek finds each substrate under its own kind only
+    const wheelSite = ctx.nearestGraft?.(wheel.pos.x, wheel.pos.z, 30, 'wheel');
+    const socketSite = ctx.nearestGraft?.(socket.pos.x, socket.pos.z, 30, 'socket');
+    const wrongKind = ctx.nearestGraft?.(wheel.pos.x, wheel.pos.z, 30, 'socket');
+    const wrongKind2 = ctx.nearestGraft?.(socket.pos.x, socket.pos.z, 30, 'wheel');
+    // and the graft itself claims them for the under
+    const graftedWheel = ctx.graft?.(wheel.pos.x, wheel.pos.z, 'wheel', 'grafter:0');
+    const graftedSocket = ctx.graft?.(socket.pos.x, socket.pos.z, 'socket', 'grafter:0');
+    const graftSign = ga.hazard.evidence.slice(evBefore)
+      .every((e) => e.kind === 'work' && e.by === 'grafter:0');
+    // the house can't re-engage foreign work; 'work' near it pulls it back
+    const wheelOwner = wheel.owner, socketOwner = socket.owner;
+    const wheelLive = !wheel.dead && wheel.belted !== false;
+    const socketLive = !socket.dead && socket.lensed !== false;
+    const houseRearm = ctx.rearmHazard?.('fan', wheel.pos.x, wheel.pos.z) ?? 'x';
+    const pulled = ctx.rearmHazard?.('work', wheel.pos.x, wheel.pos.z);
+    const torn = ctx.rearmHazard?.('work', socket.pos.x, socket.pos.z);
+    return {
+      stage: 'done',
+      wheelSite: wheelSite?.kind, socketSite: socketSite?.kind,
+      wrongKind: wrongKind?.kind ?? null, wrongKind2: wrongKind2?.kind ?? null,
+      graftedWheel, graftedSocket, graftSign,
+      wheelOwner, socketOwner, wheelLive, socketLive,
+      houseRearm, pulled, torn,
+      beltDropped: ga.droppedBelts.length > 0,
+    } as const;
+  });
+
+  if (result.stage !== 'done') { expect(result.stage).toBe('done'); return; }
+  expect(result.wheelSite, 'a muscle-less housing is the belt substrate').toBe('wheel');
+  expect(result.socketSite, 'a pried socket is the lens substrate').toBe('socket');
+  expect(result.wrongKind, 'a belt cannot graft a socket').not.toBe('socket');
+  expect(result.wrongKind2, 'a lens cannot graft a wheel').not.toBe('wheel');
+  expect(result.graftedWheel, 'the wheel graft takes').toBe(true);
+  expect(result.graftedSocket, 'the socket graft takes').toBe(true);
+  expect(result.wheelOwner, 'the grafted wheel answers the under').toBe('under');
+  expect(result.socketOwner, 'the grafted eye answers the under').toBe('under');
+  expect(result.wheelLive, 'the grafted wheel spins again').toBe(true);
+  expect(result.graftSign, 'the graft signs work under the grafter key').toBe(true);
+  expect(result.houseRearm, 'the house cannot re-engage foreign work').toBe('x');
+  expect(result.pulled, 'work near a grafted wheel is the pull').toBe('pull');
+  expect(result.torn, 'work near a grafted socket is the tear').toBe('lensTear');
+  expect(result.beltDropped, 'the pull drops the grafted muscle as goods').toBe(true);
+  expect(errors).toEqual([]);
+});

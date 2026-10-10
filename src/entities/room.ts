@@ -1056,7 +1056,7 @@ export class HazardField {
      *  `chocked` marks a wedge still jammed in the blades: 'Work the
      *  chock free' mints only while one's in there — a seeded spent
      *  wheel or a stripped housing holds none to free. */
-    belted?: boolean; owner?: 'player'; chocked?: boolean }[] = [];
+    belted?: boolean; owner?: 'player' | 'under'; chocked?: boolean }[] = [];
   /** Wall eyes: securityCams sweep a lit room on a deterministic arc,
    *  searchlights hold a slower beam lane. Motion inside the cone settles
    *  the eye — a settled eye rings your position to every listener in
@@ -1081,7 +1081,7 @@ export class HazardField {
      *  instead; `lensHoldUntil` pins the blink while a fed lens holds
      *  the stare; `watchSettle`/`lastMurmur` are the owned eye's
      *  settle clock + murmur throttle. */
-    lensed?: boolean; owner?: 'player'; lensHoldUntil?: number;
+    lensed?: boolean; owner?: 'player' | 'under'; lensHoldUntil?: number;
     watchSettle?: number; lastMurmur?: number }[] = [];
   /** One warn per marking: reset when the book no longer holds you. */
   private markedWarned = false;

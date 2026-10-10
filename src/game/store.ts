@@ -166,6 +166,8 @@ export interface BooksClosed {
   wheelsOwned?: number;
   /** sprint 602 — eyes still panning on YOUR lens */
   eyesOwned?: number;
+  /** sprint 650 — wheels and eyes the under grafted back awake */
+  graftedWork?: number;
 }
 
 export interface CheckpointSave {
@@ -223,8 +225,9 @@ export interface CheckpointSave {
     x: number; z: number; dead?: boolean; filed?: boolean;
     /** sprint 581 — steam vents carry their throat + ownership: a
      *  stripped valve (valved:false) stays stripped, a player-refit
-     *  line stays yours. */
-    valved?: boolean; owner?: 'player';
+     *  line stays yours. sprint 646 — 'under' too: a wheel or eye the
+     *  under grafted stays grafted through the checkpoint. */
+    valved?: boolean; owner?: 'player' | 'under';
     /** sprint 593 — fans carry their muscle + the wedge: a stripped
      *  wheel (belted:false) stays stripped, a chocked wheel keeps its
      *  jam, a refit wheel stays yours. */
