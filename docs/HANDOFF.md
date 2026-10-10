@@ -4,6 +4,19 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 634–636 — the openings wore their heads (molding batch)
+
+- `lintel-frieze` + `lintel-key` + `lintel-rosette` under the door
+  architrave on both wall faces (frame-space z ±0.26 — wall faces sit
+  at ±0.26 there, not ±0.06).
+- `win-head`/`win-casing` trim + brass `curtain-rod` with `rod-finial`
+  ends and 1–2 torn `rod-drape` drops over livedIn windows (~60%).
+- `outlet-plate` + `outlet-slot` + `cord-plug`/`flex-cord` low on
+  livedIn walls via `pickWallSpot`.
+- New shared helper `placeOnWall(m, wall, off, y, proud)` — room-space
+  placement for wall-mounted meshes (e/w auto-rotates y π/2, auto-pushes
+  to frameHardware). Reuse it instead of hand-rolling per-wall math.
+
 ## Sprint 631–633 — the sills kept their keepers (window-ledge batch)
 
 - `sill-pot` + `sill-stem` dead plants, `sill-candle` stubs,
