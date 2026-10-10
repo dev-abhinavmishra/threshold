@@ -1892,7 +1892,7 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
   }
   // The warm spots kept the cat — curled heat halos on the warm
   // tops where a pet used to sleep.
-  const WARM_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['radiator', 'masonryHeater', 'bench', 'bedBench']);
+  const WARM_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['radiatorFin', 'radiatorTall', 'masonryHeater', 'bench', 'bedBench']);
   if (WARM_TOPS.has(spec.kind) && rng.bool(0.3)) {
     const dc = modelCollider(spec.kind);
     const ch = new THREE.Mesh(

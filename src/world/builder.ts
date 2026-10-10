@@ -4505,7 +4505,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
 
     // The brooms leaned their marks — handle scuffs on the walls of
     // scullery and maintenance rooms.
-    if (spec.biome === 'maintenance' || spec.biome === 'kitchen' || spec.biome === 'scullery' || !livedIn) {
+    if (spec.biome === 'maintenance' || !livedIn) {
       if (rng.bool(0.4)) {
         const spot = pickWallSpot(0.5);
         if (spot) {
