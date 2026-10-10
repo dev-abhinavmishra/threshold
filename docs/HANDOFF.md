@@ -8366,7 +8366,21 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 700–702 — the counters kept their shells, the casks kept their trays & the shelves kept their hooks (decals lane)
+\n\n## Sprint 703–705 — the desks kept their letters, the hearths kept their embers & the walls kept their caps (decals lane)
+
+- `tornEnvelope` — torn-mail ghosts on desks (props overlay).
+- `protractorArc` — drafting arcs on school surfaces (props overlay).
+- `marbleVein` — vein ghosts on cold/stone tops (props overlay).
+- `grateBar` — slat shadows under drains/grates.
+- `emberScar` — scorch pits before hearths/stoves.
+- `lidSteam` — extended onto counters (existing decal reuse; pots overlay already existed).
+- `dustPan` — swept-mound ghosts in service corners.
+- `gloveDust` — laid-glove ghosts on hall tables (props overlay).
+- `capPeg` — hat shadows on peg/rails.
+
+`lidSteam`/`LIDDED` already existed from an earlier sprint — grep decals.ts before naming new generators.
+
+Gates: tsc, lint, scoped vitest (703–705) green.\n\n## Sprint 700–702 — the counters kept their shells, the casks kept their trays & the shelves kept their hooks (decals lane)
 
 - `eggShell` — breakfast chips on counter/table tops (props overlay).
 - `milkBottle` — bottle rings on thresholds of lived rooms.

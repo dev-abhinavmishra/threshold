@@ -16639,3 +16639,397 @@ export function shelfBracket(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Torn envelope — the torn-envelope ghosts on a desk where a
+ * letter was opened: envelope ghost, torn edge, flap shadow,
+ * stamp kiss, letter dust. */
+export function tornEnvelope(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48, cy = 32;
+    // envelope ghost — the pressed rectangle of the paper
+    ctx.fillStyle = `rgba(196,188,164,${0.26 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 26, cy - 14, 52, 28);
+    // torn edge — the ripped top where the thumb ran
+    ctx.strokeStyle = `rgba(150,142,120,${0.4 + rng.float() * 0.16})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx - 26, cy - 14);
+    for (let i = 0; i < 12; i++) {
+      ctx.lineTo(cx - 26 + (i + 1) * 4.4, cy - 14 + (rng.float() - 0.5) * 4);
+    }
+    ctx.stroke();
+    // flap shadow — the folded-back triangle
+    ctx.fillStyle = `rgba(180,172,150,${0.24 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.moveTo(cx - 26, cy - 14);
+    ctx.lineTo(cx + 26, cy - 14);
+    ctx.lineTo(cx, cy - 26 + rng.float() * 4);
+    ctx.closePath();
+    ctx.fill();
+    // stamp kiss — the franked corner
+    ctx.strokeStyle = `rgba(140,110,90,${0.32 + rng.float() * 0.16})`;
+    ctx.lineWidth = 0.9;
+    ctx.strokeRect(cx + 16, cy - 12, 7, 5);
+    // postmark arc — the round frank's partial ring
+    ctx.strokeStyle = `rgba(110,96,80,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx + 12, cy - 8, 5, Math.PI * (0.1 + rng.float() * 0.3), Math.PI * (0.8 + rng.float() * 0.4));
+    ctx.stroke();
+    // letter dust — the paper fibres the tear shed
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(200,192,170,${0.28 + rng.float() * 0.16})`;
+      ctx.fillRect(cx - 24 + rng.float() * 50, cy + 8 + rng.float() * 12, 1.2, 0.8);
+    }
+    // opening thumb — the smudge where it was gripped
+    ctx.fillStyle = `rgba(120,110,92,${0.22 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(cx - 18, cy + 2, 4, 2.4, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Protractor arc — the protractor arcs and ruled angles a
+ * drafting board keeps: arc lines, angle rays, tick marks,
+ * pencil ghosts. */
+export function protractorArc(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48, cy = 44;
+    // arc lines — the half-circle's pressed rings
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(110,110,120,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 12 + i * 7, Math.PI, Math.PI * 2);
+      ctx.stroke();
+    }
+    // angle rays — the ruled spokes
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI + (i / 6) * Math.PI;
+      ctx.strokeStyle = `rgba(100,100,110,${0.24 + rng.float() * 0.12})`;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 6, cy + Math.sin(a) * 6);
+      ctx.lineTo(cx + Math.cos(a) * (24 + rng.float() * 4), cy + Math.sin(a) * (24 + rng.float() * 4));
+      ctx.stroke();
+    }
+    // tick marks — the degree notches on the arc's edge
+    for (let i = 0; i < 13; i++) {
+      const a = Math.PI + (i / 12) * Math.PI;
+      ctx.strokeStyle = `rgba(120,120,130,${0.28 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30);
+      ctx.lineTo(cx + Math.cos(a) * 33, cy + Math.sin(a) * 33);
+      ctx.stroke();
+    }
+    // pencil ghosts — the erased arcs of a corrected angle
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(150,150,160,${0.2 + rng.float() * 0.1})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx + rng.float() * 8 - 4, cy + rng.float() * 6 - 3, 8 + rng.float() * 6, Math.PI * (1 + rng.float() * 0.4), Math.PI * (1.4 + rng.float() * 0.4));
+      ctx.stroke();
+    }
+    // baseline — the ruled edge the arc sat on
+    ctx.strokeStyle = `rgba(90,90,100,${0.32 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 34, cy);
+    ctx.lineTo(cx + 34, cy);
+    ctx.stroke();
+    // pin pit — the compass point's hole at the centre
+    ctx.fillStyle = 'rgba(30,28,26,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/** Marble vein — the vein ghosts on a marble or stone top:
+ * dark veins, pale clouds, polish sheen, chip pits. */
+export function marbleVein(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    const cx = 48, cy = 32;
+    // pale clouds — the soft marbling of the stone
+    for (let i = 0; i < 4; i++) {
+      const g = ctx.createRadialGradient(cx - 24 + rng.float() * 48, cy - 14 + rng.float() * 28, 1, cx - 24 + rng.float() * 48, cy - 14 + rng.float() * 28, 10 + rng.float() * 8);
+      g.addColorStop(0, `rgba(190,192,186,${0.18 + rng.float() * 0.1})`);
+      g.addColorStop(1, 'rgba(190,192,186,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 96, 64);
+    }
+    // dark veins — the wandering cracks of the stone
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(90,94,96,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.9;
+      let vx = rng.float() * 96, vy = rng.float() * 64;
+      ctx.beginPath();
+      ctx.moveTo(vx, vy);
+      for (let j = 0; j < 6; j++) {
+        vx += (rng.float() - 0.3) * 18;
+        vy += (rng.float() - 0.5) * 12;
+        ctx.lineTo(vx, vy);
+      }
+      ctx.stroke();
+    }
+    // polish sheen — the buffed gloss of the top
+    ctx.fillStyle = `rgba(210,212,204,${0.16 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 10, cy - 12, 18, 6, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // chip pits — the small nicks along the edge
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(120,122,118,${0.3 + rng.float() * 0.16})`;
+      ctx.beginPath();
+      ctx.arc(10 + rng.float() * 76, cy + 24 + rng.float() * 4, 0.8 + rng.float() * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // ring mark — the glass ring someone set down
+    ctx.strokeStyle = `rgba(170,174,168,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.arc(cx - 18, cy + 6, 5 + rng.float(), 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
+/** Grate bar — the bar shadows and sifted ash under a floor
+ * grate: bar lines, ash scatter, rust kiss, sweep marks. */
+export function grateBar(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 30;
+    // bar lines — the grate's slats pressed into the floor
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(60,56,50,${0.36 + rng.float() * 0.16})`;
+      ctx.fillRect(cx - 20 + i * 7 + rng.float(), cy - 10, 2.6, 20);
+    }
+    // cross bars — the frame's two transverse members
+    ctx.fillStyle = `rgba(70,66,58,${0.32 + rng.float() * 0.14})`;
+    ctx.fillRect(cx - 22, cy - 8, 44, 2);
+    ctx.fillRect(cx - 22, cy + 6, 44, 2);
+    // ash scatter — the grey sift that fell through
+    for (let i = 0; i < 16; i++) {
+      ctx.fillStyle = `rgba(170,168,158,${0.3 + rng.float() * 0.18})`;
+      ctx.beginPath();
+      ctx.arc(cx - 22 + rng.float() * 44, cy - 14 + rng.float() * 28, 0.5 + rng.float() * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // rust kiss — the iron's bleed at the grate's edge
+    ctx.strokeStyle = `rgba(140,90,50,${0.32 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(cx - 24, cy - 12, 48, 24);
+    // sweep marks — the broom arcs that pushed the dust aside
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(150,146,134,${0.24 + rng.float() * 0.12})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx - 10 + i * 10 + rng.float() * 4, cy + 16 + rng.float() * 4, 6 + rng.float() * 2, Math.PI * 0.15, Math.PI * 0.85);
+      ctx.stroke();
+    }
+    // drop shadow — the dark of the void below
+    ctx.fillStyle = `rgba(24,22,20,${0.3 + rng.float() * 0.12})`;
+    ctx.fillRect(cx - 20, cy - 9, 40, 18);
+  });
+}
+
+/** Ember scar — the ember burns a hearth keeps on its floor:
+ * scorch pits, char cracks, ash halo, spark trails. */
+export function emberScar(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // scorch pits — the dark burns where embers landed
+    for (let i = 0; i < 5; i++) {
+      const sx = cx - 18 + rng.float() * 36, sy = cy - 16 + rng.float() * 32;
+      const g = ctx.createRadialGradient(sx, sy, 0.4, sx, sy, 3 + rng.float() * 2);
+      g.addColorStop(0, `rgba(28,24,20,${0.48 + rng.float() * 0.18})`);
+      g.addColorStop(0.7, `rgba(50,44,38,${0.26 + rng.float() * 0.12})`);
+      g.addColorStop(1, 'rgba(50,44,38,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 64, 64);
+    }
+    // char cracks — the splits a hot ember opened
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(40,34,28,${0.34 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      const sx2 = cx - 16 + rng.float() * 32, sy2 = cy - 14 + rng.float() * 28;
+      ctx.beginPath();
+      ctx.moveTo(sx2, sy2);
+      ctx.lineTo(sx2 + (rng.float() - 0.5) * 8, sy2 + (rng.float() - 0.5) * 8);
+      ctx.stroke();
+    }
+    // ash halo — the pale ring the embers shed
+    ctx.strokeStyle = `rgba(180,176,166,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 20, 14, 0.1, 0, Math.PI * 2);
+    ctx.stroke();
+    // spark trails — the thin runs where a spark skittered
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(120,110,100,${0.26 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.6;
+      const tx = cx - 20 + rng.float() * 40, ty = cy - 18 + rng.float() * 36;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(tx + (rng.float() - 0.5) * 10, ty + (rng.float() - 0.5) * 10);
+      ctx.stroke();
+    }
+    // scorched edge — the dark line under the hearth's lip
+    ctx.strokeStyle = `rgba(36,32,28,${0.3 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 22, cy - 20);
+    ctx.lineTo(cx + 22, cy - 20 + (rng.float() - 0.5) * 2);
+    ctx.stroke();
+  });
+}
+
+
+/** Dust pan — the dustpan ghosts and swept mounds a cleaning
+ * pass leaves in a corner: pan outline, dust mound, bristle
+ * lines, spill trail. */
+export function dustPan(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // pan outline — the pressed lip of the dustpan
+    ctx.strokeStyle = `rgba(140,134,120,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, cy + 6);
+    ctx.lineTo(cx - 14, cy - 4);
+    ctx.lineTo(cx + 14, cy - 4);
+    ctx.lineTo(cx + 16, cy + 6);
+    ctx.stroke();
+    // dust mound — the swept heap at the pan's lip
+    const g = ctx.createRadialGradient(cx, cy + 4, 1, cx, cy + 4, 10);
+    g.addColorStop(0, `rgba(150,144,128,${0.4 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(150,144,128,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // bristle lines — the broom strokes that pushed the mound
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = `rgba(160,154,138,${0.28 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx - 14 + i * 5 + rng.float(), cy + 12);
+      ctx.lineTo(cx - 12 + i * 5, cy + 5 + rng.float() * 2);
+      ctx.stroke();
+    }
+    // spill trail — the dust that slid off the pan
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = `rgba(140,136,122,${0.3 + rng.float() * 0.16})`;
+      ctx.fillRect(cx - 8 + rng.float() * 18, cy - 14 + rng.float() * 8, 1.4, 0.9);
+    }
+    // stray flecks — what the broom missed
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(120,116,104,${0.28 + rng.float() * 0.14})`;
+      ctx.fillRect(cx - 22 + rng.float() * 44, cy + 14 + rng.float() * 8, 1, 1);
+    }
+    // pan handle shadow — the held angle
+    ctx.strokeStyle = `rgba(100,94,84,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 6, cy - 4);
+    ctx.lineTo(cx + 14, cy - 14);
+    ctx.stroke();
+  });
+}
+
+/** Glove dust — the glove ghosts a pair leaves on a hall table:
+ * finger prints, palm ghost, cuff mark, dust ring. */
+export function gloveDust(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    const cx = 32, cy = 32;
+    // palm ghost — the pressed shape of a laid glove
+    ctx.fillStyle = `rgba(150,140,116,${0.3 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(cx - 8, cy + 2, 9, 6, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // finger marks — the four laid impressions
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = `rgba(140,130,108,${0.28 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(cx - 14 + i * 4, cy - 6, 1.4, 4 + rng.float(), -0.2 + i * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // thumb — the side print
+    ctx.beginPath();
+    ctx.ellipse(cx - 16, cy + 4, 1.4, 3.4, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    // cuff mark — the gauntlet's pressed band
+    ctx.strokeStyle = `rgba(130,120,98,${0.32 + rng.float() * 0.16})`;
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, cy + 10);
+    ctx.lineTo(cx - 2, cy + 8);
+    ctx.stroke();
+    // second glove — the pair's fainter ghost beside it
+    ctx.fillStyle = `rgba(160,150,126,${0.2 + rng.float() * 0.1})`;
+    ctx.beginPath();
+    ctx.ellipse(cx + 14, cy + 4, 7, 4, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // dust ring — the table's film outline where they lay
+    ctx.strokeStyle = `rgba(170,164,146,${0.24 + rng.float() * 0.12})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.ellipse(cx - 4, cy, 22, 12, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // lint — the fibre dots the wool shed
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(180,174,158,${0.26 + rng.float() * 0.14})`;
+      ctx.fillRect(cx - 20 + rng.float() * 40, cy - 14 + rng.float() * 28, 1, 0.8);
+    }
+  });
+}
+
+/** Cap peg — the peg marks and cap shadows where hats hung on
+ * wall pegs: peg pits, brim shadows, crown ghosts, hook shine. */
+export function capPeg(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 96, (ctx) => {
+    const cx = 32, cy = 24;
+    // peg pit — the fixing's dark point
+    ctx.fillStyle = `rgba(40,36,30,${0.44 + rng.float() * 0.18})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    // hook shine — the bright polish where caps lifted
+    ctx.strokeStyle = `rgba(190,184,166,${0.28 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 3, 3, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.stroke();
+    // brim shadow — the hat's cast ellipse below the peg
+    ctx.fillStyle = `rgba(80,74,64,${0.28 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 14, 12, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // crown ghost — the dome's soft shape
+    ctx.fillStyle = `rgba(90,84,74,${0.24 + rng.float() * 0.12})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 10, 7, 5, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    // band line — the hat band's darker rim
+    ctx.strokeStyle = `rgba(60,54,46,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy + 10);
+    ctx.quadraticCurveTo(cx, cy + 13, cx + 7, cy + 10);
+    ctx.stroke();
+    // grease crescent — the pomade kiss under the crown
+    ctx.strokeStyle = `rgba(110,100,80,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 12, 8, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+    // dust drift — the settled film the hats kept off
+    ctx.fillStyle = `rgba(160,154,138,${0.2 + rng.float() * 0.1})`;
+    ctx.fillRect(cx - 14, cy + 24, 28, 2);
+    // peg shadow — the peg's cast line in side light
+    ctx.strokeStyle = `rgba(70,64,56,${0.26 + rng.float() * 0.14})`;
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 1);
+    ctx.lineTo(cx + 2, cy + 8);
+    ctx.stroke();
+  });
+}
