@@ -7852,3 +7852,37 @@ Traps: `trapPos` must be seeded in the SAME mint pass that pushes
 liveTraps (armedTraps key = `${space}:${roomIdx}:${n}`); set-trap
 keys mint `set:` so they can't collide with seeded keys and can't
 be re-laid by the warden.
+
+## Sprints 577–580 — the plate is goods
+
+- **s577 the plate is loose goods** — `droppedSprings` joins the
+  pile family: 'Leave a spring out' (crouched, 1 springPart) sets
+  bait-grade litter, 'Gather the sprung plate' takes it home,
+  'Drag the pile closer' and every walker's boot move it, and
+  'Spill the take' drops carried plates with the rest. Rides the
+  checkpoint like the kicked chock.
+- **s578 the house tidies the plate** — warden reads/pockets loose
+  plates (`pocketedSprings`); a stagger or a settle spills them
+  back via `spillSprings`. The grafter folds one into a coil's
+  worth of graft stock — your litter is the under's teeth again.
+- **s579 the under sells your teeth back** — springPart joins the
+  Broker's seeded stock (12-18 marginalia, cheap: the scavenger
+  never runs out); and a door-listen answers a cocked set plate
+  within 3m past the leaf — '[a plate waits cocked past the leaf]'.
+- **s580 the book counts the cocked** — `BooksClosed.trapsSet`:
+  'N plates still lie cocked on the floor — your work outlasts you';
+  droppedSprings counts toward `spilled` on both epitaphs.
+
+Contract: a sprung plate is the FULL pile surface, not a special
+case — baitable, draggable, bootable, pocketable, foldable,
+epitaphed. The house ignores it until it reads as litter; the
+under takes it as graft feedstock. Water can't take the plate —
+springs are deliberately not in `spillTide`/`drainSurge`: the
+teeth bite the boards.
+
+Traps: spill-kind precedence in `scavengeSpill` — pouches run
+FIRST (coin always wins the stoop); spring is last so a pile
+shared with coin still pays the coin. `mintDragVerb`'s list
+union is where dragPile resolves its backing array — new pile
+kinds must extend BOTH the union and the arr switch or the drag
+silently writes to droppedCoils.

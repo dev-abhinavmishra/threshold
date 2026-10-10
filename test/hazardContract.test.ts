@@ -465,3 +465,36 @@ describe('the crack under the leaf (sprint 445)', () => {
     expect(game).toContain('it is listening back');
   });
 });
+
+describe('the plate is goods (sprints 577-580)', () => {
+  it('every loose-goods surface reads the sprung plate', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const corrSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    const graftSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const storeSrc = readFileSync('src/game/store.ts', 'utf8');
+    const interactionSrc = readFileSync('src/player/interaction.ts', 'utf8');
+    // the pile exists, mints its verb, survives the save
+    expect(gameSrc).toContain('droppedSprings');
+    expect(gameSrc).toContain('mintSpringDrops');
+    expect(storeSrc).toContain('droppedSprings?:');
+    // every reader of the spill surface knows the kind
+    for (const src of [gameSrc, baseSrc]) {
+      expect(src).toContain("| 'spring'");
+    }
+    expect(baseSrc).toContain('spring?: boolean');
+    expect(baseSrc).toContain('spillSprings');
+    // the house pockets it like a chock, the under folds it into wire
+    expect(corrSrc).toContain('pocketedSprings');
+    expect(corrSrc).toContain('spring: true');
+    expect(graftSrc).toContain('spring: this.carrying === 0');
+    // the player's verbs are registered and dispatched
+    for (const kind of ["'baitSpring'", "'springDrop'"]) {
+      expect(interactionSrc, `${kind} in InteractKind`).toContain(`| ${kind}`);
+      expect(gameSrc, `${kind} press dispatch`).toContain(`case ${kind}`);
+    }
+    // and the end reads what the floor still holds cocked
+    expect(storeSrc).toContain('trapsSet?:');
+    expect(gameSrc).toContain('trapsSet: this.setTraps.length');
+  });
+});

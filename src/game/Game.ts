@@ -803,6 +803,9 @@ export class Game {
     // respawn in your pocket either
     this.droppedPouches = cp?.droppedPouches?.map((w) => ({ ...w })) ?? [];
     this.mintPouchDrops();
+    // sprint 577 — loose plates outlive the reload like every pile
+    this.droppedSprings = cp?.droppedSprings?.map((w) => ({ ...w })) ?? [];
+    this.mintSpringDrops();
     // the grafter's grafts stay grafted — planted wire survives a
     // reload wearing the same face it was laid with; a graft that
     // died stays dead like any wire (its mark rides deadHazards)
@@ -990,6 +993,10 @@ export class Game {
       // cheaper than a latchpick because every grafter carries it —
       // and it smells like their stock either way you came by it.
       { id: 'wireCoil', price: rng.int(16, 24) },
+      // sprint 580 — and sprung plates for the toothless: the under
+      // strips what the house pries out — a cocked jaw sells cheap
+      // because the scavenger never runs out of them.
+      { id: 'springPart', price: rng.int(12, 18) },
     ];
     // seeded pick of 2
     const first = rng.int(0, stock.length - 1);
@@ -1221,7 +1228,7 @@ export class Game {
       // for dropped coin and wire. The spill window is a race, not a
       // timer — the pile is safe only while no scavenger is in reach.
       nearestSpill: (x, z, maxD, kinds = ['pouch', 'coil', 'wrap']) => {
-        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell'; bait?: boolean } | null = null;
+        let best: { x: number; z: number; kind: 'pouch' | 'coil' | 'wrap' | 'wedge' | 'lamp' | 'shell' | 'spring'; bait?: boolean } | null = null;
         let bd = maxD;
         if (kinds.includes('pouch')) for (const w of this.droppedPouches) {
           const d = Math.hypot(w.x - x, w.z - z);
@@ -1259,6 +1266,12 @@ export class Game {
           if (w.batt > 0) continue;
           const d = Math.hypot(w.x - x, w.z - z);
           if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'shell' }; }
+        }
+        // sprint 578 — loose plates read like every other pile: the
+        // floorkeeper tidies them, the under folds them into stock.
+        if (kinds.includes('spring')) for (const w of this.droppedSprings) {
+          const d = Math.hypot(w.x - x, w.z - z);
+          if (d < bd) { bd = d; best = { x: w.x, z: w.z, kind: 'spring' }; }
         }
         return best;
       },
@@ -1317,6 +1330,14 @@ export class Game {
             return { kind: 'shell' };
           }
         }
+        if (take.spring) {
+          const si = this.droppedSprings.findIndex((w) => Math.hypot(w.x - x, w.z - z) < 0.55);
+          if (si >= 0) {
+            this.droppedSprings.splice(si, 1);
+            this.mintSpringDrops();
+            return { kind: 'spring' };
+          }
+        }
         return null;
       },
       // sprint 489 — a pocketed chock spills back as kicked-wedge drop
@@ -1363,6 +1384,8 @@ export class Game {
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         for (const w of this.droppedCoils)
           if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
+        for (const w of this.droppedSprings)
+          if (Math.hypot(w.x - x, w.z - z) < 0.35) boot(w, 0.5);
         // sprint 543 — and the light is bootable too: a striding walker
         // kicks the burning lamp and it rolls, still lit — the lure
         // moves under the house's own feet.
@@ -1373,7 +1396,7 @@ export class Game {
         if (hit) {
           this.mintWedgeDrops(); this.mintWrapDrops();
           this.mintPouchDrops(); this.mintCoilDrops();
-          this.mintLampDrops();
+          this.mintLampDrops(); this.mintSpringDrops();
           this.syncLampLights();
           this.sound.emit({ x, y: 0.3, z, intensity: 0.34,
             category: 'item', caption: '[a boot finds the loose goods]' });
@@ -1385,6 +1408,12 @@ export class Game {
         this.mintWedgeDrops();
         this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
           category: 'item', caption: '[chocks scatter on the boards]' });
+      },
+      spillSprings: (pos, n) => {
+        for (let i = 0; i < n; i++) this.droppedSprings.push({ x: pos.x + i * 0.16, z: pos.z + i * 0.05 });
+        this.mintSpringDrops();
+        this.sound.emit({ x: pos.x, y: 0.3, z: pos.z, intensity: 0.28,
+          category: 'item', caption: '[sprung plates scatter on the boards]' });
       },
       trailOwed: () => this.paperTrail,
       hazardEvidence: (key, x, z, r) => {
@@ -1501,6 +1530,10 @@ export class Game {
   /** Door chocks the bellman kicked loose — they slid under the leaf
    *  and lie as gatherable loot until walked back for. */
   private kickedWedges: { x: number; z: number }[] = [];
+  /** sprint 577 — sprung plates as loose goods: left out, spilled,
+   *  or confiscated-and-dropped, they're floor litter like chocks —
+   *  readable, bootable, gatherable. */
+  private droppedSprings: { x: number; z: number }[] = [];
   /** Coils the house worked off a bound leaf — same drop convention:
    *  wire isn't destroyed by the strain, it lands as loot. */
   private droppedCoils: { x: number; z: number }[] = [];
@@ -1749,7 +1782,7 @@ export class Game {
    *  Crouched within reach, a pile offers an anchor a third of a metre
    *  TOWARD you — aim past the pile to pull it a step per hold, instead
    *  of pocketing it. Quiet work: a faint scrape, no sign left. */
-  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil',
+  private mintDragVerb(list: 'pouch' | 'wrap' | 'wedge' | 'coil' | 'spring',
     id: string, w: { x: number; z: number }): void {
     if (!this.player.crouching) return;
     const dx = this.player.pos.x - w.x, dz = this.player.pos.z - w.z;
@@ -1812,6 +1845,21 @@ export class Game {
         holdTime: 0.6, enabled: true, priority: 1, data: { i },
       });
       this.mintDragVerb('pouch', `pouch-drop-drag-${this.space}-${i}`, w);
+    });
+  }
+
+  /** sprint 577 — loose sprung plates: gather-minted like wedge drops,
+   *  one verb per pile, re-minted space-agnostic. */
+  private mintSpringDrops(): void {
+    this.dynamicInteractables = this.dynamicInteractables.filter((x) => !x.id.startsWith('spring-drop-'));
+    this.droppedSprings.forEach((w, i) => {
+      this.dynamicInteractables.push({
+        kind: 'springDrop', id: `spring-drop-${this.space}-${i}`,
+        pos: { x: w.x, y: 0.15, z: w.z },
+        prompt: 'Gather the sprung plate',
+        holdTime: 0.6, enabled: true, priority: 1, data: { i },
+      });
+      this.mintDragVerb('spring', `spring-drop-drag-${this.space}-${i}`, w);
     });
   }
   /** sprint 533 — 'Set the lamp down' / sprint 535 — 'Pick the lamp
@@ -2224,6 +2272,17 @@ export class Game {
       if (wired) {
         return { sfx: 'floor-creak', sev: 'info' as const,
           text: '[fresh paper waits past the leaf — the wire you slid]' };
+      }
+    }
+    // sprint 579 — and the seam answers your own plate too: a spring
+    // you cocked holds still past the leaf — quiet work, still yours.
+    {
+      const set = this.setTraps.find((t) =>
+        t.room === target.index
+          && Math.hypot(t.x - door.pos.x, t.z - door.pos.z) < 3);
+      if (set) {
+        return { sfx: 'floor-creak', sev: 'info' as const,
+          text: '[a plate waits cocked past the leaf — the spring you set]' };
       }
     }
     // sprint 523 — the seam carries the stash's hum too: the ear tells
@@ -3021,6 +3080,24 @@ export class Game {
         data: {},
       });
     }
+    // sprint 577 — and the plate is loose goods too: 'Leave a
+    // spring out' sets one down where the floorkeeper reads it —
+    // bait or donation, same as the chock.
+    if (this.player.crouching
+      && this.inventory.some((i) => i.id === 'springPart' && i.count > 0)
+      && !this.droppedSprings.some((w) =>
+        Math.hypot(w.x - this.player.pos.x, w.z - this.player.pos.z) < 1.2)
+      && !this.setTraps.some((t) =>
+        Math.hypot(t.x - this.player.pos.x, t.z - this.player.pos.z) < 1.4)) {
+      const lk = v3(); this.player.lookDir(lk);
+      this.interaction.add({
+        kind: 'baitSpring', id: `baitspring-${this.space}:${this.currentRoom}`,
+        pos: { x: this.player.pos.x + lk.x * 0.6, y: 0.25, z: this.player.pos.z + lk.z * 0.6 },
+        prompt: 'Leave a spring out',
+        holdTime: 0.8, enabled: true, priority: 1,
+        data: {},
+      });
+    }
     // sprint 533 — 'Set the lamp down': the pulse lamp keeps burning
     // where you kneel. Light the wall eyes drink (s534), a hum the
     // ears follow — a lure that pays with its own battery and dies on
@@ -3046,7 +3123,7 @@ export class Game {
     {
       const stackN = (id: ItemId) =>
         this.inventory.find((i) => i.id === id)?.count ?? 0;
-      const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil');
+      const n = stackN('feltWrap') + stackN('doorChock') + stackN('wireCoil') + stackN('springPart');
       if (this.player.crouching && n > 0) {
         const lk = v3(); this.player.lookDir(lk);
         this.interaction.add({
@@ -4015,6 +4092,7 @@ export class Game {
         const arr = dd.list === 'pouch' ? this.droppedPouches
           : dd.list === 'wrap' ? this.droppedWraps
           : dd.list === 'wedge' ? this.kickedWedges
+          : dd.list === 'spring' ? this.droppedSprings
           : this.droppedCoils;
         const w = arr.find((p) => Math.abs(p.x - dd.x) < 0.06 && Math.abs(p.z - dd.z) < 0.06);
         if (!w) { it.enabled = false; return; }
@@ -4026,7 +4104,7 @@ export class Game {
           if (to) { w.x = to.x; w.z = to.z; }
         }
         this.mintPouchDrops(); this.mintWrapDrops();
-        this.mintWedgeDrops(); this.mintCoilDrops();
+        this.mintWedgeDrops(); this.mintCoilDrops(); this.mintSpringDrops();
         this.sound.emit({ x: w.x, y: 0.2, z: w.z, intensity: 0.14 * this.wantedPull,
           category: 'item', caption: '[the pile scrapes across the boards]' });
         return;
@@ -4054,15 +4132,17 @@ export class Game {
           if (it2) it2.count = 0;
           return n;
         };
-        const wraps = grab('feltWrap'), chocks = grab('doorChock'), coils = grab('wireCoil');
-        if (!wraps && !chocks && !coils) { it.enabled = false; return; }
+        const wraps = grab('feltWrap'), chocks = grab('doorChock'), coils = grab('wireCoil'),
+          springs = grab('springPart');
+        if (!wraps && !chocks && !coils && !springs) { it.enabled = false; return; }
         const lk = v3(); this.player.lookDir(lk);
         const sx = this.player.pos.x + lk.x * 0.55, sz = this.player.pos.z + lk.z * 0.55;
         const spot = this.scatterSpot(sx, sz, Math.atan2(lk.z, lk.x), 0.1) ?? { x: sx, z: sz };
         if (wraps) this.droppedWraps.push({ x: spot.x, z: spot.z, n: wraps });
         for (let k = 0; k < chocks; k++) this.kickedWedges.push({ x: spot.x + k * 0.07, z: spot.z + k * 0.04 });
         for (let k = 0; k < coils; k++) this.droppedCoils.push({ x: spot.x - k * 0.08, z: spot.z - k * 0.03 });
-        this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops();
+        for (let k = 0; k < springs; k++) this.droppedSprings.push({ x: spot.x + k * 0.09, z: spot.z - k * 0.06 });
+        this.mintWrapDrops(); this.mintWedgeDrops(); this.mintCoilDrops(); this.mintSpringDrops();
         const marked = this.inventory.some((i) => this.hotItems.has(i.id) && i.count > 0);
         this.cue('pickup', it.pos, marked
           ? '[you spill the take — the marked stock stays sewn to your back]'
@@ -6383,6 +6463,33 @@ export class Game {
           '[the bait is set — the floor will come fold it in]');
         return;
       }
+      case 'baitSpring': {
+        // sprint 577 — a sprung plate is bait-grade litter: set down,
+        // it reads as spill to the floorkeeper's fold-back and to the
+        // under's stoop — dead goods, both jurisdictions' food.
+        it.enabled = false;
+        const wi = this.inventory.findIndex((i) => i.id === 'springPart' && i.count > 0);
+        if (wi < 0) return;
+        this.inventory[wi].count--;
+        const lk = v3(); this.player.lookDir(lk);
+        const bx = this.player.pos.x + lk.x * 0.6, bz = this.player.pos.z + lk.z * 0.6;
+        this.droppedSprings.push({ x: bx, z: bz });
+        this.mintSpringDrops();
+        this.audio.play('trap-click', { x: bx, y: 0.2, z: bz }, '[the plate clinks down — loose metal on the boards]');
+        this.sound.emit({ x: bx, y: 0.25, z: bz, intensity: 0.22 * this.wantedPull, category: 'item', caption: '' });
+        return;
+      }
+      case 'springDrop': {
+        // gather the loose plate — your litter comes home, same as
+        // the chock's
+        it.enabled = false;
+        const i2 = (it.data as { i: number }).i;
+        this.droppedSprings.splice(i2, 1);
+        this.mintSpringDrops();
+        this.giveItem('springPart', 1);
+        this.audio.play('trap-click', it.pos, '[the plate comes back to your hand]');
+        return;
+      }
       case 'baitWedge': {
         // sprint 492 — the chock lure: a set-down wedge reads exactly
         // like a kicked one to the floorkeeper's tidying (s489).
@@ -7448,6 +7555,8 @@ export class Game {
       lidFiled: [...this.lidFiled],
       kickedWedges: this.kickedWedges.length > 0
         ? this.kickedWedges.map((w) => ({ ...w })) : undefined,
+      droppedSprings: this.droppedSprings.length > 0
+        ? this.droppedSprings.map((w) => ({ ...w })) : undefined,
       droppedWraps: this.droppedWraps.length > 0
         ? this.droppedWraps.map((w) => ({ ...w })) : undefined,
       droppedCoils: this.droppedCoils.length > 0
@@ -7556,7 +7665,8 @@ export class Game {
             // pile left lying reads at the end
             spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
               + this.droppedWraps.reduce((n, w) => n + w.n, 0)
-              + this.kickedWedges.length + this.droppedCoils.length,
+              + this.kickedWedges.length + this.droppedCoils.length
+              + this.droppedSprings.length,
             // sprint 513 — and what your back kept: the take you died
             // carrying reads beside what the floor and the count kept
             carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -7574,6 +7684,8 @@ export class Game {
             shellsLeft: this.litLamps.filter((l) => l.batt <= 0).length || undefined,
             // sprint 568 — and the eyes your beam held
             eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
+            // sprint 580 — and the plates still cocked on it
+            trapsSet: this.setTraps.length || undefined,
           },
         },
         documents: this.loadDocs(),
@@ -7613,7 +7725,8 @@ export class Game {
         // sprint 500 — and what the floor kept: every pile left lying
         spilled: this.droppedPouches.reduce((n, w) => n + w.n + w.hot, 0)
           + this.droppedWraps.reduce((n, w) => n + w.n, 0)
-          + this.kickedWedges.length + this.droppedCoils.length,
+          + this.kickedWedges.length + this.droppedCoils.length
+          + this.droppedSprings.length,
         // sprint 513 — and what walked out on your back: the take kept
         // its weight to the door
         carried: this.inventory.reduce((n, i) => n + i.count, 0),
@@ -7629,6 +7742,8 @@ export class Game {
         lampsLeft: this.litLamps.filter((l) => l.lit && l.batt > 0).length || undefined,
         // sprint 568 — the eyes your beam held along the way
         eyesDazzled: this.hazard.watchers.filter((w) => w.everDazzled).length || undefined,
+        // sprint 580 — the plates you left cocked on the floor
+        trapsSet: this.setTraps.length || undefined,
       },
     }, paused: true });
     document.exitPointerLock?.();

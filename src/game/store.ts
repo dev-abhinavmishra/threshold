@@ -158,6 +158,8 @@ export interface BooksClosed {
   shellsLeft?: number;
   /** sprint 568 — watchers the held beam ever dazzled */
   eyesDazzled?: number;
+  /** sprint 580 — plates the floor still holds cocked at the end */
+  trapsSet?: number;
 }
 
 export interface CheckpointSave {
@@ -242,6 +244,9 @@ export interface CheckpointSave {
   // a paid hand kept the coin — a staggered grafter spills its pouch:
   // floor coin waits as loot, marked coin still marked
   droppedPouches?: { x: number; z: number; n: number; hot: number }[];
+  // sprint 577 — sprung plates set out, spilled, or dropped loose:
+  // litter waits as gatherable goods like the kicked chock
+  droppedSprings?: { x: number; z: number }[];
   /** The grafter's relocated wire — armed or dead, the graft persists
    *  where it was laid (dead ones also ride deadHazards). */
   graftedWires?: { x: number; z: number; room: number; armed: boolean; planted?: boolean; claimed?: boolean }[];
