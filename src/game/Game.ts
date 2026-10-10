@@ -1307,6 +1307,20 @@ export class Game {
           }
           return 'belt';
         }
+        // sprint 677 — or your eye's glass walks off: a 'work' mark by
+        // a live player-seated socket and the lens comes out in ITS
+        // hands, carried whole toward a pried socket it can claim.
+        // The socket ends like the house's tear leaves it — dead,
+        // glassless, nobody's — except the lens never touches the
+        // boards: it rides under the rubble as graft stock.
+        const w = this.hazard.watchers.find((ww) => ww.owner === 'player'
+          && ww.lensed !== false && near(ww.pos));
+        if (w) {
+          w.dead = true;
+          w.lensed = false;
+          delete w.owner; // the glass is out — dead socket, nobody's
+          return 'lens';
+        }
         return null;
       },
       spillSnare: (pos, room) => this.spillSnare(pos, room),

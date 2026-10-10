@@ -794,6 +794,22 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(spSrc).toContain("this.carriedKind = got");
     expect(spSrc).toContain('this.graftTarget = null');
   });
+
+  it('the glass walks off — your eye\'s lens rides under the rubble', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR seated eye only — a lensed socket you own is
+    // meat; a pried or house socket is outside its hands
+    expect(strip).toContain("ww.owner === 'player'\n          && ww.lensed !== false");
+    expect(strip).toContain('w.lensed = false');
+    expect(strip).toContain('w.dead = true');
+    expect(strip).toContain("return 'lens'");
+    // the socket ends like the tear leaves it — nobody's — but the
+    // glass never drops: it rides as graft stock, so the lens must
+    // NOT land in the floor pile the house's tear mints
+    const tearStrip = strip.slice(strip.indexOf("return 'lens'") - 400, strip.indexOf("return 'lens'"));
+    expect(tearStrip).not.toContain('droppedLenses.push');
+  });
 });
 
 
