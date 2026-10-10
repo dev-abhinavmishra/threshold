@@ -16,7 +16,7 @@ import { box as texBox } from './props';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MILESTONE_TELLS } from './generator';
-import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine } from './decals';
+import { grimeStreak, floorStain, ceilingDamp, poster, warningStripe, cobweb, decalQuad, bloodPool, bloodSmear, scratchMarks, handPrints, brickPatch, peeledWallpaper, footprintTrail, crackDecal, thresholdWear, chalkMark, wayArrow, dragTrail, wallNotice, rustStreak, frameGhost, ashPile, tallyMarks, dampSpot, swingWear, dustShadow, votiveWax, patchPlug, cornerScuff, oldNumber, nailRow, dustFall, wornLane, inspectionStamp, mouseHole, chasePatch, oldMap, registerPage, evictionSlip, repairTicket, photoStrip, droppedGlove, inkSpill, fallenSpecs, plasterFall, mothDrift, drainHalo, waterline, sootStain, lostLetter, fistMark, smokeStain, underBed, kickSplit, bodyOutline, drapeGhost, switchPolish, growthMarks, sillDamp, radiatorBleed, burnMarks, waxSheen, ventDust, heelScuff, sconceSoot, clockGhost, knobShine, railGhost, chairRub, phoneGhost, mouldBloom, keyBoard, luggageScuff, doorDrag, hookWear, ceilingHair, cartTracks, groutLines, sunFade, hingeRust, lampGhost, rockerArcs, cordWear, nightGlow, laceShadow, greaseCloud, rugCurl, pipeSweat, frameLean, hearthSpill, crateSplinters, umbrellaRing, knotHoles, dustShaft, flueStain, plasterBulge, doorDent, rustHalo, hookSag, leafLitter, bellRose, keyholeWear, curtainShade, lathExpose, drainRust, underbedHaze, paperPeel, tileCrack, coalDust, coatGhost, boxRot, legRings, railDust, basketShed, baseGrime, doorDrift, battenGhost, jugRing, clawMarks, lampSoot, plasterBloom, emberPits, fingerTrace, mopArcs, ladderRub, boilerFlake, frameRattle, wheelRuts, plantDeath, stoolDrag, ladderFeet, viceGrit, barrelRings, landingWear, cageRattle, callGrub, tonerDrift, bootPrints , beamDust, bucketRing, hoseScuff, ocheLine, lockerKick, pumpSeep, mailDrift, sootFan, fuseTally, hatchGrease, bunkBoots, hookShadow, chainDrag } from './decals';
 
 export interface BuiltRoom {
   group: THREE.Group;
@@ -2872,6 +2872,155 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       wallDecal(hw, hoseScuff(rng), 0.8 + rng.float() * 0.2, 0.9 + rng.float() * 0.2, along, 1.4 + rng.float() * 0.3);
       const hs = group.children[group.children.length - 1];
       if (hs && !hs.name) hs.name = 'hose-scuff';
+    }
+
+    // The lockers kept the kicks — a scuffed band runs the floor
+    // in front of every row where the doors took boots.
+    if (isUnder) {
+      const done = new Set<string>();
+      for (const p of spec.props) {
+        if (p.kind !== 'locker' && p.kind !== 'cageLocker') continue;
+        const gx = Math.round(p.x), gz = Math.round(p.z);
+        if (done.has(`${gx}:${gz}`)) continue;
+        done.add(`${gx}:${gz}`);
+        if (rng.float() >= 0.8) continue;
+        const lk = decalQuad(lockerKick(rng), 1.5 + rng.float() * 0.5, 0.7);
+        lk.name = 'locker-kick';
+        lk.rotation.x = -Math.PI / 2;
+        const yaw = p.yaw ?? 0;
+        lk.rotation.z = yaw + (rng.float() - 0.5) * 0.15;
+        // step off the wall face toward the room
+        const ox = Math.sin(yaw) * 0.5, oz = Math.cos(yaw) * 0.5;
+        lk.position.set(p.x + ox, 0.0085, p.z + oz);
+        group.add(lk);
+      }
+    }
+
+    // The pumps kept their seep — a drip line every sump leaves
+    // walking toward the floor's lowest word.
+    if (isUnder) {
+      const drain = spec.props.find((p) => p.kind === 'grateDrain');
+      for (const p of spec.props) {
+        if (p.kind !== 'sumpPump' || rng.float() >= 0.75) continue;
+        const ps = decalQuad(pumpSeep(rng), 1.1 + rng.float() * 0.3, 1.1 + rng.float() * 0.3);
+        ps.name = 'pump-seep';
+        ps.rotation.x = -Math.PI / 2;
+        ps.rotation.z = drain ? Math.atan2(drain.x - p.x, drain.z - p.z) + Math.PI : rng.float() * Math.PI * 2;
+        ps.position.set(p.x, 0.009, p.z);
+        group.add(ps);
+      }
+    }
+
+    // The mail kept drifting — envelope fans under every cart and
+    // cubby that never finished the round.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'mailCart' && p.kind !== 'stackShelf') continue;
+        if (rng.float() >= 0.7) continue;
+        const md = decalQuad(mailDrift(rng), 1.0 + rng.float() * 0.4, 1.0 + rng.float() * 0.4);
+        md.name = 'mail-drift';
+        md.rotation.x = -Math.PI / 2;
+        md.rotation.z = rng.float() * Math.PI * 2;
+        md.position.set(p.x + (rng.float() - 0.5) * 0.6, 0.008, p.z + (rng.float() - 0.5) * 0.6);
+        group.add(md);
+      }
+    }
+
+    // The drum kept blowing back — soot fans blow sideways off the
+    // burn room's mouth, the scorched signature of a cheap fire.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'boilerDrum' || rng.float() >= 0.85) continue;
+        const sf = decalQuad(sootFan(rng), 1.4 + rng.float() * 0.4, 1.4 + rng.float() * 0.4);
+        sf.name = 'soot-fan';
+        sf.rotation.x = -Math.PI / 2;
+        sf.rotation.z = rng.float() * Math.PI * 2;
+        sf.position.set(p.x + (rng.float() - 0.5) * 0.4, 0.0092, p.z + (rng.float() - 0.5) * 0.4);
+        group.add(sf);
+      }
+    }
+
+    // The panels kept the count — chalk tallies beside every box
+    // that died often enough to earn one.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'breakerPanel' && p.kind !== 'powerBox' && p.kind !== 'utilityBox') continue;
+        if (rng.float() >= 0.7) continue;
+        // tally rides the wall just beside the panel's face
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = (hw === 'e' || hw === 'w' ? p.z : p.x) + (rng.float() < 0.5 ? -0.55 : 0.55);
+        wallDecal(hw, fuseTally(rng), 0.5 + rng.float() * 0.15, 0.5 + rng.float() * 0.15, along, (p.y ?? 1.0) + 0.15);
+        const ft = group.children[group.children.length - 1];
+        if (ft && !ft.name) ft.name = 'fuse-tally';
+      }
+    }
+
+    // The hatches kept the grease — smears under every dumbwaiter
+    // lip where the cable and thumbs ran.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'dumbwaiter' && p.kind !== 'dumbWaiterDoor') continue;
+        if (rng.float() >= 0.8) continue;
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+        wallDecal(hw, hatchGrease(rng), 0.45 + rng.float() * 0.1, 0.85 + rng.float() * 0.2, along, (p.y ?? 0.9) - 0.35);
+        const hg = group.children[group.children.length - 1];
+        if (hg && !hg.name) hg.name = 'hatch-grease';
+      }
+    }
+
+    // The bunk kept the boots — paired prints that paced the nook
+    // and stopped. Nobody swept the under floors.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'bed' && p.kind !== 'bedOld' && p.kind !== 'daybed') continue;
+        if (rng.float() >= 0.75) continue;
+        const bb = decalQuad(bunkBoots(rng), 1.2 + rng.float() * 0.4, 1.2 + rng.float() * 0.4);
+        bb.name = 'bunk-boots';
+        bb.rotation.x = -Math.PI / 2;
+        bb.rotation.z = rng.float() * Math.PI * 2;
+        bb.position.set(p.x + (rng.float() - 0.5) * 0.8, 0.0082, p.z + (rng.float() - 0.5) * 0.8);
+        group.add(bb);
+      }
+    }
+
+    // The racks kept the shadows — peg silhouettes and a reach-shine
+    // where a hundred hands took the same tools down.
+    if (isUnder) {
+      const seen = new Set<string>();
+      for (const p of spec.props) {
+        if (p.kind !== 'rack' && p.kind !== 'toolChest' && p.kind !== 'stackShelf') continue;
+        const gx = Math.round(p.x * 2), gz = Math.round(p.z * 2);
+        if (seen.has(`${gx}:${gz}`)) continue;
+        seen.add(`${gx}:${gz}`);
+        if (rng.float() >= 0.65) continue;
+        const dE = w / 2 - p.x, dW = p.x + w / 2, dN = d / 2 - p.z, dS = p.z + d / 2;
+        const md2 = Math.min(dE, dW, dN, dS);
+        const hw: 'n' | 's' | 'e' | 'w' = md2 === dE ? 'e' : md2 === dW ? 'w' : md2 === dN ? 'n' : 's';
+        const along = hw === 'e' || hw === 'w' ? p.z : p.x;
+        wallDecal(hw, hookShadow(rng), 1.2 + rng.float() * 0.3, 0.8 + rng.float() * 0.15, along, 1.35 + rng.float() * 0.2);
+        const hs = group.children[group.children.length - 1];
+        if (hs && !hs.name) hs.name = 'hook-shadow';
+      }
+    }
+
+    // The freight kept the drag — a polished path where the chain
+    // ran its length out, link kisses and a rust tail.
+    if (isUnder) {
+      for (const p of spec.props) {
+        if (p.kind !== 'chainFence' && p.kind !== 'handTruck' && p.kind !== 'overheadCrane') continue;
+        if (rng.float() >= 0.7) continue;
+        const cd = decalQuad(chainDrag(rng), 1.6 + rng.float() * 0.5, 1.0 + rng.float() * 0.25);
+        cd.name = 'chain-drag';
+        cd.rotation.x = -Math.PI / 2;
+        cd.rotation.z = rng.float() * Math.PI * 2;
+        cd.position.set(p.x + (rng.float() - 0.5) * 0.7, 0.0088, p.z + (rng.float() - 0.5) * 0.7);
+        group.add(cd);
+      }
     }
 
     // The water line — a room that flooded once keeps the tide mark:
