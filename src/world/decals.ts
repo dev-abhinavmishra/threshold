@@ -12339,3 +12339,121 @@ export function jointWeep(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/** Nose print — someone small watched through the glass: a breath
+ * halo, the nose smudge, cheek fade, and one wipe streak. */
+export function nosePrint(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 64, (ctx) => {
+    // the breath halo — fog patch where the face hovered
+    const g = ctx.createRadialGradient(32, 34, 4, 32, 34, 20);
+    g.addColorStop(0, `rgba(200,208,210,${0.22 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(200,208,210,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    // the nose — a vertical smudge with two nostril dots
+    ctx.fillStyle = `rgba(190,196,196,${0.4 + rng.float() * 0.2})`;
+    ctx.beginPath();
+    ctx.ellipse(32, 30, 3.4, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    for (const nx of [30.4, 33.6]) {
+      ctx.fillStyle = `rgba(60,52,44,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(nx, 34.5, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // cheek fade — soft blur where the cheek pressed
+    const c = ctx.createRadialGradient(24, 36, 1, 24, 36, 8);
+    c.addColorStop(0, `rgba(195,202,200,${0.25 + rng.float() * 0.12})`);
+    c.addColorStop(1, 'rgba(195,202,200,0)');
+    ctx.fillStyle = c;
+    ctx.fillRect(0, 0, 64, 64);
+    // wipe streak — one diagonal drag where a hand cleared it
+    ctx.strokeStyle = `rgba(215,220,218,${0.3 + rng.float() * 0.15})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(40 + rng.float() * 6, 46);
+    ctx.quadraticCurveTo(46, 40, 52 + rng.float() * 4, 34 + rng.float() * 4);
+    ctx.stroke();
+  });
+}
+
+/** Ink soak — the bottle went over and the ink drank through the
+ * boards: a dark soak pool, splatter ring, and the pen-drag tail. */
+export function inkSoak(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // the soak pool — dense heart, feathered rim
+    const cx = 38 + rng.float() * 20, cy = 22;
+    const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, 15);
+    g.addColorStop(0, `rgba(20,22,38,${0.75 + rng.float() * 0.15})`);
+    g.addColorStop(0.7, `rgba(24,26,44,${0.4 + rng.float() * 0.2})`);
+    g.addColorStop(1, 'rgba(24,26,44,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 96, 48);
+    // splatter ring — droplets flung off the spill edge
+    for (let i = 0; i < 12; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 12 + rng.float() * 18;
+      ctx.fillStyle = `rgba(22,24,40,${0.45 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6, 0.4 + rng.float() * 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the pen-drag tail — dragged smear where the spill was wiped
+    ctx.strokeStyle = `rgba(26,28,46,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 8, cy + 4);
+    ctx.quadraticCurveTo(cx + 18, cy + 8, cx + 26 + rng.float() * 8, cy + 6 + rng.float() * 4);
+    ctx.stroke();
+    // board-line wick — ink ran along the seams
+    for (let i = 0; i < 3; i++) {
+      const by = 8 + i * 12 + rng.float() * 4;
+      ctx.strokeStyle = `rgba(20,22,36,${0.3 + rng.float() * 0.15})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 10 + rng.float() * 6, by);
+      ctx.lineTo(cx + 10 + rng.float() * 10, by + (rng.float() - 0.5) * 2);
+      ctx.stroke();
+    }
+  });
+}
+
+/** Shoe scuff — the skirting took the kicks: heel drags, toe arcs,
+ * and rubber streaks along the wall's foot. */
+export function shoeScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 48, (ctx) => {
+    // heel drags — long horizontal streaks low on the board
+    for (let i = 0; i < 4; i++) {
+      const y = 34 + rng.float() * 8;
+      const x0 = 8 + rng.float() * 40;
+      ctx.strokeStyle = `rgba(50,42,34,${0.4 + rng.float() * 0.25})`;
+      ctx.lineWidth = 1.4 + rng.float() * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x0, y);
+      ctx.lineTo(x0 + 14 + rng.float() * 18, y - rng.float() * 2);
+      ctx.stroke();
+    }
+    // toe arcs — swung scuffs where toes caught
+    for (let i = 0; i < 3; i++) {
+      const cx = 20 + rng.float() * 56;
+      ctx.strokeStyle = `rgba(60,50,40,${0.35 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, 44, 5 + rng.float() * 4, Math.PI * 1.1, Math.PI * 1.6 + rng.float() * 0.3);
+      ctx.stroke();
+    }
+    // rubber streaks — pale skid sheen above the drags
+    for (let i = 0; i < 3; i++) {
+      const x = 14 + rng.float() * 60;
+      ctx.fillStyle = `rgba(140,128,110,${0.25 + rng.float() * 0.15})`;
+      ctx.save();
+      ctx.translate(x, 28 + rng.float() * 6);
+      ctx.rotate((rng.float() - 0.5) * 0.4);
+      ctx.fillRect(0, 0, 6 + rng.float() * 6, 1.6);
+      ctx.restore();
+    }
+    // dust lip — kicked grit resting on the board top
+    ctx.fillStyle = `rgba(150,138,114,${0.2 + rng.float() * 0.12})`;
+    ctx.fillRect(6, 8, 84, 2);
+  });
+}

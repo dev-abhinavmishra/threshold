@@ -45,6 +45,12 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `matGhost` (96×64): vanished doormat's soil rectangle + frayed rim + corner fibers + grit line; 30% lived-in door feet, floor-anchored via `portLocalPos` − `portOutwardDir(dw)*0.55` (takes a Port, not a wall string).
 - `jointWeep` (48×64): verdigris bloom + crust specks + drip tail + limescale edge; 45% of pipeManifold/indPipes/radiatorTall/radiatorFin props via nearest-wall. Presence tests ×3 green.
 
+## Sprint 671 — the noses pressed, the ink soaked through & the skirting took the kicks
+
+- `nosePrint` (64×64): breath halo + nose smudge w/ nostrils + cheek fade + wipe streak; 30% of `window` props, y≈1.0–1.35 (small watcher height).
+- `inkSoak` (96×48): dense soak pool + splatter ring + pen-drag tail + board-seam wicking; 40% of rooms holding desk/writingDesk props.
+- `shoeScuff` (96×48): heel drags + toe arcs + rubber streaks + dust lip; 35% lived-in walls at skirting height. Presence tests ×3 green.
+
 ## Sprint log
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
