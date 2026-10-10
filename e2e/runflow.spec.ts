@@ -761,7 +761,7 @@ test('the under re-teeth the jaw — a grafted plate answers its own hands, not 
     const springsBefore = ga.droppedSprings.length;
     const restored = ga.entityCtx().rearmHazard?.('work', tp.x, tp.z);
     const springGain = ga.droppedSprings.length - springsBefore;
-    // sprint 676 — and a plate YOU set answers the same wrench: a live
+    // sprint 681 — and a plate YOU set answers the same wrench: a live
     // set-trap + 'work' → off the floor, spring on the boards.
     const stKey = `set:99:${Math.round(tp.x * 4)},${Math.round(tp.z * 4)}`;
     ga.setTraps.push({ key: stKey, x: tp.x + 3, z: tp.z + 3, room: 0 });

@@ -800,6 +800,108 @@ describe('the under grafts back (sprints 646-650)', () => {
 });
 
 
+describe('the under strips your hands (sprints 675-680)', () => {
+  it('stone reads your work — a fresh mark is an armed surface it has pockets for', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const baseSrc = readFileSync('src/entities/base.ts', 'utf8');
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    // the ctx hook exists and the grafter stoops for it
+    expect(baseSrc).toContain('stripWork');
+    expect(spSrc).toContain('stripWork');
+    expect(spSrc).toContain('workMark');
+    // it answers 'work' marks only, and only with empty hands — a full
+    // pocket leaves your work whole, the same rule as dead wire
+    expect(spSrc).toMatch(/ev\.kind === 'work' && this\.carrying === 0/);
+    expect(spSrc).toContain('this.carrying === 0\n      && v3dist(this.pos, this.workMark) < 0.6');
+    // your live wire comes up as its coil — planted and armed, never
+    // house-claimed: a wire the warden re-tied is outside its pocket
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    expect(strip).toContain('hz.armed && hz.planted\n          && !hz.claimed');
+    expect(strip).toContain("return 'coil'");
+    // your cocked plate folds whole — sprung or pried plates are dead
+    // work; the 'spring' sign already owns their answer
+    expect(strip).toContain('this.snappedTraps.has(tt.key)');
+    expect(strip).toContain('this.priedTraps.has(tt.key)');
+    expect(strip).toContain("return 'plate'");
+    // the plate leaves the snap loops and the mint on the way out
+    expect(strip).toContain('this.liveTraps.splice');
+    expect(strip).toContain('this.trapPos.delete(t.key)');
+  });
+
+  it('the muscle walks off — your wheel\'s belt rides under the rubble', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR belted wheel only — the under has no pocket for
+    // the house's live work, and never strips its own grafts. A
+    // chocked wheel (dead:true, still belted) is fair meat, same as
+    // the house's pull.
+    expect(strip).toContain("ff.owner === 'player'\n          && ff.belted !== false");
+    expect(strip).toContain('f.belted = false');
+    expect(strip).toContain('delete f.owner');
+    expect(strip).toContain("return 'belt'");
+    // a wedge in the wheel skids loose like the pull leaves it — the
+    // chock lands as loot, never swallowed
+    expect(strip).toContain('this.kickedWedges.push');
+    // the belt keeps its kind — it heads for a dead housing, not the
+    // coil pile, and the strip rescans substrates it may have made
+    expect(spSrc).toContain("this.carriedKind = got");
+    expect(spSrc).toContain('this.graftTarget = null');
+  });
+
+  it('the glass walks off — your eye\'s lens rides under the rubble', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR seated eye only — a lensed socket you own is
+    // meat; a pried or house socket is outside its hands
+    expect(strip).toContain("ww.owner === 'player'\n          && ww.lensed !== false");
+    expect(strip).toContain('w.lensed = false');
+    expect(strip).toContain('w.dead = true');
+    expect(strip).toContain("return 'lens'");
+    // the socket ends like the tear leaves it — nobody's — but the
+    // glass never drops: it rides as graft stock, so the lens must
+    // NOT land in the floor pile the house's tear mints
+    const tearStrip = strip.slice(strip.indexOf("return 'lens'") - 400, strip.indexOf("return 'lens'"));
+    expect(tearStrip).not.toContain('droppedLenses.push');
+  });
+
+  it('the graft wears your face — the strip site is the site it seeds', () => {
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // after a muscle/glass strip the grafter asks the floor for the
+    // substrate at the MARK — the fresh kill — so your own housing
+    // rises under new hands, not a farther dead one it smelled first
+    const stooped = spSrc.slice(spSrc.indexOf('const got = c.stripWork'));
+    expect(stooped).toContain("c.nearestGraft?.(workNear.x, workNear.z, 1.6");
+    expect(stooped).toContain("got === 'belt' ? 'wheel' : 'socket'");
+    // and the graft itself still claims the substrate for the under —
+    // owner:'under' is what puts it outside the house's re-engagement
+    const graft = gameSrc.slice(gameSrc.indexOf('graft: (x, z'));
+    expect(graft).toContain("f.owner = 'under'");
+    expect(graft).toContain("w.owner = 'under'");
+  });
+
+  it('the brass walks off — the under unscrews what the house only pinches', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    // 'work' near YOUR threaded line — valved is the meat; a crimped
+    // line still wears the valve so dead is no shelter
+    expect(strip).toContain("s.owner === 'player'\n          && s.valved !== false");
+    expect(strip).toContain('st.valved = false');
+    expect(strip).toContain('st.dead = true');
+    expect(strip).toContain("return 'throat'");
+    // the kill is permanent: the house's line re-lay already refuses a
+    // stripped vent — no throat, no pressure, ever
+    const relay = gameSrc.slice(gameSrc.indexOf("kind === 'line'"));
+    expect(relay).toContain('st.valved !== false');
+    // and stone has no pocket for steam — the brass folds to wire, so
+    // no carriedKind keeps it out of the graft walk
+    const spSrc = readFileSync('src/entities/setpieces.ts', 'utf8');
+    expect(spSrc).toContain("got === 'belt' || got === 'lens'");
+  });
+});
+
+
 describe('the floorkeeper sweeps the lid (sprints 652-656)', () => {
   it("'work' near a stuffed lid tips it — the take comes out as piles", () => {
     const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
@@ -918,7 +1020,7 @@ describe('the under re-teeth the jaw (sprints 673-675)', () => {
     expect(gameSrc).toContain('this.snappedTraps.add(pk)');
     expect(baseSrc).toContain("'platePull'");
     expect(corridorSrc).toContain("restored === 'platePull'");
-    // sprint 676 — and YOUR set jaw answers the same wrench: the pull
+    // sprint 681 — and YOUR set jaw answers the same wrench: the pull
     // strips the plate off setTraps/liveTraps/trapPos, spring → pile
     expect(gameSrc).toContain('this.setTraps.find((t)');
     expect(gameSrc).toContain('this.setTraps.splice(si, 1)');

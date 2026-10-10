@@ -2,13 +2,29 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
-## Sprint 676–678 — your jaw answers too (mechanics lane)
+## Sprint 681–683 — your jaw answers too (mechanics lane)
 
-- **676** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.
-- **677** the cue widens: 'a jaw that was never the house's' covers both foreign sets (the under's graft and your own plant) under the one wrench. The 'work'-answers map is now complete across every goods surface: wheel (pull), eye (lensTear/reclaim), under jaws and your jaws (platePull), the lid (lidSweep).
-- **678** pins + live: contract 55/55 holds the pair (grafted jaw, set jaw → same wrench); the runflow leg's second stage seeds a live setTrap + 'work' → `platePull`, plate gone, spring on the boards.
+- **681** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.
+- **682** the cue widens: 'a jaw that was never the house's' covers both foreign sets (the under's graft and your own plant) under the one wrench. The 'work'-answers map is now complete across every goods surface: wheel (pull), eye (lensTear/reclaim), under jaws and your jaws (platePull), the lid (lidSweep).
+- **683** pins + live: contract 55/55 holds the pair (grafted jaw, set jaw → same wrench); the runflow leg's second stage seeds a live setTrap + 'work' → `platePull`, plate gone, spring on the boards.
 
 Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, the 'work'-streak escalation surface (wanted already tightens — a distinct streak mechanic would need its own design), and a gather-side read: the house's pull leaves YOUR sign standing while it takes the metal — a second 'work' near the same spot could name a repeat offender (pair with the streak idea or drop).
+
+
+## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
+
+- **675** the asymmetry: the house has FIVE 'work' answers (crimp, pull, tear, sweep, grip) and the grafter already reads 'work' marks — but only dragged to them and ground the floor. New ctx hook `stripWork(x,z)` + a stoop-strip in the grafter: a fresh 'work' mark (`scentT` arming, `carrying===0`) is an armed surface. First two pockets: your live planted wire (`armed && planted && !claimed`) comes up as its coil via `removeSnare`; your cocked plate (`setTraps` minus `snappedTraps`/`priedTraps`) folds into stock and leaves every snap loop (`liveTraps.splice`, `trapPos.delete`). Claimed wires are the house's — outside its pocket.
+- **676** your wheel's muscle walks off: 'work' near a `owner==='player'` belted fan → `dead=true, belted=false, delete owner` → the belt rides as `carriedKind='belt'` — never touches the boards. A chocked wheel (`dead:true`, still belted) is fair meat — same as the pull — and the kicked chock lands as loot (`kickedWedges` + `mintWedgeDrops`), never swallowed. `graftTarget=null` rescan: the strip may have made substrate.
+- **677** your eye's glass walks off: `owner==='player'` lensed watcher → dead/glassless/nobody's → `carriedKind='lens'` — graft stock, not the floor pile the tear mints.
+- **678** the graft wears your face: after a muscle/glass strip the grafter re-queries `nearestGraft(mark,1.6,kind)` — the fresh kill is the site its goods seek — so your own housing rises under new hands where you left it, not a farther dead one. Existing `graft()` claims `owner:'under'` and signs 'work' under `grafter:${spawnRoom}`.
+- **679** the brass walks off: 'work' near your threaded line (`owner==='player' && valved!==false`) → `valved=false, dead=true, delete owner` — the PERMANENT kill a crimp never was (house pinches, under unscrews; `valved===false` blocks the line re-lay forever). A crimped line still wears the valve — `dead` is no shelter. Stone has no pocket for steam: no `carriedKind`, the brass folds to wire stock.
+- **680** e2e leg (`props.spec.ts`): seeds one of each armed surface → drives `ctx.stripWork(pos)` → 'coil'/'plate'/'belt'/'lens'/'throat' all return and leave honest corpses; under-owned wheels and far marks answer nothing.
+
+Traps: dispatch order is coil→plate→belt→lens→throat, first `near()` match wins — a mark mid-cluster answers whichever armed surface it names first. `stripWork` signs nothing itself — the conversion sign lands when `graft()` threads the stolen goods. The grafter only stoops while empty-handed and idle; a grafter carrying a claim ignores your fresh work until it settles.
+
+
+
+
 
 ## Sprint 673–675 — the under re-teeth the jaw (third graft substrate)
 
@@ -17,6 +33,7 @@ Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's 
 - **675** the house answers — a fifth 'work' dispatch before the lidSweep: `platePull` wrenches the under's teeth (jurisdiction cleared, jaw snapped dead, `springPart` on the boards). Corridor cue + epitaph `graftedWork` counts jaws. Contract pins 55/55; runflow leg green live.
 
 Next: the under's graft family is complete (wheel/eye/plate). Below that: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, and the 'work'-streak escalation surface (repeated marks tighten patrols).
+
 
 ## Sprint 663–665 — the wire walks under the knee (mechanics lane)
 
@@ -51,11 +68,32 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - `vaporGhost` (96×96): condensation bloom + drip trails + mineral ring; 40% wet rooms (maintenance/unlit/under — inline predicate, `wetRoom` const declared later in block = TDZ trap). `'bookcase'` is NOT a PropKind — only `bookshelf`. Presence tests ×3 green.
 
 ## Fixes — singleton prop decals + review debt
+- `pinLines` gate removed (`rng.bool(0.5)` → unconditional): routingBoard is one-per-run at milestoneSpecs.ts:336 — same index-seeded trap as speakingTube. Its s534 presence test went cold; now green.
+
 
 - **Index-seeded rng trap**: `buildRoomMesh` derives its rng as `roomStream('dressing', index*31+7+index)` — SEED-INDEPENDENT. A `rng.bool()` gate on a prop that exists once in the world (e.g. `speakingTube` in the custodian milestone) is either always-on or always-off forever; when the custodian's index drifted 51→52, the 60% tube-lip roll went permanently cold (presence test failure). Singleton authored props must not gate decals on the builder rng — `speakingTube` tube-lip is now unconditional. Audit before adding gated decals to one-of-a-kind props.
 - PR #218 leftover: `till-scratch` z epsilon 0.004→0.03 so it clears the till's opaque front.
 
+## Sprint 670 — the putty cracked, the mats wore through & the joints wept green
+
+- `puttyCrack` (96×48): crazed putty bead + crack net + lifted flakes + glass-edge grime; 45% of `window` props.
+- `matGhost` (96×64): vanished doormat's soil rectangle + frayed rim + corner fibers + grit line; 30% lived-in door feet, floor-anchored via `portLocalPos` − `portOutwardDir(dw)*0.55` (takes a Port, not a wall string).
+- `jointWeep` (48×64): verdigris bloom + crust specks + drip tail + limescale edge; 45% of pipeManifold/indPipes/radiatorTall/radiatorFin props via nearest-wall. Presence tests ×3 green.
+
+## Sprint 671 — the noses pressed, the ink soaked through & the skirting took the kicks
+
+- `nosePrint` (64×64): breath halo + nose smudge w/ nostrils + cheek fade + wipe streak; 30% of `window` props, y≈1.0–1.35 (small watcher height).
+- `inkSoak` (96×48): dense soak pool + splatter ring + pen-drag tail + board-seam wicking; 40% of rooms holding desk/writingDesk props.
+- `shoeScuff` (96×48): heel drags + toe arcs + rubber streaks + dust lip; 35% lived-in walls at skirting height. Presence tests ×3 green.
+
+## Sprint 672 — they taped the mirror, the hand pressed the door & the cord chewed the plaster
+
+- `mirrorTape` (96×96): crossing adhesive strips + backing wrinkles + peel ghost + dust frame + clean-glass patch; 35% of `mirror` props.
+- `glovePrint` (64×64): five finger pads + palm bloom + drag-off smear + dust rim; 30% lived-in door jambs at hand height.
+- `cordBite` (48×96): vertical cord-worn groove + swing arcs + disc halo + cap dent + plaster-dust drift; 30% lived-in walls high. Presence tests ×3 green.
+
 ## Sprint log
+
 
 ## Sprint 662 — the beetles bored, the carpet snagged & the seals broke (decals lane)
 
@@ -77,6 +115,7 @@ Next: the third graft substrate (the plate) is the biggest remaining mechanics f
 - **660** contract spec: claim key, `'work'`-only filter, grip not scatter, stashLoad gate, `onDone` release loop, the entity-agnostic `trappedBy` answers.
 - **661** e2e leg (`runflow.spec.ts`): spawn sweep → read its path → seed a stashed lid + `'work'` mark at the midpoint between exitPos and nearest polyline point → step until `trappedBy==='sweep'` → run ends → released. Green at ~13s.
 - **662** trap found: `playwright.config` `reuseExistingServer` serves a STALE dist if a preview is already on :4173 — a green-looking run can test old code. `curl :4173` + kill before diagnosing "impossible" e2e failures. New-Run boot is also >20s now (sibling dressing) — runflow legs use `seededRun`.
+
 
 
 
