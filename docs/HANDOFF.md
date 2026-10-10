@@ -4,6 +4,16 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 ## Sprint log
 
+## Sprint 631–633 — the sills kept their keepers (window-ledge batch)
+
+- `sill-pot` + `sill-stem` dead plants, `sill-candle` stubs,
+  `sill-jar`s, `sill-cloth` folds — 2–3 items per window sill (y 0.95,
+  inset 0.05 off the wall) in livedIn rooms (~70% of windows).
+- Item kinds CYCLE per sill (`(kindStart + i) % 4`), never rolled —
+  windows are rare (~10/seed), so a uniform roll starves edge kinds;
+  keep this pattern whenever a rare host gates a multi-kind batch.
+- All `frameHardware`-kept like the rest of the static dressing.
+
 ## Sprint 628–630 — the wet walls wore their aprons (splash-tile batch)
 
 - `tile-apron` subway-tile slabs (~1.5–1.9m × ~1.35–1.6m, proud of
