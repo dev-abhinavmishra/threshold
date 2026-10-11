@@ -8366,7 +8366,11 @@ Traps: 'Aim the eye' mints only when `this.player.crouching` — tape and aim sh
 - **Spec + sweep** (s598): contract specs pin mint/crouch gate, reclaim path, honest settle, beam read, blink-reassert.
 
 Contract: ownership is now one axis across every hazard kind — wire/coil, valve/line, plate/trap, eye/sweep all carry `owner:'player'`; the house's answer is always in-idiom (re-tie / crimp / re-cock / reclaim), never destruction.
-\n\n## Sprint 706–708 — the walls kept their mantles, the pianos kept their pedals & the mice kept their runs (decals lane)
+\n\n## Sprint 717 — the house counts its marks (decals lane, density budget)
+
+- Audit found mean 57 decals/room, max 107 — over the clean-rooms bar and a draw-call/texture-memory risk.
+- First attempt — a flat 28-instance cap at the tail of `buildRoomMesh` — zeroed whole decal families in dense rooms (40 presence tests red): rooms run ~42 DISTINCT decal types mean (max 87), so any fixed count cap deletes types entirely.
+- Final design — **per-family keep-hash** at tail of `buildRoomMesh`: group `userData.decalMat` meshes by `name`, FNV-1a hash `${name}|${room.index}`, keep the family when hash%1000 < 500 (~50% of a family's rooms keep it, all its instances included). Result: mean types/room 41.6→21.3, mean instances 56→32, every family still appears globally. Removed decals dispose map+material+geometry (they're outside the room's own dispose traversal).\n\n## Sprint 706–708 — the walls kept their mantles, the pianos kept their pedals & the mice kept their runs (decals lane)
 
 - `mantleGlow` — glow+soot above sconces/lanterns.
 - `pipeAsh` — ash+tobacco ghosts on smoking tables (props overlay).
