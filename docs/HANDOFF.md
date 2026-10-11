@@ -2,6 +2,14 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 718–720 — the serving tops kept their rings (decals lane)
+
+- **718** tray rings, cloth folds and dinner rings on the serving tops — `trayRing` (sideboard/consoleTable/teaTrolley/diningTable/merchantCounter), `clothFold` (diningTable/sideboard/linenShelf/stackedLinen/linenPress), `dinnerRing` (diningTable/roundTable/breakTable); horizontal decals at `decalY(kind,dc,1,0.9)+0.004` with random rotation.
+- **719** key frays, soap chips and towel stripes on the service smalls — `keyFray` on keyRack/keyCabinet (front face), `soapChip` on basinSink/washStand/vanityTable tops, `towelStripe` on towelRail/pegRail (front face, lower band).
+- **720** the steps kept the climb — `stairNose` shine band on stairs/grandStair/stairLanding, `bannisterTurn` polish spiral on balustrade/newelPost/railing, `treadScuff` heel arcs on the stair kinds.
+
+All prop-mounted (`props.ts` tail blocks) — keyed per prop kind, `decalY`/`decalDim` for surface height and front-face offset. ~420 decal systems live; the s717 keep-hash keeps each family in ~half its rooms so density stays ~32/room mean.
+
 ## Sprint 681–683 — your jaw answers too (mechanics lane)
 
 - **681** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.
