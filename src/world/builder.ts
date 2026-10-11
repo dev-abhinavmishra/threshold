@@ -6537,6 +6537,33 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     group.add(draft);
   }
 
+  const decalByName = new Map<string, THREE.Mesh[]>();
+  group.traverse((o) => {
+    const om = o as THREE.Mesh;
+    if (om.isMesh && om.userData.decalMat && om.name) {
+      const list = decalByName.get(om.name) ?? [];
+      list.push(om);
+      decalByName.set(om.name, list);
+    }
+  });
+  for (const [name, meshes] of decalByName) {
+    let hh = 2166136261;
+    const key = `${name}|${room.index}`;
+    for (let ci = 0; ci < key.length; ci++) {
+      hh ^= key.charCodeAt(ci);
+      hh = Math.imul(hh, 16777619);
+    }
+    if ((hh >>> 0) % 1000 >= 500) {
+      for (const dm of meshes) {
+        dm.parent?.remove(dm);
+        const dmm = dm.material as THREE.MeshStandardMaterial;
+        dmm.map?.dispose();
+        dmm.dispose();
+        dm.geometry.dispose();
+      }
+    }
+  }
+
   return { group, doorLeaves, lampMeshes, lights, shafts, dust, animated, drips, draft };
 }
 

@@ -8146,3 +8146,26 @@ describe('the tables kept their tiles (sprint 708)', () => {
     expect(n, 'no domino runs').toBeGreaterThan(0);
   });
 });
+
+describe('the house counts its marks (sprint 717)', () => {
+  it('decal families thin per room but never vanish', () => {
+    let max = 0;
+    const counts = new Map<string, number>();
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        let n = 0;
+        built.group.traverse((o) => {
+          if (o.userData?.decalMat && o.name) {
+            n++;
+            counts.set(o.name, (counts.get(o.name) ?? 0) + 1);
+          }
+        });
+        if (n > max) max = n;
+      }
+    }
+    expect(max, `max decal count ${max} over budget`).toBeLessThanOrEqual(60);
+  });
+});
