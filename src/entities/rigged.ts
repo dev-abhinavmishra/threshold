@@ -122,7 +122,7 @@ export function preloadFigures(): void {
     if (cache.has(file) || pending.has(file)) continue;
     pending.add(file);
     loader
-      .loadAsync(`/assets/figures/${file}`)
+      .loadAsync(`assets/figures/${file}`)
       .then((g) => cache.set(file, { scene: g.scene as THREE.Group, animations: g.animations }))
       .catch(() => { /* procedural fallback stays */ })
       .finally(() => pending.delete(file));

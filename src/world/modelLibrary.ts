@@ -959,7 +959,7 @@ export function preloadModels(): void {
       if (cache.has(spec.dir) || pending.has(spec.dir)) continue;
       pending.add(spec.dir);
       loader
-        .loadAsync(`/assets/models/${spec.dir}/model.gltf`)
+        .loadAsync(`assets/models/${spec.dir}/model.gltf`)
         .then((g) => cache.set(spec.dir, bake(normalize(g.scene, spec))))
         .catch(() => { /* fallback stays procedural */ })
         .finally(() => pending.delete(spec.dir));
