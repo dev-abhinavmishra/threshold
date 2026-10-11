@@ -2,6 +2,12 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 730–732 — the serving residue arc (decals lane)
+
+- **730** `scoreTally` chalk count-marks on boards/dartboards/routing boards (35%), `recordRings` vinyl ghosts on shelves/sideboard/recordsCage (25%), `carpetLane` traffic-worn bands down rugs (35%, decalQuad floor).
+- **731** `ashTray` smoked dish + butts + burn crease on side/coffee/dining tables (30%), `soilSpill` planter soil scatter + wilted leaves (40%, under planters — the sibling lane already owns `vaseRing`: concede invented-name collisions to the merged lane), `tableFeet` drag-arc scars beside settled tables (30%).
+- **732** pending.
+
 ## Sprint 720–725 — both books keep the floor (mechanics lane)
 
 - **720** the under strips into the same ledger: every `stripWork` landing now runs `answerWork` — coil/plate/belt/lens/throat all strike the site like the house's dispatch. The signer still owns the strike (`by` within 1.8m): the grafter stripping YOUR sign files YOUR hands again — the under answering your mark is another reader of the same floor. A grafter's own sign strips clean (files nothing, same gate).
