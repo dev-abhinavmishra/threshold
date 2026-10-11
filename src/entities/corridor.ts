@@ -911,8 +911,16 @@ export class Warden extends Entity {
             // sprint 710 — he stands over the filed floor and reads
             // it: the standing order is served (the tally keeps the
             // line; the streak is the escalation, not his detour).
-            this.ctx.cue('floor-creak', this.investigate,
-              '[it reads the floor the register named — your hands have worked here]', { severity: 'warn' });
+            // sprint 744 — but a paid desk can strike the floor's file
+            // while he walked: re-ask the ledger before he reads it —
+            // an unfilled floor is a withdrawn order, not a read.
+            const stillFiled = (this.ctx.filedFloors?.(
+              this.investigate.x, this.investigate.z, 2.6) ?? [])
+              .some((s) => s.strikes >= 2);
+            this.ctx.cue('floor-creak', this.investigate, stillFiled
+              ? '[it reads the floor the register named — your hands have worked here]'
+              : '[it bends for the filed floor — the line was struck out while it walked]',
+              { severity: stillFiled ? 'warn' : 'info' });
           }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
             || this.investigateKind === 'fan' || this.investigateKind === 'blind'

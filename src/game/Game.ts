@@ -4541,7 +4541,11 @@ export class Game {
           this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the tally · ${price} marginalia]`, 'info');
         } else if (this.unpaidHeld >= this.paperTrail) {
           this.unpaidHeld -= 1;
-          this.cue('purchase', it.pos, `[the broker makes a call — a line comes off the register · ${price} marginalia]`, 'info');
+          // sprint 741 — the call reaches the floor's file too: one
+          // worked-floor strike comes off the newest site
+          const unwound = this.unfileWorkSite(1);
+          this.cue('purchase', it.pos,
+            `[the broker makes a call — a line comes off the register${unwound > 0 ? ' · the desk strikes a worked floor' : ''} · ${price} marginalia]`, 'info');
         } else {
           this.paperTrail -= 1;
           this.cue('purchase', it.pos, `[the broker makes a call — a line comes off your file · ${price} marginalia]`, 'info');
@@ -6355,9 +6359,15 @@ export class Game {
         }
         this.chargedImprints(toll, it.pos.x, it.pos.z);
         this.unpaidHeld = 0;
+        // sprint 741 — the detective strikes your name and the floor's
+        // file goes with it: every worked site unwinds
+        const sitesCleared = this.workSites.length;
+        this.unfileWorkSite(99);
         it.enabled = false;
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
-        this.cue('whisper', it.pos, `[paid ${toll} — the detective strikes your name]`);
+        this.cue('whisper', it.pos, sitesCleared > 0
+          ? `[paid ${toll} — the detective strikes your name · ${sitesCleared} worked floor${sitesCleared === 1 ? '' : 's'} come off the book]`
+          : `[paid ${toll} — the detective strikes your name]`);
         (it.data as { detective?: { settled?: () => void } }).detective?.settled?.();
         return;
       }
@@ -7046,8 +7056,18 @@ export class Game {
       }
       case 'wanted': {
         // the sheet prints what the tally says about you — the boards'
-        // readout of the clerk's book, free to read, still named
-        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder, every counter reads the boards, and its doors stick until the count settles]`, 'warn');
+        // readout of the clerk's book, free to read, still named.
+        // sprint 743 — and it names the floor: the newest filed site
+        // is on the sheet, so the boards tell the room your hands
+        // worked twice, not just your face.
+        const cold = this.clock.time - 360;
+        const site = this.workSites.reduce<typeof this.workSites[number] | null>(
+          (best, s) => s.strikes >= 2 && s.lastT >= cold
+            && (!best || s.lastT > best.lastT) ? s : best, null);
+        const floorLine = site
+          ? ` · it names the floor in the ${this.activeRooms().find((r) => r.index === site.room)?.label ?? 'halls'}`
+          : '';
+        this.cue('chalk-mark', null, `[the sheet names your hands — ${this.unpaidTheft} theft${this.unpaidTheft === 1 ? '' : 's'} tallied · the crew listens harder, every counter reads the boards, and its doors stick until the count settles${floorLine}]`, 'warn');
         return;
       }
       case 'wantedTear': {
@@ -8186,7 +8206,13 @@ export class Game {
   private strikeWorkSite(x: number, z: number): void {
     const ev = this.hazard.evidence.find((e) => e.kind === 'work'
       && Math.hypot(e.pos.x - x, e.pos.z - z) < 1.8);
-    if (ev?.by && ev.by !== 'player' && !ev.by.startsWith('eye:')) return;
+    // sprint 742 — the under answers itself: a grafter's own sign no
+    // longer exempts the strike. The floor was worked by SOMEBODY and
+    // the site remembers either way — but the ledger only writes lines
+    // against hands it can name, so 'grafter:N' (and the eye's own
+    // 'eye:N') file the floor without filing a face. The patrol reads
+    // floors, not signers: a twice-struck under floor still pulls him.
+    const namesYou = !ev?.by || ev.by === 'player' || ev.by.startsWith('eye:');
     const cold = this.clock.time - 360;
     let site = this.workSites.find((s) => Math.hypot(s.x - x, s.z - z) < 2.5);
     if (site && site.lastT < cold) site.strikes = 0; // a cold floor is a fresh offense, not a streak
@@ -8205,6 +8231,14 @@ export class Game {
     }
     site.strikes += 1;
     site.lastT = this.clock.time;
+    if (!namesYou) {
+      // the floor is struck but the hands were never yours — the
+      // register keeps the floor anyway; the under pays its own book
+      if (site.strikes >= 2)
+        this.cue('chalk-mark', v3(x, 0.5, z),
+          '[the register keeps this floor — it was not always your hands]', 'warn');
+      return;
+    }
     if (site.strikes >= 3) {
       // sprint 721 — a floor worked past answering is a tally, not a
       // claim: the third strike writes the deeper book too. The count's
@@ -8221,6 +8255,27 @@ export class Game {
       this.cue('chalk-mark', v3(x, 0.5, z),
         '[the register keeps this floor — the same hands have worked it before]', 'warn');
     }
+  }
+
+  /** sprint 741 — the desk amends the floor: paying off the register
+   *  unwinds worked sites too, newest first — a settle wipes the
+   *  whole floor-file, a fixer's call takes one line off the newest
+   *  floor. Sites under two strikes are no longer filed, so the
+   *  patrol's standing order is withdrawn with the line. */
+  private unfileWorkSite(n: number): number {
+    let left = n;
+    while (left > 0) {
+      const site = this.workSites.reduce<typeof this.workSites[number] | null>(
+        // >= keeps the LATER site on a lastT tie — the book is LIFO:
+        // the desk strikes its newest line first, not its oldest
+        (best, s) => s.strikes > 0 && (!best || s.lastT >= best.lastT) ? s : best, null);
+      if (!site) break;
+      site.strikes -= 1;
+      left -= 1;
+      if (site.strikes <= 0)
+        this.workSites.splice(this.workSites.indexOf(site), 1);
+    }
+    return n - left;
   }
 
   /** Every 'work' answer a dispatch lands runs the tally — the

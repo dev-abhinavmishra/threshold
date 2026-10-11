@@ -1087,9 +1087,10 @@ describe('the house keeps a tally (sprints 709-714)', () => {
     for (const a of ['crimp', 'reclaim', 'pull', 'lensTear', 'platePull', 'lidSweep'])
       expect(gameSrc).toContain(`this.answerWork('${a}', x, z)`);
     const tally = gameSrc.slice(gameSrc.indexOf('strikeWorkSite(x: number'));
-    // unsigned/player-signed work is yours — a grafter's own sign
-    // files nothing against you (the under has its own tally)
-    expect(tally).toContain("ev.by !== 'player'");
+    // unsigned/player-signed work names your hands; s742 — a grafter's
+    // own sign still strikes the SITE (the under answers itself) but
+    // the ledger's lines stay gated on a named hand
+    expect(tally).toContain('namesYou');
     expect(tally).toContain("ev.by.startsWith('eye:')");
     // strike two names a repeat offender: every strike past the first
     // writes a register line and counts itself for the epitaph
@@ -1192,6 +1193,52 @@ describe('both books keep the floor (sprints 720-725)', () => {
     // no grapple starts under a knee — the inspector's own hold is
     // the only grip it sets
     expect(roomSrc).toContain("!this.testing.trappedBy || this.testing.trappedBy === 'inspector'");
+  });
+});
+
+
+describe('the tally closes its books (sprints 741-746)', () => {
+  it('the under answers itself — a foreign sign strikes the floor, never a face', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const tally = gameSrc.slice(gameSrc.indexOf('strikeWorkSite(x: number'));
+    // the by-gate no longer returns early — every landing answer
+    // strikes the SITE; the ledger's lines are the part that needs a
+    // named hand (player or an eye's sign)
+    expect(tally).toContain('namesYou');
+    expect(tally).not.toContain("ev.by !== 'player' && !ev.by.startsWith('eye:')) return");
+    expect(tally).toContain('it was not always your hands');
+    // ledger lines stay gated on a named hand
+    expect(tally).toContain('if (!namesYou)');
+  });
+
+  it('the desk amends the floor — settle wipes, the fix unwinds', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    expect(gameSrc).toContain('unfileWorkSite');
+    // the detective's settle clears every worked site
+    const settle = gameSrc.slice(gameSrc.indexOf("case 'settle'"));
+    expect(settle).toContain('this.unfileWorkSite(99)');
+    expect(settle).toContain('worked floor');
+    // the broker's call strips a register line AND a floor strike
+    const fix = gameSrc.slice(gameSrc.indexOf("case 'fix'"));
+    expect(fix).toContain('this.unfileWorkSite(1)');
+    expect(fix).toContain('the desk strikes a worked floor');
+    // unwinding newest-first (LIFO — later site wins a lastT tie),
+    // dropping emptied sites
+    const unfile = gameSrc.slice(gameSrc.indexOf('unfileWorkSite(n: number'));
+    expect(unfile).toContain('s.strikes > 0 && (!best || s.lastT >= best.lastT)');
+    expect(unfile).toContain('this.workSites.splice');
+  });
+
+  it('the poster names the floor — and the warden re-reads before he stands', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const wanted = gameSrc.slice(gameSrc.indexOf("case 'wanted'"));
+    expect(wanted).toContain('it names the floor in the');
+    expect(wanted).toContain('s.strikes >= 2 && s.lastT >= cold');
+    const corrSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+    // the stand re-asks the ledger: a paid desk withdraws the order
+    const stand = corrSrc.slice(corrSrc.indexOf("investigateKind === 'filedSite'"));
+    expect(stand).toContain('this.ctx.filedFloors?.(');
+    expect(stand).toContain('the line was struck out while it walked');
   });
 });
 

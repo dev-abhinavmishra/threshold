@@ -1930,3 +1930,87 @@ test('both books keep the floor — the under strips into the same tally, strike
   }
   expect(errors).toEqual([]);
 });
+
+// sprint 741-746 — the tally closes its books: the under answers itself,
+// the desk amends filed floors, the poster names them.
+test('the tally closes its books — foreign signs strike floors not faces, the desk unwinds, the sheet names the floor', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      space: string;
+      unpaidHeld: number;
+      unpaidTheft: number;
+      filedWork: number;
+      workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+      hazard: {
+        snares: { pos: { x: number; z: number }; room: number; armed: boolean;
+          planted?: boolean; claimed?: boolean }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string;
+          t: number; readBy: string[]; by?: string }[];
+      };
+      entityCtx: () => {
+        stripWork?: (x: number, z: number) => string | null;
+      };
+      unfileWorkSite?: (n: number) => number;
+    };
+    const ctx = ga.entityCtx();
+
+    // the under answers itself: a grafter-signed work mark still
+    // strikes the SITE it lands near — but files no line (floor, not face).
+    const under = { x: g.route.rooms[0].entryPos.x + 30, z: g.route.rooms[0].entryPos.z + 30 };
+    ga.hazard.snares.push({ pos: { x: under.x, z: under.z }, room: 0,
+      armed: true, planted: true });
+    // unshift: the site strike names the NEAREST-ordered mark — a
+    // generated mark earlier in the array would win the find
+    ga.hazard.evidence.unshift({ pos: { x: under.x, y: 0, z: under.z }, room: 0,
+      kind: 'work', t: g.clock.time, readBy: ['grafter:2'], by: 'grafter:2' });
+    const held0 = ga.unpaidHeld;
+    ctx.stripWork?.(under.x, under.z);            // 'coil' — foreign strike 1
+    ga.hazard.snares.push({ pos: { x: under.x + 0.3, z: under.z }, room: 0,
+      armed: true, planted: true });
+    ctx.stripWork?.(under.x, under.z);            // 'coil' — foreign strike 2
+    const underStrikes = ga.workSites.find((s) => Math.hypot(s.x - under.x, s.z - under.z) < 2.5)?.strikes ?? -1;
+    const underKept = caps.some((c) => /it was not always your hands/.test(c));
+    const heldAfterUnder = ga.unpaidHeld; // foreign strikes wrote nothing yet
+
+    // your floor: file one to strikes=2, then the desk unwinds one line
+    const mine = { x: g.route.rooms[0].entryPos.x - 20, z: g.route.rooms[0].entryPos.z - 20 };
+    ga.hazard.snares.push({ pos: { x: mine.x, z: mine.z }, room: 0, armed: true, planted: true });
+    ga.hazard.evidence.splice(1, 0, { pos: { x: mine.x, y: 0, z: mine.z }, room: 0,
+      kind: 'work', t: g.clock.time, readBy: ['player'], by: 'player' });
+    ctx.stripWork?.(mine.x, mine.z);              // strike 1
+    ga.hazard.snares.push({ pos: { x: mine.x + 0.3, z: mine.z }, room: 0, armed: true, planted: true });
+    ctx.stripWork?.(mine.x, mine.z);              // strike 2 → filed (held+1)
+    const heldAfterFile = ga.unpaidHeld;
+    const unwound = ga.unfileWorkSite?.(1) ?? -1; // the desk's call
+    const myStrikes = ga.workSites.find((s) => Math.hypot(s.x - mine.x, s.z - mine.z) < 2.5)?.strikes ?? -1;
+    // and the wipe: clear every site
+    const wiped = ga.unfileWorkSite?.(99) ?? -1;
+    const left = ga.workSites.length;
+    return { stage: 'done',
+      underStrikes, underHeldGain: heldAfterUnder - held0, underKept,
+      heldAfterFile: heldAfterFile - heldAfterUnder, unwound, myStrikes, wiped, left } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  else {
+    expect(result.underStrikes, 'the under\'s own sign still strikes the floor').toBe(2);
+    expect(result.underHeldGain, 'foreign strikes file no register line').toBe(0);
+    expect(result.underKept, 'the register warns the floor isn\'t always yours').toBe(true);
+    expect(result.heldAfterFile, 'your second strike filed the line').toBe(1);
+    expect(result.unwound, 'the desk unwound one strike').toBe(1);
+    expect(result.myStrikes, 'your site dropped back below filed').toBe(1);
+    expect(result.wiped, 'the settle wiped the remaining strikes (1+2)').toBe(3);
+    expect(result.left, 'every emptied site is struck out of the book').toBe(0);
+  }
+  expect(errors).toEqual([]);
+});
