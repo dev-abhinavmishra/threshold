@@ -967,7 +967,11 @@ export class Warden extends Entity {
       const wipes = evs.filter((e) => e.wiped);
       for (const ev of evs) {
         if (ev.wiped) continue; // a wipe is a filter on the sign, not a target
-        if (room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
+        // sprint 734 — a legible hand carries through the wall: the
+        // register knows these hands, so their marks read beyond the
+        // room it walks — every other sign stays room-bound.
+        if (ev.marked !== 'hands'
+          && room0?.spec && !pointInRoom(room0, ev.pos.x, ev.pos.z)) continue;
         // The register's face is on the sign — while the register holds
         // a line on you (heldOwed > 0), every fresh mark has a name
         // attached and teaches him double: two strangers' reads to
@@ -984,9 +988,11 @@ export class Warden extends Entity {
         this.investigate = v3(ev.pos.x, 0, ev.pos.z);
         this.investigateScan = 0;
         this.investigateKind = ev.kind;
-        c.cue('floor-creak', this.pos, named
-          ? '[the register\'s face is on this sign — it knows these hands]'
-          : '[it reads the sign — someone has been here]', { severity: 'warn' });
+        c.cue('floor-creak', this.pos, ev.marked === 'hands'
+          ? '[it knows this hand — the mark was never a stranger\'s]'
+          : named
+            ? '[the register\'s face is on this sign — it knows these hands]'
+            : '[it reads the sign — someone has been here]', { severity: 'warn' });
         this.rig?.play('move', 0.1);
         break;
       }

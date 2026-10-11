@@ -140,7 +140,10 @@ export interface EntityCtx {
    *  reader key (e.g. 'warden:33'); returned marks are recorded as read
    *  so each hunter reads each sign once. Optional for headless ctxs. */
   hazardEvidence?: (readerKey: string, x: number, z: number, radius: number)
-    => { pos: Vec3; room: number; kind: string; t: number; old?: boolean; weak?: boolean; wiped?: boolean }[];
+    => { pos: Vec3; room: number; kind: string; t: number; old?: boolean; weak?: boolean; wiped?: boolean;
+      /** sprint 733 — 'hands' marks read through the room wall (the
+       *  register knows the hand). */
+      by?: string; marked?: 'hands' }[];
   /** The house re-lays its own work: a floorkeeper that reads a dead
    *  hazard's sign can bring it back near that spot — wire re-tied,
    *  bled lines re-pressurized, killed wheels re-engaged, felt stripped

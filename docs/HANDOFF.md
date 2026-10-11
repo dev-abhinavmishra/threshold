@@ -2,6 +2,16 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 733–735 — the hands are legible (mechanics lane)
+
+- **733** the stamp: `handsLegible` — three live filed floors (strikes ≥2, uncooled) and the register stops keeping floors and starts keeping the signer. `workStamp()` marks every player-signed mint (`by:'player'`, all kinds — work and spring alike) with `marked:'hands'`; the flag rides `CheckpointSave` evidence like `by` does.
+- **734** the warden reads the hand through the wall: a `marked:'hands'` mark skips the `pointInRoom` gate in the scent poll — the sign still has to be inside the 30m read and unspent, but the handwriting carries into the room it walks. Its cue stops pretending the mark is a stranger's: `[it knows this hand — the mark was never a stranger's]`.
+- **735** the readouts read the signer: the seam tell upgrades — `[these boards know your hands — the floor reads them before the patrol does]`; the askReg book appends `· the same hands work these floors`. Contract describe pins the stamp/gate/cue chain; e2e leg drives 2-vs-3 sites (under/over the line), stamps a mint, and checks the seam names the hands.
+
+Note: `hazardEvidence` gained `by` + `marked` on its return type in base.ts — corridor was already destructuring raw evs so the wall-read is a gate change, not a data flow.
+
+Next: the streak has an escalation surface now (file → patrol → levy → legible). Backlog: inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings; a legible-hand counterweight — the wipe's shadow could launder the hands as well as the floor (design call: does felt erase names?).
+
 ## Sprint 730–732 — the serving residue arc (decals lane)
 
 - **730** `scoreTally` chalk count-marks on boards/dartboards/routing boards (35%), `recordRings` vinyl ghosts on shelves/sideboard/recordsCage (25%), `carpetLane` traffic-worn bands down rugs (35%, decalQuad floor).

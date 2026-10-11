@@ -1524,6 +1524,69 @@ test('the knee outranks the broom — a held lid keeps its take', async ({ page 
   expect(errors).toEqual([]);
 });
 
+// sprint 733-735 — the hands are legible: three filed floors stamps
+// the signer — marks mint 'hands', the readouts read the hand.
+test('the hands are legible — three filed floors stamps the signer', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      clock: { time: number };
+      space: string;
+      workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+      handsLegible: boolean;
+      workStamp: () => { marked?: string };
+      hazard: { evidence: { pos: { x: number; y: number; z: number }; room: number;
+        kind: string; t: number; readBy: string[]; by?: string; marked?: string }[] };
+      player: { pos: { x: number; y: number; z: number } };
+      maybeFiledFloor: () => void;
+      currentRoom: number;
+    };
+    const r0 = g.route.rooms[0];
+    const legible0 = ga.handsLegible;
+    // two filed floors — under the stamp line
+    ga.workSites.push({ x: r0.entryPos.x, z: r0.entryPos.z, room: r0.index,
+      strikes: 2, lastT: ga.clock.time });
+    ga.workSites.push({ x: r0.entryPos.x + 5, z: r0.entryPos.z, room: r0.index,
+      strikes: 2, lastT: ga.clock.time });
+    const two = ga.handsLegible;
+    const unmarked = ga.workStamp().marked ?? null;
+    // the third files the hands
+    ga.workSites.push({ x: r0.entryPos.x + 10, z: r0.entryPos.z, room: r0.index,
+      strikes: 2, lastT: ga.clock.time });
+    const three = ga.handsLegible;
+    const stamped = ga.workStamp().marked ?? null;
+    // a stamped mark mints like the player's own pushes do
+    ga.hazard.evidence.push({ pos: { x: r0.entryPos.x, y: 0, z: r0.entryPos.z },
+      room: r0.index, kind: 'work', t: ga.clock.time,
+      readBy: ['player'], by: 'player', ...(ga.workStamp() as { marked?: 'hands' }) });
+    const minted = ga.hazard.evidence[ga.hazard.evidence.length - 1].marked ?? null;
+    // and the seam reads the hands, not just the boards
+    ga.currentRoom = r0.index;
+    const capsBefore = caps.length;
+    ga.maybeFiledFloor();
+    const seamHands = caps.slice(capsBefore).some((c) => /know your hands/.test(c));
+    return { legible0, two, unmarked, three, stamped, minted, seamHands };
+  });
+
+  expect(result.legible0, 'a fresh run has no legible hand').toBe(false);
+  expect(result.two, 'two filed floors stays under the line').toBe(false);
+  expect(result.unmarked, 'under the line, mints stamp nothing').toBeNull();
+  expect(result.three, 'the third floor stamps the hands').toBe(true);
+  expect(result.stamped, "workStamp marks 'hands'").toBe('hands');
+  expect(result.minted, 'a stamped mint carries the flag').toBe('hands');
+  expect(result.seamHands, 'the seam names the hands').toBe(true);
+  expect(errors).toEqual([]);
+});
+
 // sprint 726-727 — the clerk levies the floor: a staffed counter on a
 // twice-struck site prices the boards into every verb.
 test('the clerk levies the floor — a filed room prices the counter', async ({ page }) => {

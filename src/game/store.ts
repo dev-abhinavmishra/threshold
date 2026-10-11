@@ -211,7 +211,10 @@ export interface CheckpointSave {
     t: number; x: number; z: number; readBy: string[]; weak?: boolean; wiped?: boolean;
     /** sprint 565 — the signer's key ('player', 'grafter:N', 'eye:N');
      *  rides the checkpoint so a restored sign still names the hand. */
-    by?: string }[];
+    by?: string;
+    /** sprint 733 — a legible hand rides the checkpoint too: three
+     *  filed floors stamps the player's marks legible. */
+    marked?: 'hands' }[];
   // an armed ward seal is paid protection — a reload can't strip it
   wardArmed?: boolean;
   // the count's locker — goods a named catch stripped hang claimable

@@ -714,6 +714,7 @@ export class Game {
       this.hazard.evidence.push({
         pos: v3(e.x, 0, e.z), room: e.room, kind: e.kind, t: e.t,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped, by: e.by,
+        marked: e.marked,
       });
     }
     // the dead stay dead — disarmed/bled/choked/killed hazards don't
@@ -2098,6 +2099,21 @@ export class Game {
     return Math.min(n * 2, 6);
   }
 
+  /** sprint 733 — the hands are legible: three live filed floors
+   *  stamps the player's name on every mark they leave after. The
+   *  register doesn't just keep these boards — it knows the hand. */
+  private get handsLegible(): boolean {
+    const cold = this.clock.time - 360;
+    return this.workSites.filter((s) => s.strikes >= 2
+      && s.lastT >= cold).length >= 3;
+  }
+
+  /** sprint 733 — stamp a player-signed mint legible while the
+   *  register knows the hand. */
+  private workStamp(): { marked?: 'hands' } {
+    return this.handsLegible ? { marked: 'hands' } : {};
+  }
+
   /** The count's locker — seized goods hang under a fresh claim tag at
    *  the nearest under claim cage instead of vanishing. A seed with no
    *  cage keeps the take (the count swallowed it whole). */
@@ -2553,7 +2569,8 @@ export class Game {
     // re-mint the wire silently (the mark was written when it was laid).
     if (planterKey) {
       this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room, kind: 'work',
-        t: this.clock.time, readBy: [planterKey], by: planterKey });
+        t: this.clock.time, readBy: [planterKey], by: planterKey,
+        ...(planterKey === 'player' ? this.workStamp() : {}) });
     }
     snare.mesh = this.buildSnareProp(pos, room);
   }
@@ -4663,9 +4680,12 @@ export class Game {
         // sprint 727 — and when the counter itself stands on one,
         // the readout names the boards under it
         const thisFloor = levy > 0 ? ' · THIS floor is filed' : '';
+        // sprint 735 — and three filed floors makes the readout read
+        // the signer: the book keeps the hand now, not just the floor
+        const hands = this.handsLegible ? ' · the same hands work these floors' : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}${floors}${thisFloor}]`
-          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}${floors}${thisFloor}]`);
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}${floors}${thisFloor}${hands}]`
+          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}${floors}${thisFloor}${hands}]`);
         return;
       }
       case 'till': {
@@ -5376,7 +5396,7 @@ export class Game {
         // wire is laid work like any other.
         this.lastSlip = { doorId: door.id, snare, until: this.clock.time + 4 };
         this.hazard.evidence.push({ pos: v3(pos.x, 0, pos.z), room: far.index, kind: 'work',
-          t: this.clock.time, readBy: ['player'], by: 'player' });
+          t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('trap-click', pos, '[the coil unwinds under the leaf — wire on their side]');
         // the slide's rasp is a real sound at the leaf's far edge —
         // quiet work, not silent work
@@ -6523,7 +6543,7 @@ export class Game {
         // re-lay can cock it back (s574). Your own read stays silent.
         const parts = tkey.split(':');
         this.hazard.evidence.push({ pos: v3(at.x, 0, at.z), room: Number(parts[1]),
-          kind: 'spring', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'spring', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         // sprint 575 — the plate is parts: a sprung trap yields the
         // mechanism whole — set it somewhere the living walk.
         this.giveItem('springPart', 1);
@@ -6546,7 +6566,7 @@ export class Game {
         this.liveTraps.push({ key: key2, x: d2.x, z: d2.z });
         this.trapPos.set(key2, { x: d2.x, z: d2.z });
         this.hazard.evidence.push({ pos: v3(d2.x, 0, d2.z), room: d2.room, kind: 'work',
-          t: this.clock.time, readBy: ['player'], by: 'player' });
+          t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('trap-click', { x: d2.x, y: 0.05, z: d2.z }, '[the plate cocks under your palm]');
         this.sound.emit({ x: d2.x, y: 0.1, z: d2.z, intensity: 0.3 * this.wantedPull, category: 'item', caption: '' });
         return;
@@ -6633,7 +6653,7 @@ export class Game {
           // at the house's book: your hands stay silent on your pipe.
           if (st.owner === 'player') {
             this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
-              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
           } else {
             this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room, kind: 'line', t: this.clock.time, readBy: [] });
           }
@@ -6658,7 +6678,7 @@ export class Game {
           (this.player.pos.z + lk.z * 3) - w.pos.z);
         w.owner = 'player';
         this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.cue('steam-hiss', w.pos, '[the eye\'s pan locks on your bearing — it watches for you now]', 'info');
         this.sound.emit({ x: w.pos.x, y: 1.6, z: w.pos.z, intensity: 0.3, category: 'machine', caption: '[an eye re-aims]' });
         return;
@@ -6676,7 +6696,7 @@ export class Game {
         delete st.owner;
         this.giveItem('steamValve', 1);
         this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('trap-click', { x: d.sx, y: 0.4, z: d.sz },
           '[the throat threads off whole — the line will never pressurize again]');
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.3, category: 'item', caption: '[brass on the thread]' });
@@ -6704,7 +6724,7 @@ export class Game {
           st.owner = 'player';
         } else return;
         this.hazard.evidence.push({ pos: v3(st.pos.x, 0, st.pos.z), room: st.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('steam-hiss', { x: d.sx, y: 0.4, z: d.sz },
           '[the thread seats — pressure rises on a line that is yours]');
         this.sound.emit({ x: d.sx, y: 0.4, z: d.sz, intensity: 0.4, category: 'item', caption: '[a valve seats under pressure]' });
@@ -6748,7 +6768,7 @@ export class Game {
         // signs 'fan' so its keeper can re-engage.
         if (f.owner === 'player')
           this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
-            kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+            kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         else
           this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room, kind: 'fan', t: this.clock.time, readBy: [] });
         this.cue('item', it.pos, '[the wheel chokes on the chock — the blades stand still]');
@@ -6784,7 +6804,7 @@ export class Game {
         if (f.chocked) { f.chocked = false; this.giveItem('doorChock', 1); }
         this.giveItem('fanBelt', 1);
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('trap-click', { x: f.pos.x, y: 1.2, z: f.pos.z },
           '[the belt walks off the rim — the wheel will never chew again]');
         this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.3, category: 'item', caption: '[leather off the rim]' });
@@ -6805,7 +6825,7 @@ export class Game {
         f.dead = false;
         f.owner = 'player';
         this.hazard.evidence.push({ pos: v3(f.pos.x, 0, f.pos.z), room: f.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.audio.play('steam-hiss', { x: f.pos.x, y: 1.2, z: f.pos.z },
           '[the belt seats on the rim — the wheel spins on your word]');
         this.sound.emit({ x: f.pos.x, y: 1.2, z: f.pos.z, intensity: 0.4, category: 'machine', caption: '[a belt seats on the rim]' });
@@ -7443,7 +7463,7 @@ export class Game {
           // same convention as chocking your own wheel (s594).
           if (w.owner === 'player')
             this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
-              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+              kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
           else
             this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
               kind: 'blind', t: this.clock.time, readBy: [] });
@@ -7485,7 +7505,7 @@ export class Game {
         this.giveItem('eyeLens', 1);
         this.giveItem('feltWrap', 1); // the wrap levers out with the glass
         this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.cue('item', it.pos, '[the lens works free — the socket will never open again]', 'warn');
         this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 0.3,
           category: 'item', caption: '[glass levers out whole]' });
@@ -7512,7 +7532,7 @@ export class Game {
         w.owner = 'player';
         it.enabled = false;
         this.hazard.evidence.push({ pos: v3(w.pos.x, 0, w.pos.z), room: w.room,
-          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player' });
+          kind: 'work', t: this.clock.time, readBy: ['player'], by: 'player', ...this.workStamp() });
         this.cue('item', it.pos, '[the glass seats — the pan answers you now]', 'warn');
         this.sound.emit({ x: it.pos.x, y: 1.6, z: it.pos.z, intensity: 0.32,
           category: 'item', caption: '[the eye is yours]' });
@@ -8219,8 +8239,11 @@ export class Game {
     const cold = this.clock.time - 360;
     if (!this.workSites.some((s) => s.room === this.currentRoom
       && s.strikes >= 2 && s.lastT >= cold)) return;
-    this.cue('chalk-mark', this.player.pos,
-      '[these boards are filed — it remembers whose hands worked them]', 'warn');
+    // sprint 735 — and when the hands themselves are legible, the seam
+    // names them too: the floor reads the signer, not just the sign.
+    this.cue('chalk-mark', this.player.pos, this.handsLegible
+      ? '[these boards know your hands — the floor reads them before the patrol does]'
+      : '[these boards are filed — it remembers whose hands worked them]', 'warn');
   }
 
   /** Service refusal at a staffed counter — a cold counter folds its
@@ -8665,6 +8688,7 @@ export class Game {
       evidence: this.hazard.evidence.filter((e) => !e.old).map((e) => ({
         room: e.room, kind: e.kind, t: e.t, x: e.pos.x, z: e.pos.z,
         readBy: [...e.readBy], weak: e.weak, wiped: e.wiped, by: e.by,
+        marked: e.marked,
       })),
     };
   }
