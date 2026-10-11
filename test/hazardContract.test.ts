@@ -970,6 +970,21 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
   });
 
+  describe('the clerk levies the floor (sprints 726-728)', () => {
+    it('a counter on a filed floor names the boards in its prices', () => {
+      const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+      // the levy is room-scoped and live-only: twice-struck, uncooled
+      expect(gameSrc).toContain('private filedFloorLevy(roomIndex: number)');
+      expect(gameSrc).toContain('s.strikes >= 2\n      && s.lastT >= cold && s.room === roomIndex');
+      // all three counter verbs pay it and name it
+      expect(gameSrc).toContain('traded on a filed floor');
+      expect(gameSrc).toContain("the floor's rate, these boards are filed");
+      expect(gameSrc).toContain('THIS floor is filed');
+      // cooled sites stop levying — the 360s sign convention holds
+      expect(gameSrc).toContain('this.clock.time - 360');
+    });
+  });
+
   describe('the knee lifts loud (sprints 715-716)', () => {
     it('the release tells like the planting did', () => {
       const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');

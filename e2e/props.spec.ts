@@ -1524,6 +1524,73 @@ test('the knee outranks the broom — a held lid keeps its take', async ({ page 
   expect(errors).toEqual([]);
 });
 
+// sprint 726-727 — the clerk levies the floor: a staffed counter on a
+// twice-struck site prices the boards into every verb.
+test('the clerk levies the floor — a filed room prices the counter', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      imprints: number;
+      clock: { time: number };
+      workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+      interaction: { focused: { kind: string;
+        pos: { x: number; y: number; z: number }; data: unknown; enabled: boolean } | null };
+      tryInteract: () => void;
+    };
+    // a staffed counter: a room whose sockets carry the clerk meta
+    const found = g.route.rooms
+      .map((r) => ({ r, sock: (r.sockets ?? []).find((s) =>
+        (s as { meta: Record<string, unknown> }).meta.clerk !== undefined) }))
+      .find((f) => f.sock) as { r: { index: number };
+        sock: { pos: { x: number; y: number; z: number }; meta: Record<string, unknown> } } | undefined;
+    if (!found) return { stage: 'no-counter' } as const;
+    const { r, sock } = found;
+    const base = (sock.meta.clerkPrice as number) ?? 12;
+    ga.imprints = 40;
+    // the counter stands on filed boards — a twice-struck live site
+    ga.workSites.push({ x: sock.pos.x, z: sock.pos.z,
+      room: r.index, strikes: 2, lastT: ga.clock.time });
+    const capsBefore = caps.length;
+    ga.interaction.focused = { kind: 'shop',
+      pos: { x: sock.pos.x, y: sock.pos.y, z: sock.pos.z }, data: sock, enabled: true };
+    ga.tryInteract();
+    const spent = 40 - ga.imprints;
+    const namedFloor = caps.slice(capsBefore).some((c) => /filed floor/.test(c));
+    // a cooled site levies nothing: same counter, aged site, fresh sock
+    const cooled = { ...sock, pos: { ...sock.pos }, meta: { clerk: sock.meta.clerk,
+      clerkItem: 'bandage', clerkPrice: base } };
+    ga.workSites[0].lastT = ga.clock.time - 400;
+    const capsBefore2 = caps.length;
+    ga.interaction.focused = { kind: 'shop',
+      pos: { x: sock.pos.x, y: sock.pos.y, z: sock.pos.z }, data: cooled, enabled: true };
+    ga.tryInteract();
+    const spentCooled = 40 - spent - ga.imprints;
+    const namedCooled = caps.slice(capsBefore2).some((c) => /filed floor/.test(c));
+    ga.interaction.focused = null;
+    return { stage: 'done' as const, base, spent, namedFloor,
+      spentCooled, namedCooled, sold: sock.meta.sold === true };
+  });
+
+  if (result.stage === 'no-counter') test.skip();
+  else {
+    expect(result.sold, 'the filed-floor sale still lands').toBe(true);
+    expect(result.spent, 'the floor levies its rate (+2)').toBe(result.base + 2);
+    expect(result.namedFloor, 'the receipt names the boards').toBe(true);
+    expect(result.spentCooled, 'a cooled floor levies nothing').toBe(result.base);
+    expect(result.namedCooled, 'a cooled floor keeps the boards unnamed').toBe(false);
+  }
+  expect(errors).toEqual([]);
+});
+
 // sprint 680 — the under strips your hands: 'work' marks arm the
 // grafter's strip, and every armed surface answers its pocket. Driven
 // through the same ctx hooks the grafter calls.

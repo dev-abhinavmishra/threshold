@@ -2,6 +2,16 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 726–728 — the clerk levies the floor (mechanics lane)
+
+- **726** the floor's rate: new `filedFloorLevy(roomIndex)` — live twice-struck sites in the counter's room levy +2 each (cap 6) onto every price the staffed counter quotes. The ware verb names the boards: `[traded on a filed floor — N imprints]` / refusal reads `the floor's rate is N imprints — the register levies these boards`.
+- **727** the book levies too: the 'ask' page and the register's own readout pay the same boards (`eff = price + levy`, `regCost = 3 + levy`, both refusal cues name the floor); the askReg readout appends `· THIS floor is filed` when the counter stands on one.
+- **728** pins + live: contract describe 'the clerk levies the floor' (room-scoped, live-only, all three verbs pay it, 360s cool); e2e leg drives `focused.kind='shop'` → `tryInteract()` on a seeded counter: base+2 charged, receipt names the floor; aged site (lastT −400s) levies nothing and names nothing.
+
+Convention: `site.room` is `room.index`, but counter lookups index `activeRooms()` by array position — levy call sites translate via `activeRooms()[i]?.index`. A cooled site stops levying at the same 360s sign the warden stops believing.
+
+Next: the tally's counter-leg is closed (file → patrol → levy). Backlog: inspector rattle mid-sweep ordering line; 'work'-streak escalation beyond +1/strike (wanted already tightens at 6); milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
 ## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
 - **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
