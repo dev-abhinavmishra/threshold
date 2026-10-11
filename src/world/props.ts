@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe, stairNose, bannisterTurn, treadScuff } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight, canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe, stairNose, bannisterTurn, treadScuff, ashTray, bleachBloom, greaseSpatter, recordRings, scoreTally, soilSpill, tableFeet, tankRing } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1346,7 +1346,20 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     prop = c[0] > 0 ? single(model, c[0], c[1], c[2]) : { group: model, colliders: [] };
   } else {
     const b = builders[spec.kind];
-    prop = b ? b(spec, rng) : single(new THREE.Group(), 0.4, 0.4, 0.4);
+    if (b) {
+      prop = b(spec, rng);
+    } else {
+      // GLB-only kind whose model hasn't arrived — a sheeted placeholder at
+      // the real collider dims, never an invisible collider. The streamer's
+      // rebuild swaps in the true model once the GLB lands.
+      const c = modelCollider(spec.kind) ?? [0.4, 0.9, 0.4];
+      const sheet = new THREE.Mesh(
+        new THREE.BoxGeometry(c[0], c[1], c[2]),
+        MAT.figureCloth ? MAT.figureCloth() : new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 0.95 }),
+      );
+      sheet.position.y = c[1] / 2;
+      prop = single(new THREE.Group().add(sheet), c[0], c[1], c[2]);
+    }
   }
   // Some portraits are occupied: a pair of painted eyes that only open in
   // your periphery — the game fades them out under direct observation.
@@ -1769,6 +1782,140 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     wb.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 1.8) - 0.05, -decalDim(spec.kind, dc, 2, 0.4) / 2 - 0.004);
     prop.group.add(wb);
     if (!prop.group.name) prop.group.name = 'web-drape';
+  }
+  // The tally kept count — chalk score-marks on game boards and
+  // routing boards.
+  const TALLY_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['board', 'boardGame', 'dartboard', 'routingBoard', 'circuitBoard']);
+  if (TALLY_KINDS.has(spec.kind) && rng.bool(0.35)) {
+    const dc = modelCollider(spec.kind);
+    const st = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.42, 0.42),
+      new THREE.MeshStandardMaterial({ map: scoreTally(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    st.name = 'score-tally';
+    st.userData.decalMat = true;
+    const tallBoard = spec.kind === 'routingBoard';
+    st.position.set(
+      (rng.float() - 0.5) * 0.3,
+      (dc?.[1] ?? 1.4) * (tallBoard ? 0.8 : 0.55),
+      (dc?.[2] ?? 0.1) / 2 + (tallBoard ? 0.24 : 0.008),
+    );
+    prop.group.add(st);
+    if (!prop.group.name) prop.group.name = 'score-tally';
+  }
+  // The records kept their rings — vinyl ghosts on the shelves and
+  // the record cage that held them.
+  const RECORD_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['recordsCage', 'shelf', 'shelfWood', 'sideboard', 'mantelClock', 'cabinet']);
+  if (RECORD_KINDS.has(spec.kind) && rng.bool(0.25)) {
+    const dc = modelCollider(spec.kind);
+    const rr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.36),
+      new THREE.MeshStandardMaterial({ map: recordRings(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    rr.name = 'record-rings';
+    rr.userData.decalMat = true;
+    rr.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.2) * 0.55, (dc?.[2] ?? 0.4) / 2 + 0.005);
+    prop.group.add(rr);
+    if (!prop.group.name) prop.group.name = 'record-rings';
+  }
+  // The ash kept the tray — a smoked dish of ends on the tables
+  // where somebody sat too long.
+  const ASH_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['sideTable', 'coffeeTable', 'roundTable', 'diningTable', 'vanityTable', 'table', 'mantelClock', 'sideboard']);
+  if (ASH_TOPS.has(spec.kind) && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const at = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.3),
+      new THREE.MeshStandardMaterial({ map: ashTray(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    at.name = 'ash-tray';
+    at.userData.decalMat = true;
+    at.rotation.x = -Math.PI / 2;
+    const ashY = spec.kind === 'coffeeTable' ? 0.56 : decalY(spec.kind, dc, 0.9, 0.05);
+    at.position.set((rng.float() - 0.5) * 0.3, ashY, (rng.float() - 0.5) * 0.2);
+    prop.group.add(at);
+    if (!prop.group.name) prop.group.name = 'ash-tray';
+  }
+  // The planters kept their spill — soil scatter and wilted
+  // leaves shed where a pot was knocked or died standing.
+  const PLANT_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['vase', 'planter', 'plant']);
+  if (PLANT_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const vr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.44, 0.44),
+      new THREE.MeshStandardMaterial({ map: soilSpill(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    vr.name = 'soil-spill';
+    vr.userData.decalMat = true;
+    vr.rotation.x = -Math.PI / 2;
+    vr.position.set(0, 0.004 + rng.float() * 0.004, 0);
+    prop.group.add(vr);
+    if (!prop.group.name) prop.group.name = 'soil-spill';
+  }
+  // The tables kept their feet — drag scars on the floor where a
+  // table was pulled a short way and settled.
+  const TABLE_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['table', 'diningTable', 'roundTable', 'coffeeTable', 'sideTable', 'vanityTable', 'desk', 'writingDesk']);
+  if (TABLE_KINDS.has(spec.kind) && rng.bool(0.3)) {
+    const tf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.7, 0.5),
+      new THREE.MeshStandardMaterial({ map: tableFeet(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    tf.name = 'table-feet';
+    tf.userData.decalMat = true;
+    tf.rotation.x = -Math.PI / 2;
+    tf.rotation.z = rng.float() * Math.PI * 2;
+    const dc = modelCollider(spec.kind);
+    const reach = (dc?.[2] ?? 0.6) / 2 + 0.28;
+    const a = rng.float() * Math.PI * 2;
+    tf.position.set(Math.cos(a) * reach, 0.004 + rng.float() * 0.003, Math.sin(a) * reach);
+    prop.group.add(tf);
+    if (!prop.group.name) prop.group.name = 'table-feet';
+  }
+  // The bleach kept its bloom — a cleaned halo where a bottle
+  // tipped in the laundry corner.
+  const BLEACH_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['bleachBottle', 'cleanerBottle', 'sprayCans']);
+  if (BLEACH_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const bb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: bleachBloom(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bb.name = 'bleach-bloom';
+    bb.userData.decalMat = true;
+    bb.rotation.x = -Math.PI / 2;
+    bb.rotation.z = rng.float() * Math.PI * 2;
+    bb.position.set(0.1 + rng.float() * 0.15, 0.005 + rng.float() * 0.003, 0.08);
+    prop.group.add(bb);
+    if (!prop.group.name) prop.group.name = 'bleach-bloom';
+  }
+  // The tanks kept their rings — oxide ghosts under the cylinders
+  // that stood in the corner a season too long.
+  const TANK_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['propaneTank', 'lpgTank', 'boilerTank', 'gallonJug']);
+  if (TANK_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const tr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: tankRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tr.name = 'tank-ring';
+    tr.userData.decalMat = true;
+    tr.rotation.x = -Math.PI / 2;
+    tr.rotation.z = rng.float() * Math.PI * 2;
+    tr.position.set(0, 0.005 + rng.float() * 0.003, 0);
+    prop.group.add(tr);
+    if (!prop.group.name) prop.group.name = 'tank-ring';
+  }
+  // The stove kept its spatter — the hot fan a pan leaves on the
+  // floor at the range's feet.
+  const STOVE_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['stoveRange', 'stove', 'enamelPot', 'pan']);
+  if (STOVE_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const gs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.65, 0.65),
+      new THREE.MeshStandardMaterial({ map: greaseSpatter(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    gs.name = 'grease-spatter';
+    gs.userData.decalMat = true;
+    gs.rotation.x = -Math.PI / 2;
+    gs.rotation.z = rng.float() * Math.PI * 2;
+    gs.position.set(0.05, 0.005 + rng.float() * 0.003, (modelCollider(spec.kind)?.[2] ?? 0.5) / 2 + 0.22);
+    prop.group.add(gs);
+    if (!prop.group.name) prop.group.name = 'grease-spatter';
   }
   // The bells kept the thumbs — polished brass and greasy arcs on
   // counter bells rung a thousand times.
