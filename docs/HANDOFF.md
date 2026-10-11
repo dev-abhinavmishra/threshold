@@ -12,6 +12,12 @@ Note: `hazardEvidence` gained `by` + `marked` on its return type in base.ts — 
 
 Next: the streak has an escalation surface now (file → patrol → levy → legible). Backlog: inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings; a legible-hand counterweight — the wipe's shadow could launder the hands as well as the floor (design call: does felt erase names?).
 
+## Sprint 730–732 — the serving residue arc (decals lane)
+
+- **730** `scoreTally` chalk count-marks on boards/dartboards/routing boards (35%), `recordRings` vinyl ghosts on shelves/sideboard/recordsCage (25%), `carpetLane` traffic-worn bands down rugs (35%, decalQuad floor).
+- **731** `ashTray` smoked dish + butts + burn crease on side/coffee/dining tables (30%), `soilSpill` planter soil scatter + wilted leaves (40%, under planters — the sibling lane already owns `vaseRing`: concede invented-name collisions to the merged lane), `tableFeet` drag-arc scars beside settled tables (30%).
+- **732** `bleachBloom` cleaned halos under bleach/cleaner bottles + spray cans (45%), `tankRing` oxide ghosts under propane/lpg/boiler tanks + gallon jugs (45%), `greaseSpatter` hot fans at stove-range feet (40%). All floor-mounted prop-overlays.
+
 ## Sprint 726–728 — the clerk levies the floor (mechanics lane)
 
 - **726** the floor's rate: new `filedFloorLevy(roomIndex)` — live twice-struck sites in the counter's room levy +2 each (cap 6) onto every price the staffed counter quotes. The ware verb names the boards: `[traded on a filed floor — N imprints]` / refusal reads `the floor's rate is N imprints — the register levies these boards`.
@@ -64,6 +70,14 @@ Next: the tally is a surface — a natural third leg is the counter *answering* 
 
 Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, the 'work'-streak escalation surface (wanted already tightens — a distinct streak mechanic would need its own design), and a gather-side read: the house's pull leaves YOUR sign standing while it takes the metal — a second 'work' near the same spot could name a repeat offender (pair with the streak idea or drop).
 
+
+## Sprint 690–693 — the rail keeps its hour (captions rail ages, folds & announces)
+
+- s690 `the rail keeps its hour` — `src/ui/captions.ts`: `visibleCaptions(subs, now)` ages reads out by severity (info 4.2s / warn 5.2s / danger 7s — the last thing before a death stays up longest), folds consecutive identical reads into a ×N run riding the newest stamp, caps the rail at 3 live lines.
+- s691 `the rail speaks once` — App.tsx renders the rail through the helper instead of `subtitles.slice(-3)`; stale tells ("stone drags to the fresh sign") no longer read as if they just happened. The rail is a `role="log" aria-live="polite"` region; folded repeats show ` ×N`.
+- s692 `the room names its instruments` — HUD bars announce `role="progressbar"` with aria-valuenow/min/max/label; vignette + crosshair go `aria-hidden` so the reader hears the house, not its chrome.
+- s693 `the rail forgets in the glass` — `e2e/rail.spec.ts`: the rail verified in the running DOM — a repeated tell folds to one ×4 line, a burst of distinct reads keeps only the newest three (oldest scrolls off), and after the info dwell the rail empties of its own age. `emitCaption` is monkey-wrapped in-page to drop ambient tells (only `rail-` texts land in the store); `applySettings({captions:true})` flips the rail on through the real path.
+- Tests: `test/captions.test.ts` (13) — dwell boundaries per severity, exact-dwell edge, fold rules (severity/text break the run, non-consecutive doesn't fold back, fold refreshes dwell), cap + expired-not-counting, App wiring pins.
 
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
 
