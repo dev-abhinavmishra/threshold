@@ -12,12 +12,25 @@ Convention: `site.room` is `room.index`, but counter lookups index `activeRooms(
 
 Next: the tally's counter-leg is closed (file → patrol → levy). Backlog: inspector rattle mid-sweep ordering line; 'work'-streak escalation beyond +1/strike (wanted already tightens at 6); milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
 
+## Sprint 720–725 — both books keep the floor (mechanics lane)
+
+- **720** the under strips into the same ledger: every `stripWork` landing now runs `answerWork` — coil/plate/belt/lens/throat all strike the site like the house's dispatch. The signer still owns the strike (`by` within 1.8m): the grafter stripping YOUR sign files YOUR hands again — the under answering your mark is another reader of the same floor. A grafter's own sign strips clean (files nothing, same gate).
+- **721** a floor worked past answering writes the deeper book: strike 3+ at one site now files `unpaidHeld` AND `unpaidTheft` — the count's ledger and the clerk's register agree on a signature neither book mistakes. Distinct warn `[the tally writes it as theft — the same floor worked past answering]`; strike 2 keeps its `[the register keeps this floor]` line. `unpaidTheft` already routes (Broker's marked rate, Auditor's wanted posts) — repeat site-workers now feed it.
+- **722** the seam tells the filed floor: `maybeFiledFloor()` on main-space room entry — an uncooled twice-struck site in the room you just entered warns `[these boards are filed — it remembers whose hands worked them]` before the patrol reaches it. Fires on transition only (the `currentRoom !== prev` gate is the dedupe).
+- **723** the keys' ordering line (inspector): a spot gripped MID-WALK now stands the inspector aside — `checked.add`, `target=null`, cue `[it tries the lid — a knee already holds it — it leaves it]`. A foreign grip (`trappedBy` set, not 'inspector') also blocks grapple-start under `p.hiddenSpot` and blanks `seizeStash` — a lid a knee holds stays shut to the keys, the hold answers before the count's read. Its own 'inspector' grip still tests/pulls/seizes as before.
+- **724** the clerk names the floors: the `unpaidHeld >= 6` refusal now counts filed sites and reads `· it names N worked floors` inside the desk-refusal cue.
+- **725** contract spec (3 new describes, 66 tests) pins the strip-strike chain, the strike-3 theft write, the seam tell, the refusal naming, and the inspector ordering; e2e leg drives `ctx.stripWork` + `ctx.rearmHazard` three ways at one site → coil/crimp/coil = 3 strikes, `unpaidHeld +2`, `unpaidTheft +1`, `filedWork 2`, theft warn fires.
+
+Traps: `stripWork`'s answers strike through the same `by`-gate — a grafter stripping YOUR mark files you, never itself (the `ev.by` skip for 'grafter:N'/'eye:N' is unchanged). The inspector's arrival ordering runs BEFORE `testing` is set, so a mid-walk grip never starts its 2.6s rattle — `checked.add(spot.id)` is what moves it past the spot (without it the inspector re-targets the same gripped lid forever). `unpaidTheft` writes ride the existing death-remittance load (death.ts) — the tally's book and the count's book now write together.
+
+Next: `filedWork` has no UNDO path — the ledger only writes, never amends (a paid desk could reduce filedWork like it lowers unpaid). The Auditor's wanted posts key off `unpaidTheft` totals, not sites — a wanted poster naming the filed floor is open. And the grafter's own-strip strike is the honest one — a grafter stripping its OWN graft-sign files nothing, meaning the under still answers itself for free.
 ## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
 - **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
 - **716** merge-down of the 700-703 arc: the sibling lane's tally arc (709-714) landed the same ordering + holder-read surface first and further — `lidHeld` answers a gripped lid (mark spent, take sheltered) and the peep reads the knee. My scatter-ordering and peep pins conceded to theirs; what survives is the release tell + the held→lidHeld→freed→lidSweep transition leg. Contract 64/64.
 
 Next: the knee family is closed (plants / holds / robs / outranks / releases / is told). Backlog: the tally arc's own note — a counter answering a filed floor; inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
 
 ## Sprint 709–714 — the house keeps a tally (mechanics lane)
 

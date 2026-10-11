@@ -817,12 +817,12 @@ describe('the under strips your hands (sprints 675-680)', () => {
     // house-claimed: a wire the warden re-tied is outside its pocket
     const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
     expect(strip).toContain('hz.armed && hz.planted\n          && !hz.claimed');
-    expect(strip).toContain("return 'coil'");
+    expect(strip).toContain("this.answerWork('coil', x, z)");
     // your cocked plate folds whole — sprung or pried plates are dead
     // work; the 'spring' sign already owns their answer
     expect(strip).toContain('this.snappedTraps.has(tt.key)');
     expect(strip).toContain('this.priedTraps.has(tt.key)');
-    expect(strip).toContain("return 'plate'");
+    expect(strip).toContain("this.answerWork('plate', x, z)");
     // the plate leaves the snap loops and the mint on the way out
     expect(strip).toContain('this.liveTraps.splice');
     expect(strip).toContain('this.trapPos.delete(t.key)');
@@ -839,7 +839,7 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(strip).toContain("ff.owner === 'player'\n          && ff.belted !== false");
     expect(strip).toContain('f.belted = false');
     expect(strip).toContain('delete f.owner');
-    expect(strip).toContain("return 'belt'");
+    expect(strip).toContain("this.answerWork('belt', x, z)");
     // a wedge in the wheel skids loose like the pull leaves it — the
     // chock lands as loot, never swallowed
     expect(strip).toContain('this.kickedWedges.push');
@@ -857,11 +857,11 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(strip).toContain("ww.owner === 'player'\n          && ww.lensed !== false");
     expect(strip).toContain('w.lensed = false');
     expect(strip).toContain('w.dead = true');
-    expect(strip).toContain("return 'lens'");
+    expect(strip).toContain("this.answerWork('lens', x, z)");
     // the socket ends like the tear leaves it — nobody's — but the
     // glass never drops: it rides as graft stock, so the lens must
     // NOT land in the floor pile the house's tear mints
-    const tearStrip = strip.slice(strip.indexOf("return 'lens'") - 400, strip.indexOf("return 'lens'"));
+    const tearStrip = strip.slice(strip.indexOf("answerWork('lens'") - 400, strip.indexOf("answerWork('lens'"));
     expect(tearStrip).not.toContain('droppedLenses.push');
   });
 
@@ -889,7 +889,7 @@ describe('the under strips your hands (sprints 675-680)', () => {
     expect(strip).toContain("s.owner === 'player'\n          && s.valved !== false");
     expect(strip).toContain('st.valved = false');
     expect(strip).toContain('st.dead = true');
-    expect(strip).toContain("return 'throat'");
+    expect(strip).toContain("this.answerWork('throat', x, z)");
     // the kill is permanent: the house's line re-lay already refuses a
     // stripped vent — no throat, no pressure, ever
     const relay = gameSrc.slice(gameSrc.indexOf("kind === 'line'"));
@@ -1128,6 +1128,49 @@ describe('the house keeps a tally (sprints 709-714)', () => {
     expect(corridorSrc).toContain('the floor the register named');
     // a lid's own peep reads the grip holding it shut
     expect(gameSrc).toContain('a knee holds it shut');
+  });
+});
+
+
+describe('both books keep the floor (sprints 720-725)', () => {
+  it("the under's strip strikes the same ledger — every pocket answers", () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    // all five strip pockets run the tally — the under answering
+    // YOUR sign is another reader of the same floor
+    const strip = gameSrc.slice(gameSrc.indexOf('stripWork: (x, z)'));
+    for (const a of ['coil', 'plate', 'belt', 'lens', 'throat'])
+      expect(strip).toContain(`this.answerWork('${a}', x, z)`);
+  });
+
+  it('a floor worked past answering writes the deeper book', () => {
+    const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+    const tally = gameSrc.slice(gameSrc.indexOf('strikeWorkSite(x: number'));
+    // the third strike files BOTH books — the count's ledger and the
+    // clerk's agree on a signature
+    expect(tally).toContain('site.strikes >= 3');
+    expect(tally).toContain('this.unpaidTheft += 1');
+    expect(tally).toContain('the tally writes it as theft');
+    // the seam tells the filed floor before the patrol reaches it
+    expect(gameSrc).toContain('maybeFiledFloor');
+    expect(gameSrc).toContain('these boards are filed');
+    expect(gameSrc).toContain('s.room === this.currentRoom');
+    // and the clerk names the floors when she refuses the face
+    const refuses = gameSrc.slice(gameSrc.indexOf('this.unpaidHeld >= 6'));
+    expect(refuses).toContain('it names');
+    expect(refuses).toContain('worked floor');
+  });
+
+  it("the keys' ordering line — a foreign grip stands the inspector aside", () => {
+    const roomSrc = readFileSync('src/entities/room.ts', 'utf8');
+    // gripped mid-walk: the hold that got there first owns the lid
+    expect(roomSrc).toContain("spot.trappedBy && spot.trappedBy !== 'inspector'");
+    expect(roomSrc).toContain('a knee already holds it — it leaves it');
+    // and under a foreign grip the keys can't read the stash either —
+    // the hold answers before the count's read
+    expect(roomSrc).toContain("spot.trappedBy !== 'inspector'\n          ? 0 : (c.seizeStash");
+    // no grapple starts under a knee — the inspector's own hold is
+    // the only grip it sets
+    expect(roomSrc).toContain("!this.testing.trappedBy || this.testing.trappedBy === 'inspector'");
   });
 });
 

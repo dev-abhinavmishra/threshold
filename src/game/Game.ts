@@ -1291,7 +1291,9 @@ export class Game {
         // work and stays outside the under's pocket.
         const s = this.hazard.snares.find((hz) => hz.armed && hz.planted
           && !hz.claimed && near(hz.pos));
-        if (s) { this.removeSnare(s); return 'coil'; }
+        // sprint 720 — the under's answer strikes the same ledger: a
+        // strip landing on YOUR sign is another reader of the floor
+        if (s) { this.removeSnare(s); return this.answerWork('coil', x, z); }
         // or your cocked plate folds into stock — a live setTrap the
         // mark named lifts whole. Sprung or pried plates are dead
         // work; the 'spring' sign already owns their answer.
@@ -1302,7 +1304,7 @@ export class Game {
           const li = this.liveTraps.findIndex((tt) => tt.key === t.key);
           if (li >= 0) this.liveTraps.splice(li, 1);
           this.trapPos.delete(t.key);
-          return 'plate';
+          return this.answerWork('plate', x, z);
         }
         // sprint 676 — or your wheel's muscle walks off: a 'work' mark
         // by a live player-fitted fan and the belt comes off in ITS
@@ -1321,7 +1323,7 @@ export class Game {
             this.kickedWedges.push({ x: f.pos.x + 0.2, z: f.pos.z - 0.1 });
             this.mintWedgeDrops();
           }
-          return 'belt';
+          return this.answerWork('belt', x, z);
         }
         // sprint 677 — or your eye's glass walks off: a 'work' mark by
         // a live player-seated socket and the lens comes out in ITS
@@ -1335,7 +1337,7 @@ export class Game {
           w.dead = true;
           w.lensed = false;
           delete w.owner; // the glass is out — dead socket, nobody's
-          return 'lens';
+          return this.answerWork('lens', x, z);
         }
         // sprint 679 — or your throat's brass walks off: a 'work' mark
         // by a threaded line and the valve comes off whole in ITS
@@ -1350,7 +1352,7 @@ export class Game {
           st.valved = false;
           st.dead = true;
           delete st.owner; // the brass is out — bare thread, nobody's
-          return 'throat';
+          return this.answerWork('throat', x, z);
         }
         return null;
       },
@@ -8183,7 +8185,17 @@ export class Game {
     }
     site.strikes += 1;
     site.lastT = this.clock.time;
-    if (site.strikes >= 2) {
+    if (site.strikes >= 3) {
+      // sprint 721 — a floor worked past answering is a tally, not a
+      // claim: the third strike writes the deeper book too. The count's
+      // ledger and the clerk's agree — the same floor, three readers,
+      // is a signature neither book can mistake.
+      this.unpaidHeld += 1;
+      this.unpaidTheft += 1;
+      this.filedWork += 1;
+      this.cue('chalk-mark', v3(x, 0.5, z),
+        '[the tally writes it as theft — the same floor worked past answering]', 'warn');
+    } else if (site.strikes >= 2) {
       this.unpaidHeld += 1;
       this.filedWork += 1;
       this.cue('chalk-mark', v3(x, 0.5, z),
@@ -8191,11 +8203,24 @@ export class Game {
     }
   }
 
-  /** Every 'work' answer the dispatch lands runs the tally — the
-   *  strike is the answering, not the marking. */
+  /** Every 'work' answer a dispatch lands runs the tally — the
+   *  strike is the answering, not the marking, and both books read
+   *  the same floor (the warden's re-lays and the grafter's strips
+   *  alike). */
   private answerWork<T extends string>(answer: T, x: number, z: number): T {
     this.strikeWorkSite(x, z);
     return answer;
+  }
+
+  /** sprint 722 — the seam tells the filed floor: stepping into a
+   *  room the tally struck twice reads the standing order underfoot
+   *  before the patrol reaches it. */
+  private maybeFiledFloor(): void {
+    const cold = this.clock.time - 360;
+    if (!this.workSites.some((s) => s.room === this.currentRoom
+      && s.strikes >= 2 && s.lastT >= cold)) return;
+    this.cue('chalk-mark', this.player.pos,
+      '[these boards are filed — it remembers whose hands worked them]', 'warn');
   }
 
   /** Service refusal at a staffed counter — a cold counter folds its
@@ -8210,8 +8235,12 @@ export class Game {
       return true;
     }
     if (this.unpaidHeld >= 6) {
-      this.cue('door-locked', pos,
-        "[she reads the register — the face buys nothing past six lines · the desk is the only answer]", 'warn');
+      // sprint 724 — and she names the floors: the clerk that refuses
+      // a filed face reads its worked-floor lines out loud
+      const floors = this.workSites.filter((s) => s.strikes >= 2).length;
+      this.cue('door-locked', pos, floors > 0
+        ? `[she reads the register — the face buys nothing past six lines · it names ${floors} worked floor${floors === 1 ? '' : 's'} · the desk is the only answer]`
+        : "[she reads the register — the face buys nothing past six lines · the desk is the only answer]", 'warn');
       return true;
     }
     return false;
@@ -11439,6 +11468,7 @@ export class Game {
       this.maybeStatueShift();
       this.maybeCreakyRoom();
       this.maybeMutter(false);
+      this.maybeFiledFloor();
     }
     this.tickEchoQueue();
     this.tickOccupant();
