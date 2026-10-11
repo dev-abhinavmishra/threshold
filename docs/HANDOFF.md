@@ -2,6 +2,16 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 726–728 — the clerk levies the floor (mechanics lane)
+
+- **726** the floor's rate: new `filedFloorLevy(roomIndex)` — live twice-struck sites in the counter's room levy +2 each (cap 6) onto every price the staffed counter quotes. The ware verb names the boards: `[traded on a filed floor — N imprints]` / refusal reads `the floor's rate is N imprints — the register levies these boards`.
+- **727** the book levies too: the 'ask' page and the register's own readout pay the same boards (`eff = price + levy`, `regCost = 3 + levy`, both refusal cues name the floor); the askReg readout appends `· THIS floor is filed` when the counter stands on one.
+- **728** pins + live: contract describe 'the clerk levies the floor' (room-scoped, live-only, all three verbs pay it, 360s cool); e2e leg drives `focused.kind='shop'` → `tryInteract()` on a seeded counter: base+2 charged, receipt names the floor; aged site (lastT −400s) levies nothing and names nothing.
+
+Convention: `site.room` is `room.index`, but counter lookups index `activeRooms()` by array position — levy call sites translate via `activeRooms()[i]?.index`. A cooled site stops levying at the same 360s sign the warden stops believing.
+
+Next: the tally's counter-leg is closed (file → patrol → levy). Backlog: inspector rattle mid-sweep ordering line; 'work'-streak escalation beyond +1/strike (wanted already tightens at 6); milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
 ## Sprint 720–725 — both books keep the floor (mechanics lane)
 
 - **720** the under strips into the same ledger: every `stripWork` landing now runs `answerWork` — coil/plate/belt/lens/throat all strike the site like the house's dispatch. The signer still owns the strike (`by` within 1.8m): the grafter stripping YOUR sign files YOUR hands again — the under answering your mark is another reader of the same floor. A grafter's own sign strips clean (files nothing, same gate).
@@ -14,8 +24,6 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 Traps: `stripWork`'s answers strike through the same `by`-gate — a grafter stripping YOUR mark files you, never itself (the `ev.by` skip for 'grafter:N'/'eye:N' is unchanged). The inspector's arrival ordering runs BEFORE `testing` is set, so a mid-walk grip never starts its 2.6s rattle — `checked.add(spot.id)` is what moves it past the spot (without it the inspector re-targets the same gripped lid forever). `unpaidTheft` writes ride the existing death-remittance load (death.ts) — the tally's book and the count's book now write together.
 
 Next: `filedWork` has no UNDO path — the ledger only writes, never amends (a paid desk could reduce filedWork like it lowers unpaid). The Auditor's wanted posts key off `unpaidTheft` totals, not sites — a wanted poster naming the filed floor is open. And the grafter's own-strip strike is the honest one — a grafter stripping its OWN graft-sign files nothing, meaning the under still answers itself for free.
-
-
 ## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
 - **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.

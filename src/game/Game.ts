@@ -2086,6 +2086,18 @@ export class Game {
     }
   }
 
+  /** sprint 726 — the clerk's rate stands on filed boards: a staffed
+   *  counter whose ROOM carries a live twice-struck site levies the
+   *  floor into every price it quotes — wares, pages, even reading
+   *  your own file. The floor is the room's: a cooled site stops
+   *  levying (same 360s sign the warden stops believing). */
+  private filedFloorLevy(roomIndex: number): number {
+    const cold = this.clock.time - 360;
+    const n = this.workSites.filter((s) => s.strikes >= 2
+      && s.lastT >= cold && s.room === roomIndex).length;
+    return Math.min(n * 2, 6);
+  }
+
   /** The count's locker — seized goods hang under a fresh claim tag at
    *  the nearest under claim cage instead of vanishing. A seed with no
    *  cage keeps the take (the count swallowed it whole). */
@@ -4432,17 +4444,22 @@ export class Game {
           const cPrice = (sock.meta.clerkPrice as number) ?? 12;
           if (!cItem) return;
           const filed = this.unpaidHeld > 0;
-          const cEff = filed ? cPrice + Math.min(3 + this.unpaidHeld * 2, 10) : cPrice;
+          // sprint 726 — and the floor's own levy: a counter standing
+          // on a filed floor names the boards in its price.
+          const levy = this.filedFloorLevy(this.activeRooms()[cRoom]?.index ?? cRoom);
+          const cEff = (filed ? cPrice + Math.min(3 + this.unpaidHeld * 2, 10) : cPrice) + levy;
           if (this.imprints >= cEff) {
             this.chargedImprints(cEff, it.pos.x, it.pos.z);
             sock.meta.sold = true;
             it.enabled = false;
             this.giveItem(cItem, 1);
             this.cue('purchase', it.pos,
-              filed ? `[traded at the register's rate — ${cEff} imprints]` : `[the clerk's till rings — ${cEff} imprints]`, 'info');
+              levy > 0 ? `[traded on a filed floor — ${cEff} imprints]`
+                : filed ? `[traded at the register's rate — ${cEff} imprints]` : `[the clerk's till rings — ${cEff} imprints]`, 'info');
           } else {
             this.cue('door-locked', it.pos,
-              filed ? `[the register's rate is ${cEff} imprints — settle your claims]` : `[${cEff} imprints required]`, 'warn');
+              levy > 0 ? `[the floor's rate is ${cEff} imprints — the register levies these boards]`
+                : filed ? `[the register's rate is ${cEff} imprints — settle your claims]` : `[${cEff} imprints required]`, 'warn');
           }
           return;
         }
@@ -4530,10 +4547,14 @@ export class Game {
         }
         const price = (page.meta.clerkQPrice as number) ?? 6;
         const filed = this.unpaidHeld > 0;
-        const eff = filed ? price + Math.min(2 + this.unpaidHeld, 6) : price;
+        // sprint 727 — the page levies the floor too: a question on
+        // filed boards costs the rate the boards are kept at.
+        const levy = this.filedFloorLevy(room?.index ?? roomIndex);
+        const eff = (filed ? price + Math.min(2 + this.unpaidHeld, 6) : price) + levy;
         if (this.imprints < eff) {
           this.cue('door-locked', it.pos,
-            filed ? `[the clerk wants ${eff} imprints for the page — the register's rate, settle your claims]`
+            levy > 0 ? `[the clerk wants ${eff} imprints for the page — the floor's rate, these boards are filed]`
+              : filed ? `[the clerk wants ${eff} imprints for the page — the register's rate, settle your claims]`
               : `[the clerk wants ${eff} imprints for the page — ${eff - this.imprints} short]`, 'warn');
           return;
         }
@@ -4604,12 +4625,19 @@ export class Game {
             "[the clerk folds its hands — the counter is closed to you]", 'warn');
           return;
         }
-        if (this.imprints < 3) {
+        // sprint 727 — even reading your own file on a filed floor
+        // pays the boards' rate: the clerk's book opens where the
+        // register already wrote.
+        const levy = this.filedFloorLevy(this.activeRooms()[rIdx]?.index ?? rIdx);
+        const regCost = 3 + levy;
+        if (this.imprints < regCost) {
           this.cue('door-locked', it.pos,
-            `[the clerk wants 3 imprints to open the register — ${3 - this.imprints} short]`, 'warn');
+            levy > 0
+              ? `[the clerk wants ${regCost} imprints to open the register — the floor's rate, these boards are filed]`
+              : `[the clerk wants 3 imprints to open the register — ${3 - this.imprints} short]`, 'warn');
           return;
         }
-        this.chargedImprints(3, it.pos.x, it.pos.z);
+        this.chargedImprints(regCost, it.pos.x, it.pos.z);
         this.sound.emit({ x: it.pos.x, y: 1, z: it.pos.z, intensity: 0.35, category: 'entity-cue', caption: '' });
         // sprint 516 — and the register remembers the bulge: a counter
         // that sight-filed your load says so in the readout — the
@@ -4632,9 +4660,12 @@ export class Game {
         // struck twice read in its book like the lids it counts
         const floorN = this.workSites.filter((s) => s.strikes >= 2).length;
         const floors = floorN > 0 ? ` · it keeps ${floorN} worked floor${floorN === 1 ? '' : 's'} filed` : '';
+        // sprint 727 — and when the counter itself stands on one,
+        // the readout names the boards under it
+        const thisFloor = levy > 0 ? ' · THIS floor is filed' : '';
         this.cue('whisper', it.pos, this.unpaidHeld > 0
-          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}${floors}]`
-          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}${floors}]`);
+          ? `[the register on you — ${this.unpaidHeld} claims held · your face is in it${this.unpaidHeld >= 6 ? ' — the counters are closed to you' : ''}${bulk}${lids}${lamps}${floors}${thisFloor}]`
+          : `[the register has no line on you — your face isn't in it${bulk}${lids}${lamps}${floors}${thisFloor}]`);
         return;
       }
       case 'till': {
