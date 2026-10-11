@@ -8232,7 +8232,6 @@ describe('the steps kept the climb (sprint 720)', () => {
     expect(tsc, 'no tread scuffs').toBeGreaterThan(0);
   });
 });
-||||||| 8c5f1ac
 
 describe('the tally kept count (sprint 730)', () => {
   it('chalk score-marks sit on the game boards', () => {
