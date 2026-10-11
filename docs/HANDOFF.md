@@ -2,6 +2,19 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 741–746 — the tally closes its books (mechanics lane)
+
+- **741** the desk amends the floor: new `unfileWorkSite(n)` unwinds strikes newest-first — LIFO, the later site wins a `lastT` tie — dropping emptied sites. The Detective's `settle` clears the whole floor-file (cue `· N worked floors come off the book`); the Broker's `fix` on a register line unwinds one strike (`· the desk strikes a worked floor`). A site under 2 strikes stops qualifying for `filedFloors` immediately — the standing order withdraws with the line.
+- **742** the under answers itself: `strikeWorkSite`'s `by`-gate split — EVERY landed 'work' answer now strikes its SITE, but `namesYou` (unsigned/'player'/'eye:') still gates the ledger's lines. A `grafter:N`-signed landing files the floor, never a face: warn `[the register keeps this floor — it was not always your hands]`, no unpaidHeld/unpaidTheft/filedWork. The patrol reads floors, not signers — a twice-struck under floor pulls the warden like yours does.
+- **743** the poster names the floor: the `wanted` sheet readout appends `· it names the floor in the {room.label}` — the newest uncooled strikes≥2 site is printed on the boards alongside the theft count.
+- **744** the stand re-reads the book: the warden's `filedSite` completion re-asks `filedFloors` at stand time — a desk that unwound (or a cool that aged out) the floor mid-walk reads `[it bends for the filed floor — the line was struck out while it walked]` (info) instead of naming your hands.
+- **745** pins + e2e leg: 3 new describes (70 tests) pin the namesYou split, the LIFO unwind + settle/fix wiring, the poster's floor line, and the stand re-read; e2e leg drives foreign-signed + player-signed strips then `unfileWorkSite` → floor struck 2, face filed 0, desk unwinds 1, wipe clears all.
+- **746** sibling merge bookkeeping — renumbered from 735-740 after the parallel mechanics sibling landed s733-735 (`handsLegible`) mid-gate; HANDOFF kept newest-first, no code overlap (their seam tell vs our strikeWorkSite/unfile/stand re-read).
+
+Traps: `unfileWorkSite`'s reduce MUST keep `s.lastT >= best.lastT` (not `>`) — equal timestamps land every frame, and `>` picks the OLDEST site. `strikeWorkSite`'s ev `find` is array-order, not distance order — a generated mark earlier in `hazard.evidence` can name the signer for a foreign strip; spec fixtures must `unshift`/`splice(1,0)`, never `push`. `namesYou` treats `eye:N` as yours deliberately — the eye is your glass, its sign is your hand. Sibling's `handsLegible` reads the same `workSites` strikes≥2 pool — an unwind that drops the third live floor also drops legibility (their backlog called this 'laundering the hands'; the desk now does it naturally).
+
+Next: `filedWork` (epitaph count) still only grows — the epitaph reads history, so un-filing doesn't rewrite the past (arguably right; flag for design). The Auditor's wanted could show the floor line when unpaidTheft is 0 but filed sites exist — currently only theft counts post. And the seam tell doesn't distinguish YOUR floor from the under's — a filed grafter floor warns the same way.
+
 ## Sprint 733–735 — the hands are legible (mechanics lane)
 
 - **733** the stamp: `handsLegible` — three live filed floors (strikes ≥2, uncooled) and the register stops keeping floors and starts keeping the signer. `workStamp()` marks every player-signed mint (`by:'player'`, all kinds — work and spring alike) with `marked:'hands'`; the flag rides `CheckpointSave` evidence like `by` does.
