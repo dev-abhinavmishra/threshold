@@ -8169,3 +8169,48 @@ describe('the house counts its marks (sprint 717)', () => {
     expect(max, `max decal count ${max} over budget`).toBeLessThanOrEqual(60);
   });
 });
+
+describe('the tally kept count (sprint 730)', () => {
+  it('chalk score-marks sit on the game boards', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'score-tally') n++; });
+      }
+    }
+    expect(n, 'no score tallies').toBeGreaterThan(0);
+  });
+});
+
+describe('the records kept their rings (sprint 730)', () => {
+  it('vinyl ghosts shadow the shelves', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'record-rings') n++; });
+      }
+    }
+    expect(n, 'no record rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the carpet kept the lane (sprint 730)', () => {
+  it('traffic-worn bands run down the rugs', () => {
+    let n = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => { if (o.name === 'carpet-lane') n++; });
+      }
+    }
+    expect(n, 'no carpet lanes').toBeGreaterThan(0);
+  });
+});
