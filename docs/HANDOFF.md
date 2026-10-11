@@ -30,6 +30,16 @@ Next: the tally's counter-leg is closed (file → patrol → levy). Backlog: ins
 Traps: `stripWork`'s answers strike through the same `by`-gate — a grafter stripping YOUR mark files you, never itself (the `ev.by` skip for 'grafter:N'/'eye:N' is unchanged). The inspector's arrival ordering runs BEFORE `testing` is set, so a mid-walk grip never starts its 2.6s rattle — `checked.add(spot.id)` is what moves it past the spot (without it the inspector re-targets the same gripped lid forever). `unpaidTheft` writes ride the existing death-remittance load (death.ts) — the tally's book and the count's book now write together.
 
 Next: `filedWork` has no UNDO path — the ledger only writes, never amends (a paid desk could reduce filedWork like it lowers unpaid). The Auditor's wanted posts key off `unpaidTheft` totals, not sites — a wanted poster naming the filed floor is open. And the grafter's own-strip strike is the honest one — a grafter stripping its OWN graft-sign files nothing, meaning the under still answers itself for free.
+## Sprint 718–720 — the serving tops kept their rings (decals lane)
+
+- **718** tray rings, cloth folds and dinner rings on the serving tops — `trayRing` (sideboard/consoleTable/teaTrolley/diningTable/merchantCounter), `clothFold` (diningTable/sideboard/linenShelf/stackedLinen/linenPress), `dinnerRing` (diningTable/roundTable/breakTable); horizontal decals at `decalY(kind,dc,1,0.9)+0.004` with random rotation.
+- **719** key frays, soap chips and towel stripes on the service smalls — `keyFray` on keyRack/keyCabinet (front face), `soapChip` on basinSink/washStand/vanityTable tops, `towelStripe` on towelRail/pegRail (front face, lower band).
+- **720** the steps kept the climb — `stairNose` shine band on stairs/grandStair/stairLanding, `bannisterTurn` polish spiral on balustrade/newelPost/railing, `treadScuff` heel arcs on the stair kinds.
+
+All prop-mounted (`props.ts` tail blocks) — keyed per prop kind, `decalY`/`decalDim` for surface height and front-face offset. ~420 decal systems live; the s717 keep-hash keeps each family in ~half its rooms so density stays ~32/room mean.
+
+
+
 ## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
 - **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
@@ -50,6 +60,7 @@ Next: the knee family is closed (plants / holds / robs / outranks / releases / i
 Traps: `answerWork` wraps ONLY the returns that land — `return null` and `lidHeld` strike nothing (nothing was answered). The strike names the SIGNER via the nearest 'work' mark within 1.8m — a grafter's own sign near your work is a real edge the `by` check exists for. `filedChecked` keys on strike-count not time, so a cooled-then-restruck site re-pulls correctly.
 
 Next: the tally is a surface — a natural third leg is the counter *answering* a filed floor (the clerk's rate could name the floor it refuses on), and the streak idea still has no escalation beyond +1 line per strike (wanted already tightens at 6). Other backlog: lidSweep under a sweep-grip is now ordered, but an inspector rattle mid-sweep has no ordering line of its own.
+
 
 
 ## Sprint 681–683 — your jaw answers too (mechanics lane)

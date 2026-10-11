@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun , scoreTally, recordRings, ashTray, soilSpill, tableFeet, bleachBloom, tankRing, greaseSpatter } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight, canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe, stairNose, bannisterTurn, treadScuff, ashTray, bleachBloom, greaseSpatter, recordRings, scoreTally, soilSpill, tableFeet, tankRing } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -3827,6 +3827,151 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     md.position.set(0, decalY(spec.kind, dc, 0.7, 0.7), 0);
     prop.group.add(md);
     if (!prop.group.name) prop.group.name = 'mail-dust';
+  }
+  // The sideboards kept their circles — water rings and tray ghosts
+  // on the dining tops where the service used to rest.
+  const SERVING_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['sideboard', 'consoleTable', 'teaTrolley', 'diningTable', 'merchantCounter']);
+  if (SERVING_TOPS.has(spec.kind) && rng.bool(0.32)) {
+    const dc = modelCollider(spec.kind);
+    const tr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.46, 0.4),
+      new THREE.MeshStandardMaterial({ map: trayRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tr.name = 'tray-ring';
+    tr.userData.decalMat = true;
+    tr.rotation.x = -Math.PI / 2;
+    tr.rotation.z = rng.float() * Math.PI * 2;
+    tr.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 1, 0.9) + 0.004, (rng.float() - 0.5) * 0.2);
+    prop.group.add(tr);
+    if (!prop.group.name) prop.group.name = 'tray-ring';
+  }
+  // The cloths kept their folds — the clean patch and crease lines
+  // of a cloth left folded on the wood.
+  const CLOTH_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['diningTable', 'sideboard', 'linenShelf', 'stackedLinen', 'linenPress']);
+  if (CLOTH_TOPS.has(spec.kind) && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const cf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.52, 0.4),
+      new THREE.MeshStandardMaterial({ map: clothFold(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cf.name = 'cloth-fold';
+    cf.userData.decalMat = true;
+    cf.rotation.x = -Math.PI / 2;
+    cf.rotation.z = rng.float() * Math.PI * 2;
+    cf.position.set((rng.float() - 0.5) * 0.25, decalY(spec.kind, dc, 1, 0.9) + 0.005, (rng.float() - 0.5) * 0.2);
+    prop.group.add(cf);
+    if (!prop.group.name) prop.group.name = 'cloth-fold';
+  }
+  // The tables kept the meal — plate rings and crumbs where
+  // someone ate and nobody cleared.
+  const MEAL_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['diningTable', 'roundTable', 'breakTable']);
+  if (MEAL_TOPS.has(spec.kind) && rng.bool(0.36)) {
+    const dc = modelCollider(spec.kind);
+    const dr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: dinnerRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    dr.name = 'dinner-ring';
+    dr.userData.decalMat = true;
+    dr.rotation.x = -Math.PI / 2;
+    dr.rotation.z = rng.float() * Math.PI * 2;
+    dr.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 0.9) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(dr);
+    if (!prop.group.name) prop.group.name = 'dinner-ring';
+  }
+  // The keys kept their fobs — frayed cords and tag ghosts on
+  // the boards where the house's keys hung.
+  const KEY_BOARDS: ReadonlySet<PropSpec['kind']> = new Set(['keyRack', 'keyCabinet']);
+  if (KEY_BOARDS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const kf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.44, 0.44),
+      new THREE.MeshStandardMaterial({ map: keyFray(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    kf.name = 'key-fray';
+    kf.userData.decalMat = true;
+    kf.position.set(0, decalY(spec.kind, dc, 0.5, 1.2), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
+    prop.group.add(kf);
+    if (!prop.group.name) prop.group.name = 'key-fray';
+  }
+  // The basins kept the soap — chips and lather crust in the
+  // ring the dish left.
+  const SOAP_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['basinSink', 'washStand', 'vanityTable']);
+  if (SOAP_TOPS.has(spec.kind) && rng.bool(0.42)) {
+    const dc = modelCollider(spec.kind);
+    const sc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.34),
+      new THREE.MeshStandardMaterial({ map: soapChip(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sc.name = 'soap-chip';
+    sc.userData.decalMat = true;
+    sc.rotation.x = -Math.PI / 2;
+    sc.rotation.z = rng.float() * Math.PI * 2;
+    sc.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, dc, 1, 0.85) + 0.004, (rng.float() - 0.5) * 0.15);
+    prop.group.add(sc);
+    if (!prop.group.name) prop.group.name = 'soap-chip';
+  }
+  // The rails kept the damp — wet stripes where towels hung
+  // and never dried.
+  const TOWEL_RAILS: ReadonlySet<PropSpec['kind']> = new Set(['towelRail', 'pegRail']);
+  if (TOWEL_RAILS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.62),
+      new THREE.MeshStandardMaterial({ map: towelStripe(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ts.name = 'towel-stripe';
+    ts.userData.decalMat = true;
+    ts.position.set(0, decalY(spec.kind, dc, 0.4, 1.0), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'towel-stripe';
+  }
+  // The steps kept the climb — a worn shine band along every
+  // tread nose where feet caught the edge.
+  const STAIR_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['stairs', 'grandStair', 'stairLanding']);
+  if (STAIR_KINDS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const sn = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.3),
+      new THREE.MeshStandardMaterial({ map: stairNose(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sn.name = 'stair-nose';
+    sn.userData.decalMat = true;
+    sn.rotation.x = -Math.PI / 2;
+    sn.position.set(0, decalY(spec.kind, dc, 0.35, 0.5) + 0.005, decalDim(spec.kind, dc, 2, 0.8) / 2 - 0.12);
+    prop.group.add(sn);
+    if (!prop.group.name) prop.group.name = 'stair-nose';
+  }
+  // The bannisters kept the turn — polished spirals at the
+  // newel where hands always land.
+  const POST_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['balustrade', 'newelPost', 'railing']);
+  if (POST_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const bt = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.6),
+      new THREE.MeshStandardMaterial({ map: bannisterTurn(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bt.name = 'bannister-turn';
+    bt.userData.decalMat = true;
+    bt.position.set(0, decalY(spec.kind, dc, 0.55, 0.7), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.012);
+    prop.group.add(bt);
+    if (!prop.group.name) prop.group.name = 'bannister-turn';
+  }
+  // The risers kept the strike — heel arcs and rubber smears
+  // dragged up the climb.
+  if (STAIR_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const tsc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.38),
+      new THREE.MeshStandardMaterial({ map: treadScuff(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    tsc.name = 'tread-scuff';
+    tsc.userData.decalMat = true;
+    tsc.rotation.x = -Math.PI / 2;
+    tsc.rotation.z = rng.float() * Math.PI * 2;
+    tsc.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 0.2, 0.3) + 0.005, (rng.float() - 0.5) * 0.3);
+    prop.group.add(tsc);
+    if (!prop.group.name) prop.group.name = 'tread-scuff';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

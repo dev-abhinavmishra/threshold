@@ -8170,6 +8170,70 @@ describe('the house counts its marks (sprint 717)', () => {
   });
 });
 
+describe('the sideboards kept their circles (sprint 718)', () => {
+  it('tray rings, cloth folds and dinner rings mark the serving tops', () => {
+    let tr = 0, cf = 0, dr = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'tray-ring') tr++;
+          if (o.name === 'cloth-fold') cf++;
+          if (o.name === 'dinner-ring') dr++;
+        });
+      }
+    }
+    expect(tr, 'no tray rings').toBeGreaterThan(0);
+    expect(cf, 'no cloth folds').toBeGreaterThan(0);
+    expect(dr, 'no dinner rings').toBeGreaterThan(0);
+  });
+});
+
+describe('the keys kept their fobs (sprint 719)', () => {
+  it('key frays, soap chips and towel stripes mark the service smalls', () => {
+    let kf = 0, sc = 0, ts = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'key-fray') kf++;
+          if (o.name === 'soap-chip') sc++;
+          if (o.name === 'towel-stripe') ts++;
+        });
+      }
+    }
+    expect(kf, 'no key frays').toBeGreaterThan(0);
+    expect(sc, 'no soap chips').toBeGreaterThan(0);
+    expect(ts, 'no towel stripes').toBeGreaterThan(0);
+  });
+});
+
+describe('the steps kept the climb (sprint 720)', () => {
+  it('stair noses, bannister turns and tread scuffs mark the climbs', () => {
+    let sn = 0, bt = 0, tsc = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'stair-nose') sn++;
+          if (o.name === 'bannister-turn') bt++;
+          if (o.name === 'tread-scuff') tsc++;
+        });
+      }
+    }
+    expect(sn, 'no stair noses').toBeGreaterThan(0);
+    expect(bt, 'no bannister turns').toBeGreaterThan(0);
+    expect(tsc, 'no tread scuffs').toBeGreaterThan(0);
+  });
+});
+||||||| 8c5f1ac
+
 describe('the tally kept count (sprint 730)', () => {
   it('chalk score-marks sit on the game boards', () => {
     let n = 0;
@@ -8304,3 +8368,4 @@ describe('the stove kept its spatter (sprint 732)', () => {
     expect(n, 'no grease spatter').toBeGreaterThan(0);
   });
 });
+
