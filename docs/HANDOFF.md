@@ -2,6 +2,10 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## ⚑ FINALIZATION STATE (2026-10-11) — read before resuming
+
+The user asked for a hard stop: the game is being finished to show off. All lanes landed their final arcs (mechanics s741–746, decals s730–732) and were told to idle. A full finalization pass on main verified: playable end-to-end on the prod build (menu → run → movement → door interact → room traversal → underscript, zero console errors), post-governor degrades correctly under load (tier 2: SSAO shed, bloom off, pixelRatio 1.5→1.05), all gates green. Draw calls ~0.3–1.4k calls / ~1–5M tris in the heaviest rooms — fine for hardware GL, slide-show on SwiftShader (environment-bound, not a game defect). Known caveat: GLB prop-variant picks are nondeterministic across loads (async cache timing) — cosmetic, same seed shows different furniture variants. Do NOT resume the sprint loop on a future wake without checking with the user whether more polish is actually wanted.
+
 ## Sprint 741–746 — the tally closes its books (mechanics lane)
 
 - **741** the desk amends the floor: new `unfileWorkSite(n)` unwinds strikes newest-first — LIFO, the later site wins a `lastT` tie — dropping emptied sites. The Detective's `settle` clears the whole floor-file (cue `· N worked floors come off the book`); the Broker's `fix` on a register line unwinds one strike (`· the desk strikes a worked floor`). A site under 2 strikes stops qualifying for `filedFloors` immediately — the standing order withdraws with the line.
