@@ -457,13 +457,17 @@ export function warningStripe(): THREE.Texture | null {
 /* ---------- mesh helpers ---------- */
 
 /** Quad in the XY plane — caller positions/orients it onto a surface.
- *  Material + texture are per-mesh; disposeRoom frees them via userData. */
+ *  Material + texture are per-mesh; disposeRoom frees them via userData.
+ *  The depth bias staggers per quad so decals that land on the same plane
+ *  (same wall, same floor) separate instead of z-fighting each other. */
+let decalBias = 0;
 export function decalQuad(tex: THREE.Texture | null, w: number, h: number): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
     new THREE.MeshStandardMaterial({
       map: tex ?? undefined, transparent: true, roughness: 0.95, metalness: 0,
-      polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2 - (decalBias++ % 8),
+      depthWrite: false,
     }),
   );
   mesh.userData.decalMat = true;

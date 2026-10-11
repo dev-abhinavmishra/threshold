@@ -1180,13 +1180,16 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
   // Decal overlays — grime streaks, floor stains, posters, warning stripes
   // on planes slightly offset off surfaces. Boundary walls only.
   {
+    // Wall slabs are 0.24 thick (inner face at ±half − 0.12); decals must sit
+    // just proud of that face or they shimmer inside the wall.
+    const WALL_SKIN = 0.125;
     const wallDecal = (wall: 'n' | 's' | 'e' | 'w', tex: THREE.Texture | null, dw: number, dh: number, along: number, cy: number) => {
       const m = decalQuad(tex, dw, dh);
       if (dw <= 0.78) m.userData.paperWall = true;
-      if (wall === 'e') { m.rotation.y = -Math.PI / 2; m.position.set(w / 2 - 0.013, cy, along); }
-      else if (wall === 'w') { m.rotation.y = Math.PI / 2; m.position.set(-w / 2 + 0.013, cy, along); }
-      else if (wall === 'n') { m.rotation.y = Math.PI; m.position.set(along, cy, d / 2 - 0.013); }
-      else { m.position.set(along, cy, -d / 2 + 0.013); }
+      if (wall === 'e') { m.rotation.y = -Math.PI / 2; m.position.set(w / 2 - WALL_SKIN, cy, along); }
+      else if (wall === 'w') { m.rotation.y = Math.PI / 2; m.position.set(-w / 2 + WALL_SKIN, cy, along); }
+      else if (wall === 'n') { m.rotation.y = Math.PI; m.position.set(along, cy, d / 2 - WALL_SKIN); }
+      else { m.position.set(along, cy, -d / 2 + WALL_SKIN); }
       group.add(m);
     };
     const portOffsetsOn = (wall: string) => [spec.entry, ...spec.exits].filter((p) => p.wall === wall).map((p) => p.offset);
@@ -1287,10 +1290,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const web = decalQuad(cobweb(rng), 0.62, 0.62);
         // cobweb tex anchors top-right; mirror half the time for left corners
         if (rng.bool(0.5)) web.scale.x = -1;
-        if (spot.wall === 'e') { web.rotation.y = -Math.PI / 2; web.position.set(w / 2 - 0.013, h - 0.38, spot.along); }
-        else if (spot.wall === 'w') { web.rotation.y = Math.PI / 2; web.position.set(-w / 2 + 0.013, h - 0.38, spot.along); }
-        else if (spot.wall === 'n') { web.rotation.y = Math.PI; web.position.set(spot.along, h - 0.38, d / 2 - 0.013); }
-        else { web.position.set(spot.along, h - 0.38, -d / 2 + 0.013); }
+        if (spot.wall === 'e') { web.rotation.y = -Math.PI / 2; web.position.set(w / 2 - 0.125, h - 0.38, spot.along); }
+        else if (spot.wall === 'w') { web.rotation.y = Math.PI / 2; web.position.set(-w / 2 + 0.125, h - 0.38, spot.along); }
+        else if (spot.wall === 'n') { web.rotation.y = Math.PI; web.position.set(spot.along, h - 0.38, d / 2 - 0.125); }
+        else { web.position.set(spot.along, h - 0.38, -d / 2 + 0.125); }
         group.add(web);
       }
     }
@@ -1432,10 +1435,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           strip.position.set(bx, by, 0.005);
           fr.add(strip);
         }
-        if (spot.wall === 'e') { fr.rotation.y = -Math.PI / 2; fr.position.set(w / 2 - 0.02, cy, spot.along); }
-        else if (spot.wall === 'w') { fr.rotation.y = Math.PI / 2; fr.position.set(-w / 2 + 0.02, cy, spot.along); }
-        else if (spot.wall === 'n') { fr.rotation.y = Math.PI; fr.position.set(spot.along, cy, d / 2 - 0.02); }
-        else { fr.position.set(spot.along, cy, -d / 2 + 0.02); }
+        if (spot.wall === 'e') { fr.rotation.y = -Math.PI / 2; fr.position.set(w / 2 - 0.125, cy, spot.along); }
+        else if (spot.wall === 'w') { fr.rotation.y = Math.PI / 2; fr.position.set(-w / 2 + 0.125, cy, spot.along); }
+        else if (spot.wall === 'n') { fr.rotation.y = Math.PI; fr.position.set(spot.along, cy, d / 2 - 0.125); }
+        else { fr.position.set(spot.along, cy, -d / 2 + 0.125); }
         group.add(fr);
       }
     }
@@ -1509,7 +1512,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const bw = 1.7 + rng.float() * 0.5;
       const bd = 0.55;
       const cx = (rng.float() - 0.5) * Math.max(0, w - bw - 2.4);
-      const cz = sgn * (d / 2 - 0.12 - bd / 2);
+      const cz = sgn * (d / 2 - 0.125 - bd / 2);
       const front = cz - sgn * (bd / 2); // room-facing surface
       const brickMat = rng.bool(0.5) ? TEX.brick() : TEX.stoneWall();
       brickMat.color.multiplyScalar(0.82 + rng.float() * 0.3);
@@ -1579,7 +1582,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     if (grand && !isUnder && h >= 3.8 && w >= 6 && rng.float() < 0.4) {
       const sgn = rng.bool(0.5) ? 1 : -1;
       const deckD = 0.42;
-      const bz = sgn * (d / 2 - 0.12 - deckD / 2);
+      const bz = sgn * (d / 2 - 0.125 - deckD / 2);
       const by = 2.52;
       const bw2 = w - 1.2;
       const deck = new THREE.Mesh(texBox(bw2, 0.08, deckD), wainsMat);
@@ -1874,9 +1877,9 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         const along = onX ? lz : lx;
         const lim = (onX ? d : w) / 2 - 0.4;
         m.position.set(
-          onX ? sgn * (w / 2 - 0.04) : Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)),
+          onX ? sgn * (w / 2 - 0.125) : Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)),
           0.95 + rng.float() * 0.45,
-          onX ? Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)) : sgn * (d / 2 - 0.04));
+          onX ? Math.max(-lim, Math.min(lim, along + (rng.float() - 0.5) * 0.5)) : sgn * (d / 2 - 0.125));
         m.rotation.y = onX ? -sgn * Math.PI / 2 : (sgn > 0 ? Math.PI : 0);
       } else {
         m.rotation.x = -Math.PI / 2;
@@ -3426,7 +3429,7 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       let side = rng.bool(0.5) ? 1 : -1;
       for (let i = 0; i < count; i++) {
         const sz = -d / 2 + (i + 0.5) * ((d - 1.2) / count) + 0.6;
-        const sx = side * (w / 2 - 0.05);
+        const sx = side * (w / 2 - 0.1);
         const py = 1.9 + rng.float() * 0.15;
         // arm out from the wall
         const arm = new THREE.Mesh(texBox(0.05, 0.05, 0.14), MAT.brass());
@@ -3651,10 +3654,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       const ah = 1.35 + rng.float() * 0.25;
       const ap = new THREE.Mesh(texBox(aw, ah, 0.018), TEX.tilesSubway());
       ap.name = 'tile-apron';
-      if (hw === 'e') ap.position.set(w / 2 - 0.016, ah / 2 + 0.35, along);
-      else if (hw === 'w') ap.position.set(-w / 2 + 0.016, ah / 2 + 0.35, along);
-      else if (hw === 'n') ap.position.set(along, ah / 2 + 0.35, d / 2 - 0.012);
-      else ap.position.set(along, ah / 2 + 0.35, -d / 2 + 0.016);
+      if (hw === 'e') ap.position.set(w / 2 - 0.134, ah / 2 + 0.35, along);
+      else if (hw === 'w') ap.position.set(-w / 2 + 0.134, ah / 2 + 0.35, along);
+      else if (hw === 'n') ap.position.set(along, ah / 2 + 0.35, d / 2 - 0.134);
+      else ap.position.set(along, ah / 2 + 0.35, -d / 2 + 0.134);
       group.add(ap);
       frameHardware.push(ap);
       // grout ghosting across the band
@@ -3669,10 +3672,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
         chip.name = 'tile-chip';
         const cx = along + (rng.float() - 0.5) * aw * 0.7;
         const cy = 0.5 + rng.float() * 0.8;
-        if (hw === 'e') chip.position.set(w / 2 - 0.004, cy, cx);
-        else if (hw === 'w') chip.position.set(-w / 2 + 0.004, cy, cx);
-        else if (hw === 'n') chip.position.set(cx, cy, d / 2 - 0.004);
-        else chip.position.set(cx, cy, -d / 2 + 0.004);
+        if (hw === 'e') chip.position.set(w / 2 - 0.127, cy, cx);
+        else if (hw === 'w') chip.position.set(-w / 2 + 0.127, cy, cx);
+        else if (hw === 'n') chip.position.set(cx, cy, d / 2 - 0.127);
+        else chip.position.set(cx, cy, -d / 2 + 0.127);
         group.add(chip);
         frameHardware.push(chip);
       }
@@ -5296,10 +5299,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (!tallCoverOn(port.wall, off, sDw)) {
         const m2 = decalQuad(inspectionStamp(rng), sDw, 0.3 + rng.float() * 0.12);
         m2.name = 'inspection-stamp';
-        if (port.wall === 'e') { m2.rotation.y = -Math.PI / 2; m2.position.set(w / 2 - 0.013, 1.35 + rng.float() * 0.5, off); }
-        else if (port.wall === 'w') { m2.rotation.y = Math.PI / 2; m2.position.set(-w / 2 + 0.013, 1.35 + rng.float() * 0.5, off); }
-        else if (port.wall === 'n') { m2.rotation.y = Math.PI; m2.position.set(off, 1.35 + rng.float() * 0.5, d / 2 - 0.013); }
-        else { m2.position.set(off, 1.35 + rng.float() * 0.5, -d / 2 + 0.013); }
+        if (port.wall === 'e') { m2.rotation.y = -Math.PI / 2; m2.position.set(w / 2 - 0.125, 1.35 + rng.float() * 0.5, off); }
+        else if (port.wall === 'w') { m2.rotation.y = Math.PI / 2; m2.position.set(-w / 2 + 0.125, 1.35 + rng.float() * 0.5, off); }
+        else if (port.wall === 'n') { m2.rotation.y = Math.PI; m2.position.set(off, 1.35 + rng.float() * 0.5, d / 2 - 0.125); }
+        else { m2.position.set(off, 1.35 + rng.float() * 0.5, -d / 2 + 0.125); }
         group.add(m2);
       }
     }
@@ -5479,10 +5482,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
       if (rng.float() >= mt.p) continue;
       const spot = pickWallSpot(0.6);
       if (!spot) continue;
-      const lp = spot.wall === 'e' ? { x: w / 2 - 0.07, z: spot.along }
-        : spot.wall === 'w' ? { x: -w / 2 + 0.07, z: spot.along }
-        : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.07 }
-        : { x: spot.along, z: -d / 2 + 0.07 };
+      const lp = spot.wall === 'e' ? { x: w / 2 - 0.145, z: spot.along }
+        : spot.wall === 'w' ? { x: -w / 2 + 0.145, z: spot.along }
+        : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.145 }
+        : { x: spot.along, z: -d / 2 + 0.145 };
       try {
         const built = buildProp({ kind: mt.kind, x: lp.x, z: lp.z, y: mt.y, yaw: mountYaw[spot.wall] }, rng.fork(7000 + Math.floor(spot.along * 10)));
         if (mt.kind === 'securityCam') built.group.name = `cam-${room.index}`;
@@ -5535,10 +5538,10 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
           : CORRIDOR_SIGNS[Math.floor(rng.float() * CORRIDOR_SIGNS.length)].replace(/[→←]/g, '').trim();
         const label = `${text} ${arrow}`;
         const board = new THREE.Mesh(texBox(1.1, 0.28, 0.04), signMaterial(label) ?? MAT.charcoal());
-        const lp2 = spot.wall === 'e' ? { x: w / 2 - 0.06, z: spot.along }
-          : spot.wall === 'w' ? { x: -w / 2 + 0.06, z: spot.along }
-          : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.06 }
-          : { x: spot.along, z: -d / 2 + 0.06 };
+        const lp2 = spot.wall === 'e' ? { x: w / 2 - 0.145, z: spot.along }
+          : spot.wall === 'w' ? { x: -w / 2 + 0.145, z: spot.along }
+          : spot.wall === 'n' ? { x: spot.along, z: d / 2 - 0.145 }
+          : { x: spot.along, z: -d / 2 + 0.145 };
         board.position.set(lp2.x, 1.95, lp2.z);
         board.rotation.y = yaw;
         group.add(board);
@@ -5912,8 +5915,8 @@ export function buildRoomMesh(room: RoomInstance, spec: RoomSpec, seed: number, 
     {
       const onX = Math.abs(sconcePos.x) > Math.abs(sconcePos.z);
       const sgn = onX ? Math.sign(sconcePos.x || 1) : Math.sign(sconcePos.z || 1);
-      const wallX = onX ? sgn * (w / 2 - 0.03) : sconcePos.x;
-      const wallZ = onX ? sconcePos.z : sgn * (d / 2 - 0.03);
+      const wallX = onX ? sgn * (w / 2 - 0.125) : sconcePos.x;
+      const wallZ = onX ? sconcePos.z : sgn * (d / 2 - 0.125);
       const throwMat = new THREE.MeshBasicMaterial({
         color: 0xff9d4f, alphaMap: poolTexture(), transparent: true, opacity: 0.3,
         blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
