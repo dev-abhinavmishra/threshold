@@ -2,6 +2,13 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 715–716 — the knee lifts loud (mechanics lane)
+
+- **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
+- **716** merge-down of the 700-703 arc: the sibling lane's tally arc (709-714) landed the same ordering + holder-read surface first and further — `lidHeld` answers a gripped lid (mark spent, take sheltered) and the peep reads the knee. My scatter-ordering and peep pins conceded to theirs; what survives is the release tell + the held→lidHeld→freed→lidSweep transition leg. Contract 64/64.
+
+Next: the knee family is closed (plants / holds / robs / outranks / releases / is told). Backlog: the tally arc's own note — a counter answering a filed floor; inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
 ## Sprint 709–714 — the house keeps a tally (mechanics lane)
 
 - **709** work-site ledger: every 'work' answer the dispatch lands now runs `strikeWorkSite` — the answering itself is the strike, bucketed ~2.5m, keyed off the read mark's `by` (unsigned/'player'/'eye:' signs are yours; a grafter's own sign files nothing). Strike 2 at the same site names a repeat offender: `unpaidHeld + 1` and `filedWork + 1` per strike past the first, warn cue `[the register keeps this floor — the same hands have worked it before]`. Sites cool like sign (360s unanswered = fresh offense); ledger capped at 12, cooled-first out. `workSites` + `filedWork` ride `CheckpointSave`.
