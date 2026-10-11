@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -3680,6 +3680,57 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     md.position.set(0, decalY(spec.kind, dc, 0.7, 0.7), 0);
     prop.group.add(md);
     if (!prop.group.name) prop.group.name = 'mail-dust';
+  }
+  // The sideboards kept their circles — water rings and tray ghosts
+  // on the dining tops where the service used to rest.
+  const SERVING_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['sideboard', 'consoleTable', 'teaTrolley', 'diningTable', 'merchantCounter']);
+  if (SERVING_TOPS.has(spec.kind) && rng.bool(0.32)) {
+    const dc = modelCollider(spec.kind);
+    const tr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.46, 0.4),
+      new THREE.MeshStandardMaterial({ map: trayRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tr.name = 'tray-ring';
+    tr.userData.decalMat = true;
+    tr.rotation.x = -Math.PI / 2;
+    tr.rotation.z = rng.float() * Math.PI * 2;
+    tr.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 1, 0.9) + 0.004, (rng.float() - 0.5) * 0.2);
+    prop.group.add(tr);
+    if (!prop.group.name) prop.group.name = 'tray-ring';
+  }
+  // The cloths kept their folds — the clean patch and crease lines
+  // of a cloth left folded on the wood.
+  const CLOTH_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['diningTable', 'sideboard', 'linenShelf', 'stackedLinen', 'linenPress']);
+  if (CLOTH_TOPS.has(spec.kind) && rng.bool(0.3)) {
+    const dc = modelCollider(spec.kind);
+    const cf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.52, 0.4),
+      new THREE.MeshStandardMaterial({ map: clothFold(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    cf.name = 'cloth-fold';
+    cf.userData.decalMat = true;
+    cf.rotation.x = -Math.PI / 2;
+    cf.rotation.z = rng.float() * Math.PI * 2;
+    cf.position.set((rng.float() - 0.5) * 0.25, decalY(spec.kind, dc, 1, 0.9) + 0.005, (rng.float() - 0.5) * 0.2);
+    prop.group.add(cf);
+    if (!prop.group.name) prop.group.name = 'cloth-fold';
+  }
+  // The tables kept the meal — plate rings and crumbs where
+  // someone ate and nobody cleared.
+  const MEAL_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['diningTable', 'roundTable', 'breakTable']);
+  if (MEAL_TOPS.has(spec.kind) && rng.bool(0.36)) {
+    const dc = modelCollider(spec.kind);
+    const dr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: dinnerRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    dr.name = 'dinner-ring';
+    dr.userData.decalMat = true;
+    dr.rotation.x = -Math.PI / 2;
+    dr.rotation.z = rng.float() * Math.PI * 2;
+    dr.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 0.9) + 0.004, (rng.float() - 0.5) * 0.3);
+    prop.group.add(dr);
+    if (!prop.group.name) prop.group.name = 'dinner-ring';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

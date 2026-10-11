@@ -8169,3 +8169,24 @@ describe('the house counts its marks (sprint 717)', () => {
     expect(max, `max decal count ${max} over budget`).toBeLessThanOrEqual(60);
   });
 });
+
+describe('the sideboards kept their circles (sprint 718)', () => {
+  it('tray rings, cloth folds and dinner rings mark the serving tops', () => {
+    let tr = 0, cf = 0, dr = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'tray-ring') tr++;
+          if (o.name === 'cloth-fold') cf++;
+          if (o.name === 'dinner-ring') dr++;
+        });
+      }
+    }
+    expect(tr, 'no tray rings').toBeGreaterThan(0);
+    expect(cf, 'no cloth folds').toBeGreaterThan(0);
+    expect(dr, 'no dinner rings').toBeGreaterThan(0);
+  });
+});

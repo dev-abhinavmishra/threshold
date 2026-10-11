@@ -17513,3 +17513,113 @@ export function dominoRun(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/* ---------- tray ring — water rings a tray left on the sideboard ---------- */
+
+export function trayRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // concentric saucer circles — the tray's feet wept into the polish
+    for (let i = 0; i < 4; i++) {
+      const cx = 20 + rng.float() * 56;
+      const cy = 20 + rng.float() * 56;
+      ctx.strokeStyle = `rgba(96,74,40,${0.3 + rng.float() * 0.18})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7 + rng.float() * 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(140,112,64,${0.22 + rng.float() * 0.1})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5 + rng.float() * 9, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    // pale dust skirt around the tray's old outline
+    ctx.strokeStyle = `rgba(180,166,140,${0.22 + rng.float() * 0.12})`;
+    ctx.lineWidth = 2.4;
+    ctx.strokeRect(18 + rng.float() * 10, 16 + rng.float() * 10, 44 + rng.float() * 12, 38 + rng.float() * 12);
+    // drip — one spot ran off the edge
+    ctx.fillStyle = `rgba(88,66,36,${0.3 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(60 + rng.float() * 20, 70 + rng.float() * 10, 3 + rng.float() * 3, 5 + rng.float() * 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+/* ---------- cloth fold — the ghost of a cloth kept folded on the table ---------- */
+
+export function clothFold(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 96, (ctx) => {
+    // clean rectangle — the dust-free patch the cloth guarded
+    const x0 = 16 + rng.float() * 14, y0 = 14 + rng.float() * 10;
+    const w0 = 70 + rng.float() * 22, h0 = 44 + rng.float() * 14;
+    ctx.fillStyle = `rgba(196,184,158,${0.2 + rng.float() * 0.12})`;
+    ctx.fillRect(x0, y0, w0, h0);
+    // fold creases — parallel lines where the cloth doubled over
+    for (let i = 1; i < 4; i++) {
+      ctx.strokeStyle = `rgba(120,104,78,${0.28 + rng.float() * 0.12})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x0 + (w0 / 4) * i, y0 + 2);
+      ctx.lineTo(x0 + (w0 / 4) * i + (rng.float() - 0.5) * 4, y0 + h0 - 2);
+      ctx.stroke();
+    }
+    // frayed edge — loose threads at the hem line
+    for (let i = 0; i < 10; i++) {
+      ctx.strokeStyle = `rgba(150,132,102,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      const tx = x0 + rng.float() * w0;
+      ctx.moveTo(tx, y0 + h0);
+      ctx.lineTo(tx + (rng.float() - 0.5) * 4, y0 + h0 + 4 + rng.float() * 5);
+      ctx.stroke();
+    }
+    // dust tide outside the cloth edge
+    ctx.strokeStyle = `rgba(96,84,64,${0.24 + rng.float() * 0.1})`;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x0 - 3, y0 - 3, w0 + 6, h0 + 6);
+  });
+}
+
+/* ---------- dinner ring — plate circles and crumbs where someone ate ---------- */
+
+export function dinnerRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 128, (ctx) => {
+    // plate circle — the ghost ring the crockery kept
+    const px = 46 + rng.float() * 22, py = 48 + rng.float() * 22;
+    ctx.strokeStyle = `rgba(150,126,84,${0.34 + rng.float() * 0.14})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(px, py, 26 + rng.float() * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(110,88,58,${0.26 + rng.float() * 0.1})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(px, py, 20 + rng.float() * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // grease film inside the ring
+    const g = ctx.createRadialGradient(px, py, 4, px, py, 24);
+    g.addColorStop(0, `rgba(140,120,80,${0.14 + rng.float() * 0.08})`);
+    g.addColorStop(1, 'rgba(140,120,80,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, 24, 0, Math.PI * 2);
+    ctx.fill();
+    // crumbs scattered off the plate
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 30 + rng.float() * 28;
+      ctx.fillStyle = `rgba(120,96,58,${0.34 + rng.float() * 0.2})`;
+      ctx.fillRect(px + Math.cos(a) * r, py + Math.sin(a) * r, 1.4 + rng.float() * 1.6, 1.2 + rng.float() * 1.2);
+    }
+    // knife score — a few straight cuts beside the plate
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(90,74,50,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      const sx = px + 34 + rng.float() * 16, sy = py - 20 + rng.float() * 40;
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + 10 + rng.float() * 14, sy + (rng.float() - 0.5) * 6);
+      ctx.stroke();
+    }
+  });
+}
