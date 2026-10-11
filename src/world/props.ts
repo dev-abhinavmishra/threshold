@@ -1781,7 +1781,12 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     );
     st.name = 'score-tally';
     st.userData.decalMat = true;
-    st.position.set((rng.float() - 0.5) * 0.3, (dc?.[1] ?? 1.4) * 0.55, (dc?.[2] ?? 0.1) / 2 + 0.008);
+    const tallBoard = spec.kind === 'routingBoard';
+    st.position.set(
+      (rng.float() - 0.5) * 0.3,
+      (dc?.[1] ?? 1.4) * (tallBoard ? 0.8 : 0.55),
+      (dc?.[2] ?? 0.1) / 2 + (tallBoard ? 0.24 : 0.008),
+    );
     prop.group.add(st);
     if (!prop.group.name) prop.group.name = 'score-tally';
   }
@@ -1812,7 +1817,8 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     at.name = 'ash-tray';
     at.userData.decalMat = true;
     at.rotation.x = -Math.PI / 2;
-    at.position.set((rng.float() - 0.5) * 0.3, decalY(spec.kind, dc, 0.9, 0.05), (rng.float() - 0.5) * 0.2);
+    const ashY = spec.kind === 'coffeeTable' ? 0.56 : decalY(spec.kind, dc, 0.9, 0.05);
+    at.position.set((rng.float() - 0.5) * 0.3, ashY, (rng.float() - 0.5) * 0.2);
     prop.group.add(at);
     if (!prop.group.name) prop.group.name = 'ash-tray';
   }
