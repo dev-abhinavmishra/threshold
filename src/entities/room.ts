@@ -1017,6 +1017,10 @@ export class HazardField {
      *  ('grafter:N', 'eye:N', ...) so reads can say WHO worked, not
      *  just that work happened. */
     by?: string;
+    /** sprint 733 — a legible hand: three filed floors stamps the
+     *  player's next marks — the house reads the hand through the
+     *  wall, not just the floor under it. */
+    marked?: 'hands';
     old?: boolean; weak?: boolean; wiped?: boolean }[] = [];
 
   /** sprint 475 — a snare pos is free when no floor-band prop box

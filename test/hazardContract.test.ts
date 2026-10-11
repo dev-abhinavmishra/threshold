@@ -970,6 +970,27 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
   });
 
+  describe('the hands are legible (sprints 733-735)', () => {
+    it('three filed floors stamps the signer — marks read through the wall', () => {
+      const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
+      const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+      // legibility = three live twice-struck sites (all strikes are
+      // player-signed; graft signs file nothing)
+      expect(gameSrc).toContain('private get handsLegible()');
+      expect(gameSrc).toContain('this.workSites.filter((s) => s.strikes >= 2\n      && s.lastT >= cold).length >= 3');
+      // player-signed mints carry the stamp; the checkpoint rides it
+      expect(gameSrc).toContain('private workStamp()');
+      expect(gameSrc).toContain('marked: e.marked');
+      expect(readFileSync('src/game/store.ts', 'utf8')).toContain("marked?: 'hands'");
+      // the warden reads a stamped mark through the room wall
+      expect(corridorSrc).toContain("ev.marked !== 'hands'\n          && room0?.spec && !pointInRoom");
+      expect(corridorSrc).toContain('it knows this hand');
+      // and the readouts name the signer
+      expect(gameSrc).toContain('the same hands work these floors');
+      expect(gameSrc).toContain('these boards know your hands');
+    });
+  });
+
   describe('the clerk levies the floor (sprints 726-728)', () => {
     it('a counter on a filed floor names the boards in its prices', () => {
       const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
