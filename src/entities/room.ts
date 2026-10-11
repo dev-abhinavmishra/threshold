@@ -2013,7 +2013,11 @@ export class Inspector extends Entity {
         c.sound.emit({ x: this.testing.exitPos.x, y: 1.1, z: this.testing.exitPos.z, intensity: 0.4, category: 'impact', caption: '', source: this.id });
       }
       if (this.figGroup) this.figGroup.rotation.x = this.baseTiltX + Math.sin(c.now * 26) * 0.03;
-      if (!this.grappling && p.hiddenSpot === this.testing) {
+      // sprint 723 — the grip's ordering line: a lid a knee already
+      // holds can't be grappled — the keys rattle under a foreign
+      // grip and get nothing open. Its own hold is the exception.
+      if (!this.grappling && p.hiddenSpot === this.testing
+        && (!this.testing.trappedBy || this.testing.trappedBy === 'inspector')) {
         this.grappling = true;
         this.heldShut = 0;
         this.testing.trappedBy = 'inspector';
@@ -2034,7 +2038,10 @@ export class Inspector extends Entity {
         // sprint 518 — the lid test reads what's inside it: goods
         // parked in a lid the keys got to go to the count's locker —
         // the stash's one real peril, the price of parking the take.
-        const seized = c.seizeStash?.(spot.id) ?? 0;
+        // sprint 723 — a lid under a foreign grip stays shut to the
+        // keys too: the knee's hold answers before the count's read.
+        const seized = spot.trappedBy && spot.trappedBy !== 'inspector'
+          ? 0 : (c.seizeStash?.(spot.id) ?? 0);
         if (seized > 0) {
           c.cue('collector-rattle', spot.exitPos,
             `[the keys read the lid — the count's hands take what it holds · ${seized} goods]`,
@@ -2069,14 +2076,25 @@ export class Inspector extends Entity {
     const dx = tgt.x - this.pos.x, dz = tgt.z - this.pos.z;
     const d = Math.hypot(dx, dz);
     if (d < 0.42) {
-      this.testing = this.target.spot;
+      const spot = this.target.spot;
+      // sprint 723 — gripped mid-walk: a knee that landed while it
+      // crossed the room stands the keys aside — the hold that got
+      // there first owns the lid (its own prior grip still tests).
+      if (spot.trappedBy && spot.trappedBy !== 'inspector') {
+        this.checked.add(spot.id);
+        this.target = null;
+        c.cue('collector-rattle', this.pos,
+          '[it tries the lid — a knee already holds it — it leaves it]', { severity: 'info' });
+        return;
+      }
+      this.testing = spot;
       this.testT = 2.6;
       this.grappling = false;
       this.rig?.play('idle');
       c.cue('hide-creak', tgt, '[it tries the lid]', { severity: 'warn' });
       c.sound.emit({ x: tgt.x, y: 1.1, z: tgt.z, intensity: 0.5, category: 'impact', caption: '[rattle]', source: this.id });
       // Player already inside → grapple starts now.
-      if (p.hiddenSpot === this.testing) {
+      if (p.hiddenSpot === this.testing && !this.testing.trappedBy) {
         this.grappling = true;
         this.heldShut = 0;
         this.testing.trappedBy = 'inspector';
