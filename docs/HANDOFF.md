@@ -2,6 +2,12 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 730–732 — the serving residue arc (decals lane)
+
+- **730** `scoreTally` chalk count-marks on boards/dartboards/routing boards (35%), `recordRings` vinyl ghosts on shelves/sideboard/recordsCage (25%), `carpetLane` traffic-worn bands down rugs (35%, decalQuad floor).
+- **731** `ashTray` smoked dish + butts + burn crease on side/coffee/dining tables (30%), `soilSpill` planter soil scatter + wilted leaves (40%, under planters — the sibling lane already owns `vaseRing`: concede invented-name collisions to the merged lane), `tableFeet` drag-arc scars beside settled tables (30%).
+- **732** `bleachBloom` cleaned halos under bleach/cleaner bottles + spray cans (45%), `tankRing` oxide ghosts under propane/lpg/boiler tanks + gallon jugs (45%), `greaseSpatter` hot fans at stove-range feet (40%). All floor-mounted prop-overlays.
+
 ## Sprint 726–728 — the clerk levies the floor (mechanics lane)
 
 - **726** the floor's rate: new `filedFloorLevy(roomIndex)` — live twice-struck sites in the counter's room levy +2 each (cap 6) onto every price the staffed counter quotes. The ware verb names the boards: `[traded on a filed floor — N imprints]` / refusal reads `the floor's rate is N imprints — the register levies these boards`.
