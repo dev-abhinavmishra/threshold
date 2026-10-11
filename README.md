@@ -2,14 +2,16 @@
 
 A hundred doors. The house keeps the count.
 
+**Play it live: https://dev-abhinavmishra.github.io/threshold/**
+
 **THRESHOLD** is a first-person browser horror game: a procedurally generated
 100-room run through an archival hotel that is also an index of everything it
 has kept. Every run is fully deterministic from its seed text — same seed,
 same house, same things waiting in it.
 
-Built entirely in code: every model is procedural Three.js geometry, every
-sound is synthesized in WebAudio, every room is assembled from a seeded room
-grammar. No external assets.
+Every room is assembled from a seeded room grammar and dressed with CC0
+vendored assets (Poly Haven, ambientCG — see `ASSETS.md`); every sound is
+synthesized in WebAudio.
 
 ## Playing
 

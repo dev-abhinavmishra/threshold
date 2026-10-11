@@ -15,7 +15,7 @@ function tex(name: string, kind: 'color' | 'normalgl' | 'roughness', srgb = fals
   let t = texCache.get(key);
   if (!t) {
     try {
-      t = loader.load(`/assets/textures/${name}/${kind}.jpg`);
+      t = loader.load(`assets/textures/${name}/${kind}.jpg`);
     } catch {
       // Headless environments (unit tests, SSR) have no real image loading —
       // a blank texture keeps materials valid.
