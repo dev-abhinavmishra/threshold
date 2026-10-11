@@ -444,7 +444,15 @@ export class CorridorRunner extends Entity {
   protected override onDone(): void {
     // the grip outlives nothing — when the run ends the lids it held
     // breathe again.
-    for (const s of this.gripped) if (s.trappedBy === 'sweep') s.trappedBy = undefined;
+    for (const s of this.gripped) {
+      if (s.trappedBy === 'sweep') {
+        s.trappedBy = undefined;
+        // sprint 715 — the release tells like the planting did: the
+        // room hears the weight come off the box.
+        this.ctx.cue('info', { x: s.exitPos.x, y: 0.4, z: s.exitPos.z },
+          '[the knee lifts off the lid — the box breathes again]');
+      }
+    }
     this.gripped.length = 0;
     if (this.hideWatch) clearInterval(this.hideWatch);
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }

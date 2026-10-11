@@ -970,6 +970,18 @@ describe('the sweep plants a knee (sprints 657-662)', () => {
     expect(corridorSrc).toContain('c.stashLoad?.(s.id) ?? 0) > 0');
   });
 
+  describe('the knee lifts loud (sprints 715-716)', () => {
+    it('the release tells like the planting did', () => {
+      const corridorSrc = readFileSync('src/entities/corridor.ts', 'utf8');
+      // the room hears the weight come off the box — each freed lid
+      // cues where it sits (the ordering + holder-read pins live in
+      // the tally arc's describe below)
+      expect(corridorSrc).toContain('the knee lifts off the lid');
+      expect(corridorSrc).toContain("s.trappedBy = undefined");
+      expect(corridorSrc).toContain("s.trappedBy === 'sweep'");
+    });
+  });
+
   describe('the wire walks under the knee (sprints 663-665)', () => {
     it('the under robs a gripped lid and the house tells you the hands do not care', () => {
       const gameSrc = readFileSync('src/game/Game.ts', 'utf8');
