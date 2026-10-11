@@ -6,6 +6,10 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 The user asked for a hard stop: the game is being finished to show off. All lanes landed their final arcs (mechanics s741–746, decals s730–732) and were told to idle. A full finalization pass on main verified: playable end-to-end on the prod build (menu → run → movement → door interact → room traversal → underscript, zero console errors), post-governor degrades correctly under load (tier 2: SSAO shed, bloom off, pixelRatio 1.5→1.05), all gates green. Draw calls ~0.3–1.4k calls / ~1–5M tris in the heaviest rooms — fine for hardware GL, slide-show on SwiftShader (environment-bound, not a game defect). Known caveat: GLB prop-variant picks are nondeterministic across loads (async cache timing) — cosmetic, same seed shows different furniture variants. Do NOT resume the sprint loop on a future wake without checking with the user whether more polish is actually wanted.
 
+## Z-fight pass (2026-10-11)
+
+User-visible shimmer on walls: wall slabs are 0.24 thick (inner face at ±half − 0.12) but most wall decals sat at ~0.013 — **buried inside the slab**, surviving only on polygonOffset bias, which flickers. Fixed: every wall-mounted decal/solid now sits proud of the inner face (~0.125; mounts 0.145; tile apron 0.134 + chips 0.127), chimney breast + balcony deck backs moved 5mm off the face, and `decalQuad` staggers `polygonOffsetFactor` per quad (−2..−9) so decals that share a plane separate instead of fighting. Rule for future wall dressing: inner face = 0.12 in from the half-extent; anything mounted shallower than 0.12 is inside the slab.
+
 ## Deploy — GitHub Pages (2026-10-11)
 
 The game deploys as a static site at `https://dev-abhinavmishra.github.io/threshold/`. Facts:
