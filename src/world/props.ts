@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun , scoreTally, recordRings, ashTray, soilSpill, tableFeet } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun , scoreTally, recordRings, ashTray, soilSpill, tableFeet, bleachBloom, tankRing, greaseSpatter } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -1849,6 +1849,54 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     tf.position.set(Math.cos(a) * reach, 0.004 + rng.float() * 0.003, Math.sin(a) * reach);
     prop.group.add(tf);
     if (!prop.group.name) prop.group.name = 'table-feet';
+  }
+  // The bleach kept its bloom — a cleaned halo where a bottle
+  // tipped in the laundry corner.
+  const BLEACH_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['bleachBottle', 'cleanerBottle', 'sprayCans']);
+  if (BLEACH_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const bb = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshStandardMaterial({ map: bleachBloom(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bb.name = 'bleach-bloom';
+    bb.userData.decalMat = true;
+    bb.rotation.x = -Math.PI / 2;
+    bb.rotation.z = rng.float() * Math.PI * 2;
+    bb.position.set(0.1 + rng.float() * 0.15, 0.005 + rng.float() * 0.003, 0.08);
+    prop.group.add(bb);
+    if (!prop.group.name) prop.group.name = 'bleach-bloom';
+  }
+  // The tanks kept their rings — oxide ghosts under the cylinders
+  // that stood in the corner a season too long.
+  const TANK_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['propaneTank', 'lpgTank', 'boilerTank', 'gallonJug']);
+  if (TANK_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const tr = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshStandardMaterial({ map: tankRing(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    tr.name = 'tank-ring';
+    tr.userData.decalMat = true;
+    tr.rotation.x = -Math.PI / 2;
+    tr.rotation.z = rng.float() * Math.PI * 2;
+    tr.position.set(0, 0.005 + rng.float() * 0.003, 0);
+    prop.group.add(tr);
+    if (!prop.group.name) prop.group.name = 'tank-ring';
+  }
+  // The stove kept its spatter — the hot fan a pan leaves on the
+  // floor at the range's feet.
+  const STOVE_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['stoveRange', 'stove', 'enamelPot', 'pan']);
+  if (STOVE_KINDS.has(spec.kind) && rng.bool(0.4)) {
+    const gs = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.65, 0.65),
+      new THREE.MeshStandardMaterial({ map: greaseSpatter(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    gs.name = 'grease-spatter';
+    gs.userData.decalMat = true;
+    gs.rotation.x = -Math.PI / 2;
+    gs.rotation.z = rng.float() * Math.PI * 2;
+    gs.position.set(0.05, 0.005 + rng.float() * 0.003, (modelCollider(spec.kind)?.[2] ?? 0.5) / 2 + 0.22);
+    prop.group.add(gs);
+    if (!prop.group.name) prop.group.name = 'grease-spatter';
   }
   // The bells kept the thumbs — polished brass and greasy arcs on
   // counter bells rung a thousand times.

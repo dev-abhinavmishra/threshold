@@ -17790,3 +17790,127 @@ export function tableFeet(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/** Bleach bloom — the pale ghost a spilt bottle leaves: a bleach
+ * ring, spatter fans, a drip run, dust pushed back in a clean halo. */
+export function bleachBloom(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the cleaned halo — dust bleached away in a bloom
+    ctx.fillStyle = `rgba(196,200,190,${0.22 + rng.float() * 0.14})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 52, 24 + rng.float() * 6, 18 + rng.float() * 4, rng.float(), 0, Math.PI * 2);
+    ctx.fill();
+    // the ring where the splash stopped
+    ctx.strokeStyle = `rgba(170,178,168,${0.4 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(48, 52, 25 + rng.float() * 5, 19 + rng.float() * 4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // spatter fans — thin droplet tails flung outward
+    for (let i = 0; i < 8; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r1 = 28, r2 = 34 + rng.float() * 14;
+      ctx.strokeStyle = `rgba(180,188,176,${0.3 + rng.float() * 0.2})`;
+      ctx.lineWidth = 0.9 + rng.float();
+      ctx.beginPath();
+      ctx.moveTo(48 + Math.cos(a) * r1, 52 + Math.sin(a) * r1 * 0.8);
+      ctx.lineTo(48 + Math.cos(a) * r2, 52 + Math.sin(a) * r2 * 0.8);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(180,188,176,${0.4 + rng.float() * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * r2, 52 + Math.sin(a) * r2 * 0.8, 1 + rng.float(), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a drip run — where the bottle tipped between pours
+    ctx.strokeStyle = 'rgba(178,186,174,0.45)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(60, 30);
+    ctx.quadraticCurveTo(68, 20, 78, 18 + rng.float() * 6);
+    ctx.stroke();
+    // bottle's own ghost — the round where it sat
+    ctx.strokeStyle = `rgba(160,168,158,${0.35 + rng.float() * 0.2})`;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.arc(30, 34, 8 + rng.float() * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+}
+
+/** Tank ring — the rust ghost a gas cylinder leaves: a ring of
+ * oxide stain, condensation skirt, boot-drag scratches, dark seep. */
+export function tankRing(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // the rust ring the base left
+    ctx.strokeStyle = `rgba(120,74,44,${0.55 + rng.float() * 0.2})`;
+    ctx.lineWidth = 3.4;
+    ctx.beginPath();
+    ctx.arc(48, 48, 22 + rng.float() * 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // inner seep — damp that kept wicking
+    ctx.fillStyle = `rgba(90,58,36,${0.3 + rng.float() * 0.15})`;
+    ctx.beginPath();
+    ctx.ellipse(48, 50, 17, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // condensation skirt — pale damp edge outside the ring
+    ctx.strokeStyle = 'rgba(120,110,96,0.3)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(48, 48, 28 + rng.float() * 3, Math.PI * 0.3, Math.PI * 0.9);
+    ctx.stroke();
+    // boot-drag scratches — the tank slid a hand's width
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(96,84,70,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(24 + i * 8, 66 + i * 4);
+      ctx.lineTo(56 + i * 8 + rng.float() * 6, 62 + i * 4);
+      ctx.stroke();
+    }
+    // oxide flecks rained around the ring
+    for (let i = 0; i < 14; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 24 + rng.float() * 16;
+      ctx.fillStyle = `rgba(140,84,48,${0.35 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.arc(48 + Math.cos(a) * r, 48 + Math.sin(a) * r, 0.7 + rng.float() * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+/** Grease spatter — the hot fan a frying pan leaves: a splatter
+ * star at the hob's edge, drip dots, a black pan ring. */
+export function greaseSpatter(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // splatter star — droplets flung from one hot point
+    const cx = 40, cy = 46;
+    for (let i = 0; i < 16; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 8 + rng.float() * 32;
+      const s = 0.8 + rng.float() * 2.2;
+      ctx.fillStyle = `rgba(66,52,34,${0.4 + rng.float() * 0.3})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, s * (1 - r / 60), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // the pan ring — where the pan sat on the stove top
+    ctx.strokeStyle = `rgba(56,44,30,${0.5 + rng.float() * 0.2})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(66, 30, 14 + rng.float() * 3, 0, Math.PI * 2);
+    ctx.stroke();
+    // drip dots trailed toward the floor edge
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(74,58,38,${0.5 + rng.float() * 0.25})`;
+      ctx.beginPath();
+      ctx.ellipse(58 + i * 5 + rng.float() * 3, 58 + i * 6, 1.6 + rng.float(), 2.4 + rng.float(), 0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // a sheen — the grease film that caught the light
+    ctx.fillStyle = 'rgba(120,104,70,0.16)';
+    ctx.beginPath();
+    ctx.ellipse(44, 50, 26, 18, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}

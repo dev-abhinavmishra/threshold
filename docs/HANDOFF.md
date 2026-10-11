@@ -6,7 +6,7 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 - **730** `scoreTally` chalk count-marks on boards/dartboards/routing boards (35%), `recordRings` vinyl ghosts on shelves/sideboard/recordsCage (25%), `carpetLane` traffic-worn bands down rugs (35%, decalQuad floor).
 - **731** `ashTray` smoked dish + butts + burn crease on side/coffee/dining tables (30%), `soilSpill` planter soil scatter + wilted leaves (40%, under planters — the sibling lane already owns `vaseRing`: concede invented-name collisions to the merged lane), `tableFeet` drag-arc scars beside settled tables (30%).
-- **732** pending.
+- **732**  cleaned halos under bleach/cleaner bottles + spray cans (45%),  oxide ghosts under propane/lpg/boiler tanks + gallon jugs (45%),  hot fans at stove-range feet (40%). All floor-mounted prop-overlays; invented-kind rule held (sprayCans/lpgTank/boilerTank are real union members).
 
 ## Sprint 720–725 — both books keep the floor (mechanics lane)
 
