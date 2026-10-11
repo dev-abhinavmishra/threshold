@@ -6,6 +6,16 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 
 The user asked for a hard stop: the game is being finished to show off. All lanes landed their final arcs (mechanics s741–746, decals s730–732) and were told to idle. A full finalization pass on main verified: playable end-to-end on the prod build (menu → run → movement → door interact → room traversal → underscript, zero console errors), post-governor degrades correctly under load (tier 2: SSAO shed, bloom off, pixelRatio 1.5→1.05), all gates green. Draw calls ~0.3–1.4k calls / ~1–5M tris in the heaviest rooms — fine for hardware GL, slide-show on SwiftShader (environment-bound, not a game defect). Known caveat: GLB prop-variant picks are nondeterministic across loads (async cache timing) — cosmetic, same seed shows different furniture variants. Do NOT resume the sprint loop on a future wake without checking with the user whether more polish is actually wanted.
 
+## Deploy — GitHub Pages (2026-10-11)
+
+The game deploys as a static site at `https://dev-abhinavmishra.github.io/threshold/`. Facts:
+
+- `vite.config.ts` sets `base: './'` and all runtime fetches in `modelLibrary.ts`/`textures.ts`/`rigged.ts` are relative — required because project Pages serves under `/<repo>/`.
+- The `gh-pages` branch holds the **built site at root** (`index.html`, `assets/`, `.nojekyll`) — not the dist folder, not sources. Rebuild deploy = `npm run build`, downscale textures in `dist` (see below), copy `dist/*` onto the branch root, commit.
+- Textures in `dist` are downscaled to ≤512px (PIL LANCZOS, jpg q70) before publishing — full build is ~1.3 GB, dist shrinks to ~330 MB and still looks right in dark rooms. `public/assets` keeps the full-res sources; a rebuild recopies them so the downscale must be re-applied.
+- Pages must be enabled by a repo admin: Settings → Pages → Deploy from a branch → `gh-pages` `/` root. The Devin GitHub app cannot enable it (`403 Resource not accessible by integration`).
+- Devin `deploy frontend` upload fails on this repo at every tested size (1.3 GB → 326 MB) — use the gh-pages flow instead.
+
 ## Sprint 741–746 — the tally closes its books (mechanics lane)
 
 - **741** the desk amends the floor: new `unfileWorkSite(n)` unwinds strikes newest-first — LIFO, the later site wins a `lastT` tie — dropping emptied sites. The Detective's `settle` clears the whole floor-file (cue `· N worked floors come off the book`); the Broker's `fix` on a register line unwinds one strike (`· the desk strikes a worked floor`). A site under 2 strikes stops qualifying for `filedFloors` immediately — the standing order withdraws with the line.
