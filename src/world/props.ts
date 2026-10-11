@@ -1346,7 +1346,20 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     prop = c[0] > 0 ? single(model, c[0], c[1], c[2]) : { group: model, colliders: [] };
   } else {
     const b = builders[spec.kind];
-    prop = b ? b(spec, rng) : single(new THREE.Group(), 0.4, 0.4, 0.4);
+    if (b) {
+      prop = b(spec, rng);
+    } else {
+      // GLB-only kind whose model hasn't arrived — a sheeted placeholder at
+      // the real collider dims, never an invisible collider. The streamer's
+      // rebuild swaps in the true model once the GLB lands.
+      const c = modelCollider(spec.kind) ?? [0.4, 0.9, 0.4];
+      const sheet = new THREE.Mesh(
+        new THREE.BoxGeometry(c[0], c[1], c[2]),
+        MAT.figureCloth ? MAT.figureCloth() : new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 0.95 }),
+      );
+      sheet.position.y = c[1] / 2;
+      prop = single(new THREE.Group().add(sheet), c[0], c[1], c[2]);
+    }
   }
   // Some portraits are occupied: a pair of painted eyes that only open in
   // your periphery — the game fades them out under direct observation.
