@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe, stairNose, bannisterTurn, treadScuff } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -3778,6 +3778,53 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     ts.position.set(0, decalY(spec.kind, dc, 0.4, 1.0), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
     prop.group.add(ts);
     if (!prop.group.name) prop.group.name = 'towel-stripe';
+  }
+  // The steps kept the climb — a worn shine band along every
+  // tread nose where feet caught the edge.
+  const STAIR_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['stairs', 'grandStair', 'stairLanding']);
+  if (STAIR_KINDS.has(spec.kind) && rng.bool(0.55)) {
+    const dc = modelCollider(spec.kind);
+    const sn = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.8, 0.3),
+      new THREE.MeshStandardMaterial({ map: stairNose(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    sn.name = 'stair-nose';
+    sn.userData.decalMat = true;
+    sn.rotation.x = -Math.PI / 2;
+    sn.position.set(0, decalY(spec.kind, dc, 0.35, 0.5) + 0.005, decalDim(spec.kind, dc, 2, 0.8) / 2 - 0.12);
+    prop.group.add(sn);
+    if (!prop.group.name) prop.group.name = 'stair-nose';
+  }
+  // The bannisters kept the turn — polished spirals at the
+  // newel where hands always land.
+  const POST_KINDS: ReadonlySet<PropSpec['kind']> = new Set(['balustrade', 'newelPost', 'railing']);
+  if (POST_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const bt = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.3, 0.6),
+      new THREE.MeshStandardMaterial({ map: bannisterTurn(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    bt.name = 'bannister-turn';
+    bt.userData.decalMat = true;
+    bt.position.set(0, decalY(spec.kind, dc, 0.55, 0.7), decalDim(spec.kind, dc, 2, 0.12) / 2 + 0.012);
+    prop.group.add(bt);
+    if (!prop.group.name) prop.group.name = 'bannister-turn';
+  }
+  // The risers kept the strike — heel arcs and rubber smears
+  // dragged up the climb.
+  if (STAIR_KINDS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const tsc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.55, 0.38),
+      new THREE.MeshStandardMaterial({ map: treadScuff(rng) ?? undefined, transparent: true, roughness: 0.9, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }),
+    );
+    tsc.name = 'tread-scuff';
+    tsc.userData.decalMat = true;
+    tsc.rotation.x = -Math.PI / 2;
+    tsc.rotation.z = rng.float() * Math.PI * 2;
+    tsc.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 0.2, 0.3) + 0.005, (rng.float() - 0.5) * 0.3);
+    prop.group.add(tsc);
+    if (!prop.group.name) prop.group.name = 'tread-scuff';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);

@@ -17728,3 +17728,105 @@ export function towelStripe(rng: Rng): THREE.Texture | null {
     ctx.stroke();
   });
 }
+
+/* ---------- stair nose — worn shine band along the tread edges ---------- */
+
+export function stairNose(rng: Rng): THREE.Texture | null {
+  return canvasTex(128, 48, (ctx) => {
+    // nose band — a bright worn strip where feet caught the edge
+    const g = ctx.createLinearGradient(0, 8, 0, 26);
+    g.addColorStop(0, 'rgba(196,178,140,0)');
+    g.addColorStop(0.5, `rgba(196,178,140,${0.36 + rng.float() * 0.16})`);
+    g.addColorStop(1, 'rgba(196,178,140,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(6, 8, 116, 18);
+    // chips — little notches where the edge splintered
+    for (let i = 0; i < 9; i++) {
+      ctx.fillStyle = `rgba(70,58,40,${0.34 + rng.float() * 0.2})`;
+      const x = 12 + rng.float() * 104;
+      ctx.beginPath();
+      ctx.moveTo(x, 14 + rng.float() * 4);
+      ctx.lineTo(x + 3 + rng.float() * 4, 17 + rng.float() * 4);
+      ctx.lineTo(x + 1 + rng.float() * 3, 21 + rng.float() * 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // heel sheen — darker scuffs alternating on the band
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = `rgba(80,68,48,${0.26 + rng.float() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(18 + i * 22 + rng.float() * 8, 16 + rng.float() * 5, 5 + rng.float() * 4, 2.4 + rng.float(), (rng.float() - 0.5) * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // tread shadow below the band
+    ctx.fillStyle = `rgba(56,46,32,${0.22 + rng.float() * 0.12})`;
+    ctx.fillRect(6, 28, 116, 8);
+  });
+}
+
+/* ---------- bannister turn — polished wear where hands turn the newel ---------- */
+
+export function bannisterTurn(rng: Rng): THREE.Texture | null {
+  return canvasTex(64, 128, (ctx) => {
+    // hand turn — a spiral of rubbed polish around the post head
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(190,168,124,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2.4 - i * 0.4;
+      ctx.beginPath();
+      ctx.arc(32, 26 + i * 7, 20 - i * 3, Math.PI * (0.1 + rng.float() * 0.3), Math.PI * (1.1 + rng.float() * 0.4));
+      ctx.stroke();
+    }
+    // vertical sheen — the post's hand side worn brighter
+    const g = ctx.createLinearGradient(18, 40, 46, 40);
+    g.addColorStop(0, 'rgba(186,164,116,0)');
+    g.addColorStop(0.5, `rgba(186,164,116,${0.24 + rng.float() * 0.12})`);
+    g.addColorStop(1, 'rgba(186,164,116,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(18, 40, 28, 70);
+    // ring marks — the bracelet/watch scuffs mid-post
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = `rgba(120,100,66,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(14, 56 + i * 14 + rng.float() * 5);
+      ctx.lineTo(50, 55 + i * 14 + rng.float() * 5);
+      ctx.stroke();
+    }
+    // dark hand shadow below the turn
+    ctx.fillStyle = `rgba(60,48,32,${0.24 + rng.float() * 0.12})`;
+    ctx.fillRect(20, 96, 24, 12);
+  });
+}
+
+/* ---------- tread scuff — heel strikes dragged up the risers ---------- */
+
+export function treadScuff(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 64, (ctx) => {
+    // heel arcs — dark crescent strikes where toes dragged
+    for (let i = 0; i < 6; i++) {
+      const cx = 14 + rng.float() * 68;
+      const cy = 14 + rng.float() * 36;
+      ctx.strokeStyle = `rgba(52,42,28,${0.4 + rng.float() * 0.22})`;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5 + rng.float() * 7, Math.PI * (0.7 + rng.float() * 0.4), Math.PI * (1.9 + rng.float() * 0.4));
+      ctx.stroke();
+    }
+    // rubber smears — diagonal drags
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(64,52,36,${0.3 + rng.float() * 0.16})`;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      const sx = 12 + rng.float() * 60, sy = 12 + rng.float() * 40;
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + 8 + rng.float() * 14, sy + (rng.float() - 0.5) * 10);
+      ctx.stroke();
+    }
+    // toe polish — faint bright spot where the ball of the foot pivoted
+    const g = ctx.createRadialGradient(48, 30, 2, 48, 30, 18);
+    g.addColorStop(0, `rgba(170,152,112,${0.2 + rng.float() * 0.1})`);
+    g.addColorStop(1, 'rgba(170,152,112,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(28, 10, 40, 40);
+  });
+}

@@ -8211,3 +8211,24 @@ describe('the keys kept their fobs (sprint 719)', () => {
     expect(ts, 'no towel stripes').toBeGreaterThan(0);
   });
 });
+
+describe('the steps kept the climb (sprint 720)', () => {
+  it('stair noses, bannister turns and tread scuffs mark the climbs', () => {
+    let sn = 0, bt = 0, tsc = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'stair-nose') sn++;
+          if (o.name === 'bannister-turn') bt++;
+          if (o.name === 'tread-scuff') tsc++;
+        });
+      }
+    }
+    expect(sn, 'no stair noses').toBeGreaterThan(0);
+    expect(bt, 'no bannister turns').toBeGreaterThan(0);
+    expect(tsc, 'no tread scuffs').toBeGreaterThan(0);
+  });
+});
