@@ -17623,3 +17623,108 @@ export function dinnerRing(rng: Rng): THREE.Texture | null {
     }
   });
 }
+
+/* ---------- key fray — frayed fob cords and brass tags on the key boards ---------- */
+
+export function keyFray(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // hanging fob cords — slack loops where keys used to dangle
+    for (let i = 0; i < 5; i++) {
+      const x = 18 + i * 14 + rng.float() * 6;
+      ctx.strokeStyle = `rgba(110,88,56,${0.4 + rng.float() * 0.2})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, 8 + rng.float() * 10);
+      ctx.quadraticCurveTo(x + 6 + rng.float() * 8, 30 + rng.float() * 16, x + (rng.float() - 0.5) * 10, 52 + rng.float() * 18);
+      ctx.stroke();
+      // frayed end — split strands at the cord tip
+      const ex = x + (rng.float() - 0.5) * 4, ey = 66 + rng.float() * 16;
+      for (let f = 0; f < 3; f++) {
+        ctx.strokeStyle = `rgba(140,116,74,${0.35 + rng.float() * 0.2})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(ex, ey);
+        ctx.lineTo(ex + (f - 1) * 2 + rng.float() * 2, ey + 5 + rng.float() * 5);
+        ctx.stroke();
+      }
+    }
+    // brass fob ghosts — pale labels where tags were lifted
+    for (let i = 0; i < 4; i++) {
+      ctx.strokeStyle = `rgba(180,158,106,${0.3 + rng.float() * 0.14})`;
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(12 + rng.float() * 60, 12 + rng.float() * 50, 9 + rng.float() * 5, 13 + rng.float() * 5);
+    }
+    // thumb polish — a rubbed sheen across the hook line
+    const g = ctx.createLinearGradient(0, 6, 0, 22);
+    g.addColorStop(0, 'rgba(190,172,120,0)');
+    g.addColorStop(0.5, `rgba(190,172,120,${0.2 + rng.float() * 0.1})`);
+    g.addColorStop(1, 'rgba(190,172,120,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(8, 6, 80, 16);
+  });
+}
+
+/* ---------- soap chip — soap shards and lather crust in the basin ring ---------- */
+
+export function soapChip(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 96, (ctx) => {
+    // lather bloom — a dried foam ring around the drain side
+    const cx = 40 + rng.float() * 20, cy = 42 + rng.float() * 20;
+    ctx.strokeStyle = `rgba(224,216,196,${0.36 + rng.float() * 0.16})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 24 + rng.float() * 6, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < 18; i++) {
+      const a = rng.float() * Math.PI * 2;
+      const r = 20 + rng.float() * 12;
+      ctx.fillStyle = `rgba(230,224,206,${0.3 + rng.float() * 0.24})`;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.4 + rng.float() * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // soap chips — white shards in the dish shadow
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = `rgba(238,234,216,${0.5 + rng.float() * 0.24})`;
+      ctx.save();
+      ctx.translate(24 + rng.float() * 48, 22 + rng.float() * 24);
+      ctx.rotate(rng.float() * Math.PI);
+      ctx.fillRect(-3 - rng.float() * 2, -1.6, 6 + rng.float() * 5, 3.2 + rng.float());
+      ctx.restore();
+    }
+    // hard-water crust — faint white tide at the rim
+    ctx.strokeStyle = `rgba(216,208,188,${0.26 + rng.float() * 0.12})`;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 30 + rng.float() * 6, Math.PI * 0.1, Math.PI * 0.9);
+    ctx.stroke();
+  });
+}
+
+/* ---------- towel stripe — damp stripes where towels hung on the rail ---------- */
+
+export function towelStripe(rng: Rng): THREE.Texture | null {
+  return canvasTex(96, 128, (ctx) => {
+    // hanging damp bands — vertical wet streaks under the bar
+    for (let i = 0; i < 4; i++) {
+      const x = 16 + i * 18 + rng.float() * 10;
+      const h = 60 + rng.float() * 44;
+      const g = ctx.createLinearGradient(x, 20, x, 20 + h);
+      g.addColorStop(0, `rgba(96,110,110,${0.34 + rng.float() * 0.14})`);
+      g.addColorStop(1, 'rgba(96,110,110,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x, 20, 10 + rng.float() * 6, h);
+    }
+    // hem shadow — a darker band where the towel's edge rested
+    ctx.fillStyle = `rgba(70,84,84,${0.3 + rng.float() * 0.14})`;
+    ctx.fillRect(12, 84 + rng.float() * 20, 70 + rng.float() * 10, 4 + rng.float() * 3);
+    // drip run — one spot kept wicking down
+    ctx.strokeStyle = `rgba(80,96,96,${0.34 + rng.float() * 0.16})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    const dx = 30 + rng.float() * 40;
+    ctx.moveTo(dx, 60);
+    ctx.lineTo(dx + (rng.float() - 0.5) * 6, 110 + rng.float() * 12);
+    ctx.stroke();
+  });
+}

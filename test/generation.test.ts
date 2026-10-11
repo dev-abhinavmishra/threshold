@@ -8190,3 +8190,24 @@ describe('the sideboards kept their circles (sprint 718)', () => {
     expect(dr, 'no dinner rings').toBeGreaterThan(0);
   });
 });
+
+describe('the keys kept their fobs (sprint 719)', () => {
+  it('key frays, soap chips and towel stripes mark the service smalls', () => {
+    let kf = 0, sc = 0, ts = 0;
+    for (const seed of SEEDS) {
+      const route = generateRoute({ seedText: seed, includeUnderscript: true });
+      for (const room of [...mainRooms(route), ...route.underRooms]) {
+        if (!room.spec) continue;
+        const built = buildRoomMesh(room, room.spec, room.index, 'high');
+        built.group.traverse((o) => {
+          if (o.name === 'key-fray') kf++;
+          if (o.name === 'soap-chip') sc++;
+          if (o.name === 'towel-stripe') ts++;
+        });
+      }
+    }
+    expect(kf, 'no key frays').toBeGreaterThan(0);
+    expect(sc, 'no soap chips').toBeGreaterThan(0);
+    expect(ts, 'no towel stripes').toBeGreaterThan(0);
+  });
+});

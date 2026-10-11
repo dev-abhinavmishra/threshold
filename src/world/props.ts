@@ -8,7 +8,7 @@ import type { LocalCollider, PropSpec } from './spec';
 import { MAT } from './materials';
 import { TEX } from './textures';
 import { modelInstance, modelCollider, MODEL_FOR } from './modelLibrary';
-import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing } from './decals';
+import { nightBackdrop, rainStreaks, floorStain, decalQuad, wrongRoom, glassFog, ringStains, sleptIn, scratchWriting, dustDate, paneTape, chairHalo, bedpostNotches, paneWriting, tableScratches, soapScum, shaverSmear, stairWear, counterDrips, flourDust, bathRing, wardrobeDark, bookGap, deskInk, pianoDust, drawerSlit, sheetShape, labelGhost, candleDrip, mirrorBlind, tapCalc, porcelainCraze, chainShine, ropeFray, webDrape, candleSkin, treadShine, mothBites, valanceDust, potRing, lidSteam, rackGhost, caseDust, carpetFray, pinScars, waxRings, clockStopped, shelfLip, railGrime, liftScuff, panelBow, seatWipe, pageFan, paperCurl, sillPeel, drawerScars, ovenGrease, dialRubs, mirrorAmalgam, basinRing, hingeWear, headGrease, seatSag, platenInk, sparkScorch, jarDust, spinDust, counterBelt, bellTap, pewWear, kneelRubs, hatchRing, canvasCrackle, dartSplash, hookRing, rackWeight , canRing, pegWear, extingTag, pinLines, fanFilm, bottleBloom, bustCap, pieceSquares, globeSpin, gateTrack, liftHeels, shutterChain, teaRing, lensVeil, sheetDrag, tubeLip, alarmPull, valveGrip, needleGhost, cableSleeve, keyGhost, vendKick, trapSet, tapeCurl, manifoldRust, craneHook, carVeil, steamBleach, ductSeam, buoyFade, gazeCrack, trophyDust, riggingDust, stencilGhost, weldSpatter, cosmoGrease, flaskRing, blockCuts, torchSoot, cardCurl, labelFade, speakerDust, hoopRust, ashRing, lockerGhost, kettleScale, boardScores, dartHalo, jugSweat, foldPulls, shelfDust, tillScratch, screenGhost, splatFilm, sawdustFan, oilyGrip, haftShine, strapScuff, toeRubs, mailDust, bellThumb, slotScratch, windowLatch, pianoKeys, vaseRing, springDust, ironStamp, seatDust, catHalo, viceJaw, nailSpill, mirrorFox, powderPuff, eggShell, napkinFold, steinRing, parcelString, quiltPatch, tornEnvelope, protractorArc, marbleVein, gloveDust, pipeAsh, snufferMark, bookPlate, dominoRun, trayRing, clothFold, dinnerRing, keyFray, soapChip, towelStripe } from './decals';
 import { tallFigure } from '../entities/figure';
 import type { Rng } from '../engine/rng';
 
@@ -3731,6 +3731,53 @@ export function buildProp(spec: PropSpec, rng: Rng): BuiltProp {
     dr.position.set((rng.float() - 0.5) * 0.4, decalY(spec.kind, dc, 1, 0.9) + 0.004, (rng.float() - 0.5) * 0.3);
     prop.group.add(dr);
     if (!prop.group.name) prop.group.name = 'dinner-ring';
+  }
+  // The keys kept their fobs — frayed cords and tag ghosts on
+  // the boards where the house's keys hung.
+  const KEY_BOARDS: ReadonlySet<PropSpec['kind']> = new Set(['keyRack', 'keyCabinet']);
+  if (KEY_BOARDS.has(spec.kind) && rng.bool(0.5)) {
+    const dc = modelCollider(spec.kind);
+    const kf = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.44, 0.44),
+      new THREE.MeshStandardMaterial({ map: keyFray(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    kf.name = 'key-fray';
+    kf.userData.decalMat = true;
+    kf.position.set(0, decalY(spec.kind, dc, 0.5, 1.2), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
+    prop.group.add(kf);
+    if (!prop.group.name) prop.group.name = 'key-fray';
+  }
+  // The basins kept the soap — chips and lather crust in the
+  // ring the dish left.
+  const SOAP_TOPS: ReadonlySet<PropSpec['kind']> = new Set(['basinSink', 'washStand', 'vanityTable']);
+  if (SOAP_TOPS.has(spec.kind) && rng.bool(0.42)) {
+    const dc = modelCollider(spec.kind);
+    const sc = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.34, 0.34),
+      new THREE.MeshStandardMaterial({ map: soapChip(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    sc.name = 'soap-chip';
+    sc.userData.decalMat = true;
+    sc.rotation.x = -Math.PI / 2;
+    sc.rotation.z = rng.float() * Math.PI * 2;
+    sc.position.set((rng.float() - 0.5) * 0.2, decalY(spec.kind, dc, 1, 0.85) + 0.004, (rng.float() - 0.5) * 0.15);
+    prop.group.add(sc);
+    if (!prop.group.name) prop.group.name = 'soap-chip';
+  }
+  // The rails kept the damp — wet stripes where towels hung
+  // and never dried.
+  const TOWEL_RAILS: ReadonlySet<PropSpec['kind']> = new Set(['towelRail', 'pegRail']);
+  if (TOWEL_RAILS.has(spec.kind) && rng.bool(0.45)) {
+    const dc = modelCollider(spec.kind);
+    const ts = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.62),
+      new THREE.MeshStandardMaterial({ map: towelStripe(rng) ?? undefined, transparent: true, roughness: 0.95, metalness: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }),
+    );
+    ts.name = 'towel-stripe';
+    ts.userData.decalMat = true;
+    ts.position.set(0, decalY(spec.kind, dc, 0.4, 1.0), decalDim(spec.kind, dc, 2, 0.14) / 2 + 0.012);
+    prop.group.add(ts);
+    if (!prop.group.name) prop.group.name = 'towel-stripe';
   }
   prop.group.rotation.y = spec.yaw ?? 0;
   prop.group.position.set(spec.x, spec.y ?? 0, spec.z);
