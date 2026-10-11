@@ -55,6 +55,14 @@ Next: the tally is a surface — a natural third leg is the counter *answering* 
 Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, the 'work'-streak escalation surface (wanted already tightens — a distinct streak mechanic would need its own design), and a gather-side read: the house's pull leaves YOUR sign standing while it takes the metal — a second 'work' near the same spot could name a repeat offender (pair with the streak idea or drop).
 
 
+## Sprint 690–693 — the rail keeps its hour (captions rail ages, folds & announces)
+
+- s690 `the rail keeps its hour` — `src/ui/captions.ts`: `visibleCaptions(subs, now)` ages reads out by severity (info 4.2s / warn 5.2s / danger 7s — the last thing before a death stays up longest), folds consecutive identical reads into a ×N run riding the newest stamp, caps the rail at 3 live lines.
+- s691 `the rail speaks once` — App.tsx renders the rail through the helper instead of `subtitles.slice(-3)`; stale tells ("stone drags to the fresh sign") no longer read as if they just happened. The rail is a `role="log" aria-live="polite"` region; folded repeats show ` ×N`.
+- s692 `the room names its instruments` — HUD bars announce `role="progressbar"` with aria-valuenow/min/max/label; vignette + crosshair go `aria-hidden` so the reader hears the house, not its chrome.
+- s693 `the rail forgets in the glass` — `e2e/rail.spec.ts`: the rail verified in the running DOM — a repeated tell folds to one ×4 line, a burst of distinct reads keeps only the newest three (oldest scrolls off), and after the info dwell the rail empties of its own age. `emitCaption` is monkey-wrapped in-page to drop ambient tells (only `rail-` texts land in the store); `applySettings({captions:true})` flips the rail on through the real path.
+- Tests: `test/captions.test.ts` (13) — dwell boundaries per severity, exact-dwell edge, fold rules (severity/text break the run, non-consecutive doesn't fold back, fold refreshes dwell), cap + expired-not-counting, App wiring pins.
+
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
 
 - **675** the asymmetry: the house has FIVE 'work' answers (crimp, pull, tear, sweep, grip) and the grafter already reads 'work' marks — but only dragged to them and ground the floor. New ctx hook `stripWork(x,z)` + a stoop-strip in the grafter: a fresh 'work' mark (`scentT` arming, `carrying===0`) is an armed surface. First two pockets: your live planted wire (`armed && planted && !claimed`) comes up as its coil via `removeSnare`; your cocked plate (`setTraps` minus `snappedTraps`/`priedTraps`) folds into stock and leaves every snap loop (`liveTraps.splice`, `trapPos.delete`). Claimed wires are the house's — outside its pocket.
