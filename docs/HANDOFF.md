@@ -2,6 +2,27 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 715–716 — the knee lifts loud (mechanics lane)
+
+- **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
+- **716** merge-down of the 700-703 arc: the sibling lane's tally arc (709-714) landed the same ordering + holder-read surface first and further — `lidHeld` answers a gripped lid (mark spent, take sheltered) and the peep reads the knee. My scatter-ordering and peep pins conceded to theirs; what survives is the release tell + the held→lidHeld→freed→lidSweep transition leg. Contract 64/64.
+
+Next: the knee family is closed (plants / holds / robs / outranks / releases / is told). Backlog: the tally arc's own note — a counter answering a filed floor; inspector rattle mid-sweep ordering line; milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
+## Sprint 709–714 — the house keeps a tally (mechanics lane)
+
+- **709** work-site ledger: every 'work' answer the dispatch lands now runs `strikeWorkSite` — the answering itself is the strike, bucketed ~2.5m, keyed off the read mark's `by` (unsigned/'player'/'eye:' signs are yours; a grafter's own sign files nothing). Strike 2 at the same site names a repeat offender: `unpaidHeld + 1` and `filedWork + 1` per strike past the first, warn cue `[the register keeps this floor — the same hands have worked it before]`. Sites cool like sign (360s unanswered = fresh offense); ledger capped at 12, cooled-first out. `workSites` + `filedWork` ride `CheckpointSave`.
+- **710** a filed floor pulls the patrol: new ctx hook `filedFloors(x,z,r)` serves uncooled twice-struck sites. The warden polls it inside `scentT` (after sign and spill, never in the under), dedupes per `room:x,z → strikes` (`filedChecked`) so a re-struck site pulls again, investigates kind `'filedSite'`, and stands over it reading the floor — the standing order is a detour, not a new sign (`seenSpills` untouched).
+- **711** the register keeps count: `askReg` readout appends `· it keeps N worked floors filed`; `filedWork` joins `BooksClosed` + both epitaph/victory books literals; `bookLines` renders "the register filed N worked-floor strikes against you".
+- **712** the knee's ordering line: `spot.trappedBy` (any grip — knee, rattle, bite) now blocks the warden's `lidSweep` and answers new `'lidHeld'` — the mark is still spent, the take keeps its shelter while the grip stands, and the answer files no strike (no work was answered). Corridor cue `[it reaches for the lid — a knee already holds it shut]`; base union + contract pins updated.
+- **713** the peep reads the grip: `peepLid` appends `· a knee holds it shut` ('sweep') / `· hands hold it shut` (other grips) — a look still works under a knee, it just can't reach in.
+- **714** contract spec (3 new describes, 66 tests) pins the tally chain, the ordering line, and the readbacks; e2e leg in `props.spec.ts` drives `ctx.rearmHazard` twice at a seeded player-vent+wheel spot → 'crimp' then 'pull', one site two strikes, `unpaidHeld +1`, `filedFloors` returns it, warn fires; then a `trappedBy:'sweep'` stash answers 'lidHeld' with the take intact and the peep reads the grip.
+
+Traps: `answerWork` wraps ONLY the returns that land — `return null` and `lidHeld` strike nothing (nothing was answered). The strike names the SIGNER via the nearest 'work' mark within 1.8m — a grafter's own sign near your work is a real edge the `by` check exists for. `filedChecked` keys on strike-count not time, so a cooled-then-restruck site re-pulls correctly.
+
+Next: the tally is a surface — a natural third leg is the counter *answering* a filed floor (the clerk's rate could name the floor it refuses on), and the streak idea still has no escalation beyond +1 line per strike (wanted already tightens at 6). Other backlog: lidSweep under a sweep-grip is now ordered, but an inspector rattle mid-sweep has no ordering line of its own.
+
+
 ## Sprint 681–683 — your jaw answers too (mechanics lane)
 
 - **681** the pull's jurisdiction was partial: `platePull` reached the under's grafted jaws but not a plate YOU set — a `setTrap` plate signs 'work' under your name yet no house answer could touch it. The dispatch now sweeps `setTraps` after the grafted set: 'work' near your live plate lifts it off the floor (setTraps/liveTraps/trapPos cleared), mechanism on the boards. Its 'work' sign stays written — the sign is what he read.

@@ -444,7 +444,15 @@ export class CorridorRunner extends Entity {
   protected override onDone(): void {
     // the grip outlives nothing — when the run ends the lids it held
     // breathe again.
-    for (const s of this.gripped) if (s.trappedBy === 'sweep') s.trappedBy = undefined;
+    for (const s of this.gripped) {
+      if (s.trappedBy === 'sweep') {
+        s.trappedBy = undefined;
+        // sprint 715 — the release tells like the planting did: the
+        // room hears the weight come off the box.
+        this.ctx.cue('info', { x: s.exitPos.x, y: 0.4, z: s.exitPos.z },
+          '[the knee lifts off the lid — the box breathes again]');
+      }
+    }
     this.gripped.length = 0;
     if (this.hideWatch) clearInterval(this.hideWatch);
     if (this.noiseUnsub) { this.noiseUnsub(); this.noiseUnsub = null; }
@@ -541,6 +549,10 @@ export class Warden extends Entity {
   private scentT = 0;                          // evidence polling
   private signReads = 0;                       // marks it has weighed in its room
   private learnedCued = false;                 // the second read teaches — once
+  /** sprint 710 — a filed floor pulls the patrol once per strike-
+   *  count: `room:x,z` → strikes served, so a re-struck site pulls
+   *  him again while the same standing order doesn't repeat. */
+  private filedChecked = new Map<string, number>();
   private braceShoveT = 0;                     // seconds since it last shouldered a live brace
   private workUntil = 0;                       // mid-doorwork hold: it stands at a bound leaf and works the bind
   private noiseUnsub: (() => void) | null = null;
@@ -895,6 +907,13 @@ export class Warden extends Entity {
                 source: this.id });
             }
           }
+          if (this.investigateKind === 'filedSite') {
+            // sprint 710 — he stands over the filed floor and reads
+            // it: the standing order is served (the tally keeps the
+            // line; the streak is the escalation, not his detour).
+            this.ctx.cue('floor-creak', this.investigate,
+              '[it reads the floor the register named — your hands have worked here]', { severity: 'warn' });
+          }
           if (this.investigateKind === 'wire' || this.investigateKind === 'line'
             || this.investigateKind === 'fan' || this.investigateKind === 'blind'
             || this.investigateKind === 'spring' || this.investigateKind === 'work') {
@@ -916,6 +935,10 @@ export class Warden extends Entity {
                               : restored === 'lensTear' ? '[it tears the lens off your eye — the glass slaps the boards]'
                                 : restored === 'platePull' ? '[it wrenches the teeth out of a jaw that was never the house\'s — the spring slaps the boards]'
                                   : restored === 'lidSweep' ? '[it tips your lid — the take scatters the floor]'
+                                  // sprint 712 — the grip orders the
+                                  // lid: the mark is spent and the box
+                                  // keeps its shelter while a knee stands
+                                  : restored === 'lidHeld' ? '[it reaches for the lid — a knee already holds it shut]'
                                   : restored === 'reclaim' ? '[it turns your eye back to the house — the pan is its own again]'
                                     : '[it peels your felt off the eye — and pockets it]', { severity: 'warn' });
               // the house's work is audible like yours — re-tying wire
@@ -983,6 +1006,24 @@ export class Warden extends Entity {
               : spill.kind === 'belt'
                 ? '[it bends for the pulled belt]'
                 : '[it bends for the felt that fell]', { severity: 'warn' });
+          this.rig?.play('move', 0.1);
+        }
+      }
+      // sprint 710 — the register's mark is a standing order: a
+      // floor the tally struck twice pulls him back to stand over
+      // your worked spot (once per strike-count per site, until it
+      // cools). Standing orders aren't sign — they skip seenSpills.
+      if (!this.investigate && room0?.spec && this.ctx.filedFloors) {
+        const site = this.ctx.filedFloors(this.pos.x, this.pos.z, 30)
+          .find((s) => s.room === this.hostRoom
+            && this.filedChecked.get(`${s.room}:${s.x.toFixed(1)},${s.z.toFixed(1)}`) !== s.strikes);
+        if (site) {
+          this.filedChecked.set(`${site.room}:${site.x.toFixed(1)},${site.z.toFixed(1)}`, site.strikes);
+          this.investigate = v3(site.x, 0, site.z);
+          this.investigateScan = 0;
+          this.investigateKind = 'filedSite';
+          c.cue('floor-creak', this.pos,
+            '[the register\'s mark is a standing order — it walks back to your worked floor]', { severity: 'warn' });
           this.rig?.play('move', 0.1);
         }
       }
