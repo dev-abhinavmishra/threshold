@@ -8,6 +8,16 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 - **731** `ashTray` smoked dish + butts + burn crease on side/coffee/dining tables (30%), `soilSpill` planter soil scatter + wilted leaves (40%, under planters — the sibling lane already owns `vaseRing`: concede invented-name collisions to the merged lane), `tableFeet` drag-arc scars beside settled tables (30%).
 - **732** `bleachBloom` cleaned halos under bleach/cleaner bottles + spray cans (45%), `tankRing` oxide ghosts under propane/lpg/boiler tanks + gallon jugs (45%), `greaseSpatter` hot fans at stove-range feet (40%). All floor-mounted prop-overlays.
 
+## Sprint 726–728 — the clerk levies the floor (mechanics lane)
+
+- **726** the floor's rate: new `filedFloorLevy(roomIndex)` — live twice-struck sites in the counter's room levy +2 each (cap 6) onto every price the staffed counter quotes. The ware verb names the boards: `[traded on a filed floor — N imprints]` / refusal reads `the floor's rate is N imprints — the register levies these boards`.
+- **727** the book levies too: the 'ask' page and the register's own readout pay the same boards (`eff = price + levy`, `regCost = 3 + levy`, both refusal cues name the floor); the askReg readout appends `· THIS floor is filed` when the counter stands on one.
+- **728** pins + live: contract describe 'the clerk levies the floor' (room-scoped, live-only, all three verbs pay it, 360s cool); e2e leg drives `focused.kind='shop'` → `tryInteract()` on a seeded counter: base+2 charged, receipt names the floor; aged site (lastT −400s) levies nothing and names nothing.
+
+Convention: `site.room` is `room.index`, but counter lookups index `activeRooms()` by array position — levy call sites translate via `activeRooms()[i]?.index`. A cooled site stops levying at the same 360s sign the warden stops believing.
+
+Next: the tally's counter-leg is closed (file → patrol → levy). Backlog: inspector rattle mid-sweep ordering line; 'work'-streak escalation beyond +1/strike (wanted already tightens at 6); milestone-set hearing (design call); the purse-sink gap in gallery/records wings.
+
 ## Sprint 720–725 — both books keep the floor (mechanics lane)
 
 - **720** the under strips into the same ledger: every `stripWork` landing now runs `answerWork` — coil/plate/belt/lens/throat all strike the site like the house's dispatch. The signer still owns the strike (`by` within 1.8m): the grafter stripping YOUR sign files YOUR hands again — the under answering your mark is another reader of the same floor. A grafter's own sign strips clean (files nothing, same gate).
@@ -20,8 +30,6 @@ Newest sprint first. The old bootstrap prompt lives at the bottom.
 Traps: `stripWork`'s answers strike through the same `by`-gate — a grafter stripping YOUR mark files you, never itself (the `ev.by` skip for 'grafter:N'/'eye:N' is unchanged). The inspector's arrival ordering runs BEFORE `testing` is set, so a mid-walk grip never starts its 2.6s rattle — `checked.add(spot.id)` is what moves it past the spot (without it the inspector re-targets the same gripped lid forever). `unpaidTheft` writes ride the existing death-remittance load (death.ts) — the tally's book and the count's book now write together.
 
 Next: `filedWork` has no UNDO path — the ledger only writes, never amends (a paid desk could reduce filedWork like it lowers unpaid). The Auditor's wanted posts key off `unpaidTheft` totals, not sites — a wanted poster naming the filed floor is open. And the grafter's own-strip strike is the honest one — a grafter stripping its OWN graft-sign files nothing, meaning the under still answers itself for free.
-
-
 ## Sprint 715–716 — the knee lifts loud (mechanics lane)
 
 - **715** the release tells like the planting did: the knee's grip used to lift silently in `onDone` — each freed lid now cues `[the knee lifts off the lid — the box breathes again]` where the box sits.
@@ -52,6 +60,14 @@ Next: the tally is a surface — a natural third leg is the counter *answering* 
 
 Next: every plant/stash/graft surface answers 'work' now. Backlog: the warden's scatter vs a gripped lid ordering line, a peepLid read on a gripped lid, the 'work'-streak escalation surface (wanted already tightens — a distinct streak mechanic would need its own design), and a gather-side read: the house's pull leaves YOUR sign standing while it takes the metal — a second 'work' near the same spot could name a repeat offender (pair with the streak idea or drop).
 
+
+## Sprint 690–693 — the rail keeps its hour (captions rail ages, folds & announces)
+
+- s690 `the rail keeps its hour` — `src/ui/captions.ts`: `visibleCaptions(subs, now)` ages reads out by severity (info 4.2s / warn 5.2s / danger 7s — the last thing before a death stays up longest), folds consecutive identical reads into a ×N run riding the newest stamp, caps the rail at 3 live lines.
+- s691 `the rail speaks once` — App.tsx renders the rail through the helper instead of `subtitles.slice(-3)`; stale tells ("stone drags to the fresh sign") no longer read as if they just happened. The rail is a `role="log" aria-live="polite"` region; folded repeats show ` ×N`.
+- s692 `the room names its instruments` — HUD bars announce `role="progressbar"` with aria-valuenow/min/max/label; vignette + crosshair go `aria-hidden` so the reader hears the house, not its chrome.
+- s693 `the rail forgets in the glass` — `e2e/rail.spec.ts`: the rail verified in the running DOM — a repeated tell folds to one ×4 line, a burst of distinct reads keeps only the newest three (oldest scrolls off), and after the info dwell the rail empties of its own age. `emitCaption` is monkey-wrapped in-page to drop ambient tells (only `rail-` texts land in the store); `applySettings({captions:true})` flips the rail on through the real path.
+- Tests: `test/captions.test.ts` (13) — dwell boundaries per severity, exact-dwell edge, fold rules (severity/text break the run, non-consecutive doesn't fold back, fold refreshes dwell), cap + expired-not-counting, App wiring pins.
 
 ## Sprint 675–680 — the under strips your hands ('work' answers the grafter's pocket)
 

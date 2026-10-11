@@ -9,6 +9,7 @@ import { Game } from '../game/Game';
 import { ITEM_DEFS, DEFAULT_KEYBINDS, DEATH_NAMES } from '../game/config';
 import type { SettingsData, Difficulty } from '../game/types';
 import { DOCUMENTS } from '../game/documents';
+import { visibleCaptions } from './captions';
 
 let gameInstance: Game | null = null;
 
@@ -435,7 +436,7 @@ function HUD() {
   const settings = useGameStore((s) => s.settings);
   return (
     <div className={`hud ${settings.highContrast ? 'hc' : ''}`}>
-      <div className="vignette" style={{ opacity: hud.vignette }} />
+      <div className="vignette" aria-hidden="true" style={{ opacity: hud.vignette }} />
       {hud.freezeFrame && <div className="freeze-flash" />}
       <div className="top-left">
         <div className="room-label">{hud.inUnderscript ? `U-${String(hud.roomIndex).padStart(3, '0')}` : hud.roomLabel}</div>
@@ -466,16 +467,18 @@ function HUD() {
         </div>
       )}
       {settings.captions && (
-        <div className="captions" style={{ fontSize: `${settings.captionSize}em` }}>
-          {hud.subtitles.slice(-3).map((c) => (
-            <div key={c.key} className={`caption ${c.severity}`}>{c.text}</div>
+        <div className="captions" role="log" aria-live="polite" aria-label="game captions" style={{ fontSize: `${settings.captionSize}em` }}>
+          {visibleCaptions(hud.subtitles, performance.now()).map((c) => (
+            <div key={c.key} className={`caption ${c.severity}`}>
+              {c.text}{c.count > 1 ? ` ×${c.count}` : ''}
+            </div>
           ))}
         </div>
       )}
       {hud.hidden && <div className="hidden-tag">hidden — panic rises if they pass close</div>}
       {hud.protection === 'losSafe' && <div className="safe-tag">sheltered</div>}
       {hud.stabilizeActive && <StabilizeHud needle={hud.stabilizedNeedle} />}
-      <div className="crosshair">·</div>
+      <div className="crosshair" aria-hidden="true">·</div>
     </div>
   );
 }
@@ -488,7 +491,16 @@ function Bar({ label, value, max, cls }: { label: string; value: number; max: nu
   return (
     <div className={`bar ${cls}`}>
       <span className="bar-label">{label}</span>
-      <div className="bar-track"><div className="bar-fill" style={{ width: `${(value / max) * 100}%` }} /></div>
+      <div
+        className="bar-track"
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={Math.round(value)}
+        aria-valuemin={0}
+        aria-valuemax={max}
+      >
+        <div className="bar-fill" style={{ width: `${(value / max) * 100}%` }} />
+      </div>
     </div>
   );
 }
