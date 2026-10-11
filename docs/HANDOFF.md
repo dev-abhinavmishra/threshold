@@ -2,6 +2,20 @@
 
 Newest sprint first. The old bootstrap prompt lives at the bottom.
 
+## Sprint 720–725 — both books keep the floor (mechanics lane)
+
+- **720** the under strips into the same ledger: every `stripWork` landing now runs `answerWork` — coil/plate/belt/lens/throat all strike the site like the house's dispatch. The signer still owns the strike (`by` within 1.8m): the grafter stripping YOUR sign files YOUR hands again — the under answering your mark is another reader of the same floor. A grafter's own sign strips clean (files nothing, same gate).
+- **721** a floor worked past answering writes the deeper book: strike 3+ at one site now files `unpaidHeld` AND `unpaidTheft` — the count's ledger and the clerk's register agree on a signature neither book mistakes. Distinct warn `[the tally writes it as theft — the same floor worked past answering]`; strike 2 keeps its `[the register keeps this floor]` line. `unpaidTheft` already routes (Broker's marked rate, Auditor's wanted posts) — repeat site-workers now feed it.
+- **722** the seam tells the filed floor: `maybeFiledFloor()` on main-space room entry — an uncooled twice-struck site in the room you just entered warns `[these boards are filed — it remembers whose hands worked them]` before the patrol reaches it. Fires on transition only (the `currentRoom !== prev` gate is the dedupe).
+- **723** the keys' ordering line (inspector): a spot gripped MID-WALK now stands the inspector aside — `checked.add`, `target=null`, cue `[it tries the lid — a knee already holds it — it leaves it]`. A foreign grip (`trappedBy` set, not 'inspector') also blocks grapple-start under `p.hiddenSpot` and blanks `seizeStash` — a lid a knee holds stays shut to the keys, the hold answers before the count's read. Its own 'inspector' grip still tests/pulls/seizes as before.
+- **724** the clerk names the floors: the `unpaidHeld >= 6` refusal now counts filed sites and reads `· it names N worked floors` inside the desk-refusal cue.
+- **725** contract spec (3 new describes, 66 tests) pins the strip-strike chain, the strike-3 theft write, the seam tell, the refusal naming, and the inspector ordering; e2e leg drives `ctx.stripWork` + `ctx.rearmHazard` three ways at one site → coil/crimp/coil = 3 strikes, `unpaidHeld +2`, `unpaidTheft +1`, `filedWork 2`, theft warn fires.
+
+Traps: `stripWork`'s answers strike through the same `by`-gate — a grafter stripping YOUR mark files you, never itself (the `ev.by` skip for 'grafter:N'/'eye:N' is unchanged). The inspector's arrival ordering runs BEFORE `testing` is set, so a mid-walk grip never starts its 2.6s rattle — `checked.add(spot.id)` is what moves it past the spot (without it the inspector re-targets the same gripped lid forever). `unpaidTheft` writes ride the existing death-remittance load (death.ts) — the tally's book and the count's book now write together.
+
+Next: `filedWork` has no UNDO path — the ledger only writes, never amends (a paid desk could reduce filedWork like it lowers unpaid). The Auditor's wanted posts key off `unpaidTheft` totals, not sites — a wanted poster naming the filed floor is open. And the grafter's own-strip strike is the honest one — a grafter stripping its OWN graft-sign files nothing, meaning the under still answers itself for free.
+
+
 ## Sprint 709–714 — the house keeps a tally (mechanics lane)
 
 - **709** work-site ledger: every 'work' answer the dispatch lands now runs `strikeWorkSite` — the answering itself is the strike, bucketed ~2.5m, keyed off the read mark's `by` (unsigned/'player'/'eye:' signs are yours; a grafter's own sign files nothing). Strike 2 at the same site names a repeat offender: `unpaidHeld + 1` and `filedWork + 1` per strike past the first, warn cue `[the register keeps this floor — the same hands have worked it before]`. Sites cool like sign (360s unanswered = fresh offense); ledger capped at 12, cooled-first out. `workSites` + `filedWork` ride `CheckpointSave`.

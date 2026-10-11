@@ -1671,3 +1671,78 @@ test('the house keeps a tally — struck sites file, a held lid answers, the pee
   }
   expect(errors).toEqual([]);
 });
+
+// sprint 720-725 — both books keep the floor: the under's strip strikes
+// the same ledger, and a floor worked past answering writes the deeper
+// book (unpaidTheft).
+test('both books keep the floor — the under strips into the same tally, strike three writes theft', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await seededRun(page, 's');
+
+  const result = await page.evaluate(() => {
+    const g = (window as unknown as { __thresholdGame: ThresholdG }).__thresholdGame;
+    g.renderFrame = () => {};
+    g.clock.tick = () => { g.clock.dt = 1 / 30; g.clock.time += g.clock.dt; return true; };
+    const caps: string[] = [];
+    g.audio.onCaption((c) => { if (c.text) caps.push(c.text); });
+    (g.audio as { captionsEnabled?: boolean }).captionsEnabled = true;
+    const ga = g as unknown as {
+      space: string;
+      unpaidHeld: number;
+      unpaidTheft: number;
+      filedWork: number;
+      workSites: { x: number; z: number; room: number; strikes: number; lastT: number }[];
+      hazard: {
+        snares: { pos: { x: number; z: number }; room: number; armed: boolean;
+          planted?: boolean; claimed?: boolean }[];
+        steams: { pos: { x: number; y: number; z: number }; room: number; dead: boolean;
+          valved?: boolean; owner?: string }[];
+        evidence: { pos: { x: number; y: number; z: number }; room: number; kind: string;
+          t: number; readBy: string[]; by?: string }[];
+      };
+      entityCtx: () => {
+        stripWork?: (x: number, z: number) => string | null;
+        rearmHazard?: (k: string, x: number, z: number) => string | null;
+      };
+    };
+    const ctx = ga.entityCtx();
+
+    // one floor, three surfaces, three readers: the under strips your
+    // wire (strike 1), the house crimps your vent (strike 2), the
+    // under takes your throat's brass (strike 3 — the deeper book).
+    const spot = { x: g.route.rooms[0].entryPos.x + 30, z: g.route.rooms[0].entryPos.z + 30 };
+    ga.hazard.snares.push({ pos: { x: spot.x, z: spot.z }, room: 0,
+      armed: true, planted: true });
+    ga.hazard.steams.push({ pos: { x: spot.x, y: 0.5, z: spot.z }, room: 0,
+      dead: false, valved: true, owner: 'player' });
+    ga.hazard.evidence.push({ pos: { x: spot.x, y: 0, z: spot.z }, room: 0,
+      kind: 'work', t: g.clock.time, readBy: ['player'], by: 'player' });
+    const held0 = ga.unpaidHeld, theft0 = ga.unpaidTheft;
+    const stripped = ctx.stripWork?.(spot.x, spot.z);   // coil — strike 1
+    // a second strip surface at the same site for strike 3
+    ga.hazard.snares.push({ pos: { x: spot.x + 0.4, z: spot.z }, room: 0,
+      armed: true, planted: true });
+    const crimped = ctx.rearmHazard?.('work', spot.x, spot.z); // crimp — strike 2 files
+    const stripped2 = ctx.stripWork?.(spot.x, spot.z);  // coil — strike 3 writes theft
+    const site = ga.workSites.map((s) => s.strikes);
+    const theftCap = caps.some((c) => /tally writes it as theft/.test(c));
+    return { stage: 'done', stripped, crimped, stripped2, site,
+      heldGain: ga.unpaidHeld - held0, theftGain: ga.unpaidTheft - theft0,
+      filedWork: ga.filedWork, theftCap,
+      snareLeft: ga.hazard.snares.filter((s) => s.armed).length } as const;
+  });
+
+  if (result.stage !== 'done') test.skip();
+  else {
+    expect(result.stripped, 'the under strips your wire into the ledger').toBe('coil');
+    expect(result.crimped, 'the house crimps your vent — same site').toBe('crimp');
+    expect(result.stripped2, 'the under strips again — third reader').toBe('coil');
+    expect(result.site, 'one site, three strikes').toEqual([3]);
+    expect(result.heldGain, 'strikes 2+3 file two register lines').toBe(2);
+    expect(result.theftGain, 'strike 3 writes the deeper book').toBe(1);
+    expect(result.filedWork, 'the epitaph counts both filings').toBe(2);
+    expect(result.theftCap, 'the tally warns the deeper book').toBe(true);
+  }
+  expect(errors).toEqual([]);
+});
